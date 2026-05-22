@@ -8,7 +8,7 @@ final class DockWindow: NSPanel {
             backing: .buffered,
             defer: false
         )
-        level = .statusBar
+        level = NSWindow.Level(rawValue: 24)
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false

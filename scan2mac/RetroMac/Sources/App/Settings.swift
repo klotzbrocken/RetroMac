@@ -2,6 +2,13 @@ import Foundation
 import ServiceManagement
 import Carbon.HIToolbox
 
+struct TVBookmark: Codable, Identifiable, Equatable {
+    var id: UUID = UUID()
+    var name: String
+    var url: String
+    var presetID: String?  // nil = no preset ("None")
+}
+
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
@@ -77,6 +84,20 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(classicMacModeActive, forKey: "classicMacModeActive") }
     }
 
+    // Television Bookmarks
+    @Published var tvBookmarks: [TVBookmark] {
+        didSet {
+            if let data = try? JSONEncoder().encode(tvBookmarks) {
+                defaults.set(data, forKey: "tvBookmarks")
+            }
+        }
+    }
+
+    // Per-theme preset overrides (theme name → preset ID, empty = "None")
+    @Published var themePresetOverrides: [String: String] {
+        didSet { defaults.set(themePresetOverrides, forKey: "themePresetOverrides") }
+    }
+
     // Dock
     @Published var dockEnabled: Bool {
         didSet { defaults.set(dockEnabled, forKey: "dockEnabled") }
@@ -140,6 +161,21 @@ final class AppSettings: ObservableObject {
         showFPSOverlay = defaults.bool(forKey: "showFPSOverlay")
         classicMacModeActive = defaults.bool(forKey: "classicMacModeActive")
 
+        // Per-theme preset overrides
+        themePresetOverrides = defaults.dictionary(forKey: "themePresetOverrides") as? [String: String] ?? [:]
+
+        // Television
+        if let data = defaults.data(forKey: "tvBookmarks"),
+           let bookmarks = try? JSONDecoder().decode([TVBookmark].self, from: data) {
+            tvBookmarks = bookmarks
+        } else {
+            tvBookmarks = [
+                TVBookmark(name: "Retro", url: "http://stream.mediawork.cz/retrotv/retrotvHQ1/chunklist_w627639048.m3u8"),
+                TVBookmark(name: "My Retro TVs", url: "https://www.myretrotvs.com/"),
+                TVBookmark(name: "MTV Rewind", url: "https://wantmymtv.vercel.app/"),
+            ]
+        }
+
         // Dock
         dockEnabled = defaults.bool(forKey: "dockEnabled")
         dockHideSystemDock = defaults.bool(forKey: "dockHideSystemDock")
@@ -154,6 +190,15 @@ final class AppSettings: ObservableObject {
 
     func presetForApp(bundleID: String) -> String? {
         perAppPresets[bundleID]
+    }
+
+    /// Returns the preset for a theme: user override > theme.json default > nil
+    func presetForTheme(name: String) -> String? {
+        if let override = themePresetOverrides[name] {
+            return override.isEmpty ? nil : override  // empty = "None"
+        }
+        // Fall back to theme.json defaultPreset
+        return ThemeManager.shared.availableThemes.first(where: { $0.name == name })?.config.defaultPreset
     }
 
     var hotkeyDisplayString: String {

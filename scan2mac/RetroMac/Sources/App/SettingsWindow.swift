@@ -16,9 +16,11 @@ enum SettingsTab: String, CaseIterable {
     case display = "Display"
     case overlays = "Overlays"
     case dock = "Dock"
+    case television = "Television"
     case apps = "Apps"
     case presets = "Presets"
     case health = "Health"
+    case license = "License"
     case about = "About"
 
     var icon: String {
@@ -27,9 +29,11 @@ enum SettingsTab: String, CaseIterable {
         case .display: return "display"
         case .overlays: return "square.stack.3d.up"
         case .dock: return "dock.rectangle"
+        case .television: return "tv"
         case .apps: return "app.dashed"
         case .presets: return "slider.horizontal.3"
         case .health: return "heart.text.square"
+        case .license: return "key"
         case .about: return "info.circle"
         }
     }
@@ -81,9 +85,11 @@ struct SettingsView: View {
                 case .display: displayTab
                 case .overlays: overlaysTab
                 case .dock: DockSettingsTab()
+                case .television: TVSettingsTab()
                 case .apps: appsTab
                 case .presets: presetsTab
                 case .health: HealthCheckTab()
+                case .license: LicenseTab()
                 case .about: AboutTab()
                 }
             }
@@ -614,11 +620,13 @@ final class HotkeyNSView: NSView {
 
 final class SettingsWindowController {
     private var window: NSWindow?
+    private var savedMenu: NSMenu?
 
     func show() {
         if let window = window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
+            installEditMenu()
             return
         }
 
@@ -633,8 +641,55 @@ final class SettingsWindowController {
         window.contentView = hostingView
         window.center()
         window.isReleasedWhenClosed = false
+        window.delegate = SettingsWindowDelegate(controller: self)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         self.window = window
+        installEditMenu()
+    }
+
+    /// Install a standard Edit menu so ⌘C/⌘V/⌘A work in TextFields
+    /// (LSUIElement / .accessory apps have no menu bar by default)
+    func installEditMenu() {
+        if NSApp.mainMenu != nil { return }
+
+        let mainMenu = NSMenu()
+
+        // App menu (empty, needed as first item)
+        let appMenuItem = NSMenuItem()
+        appMenuItem.submenu = NSMenu()
+        mainMenu.addItem(appMenuItem)
+
+        // Edit menu with standard actions
+        let editMenuItem = NSMenuItem()
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        editMenu.addItem(NSMenuItem.separator())
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenuItem.submenu = editMenu
+        mainMenu.addItem(editMenuItem)
+
+        NSApp.mainMenu = mainMenu
+    }
+
+    func removeEditMenu() {
+        NSApp.mainMenu = nil
+    }
+}
+
+/// Removes the Edit menu when the settings window closes
+private final class SettingsWindowDelegate: NSObject, NSWindowDelegate {
+    weak var controller: SettingsWindowController?
+
+    init(controller: SettingsWindowController) {
+        self.controller = controller
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        controller?.removeEditMenu()
     }
 }

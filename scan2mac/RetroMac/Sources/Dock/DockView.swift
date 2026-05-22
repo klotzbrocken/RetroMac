@@ -7,6 +7,8 @@ final class DockView: NSView {
     private var wsObserver: NSObjectProtocol?
     private var appsObserver: NSObjectProtocol?
     private var themeObserver: NSObjectProtocol?
+    private var wsTerminateObserver: NSObjectProtocol?
+    private var wsActivateObserver: NSObjectProtocol?
     private var dropInsertionIndex: Int?
     private var separatorX: CGFloat?
     private var separatorY: CGFloat?
@@ -43,7 +45,10 @@ final class DockView: NSView {
 
     deinit {
         clockTimer?.invalidate()
-        if let obs = wsObserver { NSWorkspace.shared.notificationCenter.removeObserver(obs) }
+        let wsNC = NSWorkspace.shared.notificationCenter
+        if let obs = wsObserver { wsNC.removeObserver(obs) }
+        if let obs = wsTerminateObserver { wsNC.removeObserver(obs) }
+        if let obs = wsActivateObserver { wsNC.removeObserver(obs) }
         if let obs = appsObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = themeObserver { NotificationCenter.default.removeObserver(obs) }
     }
@@ -64,10 +69,10 @@ final class DockView: NSView {
         }
 
         let wsNC = NSWorkspace.shared.notificationCenter
-        wsNC.addObserver(forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
+        wsTerminateObserver = wsNC.addObserver(forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
             self?.updateRunningIndicators()
         }
-        wsNC.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
+        wsActivateObserver = wsNC.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
             self?.updateRunningIndicators()
         }
     }
@@ -341,9 +346,15 @@ final class DockView: NSView {
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         let ctx = NSGraphicsContext.current!.cgContext
         let scale = CGFloat(AppSettings.shared.dockIconScale)
+        let bgAlpha = CGFloat(AppSettings.shared.dockTransparency)
 
         let rect = bounds
         let cr = theme.dock.cornerRadius * scale
+
+        // Background color with user transparency applied
+        let bgColor = theme.parsedBackgroundColor.withAlphaComponent(
+            theme.parsedBackgroundColor.alphaComponent * bgAlpha
+        )
 
         // Shadow
         if theme.dock.shadowEnabled {
@@ -351,15 +362,38 @@ final class DockView: NSView {
             let shadowColor = theme.parsedShadowColor.cgColor
             ctx.setShadow(offset: CGSize(width: 0, height: -2), blur: theme.dock.shadowRadius, color: shadowColor)
             let bgPath = NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
-            theme.parsedBackgroundColor.setFill()
+            bgColor.setFill()
             bgPath.fill()
             ctx.restoreGState()
         }
 
         // Background
         let bgPath = NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
-        theme.parsedBackgroundColor.setFill()
-        bgPath.fill()
+        if theme.hasGradientBackground,
+           let gradTop = theme.parsedGradientTop?.withAlphaComponent(
+               (theme.parsedGradientTop?.alphaComponent ?? 1) * bgAlpha),
+           let gradBottom = theme.parsedGradientBottom?.withAlphaComponent(
+               (theme.parsedGradientBottom?.alphaComponent ?? 1) * bgAlpha) {
+            ctx.saveGState()
+            bgPath.addClip()
+            let gradient = NSGradient(starting: gradBottom, ending: gradTop)
+            gradient?.draw(in: rect, angle: 90)
+            ctx.restoreGState()
+        } else {
+            bgColor.setFill()
+            bgPath.fill()
+        }
+
+        // Shelf highlight line
+        if let shelfColor = theme.parsedShelfLineColor {
+            shelfColor.withAlphaComponent(shelfColor.alphaComponent * bgAlpha).setStroke()
+            let shelfLine = NSBezierPath()
+            let shelfY = rect.minY + rect.height * 0.38
+            shelfLine.move(to: NSPoint(x: rect.minX + cr, y: shelfY))
+            shelfLine.line(to: NSPoint(x: rect.maxX - cr, y: shelfY))
+            shelfLine.lineWidth = 1
+            shelfLine.stroke()
+        }
 
         // 3D bevel (for Platinum / Win95 themes)
         if theme.dock.bevelWidth > 0 {

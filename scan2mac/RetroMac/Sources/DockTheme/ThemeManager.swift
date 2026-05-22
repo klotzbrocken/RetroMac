@@ -11,6 +11,7 @@ final class ThemeManager {
     private let userThemesDir: URL
     private let defaults = UserDefaults.standard
     private let overridesKey = "dockThemeIconOverrides"
+    private let wallpaperBackupKey = "savedWallpaperBackup"
     private var savedWallpapers: [String: URL] = [:]
 
     init() {
@@ -18,6 +19,15 @@ final class ThemeManager {
         userThemesDir = appSupport.appendingPathComponent("RetroMac/DockThemes")
         try? FileManager.default.createDirectory(at: userThemesDir, withIntermediateDirectories: true)
         iconOverrides = defaults.dictionary(forKey: overridesKey) as? [String: [String: String]] ?? [:]
+
+        // Restore wallpaper backup from UserDefaults (crash-safe)
+        if let dict = defaults.dictionary(forKey: wallpaperBackupKey) as? [String: String] {
+            savedWallpapers = dict.compactMapValues { URL(string: $0) }
+            if !savedWallpapers.isEmpty {
+                print("[Theme] Restored wallpaper backup: \(savedWallpapers.count) screens")
+            }
+        }
+
         reload()
     }
 
@@ -83,6 +93,7 @@ final class ThemeManager {
             }
             try? ws.setDesktopImageURL(wpURL, for: screen, options: [:])
         }
+        persistWallpaperBackup()
         print("[Theme] Wallpaper set: \(wpURL.lastPathComponent)")
     }
 
@@ -96,7 +107,17 @@ final class ThemeManager {
             }
         }
         savedWallpapers.removeAll()
+        persistWallpaperBackup()
         print("[Theme] Wallpapers restored")
+    }
+
+    private func persistWallpaperBackup() {
+        if savedWallpapers.isEmpty {
+            defaults.removeObject(forKey: wallpaperBackupKey)
+        } else {
+            let dict = savedWallpapers.mapValues { $0.absoluteString }
+            defaults.set(dict, forKey: wallpaperBackupKey)
+        }
     }
 
     func icon(for bundleID: String, size: CGFloat) -> NSImage {

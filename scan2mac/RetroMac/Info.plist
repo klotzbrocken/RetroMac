@@ -20,6 +20,13 @@
     <string>RetroMac needs screen recording permission to apply retro shader effects over your desktop.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>RetroMac uses System Events to hide the Dock and menu bar while the overlay is active.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoadsForMedia</key>
+        <true/>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
