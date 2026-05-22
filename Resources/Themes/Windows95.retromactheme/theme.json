@@ -1,0 +1,57 @@
+{
+  "name": "Windows 95",
+  "version": "1.0",
+  "author": "RetroMac",
+  "dock": {
+    "height": 40,
+    "iconSize": 28,
+    "padding": 4,
+    "spacing": 4,
+    "cornerRadius": 0,
+    "backgroundColor": "#C0C0C0FF",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#000000FF",
+    "borderWidth": 0,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#FFFFFFFF",
+    "bevelBottomColor": "#808080FF",
+    "bevelWidth": 2,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "fullWidth": true,
+    "startButton": true,
+    "startButtonLabel": "Start",
+    "startButtonIcon": "start.png",
+    "showClock": true
+  },
+  "icon": {
+    "renderStyle": "pixelated",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.05,
+    "hoverAnimationDuration": 0.05
+  },
+  "indicator": {
+    "style": "square",
+    "color": "#000080",
+    "size": 4,
+    "offset": 3
+  },
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "crt-lottes",
+  "iconMappings": {
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "safari.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.Notes": "notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.systempreferences": "settings.png",
+    "com.apple.Music": "music.png",
+    "com.apple.Terminal": "terminal.png"
+  }
+}
