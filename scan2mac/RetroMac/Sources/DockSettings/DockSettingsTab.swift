@@ -46,6 +46,36 @@ struct DockSettingsTab: View {
                 }
             }
 
+            Section("Theme Presets") {
+                ForEach(themes, id: \.name) { theme in
+                    HStack {
+                        Text(theme.name)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Picker("", selection: Binding(
+                            get: {
+                                if let override = settings.themePresetOverrides[theme.name] {
+                                    return override  // empty = "None"
+                                }
+                                return theme.config.defaultPreset ?? ""
+                            },
+                            set: { newVal in
+                                settings.themePresetOverrides[theme.name] = newVal
+                            }
+                        )) {
+                            Text("None").tag("")
+                            ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
+                                Text(preset.displayName).tag(preset.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: 200)
+                    }
+                }
+                Text("Choose a default shader preset for each theme. Activated automatically when switching themes.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Display") {
                 Picker("Target Display", selection: $settings.dockTargetDisplayID) {
                     Text("Main Display").tag(CGDirectDisplayID(0))

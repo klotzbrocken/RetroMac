@@ -80,7 +80,7 @@ final class RetroRenderer {
         currentPipeline = pipeline
     }
 
-    func render(sourceTexture: MTLTexture, to drawable: CAMetalDrawable, viewportSize: CGSize) {
+    func render(sourceTexture: MTLTexture, to drawable: CAMetalDrawable, viewportSize: CGSize, opaque: Bool = false) {
         guard let pipeline = currentPipeline,
               let commandBuffer = commandQueue.makeCommandBuffer() else { return }
 
@@ -107,7 +107,7 @@ final class RetroRenderer {
         renderDesc.colorAttachments[0].texture = drawable.texture
         renderDesc.colorAttachments[0].loadAction = .clear
         renderDesc.colorAttachments[0].storeAction = .store
-        renderDesc.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
+        renderDesc.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: opaque ? 1 : 0)
 
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderDesc) else { return }
 

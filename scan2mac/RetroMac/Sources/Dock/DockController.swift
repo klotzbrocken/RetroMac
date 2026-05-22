@@ -106,7 +106,6 @@ final class DockController {
         let frame = dockFrame(screen: screen, width: width, height: height)
 
         let win = DockWindow(contentRect: frame)
-        win.alphaValue = CGFloat(AppSettings.shared.dockTransparency)
 
         dockView.frame = NSRect(origin: .zero, size: frame.size)
         win.contentView = dockView
@@ -267,8 +266,8 @@ final class DockController {
             self?.recreateWindow()
         }.store(in: &settingsObservers)
 
-        s.$dockTransparency.dropFirst().sink { [weak self] alpha in
-            self?.window?.alphaValue = CGFloat(alpha)
+        s.$dockTransparency.dropFirst().sink { [weak self] _ in
+            self?.dockView?.needsDisplay = true
         }.store(in: &settingsObservers)
 
         s.$dockTargetDisplayID.dropFirst().sink { [weak self] _ in
@@ -419,6 +418,24 @@ final class DockController {
 
     @objc private func menuForceQuit(_ sender: NSMenuItem) {
         guard let bid = sender.representedObject as? String else { return }
+
+        let appName: String
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
+            appName = FileManager.default.displayName(atPath: url.path)
+                .replacingOccurrences(of: ".app", with: "")
+        } else {
+            appName = bid
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "Force Quit \"\(appName)\"?"
+        alert.informativeText = "Unsaved changes may be lost."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Force Quit")
+        alert.addButton(withTitle: "Cancel")
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
         AppLauncher.forceTerminate(bundleID: bid)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.dockView?.updateRunningIndicators()

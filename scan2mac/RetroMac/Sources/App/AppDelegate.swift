@@ -9,7 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private(set) var overlayController: OverlayWindowController?
     private(set) var isActive = false
-    private(set) var currentPresetName: String!
+    var currentPresetName: String!
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private(set) var currentIntensity: Float!
@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let onboardingWindow = OnboardingWindowController()
     private let fpsOverlay = FPSOverlayController()
     private let windowPicker = WindowPicker()
+    private let tvBrowser = TVBrowserWindow()
     private var appLaunchObserver: NSObjectProtocol?
     private var appTerminateObserver: NSObjectProtocol?
     private var sleepObserver: NSObjectProtocol?
@@ -25,6 +26,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var wakeObserver: NSObjectProtocol?
     private var perAppBundleID: String?
     private var wasActiveBeforeSleep = false
+    private var overlayStartTask: Task<Void, Never>?
+
+    // Save/restore state for TV window overlay
+    private var savedPreset: String?
+    private var savedWasActive = false
 
     var captureModeDescription: String {
         guard let controller = overlayController else { return "—" }
@@ -35,12 +41,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false  // Menu-bar app — keep running when TV window closes
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
         let settings = AppSettings.shared
         currentPresetName = settings.defaultPreset
         currentIntensity = settings.defaultIntensity
         currentVignetteIntensity = settings.vignetteIntensity
+
+        // Restore system UI if previous session crashed while UI was hidden
+        SystemUIHelper.restoreIfNeeded()
 
         NSApp.setActivationPolicy(.accessory)
         setupMenuBar()
@@ -57,8 +70,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Dock never auto-starts — user activates it by selecting a theme
         if settings.dockEnabled {
-            DockController.shared.start()
+            settings.dockEnabled = false
         }
 
         if !settings.onboardingComplete {
@@ -66,6 +80,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.onboardingWindow.show()
             }
         }
+
+        // Friendly nag: "Enjoying RetroMac?" (max once per day, not if licensed)
+        if LicenseManager.shared.shouldShowNag {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                self.showFriendlyNag()
+            }
+        }
+
+        // Auto-update checks via GitHub Releases
+        UpdateChecker.shared.startPeriodicChecks()
     }
 
     // MARK: - Menu Bar
@@ -160,6 +184,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return img
     }
 
+    private func sfIcon(_ name: String, scale: NSImage.SymbolScale = .medium) -> NSImage? {
+        let config = NSImage.SymbolConfiguration(scale: scale)
+        return NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(config)
+    }
+
     private func rebuildMenu() {
         let menu = NSMenu()
         menu.autoenablesItems = false
@@ -167,28 +197,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hk = settings.hotkeyDisplayString
 
         // Toggle
-        let toggleTitle = isActive ? "Disable (\(hk))" : "Enable (\(hk))"
+        let toggleTitle = isActive ? "Stop Shader (\(hk))" : "Start Shader (\(hk))"
         let toggle = NSMenuItem(title: toggleTitle, action: #selector(toggleOverlay), keyEquivalent: "")
         toggle.target = self
+        toggle.image = sfIcon(isActive ? "power.circle.fill" : "power.circle")
         menu.addItem(toggle)
 
         menu.addItem(NSMenuItem.separator())
 
         // Presets — cascading category submenus
         let presetsItem = NSMenuItem(title: "Presets", action: nil, keyEquivalent: "")
+        presetsItem.image = sfIcon("slider.horizontal.3")
         let presetsMenu = NSMenu()
+        let lm = LicenseManager.shared
+
+        // Monochrome lock icon for premium presets
+        let lockIcon = sfIcon("lock.fill", scale: .small)
+
+        // Basic (Free) — quick-access folder with all free presets + Surprise
+        let basicItem = NSMenuItem(title: "Basic (Free)", action: nil, keyEquivalent: "")
+        basicItem.image = sfIcon("star.circle")
+        let basicMenu = NSMenu()
+
+        let surpriseItem = NSMenuItem(title: "Surprise!", action: #selector(selectSurprisePreset), keyEquivalent: "")
+        surpriseItem.target = self
+        surpriseItem.image = sfIcon("dice")
+        basicMenu.addItem(surpriseItem)
+        basicMenu.addItem(NSMenuItem.separator())
+
+        let allBuiltin = PresetRegistry.builtinPresets
+        for preset in allBuiltin where LicenseManager.freePresetIDs.contains(preset.id) {
+            let item = NSMenuItem(title: preset.displayName, action: #selector(selectPreset(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = preset.id
+            if preset.id == currentPresetName { item.state = .on }
+            basicMenu.addItem(item)
+        }
+        basicItem.submenu = basicMenu
+        if allBuiltin.filter({ LicenseManager.freePresetIDs.contains($0.id) }).contains(where: { $0.id == currentPresetName }) {
+            basicItem.state = .mixed
+        }
+        presetsMenu.addItem(basicItem)
+        presetsMenu.addItem(NSMenuItem.separator())
+
+        // Category submenus (all presets, locked ones get lock icon)
         for (category, presets) in PresetRegistry.categorizedPresets {
             let catItem = NSMenuItem(title: category.rawValue, action: nil, keyEquivalent: "")
             let catMenu = NSMenu()
             for preset in presets {
+                let isFree = LicenseManager.freePresetIDs.contains(preset.id)
+                let locked = !isFree && !lm.hasAllPresets
                 let item = NSMenuItem(title: preset.displayName, action: #selector(selectPreset(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = preset.id
                 if preset.id == currentPresetName { item.state = .on }
+                if locked { item.image = lockIcon }
                 catMenu.addItem(item)
             }
             catItem.submenu = catMenu
-            // Mark category if current preset is in it
             if presets.contains(where: { $0.id == currentPresetName }) {
                 catItem.state = .mixed
             }
@@ -198,12 +264,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !custom.isEmpty {
             presetsMenu.addItem(NSMenuItem.separator())
             let catItem = NSMenuItem(title: "Custom", action: nil, keyEquivalent: "")
+            if !lm.hasAllPresets { catItem.image = lockIcon }
             let catMenu = NSMenu()
             for preset in custom {
+                let locked = !lm.hasAllPresets
                 let item = NSMenuItem(title: preset.displayName, action: #selector(selectPreset(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = preset.id
                 if preset.id == currentPresetName { item.state = .on }
+                if locked { item.image = lockIcon }
                 catMenu.addItem(item)
             }
             catItem.submenu = catMenu
@@ -214,6 +283,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Intensity submenu
         let intensityItem = NSMenuItem(title: "Intensity", action: nil, keyEquivalent: "")
+        intensityItem.image = sfIcon("sun.max")
         let intensityMenu = NSMenu()
         for pct in stride(from: 10, through: 100, by: 10) {
             let item = NSMenuItem(title: "\(pct)%", action: #selector(setIntensity(_:)), keyEquivalent: "")
@@ -227,6 +297,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Vignette submenu
         let vignetteItem = NSMenuItem(title: "Vignette", action: nil, keyEquivalent: "")
+        vignetteItem.image = sfIcon("circle.circle")
         let vignetteMenu = NSMenu()
         let vigOff = NSMenuItem(title: "Off", action: #selector(setVignette(_:)), keyEquivalent: "")
         vigOff.target = self
@@ -245,9 +316,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Overlays submenu
         let overlaysItem = NSMenuItem(title: "Overlays", action: nil, keyEquivalent: "")
+        overlaysItem.image = sfIcon("square.3.layers.3d")
         let overlaysMenu = NSMenu()
 
-        // Scanline sub
         let scanItem = NSMenuItem(title: "Scanlines", action: nil, keyEquivalent: "")
         let scanMenu = NSMenu()
         let scanOff = NSMenuItem(title: "None", action: #selector(selectScanline(_:)), keyEquivalent: "")
@@ -264,7 +335,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         scanItem.submenu = scanMenu
         overlaysMenu.addItem(scanItem)
 
-        // Reflection sub
         let reflItem = NSMenuItem(title: "Reflection", action: nil, keyEquivalent: "")
         let reflMenu = NSMenu()
         let reflOff = NSMenuItem(title: "None", action: #selector(selectReflection(_:)), keyEquivalent: "")
@@ -288,6 +358,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Display submenu
         let displayItem = NSMenuItem(title: "Display", action: nil, keyEquivalent: "")
+        displayItem.image = sfIcon("display")
         let displayMenu = NSMenu()
         let allDisplays = NSMenuItem(title: "All Displays", action: #selector(selectDisplay(_:)), keyEquivalent: "")
         allDisplays.target = self
@@ -295,13 +366,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if settings.targetDisplayID == 0 { allDisplays.state = .on }
         displayMenu.addItem(allDisplays)
         displayMenu.addItem(NSMenuItem.separator())
-        for (i, screen) in NSScreen.screens.enumerated() {
+        for screen in NSScreen.screens {
             let displayID = screen.displayID
             let name = screen.localizedName
             let item = NSMenuItem(title: name, action: #selector(selectDisplay(_:)), keyEquivalent: "")
             item.target = self
             item.tag = Int(displayID)
-            item.indentationLevel = 0
             if displayID == settings.targetDisplayID { item.state = .on }
             displayMenu.addItem(item)
         }
@@ -311,11 +381,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Window picker
         let pickItem = NSMenuItem(title: "Apply to Window…", action: #selector(pickWindowVisual), keyEquivalent: "")
         pickItem.target = self
+        pickItem.image = sfIcon("macwindow")
         menu.addItem(pickItem)
 
         if isActive {
             let fullItem = NSMenuItem(title: "Apply to Full Screen", action: #selector(applyFullScreen), keyEquivalent: "")
             fullItem.target = self
+            fullItem.image = sfIcon("rectangle.inset.filled")
             menu.addItem(fullItem)
         }
 
@@ -324,29 +396,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isActive {
             let screenshotItem = NSMenuItem(title: "Screenshot with Effect", action: #selector(takeScreenshot), keyEquivalent: "")
             screenshotItem.target = self
+            screenshotItem.image = sfIcon("camera")
             menu.addItem(screenshotItem)
         }
 
         let fpsTitle = fpsOverlay.isVisible ? "Hide FPS Overlay" : "Show FPS Overlay"
         let fpsItem = NSMenuItem(title: fpsTitle, action: #selector(toggleFPSOverlay), keyEquivalent: "")
         fpsItem.target = self
+        fpsItem.image = sfIcon("gauge.with.dots.needle.33percent")
         menu.addItem(fpsItem)
 
         menu.addItem(NSMenuItem.separator())
 
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
+        settingsItem.image = sfIcon("gearshape")
         menu.addItem(settingsItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        // Television submenu
+        let tvBookmarks = AppSettings.shared.tvBookmarks
+        if !tvBookmarks.isEmpty {
+            let tvItem = NSMenuItem(title: "Television", action: nil, keyEquivalent: "")
+            tvItem.image = sfIcon("tv")
+            let tvMenu = NSMenu()
+            for bookmark in tvBookmarks {
+                let item = NSMenuItem(title: bookmark.name, action: #selector(openTVBookmark(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = bookmark.id.uuidString
+                item.image = sfIcon("antenna.radiowaves.left.and.right")
+                tvMenu.addItem(item)
+            }
+            tvItem.submenu = tvMenu
+            menu.addItem(tvItem)
+        }
 
         menu.addItem(NSMenuItem.separator())
 
         // Themes submenu
         let themesItem = NSMenuItem(title: "Themes", action: nil, keyEquivalent: "")
+        themesItem.image = sfIcon("paintpalette")
         let themesMenu = NSMenu()
         let dockOn = AppSettings.shared.dockEnabled
         let currentTheme = AppSettings.shared.dockTheme
 
-        let offItem = NSMenuItem(title: "Aus", action: #selector(disableTheme), keyEquivalent: "")
+        let offItem = NSMenuItem(title: "Off", action: #selector(disableTheme), keyEquivalent: "")
         offItem.target = self
         if !dockOn { offItem.state = .on }
         themesMenu.addItem(offItem)
@@ -366,12 +461,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let dockTitle = AppSettings.shared.dockEnabled ? "Hide Retro-Dock" : "Show Retro-Dock"
         let dockItem = NSMenuItem(title: dockTitle, action: #selector(toggleDock), keyEquivalent: "")
         dockItem.target = self
+        dockItem.image = sfIcon("dock.rectangle")
         menu.addItem(dockItem)
 
         menu.addItem(NSMenuItem.separator())
 
+        let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(UpdateChecker.checkNow(_:)), keyEquivalent: "")
+        updateItem.target = UpdateChecker.shared
+        updateItem.image = sfIcon("arrow.triangle.2.circlepath")
+        menu.addItem(updateItem)
+
         let quit = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
+        quit.image = sfIcon("xmark.circle")
         menu.addItem(quit)
 
         statusItem.menu = menu
@@ -530,6 +632,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func disableAll() {
         print("[RetroMac] disableAll()")
 
+        overlayStartTask?.cancel()
+        overlayStartTask = nil
         overlayController?.stop()
         overlayController = nil
         isActive = false
@@ -555,7 +659,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func startOverlay(mode: CaptureMode) {
+    private func startOverlay(mode: CaptureMode, presetOverride: String? = nil, parentWindow: NSWindow? = nil) {
+        // Cancel any in-flight overlay start
+        overlayStartTask?.cancel()
+        overlayStartTask = nil
+
         if isActive {
             overlayController?.stop()
             overlayController = nil
@@ -568,8 +676,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             effectiveMode = .singleDisplay(settings.targetDisplayID)
         }
 
-        // Per-app preset: check if the target window's app has a configured preset
-        var presetName = currentPresetName!
+        // Use override if provided (e.g. TV window), otherwise use global preset
+        var presetName = presetOverride ?? currentPresetName!
         if case .singleWindow(let scWindow) = effectiveMode,
            let bundleID = scWindow.owningApplication?.bundleIdentifier,
            let appPreset = settings.presetForApp(bundleID: bundleID) {
@@ -578,14 +686,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             print("[RetroMac] Per-app preset: \(bundleID) → \(appPreset)")
         }
 
-        Task {
+        overlayStartTask = Task { [weak self] in
+            guard let self = self else { return }
             do {
                 let controller = try await OverlayWindowController.create(mode: effectiveMode)
+
+                // Check cancellation before committing
+                guard !Task.isCancelled else {
+                    controller.stop()
+                    return
+                }
+
                 controller.intensity = self.currentIntensity
                 controller.vignetteIntensity = self.currentVignetteIntensity
                 try await controller.start(presetName: presetName)
+
+                guard !Task.isCancelled else {
+                    controller.stop()
+                    return
+                }
+
                 self.overlayController = controller
                 self.isActive = true
+                self.overlayStartTask = nil
+
+                // Attach overlay as child of parent window (for TV overlay)
+                // Child windows follow parent automatically and ignoresMouseEvents
+                // passes clicks through to the parent.
+                if let parent = parentWindow {
+                    await MainActor.run {
+                        controller.attachToParentWindow(parent)
+                    }
+                }
+
                 if self.fpsOverlay.isVisible {
                     self.setupFPSTracking()
                 }
@@ -594,7 +727,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.rebuildMenu()
                 }
             } catch {
+                guard !Task.isCancelled else { return }
                 print("[RetroMac] ERROR: \(error)")
+                self.overlayStartTask = nil
                 await MainActor.run {
                     let alert = NSAlert()
                     alert.messageText = "RetroMac Error"
@@ -607,9 +742,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func selectPreset(_ sender: NSMenuItem) {
         guard let presetId = sender.representedObject as? String else { return }
-        currentPresetName = presetId
-        overlayController?.switchPreset(presetId)
-        rebuildMenu()
+
+        // License check: block premium presets if not licensed
+        if !LicenseManager.shared.isPresetAvailable(presetId) {
+            let name = PresetRegistry.builtinPresets.first(where: { $0.id == presetId })?.displayName ?? presetId
+            showPresetLockedAlert(presetName: name)
+            return
+        }
+
+        // Manual selection is highest priority — clear any saved TV state
+        savedPreset = nil
+        savedWasActive = false
+        if !isActive {
+            startOverlay(mode: .fullScreen)
+        }
+        applyPreset(presetId)
     }
 
     @objc private func setIntensity(_ sender: NSMenuItem) {
@@ -666,8 +813,83 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow.show()
     }
 
+    @objc private func openTVBookmark(_ sender: NSMenuItem) {
+        guard let idString = sender.representedObject as? String,
+              let uuid = UUID(uuidString: idString),
+              let bookmark = AppSettings.shared.tvBookmarks.first(where: { $0.id == uuid }) else { return }
+        tvBrowser.open(bookmark: bookmark)
+    }
+
     func showOnboarding() {
         onboardingWindow.show()
+    }
+
+    func applyOverlayToWindowID(_ windowID: CGWindowID, presetName: String, parentWindow: NSWindow? = nil, saveState: Bool = true) {
+        if saveState {
+            // Save current state so we can restore when the TV window closes
+            savedPreset = currentPresetName
+            savedWasActive = isActive
+            print("[RetroMac] TV overlay: saving state (preset=\(currentPresetName ?? "nil"), active=\(isActive))")
+        }
+
+        Task {
+            do {
+                let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+                guard let scWindow = content.windows.first(where: { $0.windowID == windowID }) else {
+                    print("[RetroMac] No SCWindow found for windowID \(windowID)")
+                    if saveState {
+                        self.savedPreset = nil
+                        self.savedWasActive = false
+                    }
+                    return
+                }
+                await MainActor.run {
+                    // Don't modify currentPresetName — pass preset via override
+                    // Pass parentWindow so overlay attaches as child (for TV windows)
+                    self.startOverlay(mode: .singleWindow(scWindow), presetOverride: presetName, parentWindow: parentWindow)
+                }
+            } catch {
+                print("[RetroMac] Window overlay error: \(error)")
+                if saveState {
+                    self.savedPreset = nil
+                    self.savedWasActive = false
+                }
+            }
+        }
+    }
+
+    /// Restore previous overlay state after TV window closes
+    func restorePreviousOverlay() {
+        guard let preset = savedPreset else {
+            // No saved state — just stop if still running
+            if isActive {
+                disableAll()
+            }
+            return
+        }
+        let wasActive = savedWasActive
+        savedPreset = nil
+        savedWasActive = false
+
+        print("[RetroMac] TV closed: restoring (preset=\(preset), wasActive=\(wasActive))")
+
+        // Stop TV overlay
+        overlayStartTask?.cancel()
+        overlayStartTask = nil
+        overlayController?.stop()
+        overlayController = nil
+        isActive = false
+
+        // Restore previous preset
+        currentPresetName = preset
+
+        // Restore overlay if it was active before TV
+        if wasActive {
+            startOverlay(mode: .fullScreen)
+        } else {
+            updateMenuBarIcon()
+            rebuildMenu()
+        }
     }
 
     func applyPreset(_ presetID: String) {
@@ -747,7 +969,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings.dockEnabled = true
             DockController.shared.start()
         }
-        if let preset = ThemeManager.shared.activeTheme?.config.defaultPreset {
+        if let preset = settings.presetForTheme(name: name) {
+            if !isActive {
+                startOverlay(mode: .fullScreen)
+            }
             applyPreset(preset)
         }
         rebuildMenu()
@@ -771,7 +996,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        cleanupBeforeQuit()
+    }
+
     @objc private func quitApp() {
+        NSApp.terminate(nil)
+    }
+
+    private func cleanupBeforeQuit() {
         let nc = NSWorkspace.shared.notificationCenter
         for obs in [appLaunchObserver, appTerminateObserver, sleepObserver, lockObserver, wakeObserver].compactMap({ $0 }) {
             nc.removeObserver(obs)
@@ -779,7 +1012,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         disableAll()
         DockController.shared.stop()
         ThemeManager.shared.restoreWallpapers()
-        NSApp.terminate(nil)
+    }
+
+    // MARK: - Surprise Preset
+
+    @objc private func selectSurprisePreset() {
+        let presetID = LicenseManager.surprisePresetID
+        savedPreset = nil
+        savedWasActive = false
+        if !isActive {
+            startOverlay(mode: .fullScreen)
+        }
+        applyPreset(presetID)
+    }
+
+    // MARK: - License / Nag
+
+    private func showFriendlyNag() {
+        let lm = LicenseManager.shared
+        lm.markNagDismissed()
+
+        let alert = NSAlert()
+        alert.messageText = "Enjoying RetroMac?"
+        alert.informativeText = "RetroMac is free. If you like it, buy me a coffee or unlock all \(PresetRegistry.builtinPresets.count) presets!"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Buy me a coffee ☕")
+        alert.addButton(withTitle: "Get All Presets")
+        alert.addButton(withTitle: "Later")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            if let url = URL(string: LicenseManager.kofiURL) {
+                NSWorkspace.shared.open(url)
+            }
+        } else if response == .alertSecondButtonReturn {
+            if let url = URL(string: LicenseManager.purchaseURL) {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    }
+
+    private func showPresetLockedAlert(presetName: String) {
+        let alert = NSAlert()
+        alert.messageText = "\(presetName) 🔒"
+        alert.informativeText = "This preset is part of the All Presets pack. Unlock all \(PresetRegistry.builtinPresets.count) presets + custom shaders!"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Get All Presets")
+        alert.addButton(withTitle: "Enter Key")
+        alert.addButton(withTitle: "Cancel")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            if let url = URL(string: LicenseManager.purchaseURL) {
+                NSWorkspace.shared.open(url)
+            }
+        } else if response == .alertSecondButtonReturn {
+            settingsWindow.show()
+        }
     }
 }
 

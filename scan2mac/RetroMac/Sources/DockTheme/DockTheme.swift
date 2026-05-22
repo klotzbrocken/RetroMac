@@ -29,6 +29,9 @@ struct DockThemeConfig: Codable {
         var bevelTopColor: String? = nil
         var bevelBottomColor: String? = nil
         var bevelWidth: CGFloat = 0
+        var backgroundGradientTop: String?
+        var backgroundGradientBottom: String?
+        var shelfLineColor: String?
         var orientation: String?
         var position: String?
         var fullWidth: Bool?
@@ -61,6 +64,10 @@ extension DockThemeConfig {
     var parsedIndicatorColor: NSColor { NSColor.fromHex(indicator.color) }
     var parsedBevelTopColor: NSColor? { dock.bevelTopColor.map { NSColor.fromHex($0) } }
     var parsedBevelBottomColor: NSColor? { dock.bevelBottomColor.map { NSColor.fromHex($0) } }
+    var parsedGradientTop: NSColor? { dock.backgroundGradientTop.map { NSColor.fromHex($0) } }
+    var parsedGradientBottom: NSColor? { dock.backgroundGradientBottom.map { NSColor.fromHex($0) } }
+    var parsedShelfLineColor: NSColor? { dock.shelfLineColor.map { NSColor.fromHex($0) } }
+    var hasGradientBackground: Bool { dock.backgroundGradientTop != nil && dock.backgroundGradientBottom != nil }
 
     var isPixelated: Bool { icon.renderStyle == "pixelated" }
     var isVertical: Bool { dock.orientation == "vertical" }

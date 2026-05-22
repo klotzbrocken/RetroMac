@@ -65,7 +65,9 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     }
 
     private static func cgRectToNS(_ cgRect: CGRect) -> NSRect {
-        let primaryHeight = NSScreen.screens.first?.frame.height ?? 900
+        // Use CGMainDisplayID for correct primary display height in all multi-monitor setups.
+        // CG coordinate space has origin at top-left of primary display; NS at bottom-left.
+        let primaryHeight = CGDisplayBounds(CGMainDisplayID()).height
         return NSRect(
             x: cgRect.origin.x,
             y: primaryHeight - cgRect.origin.y - cgRect.height,
@@ -118,7 +120,15 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         } else {
             window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         }
-        window.level = NSWindow.Level(rawValue: 25)
+        // singleWindow overlay needs level 26 (above TV window at 25, above dock at 24)
+        // fullScreen/singleDisplay uses level 25
+        let overlayLevel: Int
+        if case .singleWindow = captureMode {
+            overlayLevel = 26
+        } else {
+            overlayLevel = 25
+        }
+        window.level = NSWindow.Level(rawValue: overlayLevel)
         window.isOpaque = false
         window.backgroundColor = .clear
         window.ignoresMouseEvents = true
@@ -398,6 +408,25 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         guard let source = texture else { return nil }
         let size = CGSize(width: source.width, height: source.height)
         return renderer.renderToImage(sourceTexture: source, viewportSize: size)
+    }
+
+    // MARK: - Child Window Attachment (for TV overlay)
+
+    /// Attach overlay windows as children of a parent window.
+    /// This makes clicks pass through the overlay directly to the parent via ignoresMouseEvents,
+    /// and the child automatically moves/resizes with the parent — no tracking timer needed.
+    @MainActor
+    func attachToParentWindow(_ parent: NSWindow) {
+        // Stop position tracking — child windows follow parent automatically
+        trackingTimer?.cancel()
+        trackingTimer = nil
+
+        for window in windows {
+            // Reset level — child windows inherit stacking from parent
+            window.level = .normal
+            parent.addChildWindow(window, ordered: .above)
+        }
+        print("[Overlay] Attached as child of window \(parent.windowNumber)")
     }
 
     // MARK: - Window Tracking (off main thread)
