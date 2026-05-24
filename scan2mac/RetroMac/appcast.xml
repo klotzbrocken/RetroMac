@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>RetroMac</title>
+    <link>https://raw.githubusercontent.com/klotzbrocken/RetroMac/main/appcast.xml</link>
+    <description>Most recent changes with links to updates.</description>
+    <language>en</language>
+    <item>
+      <title>Version 1.1</title>
+      <pubDate>Sat, 24 May 2026 17:53:00 +0000</pubDate>
+      <sparkle:version>1.1</sparkle:version>
+      <sparkle:shortVersionString>1.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.1</h2>
+        <ul>
+          <li>Automatic updates via Sparkle</li>
+          <li>Fixed theme switching crash (BeOS to Snow Leopard)</li>
+          <li>Dynamic trash icon (empty/full state)</li>
+          <li>Improved Screen Recording permission onboarding</li>
+          <li>User-friendly error messages for missing permissions</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.1/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="KnYJhTzveJ62KlEowHElR0yvyjUtVVr3mudvHt+EDXYOaW+OYzhWN8JpddVoAEMLNHvink6SabNuPsro6FbLCw=="
+        length="27599247"
+      />
+    </item>
+  </channel>
+</rss>
