@@ -46,6 +46,8 @@ CONTENTS="$APP_BUNDLE/Contents"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources" "$CONTENTS/Library/SystemExtensions"
 
 cp ".build/$MODE/RetroMac" "$CONTENTS/MacOS/RetroMac"
+# Add rpath so dyld finds Sparkle.framework in Contents/Frameworks
+install_name_tool -add_rpath @executable_path/../Frameworks "$CONTENTS/MacOS/RetroMac" 2>/dev/null || true
 cp Info.plist "$CONTENTS/Info.plist"
 cp Resources/AppIcon.icns "$CONTENTS/Resources/AppIcon.icns"
 cp Resources/menubar_icon.png "$CONTENTS/Resources/menubar_icon.png"
