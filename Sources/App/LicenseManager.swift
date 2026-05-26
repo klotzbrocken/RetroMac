@@ -5,7 +5,7 @@ final class LicenseManager: ObservableObject {
 
     // MARK: - Configuration
     static let gumroadProductID = "CgpY00IEkPvaLvnOJXk26g=="
-    static let purchaseURL = "https://klotzzy2.gumroad.com/l/ygjrx"
+    static let purchaseURL = "https://klotzzy2.gumroad.com/l/retromac-licence"
     static let kofiURL = "https://ko-fi.com/N4N11K1NC"
 
     // Basic presets — always free, no license needed
@@ -48,12 +48,14 @@ final class LicenseManager: ObservableObject {
     /// Check if a specific preset is available
     func isPresetAvailable(_ presetID: String) -> Bool {
         if isLicensed { return true }
+        if presetID.hasPrefix("custom:") { return true }  // user's own shaders are always available
         return Self.freePresetIDs.contains(presetID)
     }
 
-    /// Whether to show the friendly nag (at most once per day)
+    /// Whether to show the friendly nag (at most once per day, not on first launch)
     var shouldShowNag: Bool {
         if isLicensed { return false }
+        if !AppSettings.shared.onboardingComplete { return false }
         if let lastDismissed = defaults.object(forKey: nagDismissedKey) as? Date {
             let daysSince = Calendar.current.dateComponents([.day], from: lastDismissed, to: Date()).day ?? 0
             return daysSince >= 1

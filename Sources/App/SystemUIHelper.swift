@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 enum SystemUIHelper {
     private static let defaults = UserDefaults.standard
@@ -21,8 +21,21 @@ enum SystemUIHelper {
             print("[SystemUI] Saved original state: menuBarAutoHide=\(menuBarAutoHide), dockAutoHide=\(dockAutoHide)")
         }
 
-        runAppleScript("tell application \"System Events\" to tell dock preferences to set autohide menu bar to true")
-        runAppleScript("tell application \"System Events\" to set the autohide of the dock preferences to true")
+        let ok1 = runAppleScript("tell application \"System Events\" to tell dock preferences to set autohide menu bar to true")
+        let ok2 = runAppleScript("tell application \"System Events\" to set the autohide of the dock preferences to true")
+        if !ok1 { setMenuBarAutoHideViaDefaults(true) }
+        if !ok2 {
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            task.arguments = ["write", "com.apple.dock", "autohide", "-bool", "true"]
+            try? task.run()
+            task.waitUntilExit()
+            let killDock = Process()
+            killDock.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+            killDock.arguments = ["Dock"]
+            try? killDock.run()
+            killDock.waitUntilExit()
+        }
     }
 
     static func showMenuBarAndDock() {
@@ -30,8 +43,21 @@ enum SystemUIHelper {
         let menuBarAutoHide = defaults.bool(forKey: savedMenuBarAutoHideKey)
         let dockAutoHide = defaults.bool(forKey: savedDockAutoHideKey)
 
-        runAppleScript("tell application \"System Events\" to tell dock preferences to set autohide menu bar to \(menuBarAutoHide)")
-        runAppleScript("tell application \"System Events\" to set the autohide of the dock preferences to \(dockAutoHide)")
+        let ok1 = runAppleScript("tell application \"System Events\" to tell dock preferences to set autohide menu bar to \(menuBarAutoHide)")
+        let ok2 = runAppleScript("tell application \"System Events\" to set the autohide of the dock preferences to \(dockAutoHide)")
+        if !ok1 { setMenuBarAutoHideViaDefaults(menuBarAutoHide) }
+        if !ok2 {
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            task.arguments = ["write", "com.apple.dock", "autohide", "-bool", dockAutoHide ? "true" : "false"]
+            try? task.run()
+            task.waitUntilExit()
+            let killDock = Process()
+            killDock.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+            killDock.arguments = ["Dock"]
+            try? killDock.run()
+            killDock.waitUntilExit()
+        }
 
         // Clear saved state
         defaults.removeObject(forKey: savedMenuBarAutoHideKey)
@@ -50,6 +76,56 @@ enum SystemUIHelper {
 
     static func testAutomation() -> Bool {
         runAppleScript("tell application \"System Events\" to return name of first process")
+    }
+
+    // MARK: - Menu Bar Auto-Hide
+
+    static func setMenuBarAutoHide(_ hide: Bool) {
+        // Primary: AppleScript via System Events (updates both preference and live state)
+        let success = runAppleScript(
+            "tell application \"System Events\" to tell dock preferences to set autohide menu bar to \(hide)"
+        )
+
+        if !success {
+            // Fallback when Automation permission is denied (TCC error -1743):
+            // Write the defaults key directly + notify the Dock via DistributedNotification
+            setMenuBarAutoHideViaDefaults(hide)
+        }
+
+        print("[SystemUI] Menu bar auto-hide: \(hide) (AppleScript: \(success ? "ok" : "fallback"))")
+    }
+
+    private static func setMenuBarAutoHideViaDefaults(_ hide: Bool) {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+        task.arguments = ["write", "NSGlobalDomain", "_HIHideMenuBar", "-bool", hide ? "true" : "false"]
+        try? task.run()
+        task.waitUntilExit()
+
+        // Post the notification that the Dock listens to for menu bar state changes
+        DistributedNotificationCenter.default().postNotificationName(
+            NSNotification.Name("AppleInterfaceMenuBarHidingChangedNotification"),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+    }
+
+    // MARK: - Desktop Icons
+
+    static func setDesktopIconsHidden(_ hidden: Bool) {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+        task.arguments = ["write", "com.apple.finder", "CreateDesktop", "-bool", hidden ? "false" : "true"]
+        try? task.run()
+        task.waitUntilExit()
+
+        let killall = Process()
+        killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+        killall.arguments = ["Finder"]
+        try? killall.run()
+        killall.waitUntilExit()
+        print("[SystemUI] Desktop icons hidden: \(hidden)")
     }
 
     private static func readAppleScriptBool(_ source: String) -> Bool {

@@ -1,0 +1,77 @@
+{
+  "name": "Windows XP",
+  "version": "1.0",
+  "author": "RetroMac",
+  "wallpaper": "wallpaper.jpg",
+  "wallpapers": [
+    {
+      "name": "Bliss",
+      "file": "wallpaper.jpg"
+    },
+    {
+      "name": "Azul",
+      "file": "wallpaper2.png"
+    }
+  ],
+  "dock": {
+    "height": 44,
+    "iconSize": 32,
+    "padding": 6,
+    "spacing": 4,
+    "cornerRadius": 0,
+    "backgroundColor": "#1856CDFF",
+    "backgroundGradientTop": "#3168D5",
+    "backgroundGradientBottom": "#1042A8",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#0C3B94FF",
+    "borderWidth": 1,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#3C7DFFFF",
+    "bevelBottomColor": "#0A246AFF",
+    "bevelWidth": 1,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "fullWidth": true,
+    "startButton": true,
+    "startButtonLabel": "start",
+    "startButtonIcon": "startxpblue.png",
+    "startButtonImage": "startxpbluebutton.png",
+    "startButtonColor": "#40AE2A",
+    "startButtonGradientTop": "#52BD38",
+    "startButtonGradientBottom": "#2D8E1B",
+    "showClock": true,
+    "magnification": false,
+    "showTrash": false,
+    "startMenuStyle": "xp"
+  },
+  "icon": {
+    "renderStyle": "smooth",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.05,
+    "hoverAnimationDuration": 0.08
+  },
+  "indicator": {
+    "style": "highlight",
+    "color": "#5B9BD5",
+    "size": 3,
+    "offset": 2
+  },
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "zfast-lcd",
+  "iconMappings": {
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "safari.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.Notes": "notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.systempreferences": "settings.png",
+    "com.apple.Music": "music.png",
+    "com.apple.Terminal": "terminal.png"
+  }
+}

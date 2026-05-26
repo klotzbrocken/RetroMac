@@ -77,6 +77,8 @@ enum BuiltinShaders {
         "ntsc": ntscShader,
         "pal": palShader,
         "lcd-grid": lcdGridShader,
+        "lcd3x": lcd3xShader,
+        "zfast-lcd": zfastLcdShader,
         "gameboy": gameboyShader,
         "amber-monitor": amberMonitorShader,
         "green-phosphor": greenPhosphorShader,
@@ -101,6 +103,10 @@ enum BuiltinShaders {
         "trinitron-tv": trinitronTVShader,
         "vcr-tracking": vcrTrackingShader,
         "cinema-film": cinemaFilmShader,
+        "late-night-crt": lateNightCrtShader,
+        "newsroom-1987": newsroom1987Shader,
+        "vhs-tape": vhsTapeShader,
+        "terminal-green": terminalGreenShader,
     ]
 
     // MARK: - zfast CRT — scanlines + chromatic aberration, NO barrel distortion
@@ -347,6 +353,90 @@ enum BuiltinShaders {
         lcd += float3(0.02, 0.02, 0.025);
 
         color = mix(original, clamp(lcd, 0.0, 1.0), intensity);
+        color = applyVignette(color, uv, uniforms.vignetteIntensity);
+
+        return float4(color, sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
+    // MARK: - LCD 3x — sine-based RGB subpixel columns + scanlines (Public Domain, Gigaherz)
+
+    private static let lcd3xShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outputSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+        float3 original = source.sample(s, uv).rgb;
+
+        float PI = 3.14159265;
+        float2 pixelPos = uv * outputSize;
+
+        // Horizontal RGB subpixel stripes via phase-offset sines
+        float omegaX = PI * 2.0 * pixelPos.x;
+        float brighten_lcd = 1.5;
+        float r_factor = (brighten_lcd + sin(omegaX + PI / 2.0)) / (brighten_lcd + 1.0);
+        float g_factor = (brighten_lcd + sin(omegaX + PI / 2.0 - 2.0 * PI / 3.0)) / (brighten_lcd + 1.0);
+        float b_factor = (brighten_lcd + sin(omegaX + PI / 2.0 - 4.0 * PI / 3.0)) / (brighten_lcd + 1.0);
+
+        // Vertical scanline darkening between pixel rows
+        float brighten_scanlines = 12.0;
+        float omegaY = PI * 2.0 * pixelPos.y;
+        float y_factor = (brighten_scanlines + sin(omegaY)) / (brighten_scanlines + 1.0);
+
+        float3 lcd = original * float3(r_factor, g_factor, b_factor) * y_factor;
+
+        float3 color = mix(original, clamp(lcd, 0.0, 1.0), intensity);
+        color = applyVignette(color, uv, uniforms.vignetteIntensity);
+
+        return float4(color, sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
+    // MARK: - zfast LCD — pixel grid with border darkening (GPLv2, Greg Hogan)
+
+    private static let zfastLcdShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outputSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+        float3 original = source.sample(s, uv).rgb;
+
+        float2 pixelPos = uv * outputSize;
+        float2 pixelCenter = floor(pixelPos) + 0.5;
+        float2 dist = abs(pixelPos - pixelCenter);
+
+        // Border darkening polynomial: creates dark grid lines between pixels
+        float BORDERMULT = 14.0;
+        float borderX = dist.x * dist.x * (1.0 - 2.7 * dist.x * dist.x) * BORDERMULT;
+        float borderY = dist.y * dist.y * (1.0 - 2.7 * dist.y * dist.y) * BORDERMULT;
+        float border = 1.0 - clamp(borderX + borderY, 0.0, 0.6);
+
+        // Subtle RGB subpixel tinting
+        float subCol = fmod(pixelPos.x, 3.0);
+        float3 subpixelMask = float3(0.9);
+        if (subCol < 1.0) {
+            subpixelMask = float3(1.0, 0.85, 0.85);
+        } else if (subCol < 2.0) {
+            subpixelMask = float3(0.85, 1.0, 0.85);
+        } else {
+            subpixelMask = float3(0.85, 0.85, 1.0);
+        }
+
+        // Slight backlight glow
+        float3 lcd = original * subpixelMask * border;
+        lcd += float3(0.015, 0.015, 0.02);
+
+        float3 color = mix(original, clamp(lcd, 0.0, 1.0), intensity);
         color = applyVignette(color, uv, uniforms.vignetteIntensity);
 
         return float4(color, sampleSourceAlpha(source, s, in.texCoord));
@@ -1852,6 +1942,341 @@ enum BuiltinShaders {
         // Slight desaturation (film stock look)
         float lumaFinal = dot(color, float3(0.2126, 0.7152, 0.0722));
         color = mix(float3(lumaFinal), color, mix(1.0, 0.9, intensity));
+
+        color = mix(original, clamp(color, 0.0, 1.0), intensity);
+        color = applyVignette(color, uv, uniforms.vignetteIntensity);
+        return float4(color, sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
+    // MARK: - Late Night CRT — warm 90s late-night TV studio look
+
+    private static let lateNightCrtShader = """
+    float rand_lncrt(float2 co) {
+        return fract(sin(dot(co, float2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    float2 curveUV_lncrt(float2 uv, float amount) {
+        uv = uv * 2.0 - 1.0;
+        float2 offset = abs(uv.yx) / float2(8.0, 5.0) * amount;
+        uv = uv + uv * offset * offset;
+        return uv * 0.5 + 0.5;
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float intensity = uniforms.intensity;
+        float2 uv = curveUV_lncrt(in.texCoord, 0.3 * intensity);
+        float2 texSize = uniforms.sourceSize.xy;
+        float time = float(uniforms.frameCount) / 60.0;
+
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+            return float4(0, 0, 0, sampleSourceAlpha(source, s, in.texCoord));
+
+        float3 original = source.sample(s, uv).rgb;
+
+        // Soft phosphor glow / bloom — average nearby pixels
+        float3 bloom = float3(0.0);
+        for (int i = -2; i <= 2; i++) {
+            for (int j = -2; j <= 2; j++) {
+                float2 off = float2(float(i), float(j)) / texSize * 1.5;
+                bloom += source.sample(s, uv + off).rgb;
+            }
+        }
+        bloom /= 25.0;
+        float3 color = mix(original, bloom, 0.25 * intensity);
+
+        // Warm color temperature — orange/amber push
+        color *= float3(1.12, 1.02, 0.88);
+
+        // Subtle scanlines
+        float scanStr = 0.12 * intensity;
+        float scanline = 1.0 - scanStr + scanStr * sin(uv.y * texSize.y * M_PI_F);
+        color *= scanline;
+
+        // Slight saturation boost (studio cameras were vivid)
+        float luma = dot(color, float3(0.299, 0.587, 0.114));
+        color = mix(float3(luma), color, 1.1);
+
+        // Analog noise — subtle grain
+        float noise = (rand_lncrt(uv * texSize + time) - 0.5) * 0.03 * intensity;
+        color += noise;
+
+        // Phosphor bloom on bright areas
+        float brightness = dot(original, float3(0.333));
+        float glowAmt = smoothstep(0.5, 1.0, brightness) * 0.12 * intensity;
+        color += bloom * glowAmt;
+
+        // Warm vignette — darker and warmer at edges
+        float2 edge = uv * 2.0 - 1.0;
+        float edgeDist = dot(edge, edge);
+        color *= 1.0 - edgeDist * 0.08 * intensity;
+        color += float3(0.02, 0.005, -0.01) * edgeDist * intensity;
+
+        // Very subtle flicker
+        color *= 1.0 + sin(time * 5.5) * 0.008 * intensity;
+
+        color = mix(original, clamp(color, 0.0, 1.0), intensity);
+        color = applyVignette(color, uv, uniforms.vignetteIntensity);
+        return float4(color, sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
+    // MARK: - Newsroom 1987 — broadcast TV newsroom, late 1980s
+
+    private static let newsroom1987Shader = """
+    float rand_nr87(float2 co) {
+        return fract(sin(dot(co, float2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 texSize = uniforms.sourceSize.xy;
+        float2 outputSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+        float time = float(uniforms.frameCount) / 60.0;
+
+        float3 original = source.sample(s, uv).rgb;
+
+        // Edge enhancement / ringing — broadcast cameras sharpened aggressively
+        float3 center = original;
+        float3 left = source.sample(s, uv - float2(1.0 / texSize.x, 0)).rgb;
+        float3 right = source.sample(s, uv + float2(1.0 / texSize.x, 0)).rgb;
+        float3 sharp = center + (center - (left + right) * 0.5) * 0.4 * intensity;
+
+        // Horizontal chroma smear — slight color bleed
+        float chromaSpread = 0.002 * intensity;
+        float cr = source.sample(s, uv + float2(chromaSpread, 0)).r;
+        float cb = source.sample(s, uv - float2(chromaSpread * 0.7, 0)).b;
+        float3 color = float3(mix(sharp.r, cr, 0.3 * intensity),
+                              sharp.g,
+                              mix(sharp.b, cb, 0.3 * intensity));
+
+        // Contrast boost — broadcast cameras had punchy images
+        color = (color - 0.5) * (1.0 + 0.15 * intensity) + 0.5;
+
+        // Cool/neutral white balance — fluorescent lighting
+        color *= float3(0.97, 1.0, 1.04);
+
+        // Interlaced scanlines — visible even-odd line pattern
+        float lineNum = floor(uv.y * texSize.y);
+        float interlace = fmod(lineNum + floor(time * 30.0), 2.0);
+        float scanStr = 0.18 * intensity;
+        color *= 1.0 - scanStr * (1.0 - interlace);
+
+        // Phosphor dot pattern (shadow mask)
+        float2 pixelPos = uv * outputSize;
+        float col = fmod(pixelPos.x, 3.0);
+        float3 mask;
+        if (col < 1.0) {
+            mask = float3(1.0, 0.7, 0.7);
+        } else if (col < 2.0) {
+            mask = float3(0.7, 1.0, 0.7);
+        } else {
+            mask = float3(0.7, 0.7, 1.0);
+        }
+        color *= mix(float3(1.0), mask, 0.15 * intensity);
+
+        // Bottom phosphor aging — lower 15% slightly darker
+        float bottomDarken = smoothstep(0.85, 1.0, uv.y) * 0.15 * intensity;
+        color *= 1.0 - bottomDarken;
+
+        // Very subtle noise — broadcast noise floor
+        float noise = (rand_nr87(uv * texSize + time) - 0.5) * 0.02 * intensity;
+        color += noise;
+
+        color = mix(original, clamp(color, 0.0, 1.0), intensity);
+        color = applyVignette(color, uv, uniforms.vignetteIntensity);
+        return float4(color, sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
+    // MARK: - VHS Tape — well-worn rental tape, heavy degradation
+
+    private static let vhsTapeShader = """
+    float rand_vhst(float2 co) {
+        return fract(sin(dot(co, float2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float time = float(uniforms.frameCount) / 60.0;
+        float2 texSize = uniforms.sourceSize.xy;
+        float intensity = uniforms.intensity;
+
+        float3 original = source.sample(s, uv).rgb;
+
+        // Heavy tracking jitter — per-scanline random offset
+        float lineIdx = floor(uv.y * texSize.y);
+        float jitter = (rand_vhst(float2(lineIdx, time)) - 0.5) * 0.008 * intensity;
+        uv.x += jitter;
+
+        // Slow wobble — tape tension variation
+        float wobble = sin(uv.y * 3.0 + time * 0.8) * 0.002 * intensity;
+        uv.x += wobble;
+
+        // Frequent glitch bands — larger distortions
+        float band = step(0.93, rand_vhst(float2(floor(time * 4.0), floor(uv.y * 12.0))));
+        float glitchAmt = band * (rand_vhst(float2(time * 2.0, uv.y)) * 0.06 - 0.03) * intensity;
+        uv.x += glitchAmt;
+
+        // Occasional large frame glitch — whole sections shift
+        float bigGlitch = step(0.985, rand_vhst(float2(floor(time * 2.0), 0.0)));
+        float glitchZone = smoothstep(0.0, 0.15, abs(uv.y - rand_vhst(float2(time, 0.5))));
+        uv.x += bigGlitch * (1.0 - glitchZone) * 0.08 * intensity;
+
+        // Tape dropout lines — horizontal white/dark streaks
+        float dropSeed = floor(uv.y * texSize.y * 0.5);
+        float dropout = step(0.994, rand_vhst(float2(dropSeed, floor(time * 8.0))));
+        float dropBright = rand_vhst(float2(dropSeed + 1.0, time)) > 0.5 ? 0.9 : 0.05;
+        float dropStrength = dropout * intensity;
+
+        // Heavy head-switching noise at bottom
+        float headSwitch = smoothstep(0.90, 0.96, uv.y);
+        uv.x += headSwitch * sin(time * 50.0 + uv.y * 150.0) * 0.06 * intensity;
+
+        // Strong color bleeding / chroma shift
+        float spread = 0.008 * intensity;
+        float r = source.sample(s, uv + float2(spread, 0.0005)).r;
+        float g = source.sample(s, uv).g;
+        float b = source.sample(s, uv - float2(spread * 0.9, 0.0003)).b;
+        float3 color = float3(r, g, b);
+
+        // Apply dropout
+        color = mix(color, float3(dropBright), dropStrength);
+
+        // Heavy noise — visible snow
+        float noise = (rand_vhst(float2(uv.x * time * 3.0, uv.y * time * 3.0)) - 0.5) * 0.15 * intensity;
+        color += noise;
+
+        // Horizontal noise bands — rolling bars
+        float noiseBand = sin(uv.y * 40.0 + time * 6.0) * 0.04 * intensity;
+        noiseBand *= rand_vhst(float2(floor(uv.y * 20.0), floor(time * 3.0)));
+        color += noiseBand;
+
+        // Scanlines
+        float scanline = 1.0 - 0.1 * intensity + 0.1 * intensity * sin(uv.y * texSize.y * M_PI_F * 0.5);
+        color *= scanline;
+
+        // Strong desaturation and contrast loss
+        float luma = dot(color, float3(0.299, 0.587, 0.114));
+        color = mix(color, float3(luma), 0.35 * intensity);
+        color = mix(float3(0.5), color, 1.0 - 0.15 * intensity);
+
+        // Heavy horizontal blur — soft, smeared image
+        float3 blurred = source.sample(s, uv + float2(0.003, 0)).rgb * 0.15
+                       + source.sample(s, uv - float2(0.003, 0)).rgb * 0.15
+                       + source.sample(s, uv + float2(0.0015, 0)).rgb * 0.15
+                       + source.sample(s, uv - float2(0.0015, 0)).rgb * 0.15
+                       + color * 0.4;
+        color = mix(color, blurred, 0.5 * intensity);
+
+        // Head-switch area darkening
+        color *= 1.0 - headSwitch * 0.7 * intensity;
+
+        color = mix(original, clamp(color, 0.0, 1.0), intensity);
+        color = applyVignette(color, in.texCoord, uniforms.vignetteIntensity);
+        return float4(color, sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
+    // MARK: - Terminal Green — classic P1 green phosphor terminal
+
+    private static let terminalGreenShader = """
+    float rand_tgrn(float2 co) {
+        return fract(sin(dot(co, float2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    float2 curveUV_tgrn(float2 uv, float amount) {
+        uv = uv * 2.0 - 1.0;
+        float2 offset = abs(uv.yx) / float2(6.0, 4.0) * amount;
+        uv = uv + uv * offset * offset;
+        return uv * 0.5 + 0.5;
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float intensity = uniforms.intensity;
+        float2 uv = curveUV_tgrn(in.texCoord, 0.4 * intensity);
+        float2 texSize = uniforms.sourceSize.xy;
+        float time = float(uniforms.frameCount) / 60.0;
+
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+            return float4(0, 0, 0, sampleSourceAlpha(source, s, in.texCoord));
+
+        float3 original = source.sample(s, uv).rgb;
+
+        // Convert to monochrome luminance
+        float luma = dot(original, float3(0.299, 0.587, 0.114));
+
+        // Slight contrast boost for terminal crispness
+        luma = clamp((luma - 0.5) * 1.3 + 0.5, 0.0, 1.0);
+
+        // Phosphor afterglow / persistence — approximate by sampling nearby with offset
+        float3 above = source.sample(s, uv + float2(0, 1.0 / texSize.y)).rgb;
+        float lumaAbove = dot(above, float3(0.299, 0.587, 0.114));
+        float3 below = source.sample(s, uv - float2(0, 1.0 / texSize.y)).rgb;
+        float lumaBelow = dot(below, float3(0.299, 0.587, 0.114));
+        // Simulated persistence — trailing glow from adjacent lines
+        float persistence = max(lumaAbove, lumaBelow) * 0.15 * intensity;
+        luma = max(luma, persistence);
+
+        // Map to green phosphor color (#33FF33 -> 0.2, 1.0, 0.2)
+        float3 phosphorColor = float3(0.2, 1.0, 0.2);
+        float3 color = phosphorColor * luma;
+
+        // Bright text bloom/glow — bright areas bleed
+        float3 bloomSrc = float3(0.0);
+        for (int i = -2; i <= 2; i++) {
+            for (int j = -1; j <= 1; j++) {
+                float2 off = float2(float(i), float(j)) / texSize * 1.5;
+                float3 ns = source.sample(s, uv + off).rgb;
+                bloomSrc += ns;
+            }
+        }
+        bloomSrc /= 15.0;
+        float bloomLuma = dot(bloomSrc, float3(0.299, 0.587, 0.114));
+        float bloomAmt = smoothstep(0.3, 0.8, bloomLuma) * 0.2 * intensity;
+        color += phosphorColor * bloomAmt;
+
+        // Visible scanlines — strong
+        float scanStr = 0.3 * intensity;
+        float scanline = 1.0 - scanStr + scanStr * sin(uv.y * texSize.y * M_PI_F);
+        color *= scanline;
+
+        // Pixel grid — subtle vertical lines
+        float pixelGrid = sin(uv.x * texSize.x * M_PI_F * 2.0) * 0.5 + 0.5;
+        color *= mix(1.0, pixelGrid, 0.08 * intensity);
+
+        // Flickering at ~60Hz (subtle)
+        float flicker = 1.0 + sin(time * 7.5) * 0.012 * intensity;
+        color *= flicker;
+
+        // Subtle noise — CRT noise floor
+        float noise = (rand_tgrn(uv * texSize + time) - 0.5) * 0.03 * intensity;
+        color += float3(noise * 0.2, noise, noise * 0.2);
+
+        // Edge curvature darkening
+        float2 edge = uv * 2.0 - 1.0;
+        color *= 1.0 - dot(edge, edge) * 0.06 * intensity;
 
         color = mix(original, clamp(color, 0.0, 1.0), intensity);
         color = applyVignette(color, uv, uniforms.vignetteIntensity);

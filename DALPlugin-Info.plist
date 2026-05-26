@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>RetroMacCamera</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.retromac.app.dal</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>RetroMac Camera</string>
+    <key>CFBundlePackageType</key>
+    <string>BNDL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.1</string>
+    <key>CFBundleVersion</key>
+    <string>1.1</string>
+    <key>CFPlugInFactories</key>
+    <dict>
+        <key>9E6A4A30-1B5E-4E3A-9F2C-8D7B6C5A4E31</key>
+        <string>RetroMacDALPluginFactory</string>
+    </dict>
+    <key>CFPlugInTypes</key>
+    <dict>
+        <key>30010C1C-93BF-11D8-8B5B-000A95AF9C6A</key>
+        <array>
+            <string>9E6A4A30-1B5E-4E3A-9F2C-8D7B6C5A4E31</string>
+        </array>
+    </dict>
+</dict>
+</plist>

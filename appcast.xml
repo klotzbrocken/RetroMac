@@ -6,6 +6,29 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.3</title>
+      <pubDate>Mon, 26 May 2026 12:00:00 +0000</pubDate>
+      <sparkle:version>1.3</sparkle:version>
+      <sparkle:shortVersionString>1.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.3</h2>
+        <ul>
+          <li>Dock auto-hide: reclaim screen space on 1080p monitors — dock slides in on mouse proximity</li>
+          <li>Freedoom: free Doom experience with native CRT shader (auto-download)</li>
+          <li>Quake 1 & 2 via RetroArch with CRT shader and WASD controls</li>
+          <li>Native PK3 shaders for Duke Nukem 3D and Shadow Warrior (zero input lag)</li>
+          <li>Removed all overlay-based game shaders — native engine shaders only</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.3/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="q+8hfbd1mIpqkr8u2U5x3w/sN6Unxn9WCI1FJ1LnA94ilKmr4xrfhgFWgsWlhnFT8+9ARYNDMmLFzvw1YJQyDg=="
+        length="33533669"
+      />
+    </item>
+    <item>
       <title>Version 1.1</title>
       <pubDate>Sat, 24 May 2026 17:53:00 +0000</pubDate>
       <sparkle:version>1.1</sparkle:version>
@@ -24,8 +47,8 @@
       <enclosure
         url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.1/RetroMac.dmg"
         type="application/octet-stream"
-        sparkle:edSignature="c8u0t+M6T+sqR0bMpb+AF10OstluQNvc1uFLl1e55am1TnQ0qCExhvTKpDgDwOLOcrav99qjPXKtmNzCPmoFAw=="
-        length="27599034"
+        sparkle:edSignature="KnYJhTzveJ62KlEowHElR0yvyjUtVVr3mudvHt+EDXYOaW+OYzhWN8JpddVoAEMLNHvink6SabNuPsro6FbLCw=="
+        length="27599247"
       />
     </item>
   </channel>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>RetroMac Camera</string>
+    <key>CFBundleExecutable</key>
+    <string>RetroMacCameraExtension</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.retromac.app.camera</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>RetroMac Camera</string>
+    <key>CFBundlePackageType</key>
+    <string>SYSX</string>
+    <key>CFBundleShortVersionString</key>
+    <string>2.1</string>
+    <key>CFBundleVersion</key>
+    <string>23</string>
+    <key>CFBundleSupportedPlatforms</key>
+    <array>
+        <string>MacOSX</string>
+    </array>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>CMIOExtension</key>
+    <dict>
+        <key>CMIOExtensionMachServiceName</key>
+        <string>FTJLR8JRNS.com.retromac.app.camera</string>
+    </dict>
+    <key>NSSystemExtensionUsageDescription</key>
+    <string>RetroMac Camera Extension provides a virtual camera with CRT shader effects.</string>
+</dict>
+</plist>

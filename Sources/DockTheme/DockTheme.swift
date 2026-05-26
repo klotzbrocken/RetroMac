@@ -9,8 +9,14 @@ struct DockThemeConfig: Codable {
     var indicator: IndicatorStyle
     var fallbackIcon: String? = nil
     var wallpaper: String? = nil
+    var wallpapers: [WallpaperOption]? = nil
     var defaultPreset: String? = nil
     var iconMappings: [String: String]
+
+    struct WallpaperOption: Codable {
+        var name: String
+        var file: String
+    }
 
     struct DockStyle: Codable {
         var height: CGFloat = 80
@@ -39,6 +45,22 @@ struct DockThemeConfig: Codable {
         var startButtonLabel: String?
         var startButtonIcon: String?
         var showClock: Bool?
+        var magnification: Bool?
+        var magnificationScale: CGFloat?
+        var shelfStyle: String?  // "flat" (default) or "3d" (Snow Leopard perspective)
+        var alignment: String?   // "center" (default), "left", "right"
+        var edgeOffset: CGFloat? // distance from screen edge in px (default 8)
+        var showTrash: Bool?     // show trash icon at end of dock
+        var showGrip: Bool?      // show grip dots handle (BeOS deskbar style)
+        var startMenuStyle: String?  // "classic" (Win98-style), "xp" (Luna Blue two-column)
+        var startButtonColor: String?
+        var startButtonGradientTop: String?
+        var startButtonGradientBottom: String?
+        var startButtonImage: String?  // sprite sheet PNG with 3 vertical states (normal/hover/pressed)
+        var startButtonStyle: String?  // "raised" (default, Win98), "sunken" (OS/2 WarpCenter tray), "flat"
+        var clockFormat: String?       // strftime-style: "h:mm a" (default), "hh:mm:ss a", "HH:mm", etc.
+        var clockFontSize: CGFloat?    // explicit clock font size override
+        var showDiskFree: Bool?        // show disk free space tray (OS/2 WarpCenter style)
     }
 
     struct IconStyle: Codable {
@@ -74,6 +96,16 @@ extension DockThemeConfig {
     var isFullWidth: Bool { dock.fullWidth == true }
     var hasStartButton: Bool { dock.startButton == true }
     var hasClock: Bool { dock.showClock == true }
+    var hasMagnification: Bool { dock.magnification == true }
+    var magnificationMaxScale: CGFloat { dock.magnificationScale ?? 2.0 }
+    var has3DShelf: Bool { dock.shelfStyle == "3d" }
+    var dockAlignment: String { dock.alignment ?? "center" }
+    var dockEdgeOffset: CGFloat { dock.edgeOffset ?? 8 }
+    var hasTrash: Bool { dock.showTrash == true }
+    var hasGrip: Bool { dock.showGrip == true }
+    var startMenuStyle: String { dock.startMenuStyle ?? "classic" }
+    var isXPStartMenu: Bool { startMenuStyle == "xp" }
+    var hasDiskFree: Bool { dock.showDiskFree == true }
 }
 
 extension NSColor {

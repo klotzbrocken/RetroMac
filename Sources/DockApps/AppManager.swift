@@ -77,6 +77,15 @@ final class AppManager {
         NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
     }
 
+    func addFolder(path: String) {
+        let folderID = "__folder__\(path)"
+        guard !apps.contains(where: { $0.bundleID == folderID }) else { return }
+        guard FileManager.default.fileExists(atPath: path) else { return }
+        apps.append(DockApp(bundleID: folderID, customIconPath: nil, order: apps.count, folderPath: path))
+        save()
+        NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
+    }
+
     func removeApp(bundleID: String) {
         apps.removeAll { $0.bundleID == bundleID }
         save()
@@ -104,4 +113,5 @@ final class AppManager {
 extension Notification.Name {
     static let dockAppsChanged = Notification.Name("DockAppsChanged")
     static let dockThemeChanged = Notification.Name("DockThemeChanged")
+    static let virtualCameraStateChanged = Notification.Name("VirtualCameraStateChanged")
 }

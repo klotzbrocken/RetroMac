@@ -10,16 +10,47 @@ struct DockSettingsTab: View {
     @State private var showingSaveSheet: Bool = false
     @State private var iconOverrideRefresh: Bool = false
 
+    /// Returns the config of the currently selected theme (works even when dock is disabled)
+    private var selectedThemeConfig: DockThemeConfig? {
+        themes.first(where: { $0.name == settings.dockTheme })?.config
+            ?? ThemeManager.shared.activeTheme?.config
+    }
+
+    /// Returns the ThemeBundle of the currently selected theme
+    private var selectedThemeBundle: ThemeBundle? {
+        themes.first(where: { $0.name == settings.dockTheme })
+            ?? ThemeManager.shared.activeTheme
+    }
+
     var body: some View {
         Form {
-            Section("Appearance") {
-                Toggle("Hide System Dock", isOn: $settings.dockHideSystemDock)
+            Section("Theme") {
                 Picker("Theme", selection: $settings.dockTheme) {
                     ForEach(themes, id: \.name) { theme in
                         Text(theme.name).tag(theme.name)
                     }
                 }
                 .pickerStyle(.menu)
+                .onChange(of: settings.dockTheme) { _ in
+                    // Theme change is handled by DockController's observer
+                    // which calls ThemeManager.reload + recreateWindow
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        themes = ThemeManager.shared.availableThemes
+                    }
+                }
+            }
+
+            Section("Appearance") {
+                Toggle("Hide System Dock", isOn: $settings.dockHideSystemDock)
+                Toggle("Hide Menu Bar", isOn: $settings.hideMenuBar)
+                Toggle("Hide Desktop Icons", isOn: $settings.hideDesktopIcons)
+
+                if selectedThemeConfig?.hasMagnification == true {
+                    Toggle("Magnification", isOn: $settings.dockMagnification)
+                }
+
+                Toggle("Auto-hide Dock", isOn: $settings.dockAutoHide)
+                Toggle("DockFix (avoid window overlap)", isOn: $settings.dockFix)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -46,34 +77,55 @@ struct DockSettingsTab: View {
                 }
             }
 
-            Section("Theme Presets") {
-                ForEach(themes, id: \.name) { theme in
-                    HStack {
-                        Text(theme.name)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Picker("", selection: Binding(
-                            get: {
-                                if let override = settings.themePresetOverrides[theme.name] {
-                                    return override  // empty = "None"
-                                }
-                                return theme.config.defaultPreset ?? ""
-                            },
-                            set: { newVal in
-                                settings.themePresetOverrides[theme.name] = newVal
-                            }
-                        )) {
-                            Text("None").tag("")
-                            ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
-                                Text(preset.displayName).tag(preset.id)
-                            }
+            Section("Shader Preset") {
+                Picker("Shader", selection: Binding(
+                    get: {
+                        if let override = settings.themePresetOverrides[settings.dockTheme] {
+                            return override
                         }
-                        .pickerStyle(.menu)
-                        .frame(maxWidth: 200)
+                        return selectedThemeConfig?.defaultPreset ?? ""
+                    },
+                    set: { newVal in
+                        settings.themePresetOverrides[settings.dockTheme] = newVal
+                    }
+                )) {
+                    Text("None").tag("")
+                    ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
+                        Text(preset.displayName).tag(preset.id)
                     }
                 }
-                Text("Choose a default shader preset for each theme. Activated automatically when switching themes.")
+                .pickerStyle(.menu)
+                Text("Shader preset activated automatically when switching to \"\(settings.dockTheme)\".")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            if selectedThemeBundle?.wallpaperURL() != nil {
+                Section("Wallpaper") {
+                    let wpOptions = selectedThemeBundle?.wallpaperOptions() ?? []
+                    if wpOptions.count > 1 {
+                        // Multiple wallpapers — show picker
+                        ForEach(wpOptions, id: \.url) { option in
+                            Button(option.name) {
+                                applyWallpaperFromTheme(url: option.url)
+                            }
+                        }
+                    } else {
+                        let wpName = selectedThemeConfig?.wallpaper ?? "—"
+                        LabeledContent("Current", value: wpName)
+                    }
+                    HStack {
+                        Button("Custom Wallpaper...") {
+                            browseForWallpaper()
+                        }
+                        Button("Restore Theme Wallpaper") {
+                            ThemeManager.shared.applyWallpaper()
+                        }
+                    }
+                    Text("Theme wallpaper is applied to all displays when this theme is active.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Display") {
@@ -107,6 +159,9 @@ struct DockSettingsTab: View {
                     Button("Add App...") {
                         browseForApp()
                     }
+                    Button("Add Folder...") {
+                        browseForFolder()
+                    }
                     Spacer()
                     Button("Reset to Defaults") {
                         let fm = FileManager.default
@@ -121,7 +176,22 @@ struct DockSettingsTab: View {
                 }
             }
 
-            Section("Themes") {
+            Section("System Icons") {
+                Toggle("Apply theme icons to system apps", isOn: $settings.applySystemIcons)
+                HStack {
+                    Button("Apply Now") {
+                        ThemeManager.shared.applyIconsToSystem()
+                    }
+                    Button("Revert All") {
+                        ThemeManager.shared.revertSystemIcons()
+                    }
+                }
+                Text("Applies your dock theme icons to the actual apps in Finder, Launchpad, and Spotlight. Revert restores original icons.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Theme Management") {
                 HStack {
                     Button("Open Themes Folder") {
                         NSWorkspace.shared.open(ThemeManager.shared.userThemesDirectory)
@@ -175,6 +245,24 @@ struct DockSettingsTab: View {
             refreshApps()
             themes = ThemeManager.shared.availableThemes
         }
+        .sheet(isPresented: $showingIconPicker) {
+            ThemeIconPickerSheet(
+                bundleID: iconPickerBundleID,
+                theme: selectedThemeBundle ?? ThemeManager.shared.activeTheme,
+                onSelectThemeIcon: { iconPath in
+                    ThemeManager.shared.setCustomIcon(for: iconPickerBundleID, path: iconPath)
+                    iconOverrideRefresh.toggle()
+                    showingIconPicker = false
+                },
+                onBrowse: {
+                    showingIconPicker = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        browseForCustomIconFile(bundleID: iconPickerBundleID)
+                    }
+                },
+                onCancel: { showingIconPicker = false }
+            )
+        }
     }
 
     @ViewBuilder
@@ -219,7 +307,21 @@ struct DockSettingsTab: View {
         dockApps = AppManager.shared.apps
     }
 
+    @State private var showingIconPicker = false
+    @State private var iconPickerBundleID: String = ""
+
     private func browseForCustomIcon(bundleID: String) {
+        // Show theme icon picker if theme has icons
+        if let theme = selectedThemeBundle ?? ThemeManager.shared.activeTheme,
+           !theme.availableIcons().isEmpty {
+            iconPickerBundleID = bundleID
+            showingIconPicker = true
+            return
+        }
+        browseForCustomIconFile(bundleID: bundleID)
+    }
+
+    private func browseForCustomIconFile(bundleID: String) {
         NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [UTType.png, UTType.icns, UTType.tiff, UTType.jpeg]
@@ -252,6 +354,49 @@ struct DockSettingsTab: View {
 
         AppManager.shared.addApp(bundleID: bundleID)
         refreshApps()
+    }
+
+    private func browseForFolder() {
+        NSApp.activate(ignoringOtherApps: true)
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Select a folder to add to the Dock"
+        panel.prompt = "Add Folder"
+        panel.level = .floating
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        AppManager.shared.addFolder(path: url.path)
+        refreshApps()
+    }
+
+    private func applyWallpaperFromTheme(url: URL) {
+        let ws = NSWorkspace.shared
+        for screen in NSScreen.screens {
+            try? ws.setDesktopImageURL(url, for: screen, options: [:])
+        }
+        print("[Dock] Theme wallpaper set: \(url.lastPathComponent)")
+    }
+
+    private func browseForWallpaper() {
+        NSApp.activate(ignoringOtherApps: true)
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [UTType.png, UTType.jpeg, UTType.tiff, UTType.bmp]
+        panel.message = "Choose a wallpaper for \"\(settings.dockTheme)\" theme"
+        panel.prompt = "Set Wallpaper"
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.level = .floating
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        // Set the wallpaper directly via NSWorkspace
+        let ws = NSWorkspace.shared
+        for screen in NSScreen.screens {
+            try? ws.setDesktopImageURL(url, for: screen, options: [:])
+        }
+        print("[Dock] Custom wallpaper set: \(url.path)")
     }
 
     private func importTheme() {

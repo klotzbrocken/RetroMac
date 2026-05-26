@@ -23,6 +23,7 @@ enum PresetRegistry {
         case retro = "Retro Devices"
         case apple = "Apple"
         case film = "Film / Photo"
+        case webcam = "Webcam Looks"
     }
 
     static let categorizedPresets: [(PresetCategory, [PresetInfo])] = [
@@ -55,6 +56,8 @@ enum PresetRegistry {
         ]),
         (.retro, [
             PresetInfo(id: "lcd-grid", displayName: "LCD Grid", description: "RGB subpixel grid"),
+            PresetInfo(id: "lcd3x", displayName: "LCD 3x", description: "Sine-based subpixel columns, early TFT look"),
+            PresetInfo(id: "zfast-lcd", displayName: "zfast LCD", description: "Pixel grid + border darkening, 2000s LCD"),
             PresetInfo(id: "gameboy", displayName: "Game Boy", description: "DMG LCD palette + pixel grid"),
             PresetInfo(id: "amber-monitor", displayName: "Amber Monitor", description: "Amber phosphor terminal"),
             PresetInfo(id: "green-phosphor", displayName: "Green Phosphor", description: "P1 green terminal"),
@@ -69,6 +72,12 @@ enum PresetRegistry {
             PresetInfo(id: "sepia", displayName: "Sepia", description: "Warm vintage photograph"),
             PresetInfo(id: "bw-film", displayName: "B&W Film", description: "Classic film grain"),
             PresetInfo(id: "bw-noir", displayName: "B&W Noir", description: "High contrast noir"),
+        ]),
+        (.webcam, [
+            PresetInfo(id: "late-night-crt", displayName: "Late Night CRT", description: "Warm 90s late-night TV studio"),
+            PresetInfo(id: "newsroom-1987", displayName: "Newsroom 1987", description: "1987 broadcast newsroom look"),
+            PresetInfo(id: "vhs-tape", displayName: "VHS Tape", description: "Well-worn rental VHS tape"),
+            PresetInfo(id: "terminal-green", displayName: "Terminal Green", description: "Green phosphor terminal"),
         ]),
     ]
 

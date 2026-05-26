@@ -32,9 +32,9 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
         let filter = try buildExclusionFilter(display: display, content: content, excludingWindowIDs: excludingWindowIDs)
 
         let config = SCStreamConfiguration()
-        let scale = AppSettings.shared.halfResolution ? 1 : 2
-        config.width = Int(display.width) * scale
-        config.height = Int(display.height) * scale
+        let (w, h) = await captureSize(for: display)
+        config.width = w
+        config.height = h
         config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(targetFPS))
         config.queueDepth = targetFPS > 30 ? 5 : 3
         config.pixelFormat = kCVPixelFormatType_32BGRA
@@ -57,15 +57,40 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
         let filter = try buildExclusionFilter(display: display, content: resolvedContent, excludingWindowIDs: excludingWindowIDs)
 
         let config = SCStreamConfiguration()
-        let scale = AppSettings.shared.halfResolution ? 1 : 2
-        config.width = Int(display.width) * scale
-        config.height = Int(display.height) * scale
+        let (w, h) = await captureSize(for: display)
+        config.width = w
+        config.height = h
         config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(targetFPS))
         config.queueDepth = targetFPS > 30 ? 5 : 3
         config.pixelFormat = kCVPixelFormatType_32BGRA
         config.showsCursor = false
 
         try await startStream(filter: filter, config: config)
+    }
+
+    /// Determine capture size from NSScreen (matches overlay window) rather than
+    /// SCDisplay (native CG points). On scaled external displays (e.g. Studio Display XDR
+    /// set to "Looks like 2560×1440") SCDisplay.width/height return the unscaled native
+    /// resolution, which is larger than the overlay window → content offset bug.
+    private func captureSize(for display: SCDisplay) async -> (Int, Int) {
+        let halfRes = AppSettings.shared.halfResolution
+        let result: (Int, Int) = await MainActor.run {
+            // Match NSScreen by displayID for accurate scaled resolution
+            if let screen = NSScreen.screens.first(where: { $0.displayID == display.displayID }) {
+                let scale = halfRes ? 1.0 : screen.backingScaleFactor
+                let w = Int(screen.frame.width * scale)
+                let h = Int(screen.frame.height * scale)
+                print("[Capture] Using NSScreen size for display \(display.displayID): \(w)x\(h) (screen: \(Int(screen.frame.width))x\(Int(screen.frame.height)) @\(scale)x)")
+                return (w, h)
+            }
+            // Fallback to SCDisplay dimensions (old behavior)
+            let scale = halfRes ? 1 : 2
+            let w = Int(display.width) * scale
+            let h = Int(display.height) * scale
+            print("[Capture] Using SCDisplay size (no NSScreen match): \(w)x\(h)")
+            return (w, h)
+        }
+        return result
     }
 
     func startWindow(_ scWindow: SCWindow, excludingWindowIDs: [CGWindowID]) async throws {
