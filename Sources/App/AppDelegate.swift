@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var perAppBundleID: String?
     private var wasActiveBeforeSleep = false
     private var overlayStartTask: Task<Void, Never>?
+    private var permissionPollTimer: Timer?
 
     // Save/restore state for TV window overlay
     var savedPreset: String?
@@ -783,14 +784,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // After Sparkle updates the binary is re-signed and macOS revokes
         // the old grant, so this catches the common post-update case.
         if !CGPreflightScreenCaptureAccess() {
-            let alert = NSAlert()
-            alert.messageText = "Screen Recording Permission Required"
-            alert.informativeText = "RetroMac needs Screen Recording permission to apply shader effects.\n\nAfter an update macOS may require you to re-grant this permission. Please toggle RetroMac ON in System Settings, then try again."
-            alert.addButton(withTitle: "Open System Settings")
-            alert.addButton(withTitle: "Cancel")
-            if alert.runModal() == .alertFirstButtonReturn {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                    NSWorkspace.shared.open(url)
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                NSWorkspace.shared.open(url)
+            }
+            let captureMode = effectiveMode
+            let capturePreset = presetName
+            let captureParent = parentWindow
+            permissionPollTimer?.invalidate()
+            permissionPollTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+                if CGPreflightScreenCaptureAccess() {
+                    timer.invalidate()
+                    self?.permissionPollTimer = nil
+                    self?.startOverlay(mode: captureMode, presetOverride: capturePreset, parentWindow: captureParent)
                 }
             }
             return
