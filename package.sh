@@ -31,11 +31,21 @@ else
     echo "=== Skipping build (using existing app) ==="
 fi
 
-# Verify signature
+# Verify signature and identity stability
 echo ""
 echo "=== Verifying code signature ==="
 codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE" 2>&1 | tail -5
 echo "  ✓ Signature valid"
+
+# Verify release identity: Team ID, Bundle ID, designated requirement
+echo ""
+echo "=== Verifying release identity (TCC stability) ==="
+DR=$(codesign -d -r- "$APP_BUNDLE" 2>&1)
+echo "$DR"
+echo "$DR" | grep -q 'identifier "com.retromac.app"' || { echo "❌ Bundle ID mismatch!"; exit 1; }
+echo "$DR" | grep -q 'FTJLR8JRNS' || { echo "❌ Team ID mismatch!"; exit 1; }
+spctl -a -vvv -t exec "$APP_BUNDLE" 2>&1 | tail -3
+echo "  ✓ Identity stable (com.retromac.app / FTJLR8JRNS)"
 
 # --- Step 2: Create DMG ---
 echo ""

@@ -49,6 +49,11 @@ cp ".build/$MODE/RetroMac" "$CONTENTS/MacOS/RetroMac"
 # Add rpath so dyld finds Sparkle.framework in Contents/Frameworks
 install_name_tool -add_rpath @executable_path/../Frameworks "$CONTENTS/MacOS/RetroMac" 2>/dev/null || true
 cp Info.plist "$CONTENTS/Info.plist"
+# Debug builds use a separate bundle ID to avoid poisoning release TCC grants
+if [ "$MODE" != "release" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.retromac.app.dev" "$CONTENTS/Info.plist"
+    /usr/libexec/PlistBuddy -c "Set :CFBundleName 'RetroMac Dev'" "$CONTENTS/Info.plist"
+fi
 cp Resources/AppIcon.icns "$CONTENTS/Resources/AppIcon.icns"
 cp Resources/menubar_icon.png "$CONTENTS/Resources/menubar_icon.png"
 cp Resources/menubar_icon@2x.png "$CONTENTS/Resources/menubar_icon@2x.png"
@@ -116,22 +121,41 @@ else
 fi
 
 # Sign the main app (extension must be signed first, then app wraps it)
+if [ "$MODE" = "release" ]; then
+    APP_IDENTIFIER="com.retromac.app"
+else
+    APP_IDENTIFIER="com.retromac.app.dev"
+fi
 codesign --force --sign "$SIGN_ID" \
     --entitlements "$APP_ENTITLEMENTS" \
-    --identifier "com.retromac.app" \
+    --identifier "$APP_IDENTIFIER" \
     $SIGN_FLAGS \
     --generate-entitlement-der \
     "$APP_BUNDLE"
 
-# Install to /Applications (required for system extension activation)
-rm -rf /Applications/RetroMac.app
-cp -R "$APP_BUNDLE" /Applications/RetroMac.app
-echo "  ✓ Installed to /Applications"
+# Install — debug goes to "RetroMac Dev.app" to protect release TCC permissions
+if [ "$MODE" = "release" ]; then
+    INSTALL_NAME="RetroMac.app"
+else
+    INSTALL_NAME="RetroMac Dev.app"
+fi
+rm -rf "/Applications/$INSTALL_NAME"
+ditto "$APP_BUNDLE" "/Applications/$INSTALL_NAME"
+# Re-sign at install path (bundle name changed for dev builds)
+if [ "$MODE" != "release" ]; then
+    codesign --force --deep --sign "$SIGN_ID" \
+        --entitlements "$APP_ENTITLEMENTS" \
+        --identifier "$APP_IDENTIFIER" \
+        $SIGN_FLAGS \
+        --generate-entitlement-der \
+        "/Applications/$INSTALL_NAME"
+fi
+echo "  ✓ Installed to /Applications/$INSTALL_NAME"
 
 echo ""
-echo "✓ Built and installed /Applications/RetroMac.app ($MODE)"
+echo "✓ Built and installed /Applications/$INSTALL_NAME ($MODE)"
 echo "  ✓ Camera Extension embedded in Library/SystemExtensions"
-echo "  Run:  open /Applications/RetroMac.app"
+echo "  Run:  open /Applications/$INSTALL_NAME"
 echo ""
 echo "First launch: grant Screen Recording + Camera in System Settings → Privacy & Security"
 
