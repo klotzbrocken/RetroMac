@@ -82,12 +82,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.rebuildMenu()
         }
 
-        // Check Screen Recording — don't call CGRequestScreenCaptureAccess() as
-        // it opens System Settings on every launch when permission is missing.
-        // The onboarding flow handles directing users to grant it.
-        if !CGPreflightScreenCaptureAccess() {
-            print("[RetroMac] Screen Recording not granted — overlay will be skipped until granted")
-        }
+        // Screen Recording permission is checked lazily when overlay is actually
+        // started (line ~759). No upfront check here — both CGPreflight and
+        // CGRequest can trigger the TCC dialog / System Settings redirect.
 
         let hotkeyStr = settings.hotkeyDisplayString
         print("[RetroMac] Ready. \(hotkeyStr) to toggle.")
@@ -755,12 +752,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startOverlay(mode: CaptureMode, presetOverride: String? = nil, parentWindow: NSWindow? = nil) {
-        // Silently skip if Screen Recording permission is not granted
-        if !CGPreflightScreenCaptureAccess() {
-            print("[RetroMac] Screen Recording permission not granted — skipping overlay")
-            return
-        }
-
         // Cancel any in-flight overlay start
         overlayStartTask?.cancel()
         overlayStartTask = nil
