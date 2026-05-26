@@ -1,3 +1,4 @@
+import AppKit
 import AVFoundation
 import CoreVideo
 import IOSurface
@@ -91,6 +92,40 @@ final class VirtualCameraManager: NSObject, ObservableObject {
 
     func start() {
         guard !isRunning else { return }
+
+        // Check Camera permission before attempting capture.
+        // After a build/update the code signature changes and macOS
+        // revokes the Camera permission — same as Screen Recording.
+        let cameraStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        if cameraStatus == .denied || cameraStatus == .restricted {
+            logger.error("Camera permission denied — showing alert")
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "Camera Permission"
+                alert.informativeText = """
+                    After an update you need to re-grant Camera access:
+
+                    1. Remove RetroMac with the minus (\u{2212}) button
+                    2. Re-add RetroMac with the plus (+) button
+                    """
+                alert.addButton(withTitle: "Open System Settings")
+                alert.addButton(withTitle: "Cancel")
+                if alert.runModal() == .alertFirstButtonReturn {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
+            return
+        }
+        if cameraStatus == .notDetermined {
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                if granted {
+                    DispatchQueue.main.async { self?.start() }
+                }
+            }
+            return
+        }
 
         logger.info("Starting virtual camera pipeline…")
 
