@@ -82,10 +82,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.rebuildMenu()
         }
 
-        // Request Screen Recording access so the app appears in System Settings.
-        // This is a no-op if already granted; shows the TCC prompt once if not.
+        // Check Screen Recording — don't call CGRequestScreenCaptureAccess() as
+        // it opens System Settings on every launch when permission is missing.
+        // The onboarding flow handles directing users to grant it.
         if !CGPreflightScreenCaptureAccess() {
-            CGRequestScreenCaptureAccess()
+            print("[RetroMac] Screen Recording not granted — overlay will be skipped until granted")
         }
 
         let hotkeyStr = settings.hotkeyDisplayString
