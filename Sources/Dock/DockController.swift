@@ -477,27 +477,12 @@ final class DockController {
     }
 
     private func isFrontmostAppFullscreen() -> Bool {
-        guard let frontApp = NSWorkspace.shared.frontmostApplication else { return false }
-        if frontApp.bundleIdentifier == Bundle.main.bundleIdentifier { return false }
-
-        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
-        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
-            return false
-        }
-        let pid = frontApp.processIdentifier
-        for info in windowList {
-            guard let ownerPID = info[kCGWindowOwnerPID as String] as? pid_t,
-                  ownerPID == pid,
-                  let layer = info[kCGWindowLayer as String] as? Int,
-                  layer == 0,
-                  let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
-                  let w = bounds["Width"], let h = bounds["Height"] else { continue }
-            if let screen = NSScreen.main,
-               w >= screen.frame.width && h >= screen.frame.height {
-                return true
-            }
-        }
-        return false
+        // When a fullscreen app is active it occupies its own Mission Control Space.
+        // Our dock window lives on the desktop Space, so isOnActiveSpace returns false.
+        // This replaces CGWindowListCopyWindowInfo which requires Screen Recording
+        // permission (TCC) on macOS 15+ and triggered a dialog on every launch.
+        guard let dockWindow = window else { return false }
+        return !dockWindow.isOnActiveSpace
     }
 
     // MARK: - Settings

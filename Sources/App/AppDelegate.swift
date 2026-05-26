@@ -778,6 +778,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             print("[RetroMac] Per-app preset: \(bundleID) → \(appPreset)")
         }
 
+        // Check Screen Recording permission before attempting capture.
+        // CGPreflightScreenCaptureAccess() is a pure check — no dialog.
+        // After Sparkle updates the binary is re-signed and macOS revokes
+        // the old grant, so this catches the common post-update case.
+        if !CGPreflightScreenCaptureAccess() {
+            let alert = NSAlert()
+            alert.messageText = "Screen Recording Permission Required"
+            alert.informativeText = "RetroMac needs Screen Recording permission to apply shader effects.\n\nAfter an update macOS may require you to re-grant this permission. Please toggle RetroMac ON in System Settings, then try again."
+            alert.addButton(withTitle: "Open System Settings")
+            alert.addButton(withTitle: "Cancel")
+            if alert.runModal() == .alertFirstButtonReturn {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            return
+        }
+
         overlayStartTask = Task { [weak self] in
             guard let self = self else { return }
             do {
