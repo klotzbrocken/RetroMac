@@ -784,6 +784,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // After Sparkle updates the binary is re-signed and macOS revokes
         // the old grant, so this catches the common post-update case.
         if !CGPreflightScreenCaptureAccess() {
+            let alert = NSAlert()
+            alert.messageText = "Screen Recording Permission"
+            alert.informativeText = """
+                After an update you need to re-grant Screen Recording:
+
+                1. Remove RetroMac with the minus (\u{2212}) button
+                2. Re-add RetroMac with the plus (+) button
+
+                The shader will start automatically once granted.
+                """
+            alert.addButton(withTitle: "Open System Settings")
+            alert.addButton(withTitle: "Cancel")
+            let response = alert.runModal()
+            guard response == .alertFirstButtonReturn else { return }
             if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
                 NSWorkspace.shared.open(url)
             }
