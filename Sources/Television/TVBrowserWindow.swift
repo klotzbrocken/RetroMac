@@ -1,26 +1,17 @@
 import AppKit
-import WebKit
 import AVKit
 import MetalKit
 import CoreVideo
-
-/// NSImageView that passes all mouse events through to views behind it.
-final class PassthroughImageView: NSImageView {
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        return nil
-    }
-    override var acceptsFirstResponder: Bool { false }
-}
+import WebKit
 
 final class TVBrowserWindow: NSObject {
     private var window: NSWindow?
-    private var webView: WKWebView?
     private var player: AVPlayer?
     private var playerView: AVPlayerView?
+    private var webView: WKWebView?
     private var dockWasRunning = false
 
-    // CRT shader overlay (rendered image on top of WKWebView)
-    private var overlayImageView: PassthroughImageView?
+    // CRT shader
     private var metalDevice: MTLDevice?
     private var renderer: RetroRenderer?
     private var activePresetID: String?
@@ -30,21 +21,16 @@ final class TVBrowserWindow: NSObject {
     private var textureCache: CVMetalTextureCache?
     private var videoOutput: AVPlayerItemVideoOutput?
 
-    // Web mode: periodic snapshots → renderToImage → overlay
-    private var snapshotTimer: Timer?
-    private var snapshotCount = 0
-
-    // Save/restore global overlay state when TV is open
-    private var savedGlobalPreset: String?
-    private var savedGlobalWasActive = false
+    // Aspect ratio lock: set once from stream's native resolution
+    private var aspectRatioLocked = false
+    private var presentationSizeObserver: NSKeyValueObservation?
 
     private enum ContentMode {
         case streamDirect      // Stream with CRT shader (AVPlayer → Metal)
         case streamBasic       // Stream without shader (AVPlayerView)
-        case webDirect         // Web with CRT shader (WKWebView visible + overlay)
-        case webBasic          // Web without shader (WKWebView only)
+        case webContent        // Web page via WKWebView
     }
-    private var contentMode: ContentMode = .webBasic
+    private var contentMode: ContentMode = .streamBasic
     private var drawCallCount = 0
 
     func open(bookmark: TVBookmark) {
@@ -84,16 +70,7 @@ final class TVBrowserWindow: NSObject {
         accessory.layoutAttribute = .right
         win.addTitlebarAccessoryViewController(accessory)
 
-        let isStream = url.pathExtension == "m3u8" ||
-                       url.absoluteString.contains(".m3u8") ||
-                       url.absoluteString.contains(".m3u") ||
-                       url.absoluteString.contains(".mp4") ||
-                       url.absoluteString.contains(".ts")
-
         // Determine effective preset: bookmark-specific > active global preset > app default.
-        // TV is a shader experience — always apply a CRT effect. "None" only if user
-        // explicitly sets bookmark.presetID to empty string.
-        // IMPORTANT: Resolve this BEFORE stopping the global overlay.
         let effectivePresetID: String?
         if let bookmarkPreset = bookmark.presetID {
             effectivePresetID = bookmarkPreset.isEmpty ? nil : bookmarkPreset
@@ -106,22 +83,23 @@ final class TVBrowserWindow: NSObject {
 
         // Stop the global overlay — TV renders its own CRT effect inside the window.
         if let appDel = NSApp.delegate as? AppDelegate, appDel.isActive {
-            savedGlobalPreset = appDel.currentPresetName
-            savedGlobalWasActive = true
+            appDel.saveOverlayState()
             appDel.disableAll()
-            print("[TV] Stopped global overlay (was '\(savedGlobalPreset ?? "nil")')")
+            print("[TV] Stopped global overlay (was '\(appDel.savedPreset ?? "nil")')")
         }
 
-        print("[TV] Opening '\(bookmark.name)' isStream=\(isStream) effectivePreset=\(effectivePresetID ?? "none")")
+        print("[TV] Opening '\(bookmark.name)' effectivePreset=\(effectivePresetID ?? "none")")
 
-        if isStream, let presetID = effectivePresetID {
-            setupStreamWithShader(url: url, presetID: presetID, size: size, window: win)
-        } else if isStream {
-            setupStreamBasic(url: url, size: size, window: win)
-        } else if let presetID = effectivePresetID {
-            setupWebWithShader(url: url, presetID: presetID, size: size, window: win)
+        if Self.isStreamURL(url) {
+            // Stream URL — use AVPlayer (with optional CRT shader)
+            if let presetID = effectivePresetID {
+                setupStreamWithShader(url: url, presetID: presetID, size: size, window: win)
+            } else {
+                setupStreamBasic(url: url, size: size, window: win)
+            }
         } else {
-            setupWebBasic(url: url, size: size, window: win)
+            // Web URL — render with WKWebView
+            setupWebView(url: url, size: size, window: win)
         }
 
         win.makeKeyAndOrderFront(nil)
@@ -192,185 +170,51 @@ final class TVBrowserWindow: NSObject {
         self.player = avPlayer
         self.playerView = pv
         self.contentMode = .streamBasic
+        observePresentationSize(item: avPlayer.currentItem, window: window)
         print("[TV] Stream basic: \(url.absoluteString)")
     }
 
-    // MARK: - Web with CRT Shader (WKWebView visible + image overlay)
+    // MARK: - URL Classification
 
-    private func setupWebWithShader(url: URL, presetID: String, size: NSSize, window: NSWindow) {
-        guard let device = MTLCreateSystemDefaultDevice() else {
-            print("[TV] No Metal device — falling back to basic web")
-            setupWebBasic(url: url, size: size, window: window)
-            return
-        }
-        do {
-            let r = try RetroRenderer(device: device)
-            try r.loadShader(named: presetID)
-            r.intensity = AppSettings.shared.defaultIntensity
-            r.vignetteIntensity = AppSettings.shared.vignetteIntensity
-            self.renderer = r
-        } catch {
-            print("[TV] Shader load failed: \(error) — falling back to basic web")
-            setupWebBasic(url: url, size: size, window: window)
-            return
-        }
-
-        self.metalDevice = device
-        self.activePresetID = presetID
-        self.contentMode = .webDirect
-
-        // Container view holds WKWebView + CRT overlay
-        let container = NSView(frame: NSRect(origin: .zero, size: size))
-        container.autoresizingMask = [.width, .height]
-
-        // WKWebView is the interactive content — visible and clickable
-        let config = WKWebViewConfiguration()
-        config.allowsAirPlayForMediaPlayback = true
-        config.mediaTypesRequiringUserActionForPlayback = []
-        config.preferences.setValue(true, forKey: "fullScreenEnabled")
-        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
-
-        let wv = WKWebView(frame: container.bounds, configuration: config)
-        wv.autoresizingMask = [.width, .height]
-        wv.navigationDelegate = self
-        wv.uiDelegate = self
-        wv.allowsBackForwardNavigationGestures = true
-        wv.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
-        container.addSubview(wv)
-        self.webView = wv
-
-        // CRT overlay on top — shows shader-processed snapshot, passes clicks through
-        let overlay = PassthroughImageView(frame: container.bounds)
-        overlay.autoresizingMask = [.width, .height]
-        overlay.imageScaling = .scaleAxesIndependently
-        overlay.wantsLayer = true
-        overlay.layer?.zPosition = 1000  // stay above WKWebView's layer management
-        container.addSubview(overlay)
-        self.overlayImageView = overlay
-
-        window.contentView = container
-        wv.load(URLRequest(url: url))
-
-        // Start periodic snapshot → shader → overlay cycle
-        startSnapshotTimer()
-        print("[TV] Web with CRT shader '\(presetID)': \(url.absoluteString)")
+    private static func isStreamURL(_ url: URL) -> Bool {
+        let streamExtensions: Set<String> = ["m3u8", "m3u", "mp4", "mov", "ts", "mp3", "aac", "flac", "wav", "avi", "mkv"]
+        if streamExtensions.contains(url.pathExtension.lowercased()) { return true }
+        if let scheme = url.scheme?.lowercased(), ["rtsp", "rtmp", "mms"].contains(scheme) { return true }
+        return false
     }
 
-    // MARK: - Web Basic (WKWebView)
+    // MARK: - Web Content (WKWebView)
 
-    private func setupWebBasic(url: URL, size: NSSize, window: NSWindow) {
+    private func setupWebView(url: URL, size: NSSize, window: NSWindow) {
         let config = WKWebViewConfiguration()
         config.allowsAirPlayForMediaPlayback = true
-        config.mediaTypesRequiringUserActionForPlayback = []
-        config.preferences.setValue(true, forKey: "fullScreenEnabled")
-        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
-
         let wv = WKWebView(frame: NSRect(origin: .zero, size: size), configuration: config)
         wv.autoresizingMask = [.width, .height]
-        wv.navigationDelegate = self
-        wv.uiDelegate = self
-        wv.allowsBackForwardNavigationGestures = true
-        wv.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
-        window.contentView = wv
         wv.load(URLRequest(url: url))
+        window.contentView = wv
         self.webView = wv
-        self.contentMode = .webBasic
-        print("[TV] Web basic: \(url.absoluteString)")
+        self.contentMode = .webContent
+        print("[TV] Web content: \(url.absoluteString)")
     }
 
-    // MARK: - Snapshot Timer (Web CRT mode)
+    // MARK: - Aspect Ratio
 
-    private func startSnapshotTimer() {
-        snapshotTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 12.0, repeats: true) { [weak self] _ in
-            self?.captureAndRenderSnapshot()
-        }
-    }
-
-    private func stopSnapshotTimer() {
-        snapshotTimer?.invalidate()
-        snapshotTimer = nil
-    }
-
-    /// Capture WKWebView snapshot → process through CRT shader → display as overlay image
-    private func captureAndRenderSnapshot() {
-        guard let wv = webView, let renderer = renderer, let device = metalDevice else { return }
-
-        let snapshotConfig = WKSnapshotConfiguration()
-        snapshotConfig.rect = wv.bounds
-
-        wv.takeSnapshot(with: snapshotConfig) { [weak self] image, error in
-            guard let self = self else { return }
-            self.snapshotCount += 1
-            if let error = error {
-                if self.snapshotCount <= 3 { print("[TV] Snapshot error: \(error.localizedDescription)") }
-                return
-            }
-            guard let image = image else { return }
-            if self.snapshotCount <= 3 { print("[TV] Snapshot #\(self.snapshotCount): \(image.size)") }
-
-            // Convert snapshot to Metal texture
-            guard let texture = self.textureFromImage(image, device: device) else { return }
-
-            // Render CRT effect to NSImage via GPU
-            let viewportSize = CGSize(width: texture.width, height: texture.height)
-            guard let rendered = renderer.renderToImage(sourceTexture: texture, viewportSize: viewportSize) else {
-                if self.snapshotCount <= 3 { print("[TV] renderToImage failed") }
-                return
-            }
-
-            // Update the overlay on the main thread
+    private func observePresentationSize(item: AVPlayerItem?, window: NSWindow) {
+        guard let item = item else { return }
+        presentationSizeObserver = item.observe(\.presentationSize, options: [.new]) { [weak self] item, _ in
+            guard let self = self, !self.aspectRatioLocked else { return }
+            let size = item.presentationSize
+            guard size.width > 0 && size.height > 0 else { return }
+            self.aspectRatioLocked = true
             DispatchQueue.main.async {
-                self.overlayImageView?.image = rendered
+                self.window?.contentAspectRatio = NSSize(width: size.width, height: size.height)
             }
         }
-    }
-
-    private func textureFromImage(_ image: NSImage, device: MTLDevice) -> MTLTexture? {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
-        let width = cgImage.width
-        let height = cgImage.height
-        guard width > 0, height > 0 else { return nil }
-
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: .bgra8Unorm,
-            width: width,
-            height: height,
-            mipmapped: false
-        )
-        descriptor.usage = .shaderRead
-        guard let texture = device.makeTexture(descriptor: descriptor) else { return nil }
-
-        let bytesPerRow = width * 4
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        guard let context = CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: bytesPerRow,
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-        ) else { return nil }
-
-        context.draw(cgImage, in: CGRect(origin: .zero, size: CGSize(width: width, height: height)))
-        guard let data = context.data else { return nil }
-
-        texture.replace(
-            region: MTLRegionMake2D(0, 0, width, height),
-            mipmapLevel: 0,
-            withBytes: data,
-            bytesPerRow: bytesPerRow
-        )
-        return texture
     }
 
     // MARK: - Cleanup
 
     func close() {
-        stopSnapshotTimer()
-        overlayImageView?.image = nil
-        overlayImageView = nil
-
         metalView?.isPaused = true
         metalView = nil
         renderer = nil
@@ -379,20 +223,19 @@ final class TVBrowserWindow: NSObject {
         metalDevice = nil
         activePresetID = nil
         drawCallCount = 0
-        snapshotCount = 0
+
+        presentationSizeObserver?.invalidate()
+        presentationSizeObserver = nil
+        aspectRatioLocked = false
 
         player?.pause()
         player = nil
         playerView = nil
-
-        webView?.stopLoading()
-        webView?.uiDelegate = nil
-        webView?.navigationDelegate = nil
         webView = nil
 
         window?.close()
         window = nil
-        contentMode = .webBasic
+        contentMode = .streamBasic
     }
 }
 
@@ -404,11 +247,9 @@ extension TVBrowserWindow: MTKViewDelegate {
     func draw(in view: MTKView) {
         drawCallCount += 1
         guard let renderer = renderer,
-              let drawable = view.currentDrawable else { return }
-
-        if contentMode == .streamDirect {
-            drawStreamFrame(renderer: renderer, drawable: drawable, viewportSize: view.drawableSize)
-        }
+              let drawable = view.currentDrawable,
+              contentMode == .streamDirect else { return }
+        drawStreamFrame(renderer: renderer, drawable: drawable, viewportSize: view.drawableSize)
     }
 
     private func drawStreamFrame(renderer: RetroRenderer, drawable: CAMetalDrawable, viewportSize: CGSize) {
@@ -423,6 +264,14 @@ extension TVBrowserWindow: MTKViewDelegate {
 
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
+
+        if !aspectRatioLocked && width > 0 && height > 0 {
+            aspectRatioLocked = true
+            let ratio = NSSize(width: width, height: height)
+            DispatchQueue.main.async { [weak self] in
+                self?.window?.contentAspectRatio = ratio
+            }
+        }
 
         var cvTexture: CVMetalTexture?
         let status = CVMetalTextureCacheCreateTextureFromImage(
@@ -441,22 +290,19 @@ extension TVBrowserWindow: MTKViewDelegate {
 
 extension TVBrowserWindow: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
-        stopSnapshotTimer()
-        overlayImageView?.image = nil
-        overlayImageView = nil
         metalView?.isPaused = true
         metalView = nil
         renderer = nil
         videoOutput = nil
         textureCache = nil
 
+        presentationSizeObserver?.invalidate()
+        presentationSizeObserver = nil
+        aspectRatioLocked = false
+
         player?.pause()
         player = nil
         playerView = nil
-
-        webView?.stopLoading()
-        webView?.uiDelegate = nil
-        webView?.navigationDelegate = nil
         webView = nil
         window = nil
         print("[TV] Window closed")
@@ -467,14 +313,8 @@ extension TVBrowserWindow: NSWindowDelegate {
         }
 
         // Restore global overlay if it was active before TV opened
-        if savedGlobalWasActive, let preset = savedGlobalPreset {
-            print("[TV] Restoring global overlay '\(preset)'")
-            if let appDel = NSApp.delegate as? AppDelegate {
-                appDel.currentPresetName = preset
-                appDel.toggleOverlay()
-            }
-            savedGlobalWasActive = false
-            savedGlobalPreset = nil
+        if let appDel = NSApp.delegate as? AppDelegate {
+            appDel.restorePreviousOverlay()
         }
     }
 
@@ -500,33 +340,5 @@ extension TVBrowserWindow: NSWindowDelegate {
             DockController.shared.start()
             dockWasRunning = false
         }
-    }
-}
-
-// MARK: - WKNavigationDelegate
-
-extension TVBrowserWindow: WKNavigationDelegate {
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        print("[TV] Navigation failed: \(error.localizedDescription)")
-    }
-
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        print("[TV] Provisional navigation failed: \(error.localizedDescription)")
-    }
-
-    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        decisionHandler(.allow)
-    }
-}
-
-// MARK: - WKUIDelegate
-
-extension TVBrowserWindow: WKUIDelegate {
-    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if let url = navigationAction.request.url {
-            webView.load(URLRequest(url: url))
-            print("[TV] Redirected popup/blank link: \(url.absoluteString)")
-        }
-        return nil
     }
 }

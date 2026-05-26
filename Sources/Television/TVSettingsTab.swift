@@ -50,7 +50,7 @@ struct TVSettingsTab: View {
             }
 
             Section("Info") {
-                Text("Television bookmarks open in a minimal fullscreen browser. Each bookmark can have a default shader preset that activates automatically.")
+                Text("Television plays m3u/m3u8 streams with CRT shader effects. Each bookmark can have a default shader preset that activates automatically.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

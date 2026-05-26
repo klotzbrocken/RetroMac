@@ -4,10 +4,16 @@ struct DockApp: Codable, Identifiable, Equatable {
     var bundleID: String
     var customIconPath: String?
     var order: Int
+    var folderPath: String?  // non-nil = this is a folder item, not an app
 
     var id: String { bundleID }
 
+    var isFolder: Bool { folderPath != nil }
+
     var displayName: String {
+        if let folderPath = folderPath {
+            return (folderPath as NSString).lastPathComponent
+        }
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
             if let bundle = Bundle(url: url) {
                 return bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
@@ -24,7 +30,10 @@ struct DockApp: Codable, Identifiable, Equatable {
     }
 
     var isInstalled: Bool {
-        applicationURL != nil
+        if isFolder {
+            return FileManager.default.fileExists(atPath: folderPath!)
+        }
+        return applicationURL != nil
     }
 }
 

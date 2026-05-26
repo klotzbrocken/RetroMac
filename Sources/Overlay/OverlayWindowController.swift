@@ -79,7 +79,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     @MainActor
     private func setupWindows() {
         let settings = AppSettings.shared
-        let fps = settings.lowLatencyMode ? 60 : 30
+        let fps = settings.lowLatencyMode ? 60 : settings.targetFPS
 
         switch captureMode {
         case .fullScreen:
@@ -173,7 +173,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         loadOverlays()
 
         let settings = AppSettings.shared
-        let captureFPS = settings.lowLatencyMode ? 60 : 30
+        let captureFPS = settings.lowLatencyMode ? 60 : settings.targetFPS
 
         let isFullscreenMode: Bool
         switch captureMode {
@@ -331,26 +331,33 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     }
 
     func stop() {
-        trackingTimer?.cancel()
-        trackingTimer = nil
-        resizeDebounceTimer?.cancel()
-        resizeDebounceTimer = nil
-        stopFPSTracking()
-        for manager in captureManagers { manager.stop() }
-        captureManagers.removeAll()
-        for view in metalViews { view.isPaused = true }
-        for window in windows { window.orderOut(nil) }
-        textureLock.withLock {
-            viewTextures.removeAll()
-            viewDirtyFlags.removeAll()
-        }
-        didReceiveFirstFrame = false
+        let doStop = { [self] in
+            trackingTimer?.cancel()
+            trackingTimer = nil
+            resizeDebounceTimer?.cancel()
+            resizeDebounceTimer = nil
+            stopFPSTracking()
+            for manager in captureManagers { manager.stop() }
+            captureManagers.removeAll()
+            for view in metalViews { view.isPaused = true }
+            for window in windows { window.orderOut(nil) }
+            textureLock.withLock {
+                viewTextures.removeAll()
+                viewDirtyFlags.removeAll()
+            }
+            didReceiveFirstFrame = false
 
-        if didHideSystemUI {
-            SystemUIHelper.showMenuBarAndDock()
-            didHideSystemUI = false
+            if didHideSystemUI {
+                SystemUIHelper.showMenuBarAndDock()
+                didHideSystemUI = false
+            }
+            print("[Overlay] Stopped.")
         }
-        print("[Overlay] Stopped.")
+        if Thread.isMainThread {
+            doStop()
+        } else {
+            DispatchQueue.main.async { doStop() }
+        }
     }
 
     func switchPreset(_ name: String) {
@@ -358,6 +365,17 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
             try renderer.loadShader(named: name)
         } catch {
             print("[Overlay] Switch failed: \(error)")
+            // Show error to user for custom shaders (compile errors etc.)
+            if name.hasPrefix("custom:") {
+                DispatchQueue.main.async {
+                    let alert = NSAlert()
+                    alert.messageText = "Shader Compile Error"
+                    alert.informativeText = "\(error.localizedDescription)"
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: "OK")
+                    alert.runModal()
+                }
+            }
         }
     }
 

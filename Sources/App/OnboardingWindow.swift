@@ -62,22 +62,9 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 32)
 
-            HStack(spacing: 12) {
-                Button("Open System Settings") {
-                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
-
-                Button("Check Permission") {
-                    Task {
-                        do {
-                            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-                            screenRecordingGranted = true
-                        } catch {
-                            screenRecordingGranted = false
-                        }
-                    }
+            Button("Open System Settings") {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                    NSWorkspace.shared.open(url)
                 }
             }
             .padding(.top, 4)
@@ -88,6 +75,21 @@ struct OnboardingView: View {
             nextButton("Continue") { step = .accessibility }
         }
         .padding()
+        .onAppear { checkScreenRecording() }
+        .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
+            if !screenRecordingGranted { checkScreenRecording() }
+        }
+    }
+
+    private func checkScreenRecording() {
+        Task {
+            do {
+                _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+                screenRecordingGranted = true
+            } catch {
+                screenRecordingGranted = false
+            }
+        }
     }
 
     private var accessibilityStep: some View {
@@ -170,7 +172,7 @@ struct OnboardingView: View {
     }
 }
 
-final class OnboardingWindowController {
+final class OnboardingWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
 
     func show() {
@@ -192,8 +194,14 @@ final class OnboardingWindowController {
         window.center()
         window.level = .floating
         window.isReleasedWhenClosed = false
+        window.delegate = self
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         self.window = window
+    }
+
+    // Mark onboarding complete even if the user closes via the X button
+    func windowWillClose(_ notification: Notification) {
+        AppSettings.shared.onboardingComplete = true
     }
 }

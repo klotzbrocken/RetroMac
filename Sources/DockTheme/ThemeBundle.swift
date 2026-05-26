@@ -38,11 +38,61 @@ final class ThemeBundle {
         return nil
     }
 
+    func startButtonImageURL() -> URL? {
+        guard let filename = config.dock.startButtonImage else { return nil }
+        let imgURL = iconsDirectory.appendingPathComponent(filename)
+        if FileManager.default.fileExists(atPath: imgURL.path) { return imgURL }
+        return nil
+    }
+
+    /// Returns all icon image files available in this theme's icons directory
+    func availableIcons() -> [(name: String, url: URL)] {
+        let fm = FileManager.default
+        let dir = iconsDirectory
+        guard let contents = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else {
+            return []
+        }
+        let imageExtensions: Set<String> = ["png", "jpg", "jpeg", "icns", "tiff", "tif"]
+        return contents
+            .filter { imageExtensions.contains($0.pathExtension.lowercased()) }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            .map { (name: $0.deletingPathExtension().lastPathComponent, url: $0) }
+    }
+
     func wallpaperURL() -> URL? {
         guard let filename = config.wallpaper else { return nil }
         let wpURL = url.appendingPathComponent(filename)
         if FileManager.default.fileExists(atPath: wpURL.path) { return wpURL }
         return nil
+    }
+
+    /// Returns all available wallpaper options for this theme
+    func wallpaperOptions() -> [(name: String, url: URL)] {
+        var options: [(name: String, url: URL)] = []
+
+        // Add wallpapers from the wallpapers array
+        if let wallpapers = config.wallpapers {
+            for wp in wallpapers {
+                let wpURL = url.appendingPathComponent(wp.file)
+                if FileManager.default.fileExists(atPath: wpURL.path) {
+                    options.append((name: wp.name, url: wpURL))
+                }
+            }
+        }
+
+        // If no wallpapers array, use the single wallpaper field
+        if options.isEmpty, let filename = config.wallpaper {
+            let wpURL = url.appendingPathComponent(filename)
+            if FileManager.default.fileExists(atPath: wpURL.path) {
+                let name = (filename as NSString).deletingPathExtension
+                    .replacingOccurrences(of: "wallpaper-", with: "")
+                    .replacingOccurrences(of: "wallpaper", with: "Default")
+                    .capitalized
+                options.append((name: name, url: wpURL))
+            }
+        }
+
+        return options
     }
 
     func previewImage() -> NSImage? {

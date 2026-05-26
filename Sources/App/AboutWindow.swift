@@ -1,8 +1,16 @@
+import Sparkle
 import SwiftUI
 
 struct AboutTab: View {
-    @State private var updateStatus: String?
-    @State private var isChecking = false
+    @ObservedObject private var license = LicenseManager.shared
+    @State private var keyInput: String = ""
+    @State private var activationMessage: String?
+    @State private var activationSuccess: Bool?
+    private let updater: SPUUpdater
+
+    init(updater: SPUUpdater) {
+        self.updater = updater
+    }
 
     private let shaderCredits: [(name: String, author: String, license: String)] = [
         ("zfast-crt", "Greg Hogan", "GPL-2.0"),
@@ -52,9 +60,12 @@ struct AboutTab: View {
                     LabeledContent("Website") {
                         Link("klotzbrocken.de", destination: URL(string: "https://www.klotzbrocken.de")!)
                     }
-                    LabeledContent("SimpleBanking") {
-                        Link("simplebanking.de", destination: URL(string: "https://www.simplebanking.de")!)
+                    LabeledContent("Contact") {
+                        Link("info@klotzbrocken.de", destination: URL(string: "mailto:info@klotzbrocken.de")!)
                     }
+                    Text("Questions? Write me an email!")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Shader Credits") {
@@ -96,24 +107,120 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("Resources") {
+                    Link("amanchokshi/retro-icons on GitHub",
+                         destination: URL(string: "https://github.com/amanchokshi/retro-icons")!)
+                        .font(.caption)
+                    Text("Sleek Retro theme icons by Aman Chokshi.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("jcherven/BeOS-r5-Icons on GitHub",
+                         destination: URL(string: "https://github.com/jcherven/BeOS-r5-Icons")!)
+                        .font(.caption)
+                    Text("BeOS theme icons by Josh Cherven.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("marchmountain/Windows-XP-Icon-Pack on GitHub",
+                         destination: URL(string: "https://github.com/marchmountain/-Windows-XP-High-Resolution-Icon-Pack")!)
+                        .font(.caption)
+                    Text("Windows XP theme icons.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("kfh83/ExplorerEx on GitHub",
+                         destination: URL(string: "https://github.com/kfh83/ExplorerEx")!)
+                        .font(.caption)
+                    Text("Windows XP Luna Blue theme reference.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Open Source") {
                     Text("RetroMac uses the following Apple frameworks: Metal, MetalKit, ScreenCaptureKit, AVKit, WebKit, AppKit, SwiftUI. No third-party libraries are used.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                Section("Updates") {
+                // MARK: - License
+                Section("License") {
                     HStack {
-                        Button(isChecking ? "Checking..." : "Check for Updates") {
-                            checkForUpdates()
-                        }
-                        .disabled(isChecking)
-                        Spacer()
-                        if let status = updateStatus {
-                            Text(status)
+                        Image(systemName: license.isLicensed ? "checkmark.seal.fill" : "sparkles")
+                            .font(.system(size: 20))
+                            .foregroundStyle(license.isLicensed ? .green : .orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(license.isLicensed ? "All Presets Unlocked" : "Basic Edition")
                                 .font(.caption)
+                                .fontWeight(.medium)
+                            Text(license.isLicensed ? "Thank you for supporting RetroMac!" : "Unlock all \(PresetRegistry.builtinPresets.count) presets + custom shaders")
+                                .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
+                        Spacer()
+                    }
+
+                    if !license.isLicensed {
+                        TextField("License Key", text: $keyInput)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.caption, design: .monospaced))
+
+                        HStack {
+                            Button(license.isValidating ? "Validating..." : "Activate") {
+                                activateKey()
+                            }
+                            .disabled(keyInput.trimmingCharacters(in: .whitespaces).isEmpty || license.isValidating)
+                            .font(.caption)
+
+                            Spacer()
+
+                            if let msg = activationMessage {
+                                Text(msg)
+                                    .font(.caption2)
+                                    .foregroundStyle(activationSuccess == true ? .green : .red)
+                            }
+                        }
+
+                        Link("Get All Presets on Gumroad", destination: URL(string: LicenseManager.purchaseURL)!)
+                            .font(.caption)
+
+                        Link("Buy me a coffee on Ko-fi", destination: URL(string: LicenseManager.kofiURL)!)
+                            .font(.caption)
+                    } else {
+                        if !license.licenseEmail.isEmpty {
+                            LabeledContent("Email") {
+                                Text(license.licenseEmail)
+                                    .font(.caption)
+                            }
+                        }
+                        LabeledContent("Key") {
+                            Text(maskedKey)
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                        Button("Deactivate License") {
+                            license.deactivate()
+                            keyInput = ""
+                            activationMessage = nil
+                            activationSuccess = nil
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                    }
+                }
+
+                Section("Updates") {
+                    HStack {
+                        Button("Check for Updates…") {
+                            updater.checkForUpdates()
+                        }
+                        .disabled(!updater.canCheckForUpdates)
+                        Spacer()
+                        Toggle("Automatic Updates", isOn: Binding(
+                            get: { updater.automaticallyChecksForUpdates },
+                            set: { updater.automaticallyChecksForUpdates = $0 }
+                        ))
+                        .font(.caption)
                     }
                 }
 
@@ -130,6 +237,11 @@ struct AboutTab: View {
             .formStyle(.grouped)
         }
         .padding(.top, 8)
+        .onAppear {
+            if keyInput.isEmpty && !license.licenseKey.isEmpty {
+                keyInput = license.licenseKey
+            }
+        }
     }
 
     private static var appIcon: NSImage {
@@ -144,39 +256,26 @@ struct AboutTab: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 
-    private func checkForUpdates() {
-        isChecking = true
-        updateStatus = nil
-
-        guard let url = URL(string: "https://www.klotzbrocken.de/retromac/version.json") else {
-            updateStatus = "Invalid URL"
-            isChecking = false
-            return
+    private var maskedKey: String {
+        let key = license.licenseKey
+        if key.count > 8 {
+            return String(key.prefix(4)) + "..." + String(key.suffix(4))
         }
-
-        URLSession.shared.dataTask(with: url) { data, _, error in
-            DispatchQueue.main.async {
-                isChecking = false
-                if let error = error {
-                    updateStatus = "Connection failed"
-                    print("[Update] Error: \(error.localizedDescription)")
-                    return
-                }
-                guard let data = data,
-                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let latest = json["version"] as? String else {
-                    updateStatus = "Could not check"
-                    return
-                }
-                if latest == appVersion {
-                    updateStatus = "Up to date \u{2713}"
-                } else {
-                    updateStatus = "v\(latest) available"
-                    if let urlStr = json["url"] as? String, let downloadURL = URL(string: urlStr) {
-                        NSWorkspace.shared.open(downloadURL)
-                    }
-                }
-            }
-        }.resume()
+        return key
     }
+
+    private func activateKey() {
+        activationMessage = nil
+        activationSuccess = nil
+
+        license.activate(key: keyInput) { success, error in
+            activationSuccess = success
+            if success {
+                activationMessage = "All presets unlocked!"
+            } else {
+                activationMessage = error ?? "Activation failed"
+            }
+        }
+    }
+
 }

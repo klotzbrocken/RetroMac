@@ -9,6 +9,62 @@ struct TVBookmark: Codable, Identifiable, Equatable {
     var presetID: String?  // nil = no preset ("None")
 }
 
+/// Performance profile presets that bundle resolution, fps, and overlay settings
+enum PerformanceProfile: String, CaseIterable, Identifiable {
+    case high = "high"
+    case balanced = "balanced"
+    case low = "low"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .high: return "High"
+        case .balanced: return "Balanced"
+        case .low: return "Low"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .high: return "Retina 2×, 30 fps, all overlays"
+        case .balanced: return "1× resolution, 30 fps, all overlays"
+        case .low: return "1× resolution, 24 fps, no overlays"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .high: return "hare"
+        case .balanced: return "gauge.with.dots.needle.50percent"
+        case .low: return "tortoise"
+        }
+    }
+
+    var halfResolution: Bool {
+        switch self {
+        case .high: return false
+        case .balanced, .low: return true
+        }
+    }
+
+    var lowLatencyMode: Bool { false }  // 60fps only via manual override
+
+    var targetFPS: Int {
+        switch self {
+        case .high, .balanced: return 30
+        case .low: return 24
+        }
+    }
+
+    var disableOverlays: Bool {
+        switch self {
+        case .high, .balanced: return false
+        case .low: return true
+        }
+    }
+}
+
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
@@ -45,17 +101,29 @@ final class AppSettings: ObservableObject {
     @Published var targetDisplayID: CGDirectDisplayID {
         didSet { defaults.set(targetDisplayID, forKey: "targetDisplayID") }
     }
+    @Published var performanceProfile: PerformanceProfile {
+        didSet {
+            defaults.set(performanceProfile.rawValue, forKey: "performanceProfile")
+            applyPerformanceProfile()
+        }
+    }
     @Published var lowLatencyMode: Bool {
         didSet { defaults.set(lowLatencyMode, forKey: "lowLatencyMode") }
     }
     @Published var halfResolution: Bool {
         didSet { defaults.set(halfResolution, forKey: "halfResolution") }
     }
+    @Published var targetFPS: Int {
+        didSet { defaults.set(targetFPS, forKey: "targetFPS") }
+    }
     @Published var stopOnSleep: Bool {
         didSet { defaults.set(stopOnSleep, forKey: "stopOnSleep") }
     }
     @Published var resumeAfterSleep: Bool {
         didSet { defaults.set(resumeAfterSleep, forKey: "resumeAfterSleep") }
+    }
+    @Published var resetOnWake: Bool {
+        didSet { defaults.set(resetOnWake, forKey: "resetOnWake") }
     }
     @Published var perAppPresets: [String: String] {
         didSet { defaults.set(perAppPresets, forKey: "perAppPresets") }
@@ -105,6 +173,18 @@ final class AppSettings: ObservableObject {
     @Published var dockHideSystemDock: Bool {
         didSet { defaults.set(dockHideSystemDock, forKey: "dockHideSystemDock") }
     }
+    @Published var hideMenuBar: Bool {
+        didSet {
+            defaults.set(hideMenuBar, forKey: "hideMenuBar")
+            SystemUIHelper.setMenuBarAutoHide(hideMenuBar)
+        }
+    }
+    @Published var hideDesktopIcons: Bool {
+        didSet {
+            defaults.set(hideDesktopIcons, forKey: "hideDesktopIcons")
+            SystemUIHelper.setDesktopIconsHidden(hideDesktopIcons)
+        }
+    }
     @Published var dockHotkeyCode: UInt32 {
         didSet { defaults.set(dockHotkeyCode, forKey: "dockHotkeyCode") }
     }
@@ -126,6 +206,95 @@ final class AppSettings: ObservableObject {
     @Published var dockTargetDisplayID: CGDirectDisplayID {
         didSet { defaults.set(dockTargetDisplayID, forKey: "dockTargetDisplayID") }
     }
+    @Published var dockMagnification: Bool {
+        didSet { defaults.set(dockMagnification, forKey: "dockMagnification") }
+    }
+    @Published var dockAutoHide: Bool {
+        didSet { defaults.set(dockAutoHide, forKey: "dockAutoHide") }
+    }
+    @Published var dockFix: Bool {
+        didSet { defaults.set(dockFix, forKey: "dockFix") }
+    }
+    @Published var applySystemIcons: Bool {
+        didSet { defaults.set(applySystemIcons, forKey: "applySystemIcons") }
+    }
+
+    // Virtual Camera — Lower Third
+    @Published var lowerThirdEnabled: Bool {
+        didSet { defaults.set(lowerThirdEnabled, forKey: "lowerThirdEnabled") }
+    }
+    @Published var lowerThirdName: String {
+        didSet { defaults.set(lowerThirdName, forKey: "lowerThirdName") }
+    }
+    @Published var lowerThirdTitle: String {
+        didSet { defaults.set(lowerThirdTitle, forKey: "lowerThirdTitle") }
+    }
+    @Published var lowerThirdStyle: String {
+        didSet { defaults.set(lowerThirdStyle, forKey: "lowerThirdStyle") }
+    }
+
+    // Games — Doom
+    @Published var doomWadFolder: String {
+        didSet { defaults.set(doomWadFolder, forKey: "doomWadFolder") }
+    }
+    @Published var doomCRTShaderEnabled: Bool {
+        didSet { defaults.set(doomCRTShaderEnabled, forKey: "doomCRTShaderEnabled") }
+    }
+    @Published var doomVHSEnabled: Bool {
+        didSet { defaults.set(doomVHSEnabled, forKey: "doomVHSEnabled") }
+    }
+    @Published var doomWarpEnabled: Bool {
+        didSet { defaults.set(doomWarpEnabled, forKey: "doomWarpEnabled") }
+    }
+    @Published var doomWindowWidth: Int {
+        didSet { defaults.set(doomWindowWidth, forKey: "doomWindowWidth") }
+    }
+    @Published var doomWindowHeight: Int {
+        didSet { defaults.set(doomWindowHeight, forKey: "doomWindowHeight") }
+    }
+
+    // Games — Duke Nukem 3D (Raze)
+    @Published var razeGrpFolder: String {
+        didSet { defaults.set(razeGrpFolder, forKey: "razeGrpFolder") }
+    }
+    @Published var razeCRTShaderEnabled: Bool {
+        didSet { defaults.set(razeCRTShaderEnabled, forKey: "razeCRTShaderEnabled") }
+    }
+    @Published var razeVHSEnabled: Bool {
+        didSet { defaults.set(razeVHSEnabled, forKey: "razeVHSEnabled") }
+    }
+    @Published var razeWarpEnabled: Bool {
+        didSet { defaults.set(razeWarpEnabled, forKey: "razeWarpEnabled") }
+    }
+    @Published var razeWindowWidth: Int {
+        didSet { defaults.set(razeWindowWidth, forKey: "razeWindowWidth") }
+    }
+    @Published var razeWindowHeight: Int {
+        didSet { defaults.set(razeWindowHeight, forKey: "razeWindowHeight") }
+    }
+
+    // Games — Heretic (uses GZDoom engine, shares WAD folder with Doom)
+    @Published var hereticCRTShaderEnabled: Bool {
+        didSet { defaults.set(hereticCRTShaderEnabled, forKey: "hereticCRTShaderEnabled") }
+    }
+
+    // Games — Shadow Warrior (uses Raze engine, shares GRP folder with Duke3D)
+    @Published var shadowWarriorCRTEnabled: Bool {
+        didSet { defaults.set(shadowWarriorCRTEnabled, forKey: "shadowWarriorCRTEnabled") }
+    }
+
+    // Games — Freedoom (uses GZDoom engine, shares WAD folder with Doom)
+    @Published var freedoomCRTShaderEnabled: Bool {
+        didSet { defaults.set(freedoomCRTShaderEnabled, forKey: "freedoomCRTShaderEnabled") }
+    }
+
+    // Games — Quake 1 & 2 (RetroArch + TyrQuake/Vitaquake2 cores + CRT shader)
+    @Published var quakeBasePath: String {
+        didSet { defaults.set(quakeBasePath, forKey: "quakeBasePath") }
+    }
+    @Published var quake2BasePath: String {
+        didSet { defaults.set(quake2BasePath, forKey: "quake2BasePath") }
+    }
 
     var customPresetsDirectory: URL { presetsDir }
 
@@ -146,10 +315,14 @@ final class AppSettings: ObservableObject {
         hotkeyCode = defaults.object(forKey: "hotkeyCode") as? UInt32 ?? Self.defaultHotkeyCode
         hotkeyModifiers = defaults.object(forKey: "hotkeyModifiers") as? UInt32 ?? Self.defaultHotkeyModifiers
         targetDisplayID = defaults.object(forKey: "targetDisplayID") as? CGDirectDisplayID ?? 0
+        let profile = PerformanceProfile(rawValue: defaults.string(forKey: "performanceProfile") ?? "") ?? .balanced
+        performanceProfile = profile
         lowLatencyMode = defaults.bool(forKey: "lowLatencyMode")
-        halfResolution = defaults.bool(forKey: "halfResolution")
+        halfResolution = defaults.object(forKey: "halfResolution") as? Bool ?? profile.halfResolution
+        targetFPS = defaults.object(forKey: "targetFPS") as? Int ?? profile.targetFPS
         stopOnSleep = defaults.object(forKey: "stopOnSleep") as? Bool ?? true
         resumeAfterSleep = defaults.bool(forKey: "resumeAfterSleep")
+        resetOnWake = defaults.bool(forKey: "resetOnWake")
         perAppPresets = defaults.dictionary(forKey: "perAppPresets") as? [String: String] ?? [:]
         scanlineOverlayName = defaults.string(forKey: "scanlineOverlayName") ?? ""
         scanlineOverlayIntensity = defaults.object(forKey: "scanlineOverlayIntensity") as? Float ?? 0.5
@@ -171,14 +344,19 @@ final class AppSettings: ObservableObject {
         } else {
             tvBookmarks = [
                 TVBookmark(name: "Retro", url: "http://stream.mediawork.cz/retrotv/retrotvHQ1/chunklist_w627639048.m3u8"),
-                TVBookmark(name: "My Retro TVs", url: "https://www.myretrotvs.com/"),
-                TVBookmark(name: "MTV Rewind", url: "https://wantmymtv.vercel.app/"),
+                TVBookmark(name: "Now 90s", url: "https://lightning-now90s-samsungnz.amagi.tv/playlist.m3u8"),
+                TVBookmark(name: "Now 80s", url: "https://lightning-now80s-samsunguk.amagi.tv/playlist.m3u8"),
+                TVBookmark(name: "Classic Movies", url: "https://rpn.bozztv.com/gusa/gusa-tvsclassicmovies/index.m3u8"),
+                TVBookmark(name: "Quiz Show", url: "https://rpn.bozztv.com/gusa/gusa-tvsgameshow/index.m3u8"),
+                TVBookmark(name: "Baywatch", url: "https://amg00145-fremantlemedian-baywatch-samsungau-gtsd6.amagi.tv/playlist/amg00145-fremantlemedian-baywatch-samsungau/playlist.m3u8"),
             ]
         }
 
         // Dock
         dockEnabled = defaults.bool(forKey: "dockEnabled")
-        dockHideSystemDock = defaults.bool(forKey: "dockHideSystemDock")
+        dockHideSystemDock = defaults.object(forKey: "dockHideSystemDock") as? Bool ?? true
+        hideMenuBar = defaults.bool(forKey: "hideMenuBar")
+        hideDesktopIcons = defaults.bool(forKey: "hideDesktopIcons")
         dockHotkeyCode = defaults.object(forKey: "dockHotkeyCode") as? UInt32 ?? UInt32(kVK_ANSI_D)
         dockHotkeyModifiers = defaults.object(forKey: "dockHotkeyModifiers") as? UInt32 ?? UInt32(cmdKey | optionKey | controlKey)
         dockTransparency = defaults.object(forKey: "dockTransparency") as? Float ?? 0.85
@@ -186,6 +364,49 @@ final class AppSettings: ObservableObject {
         dockTheme = defaults.string(forKey: "dockTheme") ?? "Mountain Lion"
         dockIconScale = defaults.object(forKey: "dockIconScale") as? Float ?? 1.0
         dockTargetDisplayID = defaults.object(forKey: "dockTargetDisplayID") as? CGDirectDisplayID ?? 0
+        dockMagnification = defaults.object(forKey: "dockMagnification") as? Bool ?? true
+        dockAutoHide = defaults.bool(forKey: "dockAutoHide")
+        dockFix = defaults.bool(forKey: "dockFix")
+        applySystemIcons = defaults.bool(forKey: "applySystemIcons")
+
+        // Virtual Camera — Lower Third
+        lowerThirdEnabled = defaults.bool(forKey: "lowerThirdEnabled")
+        lowerThirdName = defaults.string(forKey: "lowerThirdName") ?? ""
+        lowerThirdTitle = defaults.string(forKey: "lowerThirdTitle") ?? ""
+        lowerThirdStyle = defaults.string(forKey: "lowerThirdStyle") ?? "latenight"
+
+        // Games — Doom
+        let defaultWadDir = NSHomeDirectory() + "/Library/Application Support/gzdoom"
+        doomWadFolder = defaults.string(forKey: "doomWadFolder") ?? defaultWadDir
+        doomCRTShaderEnabled = defaults.object(forKey: "doomCRTShaderEnabled") as? Bool ?? true
+        doomVHSEnabled = defaults.bool(forKey: "doomVHSEnabled")
+        doomWarpEnabled = defaults.object(forKey: "doomWarpEnabled") as? Bool ?? true
+        doomWindowWidth = defaults.object(forKey: "doomWindowWidth") as? Int ?? 640
+        doomWindowHeight = defaults.object(forKey: "doomWindowHeight") as? Int ?? 480
+
+        // Games — Duke Nukem 3D (Raze)
+        let defaultGrpDir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games"
+        razeGrpFolder = defaults.string(forKey: "razeGrpFolder") ?? defaultGrpDir
+        razeCRTShaderEnabled = defaults.object(forKey: "razeCRTShaderEnabled") as? Bool ?? true
+        razeVHSEnabled = defaults.bool(forKey: "razeVHSEnabled")
+        razeWarpEnabled = defaults.object(forKey: "razeWarpEnabled") as? Bool ?? true
+        razeWindowWidth = defaults.object(forKey: "razeWindowWidth") as? Int ?? 640
+        razeWindowHeight = defaults.object(forKey: "razeWindowHeight") as? Int ?? 480
+
+        // Games — Heretic
+        hereticCRTShaderEnabled = defaults.object(forKey: "hereticCRTShaderEnabled") as? Bool ?? true
+
+        // Games — Shadow Warrior
+        shadowWarriorCRTEnabled = defaults.object(forKey: "shadowWarriorCRTEnabled") as? Bool ?? true
+
+        // Games — Freedoom
+        freedoomCRTShaderEnabled = defaults.object(forKey: "freedoomCRTShaderEnabled") as? Bool ?? true
+
+        // Games — Quake 1 & 2 (RetroArch)
+        let defaultQuakeDir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games/Quake"
+        quakeBasePath = defaults.string(forKey: "quakeBasePath") ?? defaultQuakeDir
+        let defaultQuake2Dir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games/Quake2"
+        quake2BasePath = defaults.string(forKey: "quake2BasePath") ?? defaultQuake2Dir
     }
 
     func presetForApp(bundleID: String) -> String? {
@@ -234,6 +455,18 @@ final class AppSettings: ObservableObject {
             UInt32(kVK_Tab): "Tab", UInt32(kVK_Escape): "Esc",
         ]
         return names[keyCode] ?? "Key\(keyCode)"
+    }
+
+    /// Applies a performance profile by updating the individual settings it controls
+    func applyPerformanceProfile() {
+        let profile = performanceProfile
+        halfResolution = profile.halfResolution
+        targetFPS = profile.targetFPS
+
+        if profile.disableOverlays {
+            scanlineOverlayName = ""
+            reflectionName = ""
+        }
     }
 
     private func updateLoginItem() {

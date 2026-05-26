@@ -262,6 +262,74 @@ final class RetroRenderer {
         return NSImage(cgImage: cgImage, size: NSSize(width: w, height: h))
     }
 
+    /// Render shader directly to an IOSurface-backed texture (zero-copy, for virtual camera)
+    func renderToTexture(sourceTexture: MTLTexture, target: MTLTexture, viewportSize: CGSize) {
+        guard let pipeline = currentPipeline,
+              let commandBuffer = commandQueue.makeCommandBuffer() else { return }
+
+        let fw = Float(viewportSize.width)
+        let fh = Float(viewportSize.height)
+        let sw = Float(sourceTexture.width)
+        let sh = Float(sourceTexture.height)
+
+        var uniforms = ShaderUniforms(
+            mvp: makeOrthographic(width: fw, height: fh),
+            outputSize: SIMD4<Float>(fw, fh, 1.0 / fw, 1.0 / fh),
+            sourceSize: SIMD4<Float>(sw, sh, 1.0 / sw, 1.0 / sh),
+            originalSize: SIMD4<Float>(sw, sh, 1.0 / sw, 1.0 / sh),
+            finalViewportSize: SIMD4<Float>(fw, fh, 1.0 / fw, 1.0 / fh),
+            frameCount: frameCount,
+            frameDirection: 1,
+            intensity: intensity,
+            vignetteIntensity: vignetteIntensity
+        )
+
+        let renderDesc = MTLRenderPassDescriptor()
+        renderDesc.colorAttachments[0].texture = target
+        renderDesc.colorAttachments[0].loadAction = .clear
+        renderDesc.colorAttachments[0].storeAction = .store
+        renderDesc.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
+
+        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderDesc) else { return }
+
+        encoder.setRenderPipelineState(pipeline)
+        encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        encoder.setVertexBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 1)
+        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 0)
+        encoder.setFragmentTexture(sourceTexture, index: 0)
+        encoder.setFragmentSamplerState(sampler, index: 0)
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+
+        encoder.endEncoding()
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+        frameCount &+= 1
+    }
+
+    /// Composite a lower-third overlay texture onto an existing target (alpha-over blend)
+    func compositeLowerThird(texture: MTLTexture, pipeline: MTLRenderPipelineState, target: MTLTexture, viewportSize: CGSize, slideOffset: Float) {
+        guard let commandBuffer = commandQueue.makeCommandBuffer() else { return }
+
+        let renderDesc = MTLRenderPassDescriptor()
+        renderDesc.colorAttachments[0].texture = target
+        renderDesc.colorAttachments[0].loadAction = .load  // preserve existing content
+        renderDesc.colorAttachments[0].storeAction = .store
+
+        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderDesc) else { return }
+
+        var slide = slideOffset
+        encoder.setRenderPipelineState(pipeline)
+        encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        encoder.setVertexBytes(&slide, length: MemoryLayout<Float>.size, index: 1)
+        encoder.setFragmentTexture(texture, index: 0)
+        encoder.setFragmentSamplerState(sampler, index: 0)
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+
+        encoder.endEncoding()
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+    }
+
     // MARK: - Setup
 
     private func setupOverlayPipelines() throws {

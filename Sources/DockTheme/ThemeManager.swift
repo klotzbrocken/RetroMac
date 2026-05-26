@@ -69,6 +69,13 @@ final class ThemeManager {
             }
     }
 
+    func clearActiveTheme() {
+        activeTheme = nil
+        iconCache.removeAllObjects()
+        NotificationCenter.default.post(name: .dockThemeChanged, object: nil)
+        print("[Theme] Active theme: none (disabled)")
+    }
+
     func setActiveTheme(name: String) {
         AppSettings.shared.dockTheme = name
         activeTheme = availableThemes.first(where: { $0.config.name == name })
@@ -76,9 +83,16 @@ final class ThemeManager {
         applyWallpaper()
         NotificationCenter.default.post(name: .dockThemeChanged, object: nil)
         print("[Theme] Active theme: \(name)")
+
+        // Auto-apply system icons if enabled
+        if AppSettings.shared.applySystemIcons {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.applyIconsToSystem()
+            }
+        }
     }
 
-    private func applyWallpaper() {
+    func applyWallpaper() {
         guard let theme = activeTheme, let wpURL = theme.wallpaperURL() else {
             restoreWallpapers()
             return
@@ -147,13 +161,42 @@ final class ThemeManager {
             }
         }
 
-        if let theme = activeTheme, let fallbackURL = theme.fallbackIconURL() {
+        // Only use fallback if the theme intended to have an icon for this app
+        // (mapping exists but file is missing). If no mapping exists, fall through to system icon.
+        if let theme = activeTheme,
+           theme.config.iconMappings[bundleID] != nil,
+           let fallbackURL = theme.fallbackIconURL() {
             if let img = NSImage(contentsOf: fallbackURL) {
                 img.size = NSSize(width: size, height: size)
                 return img
             }
         }
 
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            let icon = NSWorkspace.shared.icon(forFile: url.path)
+            icon.size = NSSize(width: size, height: size)
+            return icon
+        }
+
+        let fallback = NSImage(systemSymbolName: "app.fill", accessibilityDescription: nil)
+            ?? NSImage(size: NSSize(width: size, height: size))
+        fallback.size = NSSize(width: size, height: size)
+        return fallback
+    }
+
+    /// Returns the real system icon for a bundle ID (no theme icons, no fallback).
+    /// Only custom user overrides are applied.
+    func systemIcon(for bundleID: String, size: CGFloat) -> NSImage {
+        // Check custom override first (user explicitly set this)
+        if let themeName = activeTheme?.name,
+           let customPath = iconOverrides[themeName]?[bundleID] {
+            if let img = NSImage(contentsOfFile: customPath) {
+                img.size = NSSize(width: size, height: size)
+                return img
+            }
+        }
+
+        // Use the real app icon from the system
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
             let icon = NSWorkspace.shared.icon(forFile: url.path)
             icon.size = NSSize(width: size, height: size)
@@ -301,5 +344,47 @@ final class ThemeManager {
         let copy = try ThemeBundle.create(name: newName, basedOn: theme, at: userThemesDir)
         reload()
         return copy
+    }
+
+    // MARK: - Apply Theme Icons to System
+
+    /// Apply the current theme's icons to actual apps on disk via NSWorkspace.setIcon
+    func applyIconsToSystem() {
+        guard let theme = activeTheme else { return }
+        let apps = AppManager.shared.apps
+        var applied = 0
+
+        for app in apps {
+            let bid = app.bundleID
+            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) else { continue }
+
+            // Load the icon this theme would display
+            let img = loadIcon(for: bid, size: 512)
+
+            // Check if we have a themed icon (not just the system icon)
+            let hasThemeIcon = iconOverrides[theme.name]?[bid] != nil
+                || theme.iconURL(for: bid) != nil
+
+            if hasThemeIcon {
+                if NSWorkspace.shared.setIcon(img, forFile: appURL.path, options: []) {
+                    applied += 1
+                }
+            }
+        }
+        print("[Theme] Applied \(applied) icons to system apps")
+    }
+
+    /// Revert all system app icons to their originals
+    func revertSystemIcons() {
+        let apps = AppManager.shared.apps
+        var reverted = 0
+
+        for app in apps {
+            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundleID) else { continue }
+            if NSWorkspace.shared.setIcon(nil, forFile: appURL.path, options: []) {
+                reverted += 1
+            }
+        }
+        print("[Theme] Reverted \(reverted) system app icons")
     }
 }

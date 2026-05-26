@@ -65,6 +65,17 @@ if [ -d "Resources/Sounds" ]; then
     rsync -a --delete Resources/Sounds/ "$CONTENTS/Resources/Sounds/"
 fi
 
+# Copy Doom CRT shader PK3
+if [ -f "Resources/RetroMac-CRT.pk3" ]; then
+    cp Resources/RetroMac-CRT.pk3 "$CONTENTS/Resources/RetroMac-CRT.pk3"
+fi
+
+# Copy Duke Nukem 3D shareware GRP (if bundled)
+if [ -f "Resources/DUKE3D.GRP" ]; then
+    cp Resources/DUKE3D.GRP "$CONTENTS/Resources/DUKE3D.GRP"
+    echo "  ✓ Duke Nukem 3D shareware bundled"
+fi
+
 # Embed Camera Extension in app bundle
 rsync -a --delete "$EXT_BUNDLE/" "$CONTENTS/Library/SystemExtensions/com.retromac.app.camera.systemextension/"
 
@@ -123,3 +134,18 @@ echo "  ✓ Camera Extension embedded in Library/SystemExtensions"
 echo "  Run:  open /Applications/RetroMac.app"
 echo ""
 echo "First launch: grant Screen Recording + Camera in System Settings → Privacy & Security"
+
+# --- DMG creation (pass 'dmg' as second arg) ---
+if [ "${2}" = "dmg" ]; then
+    echo ""
+    echo "Creating DMG..."
+    DMG_DIR=".build/dmg_staging"
+    rm -rf "$DMG_DIR"
+    mkdir -p "$DMG_DIR"
+    cp -R "$APP_BUNDLE" "$DMG_DIR/RetroMac.app"
+    ln -s /Applications "$DMG_DIR/Applications"
+    rm -f RetroMac.dmg
+    hdiutil create -volname "RetroMac" -srcfolder "$DMG_DIR" -ov -format UDZO RetroMac.dmg
+    rm -rf "$DMG_DIR"
+    echo "  ✓ RetroMac.dmg created (with Applications shortcut)"
+fi

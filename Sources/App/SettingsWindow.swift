@@ -1,5 +1,7 @@
 import SwiftUI
 import Carbon.HIToolbox
+import ScreenCaptureKit
+import Sparkle
 
 struct AppInfo: Identifiable, Hashable {
     let id: String
@@ -14,26 +16,24 @@ struct AppInfo: Identifiable, Hashable {
 enum SettingsTab: String, CaseIterable {
     case general = "General"
     case display = "Display"
-    case overlays = "Overlays"
     case dock = "Dock"
     case television = "Television"
+    case camera = "Camera"
+    case games = "Games"
     case apps = "Apps"
-    case presets = "Presets"
-    case health = "Health"
-    case license = "License"
+    case shader = "Shader"
     case about = "About"
 
     var icon: String {
         switch self {
         case .general: return "gear"
         case .display: return "display"
-        case .overlays: return "square.stack.3d.up"
         case .dock: return "dock.rectangle"
         case .television: return "tv"
+        case .camera: return "camera.fill"
+        case .games: return "gamecontroller"
         case .apps: return "app.dashed"
-        case .presets: return "slider.horizontal.3"
-        case .health: return "heart.text.square"
-        case .license: return "key"
+        case .shader: return "slider.horizontal.3"
         case .about: return "info.circle"
         }
     }
@@ -46,6 +46,7 @@ struct SettingsView: View {
     @State private var searchText: String = ""
     @State private var showAppPicker = false
     @State private var selectedTab: SettingsTab = .general
+    let updater: SPUUpdater
 
     var body: some View {
         VStack(spacing: 0) {
@@ -83,14 +84,13 @@ struct SettingsView: View {
                 switch selectedTab {
                 case .general: generalTab
                 case .display: displayTab
-                case .overlays: overlaysTab
                 case .dock: DockSettingsTab()
                 case .television: TVSettingsTab()
+                case .camera: cameraTab
+                case .games: GamesSettingsTab()
                 case .apps: appsTab
-                case .presets: presetsTab
-                case .health: HealthCheckTab()
-                case .license: LicenseTab()
-                case .about: AboutTab()
+                case .shader: shaderTab
+                case .about: AboutTab(updater: updater)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -104,6 +104,10 @@ struct SettingsView: View {
 
     // MARK: - General
 
+    @State private var screenRecordingGranted: Bool?
+    @State private var accessibilityGranted: Bool?
+    @State private var automationGranted: Bool?
+
     private var generalTab: some View {
         Form {
             Section("Startup") {
@@ -115,70 +119,106 @@ struct SettingsView: View {
                 Toggle("Stop Overlay on Sleep / Lock", isOn: $settings.stopOnSleep)
                 Toggle("Resume Overlay after Wake", isOn: $settings.resumeAfterSleep)
                     .disabled(!settings.stopOnSleep)
-                Text("Automatically stops the overlay when the Mac sleeps or the screen is locked.")
+                Toggle("Reset to Defaults after Awake", isOn: $settings.resetOnWake)
+                    .disabled(!settings.stopOnSleep || !settings.resumeAfterSleep)
+                Text("Automatically stops the overlay when the Mac sleeps or the screen is locked. Reset restores the default shader preset on wake.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            }
-
-            Section("Defaults") {
-                Picker("Default Preset", selection: $settings.defaultPreset) {
-                    ForEach(PresetRegistry.availablePresets, id: \.id) { preset in
-                        Text(preset.displayName).tag(preset.id)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Default Intensity")
-                    HStack {
-                        Slider(value: $settings.defaultIntensity, in: 0.1...1.0, step: 0.05)
-                        Text("\(Int(settings.defaultIntensity * 100))%")
-                            .frame(width: 40, alignment: .trailing)
-                            .monospacedDigit()
-                    }
-                }
             }
 
             Section("Hotkey") {
                 HotkeyRecorderView()
             }
+
+            Section("Permissions") {
+                permissionRow("Screen Recording", status: screenRecordingGranted)
+                permissionRow("Accessibility", status: accessibilityGranted)
+                permissionRow("Automation", status: automationGranted)
+
+                HStack {
+                    Button("Recheck") {
+                        checkPermissions()
+                    }
+                    .font(.caption)
+                    Spacer()
+                    Button("Re-run Setup Assistant") {
+                        AppDelegate.shared?.showOnboarding()
+                    }
+                    .font(.caption)
+                }
+            }
         }
         .formStyle(.grouped)
         .padding(.top, 8)
+        .task {
+            checkPermissions()
+        }
+    }
+
+    @ViewBuilder
+    private func permissionRow(_ name: String, status: Bool?) -> some View {
+        HStack {
+            Text(name)
+            Spacer()
+            switch status {
+            case .some(true):
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("Granted").foregroundStyle(.secondary)
+            case .some(false):
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.red)
+                Text("Not Granted").foregroundStyle(.secondary)
+            case .none:
+                ProgressView()
+                    .controlSize(.small)
+            }
+        }
+    }
+
+    private func checkPermissions() {
+        screenRecordingGranted = nil
+        accessibilityGranted = AXIsProcessTrusted()
+        automationGranted = SystemUIHelper.testAutomation()
+
+        Task {
+            do {
+                _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+                await MainActor.run { screenRecordingGranted = true }
+            } catch {
+                await MainActor.run { screenRecordingGranted = false }
+            }
+        }
     }
 
     // MARK: - Display
 
     private var displayTab: some View {
         Form {
-            Section("System UI") {
-                Toggle("Hide Dock & Menu Bar", isOn: $settings.hideSystemUI)
-                Text("Hides the Dock and menu bar while the shader overlay is active.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Vignette") {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(settings.vignetteIntensity < 0.01 ? "Off" : "\(Int(settings.vignetteIntensity * 100))%")
-                            .frame(width: 40)
-                            .monospacedDigit()
-                        Slider(value: $settings.vignetteIntensity, in: 0.0...1.0, step: 0.05)
+            Section("Performance") {
+                Picker("Profile", selection: $settings.performanceProfile) {
+                    ForEach(PerformanceProfile.allCases) { profile in
+                        HStack {
+                            Image(systemName: profile.icon)
+                            VStack(alignment: .leading) {
+                                Text(profile.displayName)
+                                Text(profile.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .tag(profile)
                     }
                 }
-                Text("Darkens screen edges for a more authentic CRT look.")
+                .pickerStyle(.radioGroup)
+                Text("Changes take effect when the overlay is restarted.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            }
 
-            Section("Performance") {
-                Toggle("Low Latency Mode", isOn: $settings.lowLatencyMode)
-                Text("60 fps capture & render. Reduces mouse lag but uses more GPU.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Toggle("Half Resolution", isOn: $settings.halfResolution)
-                Text("Capture at 1× instead of 2× (Retina). Halves GPU load, slightly softer image.")
+                Divider()
+
+                Toggle("Low Latency Mode (60 fps)", isOn: $settings.lowLatencyMode)
+                Text("Overrides profile FPS to 60. Reduces mouse lag but uses more GPU.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -192,85 +232,6 @@ struct SettingsView: View {
                     let res = "\(Int(screen.frame.width))×\(Int(screen.frame.height))"
                     LabeledContent(screen.localizedName, value: res)
                 }
-            }
-        }
-        .formStyle(.grouped)
-        .padding(.top, 8)
-    }
-
-    // MARK: - Overlays
-
-    private var overlaysTab: some View {
-        Form {
-            Section("Scanline Overlay") {
-                Picker("Scanlines", selection: $settings.scanlineOverlayName) {
-                    Text("None").tag("")
-                    ForEach(OverlayManager.builtinScanlines) { s in
-                        Text(s.displayName).tag(s.id)
-                    }
-                    let custom = OverlayManager.customOverlays(type: .scanline)
-                    if !custom.isEmpty {
-                        Divider()
-                        ForEach(custom) { overlay in
-                            Text(overlay.displayName).tag(overlay.id)
-                        }
-                    }
-                }
-                .pickerStyle(.menu)
-
-                if !settings.scanlineOverlayName.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text("\(Int(settings.scanlineOverlayIntensity * 100))%")
-                                .frame(width: 40)
-                                .monospacedDigit()
-                            Slider(value: $settings.scanlineOverlayIntensity, in: 0.1...1.0, step: 0.05)
-                        }
-                    }
-                }
-                Text("Additional scanline texture layered over the shader effect.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Screen Reflection") {
-                Picker("Reflection", selection: $settings.reflectionName) {
-                    Text("None").tag("")
-                    ForEach(OverlayManager.builtinReflections) { r in
-                        Text(r.displayName).tag(r.id)
-                    }
-                    let custom = OverlayManager.customOverlays(type: .reflection)
-                    if !custom.isEmpty {
-                        Divider()
-                        ForEach(custom) { overlay in
-                            Text(overlay.displayName).tag(overlay.id)
-                        }
-                    }
-                }
-                .pickerStyle(.menu)
-
-                if !settings.reflectionName.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text("\(Int(settings.reflectionIntensity * 100))%")
-                                .frame(width: 40)
-                                .monospacedDigit()
-                            Slider(value: $settings.reflectionIntensity, in: 0.05...1.0, step: 0.05)
-                        }
-                    }
-                }
-                Text("Simulated glass glare / light reflection on the screen surface.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Custom Overlays") {
-                Button("Open Overlays Folder") {
-                    NSWorkspace.shared.open(OverlayManager.overlaysDirectory())
-                }
-                Text("Place PNG images in the scanline or reflection subfolder.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -501,18 +462,66 @@ struct SettingsView: View {
         installedApps = apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    // MARK: - Presets
+    // MARK: - Shader
 
-    private var presetsTab: some View {
+    private var cameraTab: some View {
         Form {
-            ForEach(PresetRegistry.categorizedPresets, id: \.0) { category, presets in
-                Section(category.rawValue) {
-                    ForEach(presets, id: \.id) { preset in
-                        LabeledContent(preset.displayName, value: preset.description)
+            Section("Virtual Camera") {
+                let vcam = VirtualCameraManager.shared
+                HStack {
+                    Circle()
+                        .fill(vcam.isRunning ? Color.green : Color.gray)
+                        .frame(width: 8, height: 8)
+                    Text(vcam.isRunning ? "Camera active" : "Camera inactive")
+                        .foregroundStyle(.secondary)
+                }
+
+                Picker("Shader", selection: Binding(
+                    get: { vcam.selectedShader },
+                    set: { vcam.changeShader($0) }
+                )) {
+                    ForEach(PresetRegistry.categorizedPresets, id: \.0) { category, presets in
+                        ForEach(presets, id: \.id) { preset in
+                            Text(preset.displayName).tag(preset.id)
+                        }
                     }
+                }
+
+                Slider(value: Binding(
+                    get: { vcam.shaderIntensity },
+                    set: { vcam.updateIntensity($0) }
+                ), in: 0...1) {
+                    Text("Intensity")
                 }
             }
 
+            Section("Lower Third (Bauchbinde)") {
+                Text("Available with Late Night CRT and Newsroom 1987 shaders.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle("Show Lower Third", isOn: $settings.lowerThirdEnabled)
+
+                TextField("Name", text: $settings.lowerThirdName, prompt: Text("Your Name"))
+                TextField("Title", text: $settings.lowerThirdTitle, prompt: Text("Host / Reporter / Guest"))
+
+                Picker("Style", selection: $settings.lowerThirdStyle) {
+                    Text("Late Night (Gold)").tag("latenight")
+                    Text("Newsroom (Red/Blue)").tag("newsroom")
+                }
+                .pickerStyle(.segmented)
+
+                Text("The style is auto-selected based on the active shader. Manual override applies when using other shaders.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding(.top, 8)
+    }
+
+    private var shaderTab: some View {
+        Form {
             Section("Custom Presets") {
                 if customPresetFiles.isEmpty {
                     Text("No custom presets installed.")
@@ -530,6 +539,14 @@ struct SettingsView: View {
                 Text("Place .metal shader files in the Presets folder.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            ForEach(PresetRegistry.categorizedPresets, id: \.0) { category, presets in
+                Section(category.rawValue) {
+                    ForEach(presets, id: \.id) { preset in
+                        LabeledContent(preset.displayName, value: preset.description)
+                    }
+                }
             }
         }
         .formStyle(.grouped)
@@ -621,6 +638,7 @@ final class HotkeyNSView: NSView {
 final class SettingsWindowController {
     private var window: NSWindow?
     private var savedMenu: NSMenu?
+    var updater: SPUUpdater?
 
     func show() {
         if let window = window {
@@ -630,7 +648,7 @@ final class SettingsWindowController {
             return
         }
 
-        let hostingView = NSHostingView(rootView: SettingsView())
+        let hostingView = NSHostingView(rootView: SettingsView(updater: updater!))
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 520, height: 500),
             styleMask: [.titled, .closable, .miniaturizable],
