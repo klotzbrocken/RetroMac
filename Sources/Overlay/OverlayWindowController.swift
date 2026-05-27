@@ -13,7 +13,7 @@ enum CaptureMode {
 final class OverlayWindowController: NSObject, MTKViewDelegate {
     private var windows: [NSWindow] = []
     private var metalViews: [MTKView] = []
-    private var renderer: RetroRenderer!
+    private(set) var renderer: RetroRenderer!
     private var captureManagers: [ScreenCaptureManager] = []
     private var device: MTLDevice!
     private var overlayManager: OverlayManager!
@@ -301,7 +301,8 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         didReceiveFirstFrame = true
         print("[Overlay] First frame → rendering")
         if shouldHideSystemUI {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                guard let self = self, self.didReceiveFirstFrame else { return }
                 SystemUIHelper.hideMenuBarAndDock()
                 self.didHideSystemUI = true
                 print("[Overlay] System UI hidden via System Events")
@@ -331,25 +332,26 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     }
 
     func stop() {
-        let doStop = { [self] in
-            trackingTimer?.cancel()
-            trackingTimer = nil
-            resizeDebounceTimer?.cancel()
-            resizeDebounceTimer = nil
-            stopFPSTracking()
-            for manager in captureManagers { manager.stop() }
-            captureManagers.removeAll()
-            for view in metalViews { view.isPaused = true }
-            for window in windows { window.orderOut(nil) }
-            textureLock.withLock {
-                viewTextures.removeAll()
-                viewDirtyFlags.removeAll()
+        let doStop = { [weak self] in
+            guard let self = self else { return }
+            self.trackingTimer?.cancel()
+            self.trackingTimer = nil
+            self.resizeDebounceTimer?.cancel()
+            self.resizeDebounceTimer = nil
+            self.stopFPSTracking()
+            for manager in self.captureManagers { manager.stop() }
+            self.captureManagers.removeAll()
+            for view in self.metalViews { view.isPaused = true }
+            for window in self.windows { window.orderOut(nil) }
+            self.textureLock.withLock {
+                self.viewTextures.removeAll()
+                self.viewDirtyFlags.removeAll()
             }
-            didReceiveFirstFrame = false
+            self.didReceiveFirstFrame = false
 
-            if didHideSystemUI {
+            if self.didHideSystemUI {
                 SystemUIHelper.showMenuBarAndDock()
-                didHideSystemUI = false
+                self.didHideSystemUI = false
             }
             print("[Overlay] Stopped.")
         }

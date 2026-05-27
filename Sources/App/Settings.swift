@@ -145,6 +145,9 @@ final class AppSettings: ObservableObject {
     @Published var onboardingComplete: Bool {
         didSet { defaults.set(onboardingComplete, forKey: "onboardingComplete") }
     }
+    @Published var lastSeenVersion: String {
+        didSet { defaults.set(lastSeenVersion, forKey: "lastSeenVersion") }
+    }
     @Published var showFPSOverlay: Bool {
         didSet { defaults.set(showFPSOverlay, forKey: "showFPSOverlay") }
     }
@@ -288,12 +291,34 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(freedoomCRTShaderEnabled, forKey: "freedoomCRTShaderEnabled") }
     }
 
-    // Games — Quake 1 & 2 (RetroArch + TyrQuake/Vitaquake2 cores + CRT shader)
+    // Games — Quake 1 & 2 (vkQuake / Yamagi Quake II + Lite overlay shader)
     @Published var quakeBasePath: String {
         didSet { defaults.set(quakeBasePath, forKey: "quakeBasePath") }
     }
     @Published var quake2BasePath: String {
         didSet { defaults.set(quake2BasePath, forKey: "quake2BasePath") }
+    }
+    @Published var quakeLitePreset: String {
+        didSet { defaults.set(quakeLitePreset, forKey: "quakeLitePreset") }
+    }
+    @Published var quake2LitePreset: String {
+        didSet { defaults.set(quake2LitePreset, forKey: "quake2LitePreset") }
+    }
+
+    // Bloom (MPS-based post-process glow)
+    @Published var bloomEnabled: Bool {
+        didSet { defaults.set(bloomEnabled, forKey: "bloomEnabled") }
+    }
+    @Published var bloomIntensity: Float {
+        didSet { defaults.set(bloomIntensity, forKey: "bloomIntensity") }
+    }
+    @Published var bloomRadius: Float {
+        didSet { defaults.set(bloomRadius, forKey: "bloomRadius") }
+    }
+
+    // Retro Viewport
+    @Published var viewportPreset: String {
+        didSet { defaults.set(viewportPreset, forKey: "viewportPreset") }
     }
 
     var customPresetsDirectory: URL { presetsDir }
@@ -331,6 +356,7 @@ final class AppSettings: ObservableObject {
 
         // Onboarding / Features
         onboardingComplete = defaults.bool(forKey: "onboardingComplete")
+        lastSeenVersion = defaults.string(forKey: "lastSeenVersion") ?? ""
         showFPSOverlay = defaults.bool(forKey: "showFPSOverlay")
         classicMacModeActive = defaults.bool(forKey: "classicMacModeActive")
 
@@ -402,11 +428,21 @@ final class AppSettings: ObservableObject {
         // Games — Freedoom
         freedoomCRTShaderEnabled = defaults.object(forKey: "freedoomCRTShaderEnabled") as? Bool ?? true
 
-        // Games — Quake 1 & 2 (RetroArch)
+        // Games — Quake 1 & 2 (vkQuake / Yamagi)
         let defaultQuakeDir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games/Quake"
         quakeBasePath = defaults.string(forKey: "quakeBasePath") ?? defaultQuakeDir
         let defaultQuake2Dir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games/Quake2"
         quake2BasePath = defaults.string(forKey: "quake2BasePath") ?? defaultQuake2Dir
+        quakeLitePreset = defaults.string(forKey: "quakeLitePreset") ?? "crt-lite"
+        quake2LitePreset = defaults.string(forKey: "quake2LitePreset") ?? "crt-lite"
+
+        // Bloom
+        bloomEnabled = defaults.bool(forKey: "bloomEnabled")
+        bloomIntensity = defaults.object(forKey: "bloomIntensity") as? Float ?? 0.3
+        bloomRadius = defaults.object(forKey: "bloomRadius") as? Float ?? 8.0
+
+        // Viewport
+        viewportPreset = defaults.string(forKey: "viewportPreset") ?? "crt-royale-lite"
     }
 
     func presetForApp(bundleID: String) -> String? {
