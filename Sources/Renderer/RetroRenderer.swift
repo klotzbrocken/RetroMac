@@ -1,5 +1,6 @@
 import Metal
 import MetalKit
+import MetalPerformanceShaders
 import AppKit
 import simd
 
@@ -36,6 +37,24 @@ final class RetroRenderer {
     var reflectionTexture: MTLTexture?
     var scanlineIntensity: Float = 1.0
     var reflectionIntensity: Float = 1.0
+
+    // Bloom (MPS-based post-process)
+    private(set) var bloomFilter: BloomFilter?
+    var bloomEnabled: Bool = false {
+        didSet { ensureBloomFilter() }
+    }
+    var bloomIntensity: Float = 0.3 {
+        didSet { bloomFilter?.intensity = bloomIntensity }
+    }
+    var bloomRadius: Float = 8.0 {
+        didSet { bloomFilter?.radius = bloomRadius }
+    }
+    var bloomThreshold: Float = 0.4 {
+        didSet { bloomFilter?.threshold = bloomThreshold }
+    }
+
+    // Recording
+    var recorder: ShaderRecorder?
 
     private(set) var lastGPUTimeMs: Double = 0
     private var gpuSampleCounter: UInt32 = 0
@@ -148,6 +167,11 @@ final class RetroRenderer {
 
         encoder.endEncoding()
 
+        // Pass 4: Bloom post-process (MPS Gaussian blur + additive composite)
+        if bloomEnabled, let bloom = bloomFilter {
+            bloom.apply(source: drawable.texture, drawable: drawable, commandBuffer: commandBuffer, viewportSize: viewportSize)
+        }
+
         gpuSampleCounter &+= 1
         let shouldSample = gpuSampleCounter % 30 == 0
         if shouldSample {
@@ -157,8 +181,39 @@ final class RetroRenderer {
             }
         }
 
+        // Recording: capture the rendered frame for video output
+        if let recorder = recorder, recorder.isRecording {
+            // Schedule a blit to a managed texture for recording
+            // (done after bloom so the recording includes the effect)
+            let recTex = ensureRecordingTexture(width: drawable.texture.width, height: drawable.texture.height)
+            if let recTex = recTex, let blit = commandBuffer.makeBlitCommandEncoder() {
+                blit.copy(from: drawable.texture, to: recTex)
+                blit.synchronize(resource: recTex)
+                blit.endEncoding()
+                commandBuffer.addCompletedHandler { _ in
+                    recorder.addFrame(texture: recTex)
+                }
+            }
+        }
+
         commandBuffer.present(drawable)
         commandBuffer.commit()
+    }
+
+    // Recording texture (managed storage for CPU readback)
+    private var recordingTexture: MTLTexture?
+
+    private func ensureRecordingTexture(width: Int, height: Int) -> MTLTexture? {
+        if let tex = recordingTexture, tex.width == width, tex.height == height {
+            return tex
+        }
+        let desc = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false
+        )
+        desc.usage = [.shaderRead, .renderTarget]
+        desc.storageMode = .managed
+        recordingTexture = device.makeTexture(descriptor: desc)
+        return recordingTexture
     }
 
     func renderToImage(sourceTexture: MTLTexture, viewportSize: CGSize) -> NSImage? {
@@ -306,6 +361,50 @@ final class RetroRenderer {
         frameCount &+= 1
     }
 
+    /// Render to an IOSurface-backed texture without blocking the calling thread.
+    /// Used by VirtualCameraManager to avoid stalling the capture queue.
+    func renderToTextureAsync(sourceTexture: MTLTexture, target: MTLTexture, viewportSize: CGSize) {
+        guard let pipeline = currentPipeline,
+              let commandBuffer = commandQueue.makeCommandBuffer() else { return }
+
+        let fw = Float(viewportSize.width)
+        let fh = Float(viewportSize.height)
+        let sw = Float(sourceTexture.width)
+        let sh = Float(sourceTexture.height)
+
+        var uniforms = ShaderUniforms(
+            mvp: makeOrthographic(width: fw, height: fh),
+            outputSize: SIMD4<Float>(fw, fh, 1.0 / fw, 1.0 / fh),
+            sourceSize: SIMD4<Float>(sw, sh, 1.0 / sw, 1.0 / sh),
+            originalSize: SIMD4<Float>(sw, sh, 1.0 / sw, 1.0 / sh),
+            finalViewportSize: SIMD4<Float>(fw, fh, 1.0 / fw, 1.0 / fh),
+            frameCount: frameCount,
+            frameDirection: 1,
+            intensity: intensity,
+            vignetteIntensity: vignetteIntensity
+        )
+
+        let renderDesc = MTLRenderPassDescriptor()
+        renderDesc.colorAttachments[0].texture = target
+        renderDesc.colorAttachments[0].loadAction = .dontCare
+        renderDesc.colorAttachments[0].storeAction = .store
+
+        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderDesc) else { return }
+
+        encoder.setRenderPipelineState(pipeline)
+        encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+        encoder.setVertexBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 1)
+        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 0)
+        encoder.setFragmentTexture(sourceTexture, index: 0)
+        encoder.setFragmentSamplerState(sampler, index: 0)
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+
+        encoder.endEncoding()
+        commandBuffer.commit()
+        // No waitUntilCompleted — IOSurface is read by extension on next poll
+        frameCount &+= 1
+    }
+
     /// Composite a lower-third overlay texture onto an existing target (alpha-over blend)
     func compositeLowerThird(texture: MTLTexture, pipeline: MTLRenderPipelineState, target: MTLTexture, viewportSize: CGSize, slideOffset: Float) {
         guard let commandBuffer = commandQueue.makeCommandBuffer() else { return }
@@ -327,7 +426,7 @@ final class RetroRenderer {
 
         encoder.endEncoding()
         commandBuffer.commit()
-        commandBuffer.waitUntilCompleted()
+        // No waitUntilCompleted — lower-third composites on IOSurface read asynchronously
     }
 
     // MARK: - Setup
@@ -469,6 +568,19 @@ final class RetroRenderer {
             SIMD4<Float>(0, 0, 1, 0),
             SIMD4<Float>(0, 0, 0, 1)
         )
+    }
+
+    private func ensureBloomFilter() {
+        guard bloomEnabled, bloomFilter == nil else { return }
+        do {
+            bloomFilter = try BloomFilter(device: device)
+            bloomFilter?.intensity = bloomIntensity
+            bloomFilter?.radius = bloomRadius
+            bloomFilter?.threshold = bloomThreshold
+            print("[Renderer] Bloom filter initialized")
+        } catch {
+            print("[Renderer] Bloom filter failed: \(error)")
+        }
     }
 
     enum RendererError: Error {

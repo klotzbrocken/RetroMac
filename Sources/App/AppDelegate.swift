@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     private(set) var overlayController: OverlayWindowController?
+    private(set) var crtLiteOverlay: CRTLiteOverlay?
     private(set) var isActive = false
     var currentPresetName: String!
     private var hotKeyRef: EventHotKeyRef?
@@ -18,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var currentVignetteIntensity: Float!
     private let settingsWindow = SettingsWindowController()
     private let onboardingWindow = OnboardingWindowController()
+    private let whatsNewWindow = WhatsNewWindowController()
     private let fpsOverlay = FPSOverlayController()
     private let windowPicker = WindowPicker()
     private let tvBrowser = TVBrowserWindow()
@@ -30,6 +32,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var wasActiveBeforeSleep = false
     private var overlayStartTask: Task<Void, Never>?
     private var permissionPollTimer: Timer?
+
+    // Retro Viewport (movable shader window)
+    private let retroViewport = RetroViewport()
+
+    // Video recording with shader effects
+    private var shaderRecorder: ShaderRecorder?
 
     // Save/restore state for TV window overlay
     var savedPreset: String?
@@ -97,6 +105,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !settings.onboardingComplete {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.onboardingWindow.show()
+            }
+        } else {
+            // Show What's New if user updated to a new version
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.whatsNewWindow.showIfNeeded()
             }
         }
 
@@ -339,6 +352,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         vignetteItem.submenu = vignetteMenu
         menu.addItem(vignetteItem)
 
+        // Bloom submenu (MPS-based glow)
+        let bloomItem = NSMenuItem(title: "Bloom", action: nil, keyEquivalent: "")
+        bloomItem.image = sfIcon("sun.max")
+        let bloomMenu = NSMenu()
+
+        let bloomToggle = NSMenuItem(
+            title: settings.bloomEnabled ? "✓ Enabled" : "Off",
+            action: #selector(toggleBloom),
+            keyEquivalent: ""
+        )
+        bloomToggle.target = self
+        bloomMenu.addItem(bloomToggle)
+        bloomMenu.addItem(.separator())
+
+        for pct in [10, 20, 30, 50, 75, 100] {
+            let item = NSMenuItem(title: "\(pct)%", action: #selector(setBloomIntensity(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = pct
+            if settings.bloomEnabled && abs(Float(pct) / 100.0 - settings.bloomIntensity) < 0.01 {
+                item.state = .on
+            }
+            bloomMenu.addItem(item)
+        }
+        bloomItem.submenu = bloomMenu
+        menu.addItem(bloomItem)
+
         // Display submenu
         let displayItem = NSMenuItem(title: "Display", action: nil, keyEquivalent: "")
         displayItem.image = sfIcon("display")
@@ -380,6 +419,77 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             screenshotItem.image = sfIcon("camera")
             menu.addItem(screenshotItem)
         }
+
+        // Record with Effect
+        if isActive {
+            let isRecording = overlayController?.renderer?.recorder?.isRecording ?? false
+            let recordTitle = isRecording ? "⏹ Stop Recording" : "Record with Effect"
+            let recordItem = NSMenuItem(title: recordTitle, action: #selector(toggleRecording), keyEquivalent: "")
+            recordItem.target = self
+            recordItem.image = sfIcon(isRecording ? "stop.circle.fill" : "record.circle")
+            menu.addItem(recordItem)
+        }
+
+        menu.addItem(NSMenuItem.separator())
+
+        // Retro Viewport (movable shader lens) — submenu with shader picker
+        let viewportItem = NSMenuItem(title: "Retro Viewport", action: nil, keyEquivalent: "")
+        viewportItem.image = sfIcon("viewfinder")
+        let viewportMenu = NSMenu()
+
+        let vpToggle = NSMenuItem(
+            title: retroViewport.isActive ? "Close Viewport" : "Open Viewport",
+            action: #selector(toggleViewport),
+            keyEquivalent: ""
+        )
+        vpToggle.target = self
+        viewportMenu.addItem(vpToggle)
+        viewportMenu.addItem(.separator())
+
+        let vpCurrentPreset = AppSettings.shared.viewportPreset
+        let viewportShaders: [(String, String)] = [
+            ("CRT Royale", "crt-royale-lite"),
+            ("Trinitron TV", "trinitron-tv"),
+            ("VHS", "vhs"),
+            ("VCR Tracking", "vcr-tracking"),
+            ("Retro LCD", "lcd-grid"),
+            ("Game Boy", "gameboy"),
+            ("Cinema Film", "cinema-film"),
+            ("Amber Monitor", "amber-monitor"),
+        ]
+        let vpClassicHeader = NSMenuItem(title: "Classic Shaders", action: nil, keyEquivalent: "")
+        vpClassicHeader.isEnabled = false
+        viewportMenu.addItem(vpClassicHeader)
+        for (name, id) in viewportShaders {
+            let item = NSMenuItem(title: name, action: #selector(selectViewportPreset(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = id
+            if id == vpCurrentPreset { item.state = .on }
+            viewportMenu.addItem(item)
+        }
+
+        viewportMenu.addItem(.separator())
+        let vpLiteHeader = NSMenuItem(title: "Lite Shaders", action: nil, keyEquivalent: "")
+        vpLiteHeader.isEnabled = false
+        viewportMenu.addItem(vpLiteHeader)
+        let viewportLiteShaders: [(String, String)] = [
+            ("⚡ CRT Lite", "crt-lite"),
+            ("⚡ LCD Lite", "lcd-lite"),
+            ("⚡ LCD Retro Lite", "lcd-retro-lite"),
+            ("⚡ VHS Lite", "vhs-lite"),
+            ("⚡ Scanlines Lite", "scanlines-lite"),
+            ("⚡ Film Scratches Lite", "grain-lite"),
+        ]
+        for (name, id) in viewportLiteShaders {
+            let item = NSMenuItem(title: name, action: #selector(selectViewportPreset(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = id
+            if id == vpCurrentPreset { item.state = .on }
+            viewportMenu.addItem(item)
+        }
+
+        viewportItem.submenu = viewportMenu
+        menu.addItem(viewportItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -472,6 +582,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quake2Item.image = sfIcon("bolt.horizontal.fill")
         gamesMenu.addItem(quake2Item)
 
+        // Retro Games from ROM library
+        let romEntries = ROMLibrary.shared.entries
+        if !romEntries.isEmpty {
+            gamesMenu.addItem(NSMenuItem.separator())
+            let retroHeader = NSMenuItem(title: "Retro Games", action: nil, keyEquivalent: "")
+            retroHeader.isEnabled = false
+            gamesMenu.addItem(retroHeader)
+
+            for rom in romEntries.prefix(15) {
+                let romItem = NSMenuItem(
+                    title: "\(rom.displayName)  (\(rom.system.shortName))",
+                    action: #selector(launchRetroGame(_:)),
+                    keyEquivalent: ""
+                )
+                romItem.target = self
+                romItem.representedObject = rom.id
+                romItem.image = sfIcon(rom.system.sfSymbol)
+                romItem.isEnabled = rom.system.emulator.isInstalled
+                gamesMenu.addItem(romItem)
+            }
+        }
+
         gamesItem.submenu = gamesMenu
         menu.addItem(gamesItem)
 
@@ -516,6 +648,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 ("Terminal Green", "terminal-green"),
             ]
             for (name, id) in webcamShaders {
+                let item = NSMenuItem(title: name, action: #selector(selectCameraShader(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = id
+                if id == vcam.selectedShader { item.state = .on }
+                shaderMenu.addItem(item)
+            }
+
+            shaderMenu.addItem(.separator())
+
+            let liteHeader = NSMenuItem(title: "Lite Effects", action: nil, keyEquivalent: "")
+            liteHeader.isEnabled = false
+            shaderMenu.addItem(liteHeader)
+            // Note: B&W Lite and Amber Lite excluded — they use macOS system
+            // display filters (grayscale/color tint) which don't affect the webcam feed.
+            let liteShaders = [
+                ("⚡ CRT Lite", "crt-lite"),
+                ("⚡ LCD Lite", "lcd-lite"),
+                ("⚡ LCD Retro Lite", "lcd-retro-lite"),
+                ("⚡ LCD Sharp Lite", "lcd-sharp-lite"),
+                ("⚡ LCD Broken Lite", "lcd-broken-lite"),
+                ("⚡ VHS Lite", "vhs-lite"),
+                ("⚡ Scanlines Lite", "scanlines-lite"),
+                ("⚡ Film Scratches Lite", "grain-lite"),
+            ]
+            for (name, id) in liteShaders {
                 let item = NSMenuItem(title: name, action: #selector(selectCameraShader(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = id
@@ -715,7 +872,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         print("[RetroMac] Wake → resuming overlay")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            guard let self = self, !self.isActive else { return }
             self.startOverlay(mode: .fullScreen)
         }
     }
@@ -729,6 +887,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlayStartTask = nil
         overlayController?.stop()
         overlayController = nil
+        crtLiteOverlay?.stop()
+        crtLiteOverlay = nil
+        DisplayFilterHelper.restoreFilter()  // Safety net for B&W / Amber Lite
         isActive = false
         perAppBundleID = nil
 
@@ -744,15 +905,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
+    /// Whether the given preset is a "Lite" overlay (no screen recording needed)
+    private static let litePresetIDs: Set<String> = [
+        "crt-lite", "lcd-lite", "lcd-retro-lite", "lcd-sharp-lite", "lcd-broken-lite",
+        "bw-lite", "amber-lite", "vhs-lite", "scanlines-lite", "grain-lite"
+    ]
+
+    static func isLitePreset(_ presetID: String?) -> Bool {
+        guard let id = presetID else { return false }
+        return litePresetIDs.contains(id)
+    }
+
     @objc func toggleOverlay() {
         if isActive {
             disableAll()
         } else {
-            startOverlay(mode: .fullScreen)
+            // Lite presets use transparent overlay — no screen recording needed
+            if Self.isLitePreset(currentPresetName) {
+                startCRTLite(mode: .fullScreen)
+            } else {
+                startOverlay(mode: .fullScreen)
+            }
         }
     }
 
     private func startOverlay(mode: CaptureMode, presetOverride: String? = nil, parentWindow: NSWindow? = nil) {
+        // Redirect to Lite overlay if that's the selected preset
+        let effectivePreset = presetOverride ?? currentPresetName ?? ""
+        if Self.isLitePreset(effectivePreset) {
+            if case .singleWindow(let scWindow) = mode,
+               let bundleID = scWindow.owningApplication?.bundleIdentifier {
+                startCRTLite(mode: .forApp(bundleID: bundleID))
+            } else {
+                startCRTLite(mode: .fullScreen)
+            }
+            return
+        }
+
         // Cancel any in-flight overlay start
         overlayStartTask?.cancel()
         overlayStartTask = nil
@@ -830,6 +1019,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 controller.vignetteIntensity = self.currentVignetteIntensity
                 try await controller.start(presetName: presetName)
 
+                // Apply bloom settings from preferences
+                let bloomSettings = AppSettings.shared
+                if let renderer = controller.renderer {
+                    renderer.bloomEnabled = bloomSettings.bloomEnabled
+                    renderer.bloomIntensity = bloomSettings.bloomIntensity
+                    renderer.bloomRadius = bloomSettings.bloomRadius
+                }
+
                 guard !Task.isCancelled else {
                     await MainActor.run { controller.stop() }
                     return
@@ -869,6 +1066,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // MARK: - CRT Lite Overlay (no screen recording)
+
+    enum CRTLiteMode {
+        case fullScreen
+        case forApp(bundleID: String)
+    }
+
+    func startCRTLite(mode: CRTLiteMode, presetName: String? = nil) {
+        let preset = presetName ?? currentPresetName ?? "crt-lite"
+
+        // Stop any existing overlay
+        overlayController?.stop()
+        overlayController = nil
+        crtLiteOverlay?.stop()
+        let overlay = CRTLiteOverlay()
+
+        switch mode {
+        case .fullScreen:
+            overlay.startFullScreen(
+                intensity: currentIntensity,
+                vignetteIntensity: currentVignetteIntensity,
+                preset: preset
+            )
+        case .forApp(let bundleID):
+            overlay.startForApp(
+                bundleID: bundleID,
+                intensity: currentIntensity,
+                vignetteIntensity: currentVignetteIntensity,
+                preset: preset
+            )
+        }
+
+        crtLiteOverlay = overlay
+        currentPresetName = preset
+        isActive = true
+        updateMenuBarIcon()
+        rebuildMenu()
+        print("[RetroMac] Lite overlay started: \(preset) (mode: \(mode))")
+    }
+
     @objc private func selectPreset(_ sender: NSMenuItem) {
         guard let presetId = sender.representedObject as? String else { return }
 
@@ -882,10 +1119,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Manual selection is highest priority — clear any saved TV state
         savedPreset = nil
         savedWasActive = false
-        if !isActive {
-            startOverlay(mode: .fullScreen)
+
+        // Lite presets: switch overlay type if changing to/from lite
+        if Self.isLitePreset(presetId) {
+            // Stop full overlay if running, start Lite
+            if isActive && overlayController != nil {
+                disableAll()
+            }
+            currentPresetName = presetId
+            AppSettings.shared.defaultPreset = presetId
+            if !isActive {
+                startCRTLite(mode: .fullScreen, presetName: presetId)
+            } else {
+                // Already running a lite overlay — switch shader
+                disableAll()
+                startCRTLite(mode: .fullScreen, presetName: presetId)
+            }
+        } else {
+            // Stop Lite overlay if running, start full overlay
+            if crtLiteOverlay?.isActive == true {
+                disableAll()
+            }
+            if !isActive {
+                startOverlay(mode: .fullScreen)
+            }
+            applyPreset(presetId)
         }
-        applyPreset(presetId)
     }
 
     @objc private func setIntensity(_ sender: NSMenuItem) {
@@ -1008,11 +1267,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         print("[RetroMac] TV closed: restoring (preset=\(preset), wasActive=\(wasActive))")
 
-        // Stop TV overlay
+        // Stop current overlay (full or lite)
         overlayStartTask?.cancel()
         overlayStartTask = nil
         overlayController?.stop()
         overlayController = nil
+        crtLiteOverlay?.stop()
+        crtLiteOverlay = nil
         isActive = false
 
         // Restore previous preset
@@ -1020,11 +1281,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Restore overlay if it was active before TV
         if wasActive {
-            startOverlay(mode: .fullScreen)
+            if Self.isLitePreset(preset) {
+                startCRTLite(mode: .fullScreen, presetName: preset)
+            } else {
+                startOverlay(mode: .fullScreen)
+            }
         } else {
             updateMenuBarIcon()
             rebuildMenu()
         }
+    }
+
+    /// Start shader overlay on a specific window (used by ROMLauncher for emulator windows)
+    func startWindowOverlay(window: SCWindow, presetID: String) {
+        startOverlay(mode: .singleWindow(window), presetOverride: presetID)
     }
 
     func applyPreset(_ presetID: String) {
@@ -1093,6 +1363,92 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             ClassicMacMode.activate()
             rebuildMenu()
+        }
+    }
+
+    // MARK: - Bloom (MPS Glow)
+
+    @objc private func toggleBloom() {
+        let settings = AppSettings.shared
+        settings.bloomEnabled.toggle()
+        applyBloomSettings()
+        rebuildMenu()
+    }
+
+    @objc private func setBloomIntensity(_ sender: NSMenuItem) {
+        let settings = AppSettings.shared
+        settings.bloomIntensity = Float(sender.tag) / 100.0
+        if !settings.bloomEnabled { settings.bloomEnabled = true }
+        applyBloomSettings()
+        rebuildMenu()
+    }
+
+    private func applyBloomSettings() {
+        let settings = AppSettings.shared
+        if let renderer = overlayController?.renderer {
+            renderer.bloomEnabled = settings.bloomEnabled
+            renderer.bloomIntensity = settings.bloomIntensity
+            renderer.bloomRadius = settings.bloomRadius
+        }
+    }
+
+    // MARK: - Retro Viewport
+
+    @objc private func toggleViewport() {
+        if retroViewport.isActive {
+            retroViewport.hide()
+        } else {
+            let preset = AppSettings.shared.viewportPreset
+            retroViewport.show(preset: preset)
+        }
+        rebuildMenu()
+    }
+
+    @objc private func selectViewportPreset(_ sender: NSMenuItem) {
+        guard let presetID = sender.representedObject as? String else { return }
+        AppSettings.shared.viewportPreset = presetID
+
+        if retroViewport.isActive {
+            retroViewport.switchPreset(presetID)
+        } else {
+            // Open viewport with the selected preset
+            retroViewport.show(preset: presetID)
+        }
+        rebuildMenu()
+    }
+
+    // MARK: - Video Recording
+
+    @objc private func toggleRecording() {
+        guard let renderer = overlayController?.renderer else { return }
+
+        if let recorder = renderer.recorder, recorder.isRecording {
+            // Stop recording
+            recorder.stopAndSave()
+            renderer.recorder = nil
+            rebuildMenu()
+        } else {
+            // Start recording
+            let device = renderer.device
+            let recorder = ShaderRecorder(device: device)
+
+            // Get current capture resolution from screen
+            let screen = NSScreen.main!
+            let scale = screen.backingScaleFactor
+            let w = Int(screen.frame.width * scale)
+            let h = Int(screen.frame.height * scale)
+
+            do {
+                try recorder.startRecording(width: w, height: h)
+                renderer.recorder = recorder
+                rebuildMenu()
+            } catch {
+                print("[RetroMac] Recording failed: \(error)")
+                let alert = NSAlert()
+                alert.messageText = "Recording Failed"
+                alert.informativeText = error.localizedDescription
+                alert.runModal()
+            }
         }
     }
 
@@ -1788,109 +2144,163 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }.resume()
     }
 
-    // MARK: - Quake Launcher (RetroArch + TyrQuake)
+    // MARK: - Quake Launcher (vkQuake)
 
     @objc private func launchQuake() {
-        ensureRetroArch { [weak self] success in
-            guard success else { return }
-            self?.ensureRetroArchCore(coreName: "tyrquake_libretro") { coreSuccess in
-                guard coreSuccess else { return }
-                self?.ensureQuakePAKAndLaunch()
-            }
-        }
-    }
+        let fm = FileManager.default
+        let vkQuakePath = "/Applications/vkQuake.app"
 
-    private func ensureQuakePAKAndLaunch() {
+        guard fm.fileExists(atPath: vkQuakePath) else {
+            let alert = NSAlert()
+            alert.messageText = "vkQuake Not Installed"
+            alert.informativeText = "Please install vkQuake to play Quake.\n\nYou can download it from the vkQuake GitHub releases page."
+            alert.addButton(withTitle: "Open Download Page")
+            alert.addButton(withTitle: "Cancel")
+            if alert.runModal() == .alertFirstButtonReturn {
+                NSWorkspace.shared.open(URL(string: "https://github.com/Novum/vkQuake/releases")!)
+            }
+            return
+        }
+
         let settings = AppSettings.shared
         let basePath = settings.quakeBasePath
         let pakPath = basePath + "/id1/PAK0.PAK"
-        let fm = FileManager.default
 
         if fm.fileExists(atPath: pakPath) {
-            launchRetroArchQuake(basePath: basePath)
+            launchVkQuake(basePath: basePath)
         } else {
             downloadQuakeShareware { [weak self] success in
                 if success {
-                    self?.launchRetroArchQuake(basePath: basePath)
+                    self?.launchVkQuake(basePath: basePath)
                 }
             }
         }
     }
 
-    private func launchRetroArchQuake(basePath: String) {
-        let coresDir = NSHomeDirectory() + "/Library/Application Support/RetroArch/cores"
-        let corePath = coresDir + "/tyrquake_libretro.dylib"
-        let pakPath = basePath + "/id1/PAK0.PAK"
-        let shaderPath = NSHomeDirectory() + "/Library/Application Support/RetroArch/shaders/shaders_slang/crt/crt-geom.slangp"
+    private func launchVkQuake(basePath: String) {
+        let appURL = URL(fileURLWithPath: "/Applications/vkQuake.app")
+        let config = NSWorkspace.OpenConfiguration()
+        config.arguments = ["-basedir", basePath]
+        let preset = AppSettings.shared.quakeLitePreset
+        print("[Quake] Launching vkQuake with preset=\(preset) basedir=\(basePath)")
 
-        // Write WASD config for Quake 1 if not present
-        writeQuake1Config(basePath: basePath)
+        NSWorkspace.shared.openApplication(at: appURL, configuration: config) { [weak self] app, error in
+            if let error = error {
+                print("[Quake] Failed to launch vkQuake: \(error)")
+                return
+            }
+            let bundleID = app?.bundleIdentifier ?? "com.macsourceports.vkQuake"
+            print("[Quake] Launched vkQuake (bundleID=\(bundleID))")
 
-        // Patch RetroArch main config for mouse + shader + game focus
-        writeRetroArchQuakeConfig()
+            guard preset != "none" else {
+                print("[Quake] No overlay (preset=none)")
+                return
+            }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/Applications/RetroArch.app/Contents/MacOS/RetroArch")
-        process.arguments = ["-L", corePath, pakPath, "--set-shader", shaderPath]
-
-        do {
-            try process.run()
-            print("[Quake] Launched RetroArch + TyrQuake with CRT shader")
-        } catch {
-            print("[Quake] Failed to launch RetroArch: \(error)")
-        }
-    }
-
-    // MARK: - Quake II Launcher (RetroArch + Vitaquake2)
-
-    @objc private func launchQuake2() {
-        ensureRetroArch { [weak self] success in
-            guard success else { return }
-            self?.ensureRetroArchCore(coreName: "vitaquake2_libretro") { coreSuccess in
-                guard coreSuccess else { return }
-                self?.ensureQuake2PAKAndLaunch()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                print("[Quake] Applying overlay: \(preset) to \(bundleID)")
+                self?.applyLiteOverlayToApp(bundleID: bundleID, presetID: preset)
             }
         }
     }
 
-    private func ensureQuake2PAKAndLaunch() {
+    // MARK: - Quake II Launcher (Yamagi Quake II)
+
+    @objc private func launchQuake2() {
+        let fm = FileManager.default
+        let yamagiPath = "/Applications/quake2.app"
+        let yamagiAltPath = "/Applications/Yamagi Quake II.app"
+        let actualPath = fm.fileExists(atPath: yamagiPath) ? yamagiPath :
+                         fm.fileExists(atPath: yamagiAltPath) ? yamagiAltPath : nil
+
+        guard let appPath = actualPath else {
+            let alert = NSAlert()
+            alert.messageText = "Yamagi Quake II Not Installed"
+            alert.informativeText = "Please install Yamagi Quake II to play Quake II.\n\nYou can download it from the official website or install via Homebrew:\nbrew install yamagi-quake2"
+            alert.addButton(withTitle: "Open Download Page")
+            alert.addButton(withTitle: "Cancel")
+            if alert.runModal() == .alertFirstButtonReturn {
+                NSWorkspace.shared.open(URL(string: "https://www.yamagi.org/quake2/")!)
+            }
+            return
+        }
+
         let settings = AppSettings.shared
         let basePath = settings.quake2BasePath
         let pakPath = basePath + "/baseq2/pak0.pak"
-        let fm = FileManager.default
 
         if fm.fileExists(atPath: pakPath) {
-            launchRetroArchQuake2(basePath: basePath)
+            launchYamagiQuake2(appPath: appPath, basePath: basePath)
         } else {
             downloadQuake2Demo { [weak self] success in
                 if success {
-                    self?.launchRetroArchQuake2(basePath: basePath)
+                    self?.launchYamagiQuake2(appPath: appPath, basePath: basePath)
                 }
             }
         }
     }
 
-    private func launchRetroArchQuake2(basePath: String) {
-        let coresDir = NSHomeDirectory() + "/Library/Application Support/RetroArch/cores"
-        let corePath = coresDir + "/vitaquake2_libretro.dylib"
-        let pakPath = basePath + "/baseq2/pak0.pak"
-        let shaderPath = NSHomeDirectory() + "/Library/Application Support/RetroArch/shaders/shaders_slang/crt/crt-geom.slangp"
+    private func launchYamagiQuake2(appPath: String, basePath: String) {
+        let appURL = URL(fileURLWithPath: appPath)
+        let config = NSWorkspace.OpenConfiguration()
+        let preset = AppSettings.shared.quake2LitePreset
+        print("[Quake2] Launching Yamagi Quake II with preset=\(preset)")
 
-        // Write WASD config for Quake 2 if not present
-        writeQuake2Config(basePath: basePath)
+        NSWorkspace.shared.openApplication(at: appURL, configuration: config) { [weak self] app, error in
+            if let error = error {
+                print("[Quake2] Failed to launch Yamagi Quake II: \(error)")
+                return
+            }
+            let bundleID = app?.bundleIdentifier ?? "org.yamagi.quake2"
+            print("[Quake2] Launched Yamagi Quake II (bundleID=\(bundleID))")
 
-        writeRetroArchQuakeConfig()
+            guard preset != "none" else {
+                print("[Quake2] No overlay (preset=none)")
+                return
+            }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/Applications/RetroArch.app/Contents/MacOS/RetroArch")
-        process.arguments = ["-L", corePath, pakPath, "--set-shader", shaderPath]
-
-        do {
-            try process.run()
-            print("[Quake2] Launched RetroArch + Vitaquake2 with CRT shader")
-        } catch {
-            print("[Quake2] Failed to launch RetroArch: \(error)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                print("[Quake2] Applying overlay: \(preset) to \(bundleID)")
+                self?.applyLiteOverlayToApp(bundleID: bundleID, presetID: preset)
+            }
         }
+    }
+
+    /// Apply a Lite overlay to an app by bundle ID (used for Quake engines).
+    /// Polls until the app window is found (up to 10 seconds) to avoid the fullscreen fallback.
+    private func applyLiteOverlayToApp(bundleID: String, presetID: String, attempt: Int = 0) {
+        // Check if the app window is visible yet
+        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        let hasWindow: Bool = {
+            guard let pid = apps.first?.processIdentifier,
+                  let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else { return false }
+            return windowList.contains { info in
+                guard let ownerPID = info[kCGWindowOwnerPID as String] as? pid_t,
+                      ownerPID == pid,
+                      let boundsDict = info[kCGWindowBounds as String] as? NSDictionary else { return false }
+                var rect = CGRect.zero
+                guard CGRectMakeWithDictionaryRepresentation(boundsDict, &rect) else { return false }
+                return rect.width > 100 && rect.height > 100
+            }
+        }()
+
+        if !hasWindow && attempt < 10 {
+            // Retry in 1 second
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.applyLiteOverlayToApp(bundleID: bundleID, presetID: presetID, attempt: attempt + 1)
+            }
+            print("[RetroMac] Waiting for \(bundleID) window… (attempt \(attempt + 1))")
+            return
+        }
+
+        let overlay = CRTLiteOverlay()
+        overlay.startForApp(bundleID: bundleID, preset: presetID)
+        self.crtLiteOverlay = overlay
+        self.isActive = true
+        self.currentPresetName = presetID
+        updateMenuBarIcon()
+        rebuildMenu()
+        print("[RetroMac] Applied \(presetID) overlay to \(bundleID)")
     }
 
     private func downloadQuake2Demo(completion: @escaping (Bool) -> Void) {
@@ -1904,7 +2314,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if fm.fileExists(atPath: targetPAK) { completion(true); return }
 
         let progressWindow = createProgressWindow(title: "Downloading Quake II…", detail: "Downloading Quake II Demo…")
-        // Quake 2 demo from archive.org
         guard let url = URL(string: "https://archive.org/download/quake-ii-demo/q2-314-demo-x86.exe") else {
             progressWindow.close(); completion(false); return
         }
@@ -1926,7 +2335,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.updateProgressWindow(progressWindow, detail: "Extracting pak0.pak…")
             }
 
-            // The demo .exe is a self-extracting ZIP — unzip works on it
             let tempDir = NSTemporaryDirectory() + "quake2_extract"
             try? fm.removeItem(atPath: tempDir)
             try? fm.createDirectory(atPath: tempDir, withIntermediateDirectories: true, attributes: nil)
@@ -1939,7 +2347,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try? unzip.run()
             unzip.waitUntilExit()
 
-            // Find pak0.pak recursively
             var found: String?
             if let enumerator = fm.enumerator(atPath: tempDir) {
                 while let file = enumerator.nextObject() as? String {
@@ -1964,119 +2371,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }.resume()
     }
 
-    // MARK: - Quake Config Helpers
-
-    /// Write Quake 1 config.cfg with WASD bindings + mouse look
-    private func writeQuake1Config(basePath: String) {
-        let configPath = basePath + "/id1/config.cfg"
-        let fm = FileManager.default
-        // Don't overwrite if user already has a config
-        if fm.fileExists(atPath: configPath) { return }
-        try? fm.createDirectory(atPath: basePath + "/id1", withIntermediateDirectories: true, attributes: nil)
-
-        let config = """
-        // RetroMac WASD config for Quake
-        bind w "+forward"
-        bind s "+back"
-        bind a "+moveleft"
-        bind d "+moveright"
-        bind SPACE "+jump"
-        bind SHIFT "+speed"
-        bind MOUSE1 "+attack"
-        bind MOUSE2 "+jump"
-        bind e "+mlook"
-        bind 1 "impulse 1"
-        bind 2 "impulse 2"
-        bind 3 "impulse 3"
-        bind 4 "impulse 4"
-        bind 5 "impulse 5"
-        bind 6 "impulse 6"
-        bind 7 "impulse 7"
-        bind 8 "impulse 8"
-        bind ESCAPE "togglemenu"
-        bind ENTER "+jump"
-        +mlook
-        sensitivity 4
-        """
-        try? config.write(toFile: configPath, atomically: true, encoding: .utf8)
-        print("[Quake] Wrote WASD config to \(configPath)")
-    }
-
-    /// Write Quake 2 config.cfg with WASD bindings
-    private func writeQuake2Config(basePath: String) {
-        let configPath = basePath + "/baseq2/config.cfg"
-        let fm = FileManager.default
-        if fm.fileExists(atPath: configPath) { return }
-        try? fm.createDirectory(atPath: basePath + "/baseq2", withIntermediateDirectories: true, attributes: nil)
-
-        let config = """
-        // RetroMac WASD config for Quake II
-        bind w "+forward"
-        bind s "+back"
-        bind a "+moveleft"
-        bind d "+moveright"
-        bind SPACE "+moveup"
-        bind c "+movedown"
-        bind SHIFT "+speed"
-        bind MOUSE1 "+attack"
-        bind MOUSE2 "+moveup"
-        bind e "use"
-        bind r "reload"
-        bind 1 "use Blaster"
-        bind 2 "use Shotgun"
-        bind 3 "use Super Shotgun"
-        bind 4 "use Machinegun"
-        bind 5 "use Chaingun"
-        bind 6 "use Grenade Launcher"
-        bind 7 "use Rocket Launcher"
-        bind 8 "use HyperBlaster"
-        bind 9 "use Railgun"
-        bind 0 "use BFG10K"
-        bind ENTER "invuse"
-        bind ESCAPE "togglemenu"
-        bind TAB "inven"
-        set freelook "1"
-        set cl_run "1"
-        set sensitivity "4"
-        """
-        try? config.write(toFile: configPath, atomically: true, encoding: .utf8)
-        print("[Quake2] Wrote WASD config to \(configPath)")
-    }
-
-    /// Patch RetroArch's main config for fullscreen FPS with keyboard+mouse
-    private func writeRetroArchQuakeConfig() {
-        let fm = FileManager.default
-        let mainConfigPath = NSHomeDirectory() + "/Library/Application Support/RetroArch/config/retroarch.cfg"
-
-        guard fm.fileExists(atPath: mainConfigPath),
-              var config = try? String(contentsOfFile: mainConfigPath, encoding: .utf8) else {
-            print("[RetroArch] Config not found at \(mainConfigPath)")
-            return
-        }
-
-        let patches: [(String, String)] = [
-            ("input_auto_game_focus", "\"2\""),
-            ("input_auto_mouse_grab", "\"true\""),
-            ("input_game_focus_toggle", "\"nul\""),
-            ("input_menu_toggle", "\"f1\""),
-            ("video_shader_enable", "\"true\""),
-            ("video_fullscreen", "\"true\""),
-            ("input_libretro_device_p1", "\"3\""),
-        ]
-
-        for (key, value) in patches {
-            if let range = config.range(of: "\(key) = .*", options: .regularExpression) {
-                config.replaceSubrange(range, with: "\(key) = \(value)")
-            } else {
-                config.append("\n\(key) = \(value)")
-            }
-        }
-
-        try? config.write(toFile: mainConfigPath, atomically: true, encoding: .utf8)
-        print("[RetroArch] Patched config: fullscreen + keyboard+mouse device + shader")
-    }
-
-    // MARK: - RetroArch Infrastructure
+    // MARK: - Legacy RetroArch Infrastructure (kept for potential future use)
 
     /// Ensure RetroArch is installed, download if missing
     private func ensureRetroArch(completion: @escaping (Bool) -> Void) {
@@ -2792,6 +3087,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+
+    // MARK: - Retro ROM Launcher
+
+    @objc private func launchRetroGame(_ sender: NSMenuItem) {
+        guard let romID = sender.representedObject as? UUID,
+              let rom = ROMLibrary.shared.entries.first(where: { $0.id == romID }) else {
+            return
+        }
+        ROMLauncher.shared.launch(rom)
+    }
 
     // MARK: - Virtual Camera
 
