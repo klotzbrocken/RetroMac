@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 final class LicenseManager: ObservableObject {
     static let shared = LicenseManager()
@@ -11,6 +12,16 @@ final class LicenseManager: ObservableObject {
     // Basic presets — always free, no license needed
     static let freePresetIDs: Set<String> = [
         "passthrough",
+        "crt-lite",          // CRT Lite — transparent overlay, no screen recording
+        "lcd-lite",          // LCD Lite — standard TFT pixel grid
+        "lcd-retro-lite",    // LCD Retro Lite — chunky early-2000s TN panel
+        "lcd-sharp-lite",    // LCD Sharp Lite — fine IPS-style grid
+        "lcd-broken-lite",   // LCD Broken Lite — damaged LCD panel
+        "bw-lite",           // B&W Lite — grayscale + film grain overlay
+        "amber-lite",        // Amber Lite — amber phosphor monitor overlay
+        "vhs-lite",          // VHS Lite — transparent overlay, no screen recording
+        "scanlines-lite",    // Scanlines Lite — transparent overlay, no screen recording
+        "grain-lite",        // Film Scratches Lite — scratches, dust, flicker
         "crt-royale-lite",   // CRT Royale
         "trinitron-tv",      // Sony Trinitron
         "ntsc",              // NTSC
@@ -67,9 +78,32 @@ final class LicenseManager: ObservableObject {
         defaults.set(Date(), forKey: nagDismissedKey)
     }
 
+    /// Whether the recurring coffee/unlock page should appear (unlicensed + 30-day ack window).
+    var shouldShowCoffee: Bool {
+        if isLicensed { return false }
+        if let ack = AppSettings.shared.coffeeAckDate {
+            let days = Calendar.current.dateComponents([.day], from: ack, to: Date()).day ?? 0
+            return days >= 30
+        }
+        return true
+    }
+
     init() {
-        licenseKey = defaults.string(forKey: licenseKeyKey) ?? ""
-        licenseEmail = defaults.string(forKey: licenseEmailKey) ?? ""
+        // Migrate license key from UserDefaults to Keychain (one-time)
+        if let legacyKey = UserDefaults.standard.string(forKey: licenseKeyKey), !legacyKey.isEmpty,
+           Self.keychainLoad(key: licenseKeyKey) == nil {
+            Self.keychainSave(key: licenseKeyKey, value: legacyKey)
+            UserDefaults.standard.removeObject(forKey: licenseKeyKey)
+            print("[License] Migrated license key from UserDefaults to Keychain")
+        }
+        if let legacyEmail = UserDefaults.standard.string(forKey: licenseEmailKey), !legacyEmail.isEmpty,
+           Self.keychainLoad(key: licenseEmailKey) == nil {
+            Self.keychainSave(key: licenseEmailKey, value: legacyEmail)
+            UserDefaults.standard.removeObject(forKey: licenseEmailKey)
+        }
+
+        licenseKey = Self.keychainLoad(key: licenseKeyKey) ?? ""
+        licenseEmail = Self.keychainLoad(key: licenseEmailKey) ?? ""
         isLicensed = defaults.bool(forKey: licenseValidKey)
 
         // Re-validate periodically (every 7 days)
@@ -117,8 +151,8 @@ final class LicenseManager: ObservableObject {
         licenseEmail = ""
         isLicensed = false
         validationError = nil
-        defaults.removeObject(forKey: licenseKeyKey)
-        defaults.removeObject(forKey: licenseEmailKey)
+        Self.keychainDelete(key: licenseKeyKey)
+        Self.keychainDelete(key: licenseEmailKey)
         defaults.set(false, forKey: licenseValidKey)
         defaults.removeObject(forKey: lastValidationKey)
         print("[License] Deactivated")
@@ -136,10 +170,50 @@ final class LicenseManager: ObservableObject {
     }
 
     private func saveLicense() {
-        defaults.set(licenseKey, forKey: licenseKeyKey)
-        defaults.set(licenseEmail, forKey: licenseEmailKey)
+        Self.keychainSave(key: licenseKeyKey, value: licenseKey)
+        Self.keychainSave(key: licenseEmailKey, value: licenseEmail)
         defaults.set(true, forKey: licenseValidKey)
         defaults.set(Date(), forKey: lastValidationKey)
+    }
+
+    // MARK: - Keychain
+
+    private static let keychainService = "com.retromac.app.license"
+
+    private static func keychainSave(key: String, value: String) {
+        guard let data = value.data(using: .utf8) else { return }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: key
+        ]
+        SecItemDelete(query as CFDictionary)
+        var addQuery = query
+        addQuery[kSecValueData as String] = data
+        SecItemAdd(addQuery as CFDictionary, nil)
+    }
+
+    private static func keychainLoad(key: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private static func keychainDelete(key: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: key
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 
     // MARK: - Gumroad API

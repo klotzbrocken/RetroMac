@@ -20,15 +20,15 @@
     "bevelTopColor": "#FFFFFFFF",
     "bevelBottomColor": "#808080FF",
     "bevelWidth": 1,
-    "orientation": "vertical",
-    "position": "left",
+    "orientation": "horizontal",
+    "position": "bottom",
     "fullWidth": false,
     "startButton": false,
     "showClock": false,
     "magnification": false,
     "showTrash": true,
     "showGrip": true,
-    "alignment": "bottom",
+    "alignment": "left",
     "edgeOffset": 4
   },
   "icon": {
@@ -44,8 +44,12 @@
     "size": 4,
     "offset": 3
   },
+  "desktopIcons": [
+    { "name": "Boot Disk", "icon": "finder.png", "type": "folder", "path": "/", "gridX": 0, "gridY": 1 },
+    { "name": "Trash", "icon": "trash.png", "iconFull": "trash_full.png", "type": "trash", "gridX": 0, "gridY": 5 }
+  ],
   "fallbackIcon": "generic.png",
-  "defaultPreset": "crt-royale-lite",
+  "defaultPreset": "lcd-retro-lite",
   "iconMappings": {
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",

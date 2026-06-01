@@ -107,6 +107,18 @@ enum BuiltinShaders {
         "newsroom-1987": newsroom1987Shader,
         "vhs-tape": vhsTapeShader,
         "terminal-green": terminalGreenShader,
+        "crt-lite": crtLiteShader,
+        "lcd-lite": lcdLiteShader,
+        "lcd-retro-lite": lcdRetroLiteShader,
+        "lcd-sharp-lite": lcdSharpLiteShader,
+        "lcd-broken-lite": lcdBrokenLiteShader,
+        "bw-lite": bwLiteShader,
+        "amber-lite": amberLiteShader,
+        "vhs-lite": vhsLiteShader,
+        "scanlines-lite": scanlinesLiteShader,
+        "grain-lite": grainLiteShader,
+        // Special Thx
+        "joel-gdv-ntsc": joelGdvNtscShader,
     ]
 
     // MARK: - zfast CRT — scanlines + chromatic aberration, NO barrel distortion
@@ -2283,4 +2295,682 @@ enum BuiltinShaders {
         return float4(color, sampleSourceAlpha(source, s, in.texCoord));
     }
     """
+
+    // MARK: - CRT Lite — transparent overlay, no screen capture needed
+
+    private static let crtLiteShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+        float time = float(uniforms.frameCount) / 60.0;
+
+        // CRT overlay — scanlines, phosphor mask, vignette, flicker.
+        // Does NOT read source texture — window beneath shows through.
+
+        float alpha = 0.0;
+
+        // --- Scanlines — prominent horizontal dark bands ---
+        float scanY = uv.y * outSize.y;
+        float scanline = sin(scanY * 3.14159) * 0.5 + 0.5;
+        float scanDark = pow(scanline, 1.2) * 0.45 * intensity;
+        alpha += scanDark;
+
+        // --- Phosphor / Shadow Mask — aperture grille style ---
+        float maskX = fract(uv.x * outSize.x / 3.0);
+        float mask = smoothstep(0.0, 0.2, maskX) * smoothstep(1.0, 0.8, maskX);
+        float maskDark = (1.0 - mask) * 0.15 * intensity;
+        alpha += maskDark;
+
+        // --- Vignette — CRT tube edge darkening ---
+        float2 v = uv * (1.0 - uv);
+        float vig = v.x * v.y * 15.0;
+        float vigAmount = 1.0 - pow(vig, 0.4);
+        alpha += vigAmount * 0.22 * intensity;
+
+        // --- Subtle flicker ---
+        float flicker = sin(time * 60.0 * 3.14159) * 0.01 * intensity;
+        alpha += flicker;
+
+        // --- Corner shadow / tube curvature ---
+        float2 centered = uv * 2.0 - 1.0;
+        float cornerDist = dot(centered, centered);
+        float cornerDark = smoothstep(0.8, 1.6, cornerDist) * 0.35 * intensity;
+        alpha += cornerDark;
+
+        alpha = clamp(alpha, 0.0, 0.7);
+
+        // Composite: blend overlay with source (webcam pass-through)
+        float4 src = source.sample(s, uv);
+        float3 overlayColor = float3(0.0, 0.0, 0.0);
+        return float4(mix(src.rgb, overlayColor, alpha), max(src.a, alpha));
+    }
+    """
+
+    // MARK: - LCD Lite — standard TFT desktop monitor overlay
+
+    private static let lcdLiteShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+
+        // Standard TFT LCD — RGB stripe subpixels with black matrix grid.
+        // No vignette — LCDs have flat, evenly backlit panels.
+
+        float alpha = 0.0;
+
+        // --- Black matrix grid (pixel boundaries) ---
+        float gridScale = 5.0;
+
+        float gridY = fract(uv.y * outSize.y / gridScale);
+        float gridX = fract(uv.x * outSize.x / gridScale);
+
+        // Visible dark lines at pixel edges
+        float hLine = (gridY < 0.14 || gridY > 0.86) ? 1.0 : 0.0;
+        float vLine = (gridX < 0.14 || gridX > 0.86) ? 1.0 : 0.0;
+
+        float grid = max(hLine, vLine);
+        alpha += grid * 0.25 * intensity;
+
+        // --- RGB subpixel columns ---
+        float subX = fract(uv.x * outSize.x / gridScale) * 3.0;
+        float subCol = floor(subX);
+        float subGap = fract(subX);
+
+        // Dark gaps between subpixels
+        float subDark = (subGap < 0.12 || subGap > 0.88) ? 1.0 : 0.0;
+        alpha += subDark * 0.15 * intensity;
+
+        // Per-channel tinting (subpixel color cast)
+        float3 tint = float3(0.0);
+        if (subCol < 1.0) {
+            tint = float3(0.0, 0.03, 0.03);
+        } else if (subCol < 2.0) {
+            tint = float3(0.03, 0.0, 0.03);
+        } else {
+            tint = float3(0.03, 0.03, 0.0);
+        }
+
+        alpha = clamp(alpha, 0.0, 0.4);
+
+        // Composite: blend overlay with source (webcam pass-through)
+        float4 src = source.sample(s, uv);
+        float3 overlayColor = tint * intensity;
+        return float4(mix(src.rgb, overlayColor, alpha), max(src.a, alpha));
+    }
+    """
+
+    // MARK: - LCD Retro Lite — early 2000s cheap TN panel, coarse pixel grid
+
+    private static let lcdRetroLiteShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+
+        // Early-2000s cheap TN LCD — coarse, chunky pixels with visible
+        // black matrix, prominent subpixel gaps, slight backlight clouding.
+
+        float alpha = 0.0;
+
+        // --- Coarse black matrix grid ---
+        float gridScale = 6.0;  // bigger cells = chunkier pixels
+
+        float gridY = fract(uv.y * outSize.y / gridScale);
+        float gridX = fract(uv.x * outSize.x / gridScale);
+
+        // Thicker, harder grid lines — cheap panels had wide black matrix
+        float hLine = (gridY < 0.16 || gridY > 0.84) ? 1.0 : 0.0;
+        float vLine = (gridX < 0.16 || gridX > 0.84) ? 1.0 : 0.0;
+
+        float grid = max(hLine, vLine);
+        alpha += grid * 0.2 * intensity;
+
+        // --- RGB subpixel columns (tall rectangles) ---
+        float cellX = fract(uv.x * outSize.x / gridScale);
+        float subX = cellX * 3.0;
+        float subCol = floor(subX);
+        float subLocal = fract(subX);
+
+        // Wide dark gaps between subpixels — cheap TN panels had visible gaps
+        float subDark = (subLocal < 0.15 || subLocal > 0.85) ? 1.0 : 0.0;
+        alpha += subDark * 0.15 * intensity;
+
+        // Visible subpixel color fringing
+        float3 tint = float3(0.0);
+        if (subCol < 1.0) {
+            tint = float3(0.0, 0.04, 0.04);
+        } else if (subCol < 2.0) {
+            tint = float3(0.04, 0.0, 0.04);
+        } else {
+            tint = float3(0.04, 0.04, 0.0);
+        }
+
+        // --- Backlight clouding — uneven brightness patches ---
+        float cloud = sin(uv.x * 6.28 * 1.5) * sin(uv.y * 6.28 * 1.0) * 0.02 * intensity;
+        alpha += abs(cloud);
+
+        alpha = clamp(alpha, 0.0, 0.35);
+
+        // Composite: blend overlay with source (webcam pass-through)
+        float4 src = source.sample(s, uv);
+        float3 overlayColor = tint * intensity;
+        return float4(mix(src.rgb, overlayColor, alpha), max(src.a, alpha));
+    }
+    """
+
+    // MARK: - LCD Sharp Lite — fine IPS-style grid, clean and precise
+
+    private static let lcdSharpLiteShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+
+        // High-quality IPS-style LCD — fine pixel grid, thin black matrix,
+        // clean subpixel structure. Dense and precise.
+
+        float alpha = 0.0;
+
+        // --- Fine black matrix grid ---
+        float gridScale = 3.0;
+
+        float gridY = fract(uv.y * outSize.y / gridScale);
+        float gridX = fract(uv.x * outSize.x / gridScale);
+
+        // Thin but visible grid lines
+        float hLine = (gridY < 0.1 || gridY > 0.9) ? 1.0 : 0.0;
+        float vLine = (gridX < 0.1 || gridX > 0.9) ? 1.0 : 0.0;
+
+        float grid = max(hLine, vLine);
+        alpha += grid * 0.2 * intensity;
+
+        // --- RGB subpixels — narrow gaps ---
+        float subX = fract(uv.x * outSize.x / gridScale) * 3.0;
+        float subCol = floor(subX);
+        float subLocal = fract(subX);
+
+        // Subpixel gaps
+        float subDark = (subLocal < 0.08 || subLocal > 0.92) ? 1.0 : 0.0;
+        alpha += subDark * 0.12 * intensity;
+
+        // Subtle color cast
+        float3 tint = float3(0.0);
+        if (subCol < 1.0) {
+            tint = float3(0.0, 0.025, 0.025);
+        } else if (subCol < 2.0) {
+            tint = float3(0.025, 0.0, 0.025);
+        } else {
+            tint = float3(0.025, 0.025, 0.0);
+        }
+
+        alpha = clamp(alpha, 0.0, 0.32);
+
+        // Composite: blend overlay with source (webcam pass-through)
+        float4 src = source.sample(s, uv);
+        float3 overlayColor = tint * intensity;
+        return float4(mix(src.rgb, overlayColor, alpha), max(src.a, alpha));
+    }
+    """
+
+    // MARK: - LCD Broken Lite — damaged LCD panel with artifacts
+
+    private static let lcdBrokenLiteShader = """
+    float rand_lcd(float2 co) {
+        return fract(sin(dot(co, float2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+        float time = float(uniforms.frameCount) / 60.0;
+
+        // Damaged LCD — dead pixel clusters, stuck lines, backlight bleed,
+        // pressure marks, flickering columns.
+
+        float alpha = 0.0;
+        float3 color = float3(0.0);
+
+        // --- Base pixel grid (still partially visible) ---
+        float gridScale = 5.0;
+        float gridY = fract(uv.y * outSize.y / gridScale);
+        float gridX = fract(uv.x * outSize.x / gridScale);
+        float hLine = (gridY < 0.12 || gridY > 0.88) ? 1.0 : 0.0;
+        float vLine = (gridX < 0.12 || gridX > 0.88) ? 1.0 : 0.0;
+        alpha += max(hLine, vLine) * 0.15 * intensity;
+
+        // --- Dead pixels (tiny individual dots, not big clusters) ---
+        float dp1 = smoothstep(0.004, 0.0, length(uv - float2(0.23, 0.41)));
+        float dp2 = smoothstep(0.003, 0.0, length(uv - float2(0.67, 0.28)));
+        float dp3 = smoothstep(0.005, 0.0, length(uv - float2(0.45, 0.73)));
+        float dp4 = smoothstep(0.003, 0.0, length(uv - float2(0.82, 0.55)));
+        float dp5 = smoothstep(0.004, 0.0, length(uv - float2(0.14, 0.62)));
+        float dp6 = smoothstep(0.003, 0.0, length(uv - float2(0.71, 0.81)));
+        float dp7 = smoothstep(0.004, 0.0, length(uv - float2(0.38, 0.19)));
+        float deadPixels = (dp1 + dp2 + dp3 + dp4 + dp5 + dp6 + dp7);
+        alpha += deadPixels * 0.5 * intensity;
+
+        // --- Stuck bright line (horizontal, near right edge) ---
+        float stuckLine1 = smoothstep(0.0015, 0.0, abs(uv.y - 0.38));
+        float stuckMask1 = smoothstep(0.6, 0.65, uv.x);  // only right portion
+        color += float3(0.0, 0.05, 0.015) * stuckLine1 * stuckMask1 * intensity;
+        alpha += stuckLine1 * stuckMask1 * 0.06 * intensity;
+
+        // --- Flickering column (vertical, near right edge, slow) ---
+        float flickCol = smoothstep(0.002, 0.0, abs(uv.x - 0.87));
+        float flickRate = sin(time * 4.0) * 0.3 + 0.4;  // slow, subtle pulse
+        alpha += flickCol * flickRate * 0.2 * intensity;
+
+        // --- Pressure mark (discolored patch from pressing on screen) ---
+        float2 pressCenter = float2(0.55, 0.45);
+        float pressDist = length((uv - pressCenter) * float2(1.0, 1.4));
+        float pressMark = smoothstep(0.12, 0.04, pressDist);
+        // Pressure marks create a rainbow-ish discoloration
+        float pressPhase = pressDist * 20.0;
+        float3 pressColor = float3(
+            sin(pressPhase) * 0.5 + 0.5,
+            sin(pressPhase + 2.09) * 0.5 + 0.5,
+            sin(pressPhase + 4.18) * 0.5 + 0.5
+        ) * 0.06 * pressMark * intensity;
+        color += pressColor;
+        alpha += pressMark * 0.08 * intensity;
+
+        // --- Backlight bleed at edges (brighter, not darker) ---
+        float bleedL = smoothstep(0.06, 0.0, uv.x) * 0.15;
+        float bleedR = smoothstep(0.94, 1.0, uv.x) * 0.12;
+        float bleedB = smoothstep(0.95, 1.0, uv.y) * 0.18;
+        float bleedT = smoothstep(0.05, 0.0, uv.y) * 0.1;
+        float bleed = (bleedL + bleedR + bleedB + bleedT) * intensity;
+        // Backlight bleed is whitish light leaking through
+        color += float3(0.08, 0.08, 0.06) * bleed;
+        alpha += bleed * 0.3;
+
+        // --- Horizontal banding (uneven backlight) ---
+        float band = sin(uv.y * 40.0) * 0.02 * intensity;
+        alpha += abs(band);
+
+        alpha = clamp(alpha, 0.0, 0.8);
+
+        // Composite: blend overlay with source (webcam pass-through)
+        float4 src = source.sample(s, uv);
+        return float4(mix(src.rgb, color, alpha), max(src.a, alpha));
+    }
+    """
+
+    // MARK: - B&W Film Lite — film grain + vignette overlay
+
+    private static let bwLiteShader = """
+    float rand_bw(float2 co) {
+        return fract(sin(dot(co, float2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float intensity = uniforms.intensity;
+        float time = float(uniforms.frameCount) / 60.0;
+
+        // Light neutral wash — macOS grayscale filter does the real desaturation,
+        // this just adds a subtle film-like haze
+        float3 neutral = float3(0.35, 0.35, 0.35);
+        float washAlpha = 0.12 * intensity;
+
+        // Film grain — random noise overlay
+        float grain = rand_bw(uv * 500.0 + time * 10.0);
+        float grainDark = abs(grain - 0.5) * 0.1 * intensity;
+
+        // Strong vignette — classic film noir look
+        float2 v = uv * (1.0 - uv);
+        float vig = v.x * v.y * 15.0;
+        float vigAmount = 1.0 - pow(vig, 0.3);
+        float vigDark = vigAmount * 0.25 * intensity;
+
+        // Occasional film scratch (thin vertical line)
+        float scratchX = fract(sin(floor(time * 2.0) * 73.156) * 43758.5);
+        float scratchDark = smoothstep(0.001, 0.0, abs(uv.x - scratchX)) * 0.15 * intensity;
+
+        // Premultiplied: neutral wash adds gray color, effects add darkening
+        float darkAlpha = clamp(grainDark + vigDark + scratchDark, 0.0, 0.35);
+        float totalAlpha = clamp(washAlpha + darkAlpha, 0.0, 0.75);
+        float3 color = neutral * washAlpha;
+
+        return float4(color, totalAlpha);
+    }
+    """
+
+    // MARK: - Amber Monitor Lite — CRT overlay, macOS Color Tint handles amber color
+
+    private static let amberLiteShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+        float time = float(uniforms.frameCount) / 60.0;
+
+        // Scanlines — macOS Color Tint handles amber color, we add strong CRT structure
+        float scanY = uv.y * outSize.y;
+        float scanline = sin(scanY * 3.14159) * 0.5 + 0.5;
+        float scanDark = pow(scanline, 1.2) * 0.4 * intensity;
+
+        // Phosphor mask — aperture grille style, prominent
+        float maskX = fract(uv.x * outSize.x / 3.0);
+        float mask = smoothstep(0.0, 0.2, maskX) * smoothstep(1.0, 0.8, maskX);
+        float maskDark = (1.0 - mask) * 0.14 * intensity;
+
+        // Vignette — CRT tube edge darkening
+        float2 v = uv * (1.0 - uv);
+        float vig = v.x * v.y * 15.0;
+        float vigAmount = 1.0 - pow(vig, 0.4);
+        float vigDark = vigAmount * 0.22 * intensity;
+
+        // Phosphor flicker
+        float flicker = sin(time * 50.0) * 0.008 * intensity;
+
+        // Corner shadow
+        float2 centered = uv * 2.0 - 1.0;
+        float cornerDist = dot(centered, centered);
+        float cornerDark = smoothstep(0.8, 1.6, cornerDist) * 0.3 * intensity;
+
+        float alpha = clamp(scanDark + maskDark + vigDark + flicker + cornerDark, 0.0, 0.65);
+        return float4(0.0, 0.0, 0.0, alpha);
+    }
+    """
+
+    // MARK: - VHS Lite — tracking lines + noise overlay
+
+    private static let vhsLiteShader = """
+    float rand_vhs(float2 co) {
+        return fract(sin(dot(co, float2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+        float time = float(uniforms.frameCount) / 60.0;
+
+        float alpha = 0.0;
+
+        // VHS noise — coarse grain
+        float noise = rand_vhs(float2(floor(uv.x * outSize.x / 2.0), floor(uv.y * outSize.y / 2.0)) + time * 7.0);
+        alpha += (noise - 0.5) * 0.08 * intensity;
+
+        // Horizontal tracking lines — moves vertically
+        float trackY = fract(uv.y + time * 0.05);
+        float trackBand = smoothstep(0.0, 0.02, trackY) * smoothstep(0.06, 0.04, trackY);
+        alpha += trackBand * 0.25 * intensity;
+
+        // Second tracking line at different speed
+        float trackY2 = fract(uv.y - time * 0.12 + 0.5);
+        float trackBand2 = smoothstep(0.0, 0.015, trackY2) * smoothstep(0.04, 0.025, trackY2);
+        alpha += trackBand2 * 0.2 * intensity;
+
+        // Head switching noise at bottom
+        float bottomNoise = smoothstep(0.92, 0.98, uv.y) * rand_vhs(float2(uv.x * 50.0, time * 3.0)) * 0.3 * intensity;
+        alpha += bottomNoise;
+
+        // Slight color bleed tint (cyan-ish VHS look)
+        float3 tint = float3(0.0, 0.02, 0.04) * intensity;
+
+        // Scanlines (VHS has visible lines)
+        float scanY = uv.y * outSize.y;
+        float scanline = sin(scanY * 3.14159 * 0.5) * 0.5 + 0.5;
+        alpha += pow(scanline, 1.5) * 0.15 * intensity;
+
+        // Vignette — old TV tube edge darkening
+        float2 v = uv * (1.0 - uv);
+        float vig = v.x * v.y * 15.0;
+        float vigAmount = 1.0 - pow(vig, 0.45);
+        alpha += vigAmount * 0.18 * intensity;
+
+        alpha = clamp(alpha, 0.0, 0.6);
+
+        // Composite: blend overlay with source (webcam pass-through)
+        float4 src = source.sample(s, uv);
+        return float4(mix(src.rgb, tint, alpha), max(src.a, alpha));
+    }
+    """
+
+    // MARK: - Scanlines Lite — visible coarse scanlines
+
+    private static let scanlinesLiteShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+
+        // Coarse scanlines — every 3rd pixel row is dark, clearly visible
+        float lineScale = 3.0;
+        float row = fract(uv.y * outSize.y / lineScale);
+
+        // Dark band in the gap between scan rows
+        float dark = (row < 0.35) ? 1.0 : 0.0;
+        float alpha = dark * 0.4 * intensity;
+        alpha = clamp(alpha, 0.0, 0.45);
+
+        // Composite: blend overlay with source (webcam pass-through)
+        float4 src = source.sample(s, uv);
+        float3 overlayColor = float3(0.0, 0.0, 0.0);
+        return float4(mix(src.rgb, overlayColor, alpha), max(src.a, alpha));
+    }
+    """
+
+    // MARK: - Film Scratches Lite — vertical scratches + dust + flicker
+
+    private static let grainLiteShader = """
+    float rand_fs(float2 co) {
+        return fract(sin(dot(co, float2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float intensity = uniforms.intensity;
+        float time = float(uniforms.frameCount) / 60.0;
+
+        float alpha = 0.0;
+
+        // --- Film scratches — thin vertical lines that drift ---
+        // Scratch 1: persistent, slow drift
+        float scratchX1 = fract(sin(floor(time * 0.8) * 73.156) * 43758.5);
+        float scratch1 = smoothstep(0.0015, 0.0, abs(uv.x - scratchX1));
+        alpha += scratch1 * 0.25 * intensity;
+
+        // Scratch 2: faster, thinner
+        float scratchX2 = fract(sin(floor(time * 2.5) * 37.91) * 23421.6);
+        float scratch2 = smoothstep(0.001, 0.0, abs(uv.x - scratchX2));
+        alpha += scratch2 * 0.18 * intensity;
+
+        // Scratch 3: intermittent, partial height
+        float scratchX3 = fract(sin(floor(time * 1.2) * 91.47) * 67832.1);
+        float scratch3 = smoothstep(0.001, 0.0, abs(uv.x - scratchX3));
+        float partialH = smoothstep(0.1, 0.15, uv.y) * smoothstep(0.85, 0.8, uv.y);
+        alpha += scratch3 * partialH * 0.2 * intensity;
+
+        // --- Frame flicker — subtle brightness variation ---
+        float flicker = sin(time * 12.0) * 0.015 * intensity;
+        alpha += flicker;
+
+        // --- Dust specks — sparse, random dark spots ---
+        float speckSeed = floor(time * 3.0);
+        float speck1 = smoothstep(0.006, 0.0, length(uv - float2(
+            fract(sin(speckSeed * 12.34) * 43758.5),
+            fract(sin(speckSeed * 56.78) * 23421.6)
+        )));
+        float speck2 = smoothstep(0.004, 0.0, length(uv - float2(
+            fract(sin(speckSeed * 89.01) * 67832.1),
+            fract(sin(speckSeed * 23.45) * 91827.3)
+        )));
+        alpha += (speck1 + speck2) * 0.3 * intensity;
+
+        // --- Vignette — projector light falloff ---
+        float2 v = uv * (1.0 - uv);
+        float vig = v.x * v.y * 15.0;
+        float vigAmount = 1.0 - pow(vig, 0.5);
+        alpha += vigAmount * 0.1 * intensity;
+
+        alpha = clamp(alpha, 0.0, 0.4);
+
+        // Composite: blend overlay with source (webcam pass-through)
+        float4 src = source.sample(s, uv);
+        float3 overlayColor = float3(0.0, 0.0, 0.0);
+        return float4(mix(src.rgb, overlayColor, alpha), max(src.a, alpha));
+    }
+    """
+
+    // MARK: - Joel GDV x NTSC Hybrid v4 — Special Thx
+
+    private static let joelGdvNtscShader = """
+    float2 curveUV_gdv(float2 uv, float cx, float cy) {
+        uv = uv * 2.0 - 1.0;
+        uv *= float2(1.0 + (uv.y * uv.y) * cx, 1.0 + (uv.x * uv.x) * cy);
+        return uv * 0.5 + 0.5;
+    }
+
+    // Bright horizontal refresh band drifting downward
+    float refreshBand(float2 uv, float time) {
+        float bandPos = fract(time * 0.15);
+        float dist    = abs(fract(uv.y - bandPos) - 0.5);
+        float band    = smoothstep(0.025, 0.0, dist);
+        return 1.0 + band * 0.18;
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float intensity   = clamp(uniforms.intensity, 0.0, 1.0);
+        float time        = float(uniforms.frameCount) / 60.0;
+        float2 texSize    = uniforms.sourceSize.xy;
+        float2 outputSize = uniforms.outputSize.xy;
+
+        float2 uv = curveUV_gdv(in.texCoord, 0.03 * intensity, 0.04 * intensity);
+
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+            return float4(0.0, 0.0, 0.0, sampleSourceAlpha(source, s, in.texCoord));
+
+        float3 original = source.sample(s, uv).rgb;
+        float3 color    = original;
+
+        // Dot crawl
+        float dotCrawl = sin(uv.x * texSize.x * M_PI_F * 2.0 / 3.0 + time * M_PI_F * 2.0) * 0.03 * intensity;
+        color.r += dotCrawl;
+        color.b -= dotCrawl;
+
+        // Chroma fringing
+        float chromaSpread = 0.0025 * intensity;
+        float cr = source.sample(s, clamp(uv + float2(chromaSpread, 0.0), float2(0.0), float2(1.0))).r;
+        float cb = source.sample(s, clamp(uv - float2(chromaSpread, 0.0), float2(0.0), float2(1.0))).b;
+        color.r  = mix(color.r, cr, 0.5 * intensity);
+        color.b  = mix(color.b, cb, 0.5 * intensity);
+
+        // Luma bandwidth blur
+        float3 tap1 = source.sample(s, clamp(uv + float2(1.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        float3 tap2 = source.sample(s, clamp(uv - float2(1.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        color = mix(color, (color * 0.6 + tap1 * 0.2 + tap2 * 0.2), 0.4 * intensity);
+
+        // Rainbow edge artifacts
+        float luma    = dot(original, float3(0.299, 0.587, 0.114));
+        float lumaR   = dot(source.sample(s, clamp(uv + float2(1.5 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb, float3(0.299, 0.587, 0.114));
+        float edgeStr = abs(luma - lumaR);
+        float rainbow = sin(uv.x * texSize.x * M_PI_F + time * 3.0) * edgeStr * 0.15 * intensity;
+        color.r += rainbow;
+        color.g -= rainbow * 0.5;
+        color.b += rainbow;
+
+        // Vertical softness
+        float3 vTap = source.sample(s, clamp(uv + float2(0.0, 0.5 / texSize.y), float2(0.0), float2(1.0))).rgb;
+        color = mix(color, (color * 0.8 + vTap * 0.2), 0.2 * intensity);
+
+        // NTSC warm tint
+        color *= float3(1.03, 1.0, 0.97);
+
+        // 525-line scanlines
+        float scanline = 1.0 - 0.08 * intensity + 0.08 * intensity * sin(uv.y * 525.0 * M_PI_F);
+        color *= scanline;
+
+        // Aperture grille mask (branchless)
+        float col   = uv.x * outputSize.x;
+        float phase = fract(fmod(col, 3.0) / 3.0);
+        float3 mask;
+        mask.r = 0.2 + 0.8 * (smoothstep(0.0,  0.15, phase) * smoothstep(0.48, 0.33, phase));
+        mask.g = 0.2 + 0.8 * (smoothstep(0.33, 0.48, phase) * smoothstep(0.81, 0.66, phase));
+        mask.b = 0.2 + 0.8 * (smoothstep(0.66, 0.81, phase) * smoothstep(1.0,  0.85, phase));
+        color *= mix(float3(1.0), mask, 0.3 * intensity);
+
+        // GDV 5-tap horizontal glow
+        float3 glow = float3(0.0);
+        glow += source.sample(s, clamp(uv + float2(-3.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        glow += source.sample(s, clamp(uv + float2(-1.5 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        glow += source.sample(s, uv).rgb;
+        glow += source.sample(s, clamp(uv + float2( 1.5 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        glow += source.sample(s, clamp(uv + float2( 3.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        glow /= 5.0;
+        color += glow * 0.15 * intensity;
+
+        // Bright refresh band
+        color *= refreshBand(uv, time);
+        color  = clamp(color, 0.0, 1.5);
+
+        color = mix(original, clamp(color, 0.0, 1.0), intensity);
+
+        // Vignette
+        color = applyVignette(color, in.texCoord, uniforms.vignetteIntensity);
+
+        return float4(clamp(color, 0.0, 1.0), sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
 }

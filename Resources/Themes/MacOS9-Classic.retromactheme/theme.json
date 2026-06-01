@@ -1,0 +1,78 @@
+{
+  "name": "Mac OS 9.2 Classic",
+  "version": "1.0",
+  "author": "RetroMac",
+  "splashScreen": "splash.png",
+  "dock": {
+    "height": 52,
+    "iconSize": 28,
+    "padding": 6,
+    "spacing": 0,
+    "cornerRadius": 0,
+    "backgroundColor": "#CCCCCCFF",
+    "borderColor": "#000000FF",
+    "borderWidth": 0,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "backgroundImageMode": "tile",
+    "bevelTopColor": "#FFFFFFFF",
+    "bevelBottomColor": "#888888FF",
+    "bevelWidth": 1,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "alignment": "left",
+    "fullWidth": false,
+    "dockStyle": "controlStrip",
+    "showClock": false,
+    "showDiskFree": false,
+    "showTrash": false,
+    "showGrip": false,
+    "magnification": false,
+    "edgeOffset": 0
+  },
+  "icon": {
+    "renderStyle": "pixelated",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.05
+  },
+  "indicator": {
+    "style": "none",
+    "color": "#000000",
+    "size": 0,
+    "offset": 0
+  },
+  "wallpaper": "wallpaper.jpg",
+  "wallpapers": [
+    { "name": "Mac OS 9 Default", "file": "wallpaper.jpg" },
+    { "name": "Blue Dalmatian", "file": "wallpaper-blue-dalmatian.png" },
+    { "name": "Mac OS 9 Background", "file": "wallpaper-macos9.png" }
+  ],
+  "desktopIcons": [
+    { "name": "Macintosh HD", "icon": "harddrive.png", "type": "folder", "path": "/", "gridX": 0, "gridY": 1 },
+    { "name": "Trash", "icon": "trash_empty.png", "iconFull": "trash_full.png", "type": "trash", "gridX": 0, "gridY": 5 }
+  ],
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "lcd-broken-lite",
+  "iconMappings": {
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "safari.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.Notes": "notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.systempreferences": "settings.png",
+    "com.apple.Music": "music.png",
+    "com.apple.Terminal": "terminal.png",
+    "com.apple.TextEdit": "textedit.png",
+    "com.apple.QuickTimePlayerX": "quicktime.png",
+    "com.apple.DiskUtility": "diskutility.png",
+    "com.apple.garageband": "garageband.png",
+    "com.apple.iMovieApp": "imovie.png",
+    "com.apple.Dictionary": "dictionary.png",
+    "com.apple.reminders": "reminders.png"
+  }
+}

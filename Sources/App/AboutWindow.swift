@@ -23,6 +23,7 @@ struct AboutTab: View {
         ("trinitron-tv", "Inspired by Sony Trinitron CRTs", "Original"),
         ("vcr-tracking", "Inspired by VHS aesthetics", "Original"),
         ("cinema-film", "Inspired by analog film processing", "Original"),
+        ("joel-gdv-ntsc", "Joel (Special Thanks)", "Contributed"),
     ]
 
     var body: some View {
@@ -66,6 +67,72 @@ struct AboutTab: View {
                     Text("Questions? Write me an email!")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                // MARK: - License (between Developer and Shader Credits)
+                Section("License") {
+                    HStack {
+                        Image(systemName: license.isLicensed ? "checkmark.seal.fill" : "sparkles")
+                            .font(.system(size: 20))
+                            .foregroundStyle(license.isLicensed ? .green : .orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(license.isLicensed ? "All Presets Unlocked" : "Basic Edition")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                            Text(license.isLicensed ? "Thank you for supporting RetroMac!" : "Unlock all \(PresetRegistry.builtinPresets.count) presets + custom shaders")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+
+                    if !license.isLicensed {
+                        TextField("License Key", text: $keyInput)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.caption, design: .monospaced))
+
+                        HStack {
+                            Button(license.isValidating ? "Validating..." : "Activate") {
+                                activateKey()
+                            }
+                            .disabled(keyInput.trimmingCharacters(in: .whitespaces).isEmpty || license.isValidating)
+                            .font(.caption)
+
+                            Spacer()
+
+                            if let msg = activationMessage {
+                                Text(msg)
+                                    .font(.caption2)
+                                    .foregroundStyle(activationSuccess == true ? .green : .red)
+                            }
+                        }
+
+                        Link("Get All Presets on Gumroad", destination: URL(string: LicenseManager.purchaseURL)!)
+                            .font(.caption)
+
+                        Link("Buy me a coffee on Ko-fi", destination: URL(string: LicenseManager.kofiURL)!)
+                            .font(.caption)
+                    } else {
+                        if !license.licenseEmail.isEmpty {
+                            LabeledContent("Email") {
+                                Text(license.licenseEmail)
+                                    .font(.caption)
+                            }
+                        }
+                        LabeledContent("Key") {
+                            Text(maskedKey)
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                        Button("Deactivate License") {
+                            license.deactivate()
+                            keyInput = ""
+                            activationMessage = nil
+                            activationSuccess = nil
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                    }
                 }
 
                 Section("Shader Credits") {
@@ -135,93 +202,33 @@ struct AboutTab: View {
                     Text("Windows XP Luna Blue theme reference.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    Link("mRB0/many-windows-3.1-icons-in-png-format on GitHub",
+                         destination: URL(string: "https://github.com/mRB0/many-windows-3.1-icons-in-png-format")!)
+                        .font(.caption)
+                    Text("Windows 3.1 Program Manager icons.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("rann01/IRIX-tiles on GitHub",
+                         destination: URL(string: "https://github.com/rann01/IRIX-tiles")!)
+                        .font(.caption)
+                    Text("SGI IRIX desktop wallpaper tiles.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("SGI IRIX icon pack by darkdoomer (DeviantArt)",
+                         destination: URL(string: "https://www.deviantart.com/darkdoomer")!)
+                        .font(.caption)
+                    Text("SGI IRIX theme application icons.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Open Source") {
                     Text("RetroMac uses the following Apple frameworks: Metal, MetalKit, ScreenCaptureKit, AVKit, WebKit, AppKit, SwiftUI. No third-party libraries are used.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                }
-
-                // MARK: - License
-                Section("License") {
-                    HStack {
-                        Image(systemName: license.isLicensed ? "checkmark.seal.fill" : "sparkles")
-                            .font(.system(size: 20))
-                            .foregroundStyle(license.isLicensed ? .green : .orange)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(license.isLicensed ? "All Presets Unlocked" : "Basic Edition")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                            Text(license.isLicensed ? "Thank you for supporting RetroMac!" : "Unlock all \(PresetRegistry.builtinPresets.count) presets + custom shaders")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-
-                    if !license.isLicensed {
-                        TextField("License Key", text: $keyInput)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(.caption, design: .monospaced))
-
-                        HStack {
-                            Button(license.isValidating ? "Validating..." : "Activate") {
-                                activateKey()
-                            }
-                            .disabled(keyInput.trimmingCharacters(in: .whitespaces).isEmpty || license.isValidating)
-                            .font(.caption)
-
-                            Spacer()
-
-                            if let msg = activationMessage {
-                                Text(msg)
-                                    .font(.caption2)
-                                    .foregroundStyle(activationSuccess == true ? .green : .red)
-                            }
-                        }
-
-                        Link("Get All Presets on Gumroad", destination: URL(string: LicenseManager.purchaseURL)!)
-                            .font(.caption)
-
-                        Link("Buy me a coffee on Ko-fi", destination: URL(string: LicenseManager.kofiURL)!)
-                            .font(.caption)
-                    } else {
-                        if !license.licenseEmail.isEmpty {
-                            LabeledContent("Email") {
-                                Text(license.licenseEmail)
-                                    .font(.caption)
-                            }
-                        }
-                        LabeledContent("Key") {
-                            Text(maskedKey)
-                                .font(.system(.caption2, design: .monospaced))
-                                .foregroundStyle(.secondary)
-                        }
-                        Button("Deactivate License") {
-                            license.deactivate()
-                            keyInput = ""
-                            activationMessage = nil
-                            activationSuccess = nil
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                    }
-                }
-
-                Section("Updates") {
-                    HStack {
-                        Button("Check for Updates…") {
-                            updater.checkForUpdates()
-                        }
-                        .disabled(!updater.canCheckForUpdates)
-                        Spacer()
-                        Toggle("Automatic Updates", isOn: Binding(
-                            get: { updater.automaticallyChecksForUpdates },
-                            set: { updater.automaticallyChecksForUpdates = $0 }
-                        ))
-                        .font(.caption)
-                    }
                 }
 
                 Section {

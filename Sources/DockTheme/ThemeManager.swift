@@ -93,7 +93,28 @@ final class ThemeManager {
     }
 
     func applyWallpaper() {
-        guard let theme = activeTheme, let wpURL = theme.wallpaperURL() else {
+        guard let theme = activeTheme else {
+            restoreWallpapers()
+            return
+        }
+        // Highest priority: a custom wallpaper picked via "Browse…" (absolute path)
+        let wpURL: URL
+        if let customPath = AppSettings.shared.themeCustomWallpaper[theme.name],
+           FileManager.default.fileExists(atPath: customPath) {
+            wpURL = URL(fileURLWithPath: customPath)
+        } else if let overrideFile = AppSettings.shared.themeWallpaperOverrides[theme.name] {
+            let overrideURL = theme.url.appendingPathComponent(overrideFile)
+            if FileManager.default.fileExists(atPath: overrideURL.path) {
+                wpURL = overrideURL
+            } else if let fallback = theme.wallpaperURL() {
+                wpURL = fallback
+            } else {
+                restoreWallpapers()
+                return
+            }
+        } else if let defaultURL = theme.wallpaperURL() {
+            wpURL = defaultURL
+        } else {
             restoreWallpapers()
             return
         }

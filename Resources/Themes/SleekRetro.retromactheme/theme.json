@@ -37,7 +37,7 @@
     "offset": 5
   },
   "fallbackIcon": "generic.png",
-  "defaultPreset": "crt-royale-lite",
+  "defaultPreset": "none",
   "iconMappings": {
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",

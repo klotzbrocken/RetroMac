@@ -1,0 +1,59 @@
+{
+  "name": "Amiga Workbench 4.1",
+  "version": "1.0",
+  "author": "RetroMac",
+  "wallpaper": "wallpaper.png",
+  "wallpapers": [
+    { "name": "Workbench Gray (Gradient)", "file": "wallpaper.png" },
+    { "name": "Workbench Gray (Flat)", "file": "wallpaper-flat.png" }
+  ],
+  "dock": {
+    "height": 26,
+    "iconSize": 18,
+    "padding": 6,
+    "spacing": 8,
+    "cornerRadius": 0,
+    "backgroundColor": "#AEAEB2FF",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#5E5E62FF",
+    "borderWidth": 1,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#E6E6EAFF",
+    "bevelBottomColor": "#6E6E72FF",
+    "bevelWidth": 1,
+    "backgroundGradientTop": "#D4D8DEFF",
+    "backgroundGradientBottom": "#A8AEB6FF",
+    "orientation": "horizontal",
+    "position": "top",
+    "alignment": "left",
+    "fullWidth": true,
+    "showClock": true,
+    "clockFormat": "HH:mm",
+    "magnification": false,
+    "edgeOffset": 0
+  },
+  "icon": {
+    "renderStyle": "smooth",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.05
+  },
+  "indicator": {
+    "style": "none",
+    "color": "#000000",
+    "size": 0,
+    "offset": 0
+  },
+  "desktopIcons": [
+    { "name": "System", "icon": "harddrive.png", "type": "folder", "path": "/", "gridX": 0, "gridY": 0 },
+    { "name": "Work", "icon": "drawer.png", "type": "folder", "path": "~", "gridX": 0, "gridY": 1 },
+    { "name": "RAM Disk", "icon": "ramdisk.png", "type": "folder", "path": "/tmp", "gridX": 0, "gridY": 2 }
+  ],
+  "fallbackIcon": "drawer.png",
+  "defaultPreset": "lcd-sharp-lite",
+  "iconMappings": {}
+}

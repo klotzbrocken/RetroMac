@@ -1,0 +1,76 @@
+{
+  "name": "SGI IRIX",
+  "version": "1.0",
+  "author": "RetroMac",
+  "wallpaper": "wallpaper-rockface.png",
+  "wallpapers": [
+    { "name": "Rockface", "file": "wallpaper-rockface.png" },
+    { "name": "Granite", "file": "wallpaper-granite.png" },
+    { "name": "Brain", "file": "wallpaper-brain.png" },
+    { "name": "Linen", "file": "wallpaper-linen.png" },
+    { "name": "Burlap", "file": "wallpaper-burlap.png" },
+    { "name": "Bulge", "file": "wallpaper-bulge.png" },
+    { "name": "Scatter Blue", "file": "wallpaper-scatter_blue.png" },
+    { "name": "Solid", "file": "wallpaper-solid.png" }
+  ],
+  "dock": {
+    "height": 44, "iconSize": 32, "padding": 4, "spacing": 4, "cornerRadius": 0,
+    "backgroundColor": "#AEAEB2FF", "backgroundImage": null, "backgroundImageMode": "tile",
+    "borderColor": "#000000FF", "borderWidth": 0, "shadowEnabled": false,
+    "shadowColor": "#00000000", "shadowRadius": 0,
+    "bevelTopColor": "#FFFFFFFF", "bevelBottomColor": "#6E6E6EFF", "bevelWidth": 2,
+    "orientation": "horizontal", "position": "bottom", "dockStyle": "none"
+  },
+  "icon": {
+    "renderStyle": "smooth", "reflectionEnabled": false, "reflectionOpacity": 0,
+    "hoverScale": 1.0, "hoverAnimationDuration": 0.05
+  },
+  "indicator": { "style": "none", "color": "#000000", "size": 0, "offset": 0 },
+  "fallbackIcon": "desktop.png",
+  "defaultPreset": "lcd-sharp-lite",
+  "iconMappings": {},
+  "sgiDesktop": {
+    "toolchest": [
+      { "title": "Desktop", "submenu": [
+        { "title": "Icon Catalog" },
+        { "title": "File Manager", "item": { "name": "File Manager", "icon": "filemanager.png", "type": "folder", "path": "/" } },
+        { "title": "Console", "item": { "name": "Console", "icon": "display.png", "type": "app", "bundleID": "com.apple.Terminal" } }
+      ] },
+      { "title": "Find", "submenu": [
+        { "title": "Find Files", "item": { "name": "Find", "icon": "filemanager.png", "type": "folder", "path": "~" } }
+      ] },
+      { "title": "Applications", "submenu": [
+        { "title": "Calculator", "item": { "name": "Calculator", "icon": "calc.png", "type": "app", "bundleID": "com.apple.calculator" } },
+        { "title": "Clock", "item": { "name": "Clock", "icon": "clock.png", "type": "app", "bundleID": "com.apple.clock" } },
+        { "title": "Web", "item": { "name": "Web", "icon": "display.png", "type": "app", "bundleID": "com.apple.Safari" } },
+        { "title": "Mail", "item": { "name": "Mail", "icon": "calendar.png", "type": "app", "bundleID": "com.apple.mail" } },
+        { "title": "Media", "item": { "name": "Media", "icon": "media.png", "type": "app", "bundleID": "com.apple.Music" } }
+      ] },
+      { "title": "System", "submenu": [
+        { "title": "System Manager", "item": { "name": "System Manager", "icon": "display.png", "type": "app", "bundleID": "com.apple.systempreferences" } },
+        { "title": "Disk Manager", "item": { "name": "Disk Manager", "icon": "disk.png", "type": "app", "bundleID": "com.apple.DiskUtility" } }
+      ] },
+      { "title": "Help", "submenu": [
+        { "title": "Release Notes", "item": { "name": "Release Notes", "icon": "fonts.png", "type": "folder", "path": "~" } }
+      ] }
+    ],
+    "iconCatalog": [
+      { "name": "Icon Catalog", "x": 70, "y": 70, "width": 400, "height": 300, "items": [
+        { "name": "Calculator", "icon": "calc.png", "type": "app", "bundleID": "com.apple.calculator" },
+        { "name": "Calendar", "icon": "calendar.png", "type": "app", "bundleID": "com.apple.iCal" },
+        { "name": "Clock", "icon": "clock.png", "type": "app", "bundleID": "com.apple.clock" },
+        { "name": "File Manager", "icon": "filemanager.png", "type": "folder", "path": "/" },
+        { "name": "Fonts", "icon": "fonts.png", "type": "app", "bundleID": "com.apple.FontBook" },
+        { "name": "Display", "icon": "display.png", "type": "app", "bundleID": "com.apple.systempreferences" },
+        { "name": "Colors", "icon": "colors.png", "type": "app", "bundleID": "com.apple.systempreferences" },
+        { "name": "Media", "icon": "media.png", "type": "app", "bundleID": "com.apple.Music" },
+        { "name": "Paint", "icon": "paint.png", "type": "app", "bundleID": "com.apple.Preview" },
+        { "name": "Disk", "icon": "disk.png", "type": "app", "bundleID": "com.apple.DiskUtility" }
+      ] }
+    ],
+    "shelf": [
+      { "name": "Home", "icon": "desktop.png", "type": "folder", "path": "~" },
+      { "name": "Console", "icon": "display.png", "type": "app", "bundleID": "com.apple.Terminal" }
+    ]
+  }
+}

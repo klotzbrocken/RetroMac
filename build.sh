@@ -14,21 +14,32 @@ else
     SIGN_FLAGS="--timestamp=none"
     APP_ENTITLEMENTS="RetroMac.entitlements"
 fi
-echo "Building RetroMac ($MODE, signing: $(echo "$SIGN_ID" | cut -d: -f1))..."
+# Release builds are Universal (Intel + Apple Silicon) for distribution.
+# Debug/dev builds stay native (host arch only) for fast iteration.
+if [ "$MODE" = "release" ]; then
+    ARCH_FLAGS="--arch arm64 --arch x86_64"
+else
+    ARCH_FLAGS=""
+fi
+echo "Building RetroMac ($MODE, signing: $(echo "$SIGN_ID" | cut -d: -f1)${ARCH_FLAGS:+, Universal})..."
 
-swift build -c "$MODE" --product RetroMac 2>&1 | tee /tmp/retromac_build.log | tail -3
+swift build -c "$MODE" $ARCH_FLAGS --product RetroMac 2>&1 | tee /tmp/retromac_build.log | tail -3
 if [ "${PIPESTATUS[0]}" -ne 0 ]; then echo "❌ RetroMac build FAILED:"; cat /tmp/retromac_build.log; exit 1; fi
 
 echo "Building Camera Extension..."
-swift build -c "$MODE" --product RetroMacCameraExtension 2>&1 | tee /tmp/retromac_ext_build.log | tail -3
+swift build -c "$MODE" $ARCH_FLAGS --product RetroMacCameraExtension 2>&1 | tee /tmp/retromac_ext_build.log | tail -3
 if [ "${PIPESTATUS[0]}" -ne 0 ]; then echo "❌ Camera Extension build FAILED:"; cat /tmp/retromac_ext_build.log; exit 1; fi
+
+# Resolve the products dir (differs for universal builds → use --show-bin-path)
+BIN_PATH=$(swift build -c "$MODE" $ARCH_FLAGS --show-bin-path 2>/dev/null | tail -1)
+echo "  Products: $BIN_PATH"
 
 # --- Camera Extension .systemextension bundle ---
 EXT_BUNDLE=".build/com.retromac.app.camera.systemextension"
 EXT_CONTENTS="$EXT_BUNDLE/Contents"
 mkdir -p "$EXT_CONTENTS/MacOS"
 
-cp ".build/$MODE/RetroMacCameraExtension" "$EXT_CONTENTS/MacOS/RetroMacCameraExtension"
+cp "$BIN_PATH/RetroMacCameraExtension" "$EXT_CONTENTS/MacOS/RetroMacCameraExtension"
 cp CameraExtension-Info.plist "$EXT_CONTENTS/Info.plist"
 
 codesign --force --sign "$SIGN_ID" \
@@ -44,8 +55,12 @@ echo "  ✓ Camera Extension built"
 APP_BUNDLE=".build/RetroMac.app"
 CONTENTS="$APP_BUNDLE/Contents"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources" "$CONTENTS/Library/SystemExtensions"
+# Strip stale orphan helper from earlier builds — grayscale now runs in-process
+# (DisplayFilterHelper.swift), so this arm64-only binary must not ship (breaks
+# Universal notarization and isn't referenced by any code).
+rm -rf "$CONTENTS/Resources/Helpers"
 
-cp ".build/$MODE/RetroMac" "$CONTENTS/MacOS/RetroMac"
+cp "$BIN_PATH/RetroMac" "$CONTENTS/MacOS/RetroMac"
 # Add rpath so dyld finds Sparkle.framework in Contents/Frameworks
 install_name_tool -add_rpath @executable_path/../Frameworks "$CONTENTS/MacOS/RetroMac" 2>/dev/null || true
 cp Info.plist "$CONTENTS/Info.plist"
@@ -153,6 +168,7 @@ fi
 echo "  ✓ Installed to /Applications/$INSTALL_NAME"
 
 echo ""
+echo "  Architectures: $(lipo -archs "$CONTENTS/MacOS/RetroMac" 2>/dev/null || echo unknown)"
 echo "✓ Built and installed /Applications/$INSTALL_NAME ($MODE)"
 echo "  ✓ Camera Extension embedded in Library/SystemExtensions"
 echo "  Run:  open /Applications/$INSTALL_NAME"

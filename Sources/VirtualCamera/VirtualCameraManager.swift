@@ -164,6 +164,7 @@ final class VirtualCameraManager: NSObject, ObservableObject {
             return
         }
 
+        dispatchPrecondition(condition: .onQueue(.main))
         isRunning = true
         frameCount = 0
 
@@ -180,6 +181,7 @@ final class VirtualCameraManager: NSObject, ObservableObject {
 
     func stop() {
         guard isRunning else { return }
+        dispatchPrecondition(condition: .onQueue(.main))
 
         stopSurfaceIDTimer()
 
@@ -243,7 +245,7 @@ final class VirtualCameraManager: NSObject, ObservableObject {
             kIOSurfaceBytesPerElement as String: 4,
             kIOSurfaceBytesPerRow as String: outputWidth * 4,
             kIOSurfacePixelFormat as String: kCVPixelFormatType_32BGRA,
-            "IOSurfaceIsGlobal" as String: true  // Make surface findable via IOSurfaceLookup across processes
+            "IOSurfaceIsGlobal" as String: true  // required: extension looks up the surface by ID across processes
         ]
 
         guard let surface = IOSurfaceCreate(props as CFDictionary) else {
@@ -306,7 +308,7 @@ final class VirtualCameraManager: NSObject, ObservableObject {
         do {
             try FileManager.default.createDirectory(atPath: legacyDir, withIntermediateDirectories: true)
             try content.write(toFile: legacyFile, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: legacyFile)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: legacyFile)
         } catch {
             // Not critical — only needed for old extension
             logger.warning("Legacy surface_id write failed: \(error.localizedDescription)")
@@ -474,7 +476,9 @@ extension VirtualCameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
               let cvTex = cvTexture,
               let sourceTexture = CVMetalTextureGetTexture(cvTex) else { return }
 
-        // Render shader to IOSurface-backed texture (zero-copy to Camera Extension)
+        // Render shader to IOSurface-backed texture (zero-copy to Camera Extension).
+        // Synchronous render: the extension reads the surface cross-process, so it must be
+        // fully written before we return (async render caused unresolved/half-written frames).
         let viewportSize = CGSize(width: outputWidth, height: outputHeight)
         renderer.renderToTexture(sourceTexture: sourceTexture, target: outputTexture, viewportSize: viewportSize)
 

@@ -2,6 +2,8 @@
   "name": "Windows 98",
   "version": "1.0",
   "author": "RetroMac",
+  "splashScreen": "splash.png",
+  "splashFullscreen": true,
   "wallpaper": "wallpaper.jpg",
   "wallpapers": [
     {
@@ -52,7 +54,7 @@
     "offset": 3
   },
   "fallbackIcon": "generic.png",
-  "defaultPreset": "crt-royale-lite",
+  "defaultPreset": "vhs-lite",
   "iconMappings": {
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",
@@ -63,6 +65,24 @@
     "com.apple.iCal": "calendar.png",
     "com.apple.systempreferences": "settings.png",
     "com.apple.Music": "music.png",
-    "com.apple.Terminal": "terminal.png"
+    "com.apple.Terminal": "terminal.png",
+    "com.apple.AppStore": "appstore.png",
+    "com.apple.Preview": "preview.png",
+    "com.apple.TextEdit": "textedit.png",
+    "com.apple.calculator": "calculator.png",
+    "com.apple.Maps": "maps.png",
+    "com.apple.AddressBook": "contacts.png",
+    "com.apple.reminders": "reminders.png",
+    "com.apple.iBooksX": "books.png",
+    "com.apple.ActivityMonitor": "activitymonitor.png",
+    "com.apple.archiveutility": "archive.png",
+    "com.apple.dt.Xcode": "xcode.png",
+    "com.microsoft.Word": "word.png",
+    "com.microsoft.Excel": "excel.png",
+    "com.microsoft.Powerpoint": "powerpoint.png",
+    "org.mozilla.firefox": "firefox.png",
+    "com.google.Chrome": "chrome.png",
+    "org.gimp.gimp": "gimp.png",
+    "org.videolan.vlc": "vlc.png"
   }
 }

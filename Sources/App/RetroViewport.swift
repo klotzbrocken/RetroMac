@@ -5,6 +5,10 @@ import ScreenCaptureKit
 import CoreMedia
 import CoreVideo
 
+extension Notification.Name {
+    static let retroViewportDidClose = Notification.Name("retroViewportDidClose")
+}
+
 /// A movable, resizable "retro lens" window that captures the screen region
 /// underneath it and applies a CRT/retro shader effect in real-time.
 ///
@@ -45,6 +49,18 @@ final class RetroViewport: NSObject, MTKViewDelegate, SCStreamOutput, SCStreamDe
     var presetName: String = "crt-royale-lite"
     var bloomEnabled: Bool = true
     var bloomIntensity: Float = 0.25
+
+    /// Forwarded intensity — sets the shader intensity on the renderer.
+    var intensity: Float {
+        get { renderer?.intensity ?? 1.0 }
+        set { renderer?.intensity = newValue }
+    }
+
+    /// Forwarded vignette intensity — sets the vignette on the renderer.
+    var vignetteIntensity: Float {
+        get { renderer?.vignetteIntensity ?? 0 }
+        set { renderer?.vignetteIntensity = newValue }
+    }
 
     // MARK: - Public API
 
@@ -110,6 +126,7 @@ final class RetroViewport: NSObject, MTKViewDelegate, SCStreamOutput, SCStreamDe
         device = nil
 
         print("[Viewport] Closed")
+        NotificationCenter.default.post(name: .retroViewportDidClose, object: nil)
     }
 
     /// Switch the shader preset while the viewport is active.

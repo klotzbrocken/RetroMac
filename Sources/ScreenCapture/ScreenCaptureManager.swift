@@ -75,20 +75,28 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
     private func captureSize(for display: SCDisplay) async -> (Int, Int) {
         let halfRes = AppSettings.shared.halfResolution
         let result: (Int, Int) = await MainActor.run {
-            // Match NSScreen by displayID for accurate scaled resolution
+            // PRIMARY: the display's actual framebuffer pixel resolution. This is what
+            // ScreenCaptureKit captures at, so the output buffer matches exactly and the
+            // overlay fills the whole screen — even on HiDPI-scaled external monitors
+            // where (points × backingScaleFactor) does NOT equal native pixels.
+            if let mode = CGDisplayCopyDisplayMode(display.displayID) {
+                var w = mode.pixelWidth
+                var h = mode.pixelHeight
+                if halfRes { w /= 2; h /= 2 }
+                print("[Capture] Display \(display.displayID) native pixels: \(w)x\(h) (mode pixelWidth/Height)")
+                return (w, h)
+            }
+            // Fallback: NSScreen points × backing scale
             if let screen = NSScreen.screens.first(where: { $0.displayID == display.displayID }) {
                 let scale = halfRes ? 1.0 : screen.backingScaleFactor
                 let w = Int(screen.frame.width * scale)
                 let h = Int(screen.frame.height * scale)
-                print("[Capture] Using NSScreen size for display \(display.displayID): \(w)x\(h) (screen: \(Int(screen.frame.width))x\(Int(screen.frame.height)) @\(scale)x)")
+                print("[Capture] Fallback NSScreen size for \(display.displayID): \(w)x\(h)")
                 return (w, h)
             }
-            // Fallback to SCDisplay dimensions (old behavior)
+            // Last resort: SCDisplay dimensions
             let scale = halfRes ? 1 : 2
-            let w = Int(display.width) * scale
-            let h = Int(display.height) * scale
-            print("[Capture] Using SCDisplay size (no NSScreen match): \(w)x\(h)")
-            return (w, h)
+            return (Int(display.width) * scale, Int(display.height) * scale)
         }
         return result
     }
@@ -161,10 +169,15 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     func stop() {
-        stream?.stopCapture { _ in }
+        let stoppingStream = stream
         stream = nil
         hasReceivedFirstFrame = false
         frameLogCount = 0
+        stoppingStream?.stopCapture { error in
+            if let error = error {
+                print("[Capture] Stop error: \(error.localizedDescription)")
+            }
+        }
         print("[Capture] Stopped.")
     }
 

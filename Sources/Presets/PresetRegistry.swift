@@ -17,6 +17,7 @@ struct PresetInfo {
 
 enum PresetRegistry {
     enum PresetCategory: String, CaseIterable {
+        case lite = "Lite (Permission free)"
         case crt = "CRT / Monitor"
         case proMonitor = "Pro Monitors"
         case video = "Video Signals"
@@ -24,9 +25,22 @@ enum PresetRegistry {
         case apple = "Apple"
         case film = "Film / Photo"
         case webcam = "Webcam Looks"
+        case specialThx = "Special Thx"
     }
 
     static let categorizedPresets: [(PresetCategory, [PresetInfo])] = [
+        (.lite, [
+            PresetInfo(id: "crt-lite", displayName: "CRT Lite", description: "Transparent CRT overlay — no screen recording"),
+            PresetInfo(id: "lcd-lite", displayName: "LCD Lite", description: "Standard TFT LCD pixel grid overlay"),
+            PresetInfo(id: "lcd-retro-lite", displayName: "LCD Retro Lite", description: "Chunky early-2000s TN panel pixel grid"),
+            PresetInfo(id: "lcd-sharp-lite", displayName: "LCD Sharp Lite", description: "Fine IPS-style pixel grid, clean and precise"),
+            PresetInfo(id: "lcd-broken-lite", displayName: "LCD Broken Lite", description: "Damaged LCD — dead pixels, stuck lines, pressure marks"),
+            PresetInfo(id: "bw-lite", displayName: "B&W Lite", description: "Grayscale + film grain — uses macOS Accessibility"),
+            PresetInfo(id: "amber-lite", displayName: "Amber Lite", description: "Amber phosphor monitor — uses macOS Accessibility"),
+            PresetInfo(id: "vhs-lite", displayName: "VHS Lite", description: "VHS tracking lines + noise overlay"),
+            PresetInfo(id: "scanlines-lite", displayName: "Scanlines Lite", description: "Pure scanlines overlay — no screen recording"),
+            PresetInfo(id: "grain-lite", displayName: "Film Scratches Lite", description: "Vertical scratches, dust specks + projector flicker"),
+        ]),
         (.crt, [
             PresetInfo(id: "zfast-crt", displayName: "zfast CRT", description: "Scanlines + chromatic aberration"),
             PresetInfo(id: "crt-lottes", displayName: "CRT Lottes", description: "Shadow mask + scanlines"),
@@ -78,6 +92,9 @@ enum PresetRegistry {
             PresetInfo(id: "newsroom-1987", displayName: "Newsroom 1987", description: "1987 broadcast newsroom look"),
             PresetInfo(id: "vhs-tape", displayName: "VHS Tape", description: "Well-worn rental VHS tape"),
             PresetInfo(id: "terminal-green", displayName: "Terminal Green", description: "Green phosphor terminal"),
+        ]),
+        (.specialThx, [
+            PresetInfo(id: "joel-gdv-ntsc", displayName: "Joel GDV NTSC v4", description: "GDV x NTSC Hybrid — curvature, dot crawl, refresh band"),
         ]),
     ]
 

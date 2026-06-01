@@ -19,8 +19,9 @@
     "bevelTopColor": "#FFFFFFFF",
     "bevelBottomColor": "#888888FF",
     "bevelWidth": 2,
-    "orientation": "vertical",
-    "position": "left"
+    "orientation": "horizontal",
+    "position": "bottom",
+    "alignment": "left"
   },
   "icon": {
     "renderStyle": "pixelated",

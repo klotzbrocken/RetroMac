@@ -214,7 +214,8 @@ final class TVBrowserWindow: NSObject {
 
     // MARK: - Cleanup
 
-    func close() {
+    /// Shared resource teardown — safe to call multiple times (idempotent).
+    private func cleanupResources() {
         metalView?.isPaused = true
         metalView = nil
         renderer = nil
@@ -232,10 +233,14 @@ final class TVBrowserWindow: NSObject {
         player = nil
         playerView = nil
         webView = nil
-
-        window?.close()
-        window = nil
         contentMode = .streamBasic
+    }
+
+    func close() {
+        let win = window
+        window = nil
+        cleanupResources()
+        win?.close()
     }
 }
 
@@ -290,21 +295,8 @@ extension TVBrowserWindow: MTKViewDelegate {
 
 extension TVBrowserWindow: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
-        metalView?.isPaused = true
-        metalView = nil
-        renderer = nil
-        videoOutput = nil
-        textureCache = nil
-
-        presentationSizeObserver?.invalidate()
-        presentationSizeObserver = nil
-        aspectRatioLocked = false
-
-        player?.pause()
-        player = nil
-        playerView = nil
-        webView = nil
         window = nil
+        cleanupResources()
         print("[TV] Window closed")
 
         if dockWasRunning {
