@@ -148,6 +148,27 @@ codesign --force --sign "$SIGN_ID" \
     --generate-entitlement-der \
     "$APP_BUNDLE"
 
+# Notarize + staple (REQUIRED: under SIP a Developer ID camera system extension only
+# loads if notarized). Runs for release when 'dmg' or 'notarize' is requested.
+# Credentials come from a notarytool keychain profile (default: Retromac).
+NOTARY_PROFILE="${NOTARY_PROFILE:-Retromac}"
+if [ "$MODE" = "release" ] && { [ "${2}" = "dmg" ] || [ "${2}" = "notarize" ] || [ "${3}" = "notarize" ]; }; then
+    echo "Notarizing (profile: $NOTARY_PROFILE)…"
+    NOTARIZE_ZIP="/tmp/RetroMac-notarize.zip"
+    rm -f "$NOTARIZE_ZIP"
+    ditto -c -k --keepParent "$APP_BUNDLE" "$NOTARIZE_ZIP"
+    if xcrun notarytool submit "$NOTARIZE_ZIP" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 | tee /tmp/retromac_notarize.log | grep -q "status: Accepted"; then
+        # Staple the APP ONLY. Stapling the nested .systemextension would modify a
+        # resource sealed by the app's signature and break it ("sealed resource is
+        # invalid"). The app's notarization ticket already covers all nested code.
+        xcrun stapler staple "$APP_BUNDLE"
+        echo "  ✓ Notarized & stapled"
+    else
+        echo "  ❌ Notarization FAILED — see /tmp/retromac_notarize.log"; exit 1
+    fi
+    rm -f "$NOTARIZE_ZIP"
+fi
+
 # Install — debug goes to "RetroMac Dev.app" to protect release TCC permissions
 if [ "$MODE" = "release" ]; then
     INSTALL_NAME="RetroMac.app"
@@ -188,4 +209,15 @@ if [ "${2}" = "dmg" ]; then
     hdiutil create -volname "RetroMac" -srcfolder "$DMG_DIR" -ov -format UDZO RetroMac.dmg
     rm -rf "$DMG_DIR"
     echo "  ✓ RetroMac.dmg created (with Applications shortcut)"
+
+    # Notarize + staple the DMG itself so a downloaded image passes Gatekeeper cleanly.
+    if [ "$MODE" = "release" ]; then
+        echo "Notarizing DMG (profile: $NOTARY_PROFILE)…"
+        if xcrun notarytool submit RetroMac.dmg --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 | tee /tmp/retromac_dmg_notarize.log | grep -q "status: Accepted"; then
+            xcrun stapler staple RetroMac.dmg
+            echo "  ✓ DMG notarized & stapled"
+        else
+            echo "  ❌ DMG notarization FAILED — see /tmp/retromac_dmg_notarize.log"; exit 1
+        fi
+    fi
 fi

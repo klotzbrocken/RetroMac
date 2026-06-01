@@ -314,12 +314,15 @@ final class DockController {
 
         // Horizontal dock — top or bottom edge
         let offset = config?.dockEdgeOffset ?? 8
-        let yBottom = visible.minY + offset
+        // Anchor the bottom edge to the PHYSICAL screen bottom (screen.frame.minY) so a
+        // zero-offset dock sits flush against the edge. In the common case this equals
+        // visibleFrame.minY (the menu bar only affects the top), so no regression.
+        let yBottom = screen.frame.minY + offset
         let yTop = visible.maxY - height - offset
         let y = (position == "top") ? yTop : yBottom
 
         if config?.isFullWidth == true {
-            let fullY = (position == "top") ? (screen.frame.maxY - height) : visible.minY
+            let fullY = (position == "top") ? (screen.frame.maxY - height) : screen.frame.minY
             return NSRect(x: screen.frame.minX, y: fullY, width: screen.frame.width, height: height)
         }
         let x: CGFloat

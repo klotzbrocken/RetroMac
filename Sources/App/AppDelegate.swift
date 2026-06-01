@@ -910,6 +910,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         screenshotItem.isEnabled = isActive || retroViewport.isActive
         menu.addItem(screenshotItem)
 
+        // ── Reset permissions (troubleshooting) ──
+        let resetPermItem = NSMenuItem(title: "Reset Permissions\u{2026}", action: #selector(resetPermissions), keyEquivalent: "")
+        resetPermItem.target = self
+        resetPermItem.image = sfIcon("lock.rotation")
+        menu.addItem(resetPermItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // ── Quit ──
@@ -919,6 +925,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(quit)
 
         statusItem.menu = menu
+    }
+
+    /// Reset this app's Screen Recording + Camera TCC grants, then point the user at the
+    /// right System Settings panes. Useful after a rare update where macOS invalidates a
+    /// grant — gives a clean path back into the permission prompts.
+    @objc private func resetPermissions() {
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.retromac.app"
+        for service in ["ScreenCapture", "Camera"] {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+            proc.arguments = ["reset", service, bundleID]
+            try? proc.run()
+            proc.waitUntilExit()
+        }
+        let alert = NSAlert()
+        alert.messageText = "Permissions reset"
+        alert.informativeText = "Screen Recording and Camera permissions for RetroMac were reset.\n\nQuit and reopen RetroMac, then allow them again when prompted (or enable them in System Settings)."
+        alert.addButton(withTitle: "Open Screen Recording")
+        alert.addButton(withTitle: "Open Camera")
+        alert.addButton(withTitle: "Later")
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            if let u = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") { NSWorkspace.shared.open(u) }
+        case .alertSecondButtonReturn:
+            if let u = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera") { NSWorkspace.shared.open(u) }
+        default: break
+        }
     }
 
     /// Update the live menu views in-place (header dot/text + pill toggles) without rebuilding the menu.

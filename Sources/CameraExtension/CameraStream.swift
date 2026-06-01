@@ -98,6 +98,25 @@ final class RetroMacCameraStreamSource: NSObject, CMIOExtensionStreamSource {
         }
     }
 
+    /// Surface ID pushed from the host via the CMIO custom device property.
+    /// This is the PRIMARY channel: App Group / UserDefaults cannot cross the
+    /// host (console user) ↔ extension (_cmiodalassistants) user boundary, but a
+    /// CMIO property set is routed across it by the DAL assistant.
+    func setSurfaceIDFromHost(_ newID: Int) {
+        timerQueue.async { [weak self] in
+            guard let self = self else { return }
+            // A pushed 0 means "host stopped" — honour it so we fall back to black.
+            if newID != self.currentSurfaceID {
+                os_log("[RetroMacCam] Property push surfaceID=%{public}d (was %{public}d)",
+                       log: .default, type: .default, newID, self.currentSurfaceID)
+                self.currentSurfaceID = newID
+            }
+        }
+    }
+
+    /// Current surface ID (for the device-property getter).
+    var hostSurfaceID: Int { currentSurfaceID }
+
     /// Read IOSurface ID from App Group UserDefaults (primary) or container file (fallback)
     private func readSurfaceID() -> Int {
         // Primary: App Group UserDefaults

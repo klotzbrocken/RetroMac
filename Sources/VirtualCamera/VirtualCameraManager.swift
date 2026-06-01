@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import CoreMediaIO
 import CoreVideo
 import IOSurface
 import Metal
@@ -53,6 +54,11 @@ final class VirtualCameraManager: NSObject, ObservableObject {
 
     // Whether start() should be called after extension activation
     private var startAfterActivation = false
+
+    // Cached CMIO device id for the virtual camera (cross-user surface-ID channel).
+    private var cmioDeviceID: CMIOObjectID = 0
+    private let extensionDeviceUID = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
+    private let surfaceIDSelector: FourCharCode = "sfid".utf8.reduce(FourCharCode(0)) { ($0 << 8) | FourCharCode($1) }
 
     private override init() {
         super.init()
@@ -313,6 +319,76 @@ final class VirtualCameraManager: NSObject, ObservableObject {
             // Not critical — only needed for old extension
             logger.warning("Legacy surface_id write failed: \(error.localizedDescription)")
         }
+
+        // PRIMARY channel: push via the CMIO custom property. App Group / file IPC
+        // cannot cross the host↔extension user boundary (extension runs as
+        // _cmiodalassistants); a CMIO property set is routed across it by the DAL.
+        pushSurfaceIDViaProperty(surfaceID)
+    }
+
+    // MARK: - Cross-user surface-ID channel (CMIO custom property)
+
+    /// Locate (and cache) our virtual camera's CMIO device id by matching its UID.
+    private func cmioDevice() -> CMIOObjectID? {
+        if cmioDeviceID != 0, CMIOObjectHasProperty(cmioDeviceID, &Self.uidAddress) {
+            return cmioDeviceID
+        }
+        var listAddr = CMIOObjectPropertyAddress(
+            mSelector: CMIOObjectPropertySelector(kCMIOHardwarePropertyDevices),
+            mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
+            mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
+        var dataSize: UInt32 = 0
+        guard CMIOObjectGetPropertyDataSize(CMIOObjectID(kCMIOObjectSystemObject), &listAddr, 0, nil, &dataSize) == noErr,
+              dataSize > 0 else { return nil }
+        let count = Int(dataSize) / MemoryLayout<CMIOObjectID>.size
+        var devices = [CMIOObjectID](repeating: 0, count: count)
+        var used: UInt32 = 0
+        guard CMIOObjectGetPropertyData(CMIOObjectID(kCMIOObjectSystemObject), &listAddr, 0, nil, dataSize, &used, &devices) == noErr else { return nil }
+
+        var uidAddr = Self.uidAddress
+        for dev in devices {
+            var uidSize: UInt32 = 0
+            guard CMIOObjectGetPropertyDataSize(dev, &uidAddr, 0, nil, &uidSize) == noErr else { continue }
+            var cfUID: Unmanaged<CFString>?
+            var out: UInt32 = 0
+            let st = withUnsafeMutablePointer(to: &cfUID) { ptr -> OSStatus in
+                CMIOObjectGetPropertyData(dev, &uidAddr, 0, nil, uidSize, &out, ptr)
+            }
+            guard st == noErr, let uid = cfUID?.takeRetainedValue() as String? else { continue }
+            if uid == extensionDeviceUID {
+                cmioDeviceID = dev
+                return dev
+            }
+        }
+        return nil
+    }
+
+    private static var uidAddress = CMIOObjectPropertyAddress(
+        mSelector: CMIOObjectPropertySelector(kCMIODevicePropertyDeviceUID),
+        mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
+        mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
+
+    /// Write the surface ID into the extension's custom CMIO property. The value is
+    /// marshalled as a CFString reference (pointer-sized), per the DAL bridging rules.
+    private func pushSurfaceIDViaProperty(_ surfaceID: Int) {
+        guard let device = cmioDevice() else { return }
+        var addr = CMIOObjectPropertyAddress(
+            mSelector: CMIOObjectPropertySelector(surfaceIDSelector),
+            mScope: CMIOObjectPropertyScope(kCMIOObjectPropertyScopeGlobal),
+            mElement: CMIOObjectPropertyElement(kCMIOObjectPropertyElementMain))
+        guard CMIOObjectHasProperty(device, &addr) else { return }
+        var settable: DarwinBoolean = false
+        CMIOObjectIsPropertySettable(device, &addr, &settable)
+        guard settable.boolValue else { return }
+
+        var ref: CFTypeRef = String(surfaceID) as CFString
+        let size = UInt32(MemoryLayout<CFTypeRef>.size)
+        let status = withUnsafePointer(to: &ref) { ptr -> OSStatus in
+            CMIOObjectSetPropertyData(device, &addr, 0, nil, size, ptr)
+        }
+        if status != noErr {
+            logger.error("CMIO surface-ID push failed: \(status)")
+        }
     }
 
     /// Re-publish IOSurface ID periodically for the first few seconds to catch late-starting extensions
@@ -439,7 +515,8 @@ extension VirtualCameraManager: OSSystemExtensionRequestDelegate {
     }
 
     func request(_ request: OSSystemExtensionRequest, didFailWithError error: Error) {
-        logger.error("Camera Extension activation failed: \(error.localizedDescription)")
+        let ns = error as NSError
+        logger.error("Camera Extension activation failed: domain=\(ns.domain, privacy: .public) code=\(ns.code, privacy: .public) desc=\(ns.localizedDescription, privacy: .public)")
     }
 }
 
