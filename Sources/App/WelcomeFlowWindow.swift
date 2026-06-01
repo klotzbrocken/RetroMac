@@ -4,7 +4,6 @@ import ScreenCaptureKit
 /// Pages that can appear in the unified welcome flow.
 enum WelcomePage: Equatable {
     case whatsNew
-    case setupWelcome
     case setupScreenRecording
     case setupAccessibility
     case coffee
@@ -32,7 +31,6 @@ struct WelcomeFlowView: View {
             Group {
                 switch page {
                 case .whatsNew: whatsNewPage
-                case .setupWelcome: setupWelcomePage
                 case .setupScreenRecording: screenRecordingPage
                 case .setupAccessibility: accessibilityPage
                 case .coffee: coffeePage
@@ -43,7 +41,7 @@ struct WelcomeFlowView: View {
             Divider()
             navBar
         }
-        .frame(width: 440, height: 460)
+        .frame(width: 460, height: 560)
     }
 
     // MARK: - Nav
@@ -112,23 +110,12 @@ struct WelcomeFlowView: View {
 
     // MARK: - Setup pages
 
-    private var setupWelcomePage: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "tv.and.mediabox").font(.system(size: 48)).foregroundStyle(.secondary)
-            Text("Welcome to RetroMac").font(.title2.bold())
-            Text("RetroMac needs two permissions to apply retro shader effects to your screen.")
-                .multilineTextAlignment(.center).foregroundStyle(.secondary).padding(.horizontal, 40)
-            Spacer()
-        }.padding()
-    }
-
     private var screenRecordingPage: some View {
         VStack(spacing: 12) {
             Spacer()
-            Image(systemName: "record.circle").font(.system(size: 36)).foregroundStyle(.orange)
-            Text("Screen Recording").font(.title3.bold())
-            Text("RetroMac captures your screen to apply real-time shader effects. No data is recorded or stored.")
+            Image(systemName: "tv.and.mediabox").font(.system(size: 44)).foregroundStyle(.orange)
+            Text("Welcome to RetroMac").font(.title2.bold())
+            Text("To paint retro shader effects over your screen, RetroMac needs Screen Recording access. It reads the screen live — nothing is ever recorded or stored.")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary).padding(.horizontal, 32)
             Button("Open System Settings") {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
@@ -168,51 +155,106 @@ struct WelcomeFlowView: View {
     // MARK: - Coffee / Unlock
 
     private var coffeePage: some View {
-        VStack(spacing: 16) {
-            VStack(spacing: 5) {
-                Image(systemName: "heart").font(.system(size: 26)).foregroundStyle(.secondary).padding(.top, 26)
-                Text("Enjoying RetroMac?").font(.title3.bold())
-                Text("It's free. If you'd like to support it — no pressure.")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if license.isLicensed {
-                Label("License active — everything unlocked", systemImage: "checkmark.seal.fill")
-                    .font(.body).foregroundStyle(.green)
-                Spacer()
-            } else {
-                VStack(spacing: 10) {
-                    Button { if let u = URL(string: LicenseManager.kofiURL) { NSWorkspace.shared.open(u) } } label: {
-                        Label("Buy me a coffee", systemImage: "cup.and.saucer.fill").frame(maxWidth: .infinity)
-                    }.controlSize(.large).buttonStyle(.bordered)
-
-                    Button { if let u = URL(string: LicenseManager.purchaseURL) { NSWorkspace.shared.open(u) } } label: {
-                        Label("Unlock all presets, webcam & custom shaders", systemImage: "sparkles").frame(maxWidth: .infinity)
-                    }.controlSize(.large).buttonStyle(.borderedProminent)
-                }.padding(.horizontal, 36)
-
-                Divider().padding(.horizontal, 36)
-
-                VStack(spacing: 7) {
-                    Text("Already have a key?").font(.caption).foregroundStyle(.secondary)
-                    HStack(spacing: 8) {
-                        TextField("License key", text: $keyInput)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(size: 13, design: .monospaced))
-                        Button(license.isValidating ? "…" : "Activate") { activateKey() }
-                            .buttonStyle(.bordered)
-                            .disabled(keyInput.trimmingCharacters(in: .whitespaces).isEmpty || license.isValidating)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Header
+                HStack(alignment: .top, spacing: 14) {
+                    Image(systemName: "heart.fill").font(.system(size: 40)).foregroundStyle(.pink)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Keep RetroMac free").font(.title2.bold())
+                        Text("No ads, no tracking, no feature locks. Optional support helps the developer keep improving the app.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    if let msg = activationMessage {
-                        Text(msg).font(.caption).foregroundStyle(activationSuccess == true ? .green : .red)
+                }
+
+                if license.isLicensed {
+                    Label("License active — everything unlocked", systemImage: "checkmark.seal.fill")
+                        .font(.body).foregroundStyle(.green).padding(.vertical, 24)
+                } else {
+                    // Three benefits
+                    HStack(spacing: 10) {
+                        benefitCard("lock.fill", .blue, "No Tracking")
+                        benefitCard("xmark.octagon.fill", .purple, "Ad-Free")
+                        benefitCard("heart.fill", .pink, "100% Optional")
                     }
-                    Toggle("I already donated", isOn: $coffeeAck).toggleStyle(.checkbox).font(.caption)
-                }.padding(.horizontal, 36)
-                Spacer(minLength: 6)
+
+                    Divider()
+
+                    Text("Choose your support").font(.headline)
+
+                    supportRow(emoji: "☕️", title: "Tasty Coffee",
+                               subtitle: "Treat the developer — thank you!",
+                               chip: nil) { open(LicenseManager.kofiURL) }
+
+                    supportRow(emoji: "🍕", title: "Buy a Pizza",
+                               subtitle: "Unlock all presets & Webcam Mode",
+                               chip: "Unlock") { open(LicenseManager.purchaseURL) }
+
+                    supportRow(emoji: "🙁", title: "None of these :-(",
+                               subtitle: "Just start using RetroMac",
+                               chip: nil) { finish() }
+
+                    // Already-supported + license key
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle("I already chipped in (hide this next time)", isOn: $coffeeAck)
+                            .toggleStyle(.checkbox).font(.caption)
+                        HStack(spacing: 8) {
+                            TextField("License key", text: $keyInput)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(size: 12, design: .monospaced))
+                            Button(license.isValidating ? "…" : "Activate") { activateKey() }
+                                .buttonStyle(.bordered)
+                                .disabled(keyInput.trimmingCharacters(in: .whitespaces).isEmpty || license.isValidating)
+                        }
+                        if let msg = activationMessage {
+                            Text(msg).font(.caption).foregroundStyle(activationSuccess == true ? .green : .red)
+                        }
+                    }.padding(.top, 4)
+                }
             }
+            .padding(20)
         }
+    }
+
+    private func benefitCard(_ icon: String, _ tint: Color, _ label: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon).font(.system(size: 20, weight: .semibold)).foregroundStyle(tint)
+            Text(label).font(.caption).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 14)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.08)))
+    }
+
+    private func supportRow(emoji: String, title: String, subtitle: String,
+                            chip: String?, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Text(emoji).font(.system(size: 24))
+                    .frame(width: 44, height: 44)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.10)))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline)
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if let chip = chip {
+                    Text(chip).font(.caption.bold()).foregroundStyle(.white)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Capsule().fill(Color.orange))
+                } else {
+                    Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                }
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.06)))
+            .contentShape(Rectangle())
+        }.buttonStyle(.plain)
+    }
+
+    private func open(_ urlString: String) {
+        if let u = URL(string: urlString) { NSWorkspace.shared.open(u) }
     }
 
     private func activateKey() {
@@ -269,7 +311,7 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
 
         var pages: [WelcomePage] = []
         if newVersion || firstRun { pages.append(.whatsNew) }
-        if needSetup { pages += [.setupWelcome, .setupScreenRecording, .setupAccessibility] }
+        if needSetup { pages += [.setupScreenRecording, .setupAccessibility] }
         // Coffee: always on setup/version events (if unlicensed); otherwise honor 30-day ack
         if !lm.isLicensed {
             if needSetup || newVersion || firstRun || lm.shouldShowCoffee { pages.append(.coffee) }
@@ -280,7 +322,7 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
 
     /// Open directly at the setup pages (menu "Re-run setup").
     func showSetup() {
-        present(pages: [.setupWelcome, .setupScreenRecording, .setupAccessibility])
+        present(pages: [.setupScreenRecording, .setupAccessibility])
     }
 
     /// Open directly at the coffee / unlock page (e.g. when a locked preset is clicked).
@@ -306,7 +348,7 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 460),
+        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 560),
                            styleMask: [.titled, .closable], backing: .buffered, defer: false)
         win.title = "Welcome to RetroMac"
         win.contentView = hosting

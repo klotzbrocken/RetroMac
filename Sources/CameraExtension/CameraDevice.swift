@@ -4,6 +4,12 @@ import os.log
 
 private let logger = Logger(subsystem: "com.retromac.app.camera", category: "Device")
 
+/// Custom CMIO property used to receive the host's global IOSurface ID across the
+/// host↔extension user boundary. Key format is the DAL's required
+/// `4cc_<selector>_<scope>_<element>`: selector 'sfid', global scope, main element.
+/// The host writes it via CMIOObjectSetPropertyData (selector FourCharCode 'sfid').
+let kSurfaceIDProperty = CMIOExtensionProperty(rawValue: "4cc_sfid_glob_0000")
+
 final class RetroMacCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
     private(set) var device: CMIOExtensionDevice!
     var streamSource: RetroMacCameraStreamSource!
@@ -56,13 +62,24 @@ final class RetroMacCameraDeviceSource: NSObject, CMIOExtensionDeviceSource {
         return desc
     }
 
-    var availableProperties: Set<CMIOExtensionProperty> { [] }
+    var availableProperties: Set<CMIOExtensionProperty> { [kSurfaceIDProperty] }
 
     func deviceProperties(forProperties properties: Set<CMIOExtensionProperty>) throws -> CMIOExtensionDeviceProperties {
-        CMIOExtensionDeviceProperties(dictionary: [:])
+        let dp = CMIOExtensionDeviceProperties(dictionary: [:])
+        if properties.contains(kSurfaceIDProperty) {
+            // NSString round-trips on all macOS versions (NSNumber is broken on 12.x).
+            let value = NSString(string: String(streamSource?.hostSurfaceID ?? 0))
+            dp.setPropertyState(CMIOExtensionPropertyState(value: value), forProperty: kSurfaceIDProperty)
+        }
+        return dp
     }
 
     func setDeviceProperties(_ deviceProperties: CMIOExtensionDeviceProperties) throws {
-        // No settable properties
+        guard let state = deviceProperties.propertiesDictionary[kSurfaceIDProperty] else { return }
+        if let s = state.value as? String, let id = Int(s) {
+            streamSource?.setSurfaceIDFromHost(id)
+        } else if let n = state.value as? NSNumber {
+            streamSource?.setSurfaceIDFromHost(n.intValue)
+        }
     }
 }

@@ -2048,9 +2048,24 @@ final class DockView: NSView {
             startButtonHovered = false
             needsDisplay = true
         }
-        if hasMagnification {
-            resetMagnification()
+        guard hasMagnification else { return }
+
+        // Bottom dock: the screen's bottom edge is a natural barrier. Sliding the
+        // cursor all the way down can momentarily push it out of the tracking rect,
+        // which would drop the magnifier and cause a flicker. Keep the effect alive
+        // on a downward exit (cursor still horizontally over the dock); only reset on
+        // a REAL exit — upward past the popped icons, or out either side.
+        if !isVertical {
+            let local = convert(event.locationInWindow, from: nil)
+            let withinX = local.x >= 0 && local.x <= bounds.width
+            let downwardExit = local.y <= dockBarRect.maxY
+            if withinX && downwardExit {
+                let clampedX = min(max(local.x, 0), bounds.width)
+                applyMagnification(at: NSPoint(x: clampedX, y: dockBarRect.midY))
+                return
+            }
         }
+        resetMagnification()
     }
 
     private func applyMagnification(at point: NSPoint) {

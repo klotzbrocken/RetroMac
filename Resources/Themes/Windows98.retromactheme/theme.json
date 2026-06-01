@@ -83,6 +83,9 @@
     "org.mozilla.firefox": "firefox.png",
     "com.google.Chrome": "chrome.png",
     "org.gimp.gimp": "gimp.png",
-    "org.videolan.vlc": "vlc.png"
+    "org.videolan.vlc": "vlc.png",
+    "com.apple.FaceTime": "facetime.png",
+    "com.apple.clock": "clock.png",
+    "com.apple.podcasts": "podcasts.png"
   }
 }
