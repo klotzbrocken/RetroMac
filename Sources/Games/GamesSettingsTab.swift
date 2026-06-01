@@ -52,10 +52,18 @@ struct GamesSettingsTab: View {
     @State private var gzdoomInstalled = false
     @State private var grpFiles: [String] = []
     @State private var razeInstalled = false
-    @State private var retroArchInstalled = false
+    @State private var vkQuakeInstalled = false
+    @State private var yamagiQ2Installed = false
 
     var body: some View {
         Form {
+            // Retro Console ROMs (drop zone + library)
+            Section("Retro Games") {
+                ROMDropZone()
+            }
+            ROMLibrarySection()
+
+            // PC Games (existing — each is its own collapsible section)
             doomSection
             razeSection
             hereticSection
@@ -63,13 +71,18 @@ struct GamesSettingsTab: View {
             freedoomSection
             quakeSection
             quake2Section
+
+            // Emulators at bottom
+            EmulatorStatusSection()
         }
         .formStyle(.grouped)
         .padding(.top, 8)
         .onAppear {
             gzdoomInstalled = FileManager.default.fileExists(atPath: "/Applications/GZDoom.app")
             razeInstalled = FileManager.default.fileExists(atPath: "/Applications/Raze.app")
-            retroArchInstalled = FileManager.default.fileExists(atPath: "/Applications/RetroArch.app")
+            vkQuakeInstalled = FileManager.default.fileExists(atPath: "/Applications/vkQuake.app")
+            yamagiQ2Installed = FileManager.default.fileExists(atPath: "/Applications/quake2.app")
+                || FileManager.default.fileExists(atPath: "/Applications/Yamagi Quake II.app")
             refreshWadFiles()
             refreshGrpFiles()
         }
@@ -79,6 +92,7 @@ struct GamesSettingsTab: View {
 
     private var doomSection: some View {
         Section {
+            DisclosureGroup("Doom") {
             // GZDoom status
             HStack {
                 Image(systemName: gzdoomInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -185,8 +199,7 @@ struct GamesSettingsTab: View {
                         .foregroundStyle(.secondary)
                 }
             }
-        } header: {
-            Label("Doom", systemImage: "flame")
+            }
         }
     }
 
@@ -194,6 +207,7 @@ struct GamesSettingsTab: View {
 
     private var razeSection: some View {
         Section {
+            DisclosureGroup("Duke Nukem 3D") {
             // Raze status
             HStack {
                 Image(systemName: razeInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -285,8 +299,7 @@ struct GamesSettingsTab: View {
             Text("Apply RetroMac CRT shader overlay to the game window on launch.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-        } header: {
-            Label("Duke Nukem 3D", systemImage: "bolt.fill")
+            }
         }
     }
 
@@ -294,6 +307,7 @@ struct GamesSettingsTab: View {
 
     private var hereticSection: some View {
         Section {
+            DisclosureGroup("Heretic") {
             // GZDoom status (reused from Doom)
             HStack {
                 Image(systemName: gzdoomInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -314,8 +328,7 @@ struct GamesSettingsTab: View {
             Text("Classic CRT scanline and curvature effect via PK3 shader.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-        } header: {
-            Label("Heretic", systemImage: "wand.and.stars")
+            }
         }
     }
 
@@ -323,6 +336,7 @@ struct GamesSettingsTab: View {
 
     private var shadowWarriorSection: some View {
         Section {
+            DisclosureGroup("Shadow Warrior") {
             // Raze status (reused from Duke3D)
             HStack {
                 Image(systemName: razeInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -343,8 +357,7 @@ struct GamesSettingsTab: View {
             Text("Apply RetroMac CRT shader overlay to the game window on launch.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-        } header: {
-            Label("Shadow Warrior", systemImage: "figure.martial.arts")
+            }
         }
     }
 
@@ -352,6 +365,7 @@ struct GamesSettingsTab: View {
 
     private var freedoomSection: some View {
         Section {
+            DisclosureGroup("Freedoom") {
             // GZDoom status (shared with Doom/Heretic)
             HStack {
                 Image(systemName: gzdoomInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -372,8 +386,7 @@ struct GamesSettingsTab: View {
             Text("Native GZDoom CRT shader (no input lag).")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-        } header: {
-            Label("Freedoom", systemImage: "shield.fill")
+            }
         }
     }
 
@@ -381,25 +394,32 @@ struct GamesSettingsTab: View {
 
     private var quakeSection: some View {
         Section {
-            // RetroArch status
+            DisclosureGroup("Quake") {
+            // vkQuake status
             HStack {
-                Image(systemName: retroArchInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(retroArchInstalled ? .green : .red)
-                Text("RetroArch")
+                Image(systemName: vkQuakeInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundStyle(vkQuakeInstalled ? .green : .red)
+                Text("vkQuake")
                 Spacer()
-                Text(retroArchInstalled ? "Installed" : "Not Installed")
-                    .foregroundStyle(.secondary)
+                if vkQuakeInstalled {
+                    Text("Installed")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Button("Get vkQuake") {
+                        NSWorkspace.shared.open(URL(string: "https://github.com/Novum/vkQuake/releases")!)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                }
             }
 
-            if !retroArchInstalled {
-                Text("RetroArch will be installed automatically on first launch.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            // Lite shader picker
+            HStack {
+                Text("Overlay Shader")
+                Spacer()
+                LiteShaderPicker(selection: $settings.quakeLitePreset)
+                    .frame(width: 160)
             }
-
-            Text("Runs Quake shareware via RetroArch TyrQuake core with native CRT shader.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
 
             // Base path
             VStack(alignment: .leading, spacing: 6) {
@@ -417,8 +437,7 @@ struct GamesSettingsTab: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
-        } header: {
-            Label("Quake", systemImage: "bolt.horizontal.fill")
+            }
         }
     }
 
@@ -426,19 +445,32 @@ struct GamesSettingsTab: View {
 
     private var quake2Section: some View {
         Section {
-            // RetroArch status (shared)
+            DisclosureGroup("Quake II") {
+            // Yamagi Quake II status
             HStack {
-                Image(systemName: retroArchInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(retroArchInstalled ? .green : .red)
-                Text("RetroArch")
+                Image(systemName: yamagiQ2Installed ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundStyle(yamagiQ2Installed ? .green : .red)
+                Text("Yamagi Quake II")
                 Spacer()
-                Text(retroArchInstalled ? "Installed" : "Not Installed")
-                    .foregroundStyle(.secondary)
+                if yamagiQ2Installed {
+                    Text("Installed")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Button("Get Yamagi Q2") {
+                        NSWorkspace.shared.open(URL(string: "https://www.yamagi.org/quake2/")!)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+                }
             }
 
-            Text("Runs Quake II demo via RetroArch Vitaquake2 core with native CRT shader.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            // Lite shader picker
+            HStack {
+                Text("Overlay Shader")
+                Spacer()
+                LiteShaderPicker(selection: $settings.quake2LitePreset)
+                    .frame(width: 160)
+            }
 
             // Base path
             VStack(alignment: .leading, spacing: 6) {
@@ -456,8 +488,7 @@ struct GamesSettingsTab: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
-        } header: {
-            Label("Quake II", systemImage: "bolt.horizontal.fill")
+            }
         }
     }
 

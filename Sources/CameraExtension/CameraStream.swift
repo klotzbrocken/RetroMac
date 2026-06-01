@@ -136,6 +136,15 @@ final class RetroMacCameraStreamSource: NSObject, CMIOExtensionStreamSource {
         return true
     }
 
+    func stopStream() throws {
+        isStreaming = false
+        frameTimer?.cancel()
+        frameTimer = nil
+        configPollTimer?.cancel()
+        configPollTimer = nil
+        os_log("[RetroMacCam] stopStream", log: .default, type: .default)
+    }
+
     func startStream() throws {
         guard !isStreaming else {
             os_log("[RetroMacCam] startStream: already streaming", log: .default, type: .default)
@@ -143,20 +152,17 @@ final class RetroMacCameraStreamSource: NSObject, CMIOExtensionStreamSource {
         }
         isStreaming = true
         sequenceNumber = 0
+        // Resume config polling when stream restarts
+        if configPollTimer == nil { startConfigPolling() }
         os_log("[RetroMacCam] startStream: starting timer", log: .default, type: .default)
         startFrameTimer()
-    }
-
-    func stopStream() throws {
-        isStreaming = false
-        frameTimer?.cancel()
-        frameTimer = nil
-        os_log("[RetroMacCam] stopStream", log: .default, type: .default)
     }
 
     // MARK: - Frame Generation
 
     private func startFrameTimer() {
+        frameTimer?.cancel()
+        frameTimer = nil
         let timer = DispatchSource.makeTimerSource(queue: timerQueue)
         timer.schedule(deadline: .now(), repeating: .milliseconds(33)) // ~30fps
         timer.setEventHandler { [weak self] in
@@ -193,24 +199,62 @@ final class RetroMacCameraStreamSource: NSObject, CMIOExtensionStreamSource {
             return
         }
 
-        // Create CVPixelBuffer from IOSurface (zero-copy)
-        var unmanagedPB: Unmanaged<CVPixelBuffer>?
-        let status = CVPixelBufferCreateWithIOSurface(
-            kCFAllocatorDefault,
-            ioSurface,
-            nil,
-            &unmanagedPB
-        )
-
-        guard status == kCVReturnSuccess, let pb = unmanagedPB?.takeRetainedValue() else {
+        // Copy the host's shared IOSurface into an extension-owned, pool-allocated
+        // buffer before sending. Sending the host surface zero-copy fails in consumer
+        // apps (black image): CMIO delivers a surface still owned and continuously
+        // rewritten by another process, and the consumer never resolves valid pixels.
+        // Copying into our own IOSurface-backed pool buffer gives the consumer a stable,
+        // fully-written frame. IOSurfaceLock guarantees a coherent cross-process read.
+        guard let pb = copyIntoPoolBuffer(from: ioSurface) else {
             if debugLogCounter % 300 == 1 {
-                os_log("[RetroMacCam] IOSurf->PB fail %{public}d", log: .default, type: .error, status)
+                os_log("[RetroMacCam] IOSurf->PB copy fail", log: .default, type: .error)
             }
             sendBlackFrame()
             return
         }
 
         sendPixelBuffer(pb)
+    }
+
+    /// Copy bytes from the host's shared IOSurface into a fresh pool-allocated
+    /// CVPixelBuffer. Both are 32BGRA at outputWidth×outputHeight. Locking the source
+    /// IOSurface (read-only) ensures the GPU/host writes are visible to this process.
+    private func copyIntoPoolBuffer(from surface: IOSurfaceRef) -> CVPixelBuffer? {
+        guard let pool = bufferPool else { return nil }
+
+        var dest: CVPixelBuffer?
+        guard CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &dest) == kCVReturnSuccess,
+              let pb = dest else { return nil }
+
+        // Lock source IOSurface read-only for a coherent cross-process read.
+        let lockOptions = IOSurfaceLockOptions.readOnly
+        guard IOSurfaceLock(surface, lockOptions, nil) == kIOReturnSuccess else { return nil }
+        defer { IOSurfaceUnlock(surface, lockOptions, nil) }
+
+        let srcBase = IOSurfaceGetBaseAddress(surface)
+        let srcStride = IOSurfaceGetBytesPerRow(surface)
+        let srcHeight = IOSurfaceGetHeight(surface)
+
+        CVPixelBufferLockBaseAddress(pb, [])
+        defer { CVPixelBufferUnlockBaseAddress(pb, []) }
+        guard let dstBase = CVPixelBufferGetBaseAddress(pb) else { return nil }
+        let dstStride = CVPixelBufferGetBytesPerRow(pb)
+        let dstHeight = CVPixelBufferGetHeight(pb)
+
+        let rows = min(srcHeight, dstHeight)
+        if srcStride == dstStride {
+            memcpy(dstBase, srcBase, rows * dstStride)
+        } else {
+            // Stride mismatch: copy row by row to avoid skew/garbage.
+            let rowBytes = min(srcStride, dstStride)
+            for y in 0..<rows {
+                memcpy(dstBase.advanced(by: y * dstStride),
+                       srcBase.advanced(by: y * srcStride),
+                       rowBytes)
+            }
+        }
+
+        return pb
     }
 
     // readSurfaceID() replaced by readSurfaceIDFromFile() + polling timer above

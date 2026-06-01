@@ -3,6 +3,8 @@ import Carbon.HIToolbox
 import ScreenCaptureKit
 import Sparkle
 
+// MARK: - App Info (used by per-app rules + old apps tab)
+
 struct AppInfo: Identifiable, Hashable {
     let id: String
     let name: String
@@ -13,458 +15,524 @@ struct AppInfo: Identifiable, Hashable {
     static func == (lhs: AppInfo, rhs: AppInfo) -> Bool { lhs.id == rhs.id }
 }
 
+// MARK: - Settings Tab
+
 enum SettingsTab: String, CaseIterable {
-    case general = "General"
-    case display = "Display"
-    case dock = "Dock"
-    case television = "Television"
-    case camera = "Camera"
-    case games = "Games"
-    case apps = "Apps"
-    case shader = "Shader"
-    case about = "About"
+    case overview = "overview"
+    case effect = "effect"
+    case dock = "dock"
+    case camera = "camera"
+    case television = "television"
+    case games = "games"
+    case shortcuts = "shortcuts"
+    case rules = "rules"
+    case about = "about"
+    case updates = "updates"
+
+    var label: String {
+        switch self {
+        case .overview: return "Overview"
+        case .effect: return "Effect"
+        case .dock: return "Dock"
+        case .camera: return "Camera"
+        case .television: return "Television"
+        case .games: return "Games"
+        case .shortcuts: return "Shortcuts"
+        case .rules: return "Per-App Rules"
+        case .about: return "About"
+        case .updates: return "Updates"
+        }
+    }
 
     var icon: String {
         switch self {
-        case .general: return "gear"
-        case .display: return "display"
+        case .overview: return "house"
+        case .effect: return "wand.and.stars.inverse"
         case .dock: return "dock.rectangle"
-        case .television: return "tv"
         case .camera: return "camera.fill"
+        case .television: return "tv"
         case .games: return "gamecontroller"
-        case .apps: return "app.dashed"
-        case .shader: return "slider.horizontal.3"
+        case .shortcuts: return "keyboard"
+        case .rules: return "app.connected.to.app.below.fill"
         case .about: return "info.circle"
+        case .updates: return "arrow.down.circle"
+        }
+    }
+
+    /// Section grouping: nil = Main, "Surfaces", "System"
+    var section: String? {
+        switch self {
+        case .overview, .effect, .dock: return nil
+        case .camera, .television, .games: return "Surfaces"
+        case .shortcuts, .rules, .about, .updates: return "System"
+        }
+    }
+
+    /// Title bar subtitle
+    var subtitle: String? {
+        switch self {
+        case .effect: return "Choose how the screen looks under the overlay."
+        case .dock: return "A retro dock that floats above the system one."
+        case .shortcuts: return "One place for every key combo and per-app rule."
+        default: return nil
         }
     }
 }
 
+// MARK: - Main Settings View
+
 struct SettingsView: View {
     @ObservedObject var settings = AppSettings.shared
-    @State private var customPresetFiles: [String] = []
-    @State private var installedApps: [AppInfo] = []
-    @State private var searchText: String = ""
-    @State private var showAppPicker = false
-    @State private var selectedTab: SettingsTab = .general
+    @State private var selectedTab: SettingsTab
+    let updater: SPUUpdater
+
+    init(updater: SPUUpdater) {
+        self.updater = updater
+        let saved = AppSettings.shared.lastSettingsTab
+        _selectedTab = State(initialValue: SettingsTab(rawValue: saved) ?? .overview)
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            // Sidebar
+            SettingsSidebar(selectedTab: $selectedTab)
+                .frame(width: 220)
+
+            // Vertical divider
+            Rectangle()
+                .fill(Color.rmBorder)
+                .frame(width: 1)
+
+            // Detail pane
+            SettingsDetailPane(selectedTab: $selectedTab, updater: updater)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(width: 920, height: 640)
+        .background(Color.rmBg)
+        .onChange(of: selectedTab) { newTab in
+            settings.lastSettingsTab = newTab.rawValue
+        }
+    }
+}
+
+// MARK: - Sidebar
+
+struct SettingsSidebar: View {
+    @Binding var selectedTab: SettingsTab
+    @ObservedObject private var settings = AppSettings.shared
+
+    // Group tabs by section in order
+    private var mainTabs: [SettingsTab] { [.overview, .effect, .dock] }
+    private var surfacesTabs: [SettingsTab] { [.camera, .television, .games] }
+    private var systemTabs: [SettingsTab] { [.shortcuts, .rules, .about, .updates] }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Brand mark area (44 px title bar)
+            HStack(spacing: 8) {
+                // App icon
+                if let appIcon = NSApp.applicationIconImage {
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .frame(width: 24, height: 24)
+                        .clipShape(RoundedRectangle(cornerRadius: 5))
+                }
+                Text("RetroMac")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.rmTextPrimary)
+                Spacer()
+            }
+            .frame(height: 44)
+            .padding(.leading, 16)
+            .padding(.trailing, 14)
+            .padding(.top, 28) // below traffic lights
+
+            // Nav items
+            ScrollView {
+                VStack(spacing: 2) {
+                    // Main group (no header)
+                    ForEach(mainTabs, id: \.self) { tab in
+                        SidebarNavItem(tab: tab, isSelected: selectedTab == tab) {
+                            selectedTab = tab
+                        }
+                    }
+
+                    // Surfaces
+                    SidebarSectionHeader(title: "Surfaces")
+                    ForEach(surfacesTabs, id: \.self) { tab in
+                        SidebarNavItem(tab: tab, isSelected: selectedTab == tab) {
+                            selectedTab = tab
+                        }
+                    }
+
+                    // System
+                    SidebarSectionHeader(title: "System")
+                    ForEach(systemTabs, id: \.self) { tab in
+                        SidebarNavItem(tab: tab, isSelected: selectedTab == tab) {
+                            selectedTab = tab
+                        }
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.top, 4)
+            }
+
+            Spacer()
+
+            // Status footer
+            SidebarStatusFooter()
+        }
+        .background(Color.rmSidebarBg)
+    }
+}
+
+// MARK: - Sidebar Components
+
+struct CRTBrandMark: View {
+    var body: some View {
+        ZStack {
+            // Dark CRT body
+            RoundedRectangle(cornerRadius: 3)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.172, green: 0.192, blue: 0.220), Color(red: 0.094, green: 0.106, blue: 0.122)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 22, height: 18)
+
+            // Green phosphor glow
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(red: 0.247, green: 0.725, blue: 0.420).opacity(0.55), Color.clear],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 9
+                    )
+                )
+                .frame(width: 18, height: 14)
+
+            // Scanlines hint
+            VStack(spacing: 2) {
+                ForEach(0..<4, id: \.self) { _ in
+                    Rectangle()
+                        .fill(Color.rmAccent.opacity(0.3))
+                        .frame(height: 1.5)
+                }
+            }
+            .frame(width: 18, height: 14)
+            .clipShape(RoundedRectangle(cornerRadius: 2))
+        }
+    }
+}
+
+struct SidebarSectionHeader: View {
+    var title: String
+
+    var body: some View {
+        HStack {
+            Text(title.uppercased())
+                .font(.rmSidebarHeader)
+                .tracking(0.6)
+                .foregroundColor(.rmTextTertiary)
+            Spacer()
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 12)
+        .padding(.bottom, 6)
+    }
+}
+
+struct SidebarNavItem: View {
+    var tab: SettingsTab
+    var isSelected: Bool
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 0) {
+                // Active accent bar
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.rmAccent)
+                        .frame(width: 2, height: 16)
+                        .padding(.trailing, 8)
+                } else {
+                    Color.clear
+                        .frame(width: 2)
+                        .padding(.trailing, 8)
+                }
+
+                Image(systemName: tab.icon)
+                    .font(.system(size: 14, weight: .regular))
+                    .frame(width: 14, height: 14)
+                    .foregroundColor(isSelected ? .rmTextPrimary : .rmTextSecondary)
+
+                Text(tab.label)
+                    .font(.rmSidebarItem)
+                    .fontWeight(isSelected ? .medium : .regular)
+                    .foregroundColor(isSelected ? .rmTextPrimary : .rmTextSecondary)
+                    .padding(.leading, 10)
+
+                Spacer()
+            }
+            .frame(height: 28)
+            .padding(.horizontal, 2)
+            .background(
+                Group {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: RMRadius.button)
+                            .fill(Color.rmSurface)
+                            .rmSidebarActiveShadow()
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct SidebarStatusFooter: View {
+    @ObservedObject private var settings = AppSettings.shared
+
+    private var overlayIsOn: Bool {
+        (NSApp.delegate as? AppDelegate)?.isActive ?? false
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.rmDivider)
+                .frame(height: 1)
+
+            HStack(spacing: 10) {
+                // Status dot
+                ZStack {
+                    if overlayIsOn {
+                        Circle()
+                            .fill(Color.rmAccentSoft)
+                            .frame(width: 14, height: 14)
+                    }
+                    Circle()
+                        .fill(overlayIsOn ? Color.rmAccent : Color.rmTextTertiary)
+                        .frame(width: 8, height: 8)
+                }
+
+                HStack(spacing: 4) {
+                    Text("Overlay")
+                        .font(.rmSecondary)
+                        .foregroundColor(.rmTextSecondary)
+                    Text(overlayIsOn ? "on" : "off")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundColor(overlayIsOn ? .rmTextPrimary : .rmTextTertiary)
+                }
+
+                Spacer()
+
+                if overlayIsOn {
+                    Text("\(settings.targetFPS) fps")
+                        .font(.rmMono(size: 10.5))
+                        .foregroundColor(.rmTextTertiary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+        }
+    }
+}
+
+// MARK: - Detail Pane
+
+struct SettingsDetailPane: View {
+    @Binding var selectedTab: SettingsTab
     let updater: SPUUpdater
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab bar
-            HStack(spacing: 2) {
-                ForEach(SettingsTab.allCases, id: \.self) { tab in
-                    Button {
-                        selectedTab = tab
-                    } label: {
-                        VStack(spacing: 3) {
-                            Image(systemName: tab.icon)
-                                .font(.system(size: 14))
-                            Text(tab.rawValue)
-                                .font(.system(size: 10))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(selectedTab == tab ? Color.accentColor.opacity(0.15) : Color.clear)
-                        )
-                        .foregroundStyle(selectedTab == tab ? .primary : .secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 4)
+            // Title bar
+            DetailTitleBar(tab: selectedTab, updater: updater)
 
-            Divider()
-
-            // Tab content
+            // Content
             Group {
                 switch selectedTab {
-                case .general: generalTab
-                case .display: displayTab
-                case .dock: DockSettingsTab()
-                case .television: TVSettingsTab()
-                case .camera: cameraTab
-                case .games: GamesSettingsTab()
-                case .apps: appsTab
-                case .shader: shaderTab
-                case .about: AboutTab(updater: updater)
+                case .overview:
+                    OverviewTab(selectedTab: $selectedTab)
+                case .effect:
+                    EffectTab()
+                case .dock:
+                    DockSettingsTab()
+                case .camera:
+                    CameraTab()
+                case .television:
+                    TVSettingsTab()
+                case .games:
+                    GamesSettingsTab()
+                case .shortcuts:
+                    ShortcutsTab()
+                case .rules:
+                    PerAppRulesTab()
+                case .about:
+                    AboutTab(updater: updater)
+                case .updates:
+                    UpdatesTab(updater: updater)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 520, height: 500)
-        .onAppear {
-            refreshCustomPresets()
-            refreshInstalledApps()
-        }
     }
+}
 
-    // MARK: - General
+struct DetailTitleBar: View {
+    var tab: SettingsTab
+    let updater: SPUUpdater
 
-    @State private var screenRecordingGranted: Bool?
-    @State private var accessibilityGranted: Bool?
-    @State private var automationGranted: Bool?
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Text(tab.label)
+                    .font(.system(size: 15, weight: .semibold))
+                    .tracking(-0.1)
+                    .foregroundColor(.rmTextPrimary)
 
-    private var generalTab: some View {
-        Form {
-            Section("Startup") {
-                Toggle("Launch at Login", isOn: $settings.launchAtLogin)
-                Toggle("Enable Overlay on Launch", isOn: $settings.enableOnLaunch)
-            }
+                if let subtitle = tab.subtitle {
+                    Rectangle()
+                        .fill(Color.rmBorder)
+                        .frame(width: 1, height: 14)
+                        .padding(.horizontal, 8)
 
-            Section("Sleep & Lock") {
-                Toggle("Stop Overlay on Sleep / Lock", isOn: $settings.stopOnSleep)
-                Toggle("Resume Overlay after Wake", isOn: $settings.resumeAfterSleep)
-                    .disabled(!settings.stopOnSleep)
-                Toggle("Reset to Defaults after Awake", isOn: $settings.resetOnWake)
-                    .disabled(!settings.stopOnSleep || !settings.resumeAfterSleep)
-                Text("Automatically stops the overlay when the Mac sleeps or the screen is locked. Reset restores the default shader preset on wake.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Hotkey") {
-                HotkeyRecorderView()
-            }
-
-            Section("Permissions") {
-                permissionRow("Screen Recording", status: screenRecordingGranted)
-                permissionRow("Accessibility", status: accessibilityGranted)
-                permissionRow("Automation", status: automationGranted)
-
-                HStack {
-                    Button("Recheck") {
-                        checkPermissions()
-                    }
-                    .font(.caption)
-                    Spacer()
-                    Button("Re-run Setup Assistant") {
-                        AppDelegate.shared?.showOnboarding()
-                    }
-                    .font(.caption)
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundColor(.rmTextSecondary)
                 }
+
+                Spacer()
+
+                // Toolbar buttons per tab
+                toolbarButtons
             }
-        }
-        .formStyle(.grouped)
-        .padding(.top, 8)
-        .task {
-            checkPermissions()
+            .frame(height: 46)
+            .padding(.horizontal, 20)
+
+            Rectangle()
+                .fill(Color.rmDivider)
+                .frame(height: 1)
         }
     }
 
     @ViewBuilder
-    private func permissionRow(_ name: String, status: Bool?) -> some View {
-        HStack {
-            Text(name)
-            Spacer()
-            switch status {
-            case .some(true):
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                Text("Granted").foregroundStyle(.secondary)
-            case .some(false):
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.red)
-                Text("Not Granted").foregroundStyle(.secondary)
-            case .none:
-                ProgressView()
-                    .controlSize(.small)
+    private var toolbarButtons: some View {
+        switch tab {
+        case .overview:
+            Button("Open Settings Assistant") {}
+                .buttonStyle(RMPrimaryButtonStyle())
+        case .effect:
+            HStack(spacing: 8) {
+                Button { importMetal() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 11))
+                        Text("Import .metal")
+                    }
+                }
+                .buttonStyle(RMGhostButtonStyle())
+
+                Button("Save as preset\u{2026}") {}
+                    .buttonStyle(RMPrimaryButtonStyle())
             }
+        case .dock:
+            HStack(spacing: 8) {
+                Button("Import theme\u{2026}") { importTheme() }
+                    .buttonStyle(RMGhostButtonStyle())
+
+                Button("Show dock now") {
+                    AppSettings.shared.dockEnabled = true
+                    DockController.shared.start()
+                }
+                .buttonStyle(RMPrimaryButtonStyle())
+            }
+        default:
+            EmptyView()
         }
     }
 
-    private func checkPermissions() {
-        screenRecordingGranted = nil
-        accessibilityGranted = AXIsProcessTrusted()
-        automationGranted = SystemUIHelper.testAutomation()
-
-        Task {
-            do {
-                _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-                await MainActor.run { screenRecordingGranted = true }
-            } catch {
-                await MainActor.run { screenRecordingGranted = false }
-            }
-        }
-    }
-
-    // MARK: - Display
-
-    private var displayTab: some View {
-        Form {
-            Section("Performance") {
-                Picker("Profile", selection: $settings.performanceProfile) {
-                    ForEach(PerformanceProfile.allCases) { profile in
-                        HStack {
-                            Image(systemName: profile.icon)
-                            VStack(alignment: .leading) {
-                                Text(profile.displayName)
-                                Text(profile.description)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .tag(profile)
-                    }
-                }
-                .pickerStyle(.radioGroup)
-                Text("Changes take effect when the overlay is restarted.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Divider()
-
-                Toggle("Low Latency Mode (60 fps)", isOn: $settings.lowLatencyMode)
-                Text("Overrides profile FPS to 60. Reduces mouse lag but uses more GPU.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Monitor") {
-                Text("Select target display in the menu bar under Display.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                let screens = NSScreen.screens
-                ForEach(Array(screens.enumerated()), id: \.offset) { _, screen in
-                    let res = "\(Int(screen.frame.width))×\(Int(screen.frame.height))"
-                    LabeledContent(screen.localizedName, value: res)
-                }
-            }
-        }
-        .formStyle(.grouped)
-        .padding(.top, 8)
-    }
-
-    // MARK: - Apps
-
-    private var appsTab: some View {
-        Form {
-            Section {
-                Text("Assign a shader preset per app. When you apply the overlay to that app's window, the preset switches automatically.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Per-App Presets") {
-                let rules = settings.perAppPresets.sorted(by: { $0.key < $1.key })
-                if rules.isEmpty {
-                    Text("No per-app presets configured.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(rules, id: \.key) { bundleID, presetID in
-                        HStack(spacing: 8) {
-                            appIconView(for: bundleID)
-                                .frame(width: 24, height: 24)
-
-                            Text(appDisplayName(for: bundleID))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-
-                            Picker("", selection: Binding(
-                                get: { presetID },
-                                set: { settings.perAppPresets[bundleID] = $0 }
-                            )) {
-                                ForEach(PresetRegistry.availablePresets, id: \.id) { preset in
-                                    Text(preset.displayName).tag(preset.id)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(width: 180)
-
-                            Button {
-                                settings.perAppPresets.removeValue(forKey: bundleID)
-                            } label: {
-                                Image(systemName: "minus.circle.fill")
-                                    .foregroundStyle(.red)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-
-            Section("Add Application") {
-                HStack {
-                    Button("Browse…") {
-                        browseForApp()
-                    }
-
-                    Button("From Applications…") {
-                        showAppPicker = true
-                    }
-                }
-
-                if showAppPicker {
-                    VStack(spacing: 6) {
-                        TextField("Search apps…", text: $searchText)
-                            .textFieldStyle(.roundedBorder)
-
-                        let filtered = filteredInstalledApps
-                        if filtered.isEmpty {
-                            Text("No apps found.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.vertical, 4)
-                        } else {
-                            ScrollView {
-                                LazyVStack(spacing: 2) {
-                                    ForEach(filtered) { app in
-                                        Button {
-                                            addApp(app)
-                                        } label: {
-                                            HStack(spacing: 8) {
-                                                if let icon = app.icon {
-                                                    Image(nsImage: icon)
-                                                        .resizable()
-                                                        .frame(width: 20, height: 20)
-                                                }
-                                                Text(app.name)
-                                                    .foregroundStyle(.primary)
-                                                Spacer()
-                                                if settings.perAppPresets.keys.contains(app.id) {
-                                                    Image(systemName: "checkmark")
-                                                        .foregroundStyle(.green)
-                                                        .font(.caption)
-                                                }
-                                            }
-                                            .contentShape(Rectangle())
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 3)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 4)
-                                                .fill(Color.primary.opacity(0.05))
-                                        )
-                                    }
-                                }
-                            }
-                            .frame(height: min(CGFloat(filtered.count) * 30, 160))
-                        }
-
-                        HStack {
-                            Spacer()
-                            Button("Done") {
-                                showAppPicker = false
-                                searchText = ""
-                            }
-                            .font(.caption)
-                        }
-                    }
-                }
-            }
-        }
-        .formStyle(.grouped)
-        .padding(.top, 8)
-    }
-
-    private var filteredInstalledApps: [AppInfo] {
-        let available = installedApps.filter { !settings.perAppPresets.keys.contains($0.id) }
-        if searchText.isEmpty { return available }
-        let query = searchText.lowercased()
-        return available.filter { $0.name.lowercased().contains(query) }
-    }
-
-    private func addApp(_ app: AppInfo) {
-        settings.perAppPresets[app.id] = settings.defaultPreset
-    }
-
-    private func browseForApp() {
+    private func importMetal() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.application]
-        panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.message = "Select an application"
-        panel.prompt = "Add"
+        panel.allowedContentTypes = [.init(filenameExtension: "metal")!]
+        panel.allowsMultipleSelection = true
+        panel.message = "Select Metal shader files to import"
+        guard panel.runModal() == .OK else { return }
 
+        let dest = AppSettings.shared.customPresetsDirectory
+        for url in panel.urls {
+            let target = dest.appendingPathComponent(url.lastPathComponent)
+            try? FileManager.default.copyItem(at: url, to: target)
+        }
+    }
+
+    private func importTheme() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.init(filenameExtension: "retromactheme")!]
+        panel.message = "Select a .retromactheme bundle to install"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        guard let bundle = Bundle(url: url),
-              let bundleID = bundle.bundleIdentifier else { return }
+        try? ThemeManager.shared.importTheme(from: url)
+    }
+}
 
-        let name = bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
-            ?? bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-            ?? url.deletingPathExtension().lastPathComponent
+// MARK: - Updates Tab
 
-        settings.perAppPresets[bundleID] = settings.defaultPreset
+struct UpdatesTab: View {
+    let updater: SPUUpdater
+    @State private var autoCheck: Bool
 
-        if !installedApps.contains(where: { $0.id == bundleID }) {
-            let icon = NSWorkspace.shared.icon(forFile: url.path)
-            icon.size = NSSize(width: 32, height: 32)
-            installedApps.append(AppInfo(id: bundleID, name: name, icon: icon, path: url.path))
-            installedApps.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        }
+    init(updater: SPUUpdater) {
+        self.updater = updater
+        _autoCheck = State(initialValue: updater.automaticallyChecksForUpdates)
     }
 
-    @ViewBuilder
-    private func appIconView(for bundleID: String) -> some View {
-        if let app = installedApps.first(where: { $0.id == bundleID }),
-           let icon = app.icon {
-            Image(nsImage: icon)
-                .resizable()
-        } else if let path = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)?.path {
-            let icon = NSWorkspace.shared.icon(forFile: path)
-            Image(nsImage: icon)
-                .resizable()
-        } else {
-            Image(systemName: "app")
-                .resizable()
-        }
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 
-    private func appDisplayName(for bundleID: String) -> String {
-        if let app = installedApps.first(where: { $0.id == bundleID }) {
-            return app.name
-        }
-        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
-            return url.deletingPathExtension().lastPathComponent
-        }
-        return bundleID.components(separatedBy: ".").last ?? bundleID
-    }
+    var body: some View {
+        ScrollView {
+            Form {
+                Section("Software Updates") {
+                    LabeledContent("Current version", value: appVersion)
+                    HStack {
+                        Button("Check for Updates…") { updater.checkForUpdates() }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!updater.canCheckForUpdates)
+                        Spacer()
+                    }
+                    if let last = updater.lastUpdateCheckDate {
+                        LabeledContent("Last checked") {
+                            Text(last.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
 
-    private func refreshInstalledApps() {
-        var apps: [AppInfo] = []
-        var seen = Set<String>()
-        let ownBundle = Bundle.main.bundleIdentifier ?? ""
-        let searchPaths = [
-            "/Applications",
-            "/Applications/Utilities",
-            "/System/Applications",
-            NSHomeDirectory() + "/Applications",
-        ]
-
-        for searchPath in searchPaths {
-            let url = URL(fileURLWithPath: searchPath)
-            guard let contents = try? FileManager.default.contentsOfDirectory(
-                at: url, includingPropertiesForKeys: nil
-            ) else { continue }
-
-            for appURL in contents where appURL.pathExtension == "app" {
-                guard let bundle = Bundle(url: appURL),
-                      let bundleID = bundle.bundleIdentifier,
-                      !bundleID.isEmpty,
-                      bundleID != ownBundle,
-                      !seen.contains(bundleID) else { continue }
-                seen.insert(bundleID)
-
-                let name = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-                    ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
-                    ?? appURL.deletingPathExtension().lastPathComponent
-
-                let icon = NSWorkspace.shared.icon(forFile: appURL.path)
-                icon.size = NSSize(width: 32, height: 32)
-                apps.append(AppInfo(id: bundleID, name: name, icon: icon, path: appURL.path))
+                Section("Automatic") {
+                    Toggle("Automatically check for updates", isOn: $autoCheck)
+                        .onChange(of: autoCheck) { updater.automaticallyChecksForUpdates = $0 }
+                    Text("RetroMac uses Sparkle to deliver signed, notarized updates directly from the developer.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
+            .formStyle(.grouped)
         }
-
-        installedApps = apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        .padding(.top, 8)
     }
+}
 
-    // MARK: - Shader
+// MARK: - Camera Tab (kept from old cameraTab)
 
-    private var cameraTab: some View {
+struct CameraTab: View {
+    @ObservedObject var settings = AppSettings.shared
+
+    var body: some View {
         Form {
             Section("Virtual Camera") {
                 let vcam = VirtualCameraManager.shared
@@ -519,52 +587,309 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .padding(.top, 8)
     }
+}
 
-    private var shaderTab: some View {
-        Form {
-            Section("Custom Presets") {
-                if customPresetFiles.isEmpty {
-                    Text("No custom presets installed.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(customPresetFiles, id: \.self) { name in
-                        Text(name)
+// MARK: - Per-App Rules Tab (migrated from old Apps tab)
+
+struct PerAppRulesTab: View {
+    @ObservedObject var settings = AppSettings.shared
+    @State private var installedApps: [AppInfo] = []
+    @State private var searchText: String = ""
+    @State private var showAppPicker = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: RMSpacing.section) {
+                // Rules list
+                RMCard(
+                    title: "Per-app rules",
+                    subtitle: "Auto-switch to a specific preset when an app comes to front.",
+                    headerAction: AnyView(
+                        Button("Add app\u{2026}") {
+                            showAppPicker = true
+                        }
+                        .buttonStyle(RMPrimaryButtonStyle())
+                    ),
+                    bodyPadding: 0
+                ) {
+                    let rules = settings.perAppRules.sorted(by: { $0.key < $1.key })
+                    if rules.isEmpty {
+                        Text("No per-app rules configured.")
+                            .font(.rmSecondary)
+                            .foregroundColor(.rmTextSecondary)
+                            .padding(RMSpacing.card)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(Array(rules.enumerated()), id: \.element.key) { index, item in
+                                PerAppRuleRow(
+                                    bundleID: item.key,
+                                    rule: item.value,
+                                    installedApps: installedApps,
+                                    isLast: index == rules.count - 1
+                                )
+                            }
+                        }
+                        .padding(.vertical, 4)
                     }
                 }
 
-                Button("Open Presets Folder") {
-                    NSWorkspace.shared.open(settings.customPresetsDirectory)
-                }
+                // Add section (app picker)
+                if showAppPicker {
+                    RMCard(title: "Add Application", bodyPadding: RMSpacing.card) {
+                        VStack(spacing: 8) {
+                            HStack {
+                                Button("Browse\u{2026}") { browseForApp() }
+                                    .buttonStyle(RMDefaultButtonStyle())
+                                Spacer()
+                                Button("Done") {
+                                    showAppPicker = false
+                                    searchText = ""
+                                }
+                                .buttonStyle(RMDefaultButtonStyle())
+                            }
 
-                Text("Place .metal shader files in the Presets folder.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+                            TextField("Search apps\u{2026}", text: $searchText)
+                                .textFieldStyle(.roundedBorder)
 
-            ForEach(PresetRegistry.categorizedPresets, id: \.0) { category, presets in
-                Section(category.rawValue) {
-                    ForEach(presets, id: \.id) { preset in
-                        LabeledContent(preset.displayName, value: preset.description)
+                            let filtered = filteredInstalledApps
+                            if filtered.isEmpty {
+                                Text("No apps found.")
+                                    .font(.rmCaption)
+                                    .foregroundColor(.rmTextSecondary)
+                                    .padding(.vertical, 4)
+                            } else {
+                                ScrollView {
+                                    LazyVStack(spacing: 2) {
+                                        ForEach(filtered) { app in
+                                            Button { addApp(app) } label: {
+                                                HStack(spacing: 8) {
+                                                    if let icon = app.icon {
+                                                        Image(nsImage: icon)
+                                                            .resizable()
+                                                            .frame(width: 20, height: 20)
+                                                    }
+                                                    Text(app.name)
+                                                        .font(.rmBody)
+                                                        .foregroundColor(.rmTextPrimary)
+                                                    Spacer()
+                                                    if settings.perAppRules.keys.contains(app.id) {
+                                                        Image(systemName: "checkmark")
+                                                            .foregroundColor(.rmAccent)
+                                                            .font(.caption)
+                                                    }
+                                                }
+                                                .contentShape(Rectangle())
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 4)
+                                                    .fill(Color.rmTextPrimary.opacity(0.05))
+                                            )
+                                        }
+                                    }
+                                }
+                                .frame(height: min(CGFloat(filtered.count) * 30, 200))
+                            }
+                        }
                     }
                 }
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
-        .formStyle(.grouped)
-        .padding(.top, 8)
+        .onAppear { refreshInstalledApps() }
     }
 
-    private func refreshCustomPresets() {
-        let fm = FileManager.default
-        let dir = settings.customPresetsDirectory
-        guard let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { return }
-        customPresetFiles = files
-            .filter { $0.pathExtension == "metal" }
-            .map { $0.deletingPathExtension().lastPathComponent }
-            .sorted()
+    // MARK: - Helpers
+
+    private var filteredInstalledApps: [AppInfo] {
+        let available = installedApps.filter { !settings.perAppRules.keys.contains($0.id) }
+        if searchText.isEmpty { return available }
+        let query = searchText.lowercased()
+        return available.filter { $0.name.lowercased().contains(query) }
+    }
+
+    private func addApp(_ app: AppInfo) {
+        settings.perAppRules[app.id] = AppSettings.PerAppRule(presetID: settings.defaultPreset, reason: nil)
+        // Keep old format in sync for backward compat
+        settings.perAppPresets[app.id] = settings.defaultPreset
+    }
+
+    private func browseForApp() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.message = "Select an application"
+        panel.prompt = "Add"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let bundle = Bundle(url: url),
+              let bundleID = bundle.bundleIdentifier else { return }
+
+        let name = bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
+            ?? bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? url.deletingPathExtension().lastPathComponent
+
+        settings.perAppRules[bundleID] = AppSettings.PerAppRule(presetID: settings.defaultPreset, reason: nil)
+        settings.perAppPresets[bundleID] = settings.defaultPreset
+
+        if !installedApps.contains(where: { $0.id == bundleID }) {
+            let icon = NSWorkspace.shared.icon(forFile: url.path)
+            icon.size = NSSize(width: 32, height: 32)
+            installedApps.append(AppInfo(id: bundleID, name: name, icon: icon, path: url.path))
+            installedApps.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+    }
+
+    private func refreshInstalledApps() {
+        var apps: [AppInfo] = []
+        var seen = Set<String>()
+        let ownBundle = Bundle.main.bundleIdentifier ?? ""
+        let searchPaths = [
+            "/Applications",
+            "/Applications/Utilities",
+            "/System/Applications",
+            NSHomeDirectory() + "/Applications",
+        ]
+
+        for searchPath in searchPaths {
+            let url = URL(fileURLWithPath: searchPath)
+            guard let contents = try? FileManager.default.contentsOfDirectory(
+                at: url, includingPropertiesForKeys: nil
+            ) else { continue }
+
+            for appURL in contents where appURL.pathExtension == "app" {
+                guard let bundle = Bundle(url: appURL),
+                      let bundleID = bundle.bundleIdentifier,
+                      !bundleID.isEmpty,
+                      bundleID != ownBundle,
+                      !seen.contains(bundleID) else { continue }
+                seen.insert(bundleID)
+
+                let name = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+                    ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
+                    ?? appURL.deletingPathExtension().lastPathComponent
+
+                let icon = NSWorkspace.shared.icon(forFile: appURL.path)
+                icon.size = NSSize(width: 32, height: 32)
+                apps.append(AppInfo(id: bundleID, name: name, icon: icon, path: appURL.path))
+            }
+        }
+
+        installedApps = apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 }
 
-// MARK: - Hotkey Recorder
+// MARK: - Per-App Rule Row
+
+struct PerAppRuleRow: View {
+    let bundleID: String
+    let rule: AppSettings.PerAppRule
+    let installedApps: [AppInfo]
+    var isLast: Bool = false
+
+    @ObservedObject private var settings = AppSettings.shared
+
+    private var appName: String {
+        if let app = installedApps.first(where: { $0.id == bundleID }) {
+            return app.name
+        }
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            return url.deletingPathExtension().lastPathComponent
+        }
+        return bundleID.components(separatedBy: ".").last ?? bundleID
+    }
+
+    private var appIcon: NSImage? {
+        if let app = installedApps.first(where: { $0.id == bundleID }), let icon = app.icon {
+            return icon
+        }
+        if let path = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)?.path {
+            return NSWorkspace.shared.icon(forFile: path)
+        }
+        return nil
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: RMSpacing.lg) {
+                // App icon
+                if let icon = appIcon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .frame(width: 28, height: 28)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                } else {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.rmSurface2)
+                        .frame(width: 28, height: 28)
+                        .overlay(
+                            Image(systemName: "app")
+                                .font(.system(size: 13))
+                                .foregroundColor(.rmTextTertiary)
+                        )
+                }
+
+                // Name + reason
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(appName)
+                        .font(.system(size: 13, weight: .medium))
+                        .tracking(-0.05)
+                        .foregroundColor(.rmTextPrimary)
+                    if let reason = rule.reason, !reason.isEmpty {
+                        Text(reason)
+                            .font(.system(size: 11.5))
+                            .italic()
+                            .foregroundColor(.rmTextTertiary)
+                    }
+                }
+
+                Spacer()
+
+                // USES label + preset chip
+                HStack(spacing: 6) {
+                    Text("USES")
+                        .font(.rmMono(size: 10.5, weight: .semibold))
+                        .tracking(0.5)
+                        .foregroundColor(.rmTextTertiary)
+
+                    let presetName = PresetRegistry.availablePresets.first(where: { $0.id == rule.presetID })?.displayName ?? rule.presetID
+                    if rule.presetID.isEmpty {
+                        RMChip(text: "None \u{2014} overlay off", tone: .neutral, showDot: false)
+                    } else {
+                        RMChip(text: presetName, tone: .info, showDot: false)
+                    }
+                }
+
+                // Delete button
+                Button {
+                    settings.perAppRules.removeValue(forKey: bundleID)
+                    settings.perAppPresets.removeValue(forKey: bundleID)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 12))
+                        .foregroundColor(.rmTextTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 11)
+            .padding(.horizontal, RMSpacing.card)
+
+            if !isLast {
+                Rectangle()
+                    .fill(Color.rmDivider)
+                    .frame(height: 1)
+                    .padding(.horizontal, RMSpacing.card)
+            }
+        }
+    }
+}
+
+// MARK: - Hotkey Recorder (kept)
 
 struct HotkeyRecorderView: View {
     @ObservedObject var settings = AppSettings.shared
@@ -575,7 +900,7 @@ struct HotkeyRecorderView: View {
             Text("Toggle Overlay")
             Spacer()
             Button(action: { isRecording.toggle() }) {
-                Text(isRecording ? "Press keys…" : settings.hotkeyDisplayString)
+                Text(isRecording ? "Press keys\u{2026}" : settings.hotkeyDisplayString)
                     .frame(minWidth: 100)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -650,12 +975,14 @@ final class SettingsWindowController {
 
         let hostingView = NSHostingView(rootView: SettingsView(updater: updater!))
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 500),
-            styleMask: [.titled, .closable, .miniaturizable],
+            contentRect: NSRect(x: 0, y: 0, width: 920, height: 640),
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "RetroMac Settings"
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
         window.contentView = hostingView
         window.center()
         window.isReleasedWhenClosed = false
@@ -666,19 +993,16 @@ final class SettingsWindowController {
         installEditMenu()
     }
 
-    /// Install a standard Edit menu so ⌘C/⌘V/⌘A work in TextFields
-    /// (LSUIElement / .accessory apps have no menu bar by default)
+    /// Install a standard Edit menu so Cmd+C/V/A work in TextFields
     func installEditMenu() {
         if NSApp.mainMenu != nil { return }
 
         let mainMenu = NSMenu()
 
-        // App menu (empty, needed as first item)
         let appMenuItem = NSMenuItem()
         appMenuItem.submenu = NSMenu()
         mainMenu.addItem(appMenuItem)
 
-        // Edit menu with standard actions
         let editMenuItem = NSMenuItem()
         let editMenu = NSMenu(title: "Edit")
         editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
@@ -699,7 +1023,6 @@ final class SettingsWindowController {
     }
 }
 
-/// Removes the Edit menu when the settings window closes
 private final class SettingsWindowDelegate: NSObject, NSWindowDelegate {
     weak var controller: SettingsWindowController?
 

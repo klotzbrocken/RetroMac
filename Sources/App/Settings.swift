@@ -148,6 +148,10 @@ final class AppSettings: ObservableObject {
     @Published var lastSeenVersion: String {
         didSet { defaults.set(lastSeenVersion, forKey: "lastSeenVersion") }
     }
+    /// When the user last ticked "I already bought a coffee" — suppresses the coffee page for 30 days.
+    @Published var coffeeAckDate: Date? {
+        didSet { defaults.set(coffeeAckDate, forKey: "coffeeAckDate") }
+    }
     @Published var showFPSOverlay: Bool {
         didSet { defaults.set(showFPSOverlay, forKey: "showFPSOverlay") }
     }
@@ -167,6 +171,33 @@ final class AppSettings: ObservableObject {
     // Per-theme preset overrides (theme name → preset ID, empty = "None")
     @Published var themePresetOverrides: [String: String] {
         didSet { defaults.set(themePresetOverrides, forKey: "themePresetOverrides") }
+    }
+
+    // Per-theme orientation overrides (theme name → "vertical" or "horizontal")
+    @Published var themeOrientationOverrides: [String: String] {
+        didSet { defaults.set(themeOrientationOverrides, forKey: "themeOrientationOverrides") }
+    }
+    /// Per-theme dock edge override: "top" / "bottom" / "left" / "right".
+    @Published var themeDockPositionOverride: [String: String] {
+        didSet { defaults.set(themeDockPositionOverride, forKey: "themeDockPositionOverride") }
+    }
+    /// Per-theme dock auto-hide enable (only for themes whose original had auto-hide).
+    @Published var themeDockAutoHide: [String: Bool] {
+        didSet { defaults.set(themeDockAutoHide, forKey: "themeDockAutoHide") }
+    }
+
+    // Per-theme wallpaper overrides (theme name → wallpaper filename)
+    @Published var themeWallpaperOverrides: [String: String] {
+        didSet { defaults.set(themeWallpaperOverrides, forKey: "themeWallpaperOverrides") }
+    }
+    /// Per-theme custom wallpaper picked via "Browse…" — absolute file path outside the bundle.
+    @Published var themeCustomWallpaper: [String: String] {
+        didSet { defaults.set(themeCustomWallpaper, forKey: "themeCustomWallpaper") }
+    }
+
+    // Re:Amp integration (Win98/XP themes)
+    @Published var reampEnabled: Bool {
+        didSet { defaults.set(reampEnabled, forKey: "reampEnabled") }
     }
 
     // Dock
@@ -321,6 +352,56 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(viewportPreset, forKey: "viewportPreset") }
     }
 
+    // Settings Redesign — tab persistence
+    @Published var lastSettingsTab: String {
+        didSet { defaults.set(lastSettingsTab, forKey: "lastSettingsTab") }
+    }
+
+    // Settings Redesign — new hotkeys
+    @Published var cyclePresetHotkeyCode: UInt32 {
+        didSet { defaults.set(cyclePresetHotkeyCode, forKey: "cyclePresetHotkeyCode") }
+    }
+    @Published var cyclePresetHotkeyModifiers: UInt32 {
+        didSet { defaults.set(cyclePresetHotkeyModifiers, forKey: "cyclePresetHotkeyModifiers") }
+    }
+    @Published var bumpIntensityHotkeyCode: UInt32 {
+        didSet { defaults.set(bumpIntensityHotkeyCode, forKey: "bumpIntensityHotkeyCode") }
+    }
+    @Published var bumpIntensityHotkeyModifiers: UInt32 {
+        didSet { defaults.set(bumpIntensityHotkeyModifiers, forKey: "bumpIntensityHotkeyModifiers") }
+    }
+    @Published var menuBarToggleHotkeyCode: UInt32 {
+        didSet { defaults.set(menuBarToggleHotkeyCode, forKey: "menuBarToggleHotkeyCode") }
+    }
+    @Published var menuBarToggleHotkeyModifiers: UInt32 {
+        didSet { defaults.set(menuBarToggleHotkeyModifiers, forKey: "menuBarToggleHotkeyModifiers") }
+    }
+    @Published var screenshotHotkeyCode: UInt32 {
+        didSet { defaults.set(screenshotHotkeyCode, forKey: "screenshotHotkeyCode") }
+    }
+    @Published var screenshotHotkeyModifiers: UInt32 {
+        didSet { defaults.set(screenshotHotkeyModifiers, forKey: "screenshotHotkeyModifiers") }
+    }
+    @Published var showHotkeyConflictTips: Bool {
+        didSet { defaults.set(showHotkeyConflictTips, forKey: "showHotkeyConflictTips") }
+    }
+    @Published var showSplashScreen: Bool {
+        didSet { defaults.set(showSplashScreen, forKey: "showSplashScreen") }
+    }
+
+    // Settings Redesign — per-app rules with reason
+    struct PerAppRule: Codable, Equatable {
+        var presetID: String   // empty string = "None — overlay off"
+        var reason: String?
+    }
+    @Published var perAppRules: [String: PerAppRule] {
+        didSet {
+            if let data = try? JSONEncoder().encode(perAppRules) {
+                defaults.set(data, forKey: "perAppRules")
+            }
+        }
+    }
+
     var customPresetsDirectory: URL { presetsDir }
 
     static let defaultHotkeyCode = UInt32(kVK_ANSI_R)
@@ -357,11 +438,18 @@ final class AppSettings: ObservableObject {
         // Onboarding / Features
         onboardingComplete = defaults.bool(forKey: "onboardingComplete")
         lastSeenVersion = defaults.string(forKey: "lastSeenVersion") ?? ""
+        coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
         showFPSOverlay = defaults.bool(forKey: "showFPSOverlay")
         classicMacModeActive = defaults.bool(forKey: "classicMacModeActive")
 
         // Per-theme preset overrides
         themePresetOverrides = defaults.dictionary(forKey: "themePresetOverrides") as? [String: String] ?? [:]
+        themeOrientationOverrides = defaults.dictionary(forKey: "themeOrientationOverrides") as? [String: String] ?? [:]
+        themeDockPositionOverride = defaults.dictionary(forKey: "themeDockPositionOverride") as? [String: String] ?? [:]
+        themeDockAutoHide = defaults.dictionary(forKey: "themeDockAutoHide") as? [String: Bool] ?? [:]
+        themeWallpaperOverrides = defaults.dictionary(forKey: "themeWallpaperOverrides") as? [String: String] ?? [:]
+        themeCustomWallpaper = defaults.dictionary(forKey: "themeCustomWallpaper") as? [String: String] ?? [:]
+        reampEnabled = defaults.bool(forKey: "reampEnabled")
 
         // Television
         if let data = defaults.data(forKey: "tvBookmarks"),
@@ -443,6 +531,33 @@ final class AppSettings: ObservableObject {
 
         // Viewport
         viewportPreset = defaults.string(forKey: "viewportPreset") ?? "crt-royale-lite"
+
+        // Settings Redesign
+        lastSettingsTab = defaults.string(forKey: "lastSettingsTab") ?? "overview"
+        cyclePresetHotkeyCode = defaults.object(forKey: "cyclePresetHotkeyCode") as? UInt32 ?? 0
+        cyclePresetHotkeyModifiers = defaults.object(forKey: "cyclePresetHotkeyModifiers") as? UInt32 ?? 0
+        bumpIntensityHotkeyCode = defaults.object(forKey: "bumpIntensityHotkeyCode") as? UInt32 ?? 0
+        bumpIntensityHotkeyModifiers = defaults.object(forKey: "bumpIntensityHotkeyModifiers") as? UInt32 ?? 0
+        menuBarToggleHotkeyCode = defaults.object(forKey: "menuBarToggleHotkeyCode") as? UInt32 ?? 0
+        menuBarToggleHotkeyModifiers = defaults.object(forKey: "menuBarToggleHotkeyModifiers") as? UInt32 ?? 0
+        screenshotHotkeyCode = defaults.object(forKey: "screenshotHotkeyCode") as? UInt32 ?? 0
+        screenshotHotkeyModifiers = defaults.object(forKey: "screenshotHotkeyModifiers") as? UInt32 ?? 0
+        showHotkeyConflictTips = defaults.object(forKey: "showHotkeyConflictTips") as? Bool ?? true
+        showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true
+
+        // Per-app rules (migrate from old perAppPresets if needed)
+        if let data = defaults.data(forKey: "perAppRules"),
+           let rules = try? JSONDecoder().decode([String: PerAppRule].self, from: data) {
+            perAppRules = rules
+        } else {
+            // Migrate from old format
+            let oldPresets = defaults.dictionary(forKey: "perAppPresets") as? [String: String] ?? [:]
+            var migrated: [String: PerAppRule] = [:]
+            for (bundleID, presetID) in oldPresets {
+                migrated[bundleID] = PerAppRule(presetID: presetID, reason: nil)
+            }
+            perAppRules = migrated
+        }
     }
 
     func presetForApp(bundleID: String) -> String? {

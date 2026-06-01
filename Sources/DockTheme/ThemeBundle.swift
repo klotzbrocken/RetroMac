@@ -17,6 +17,12 @@ final class ThemeBundle {
     var name: String { config.name }
     var iconsDirectory: URL { url.appendingPathComponent("icons") }
 
+    /// URL to the theme's preview image (preview.png), if it exists.
+    var previewImageURL: URL? {
+        let previewURL = url.appendingPathComponent("preview.png")
+        return FileManager.default.fileExists(atPath: previewURL.path) ? previewURL : nil
+    }
+
     func iconURL(for bundleID: String) -> URL? {
         guard let filename = config.iconMappings[bundleID] else { return nil }
         let iconURL = iconsDirectory.appendingPathComponent(filename)

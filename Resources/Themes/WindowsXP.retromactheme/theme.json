@@ -2,16 +2,13 @@
   "name": "Windows XP",
   "version": "1.0",
   "author": "RetroMac",
+  "splashScreen": "splash.png",
+  "splashFullscreen": true,
   "wallpaper": "wallpaper.jpg",
   "wallpapers": [
-    {
-      "name": "Bliss",
-      "file": "wallpaper.jpg"
-    },
-    {
-      "name": "Azul",
-      "file": "wallpaper2.png"
-    }
+    { "name": "Bliss", "file": "wallpaper.jpg" },
+    { "name": "Azul", "file": "wallpaper2.png" },
+    { "name": "XP Professional", "file": "xp-professional-wallpaper.jpg" }
   ],
   "dock": {
     "height": 44,
@@ -60,8 +57,13 @@
     "size": 3,
     "offset": 2
   },
+  "desktopIcons": [
+    { "name": "My Computer", "icon": "xp_mycomputer.png", "type": "folder", "path": "/", "gridX": 0, "gridY": 0 },
+    { "name": "Recycle Bin", "icon": "recycle_empty.png", "iconFull": "recycle_full.png", "type": "trash", "gridX": 0, "gridY": 2 },
+    { "name": "Quake", "icon": "quake.png", "type": "app", "bundleID": "com.macsourceports.vkQuake", "args": ["-basedir", "~/Library/Application Support/RetroMac/Games/Quake"], "gridX": 0, "gridY": 4 }
+  ],
   "fallbackIcon": "generic.png",
-  "defaultPreset": "zfast-lcd",
+  "defaultPreset": "lcd-retro-lite",
   "iconMappings": {
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",

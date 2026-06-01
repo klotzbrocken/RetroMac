@@ -120,13 +120,13 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         } else {
             window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         }
-        // singleWindow overlay needs level 26 (above TV window at 25, above dock at 24)
-        // fullScreen/singleDisplay uses level 25
+        // singleWindow overlay needs level 28 (above TV window at 25, above dock at 24, above start menu at 27)
+        // fullScreen/singleDisplay uses level 28 (above start menu at 27)
         let overlayLevel: Int
         if case .singleWindow = captureMode {
-            overlayLevel = 26
+            overlayLevel = 28
         } else {
-            overlayLevel = 25
+            overlayLevel = 28
         }
         window.level = NSWindow.Level(rawValue: overlayLevel)
         window.isOpaque = false

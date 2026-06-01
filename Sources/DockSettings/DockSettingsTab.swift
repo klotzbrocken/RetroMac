@@ -9,238 +9,39 @@ struct DockSettingsTab: View {
     @State private var newThemeName: String = ""
     @State private var showingSaveSheet: Bool = false
     @State private var iconOverrideRefresh: Bool = false
+    @State private var showAllApps: Bool = false
 
-    /// Returns the config of the currently selected theme (works even when dock is disabled)
     private var selectedThemeConfig: DockThemeConfig? {
         themes.first(where: { $0.name == settings.dockTheme })?.config
             ?? ThemeManager.shared.activeTheme?.config
     }
 
-    /// Returns the ThemeBundle of the currently selected theme
     private var selectedThemeBundle: ThemeBundle? {
         themes.first(where: { $0.name == settings.dockTheme })
             ?? ThemeManager.shared.activeTheme
     }
 
     var body: some View {
-        Form {
-            Section("Theme") {
-                Picker("Theme", selection: $settings.dockTheme) {
-                    ForEach(themes, id: \.name) { theme in
-                        Text(theme.name).tag(theme.name)
-                    }
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(spacing: RMSpacing.section) {
+                // 1. Theme cards
+                themeSection
+
+                // 2. Behavior + Appearance side by side
+                HStack(alignment: .top, spacing: RMSpacing.xxl) {
+                    behaviorCard
+                    appearanceCard
                 }
-                .pickerStyle(.menu)
-                .onChange(of: settings.dockTheme) { _ in
-                    // Theme change is handled by DockController's observer
-                    // which calls ThemeManager.reload + recreateWindow
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        themes = ThemeManager.shared.availableThemes
-                    }
-                }
+
+                // 3. Apps in the dock
+                appsCard
+
+                // 4. Advanced (shader, wallpaper, system icons, management)
+                advancedSection
             }
-
-            Section("Appearance") {
-                Toggle("Hide System Dock", isOn: $settings.dockHideSystemDock)
-                Toggle("Hide Menu Bar", isOn: $settings.hideMenuBar)
-                Toggle("Hide Desktop Icons", isOn: $settings.hideDesktopIcons)
-
-                if selectedThemeConfig?.hasMagnification == true {
-                    Toggle("Magnification", isOn: $settings.dockMagnification)
-                }
-
-                Toggle("Auto-hide Dock", isOn: $settings.dockAutoHide)
-                Toggle("DockFix (avoid window overlap)", isOn: $settings.dockFix)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("\(Int(settings.dockIconScale * 100))%")
-                            .frame(width: 40)
-                            .monospacedDigit()
-                        Slider(value: $settings.dockIconScale, in: 0.5...2.0, step: 0.1)
-                    }
-                    Text("Dock size")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("\(Int(settings.dockTransparency * 100))%")
-                            .frame(width: 40)
-                            .monospacedDigit()
-                        Slider(value: $settings.dockTransparency, in: 0.3...1.0, step: 0.05)
-                    }
-                    Text("Dock transparency")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Section("Shader Preset") {
-                Picker("Shader", selection: Binding(
-                    get: {
-                        if let override = settings.themePresetOverrides[settings.dockTheme] {
-                            return override
-                        }
-                        return selectedThemeConfig?.defaultPreset ?? ""
-                    },
-                    set: { newVal in
-                        settings.themePresetOverrides[settings.dockTheme] = newVal
-                    }
-                )) {
-                    Text("None").tag("")
-                    ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
-                        Text(preset.displayName).tag(preset.id)
-                    }
-                }
-                .pickerStyle(.menu)
-                Text("Shader preset activated automatically when switching to \"\(settings.dockTheme)\".")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if selectedThemeBundle?.wallpaperURL() != nil {
-                Section("Wallpaper") {
-                    let wpOptions = selectedThemeBundle?.wallpaperOptions() ?? []
-                    if wpOptions.count > 1 {
-                        // Multiple wallpapers — show picker
-                        ForEach(wpOptions, id: \.url) { option in
-                            Button(option.name) {
-                                applyWallpaperFromTheme(url: option.url)
-                            }
-                        }
-                    } else {
-                        let wpName = selectedThemeConfig?.wallpaper ?? "—"
-                        LabeledContent("Current", value: wpName)
-                    }
-                    HStack {
-                        Button("Custom Wallpaper...") {
-                            browseForWallpaper()
-                        }
-                        Button("Restore Theme Wallpaper") {
-                            ThemeManager.shared.applyWallpaper()
-                        }
-                    }
-                    Text("Theme wallpaper is applied to all displays when this theme is active.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Section("Display") {
-                Picker("Target Display", selection: $settings.dockTargetDisplayID) {
-                    Text("Main Display").tag(CGDirectDisplayID(0))
-                    ForEach(Array(NSScreen.screens.enumerated()), id: \.offset) { _, screen in
-                        let res = "\(Int(screen.frame.width))x\(Int(screen.frame.height))"
-                        Text("\(screen.localizedName) (\(res))").tag(screen.displayID)
-                    }
-                }
-                .pickerStyle(.menu)
-            }
-
-            Section("Hotkey") {
-                DockHotkeyRecorderView()
-            }
-
-            Section("Dock Apps") {
-                Toggle("Show running apps in Dock", isOn: $settings.dockShowRunningApps)
-
-                if dockApps.isEmpty {
-                    Text("No apps configured. Default apps will be added on first launch.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(dockApps) { app in
-                        dockAppRow(app)
-                    }
-                }
-
-                HStack {
-                    Button("Add App...") {
-                        browseForApp()
-                    }
-                    Button("Add Folder...") {
-                        browseForFolder()
-                    }
-                    Spacer()
-                    Button("Reset to Defaults") {
-                        let fm = FileManager.default
-                        let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-                        let configURL = appSupport.appendingPathComponent("RetroMac/dock-apps.json")
-                        try? fm.removeItem(at: configURL)
-                        let _ = AppManager.shared
-                        AppManager.shared.load()
-                        refreshApps()
-                    }
-                    .font(.caption)
-                }
-            }
-
-            Section("System Icons") {
-                Toggle("Apply theme icons to system apps", isOn: $settings.applySystemIcons)
-                HStack {
-                    Button("Apply Now") {
-                        ThemeManager.shared.applyIconsToSystem()
-                    }
-                    Button("Revert All") {
-                        ThemeManager.shared.revertSystemIcons()
-                    }
-                }
-                Text("Applies your dock theme icons to the actual apps in Finder, Launchpad, and Spotlight. Revert restores original icons.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Theme Management") {
-                HStack {
-                    Button("Open Themes Folder") {
-                        NSWorkspace.shared.open(ThemeManager.shared.userThemesDirectory)
-                    }
-                    Button("Import Theme...") {
-                        importTheme()
-                    }
-                }
-
-                if ThemeManager.shared.canSaveExistingTheme {
-                    Button("Save Icon Changes to \"\(settings.dockTheme)\"") {
-                        do {
-                            try ThemeManager.shared.saveExistingTheme()
-                            themes = ThemeManager.shared.availableThemes
-                            iconOverrideRefresh.toggle()
-                        } catch {
-                            print("[Dock] Save theme failed: \(error)")
-                        }
-                    }
-                }
-
-                HStack {
-                    TextField("New theme name", text: $newThemeName)
-                        .textFieldStyle(.roundedBorder)
-                    Button("Save as new Theme") {
-                        guard !newThemeName.isEmpty else { return }
-                        do {
-                            try ThemeManager.shared.saveAsNewTheme(name: newThemeName)
-                            themes = ThemeManager.shared.availableThemes
-                            newThemeName = ""
-                            iconOverrideRefresh.toggle()
-                        } catch {
-                            print("[Dock] Save theme failed: \(error)")
-                        }
-                    }
-                    .disabled(newThemeName.isEmpty)
-                }
-                if ThemeManager.shared.hasOverrides() {
-                    Text("You have custom icon overrides for \"\(settings.dockTheme)\". Save them as a new theme or save to the existing theme.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Text("Place .retromactheme bundles in the themes folder or import them here.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
-        .formStyle(.grouped)
-        .padding(.top, 8)
         .onAppear {
             refreshApps()
             themes = ThemeManager.shared.availableThemes
@@ -265,43 +66,543 @@ struct DockSettingsTab: View {
         }
     }
 
-    @ViewBuilder
-    private func dockAppRow(_ app: DockApp) -> some View {
-        let hasCustom = ThemeManager.shared.customIconPath(for: app.bundleID) != nil && iconOverrideRefresh == iconOverrideRefresh
-        HStack(spacing: 8) {
-            DockAppIconView(bundleID: app.bundleID)
-                .frame(width: 24, height: 24)
-            Text(app.displayName)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Button {
-                browseForCustomIcon(bundleID: app.bundleID)
-            } label: {
-                Image(systemName: hasCustom ? "paintbrush.fill" : "paintbrush")
-                    .foregroundStyle(hasCustom ? Color.accentColor : Color.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Set custom icon for current theme")
-            if hasCustom {
-                Button {
-                    ThemeManager.shared.setCustomIcon(for: app.bundleID, path: nil)
-                    iconOverrideRefresh.toggle()
-                } label: {
-                    Image(systemName: "arrow.uturn.backward.circle")
-                        .foregroundStyle(.secondary)
+    // MARK: - Theme Section
+
+    private var themeSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            RMSectionHeaderView(title: "Theme")
+
+            let columns = [
+                GridItem(.flexible(), spacing: RMSpacing.sm),
+                GridItem(.flexible(), spacing: RMSpacing.sm),
+                GridItem(.flexible(), spacing: RMSpacing.sm),
+                GridItem(.flexible(), spacing: RMSpacing.sm)
+            ]
+            LazyVGrid(columns: columns, spacing: RMSpacing.sm) {
+                ForEach(themeCards, id: \.name) { card in
+                    ThemeCard(
+                        name: card.name,
+                        subtitle: card.subtitle,
+                        gradientColors: card.colors,
+                        isActive: settings.dockTheme == card.themeName,
+                        isAddCard: card.isAdd,
+                        previewImageURL: card.previewImageURL
+                    ) {
+                        if card.isAdd {
+                            importTheme()
+                        } else {
+                            settings.dockTheme = card.themeName
+                        }
+                    }
                 }
-                .buttonStyle(.plain)
-                .help("Reset to theme icon")
             }
-            Button {
-                AppManager.shared.removeApp(bundleID: app.bundleID)
-                refreshApps()
-            } label: {
-                Image(systemName: "minus.circle.fill")
-                    .foregroundStyle(.red)
-            }
-            .buttonStyle(.plain)
         }
     }
+
+    private var themeCards: [ThemeCardData] {
+        var cards: [ThemeCardData] = []
+        for theme in themes {
+            let displayName = themeShortName(theme.name)
+            let subtitle = themeSubtitle(theme.name)
+            let colors = themeGradient(theme.name)
+            cards.append(ThemeCardData(name: displayName, subtitle: subtitle, themeName: theme.name, colors: colors, isAdd: false, previewImageURL: theme.previewImageURL))
+        }
+        cards.append(ThemeCardData(name: "Add custom\u{2026}", subtitle: ".retromactheme bundles", themeName: "", colors: [Color.rmSurface2, Color.rmSurface2], isAdd: true))
+        return cards
+    }
+
+    private func themeShortName(_ name: String) -> String {
+        switch name {
+        case "Mountain Lion": return "Aqua"
+        case "Snow Leopard": return "Snow Leopard"
+        case "Mac OS 9.2": return "Mac OS 9.2"
+        case "Mac OS 9.2 Classic": return "Mac OS 9 Classic"
+        case "Windows 98": return "Windows 98"
+        case "Windows XP": return "Windows XP"
+        case "OS/2 Warp 4": return "OS/2 Warp 4"
+        case "BeOS": return "BeOS"
+        case "Sleek Retro": return "Sleek Retro"
+        default: return name
+        }
+    }
+
+    private func themeSubtitle(_ name: String) -> String {
+        switch name {
+        case "Mountain Lion": return "Glossy translucent"
+        case "Snow Leopard": return "3D shelf \u{00B7} magnification"
+        case "Mac OS 9.2": return "Beveled 3D \u{00B7} pixelated"
+        case "Mac OS 9.2 Classic": return "Control Strip \u{00B7} authentic"
+        case "Windows 98": return "Classic taskbar \u{00B7} Start menu"
+        case "Windows XP": return "Luna Blue \u{00B7} glossy"
+        case "OS/2 Warp 4": return "WarpCenter tray"
+        case "BeOS": return "Deskbar \u{00B7} minimal"
+        case "Sleek Retro": return "Modern retro blend"
+        default: return "Custom theme"
+        }
+    }
+
+    private func themeGradient(_ name: String) -> [Color] {
+        switch name {
+        case "Mountain Lion": return [Color(red: 0.3, green: 0.5, blue: 0.8), Color(red: 0.2, green: 0.4, blue: 0.7)]
+        case "Snow Leopard": return [Color(red: 0.45, green: 0.5, blue: 0.58), Color(red: 0.3, green: 0.35, blue: 0.45)]
+        case "Mac OS 9.2": return [Color(red: 0.75, green: 0.75, blue: 0.78), Color(red: 0.6, green: 0.6, blue: 0.65)]
+        case "Mac OS 9.2 Classic": return [Color(red: 0.78, green: 0.78, blue: 0.8), Color(red: 0.62, green: 0.62, blue: 0.68)]
+        case "Windows 98": return [Color(red: 0.0, green: 0.5, blue: 0.5), Color(red: 0.0, green: 0.35, blue: 0.35)]
+        case "Windows XP": return [Color(red: 0.0, green: 0.35, blue: 0.75), Color(red: 0.0, green: 0.25, blue: 0.55)]
+        case "OS/2 Warp 4": return [Color(red: 0.15, green: 0.15, blue: 0.5), Color(red: 0.1, green: 0.1, blue: 0.35)]
+        case "BeOS": return [Color(red: 0.85, green: 0.85, blue: 0.5), Color(red: 0.7, green: 0.7, blue: 0.35)]
+        case "Sleek Retro": return [Color(red: 0.2, green: 0.2, blue: 0.25), Color(red: 0.12, green: 0.12, blue: 0.15)]
+        default: return [Color(red: 0.3, green: 0.3, blue: 0.4), Color(red: 0.2, green: 0.2, blue: 0.3)]
+        }
+    }
+
+    private var themeDisplayName: String {
+        themeShortName(settings.dockTheme)
+    }
+
+    /// Themes that support switching between vertical (left) and horizontal (bottom) orientation
+    private var themeSupportsOrientationSwitch: Bool {
+        guard let c = selectedThemeConfig else { return false }
+        // Any normal dock bar can be repositioned (Bottom/Left/Right). Exclude
+        // full-width taskbars (Win XP/98, OS/2), the Mac OS 9 Control Strip, and
+        // dock-less desktops (Win 3.1 / SGI) — they can't sensibly go vertical.
+        return !c.hidesDock && !c.isFullWidth && !c.isControlStrip
+    }
+
+    /// Whether the current theme is Windows 98 or Windows XP (for Re:Amp integration)
+    private var isWin98OrXP: Bool {
+        let name = settings.dockTheme
+        return name == "Windows 98" || name == "Windows XP"
+    }
+
+    /// Returns the currently active wallpaper filename for the given theme bundle
+    private func activeWallpaperFile(bundle: ThemeBundle) -> String {
+        if let override = settings.themeWallpaperOverrides[settings.dockTheme] {
+            return override
+        }
+        return bundle.config.wallpaper ?? ""
+    }
+
+    // MARK: - Behavior Card
+
+    private var behaviorCard: some View {
+        RMCard(title: "Behavior", bodyPadding: 0) {
+            VStack(spacing: 0) {
+                RMRow(label: "Show retro dock") {
+                    Toggle("", isOn: $settings.dockEnabled)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                }
+                RMRow(label: "Show only when system dock is hidden", hint: "Auto-shows when macOS dock auto-hides.") {
+                    Toggle("", isOn: $settings.dockAutoHide)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                }
+                if themeSupportsOrientationSwitch {
+                    RMRow(label: "Position") {
+                        Picker("", selection: Binding(
+                            get: {
+                                settings.themeDockPositionOverride[settings.dockTheme]
+                                    ?? selectedThemeConfig?.effectiveDockPosition
+                                    ?? "bottom"
+                            },
+                            set: { settings.themeDockPositionOverride[settings.dockTheme] = $0 }
+                        )) {
+                            Text("Bottom").tag("bottom")
+                            Text("Left").tag("left")
+                            Text("Right").tag("right")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                    }
+                }
+                if selectedThemeConfig?.hasMagnification == true {
+                    RMRow(label: "Magnification on hover") {
+                        Toggle("", isOn: $settings.dockMagnification)
+                            .toggleStyle(.switch)
+                            .tint(.rmAccent)
+                            .labelsHidden()
+                    }
+                }
+                RMRow(label: "Show indicators for running apps") {
+                    Toggle("", isOn: $settings.dockShowRunningApps)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                }
+                RMRow(label: "Show splash screen", hint: "Briefly shows the theme's boot splash when activated.", isLast: true) {
+                    Toggle("", isOn: $settings.showSplashScreen)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                }
+            }
+        }
+    }
+
+    // MARK: - Appearance Card
+
+    private var appearanceCard: some View {
+        RMCard(title: "Appearance", bodyPadding: 0) {
+            VStack(spacing: 0) {
+                RMRow(label: "Transparency") {
+                    HStack(spacing: 8) {
+                        Slider(value: $settings.dockTransparency, in: 0.3...1.0, step: 0.05)
+                            .tint(.rmAccent)
+                            .frame(width: 110)
+                        Text("\(Int(settings.dockTransparency * 100))%")
+                            .font(.rmMono(size: 11))
+                            .foregroundColor(.rmTextSecondary)
+                            .frame(width: 32, alignment: .trailing)
+                    }
+                }
+                RMRow(label: "Icon scale") {
+                    HStack(spacing: 8) {
+                        Slider(value: $settings.dockIconScale, in: 0.5...2.0, step: 0.1)
+                            .tint(.rmAccent)
+                            .frame(width: 110)
+                        Text("\(Int(settings.dockIconScale * 100))%")
+                            .font(.rmMono(size: 11))
+                            .foregroundColor(.rmTextSecondary)
+                            .frame(width: 32, alignment: .trailing)
+                    }
+                }
+                RMRow(label: "Target display") {
+                    Picker("", selection: $settings.dockTargetDisplayID) {
+                        Text("Main Display").tag(CGDirectDisplayID(0))
+                        ForEach(Array(NSScreen.screens.enumerated()), id: \.offset) { _, screen in
+                            let res = "\(Int(screen.frame.width))\u{00D7}\(Int(screen.frame.height))"
+                            Text("\(screen.localizedName) (\(res))").tag(screen.displayID)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 170)
+                }
+                // Hotkey display-only row
+                RMRow(label: "Toggle shortcut", isLast: true) {
+                    RMHotkeyChip(keys: dockHotkeyKeys)
+                }
+            }
+        }
+    }
+
+    private var dockHotkeyKeys: [String] {
+        var keys: [String] = []
+        if settings.dockHotkeyModifiers & UInt32(controlKey) != 0 { keys.append("\u{2303}") }
+        if settings.dockHotkeyModifiers & UInt32(optionKey) != 0 { keys.append("\u{2325}") }
+        if settings.dockHotkeyModifiers & UInt32(cmdKey) != 0 { keys.append("\u{2318}") }
+        keys.append(AppSettings.keyName(for: settings.dockHotkeyCode))
+        return keys
+    }
+
+    // MARK: - Apps Card
+
+    private var appsCard: some View {
+        let maxVisible = 5
+        let visibleApps = showAllApps ? dockApps : Array(dockApps.prefix(maxVisible))
+        let hasMore = dockApps.count > maxVisible && !showAllApps
+
+        return RMCard(
+            title: "Apps in the dock",
+            subtitle: "\(dockApps.count) apps",
+            headerAction: AnyView(
+                Button("Add app\u{2026}") { browseForApp() }
+                    .buttonStyle(RMDefaultButtonStyle())
+            ),
+            bodyPadding: 0
+        ) {
+            VStack(spacing: 0) {
+                if dockApps.isEmpty {
+                    Text("No apps configured. Default apps will be added on first launch.")
+                        .font(.rmSecondary)
+                        .foregroundColor(.rmTextSecondary)
+                        .padding(RMSpacing.card)
+                } else {
+                    ForEach(Array(visibleApps.enumerated()), id: \.element.id) { index, app in
+                        let isLast = !hasMore && index == visibleApps.count - 1
+                        dockAppRow(app, isLast: isLast)
+                    }
+                    if hasMore {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { showAllApps = true }
+                        } label: {
+                            Text("Show all \(dockApps.count) apps\u{2026}")
+                                .font(.rmSecondary)
+                                .foregroundColor(.rmAccent)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Advanced Section
+
+    private var advancedSection: some View {
+        VStack(spacing: RMSpacing.xxl) {
+            // Wallpaper picker (only when theme has multiple wallpapers)
+            if let bundle = selectedThemeBundle {
+                let wallpapers = bundle.wallpaperOptions()
+                if wallpapers.count > 1 {
+                    RMCard(title: "Wallpaper", subtitle: "\(wallpapers.count) wallpapers available for \u{201C}\(themeDisplayName)\u{201D}.", bodyPadding: 0) {
+                        VStack(spacing: 0) {
+                            ForEach(Array(wallpapers.enumerated()), id: \.offset) { index, wp in
+                                let isSelected = activeWallpaperFile(bundle: bundle) == wp.url.lastPathComponent
+                                let isLast = index == wallpapers.count - 1
+                                Button {
+                                    settings.themeWallpaperOverrides[settings.dockTheme] = wp.url.lastPathComponent
+                                    ThemeManager.shared.applyWallpaper()
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        // Thumbnail
+                                        if let nsImage = NSImage(contentsOf: wp.url) {
+                                            Image(nsImage: nsImage)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 48, height: 32)
+                                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 4)
+                                                        .stroke(isSelected ? Color.rmAccent : Color.rmBorder, lineWidth: isSelected ? 1.5 : 0.5)
+                                                )
+                                        }
+                                        Text(wp.name)
+                                            .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                                            .foregroundColor(.rmTextPrimary)
+                                        Spacer()
+                                        if isSelected {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .font(.system(size: 14))
+                                                .foregroundColor(.rmAccent)
+                                        }
+                                    }
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, RMSpacing.card)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                if !isLast {
+                                    Rectangle()
+                                        .fill(Color.rmDivider)
+                                        .frame(height: 1)
+                                        .padding(.horizontal, RMSpacing.card)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Shader preset
+            RMCard(title: "Shader preset", subtitle: "Activated when switching to \u{201C}\(themeDisplayName)\u{201D}.", bodyPadding: 0) {
+                RMRow(label: "Preset", isLast: true) {
+                    Picker("", selection: Binding(
+                        get: {
+                            if let override = settings.themePresetOverrides[settings.dockTheme] {
+                                return override
+                            }
+                            return selectedThemeConfig?.defaultPreset ?? ""
+                        },
+                        set: { settings.themePresetOverrides[settings.dockTheme] = $0 }
+                    )) {
+                        Text("None").tag("")
+                        ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
+                            Text(preset.displayName).tag(preset.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 170)
+                }
+            }
+
+            // Re:Amp integration (Win98/XP only)
+            if isWin98OrXP {
+                RMCard(title: "Re:Amp", subtitle: "Winamp-style music player for macOS. Adds a shortcut to the taskbar and Start Menu.", bodyPadding: 0) {
+                    RMRow(label: "Enable Re:Amp", isLast: true) {
+                        Toggle("", isOn: Binding(
+                            get: { settings.reampEnabled },
+                            set: { newValue in
+                                settings.reampEnabled = newValue
+                                if newValue {
+                                    enableReAmp()
+                                } else {
+                                    disableReAmp()
+                                }
+                            }
+                        ))
+                            .toggleStyle(.switch)
+                            .tint(.rmAccent)
+                            .labelsHidden()
+                    }
+                }
+            }
+
+            // System icons + theme management
+            HStack(alignment: .top, spacing: RMSpacing.xxl) {
+                RMCard(title: "System icons", bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Apply theme icons to system apps") {
+                            Toggle("", isOn: $settings.applySystemIcons)
+                                .toggleStyle(.switch)
+                                .tint(.rmAccent)
+                                .labelsHidden()
+                        }
+                        RMRow(label: "Apply now", isLast: true) {
+                            HStack(spacing: 6) {
+                                Button("Apply") { ThemeManager.shared.applyIconsToSystem() }
+                                    .buttonStyle(RMDefaultButtonStyle())
+                                Button("Revert") { ThemeManager.shared.revertSystemIcons() }
+                                    .buttonStyle(RMDangerButtonStyle())
+                            }
+                        }
+                    }
+                }
+
+                RMCard(title: "Theme management", bodyPadding: RMSpacing.card) {
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Button("Open folder") {
+                                NSWorkspace.shared.open(ThemeManager.shared.userThemesDirectory)
+                            }
+                            .buttonStyle(RMDefaultButtonStyle())
+
+                            Button("Import\u{2026}") { importTheme() }
+                                .buttonStyle(RMDefaultButtonStyle())
+                        }
+
+                        if ThemeManager.shared.canSaveExistingTheme {
+                            Button("Save changes to \u{201C}\(themeDisplayName)\u{201D}") {
+                                try? ThemeManager.shared.saveExistingTheme()
+                                themes = ThemeManager.shared.availableThemes
+                                iconOverrideRefresh.toggle()
+                            }
+                            .buttonStyle(RMDefaultButtonStyle())
+                        }
+
+                        HStack(spacing: 6) {
+                            TextField("New theme name", text: $newThemeName)
+                                .textFieldStyle(.roundedBorder)
+                            Button("Save") {
+                                guard !newThemeName.isEmpty else { return }
+                                try? ThemeManager.shared.saveAsNewTheme(name: newThemeName)
+                                themes = ThemeManager.shared.availableThemes
+                                newThemeName = ""
+                                iconOverrideRefresh.toggle()
+                            }
+                            .buttonStyle(RMDefaultButtonStyle())
+                            .disabled(newThemeName.isEmpty)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Dock App Row
+
+    @ViewBuilder
+    private func dockAppRow(_ app: DockApp, isLast: Bool = false) -> some View {
+        let hasCustom = ThemeManager.shared.customIconPath(for: app.bundleID) != nil && iconOverrideRefresh == iconOverrideRefresh
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                // Grip handle
+                VStack(spacing: 2) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        HStack(spacing: 2) {
+                            Circle().fill(Color.rmTextTertiary).frame(width: 2, height: 2)
+                            Circle().fill(Color.rmTextTertiary).frame(width: 2, height: 2)
+                        }
+                    }
+                }
+
+                DockAppIconView(bundleID: app.bundleID)
+                    .frame(width: 24, height: 24)
+
+                Text(app.displayName)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.rmTextPrimary)
+
+                Spacer()
+
+                if NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == app.bundleID }) {
+                    RMChip(text: "Running", tone: .on, showDot: true)
+                }
+
+                Button {
+                    browseForCustomIcon(bundleID: app.bundleID)
+                } label: {
+                    Image(systemName: hasCustom ? "paintbrush.fill" : "paintbrush")
+                        .font(.system(size: 11))
+                        .foregroundColor(hasCustom ? .rmAccent : .rmTextTertiary)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    AppManager.shared.removeApp(bundleID: app.bundleID)
+                    refreshApps()
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 12))
+                        .foregroundColor(.rmTextTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 11)
+            .padding(.horizontal, RMSpacing.card)
+
+            if !isLast {
+                Rectangle()
+                    .fill(Color.rmDivider)
+                    .frame(height: 1)
+                    .padding(.horizontal, RMSpacing.card)
+            }
+        }
+    }
+
+    // MARK: - Re:Amp Integration
+
+    private func enableReAmp() {
+        // Trigger install/launch dialog
+        ReAmpHelper.launchOrInstall()
+
+        // Set the theme icon override for Re:Amp
+        if let theme = ThemeManager.shared.activeTheme {
+            let iconPath = theme.iconsDirectory.appendingPathComponent("reamp.png").path
+            if FileManager.default.fileExists(atPath: iconPath) {
+                ThemeManager.shared.setCustomIcon(for: ReAmpHelper.bundleID, path: iconPath)
+            }
+        }
+
+        // Add to dock if installed (may not be yet if user just downloaded)
+        addReAmpToDockIfInstalled()
+
+        // Poll briefly in case user is installing right now
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [self] in
+            addReAmpToDockIfInstalled()
+        }
+    }
+
+    private func disableReAmp() {
+        // Remove from dock
+        AppManager.shared.removeApp(bundleID: ReAmpHelper.bundleID)
+        ThemeManager.shared.setCustomIcon(for: ReAmpHelper.bundleID, path: nil)
+        refreshApps()
+    }
+
+    private func addReAmpToDockIfInstalled() {
+        let bid = ReAmpHelper.bundleID
+        guard !AppManager.shared.apps.contains(where: { $0.bundleID == bid }) else { return }
+        // Try adding — AppManager.addApp checks if installed
+        AppManager.shared.addApp(bundleID: bid)
+        refreshApps()
+    }
+
+    // MARK: - Existing Helpers
 
     private func refreshApps() {
         dockApps = AppManager.shared.apps
@@ -311,7 +612,6 @@ struct DockSettingsTab: View {
     @State private var iconPickerBundleID: String = ""
 
     private func browseForCustomIcon(bundleID: String) {
-        // Show theme icon picker if theme has icons
         if let theme = selectedThemeBundle ?? ThemeManager.shared.activeTheme,
            !theme.availableIcons().isEmpty {
             iconPickerBundleID = bundleID
@@ -325,7 +625,7 @@ struct DockSettingsTab: View {
         NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [UTType.png, UTType.icns, UTType.tiff, UTType.jpeg]
-        panel.message = "Choose a custom icon for \"\(settings.dockTheme)\" theme"
+        panel.message = "Choose a custom icon for \u{201C}\(themeDisplayName)\u{201D} theme"
         panel.prompt = "Set Icon"
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
@@ -334,7 +634,6 @@ struct DockSettingsTab: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         ThemeManager.shared.setCustomIcon(for: bundleID, path: url.path)
         iconOverrideRefresh.toggle()
-        print("[Dock] Custom icon set for \(bundleID): \(url.path)")
     }
 
     private func browseForApp() {
@@ -356,49 +655,6 @@ struct DockSettingsTab: View {
         refreshApps()
     }
 
-    private func browseForFolder() {
-        NSApp.activate(ignoringOtherApps: true)
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = "Select a folder to add to the Dock"
-        panel.prompt = "Add Folder"
-        panel.level = .floating
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        AppManager.shared.addFolder(path: url.path)
-        refreshApps()
-    }
-
-    private func applyWallpaperFromTheme(url: URL) {
-        let ws = NSWorkspace.shared
-        for screen in NSScreen.screens {
-            try? ws.setDesktopImageURL(url, for: screen, options: [:])
-        }
-        print("[Dock] Theme wallpaper set: \(url.lastPathComponent)")
-    }
-
-    private func browseForWallpaper() {
-        NSApp.activate(ignoringOtherApps: true)
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [UTType.png, UTType.jpeg, UTType.tiff, UTType.bmp]
-        panel.message = "Choose a wallpaper for \"\(settings.dockTheme)\" theme"
-        panel.prompt = "Set Wallpaper"
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.level = .floating
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        // Set the wallpaper directly via NSWorkspace
-        let ws = NSWorkspace.shared
-        for screen in NSScreen.screens {
-            try? ws.setDesktopImageURL(url, for: screen, options: [:])
-        }
-        print("[Dock] Custom wallpaper set: \(url.path)")
-    }
-
     private func importTheme() {
         NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
@@ -408,10 +664,7 @@ struct DockSettingsTab: View {
         panel.level = .floating
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        guard url.pathExtension == "retromactheme" else {
-            print("[Dock] Not a .retromactheme bundle")
-            return
-        }
+        guard url.pathExtension == "retromactheme" else { return }
         do {
             try ThemeManager.shared.importTheme(from: url)
             themes = ThemeManager.shared.availableThemes
@@ -420,6 +673,127 @@ struct DockSettingsTab: View {
         }
     }
 }
+
+// MARK: - Theme Card
+
+private struct ThemeCardData {
+    var name: String
+    var subtitle: String
+    var themeName: String
+    var colors: [Color]
+    var isAdd: Bool
+    var previewImageURL: URL? = nil
+}
+
+private struct ThemeCard: View {
+    var name: String
+    var subtitle: String
+    var gradientColors: [Color]
+    var isActive: Bool
+    var isAddCard: Bool
+    var previewImageURL: URL? = nil
+    var onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 0) {
+                // Preview area
+                ZStack {
+                    if isAddCard {
+                        // Hatched/dashed pattern
+                        Color.rmSurface2
+                            .overlay(
+                                ZStack {
+                                    Circle()
+                                        .strokeBorder(Color.rmBorderStrong, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                                        .frame(width: 22, height: 22)
+                                        .overlay(
+                                            Image(systemName: "plus")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundColor(.rmTextSecondary)
+                                        )
+                                }
+                            )
+                    } else if let previewURL = previewImageURL,
+                              let nsImage = NSImage(contentsOf: previewURL) {
+                        // Real preview image from theme bundle
+                        GeometryReader { geo in
+                            Image(nsImage: nsImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                        }
+                    } else {
+                        // Fallback: gradient with placeholder icons
+                        LinearGradient(colors: gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
+                            .overlay(
+                                RadialGradient(
+                                    colors: [Color.white.opacity(0.10), Color.clear],
+                                    center: UnitPoint(x: 0.30, y: 0.20),
+                                    startRadius: 0,
+                                    endRadius: 50
+                                )
+                            )
+
+                        HStack(spacing: 2) {
+                            ForEach(0..<5) { i in
+                                let colors: [Color] = [.blue, .red, .green, .orange, .purple]
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(colors[i].opacity(0.9))
+                                    .frame(width: 14, height: 14)
+                            }
+                        }
+                        .padding(.bottom, 8)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
+                    }
+                }
+                .frame(height: 56)
+                .clipped()
+                .overlay(
+                    Rectangle()
+                        .fill(isActive ? Color.rmAccent.opacity(0.3) : Color.rmBorder)
+                        .frame(height: 1),
+                    alignment: .bottom
+                )
+
+                // Footer
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(name)
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .tracking(-0.05)
+                            .foregroundColor(.rmTextPrimary)
+                            .lineLimit(1)
+                        Text(subtitle)
+                            .font(.system(size: 11))
+                            .foregroundColor(.rmTextSecondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    if isActive {
+                        RMChip(text: "In use", tone: .on)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .padding(.bottom, 1)
+            }
+            .background(Color.rmSurface)
+            .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
+            .overlay(
+                RoundedRectangle(cornerRadius: RMRadius.card)
+                    .stroke(isActive ? Color.rmAccent.opacity(0.6) : Color.rmBorder, lineWidth: isActive ? 1.5 : 1)
+            )
+            .rmCardShadow()
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Kept from original
 
 struct DockAppIconView: View {
     let bundleID: String
@@ -445,7 +819,7 @@ struct DockHotkeyRecorderView: View {
             Text("Toggle Dock")
             Spacer()
             Button(action: { isRecording.toggle() }) {
-                Text(isRecording ? "Press keys..." : dockHotkeyDisplayString)
+                Text(isRecording ? "Press keys\u{2026}" : dockHotkeyDisplayString)
                     .frame(minWidth: 100)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)

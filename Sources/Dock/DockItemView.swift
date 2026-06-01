@@ -49,7 +49,8 @@ final class DockItemView: NSView {
         reflectionLayer?.removeFromSuperlayer()
         reflectionLayer = nil
 
-        guard theme.icon.reflectionEnabled,
+        // Vertical docks (left/right) drop the 3D floor entirely — no reflection.
+        guard theme.icon.reflectionEnabled, !theme.isVertical,
               let image = iconImageView.image else { return }
 
         let iconRect = iconImageView.frame
@@ -100,8 +101,12 @@ final class DockItemView: NSView {
         let sz = theme.indicator.size
         let off = theme.indicator.offset
         if theme.isVertical {
+            // Indicator sits on the SCREEN-EDGE side of the icon (left dock → left,
+            // right dock → right), matching the real Dock.
+            let onRight = theme.effectiveDockPosition == "right"
+            let x = onRight ? (bounds.width + off - sz) : (-off)
             dot.frame = CGRect(
-                x: bounds.width + off - sz,
+                x: x,
                 y: (bounds.height - sz) / 2,
                 width: sz,
                 height: sz
@@ -173,12 +178,16 @@ final class DockItemView: NSView {
     }
 
     func applyMagnification(scale: CGFloat, dx: CGFloat, dy: CGFloat) {
+        // Larger icons must render ABOVE their neighbours and the bar, otherwise the
+        // part that pops out of the dock is occluded and the icon looks like it stays in.
+        layer?.zPosition = scale
         layer?.setAffineTransform(
             CGAffineTransform(translationX: dx, y: dy).scaledBy(x: scale, y: scale)
         )
     }
 
     func resetMagnification() {
+        layer?.zPosition = 0
         layer?.setAffineTransform(.identity)
     }
 

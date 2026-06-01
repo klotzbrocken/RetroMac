@@ -7,6 +7,7 @@ final class DockController {
 
     private var window: DockWindow?
     private var dockView: DockView?
+    private var isStarted = false       // guards re-entrancy for dock-less themes (Win 3.1)
     private var screenObserver: NSObjectProtocol?
     private var fullscreenObserver: NSObjectProtocol?
     private var settingsObservers: [AnyCancellable] = []
@@ -27,13 +28,23 @@ final class DockController {
     private let autoHideLeaveMargin: CGFloat = 20     // px above dock to trigger hide
 
     func start() {
-        guard window == nil else { return }
+        guard !isStarted else { return }
+        isStarted = true
         print("[Dock] Starting")
 
         ThemeManager.shared.reload()
-        createWindow()
+        if let theme = ThemeManager.shared.activeTheme {
+            SplashController.shared.showIfEnabled(for: theme)
+        }
+        let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false
+        if !hidesDock {
+            createWindow()
+        }
         registerHotkey()
         applySystemDockPolicy()
+        DesktopIconsController.shared.update()
+        ProgramManagerController.shared.update()
+        SGIDesktopController.shared.update()
         if AppSettings.shared.hideMenuBar {
             SystemUIHelper.setMenuBarAutoHide(true)
         }
@@ -52,13 +63,18 @@ final class DockController {
             forName: NSWorkspace.activeSpaceDidChangeNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
-            self?.evaluateVisibility()
+            // Short delay: wallpaper changes and window recreation can trigger
+            // transient space-change notifications where isOnActiveSpace is briefly
+            // unreliable. Let the window state settle before evaluating.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self?.evaluateVisibility()
+            }
         }
 
         observeSettings()
         evaluateVisibility()
 
-        if AppSettings.shared.dockAutoHide {
+        if autoHideActive {
             installAutoHideMonitors()
         }
 
@@ -72,6 +88,9 @@ final class DockController {
         removeAutoHideMonitors()
         DockFix.shared.stop()
         restoreSystemDock()
+        DesktopIconsController.shared.hide()
+        ProgramManagerController.shared.hide()
+        SGIDesktopController.shared.hide()
         // Restore menu bar and desktop icons
         if AppSettings.shared.hideMenuBar {
             SystemUIHelper.setMenuBarAutoHide(false)
@@ -94,6 +113,7 @@ final class DockController {
         dockView = nil
         isVisible = false
         manualToggle = nil
+        isStarted = false
     }
 
     func toggle() {
@@ -113,8 +133,14 @@ final class DockController {
         dockView.onContextMenu = { [weak self] bundleID, point in
             self?.showContextMenu(for: bundleID, at: point)
         }
+        dockView.onDockContextMenu = { [weak self] point in
+            self?.showDockPositionMenu(at: point)
+        }
         dockView.onRunningAppsChanged = { [weak self] in
             self?.repositionWindow()
+        }
+        dockView.onControlStripToggle = { [weak self] collapsed in
+            self?.animateControlStripToggle(collapsed: collapsed)
         }
         dockView.rebuildItems()
 
@@ -139,16 +165,41 @@ final class DockController {
         window?.orderOut(nil)
         window = nil
         dockView = nil
+
+        // Dock-less themes (Windows 3.1 Program Manager): no dock bar, just overlays.
+        let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false
+        if hidesDock {
+            isVisible = false
+            DesktopIconsController.shared.update()
+            ProgramManagerController.shared.update()
+            SGIDesktopController.shared.update()
+            return
+        }
+
+        // Switching to a dock theme — ensure desktop overlays are gone,
+        // refresh desktop icons, and show the dock bar.
+        ProgramManagerController.shared.hide()
+        SGIDesktopController.shared.hide()
+        DesktopIconsController.shared.update()
+
         createWindow()
-        if wasVisible {
-            // Use orderFront(nil) instead of show()'s orderFrontRegardless()
-            // so the dock (level 24) stays below the shader overlay (level 25).
-            repositionWindow()
-            window?.orderFront(nil)
-            isVisible = true
-            if AppSettings.shared.dockHideSystemDock && !didHideSystemDock {
-                applySystemDockPolicy()
-            }
+        // Use orderFront(nil) instead of show()'s orderFrontRegardless()
+        // so the dock (level 24) stays below the shader overlay (level 25).
+        repositionWindow()
+        window?.orderFront(nil)
+        isVisible = true
+        // Re-apply unconditionally (not gated on !didHideSystemDock): the dock edge
+        // may have changed (position override), so the system Dock must be re-placed
+        // to a non-conflicting edge. applySystemDockPolicy() preserves the original
+        // saved state (guarded by originalDockAutoHide == nil).
+        if AppSettings.shared.dockHideSystemDock {
+            applySystemDockPolicy()
+        }
+        _ = wasVisible
+        // Re-evaluate after a short delay to avoid false fullscreen detection
+        // on the newly created window.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.evaluateVisibility()
         }
     }
 
@@ -161,11 +212,18 @@ final class DockController {
         dockView.horizontalMagOverflow = 0
         let (width, height, magOverflow, hMagOverflow, dynScale) = calculateDockSize(dockView: dockView, screen: screen)
 
-        let frame = dockFrame(screen: screen, width: width, height: height)
+        let onScreen = dockFrame(screen: screen, width: width, height: height)
+        // Respect auto-hide: if the dock is currently hidden, keep it parked
+        // offscreen. Otherwise a background reposition (e.g. running-apps change,
+        // screen-params change) would yank the hidden dock back into view.
+        let frame = (autoHideActive && !autoHideVisible)
+            ? offscreenFrame(onScreen, screen: screen)
+            : onScreen
+        // dockView is laid out at the on-screen size regardless of park position.
         window.setFrame(frame, display: true)
         dockView.dynamicScale = dynScale
         dockView.horizontalMagOverflow = hMagOverflow
-        dockView.frame = NSRect(origin: .zero, size: frame.size)
+        dockView.frame = NSRect(origin: .zero, size: onScreen.size)
         dockView.magnificationOverflow = magOverflow
         dockView.relayoutItems()
     }
@@ -179,34 +237,53 @@ final class DockController {
         let iconSize = (theme?.dock.iconSize ?? 64) * scale
         let isVert = theme?.isVertical ?? false
         let hasMag = (theme?.hasMagnification == true) && AppSettings.shared.dockMagnification
+        let maxScale = theme?.magnificationMaxScale ?? 2.0
 
+        var dynScale: CGFloat = 1.0
+
+        // ── Vertical dock (left/right edge) ──────────────────────────────
+        // The long axis is the screen HEIGHT; clamp the icon stack to fit so
+        // icons never run off-screen (fixes Mountain Lion oversize too).
+        if isVert {
+            let maxLen = screen.visibleFrame.height - 16
+            // Headroom (per side) so magnified icons can reflow apart (to avoid
+            // overlap) and the end icons don't clip. Covers the worst-case one-sided
+            // push when hovering an end icon.
+            let vpadU = hasMag ? iconSize * (maxScale - 1.0) * 2.5 : 0
+            let needed = idealWidth + 2 * vpadU
+            if needed > maxLen { dynScale = maxLen / needed }
+            let effectiveIconSize = iconSize * dynScale
+            // Perpendicular pop-out room: icons grow toward the interior into this gap.
+            // Extra-wide (×1.6) so the magnified icon clearly protrudes OUT of the bar
+            // instead of just filling it — like a real Snow Leopard side dock.
+            let pop: CGFloat = hasMag ? effectiveIconSize * (maxScale - 1.0) * 1.6 : 0
+            let vpad = vpadU * dynScale
+            let width = dockBarHeight * dynScale + pop
+            let height = idealWidth * dynScale + 2 * vpad
+            // magOverflow → perpendicular pop room; hMagOverflow → per-side length pad.
+            return (width, height, pop, vpad, dynScale)
+        }
+
+        // ── Horizontal dock (bottom edge) ────────────────────────────────
         // Horizontal magnification overflow: extra space on each side for dock bar expansion
-        let hMagOverflow: CGFloat = hasMag
-            ? iconSize * ((theme?.magnificationMaxScale ?? 2.0) - 1.0) * 1.2
-            : 0
+        let hMagOverflow: CGFloat = hasMag ? iconSize * (maxScale - 1.0) * 1.2 : 0
 
         // Calculate dynamic scale to fit screen
-        var dynScale: CGFloat = 1.0
         let maxWidth = screen.visibleFrame.width - 20  // 10px margin each side
         let totalWidth = idealWidth + hMagOverflow * 2
 
-        if !isVert && theme?.isFullWidth != true && totalWidth > maxWidth {
+        if theme?.isFullWidth != true && totalWidth > maxWidth {
             dynScale = maxWidth / totalWidth
         }
 
         let effectiveIconSize = iconSize * dynScale
-        let magOverflow: CGFloat = hasMag
-            ? effectiveIconSize * ((theme?.magnificationMaxScale ?? 2.0) - 1.0)
-            : 0
+        let magOverflow: CGFloat = hasMag ? effectiveIconSize * (maxScale - 1.0) : 0
         let effectiveHMagOverflow = hMagOverflow * dynScale
         let shortAxis = dockBarHeight * dynScale + magOverflow
 
         let width: CGFloat
         let height: CGFloat
-        if isVert {
-            width = shortAxis
-            height = idealWidth
-        } else if theme?.isFullWidth == true {
+        if theme?.isFullWidth == true {
             width = screen.frame.width
             height = shortAxis
         } else {
@@ -220,36 +297,37 @@ final class DockController {
     private func dockFrame(screen: NSScreen, width: CGFloat, height: CGFloat) -> NSRect {
         let visible = screen.visibleFrame
         let config = ThemeManager.shared.activeTheme?.config
+        let position = config?.effectiveDockPosition ?? "bottom"
+        let alignment = config?.dockAlignment ?? "center"
+
         if config?.isVertical == true {
-            let offset = config?.dockEdgeOffset ?? 4
-            let alignment = config?.dockAlignment ?? "center"
-            let x = visible.minX + offset
+            // Vertical dock — flush against the left/right screen edge (no gap).
+            let x = (position == "right") ? (visible.maxX - width) : visible.minX
             let y: CGFloat
             switch alignment {
-            case "bottom":
-                y = visible.minY + offset
-            case "top":
-                y = visible.maxY - height - offset
-            default: // center
-                y = visible.midY - height / 2
+            case "bottom": y = visible.minY
+            case "top":    y = visible.maxY - height
+            default:       y = visible.midY - height / 2
             }
             return NSRect(x: x, y: y, width: width, height: height)
         }
-        if config?.isFullWidth == true {
-            return NSRect(x: screen.frame.minX, y: visible.minY, width: screen.frame.width, height: height)
-        }
+
+        // Horizontal dock — top or bottom edge
         let offset = config?.dockEdgeOffset ?? 8
-        let alignment = config?.dockAlignment ?? "center"
+        let yBottom = visible.minY + offset
+        let yTop = visible.maxY - height - offset
+        let y = (position == "top") ? yTop : yBottom
+
+        if config?.isFullWidth == true {
+            let fullY = (position == "top") ? (screen.frame.maxY - height) : visible.minY
+            return NSRect(x: screen.frame.minX, y: fullY, width: screen.frame.width, height: height)
+        }
         let x: CGFloat
         switch alignment {
-        case "left":
-            x = visible.minX + offset
-        case "right":
-            x = visible.maxX - width - offset
-        default:
-            x = visible.midX - width / 2
+        case "left":  x = visible.minX + offset
+        case "right": x = visible.maxX - width - offset
+        default:      x = visible.midX - width / 2
         }
-        let y = visible.minY + offset
         return NSRect(x: x, y: y, width: width, height: height)
     }
 
@@ -264,25 +342,47 @@ final class DockController {
 
     // MARK: - Visibility
 
+    private func dockLog(_ msg: String) {
+        let ts = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        let line = "[\(ts)] \(msg)\n"
+        let logURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("retromac_dock.log")
+        if let data = line.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: logURL.path) {
+                if let handle = try? FileHandle(forWritingTo: logURL) {
+                    handle.seekToEndOfFile()
+                    handle.write(data)
+                    handle.closeFile()
+                }
+            } else {
+                try? data.write(to: logURL)
+            }
+        }
+    }
+
     private func evaluateVisibility() {
         let settings = AppSettings.shared
         guard settings.dockEnabled else {
+            dockLog("evaluateVisibility: dockEnabled=false → hide")
             hide()
             return
         }
 
         if let manual = manualToggle {
+            dockLog("evaluateVisibility: manual=\(manual)")
             if manual { show() } else { hide() }
             return
         }
 
         if isFrontmostAppFullscreen() {
+            dockLog("evaluateVisibility: fullscreen → hide (isOnActiveSpace=\(window?.isOnActiveSpace ?? false), isVisible=\(window?.isVisible ?? false), windowNum=\(window?.windowNumber ?? -1))")
             hide()
             return
         }
 
         // When auto-hide is active, don't force-show — let the mouse monitors handle it
-        if settings.dockAutoHide {
+        if autoHideActive {
+            dockLog("evaluateVisibility: autoHide active, autoHideVisible=\(autoHideVisible)")
             if !autoHideVisible {
                 // Position offscreen so it's ready to animate in
                 hideOffscreen()
@@ -313,7 +413,123 @@ final class DockController {
         }
     }
 
+    // MARK: - Control Strip Collapse Animation
+
+    /// Animate the Control Strip "reveal" like a roller blind unrolling left→right.
+    /// The window instantly resizes to full, then a clip mask animates the reveal.
+    private func animateControlStripToggle(collapsed: Bool) {
+        guard let window = window, let dockView = dockView else { return }
+        let screen = targetScreen()
+
+        // First: recalculate layout at the target state
+        dockView.dynamicScale = 1.0
+        dockView.horizontalMagOverflow = 0
+        let (width, height, magOverflow, hMagOverflow, dynScale) = calculateDockSize(dockView: dockView, screen: screen)
+        let targetFrame = dockFrame(screen: screen, width: width, height: height)
+
+        if collapsed {
+            // Collapsing: animate clip from full width → left cap only, then resize window
+            let startW = window.frame.width
+            let endW = targetFrame.width
+            dockView.wantsLayer = true
+            let mask = CALayer()
+            mask.backgroundColor = CGColor.white
+            mask.frame = CGRect(x: 0, y: 0, width: startW, height: targetFrame.height)
+            dockView.layer?.mask = mask
+
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.35)
+            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeInEaseOut))
+            CATransaction.setCompletionBlock {
+                dockView.layer?.mask = nil
+                window.setFrame(targetFrame, display: true)
+                dockView.dynamicScale = dynScale
+                dockView.horizontalMagOverflow = hMagOverflow
+                dockView.frame = NSRect(origin: .zero, size: targetFrame.size)
+                dockView.magnificationOverflow = magOverflow
+                dockView.relayoutItems()
+            }
+            mask.frame = CGRect(x: 0, y: 0, width: endW, height: targetFrame.height)
+            CATransaction.commit()
+
+        } else {
+            // Expanding: set window to full size immediately, then animate clip from left cap → full
+            let leftCapW = dockView.controlStripLeftCapWidth
+            window.setFrame(targetFrame, display: false)
+            dockView.dynamicScale = dynScale
+            dockView.horizontalMagOverflow = hMagOverflow
+            dockView.frame = NSRect(origin: .zero, size: targetFrame.size)
+            dockView.magnificationOverflow = magOverflow
+            dockView.relayoutItems()
+
+            // Set up clip mask starting at left cap width
+            dockView.wantsLayer = true
+            let mask = CALayer()
+            mask.backgroundColor = CGColor.white
+            mask.frame = CGRect(x: 0, y: 0, width: leftCapW, height: targetFrame.height)
+            dockView.layer?.mask = mask
+
+            // Force layout before animation
+            CATransaction.flush()
+
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.4)
+            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeOut))
+            CATransaction.setCompletionBlock {
+                dockView.layer?.mask = nil
+            }
+            mask.frame = CGRect(x: 0, y: 0, width: targetFrame.width, height: targetFrame.height)
+            CATransaction.commit()
+        }
+    }
+
     // MARK: - Auto-Hide
+
+    /// Auto-hide is active if the theme opts in (its original had it) or the global toggle is on.
+    private var autoHideActive: Bool {
+        if ThemeManager.shared.activeTheme?.config.dockAutoHideEnabled == true { return true }
+        return AppSettings.shared.dockAutoHide
+    }
+
+    private func dockEdge() -> String {
+        ThemeManager.shared.activeTheme?.config.effectiveDockPosition ?? "bottom"
+    }
+
+    /// Frame moved fully offscreen perpendicular to the dock's edge.
+    private func offscreenFrame(_ frame: NSRect, screen: NSScreen) -> NSRect {
+        var f = frame
+        switch dockEdge() {
+        case "top":   f.origin.y = screen.frame.maxY + frame.height
+        case "left":  f.origin.x = screen.frame.minX - frame.width
+        case "right": f.origin.x = screen.frame.maxX + frame.width
+        default:      f.origin.y = screen.frame.minY - frame.height   // bottom
+        }
+        return f
+    }
+
+    /// Hot zone along the dock's edge that reveals the dock.
+    private func autoHideTriggerZone(screen: NSScreen) -> NSRect {
+        let t = autoHideTriggerHeight
+        let sf = screen.frame
+        switch dockEdge() {
+        case "top":   return NSRect(x: sf.minX, y: sf.maxY - t, width: sf.width, height: t)
+        case "left":  return NSRect(x: sf.minX, y: sf.minY, width: t, height: sf.height)
+        case "right": return NSRect(x: sf.maxX - t, y: sf.minY, width: t, height: sf.height)
+        default:      return NSRect(x: sf.minX, y: sf.minY, width: sf.width, height: t)
+        }
+    }
+
+    /// Install or remove auto-hide based on current theme/global setting, then re-evaluate.
+    func refreshAutoHide() {
+        if autoHideActive {
+            installAutoHideMonitors()
+        } else {
+            removeAutoHideMonitors()
+            autoHideVisible = false
+            let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false
+            if isStarted, !hidesDock { show() }
+        }
+    }
 
     private func installAutoHideMonitors() {
         removeAutoHideMonitors()
@@ -344,7 +560,7 @@ final class DockController {
     }
 
     private func handleMouseMoved() {
-        guard AppSettings.shared.dockAutoHide,
+        guard autoHideActive,
               AppSettings.shared.dockEnabled,
               manualToggle == nil || manualToggle == true,
               !isFrontmostAppFullscreen(),
@@ -352,57 +568,23 @@ final class DockController {
 
         let screen = targetScreen()
         let mouseLocation = NSEvent.mouseLocation
-        let config = ThemeManager.shared.activeTheme?.config
+        let triggerZone = autoHideTriggerZone(screen: screen)
 
-        if config?.isVertical == true {
-            // Vertical dock: trigger on left edge
-            let triggerZone = NSRect(
-                x: screen.frame.minX,
-                y: screen.frame.minY,
-                width: autoHideTriggerHeight,
-                height: screen.frame.height
-            )
-            if !autoHideVisible && triggerZone.contains(mouseLocation) {
-                slideIn()
-            } else if autoHideVisible, let dockFrame = window?.frame {
-                let expandedFrame = dockFrame.insetBy(dx: -autoHideLeaveMargin, dy: -autoHideLeaveMargin)
-                if !expandedFrame.contains(mouseLocation) {
-                    slideOut()
-                }
-            }
-        } else {
-            // Horizontal dock (bottom): trigger on bottom edge
-            let triggerZone = NSRect(
-                x: screen.frame.minX,
-                y: screen.frame.minY,
-                width: screen.frame.width,
-                height: autoHideTriggerHeight
-            )
-            if !autoHideVisible && triggerZone.contains(mouseLocation) {
-                slideIn()
-            } else if autoHideVisible, let dockFrame = window?.frame {
-                let expandedFrame = dockFrame.insetBy(dx: -autoHideLeaveMargin, dy: -autoHideLeaveMargin)
-                if !expandedFrame.contains(mouseLocation) {
-                    slideOut()
-                }
+        if !autoHideVisible && triggerZone.contains(mouseLocation) {
+            slideIn()
+        } else if autoHideVisible, let dockFrame = window?.frame {
+            let expandedFrame = dockFrame.insetBy(dx: -autoHideLeaveMargin, dy: -autoHideLeaveMargin)
+            if !expandedFrame.contains(mouseLocation) {
+                slideOut()
             }
         }
     }
 
-    /// Position the dock window offscreen (below/left of visible area) without ordering out
+    /// Position the dock window offscreen (perpendicular to its edge) without ordering out
     private func hideOffscreen() {
         guard let window = window else { return }
         let screen = targetScreen()
-        let config = ThemeManager.shared.activeTheme?.config
-        var frame = window.frame
-
-        if config?.isVertical == true {
-            frame.origin.x = screen.frame.minX - frame.width
-        } else {
-            frame.origin.y = screen.frame.minY - frame.height
-        }
-
-        window.setFrame(frame, display: false)
+        window.setFrame(offscreenFrame(window.frame, screen: screen), display: false)
         window.orderFrontRegardless()
         isVisible = true  // Window is technically ordered in (for system dock policy) but offscreen
         autoHideVisible = false
@@ -411,6 +593,9 @@ final class DockController {
     private func slideIn() {
         guard !autoHideVisible, !autoHideAnimating else { return }
         autoHideAnimating = true
+        // Mark visible first so repositionWindow() computes the on-screen target
+        // (it parks the window offscreen while autoHideVisible is false).
+        autoHideVisible = true
 
         repositionWindow()
         guard let window = window else {
@@ -420,15 +605,9 @@ final class DockController {
 
         let targetFrame = window.frame
         let screen = targetScreen()
-        let config = ThemeManager.shared.activeTheme?.config
 
-        // Start offscreen
-        var startFrame = targetFrame
-        if config?.isVertical == true {
-            startFrame.origin.x = screen.frame.minX - targetFrame.width
-        } else {
-            startFrame.origin.y = screen.frame.minY - targetFrame.height
-        }
+        // Start offscreen (perpendicular to the dock's edge)
+        let startFrame = offscreenFrame(targetFrame, screen: screen)
         window.setFrame(startFrame, display: false)
         window.orderFrontRegardless()
 
@@ -457,19 +636,12 @@ final class DockController {
         }
 
         let screen = targetScreen()
-        let config = ThemeManager.shared.activeTheme?.config
-        var offscreenFrame = window.frame
-
-        if config?.isVertical == true {
-            offscreenFrame.origin.x = screen.frame.minX - offscreenFrame.width
-        } else {
-            offscreenFrame.origin.y = screen.frame.minY - offscreenFrame.height
-        }
+        let off = offscreenFrame(window.frame, screen: screen)
 
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.15
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            window.animator().setFrame(offscreenFrame, display: true)
+            window.animator().setFrame(off, display: true)
         }, completionHandler: { [weak self] in
             self?.autoHideVisible = false
             self?.autoHideAnimating = false
@@ -482,6 +654,9 @@ final class DockController {
         // This replaces CGWindowListCopyWindowInfo which requires Screen Recording
         // permission (TCC) on macOS 15+ and triggered a dialog on every launch.
         guard let dockWindow = window else { return false }
+        // A newly created window may briefly report isOnActiveSpace = false before
+        // it is fully ordered on screen. Only trust the check if the window is visible.
+        guard dockWindow.isVisible || isVisible else { return false }
         return !dockWindow.isOnActiveSpace
     }
 
@@ -498,9 +673,27 @@ final class DockController {
             ThemeManager.shared.reload(selectTheme: newTheme)
             ThemeManager.shared.clearCache()
             ThemeManager.shared.applyWallpaper()
+            if let theme = ThemeManager.shared.activeTheme {
+                SplashController.shared.showIfEnabled(for: theme)
+            }
             self?.recreateWindow()
             // Note: no .dockThemeChanged post needed — recreateWindow() already
             // creates a fresh DockView with the new theme's layout.
+        }.store(in: &settingsObservers)
+
+        // NOTE: @Published fires in willSet — BEFORE the new value is stored. These
+        // handlers re-read the property (effectiveDockPosition / dockAutoHideEnabled),
+        // so they must run on the NEXT runloop tick, once the value is committed.
+        // Otherwise every change is applied one step late (stale read).
+        s.$themeDockPositionOverride.dropFirst().sink { [weak self] _ in
+            DispatchQueue.main.async { self?.recreateWindow() }
+        }.store(in: &settingsObservers)
+
+        s.$themeDockAutoHide.dropFirst().sink { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.refreshAutoHide()
+                self?.evaluateVisibility()
+            }
         }.store(in: &settingsObservers)
 
         s.$dockTransparency.dropFirst().sink { [weak self] _ in
@@ -522,6 +715,10 @@ final class DockController {
 
         s.$dockMagnification.dropFirst().sink { [weak self] _ in
             self?.recreateWindow()
+        }.store(in: &settingsObservers)
+
+        s.$themeOrientationOverrides.dropFirst().sink { [weak self] _ in
+            DispatchQueue.main.async { self?.recreateWindow() }
         }.store(in: &settingsObservers)
 
         s.$dockFix.dropFirst().sink { enabled in
@@ -555,20 +752,41 @@ final class DockController {
                 originalDockPosition = readSystemDockPref("orientation") ?? "bottom"
                 print("[Dock] Saved original dock state: autohide=\(originalDockAutoHide ?? false), position=\(originalDockPosition ?? "bottom")")
             }
-            // Move system dock to opposite side of theme dock
-            let themePos = ThemeManager.shared.activeTheme?.config.dock.position ?? "bottom"
-            let hidePosition: String
-            switch themePos {
-            case "left":   hidePosition = "right"
-            case "right":  hidePosition = "left"
-            case "top":    hidePosition = "left"
-            default:       hidePosition = "left"  // bottom → left
-            }
+            // Move the real macOS Dock to a DIFFERENT screen edge than RetroMac's
+            // dock so the two never "double up" on the same edge. macOS only
+            // supports left/bottom/right for the Dock orientation (no top), so we
+            // map RetroMac's effective edge to a non-conflicting system edge.
+            // Use effectiveDockPosition so a user position override (context menu)
+            // is honored, not just the theme's baked-in default.
+            let themePos = ThemeManager.shared.activeTheme?.config.effectiveDockPosition ?? "bottom"
+            let hidePosition = systemDockEdge(forThemeEdge: themePos)
             setSystemDockPrefs(autohide: true, position: hidePosition)
             didHideSystemDock = true
+            // Crash-safe: persist so we can restore even after a force-quit/crash.
+            let d = UserDefaults.standard
+            d.set(true, forKey: "sysDockHidden")
+            d.set(originalDockAutoHide ?? false, forKey: "sysDockOrigAutohide")
+            d.set(originalDockPosition ?? "bottom", forKey: "sysDockOrigPosition")
             print("[Dock] System dock moved to \(hidePosition) + auto-hide (theme dock is \(themePos))")
         } else if didHideSystemDock {
             restoreSystemDock()
+        }
+    }
+
+    /// Maps RetroMac's dock edge to a macOS-Dock edge that does NOT share the
+    /// same screen edge, so the real Dock never overlaps RetroMac's dock.
+    /// macOS Dock orientation only supports "left", "bottom", "right" (no top).
+    ///   - RetroMac bottom → system left
+    ///   - RetroMac left   → system bottom
+    ///   - RetroMac right  → system bottom  (left is occupied/visually close on right-side layouts)
+    ///   - RetroMac top    → system bottom  (top isn't a valid Dock edge anyway)
+    private func systemDockEdge(forThemeEdge themeEdge: String) -> String {
+        switch themeEdge {
+        case "bottom": return "left"
+        case "left":   return "bottom"
+        case "right":  return "bottom"
+        case "top":    return "bottom"
+        default:       return "left"
         }
     }
 
@@ -580,7 +798,31 @@ final class DockController {
         didHideSystemDock = false
         originalDockAutoHide = nil
         originalDockPosition = nil
+        clearPersistedDockState()
         print("[Dock] System dock restored (autohide=\(restoreHide), position=\(restorePos))")
+    }
+
+    private func clearPersistedDockState() {
+        let d = UserDefaults.standard
+        d.removeObject(forKey: "sysDockHidden")
+        d.removeObject(forKey: "sysDockOrigAutohide")
+        d.removeObject(forKey: "sysDockOrigPosition")
+    }
+
+    /// Crash recovery: if a previous session left the system dock hidden (force-quit /
+    /// crash before restore), put it back. Safe to call at launch — the theme dock
+    /// always starts disabled, so the system dock should be in its original state.
+    func restoreSystemDockIfNeeded() {
+        let d = UserDefaults.standard
+        guard d.bool(forKey: "sysDockHidden") else { return }
+        let restoreHide = d.bool(forKey: "sysDockOrigAutohide")
+        let restorePos = d.string(forKey: "sysDockOrigPosition") ?? "bottom"
+        setSystemDockPrefs(autohide: restoreHide, position: restorePos)
+        didHideSystemDock = false
+        originalDockAutoHide = nil
+        originalDockPosition = nil
+        clearPersistedDockState()
+        print("[Dock] Recovered system dock from previous session (autohide=\(restoreHide), position=\(restorePos))")
     }
 
     private func readSystemDockPref(_ key: String) -> String? {
@@ -624,6 +866,30 @@ final class DockController {
     }
 
     // MARK: - Context Menu
+
+    /// Right-click on the dock background → move the dock to any edge + auto-hide toggle.
+    private func showDockPositionMenu(at point: NSPoint) {
+        guard let dockView = dockView else { return }
+        let menu = NSMenu()
+        // Title row (so the menu isn't empty-looking)
+        let header = NSMenuItem(title: "Dock", action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+        appendDockPositionItems(to: menu)
+        menu.popUp(positioning: nil, at: point, in: dockView)
+    }
+
+    @objc private func menuSetDockPosition(_ sender: NSMenuItem) {
+        guard let pos = sender.representedObject as? String,
+              let name = ThemeManager.shared.activeTheme?.config.name else { return }
+        AppSettings.shared.themeDockPositionOverride[name] = pos
+    }
+
+    @objc private func menuToggleAutoHide(_ sender: NSMenuItem) {
+        guard let name = ThemeManager.shared.activeTheme?.config.name else { return }
+        let current = AppSettings.shared.themeDockAutoHide[name] ?? false
+        AppSettings.shared.themeDockAutoHide[name] = !current
+    }
 
     private func showContextMenu(for bundleID: String, at point: NSPoint) {
         let menu = NSMenu()
@@ -701,10 +967,35 @@ final class DockController {
             menu.addItem(add)
         }
 
+        appendDockPositionItems(to: menu)
+
         if let window = window {
             window.makeKeyAndOrderFront(nil)
             let localPoint = window.convertPoint(fromScreen: point)
             menu.popUp(positioning: nil, at: localPoint, in: window.contentView)
+        }
+    }
+
+    /// Adds the "Dock Position ▸" submenu (+ Auto-Hide) to any dock context menu.
+    private func appendDockPositionItems(to menu: NSMenu) {
+        guard let theme = ThemeManager.shared.activeTheme?.config else { return }
+        menu.addItem(.separator())
+        let current = theme.effectiveDockPosition
+        let posTitle = NSMenuItem(title: "Dock Position", action: nil, keyEquivalent: "")
+        let posMenu = NSMenu()
+        for (label, value) in [("Bottom", "bottom"), ("Left", "left"), ("Right", "right")] {
+            let mi = NSMenuItem(title: label, action: #selector(menuSetDockPosition(_:)), keyEquivalent: "")
+            mi.target = self; mi.representedObject = value
+            if value == current { mi.state = .on }
+            posMenu.addItem(mi)
+        }
+        posTitle.submenu = posMenu
+        menu.addItem(posTitle)
+        if theme.supportsAutoHide {
+            let ah = NSMenuItem(title: "Auto-Hide Dock", action: #selector(menuToggleAutoHide(_:)), keyEquivalent: "")
+            ah.target = self
+            ah.state = theme.dockAutoHideEnabled ? .on : .off
+            menu.addItem(ah)
         }
     }
 
@@ -896,6 +1187,13 @@ final class DockController {
     private func registerHotkey() {
         unregisterHotkey()
         let settings = AppSettings.shared
+        // Only register if a valid hotkey is configured: must have at least one
+        // system modifier (Cmd/Ctrl/Opt/Shift). A bare key without modifier would
+        // hijack normal typing (e.g. code=0 mods=0 = the "a" key).
+        guard settings.dockHotkeyModifiers != 0 else {
+            print("[Dock] No valid hotkey configured — skipping registration")
+            return
+        }
         let hotKeyID = EventHotKeyID(signature: OSType(0x524D444B), id: 2) // "RMDK"
         var ref: EventHotKeyRef?
         let status = RegisterEventHotKey(

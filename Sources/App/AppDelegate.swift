@@ -14,12 +14,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var isActive = false
     var currentPresetName: String!
     private var hotKeyRef: EventHotKeyRef?
+    private var screenshotHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private(set) var currentIntensity: Float!
     private(set) var currentVignetteIntensity: Float!
     private let settingsWindow = SettingsWindowController()
-    private let onboardingWindow = OnboardingWindowController()
-    private let whatsNewWindow = WhatsNewWindowController()
+    private let welcomeFlow = WelcomeFlowWindowController()
     private let fpsOverlay = FPSOverlayController()
     private let windowPicker = WindowPicker()
     private let tvBrowser = TVBrowserWindow()
@@ -34,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var permissionPollTimer: Timer?
 
     // Retro Viewport (movable shader window)
-    private let retroViewport = RetroViewport()
+    private(set) var retroViewport = RetroViewport()
 
     // Video recording with shader effects
     private var shaderRecorder: ShaderRecorder?
@@ -42,6 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Save/restore state for TV window overlay
     var savedPreset: String?
     var savedWasActive = false
+
+    // Live-updating menu views (updated in-place when toggle state changes)
+    private var menuHeaderView: MenuHeaderView?
+    private var shaderPillToggle: PillToggleView?
+    private var cameraPillToggle: PillToggleView?
+    private var viewportPillToggle: PillToggleView?
 
     var captureModeDescription: String {
         guard let controller = overlayController else { return "—" }
@@ -66,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Restore system UI if previous session crashed while UI was hidden
         SystemUIHelper.restoreIfNeeded()
+        DockController.shared.restoreSystemDockIfNeeded()
 
         NSApp.setActivationPolicy(.accessory)
         setupMenuBar()
@@ -81,13 +88,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.tvBrowser.open(bookmark: bookmark)
         }
 
-        // Apply theme shader when theme changes via Settings
+        // Apply theme shader and update desktop overlays when theme changes via Settings
         NotificationCenter.default.addObserver(forName: .dockThemeChanged, object: nil, queue: .main) { [weak self] _ in
             self?.applyThemePresetIfNeeded()
+            DesktopIconsController.shared.update()
+            ProgramManagerController.shared.update()
+            SGIDesktopController.shared.update()
         }
 
         // Rebuild menu when virtual camera state changes (start/stop is async)
         NotificationCenter.default.addObserver(forName: .virtualCameraStateChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.rebuildMenu()
+        }
+
+        // Rebuild menu when viewport is closed via its window close button
+        NotificationCenter.default.addObserver(forName: .retroViewportDidClose, object: nil, queue: .main) { [weak self] _ in
             self?.rebuildMenu()
         }
 
@@ -102,22 +117,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.enableOnLaunch = false
         settings.dockEnabled = false
 
-        if !settings.onboardingComplete {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.onboardingWindow.show()
-            }
-        } else {
-            // Show What's New if user updated to a new version
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.whatsNewWindow.showIfNeeded()
-            }
-        }
-
-        // Friendly nag: "Enjoying RetroMac?" (max once per day, not if licensed)
-        if LicenseManager.shared.shouldShowNag {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                self.showFriendlyNag()
-            }
+        // Unified welcome flow: What's New → Setup → Coffee/Unlock, shown conditionally.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            self.welcomeFlow.showIfNeeded()
         }
 
         // Sparkle auto-updates (checks automatically on launch)
@@ -223,31 +225,396 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .withSymbolConfiguration(config)
     }
 
+    // MARK: - Menu Custom Views
+
+    /// Header strip showing preset name, status, and gear button
+    private final class MenuHeaderView: NSView {
+        private let presetLabel = NSTextField(labelWithString: "")
+        private let statusLabel = NSTextField(labelWithString: "")
+        private let gearButton = NSButton()
+        private let iconView = NSView()
+        private let glowDot = NSView(frame: NSRect(x: 9, y: 9, width: 8, height: 8))
+        private var onGear: (() -> Void)?
+
+        init(presetName: String, statusText: String, shaderOn: Bool, onGear: @escaping () -> Void) {
+            self.onGear = onGear
+            super.init(frame: NSRect(x: 0, y: 0, width: 300, height: 50))
+            autoresizingMask = .width
+
+            // Icon — rounded square with dark background
+            iconView.frame = NSRect(x: 14, y: 12, width: 26, height: 26)
+            iconView.wantsLayer = true
+            iconView.layer?.backgroundColor = NSColor(white: 0.12, alpha: 1).cgColor
+            iconView.layer?.cornerRadius = 6
+            addSubview(iconView)
+
+            // Status dot in center
+            glowDot.wantsLayer = true
+            glowDot.layer?.cornerRadius = 4
+            glowDot.layer?.shadowRadius = 4
+            glowDot.layer?.shadowOpacity = 0.8
+            glowDot.layer?.shadowOffset = .zero
+            iconView.addSubview(glowDot)
+
+            // Preset name
+            presetLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+            presetLabel.frame = NSRect(x: 48, y: 26, width: 180, height: 16)
+            presetLabel.lineBreakMode = .byTruncatingTail
+            addSubview(presetLabel)
+
+            // Status line
+            statusLabel.font = NSFont.systemFont(ofSize: 11, weight: .regular)
+            statusLabel.frame = NSRect(x: 48, y: 9, width: 180, height: 14)
+            statusLabel.lineBreakMode = .byTruncatingTail
+            addSubview(statusLabel)
+
+            // Gear button — far right
+            gearButton.bezelStyle = .inline
+            gearButton.isBordered = false
+            let gearConfig = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+            gearButton.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Settings")?
+                .withSymbolConfiguration(gearConfig)
+            gearButton.imagePosition = .imageOnly
+            gearButton.contentTintColor = .secondaryLabelColor
+            gearButton.target = self
+            gearButton.action = #selector(gearTapped)
+            addSubview(gearButton)
+
+            // Apply initial state
+            update(shaderOn: shaderOn, presetName: presetName, statusText: statusText)
+        }
+
+        /// Update header in-place (while menu is open)
+        func update(shaderOn: Bool, presetName: String, statusText: String) {
+            let dotColor: NSColor = shaderOn
+                ? NSColor(red: 0.2, green: 0.9, blue: 0.3, alpha: 1)
+                : NSColor(red: 0.85, green: 0.25, blue: 0.2, alpha: 1)
+            glowDot.layer?.backgroundColor = dotColor.cgColor
+            glowDot.layer?.shadowColor = dotColor.cgColor
+
+            presetLabel.stringValue = presetName
+            presetLabel.textColor = shaderOn ? NSColor(red: 0.20, green: 0.45, blue: 0.22, alpha: 1) : .labelColor
+
+            statusLabel.stringValue = statusText
+            statusLabel.textColor = .secondaryLabelColor
+        }
+
+        override func layout() {
+            super.layout()
+            let gearSize: CGFloat = 24
+            gearButton.frame = NSRect(x: bounds.width - gearSize - 12, y: 13, width: gearSize, height: gearSize)
+        }
+
+        required init?(coder: NSCoder) { fatalError() }
+
+        @objc private func gearTapped() {
+            if let menu = enclosingMenuItem?.menu {
+                menu.cancelTracking()
+            }
+            onGear?()
+        }
+    }
+
+    /// Toggle row with SF Symbol, label, optional hotkey hint, and a custom green pill toggle
+    private final class MenuToggleRowView: NSView {
+        private let pillToggle: PillToggleView
+        private var onToggle: (() -> Void)?
+        private let highlightView = NSView()
+        private var hotkeyField: NSTextField?
+
+        init(icon: String, label: String, hotkeyHint: String?, pill: PillToggleView, onToggle: @escaping () -> Void) {
+            self.pillToggle = pill
+            self.onToggle = onToggle
+            super.init(frame: NSRect(x: 0, y: 0, width: 300, height: 26))
+            autoresizingMask = .width
+
+            // Highlight background (hidden by default)
+            highlightView.wantsLayer = true
+            highlightView.layer?.cornerRadius = 4
+            highlightView.isHidden = true
+            addSubview(highlightView)
+
+            // Icon
+            let iconImg = NSImage(systemSymbolName: icon, accessibilityDescription: nil)
+            let iconConfig = NSImage.SymbolConfiguration(scale: .small)
+            let iconView = NSImageView(image: iconImg?.withSymbolConfiguration(iconConfig) ?? NSImage())
+            iconView.frame = NSRect(x: 14, y: 5, width: 16, height: 16)
+            iconView.contentTintColor = .secondaryLabelColor
+            addSubview(iconView)
+
+            // Label
+            let labelField = NSTextField(labelWithString: label)
+            labelField.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+            labelField.textColor = .labelColor
+            labelField.frame = NSRect(x: 36, y: 5, width: 140, height: 16)
+            addSubview(labelField)
+
+            // Hotkey hint
+            if let hint = hotkeyHint {
+                let hf = NSTextField(labelWithString: hint)
+                hf.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+                hf.textColor = .tertiaryLabelColor
+                hf.alignment = .right
+                addSubview(hf)
+                hotkeyField = hf
+            }
+
+            addSubview(pillToggle)
+
+            // Track mouse for hover
+            updateTrackingAreas()
+        }
+
+        required init?(coder: NSCoder) { fatalError() }
+
+        override func layout() {
+            super.layout()
+            let w = bounds.width
+            // Position pill toggle at far right — pill is 36×18 (matches NSSwitch mini)
+            let toggleW: CGFloat = 36
+            let toggleH: CGFloat = 18
+            let toggleX = w - toggleW - 12
+            pillToggle.frame = NSRect(x: toggleX, y: (26 - toggleH) / 2, width: toggleW, height: toggleH)
+            // Hotkey hint before toggle
+            if let hf = hotkeyField {
+                hf.frame = NSRect(x: toggleX - 52, y: 5, width: 44, height: 16)
+            }
+            // Highlight fill
+            highlightView.frame = NSRect(x: 5, y: 1, width: w - 10, height: 24)
+        }
+
+        override func updateTrackingAreas() {
+            for area in trackingAreas { removeTrackingArea(area) }
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect],
+                owner: self,
+                userInfo: nil
+            )
+            addTrackingArea(area)
+        }
+
+        override func mouseUp(with event: NSEvent) {
+            pillToggle.toggle()
+            onToggle?()
+        }
+
+        override func mouseEntered(with event: NSEvent) {
+            highlightView.isHidden = false
+            highlightView.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.15).cgColor
+        }
+
+        override func mouseExited(with event: NSEvent) {
+            highlightView.isHidden = true
+        }
+    }
+
+    /// A 36×18 pill-shaped toggle: green when on, gray when off, white knob.
+    private final class PillToggleView: NSView {
+        var isOn: Bool {
+            didSet { needsDisplay = true }
+        }
+
+        init(isOn: Bool) {
+            self.isOn = isOn
+            super.init(frame: NSRect(x: 0, y: 0, width: 36, height: 18))
+            wantsLayer = true
+        }
+
+        required init?(coder: NSCoder) { fatalError() }
+
+        func toggle() {
+            isOn.toggle()
+        }
+
+        override func draw(_ dirtyRect: NSRect) {
+            let rect = bounds.insetBy(dx: 0.5, dy: 0.5)
+            let path = NSBezierPath(roundedRect: rect, xRadius: rect.height / 2, yRadius: rect.height / 2)
+
+            // Track color: green when on, gray when off
+            let trackColor: NSColor = isOn
+                ? NSColor(red: 0.20, green: 0.58, blue: 0.24, alpha: 1)  // phosphor green
+                : NSColor(white: 0.72, alpha: 1)
+            trackColor.setFill()
+            path.fill()
+
+            // Knob — white circle
+            let knobDiameter: CGFloat = 14
+            let knobY = (bounds.height - knobDiameter) / 2
+            let knobX = isOn ? bounds.width - knobDiameter - 2 : CGFloat(2)
+            let knobRect = NSRect(x: knobX, y: knobY, width: knobDiameter, height: knobDiameter)
+            let knobPath = NSBezierPath(ovalIn: knobRect)
+            NSColor.white.setFill()
+            knobPath.fill()
+
+            // Subtle shadow on knob
+            NSColor(white: 0, alpha: 0.12).setStroke()
+            knobPath.lineWidth = 0.5
+            knobPath.stroke()
+        }
+    }
+
+    // MARK: - Menu Builder Helpers
+
+    /// Create an NSAttributedString with a label and right-aligned value chip
+    private func menuTitle(_ label: String, value: String) -> NSAttributedString {
+        let para = NSMutableParagraphStyle()
+        let tabStop = NSTextTab(textAlignment: .right, location: 250)
+        para.tabStops = [tabStop]
+
+        let str = NSMutableAttributedString()
+        str.append(NSAttributedString(
+            string: label,
+            attributes: [
+                .font: NSFont.menuFont(ofSize: 14),
+                .paragraphStyle: para,
+            ]
+        ))
+        str.append(NSAttributedString(
+            string: "\t\(value)",
+            attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular),
+                .foregroundColor: NSColor.secondaryLabelColor,
+                .paragraphStyle: para,
+            ]
+        ))
+        return str
+    }
+
+    /// Create a section header item (disabled, small-caps style)
+    private func sectionLabel(_ text: String) -> NSMenuItem {
+        let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        item.attributedTitle = NSAttributedString(
+            string: text,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 10, weight: .bold),
+                .foregroundColor: NSColor.tertiaryLabelColor,
+            ]
+        )
+        item.isEnabled = false
+        return item
+    }
+
+    /// Look up preset display name by ID
+    private func presetDisplayName(for id: String?) -> String {
+        guard let id = id else { return "—" }
+        if let preset = PresetRegistry.builtinPresets.first(where: { $0.id == id }) {
+            return preset.displayName
+        }
+        if let preset = PresetRegistry.customPresets().first(where: { $0.id == id }) {
+            return preset.displayName
+        }
+        return id
+    }
+
+    /// Get the current display name for the value chip
+    private func currentDisplayName() -> String {
+        let tid = AppSettings.shared.targetDisplayID
+        if tid == 0 { return "All" }
+        for screen in NSScreen.screens {
+            if screen.displayID == tid { return screen.localizedName }
+        }
+        return "Unknown"
+    }
+
+    /// Get current bloom value string
+    private func bloomValueString() -> String {
+        let s = AppSettings.shared
+        if !s.bloomEnabled { return "Off" }
+        return "\(Int(s.bloomIntensity * 100))%"
+    }
+
+    /// Get current vignette value string
+    private func vignetteValueString() -> String {
+        if currentVignetteIntensity < 0.01 { return "Off" }
+        return "\(Int(currentVignetteIntensity * 100))%"
+    }
+
+    /// Get current theme value string
+    private func themeValueString() -> String {
+        let s = AppSettings.shared
+        if !s.dockEnabled { return "Off" }
+        return s.dockTheme
+    }
+
     private func rebuildMenu() {
         let menu = NSMenu()
         menu.autoenablesItems = false
         let settings = AppSettings.shared
-        let hk = settings.hotkeyDisplayString
+        let lm = LicenseManager.shared
+        let vcam = VirtualCameraManager.shared
 
-        // ── Toggle ──
-        let toggleTitle = isActive ? "Stop Shader (\(hk))" : "Start Shader (\(hk))"
-        let toggle = NSMenuItem(title: toggleTitle, action: #selector(toggleOverlay), keyEquivalent: "")
-        toggle.target = self
-        toggle.image = sfIcon(isActive ? "power.circle.fill" : "power.circle")
-        menu.addItem(toggle)
+        // ── Header strip ──
+        let presetName = presetDisplayName(for: currentPresetName)
+        let overlayStatus = isActive ? "Overlay on" : "Overlay off"
+        let displayName = currentDisplayName()
+        let statusText = "\(overlayStatus) · \(displayName)"
 
+        let headerView = MenuHeaderView(presetName: presetName, statusText: statusText, shaderOn: isActive) { [weak self] in
+            self?.openSettings()
+        }
+        menuHeaderView = headerView
+        let headerItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        headerItem.view = headerView
+        menu.addItem(headerItem)
         menu.addItem(NSMenuItem.separator())
 
-        // ── Presets Section ──
-        let presetsSectionHeader = NSMenuItem(title: "Presets", action: nil, keyEquivalent: "")
-        presetsSectionHeader.isEnabled = false
-        menu.addItem(presetsSectionHeader)
+        // ── Shader toggle ──
+        let shaderPill = PillToggleView(isOn: isActive)
+        shaderPillToggle = shaderPill
+        let shaderRow = MenuToggleRowView(
+            icon: "power.circle",
+            label: "Shader",
+            hotkeyHint: "\u{21E7}\u{2318}R",
+            pill: shaderPill
+        ) { [weak self] in
+            self?.toggleOverlay()
+            self?.updateMenuLive()
+        }
+        let shaderItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        shaderItem.view = shaderRow
+        menu.addItem(shaderItem)
 
-        // Presets — cascading category submenus
+        // ── Virtual Camera toggle ──
+        let cameraPill = PillToggleView(isOn: vcam.isRunning)
+        cameraPillToggle = cameraPill
+        let cameraRow = MenuToggleRowView(
+            icon: "camera.fill",
+            label: "Virtual Camera",
+            hotkeyHint: nil,
+            pill: cameraPill
+        ) { [weak self] in
+            self?.toggleVirtualCamera()
+            self?.updateMenuLive()
+        }
+        let cameraItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        cameraItem.view = cameraRow
+        menu.addItem(cameraItem)
+
+        // ── Retro Viewport toggle ──
+        let viewportPill = PillToggleView(isOn: retroViewport.isActive)
+        viewportPillToggle = viewportPill
+        let viewportRow = MenuToggleRowView(
+            icon: "viewfinder",
+            label: "Retro Viewport",
+            hotkeyHint: nil,
+            pill: viewportPill
+        ) { [weak self] in
+            self?.toggleViewport()
+            self?.updateMenuLive()
+        }
+        let viewportToggleItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        viewportToggleItem.view = viewportRow
+        menu.addItem(viewportToggleItem)
+
+        // ── PRESETS section ──
+        menu.addItem(sectionLabel("PRESETS"))
+
+        // Shader Presets submenu
         let presetsItem = NSMenuItem(title: "Shader Presets", action: nil, keyEquivalent: "")
         presetsItem.image = sfIcon("slider.horizontal.3")
+        presetsItem.attributedTitle = menuTitle("Shader Presets", value: presetName)
         let presetsMenu = NSMenu()
-        let lm = LicenseManager.shared
 
         // Monochrome lock icon for premium presets
         let lockIcon = sfIcon("lock.fill", scale: .small)
@@ -319,9 +686,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         presetsItem.submenu = presetsMenu
         menu.addItem(presetsItem)
 
-        // Intensity submenu
+        // Intensity submenu with value chip
         let intensityItem = NSMenuItem(title: "Intensity", action: nil, keyEquivalent: "")
         intensityItem.image = sfIcon("sun.max")
+        intensityItem.attributedTitle = menuTitle("Intensity", value: "\(Int(currentIntensity * 100))%")
         let intensityMenu = NSMenu()
         for pct in stride(from: 10, through: 100, by: 10) {
             let item = NSMenuItem(title: "\(pct)%", action: #selector(setIntensity(_:)), keyEquivalent: "")
@@ -333,9 +701,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         intensityItem.submenu = intensityMenu
         menu.addItem(intensityItem)
 
-        // Vignette submenu
+        // Vignette submenu with value chip (disabled for Lite presets)
+        let isLitePreset = Self.isLitePreset(currentPresetName)
         let vignetteItem = NSMenuItem(title: "Vignette", action: nil, keyEquivalent: "")
         vignetteItem.image = sfIcon("circle.circle")
+        vignetteItem.attributedTitle = menuTitle("Vignette", value: isLitePreset ? "n/a" : vignetteValueString())
+        vignetteItem.isEnabled = !isLitePreset
         let vignetteMenu = NSMenu()
         let vigOff = NSMenuItem(title: "Off", action: #selector(setVignette(_:)), keyEquivalent: "")
         vigOff.target = self
@@ -352,13 +723,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         vignetteItem.submenu = vignetteMenu
         menu.addItem(vignetteItem)
 
-        // Bloom submenu (MPS-based glow)
+        // Bloom submenu with value chip (disabled for Lite presets)
         let bloomItem = NSMenuItem(title: "Bloom", action: nil, keyEquivalent: "")
-        bloomItem.image = sfIcon("sun.max")
+        bloomItem.image = sfIcon("sparkles")
+        bloomItem.attributedTitle = menuTitle("Bloom", value: isLitePreset ? "n/a" : bloomValueString())
+        bloomItem.isEnabled = !isLitePreset
         let bloomMenu = NSMenu()
 
         let bloomToggle = NSMenuItem(
-            title: settings.bloomEnabled ? "✓ Enabled" : "Off",
+            title: settings.bloomEnabled ? "\u{2713} Enabled" : "Off",
             action: #selector(toggleBloom),
             keyEquivalent: ""
         )
@@ -378,9 +751,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bloomItem.submenu = bloomMenu
         menu.addItem(bloomItem)
 
-        // Display submenu
+        // Display submenu with value chip
         let displayItem = NSMenuItem(title: "Display", action: nil, keyEquivalent: "")
         displayItem.image = sfIcon("display")
+        displayItem.attributedTitle = menuTitle("Display", value: currentDisplayName())
         let displayMenu = NSMenu()
         let allDisplays = NSMenuItem(title: "All Displays", action: #selector(selectDisplay(_:)), keyEquivalent: "")
         allDisplays.target = self
@@ -401,106 +775,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(displayItem)
 
         // Window picker
-        let pickItem = NSMenuItem(title: "Apply to Window…", action: #selector(pickWindowVisual), keyEquivalent: "")
+        let pickItem = NSMenuItem(title: "Apply to Window\u{2026}", action: #selector(pickWindowVisual), keyEquivalent: "")
         pickItem.target = self
         pickItem.image = sfIcon("macwindow")
         menu.addItem(pickItem)
 
-        if isActive {
-            let fullItem = NSMenuItem(title: "Apply to Full Screen", action: #selector(applyFullScreen), keyEquivalent: "")
-            fullItem.target = self
-            fullItem.image = sfIcon("rectangle.inset.filled")
-            menu.addItem(fullItem)
-        }
-
-        if isActive {
-            let screenshotItem = NSMenuItem(title: "Screenshot with Effect", action: #selector(takeScreenshot), keyEquivalent: "")
-            screenshotItem.target = self
-            screenshotItem.image = sfIcon("camera")
-            menu.addItem(screenshotItem)
-        }
-
-        // Record with Effect
-        if isActive {
-            let isRecording = overlayController?.renderer?.recorder?.isRecording ?? false
-            let recordTitle = isRecording ? "⏹ Stop Recording" : "Record with Effect"
-            let recordItem = NSMenuItem(title: recordTitle, action: #selector(toggleRecording), keyEquivalent: "")
-            recordItem.target = self
-            recordItem.image = sfIcon(isRecording ? "stop.circle.fill" : "record.circle")
-            menu.addItem(recordItem)
-        }
-
         menu.addItem(NSMenuItem.separator())
 
-        // Retro Viewport (movable shader lens) — submenu with shader picker
-        let viewportItem = NSMenuItem(title: "Retro Viewport", action: nil, keyEquivalent: "")
-        viewportItem.image = sfIcon("viewfinder")
-        let viewportMenu = NSMenu()
+        // ── RETROMAC section ──
+        menu.addItem(sectionLabel("RETROMAC"))
 
-        let vpToggle = NSMenuItem(
-            title: retroViewport.isActive ? "Close Viewport" : "Open Viewport",
-            action: #selector(toggleViewport),
-            keyEquivalent: ""
-        )
-        vpToggle.target = self
-        viewportMenu.addItem(vpToggle)
-        viewportMenu.addItem(.separator())
-
-        let vpCurrentPreset = AppSettings.shared.viewportPreset
-        let viewportShaders: [(String, String)] = [
-            ("CRT Royale", "crt-royale-lite"),
-            ("Trinitron TV", "trinitron-tv"),
-            ("VHS", "vhs"),
-            ("VCR Tracking", "vcr-tracking"),
-            ("Retro LCD", "lcd-grid"),
-            ("Game Boy", "gameboy"),
-            ("Cinema Film", "cinema-film"),
-            ("Amber Monitor", "amber-monitor"),
-        ]
-        let vpClassicHeader = NSMenuItem(title: "Classic Shaders", action: nil, keyEquivalent: "")
-        vpClassicHeader.isEnabled = false
-        viewportMenu.addItem(vpClassicHeader)
-        for (name, id) in viewportShaders {
-            let item = NSMenuItem(title: name, action: #selector(selectViewportPreset(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = id
-            if id == vpCurrentPreset { item.state = .on }
-            viewportMenu.addItem(item)
-        }
-
-        viewportMenu.addItem(.separator())
-        let vpLiteHeader = NSMenuItem(title: "Lite Shaders", action: nil, keyEquivalent: "")
-        vpLiteHeader.isEnabled = false
-        viewportMenu.addItem(vpLiteHeader)
-        let viewportLiteShaders: [(String, String)] = [
-            ("⚡ CRT Lite", "crt-lite"),
-            ("⚡ LCD Lite", "lcd-lite"),
-            ("⚡ LCD Retro Lite", "lcd-retro-lite"),
-            ("⚡ VHS Lite", "vhs-lite"),
-            ("⚡ Scanlines Lite", "scanlines-lite"),
-            ("⚡ Film Scratches Lite", "grain-lite"),
-        ]
-        for (name, id) in viewportLiteShaders {
-            let item = NSMenuItem(title: name, action: #selector(selectViewportPreset(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = id
-            if id == vpCurrentPreset { item.state = .on }
-            viewportMenu.addItem(item)
-        }
-
-        viewportItem.submenu = viewportMenu
-        menu.addItem(viewportItem)
-
-        menu.addItem(NSMenuItem.separator())
-
-        // ── RetroMac Section ──
-        let themeSectionHeader = NSMenuItem(title: "RetroMac", action: nil, keyEquivalent: "")
-        themeSectionHeader.isEnabled = false
-        menu.addItem(themeSectionHeader)
-
-        // Themes submenu
+        // Themes submenu with value chip
         let themesItem = NSMenuItem(title: "Themes", action: nil, keyEquivalent: "")
         themesItem.image = sfIcon("paintpalette")
+        themesItem.attributedTitle = menuTitle("Themes", value: themeValueString())
         let themesMenu = NSMenu()
         let dockOn = AppSettings.shared.dockEnabled
         let currentTheme = AppSettings.shared.dockTheme
@@ -521,12 +809,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         themesItem.submenu = themesMenu
         menu.addItem(themesItem)
 
-        // Television submenu
+        // Television submenu with value chip
         let tvBookmarks = AppSettings.shared.tvBookmarks
+        let tvItem = NSMenuItem(title: "Television", action: nil, keyEquivalent: "")
+        tvItem.image = sfIcon("tv")
+        tvItem.attributedTitle = menuTitle("Television", value: "Off")
+        let tvMenu = NSMenu()
         if !tvBookmarks.isEmpty {
-            let tvItem = NSMenuItem(title: "Television", action: nil, keyEquivalent: "")
-            tvItem.image = sfIcon("tv")
-            let tvMenu = NSMenu()
             for bookmark in tvBookmarks {
                 let item = NSMenuItem(title: bookmark.name, action: #selector(openTVBookmark(_:)), keyEquivalent: "")
                 item.target = self
@@ -534,13 +823,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 item.image = sfIcon("antenna.radiowaves.left.and.right")
                 tvMenu.addItem(item)
             }
-            tvItem.submenu = tvMenu
-            menu.addItem(tvItem)
+        } else {
+            let emptyItem = NSMenuItem(title: "No bookmarks", action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            tvMenu.addItem(emptyItem)
         }
+        tvItem.submenu = tvMenu
+        menu.addItem(tvItem)
 
-        // Games submenu
+        // Games submenu with value chip
         let gamesItem = NSMenuItem(title: "Games", action: nil, keyEquivalent: "")
         gamesItem.image = sfIcon("gamecontroller")
+        gamesItem.attributedTitle = menuTitle("Games", value: "Auto")
         let gamesMenu = NSMenu()
 
         let doomItem = NSMenuItem(title: "Play Doom", action: #selector(launchDoom), keyEquivalent: "")
@@ -609,110 +903,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        // ── Settings Section ──
-        let settingsSectionHeader = NSMenuItem(title: "Settings", action: nil, keyEquivalent: "")
-        settingsSectionHeader.isEnabled = false
-        menu.addItem(settingsSectionHeader)
+        // ── Screenshot with shader ──
+        let screenshotItem = NSMenuItem(title: "Screenshot with Shader", action: #selector(screenshotMenuAction), keyEquivalent: "")
+        screenshotItem.target = self
+        screenshotItem.image = sfIcon("camera.fill")
+        screenshotItem.isEnabled = isActive || retroViewport.isActive
+        menu.addItem(screenshotItem)
 
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
-        settingsItem.target = self
-        settingsItem.image = sfIcon("gearshape")
-        menu.addItem(settingsItem)
+        menu.addItem(NSMenuItem.separator())
 
-        // Virtual Camera
-        let vcam = VirtualCameraManager.shared
-        let cameraTitle = vcam.isRunning ? "Stop Virtual Camera" : "Start Virtual Camera"
-        let cameraItem = NSMenuItem(title: cameraTitle, action: #selector(toggleVirtualCamera), keyEquivalent: "")
-        cameraItem.target = self
-        if !lm.isLicensed && !vcam.isRunning {
-            cameraItem.image = sfIcon("lock.fill", scale: .small)
-        } else {
-            cameraItem.image = sfIcon("camera.fill")
-        }
-        menu.addItem(cameraItem)
-
-        // Camera Shader submenu — always visible when camera is running or was started
-        do {
-            let shaderItem = NSMenuItem(title: "Camera Shader", action: nil, keyEquivalent: "")
-            shaderItem.image = sfIcon("camera.filters")
-            let shaderMenu = NSMenu()
-
-            // Webcam Looks (new dedicated shaders)
-            let webcamHeader = NSMenuItem(title: "Webcam Looks", action: nil, keyEquivalent: "")
-            webcamHeader.isEnabled = false
-            shaderMenu.addItem(webcamHeader)
-            let webcamShaders = [
-                ("Late Night CRT", "late-night-crt"),
-                ("Newsroom 1987", "newsroom-1987"),
-                ("VHS Tape", "vhs-tape"),
-                ("Terminal Green", "terminal-green"),
-            ]
-            for (name, id) in webcamShaders {
-                let item = NSMenuItem(title: name, action: #selector(selectCameraShader(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = id
-                if id == vcam.selectedShader { item.state = .on }
-                shaderMenu.addItem(item)
-            }
-
-            shaderMenu.addItem(.separator())
-
-            let liteHeader = NSMenuItem(title: "Lite Effects", action: nil, keyEquivalent: "")
-            liteHeader.isEnabled = false
-            shaderMenu.addItem(liteHeader)
-            // Note: B&W Lite and Amber Lite excluded — they use macOS system
-            // display filters (grayscale/color tint) which don't affect the webcam feed.
-            let liteShaders = [
-                ("⚡ CRT Lite", "crt-lite"),
-                ("⚡ LCD Lite", "lcd-lite"),
-                ("⚡ LCD Retro Lite", "lcd-retro-lite"),
-                ("⚡ LCD Sharp Lite", "lcd-sharp-lite"),
-                ("⚡ LCD Broken Lite", "lcd-broken-lite"),
-                ("⚡ VHS Lite", "vhs-lite"),
-                ("⚡ Scanlines Lite", "scanlines-lite"),
-                ("⚡ Film Scratches Lite", "grain-lite"),
-            ]
-            for (name, id) in liteShaders {
-                let item = NSMenuItem(title: name, action: #selector(selectCameraShader(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = id
-                if id == vcam.selectedShader { item.state = .on }
-                shaderMenu.addItem(item)
-            }
-
-            shaderMenu.addItem(.separator())
-
-            let classicHeader = NSMenuItem(title: "Classic Effects", action: nil, keyEquivalent: "")
-            classicHeader.isEnabled = false
-            shaderMenu.addItem(classicHeader)
-            let classicShaders = [
-                ("CRT Royale", "crt-royale-lite"),
-                ("Trinitron TV", "trinitron-tv"),
-                ("VHS", "vhs"),
-                ("VCR Tracking", "vcr-tracking"),
-                ("Retro LCD", "lcd-grid"),
-                ("Game Boy", "gameboy"),
-                ("Cinema Film", "cinema-film"),
-                ("Amber Monitor", "amber-monitor"),
-            ]
-            for (name, id) in classicShaders {
-                let item = NSMenuItem(title: name, action: #selector(selectCameraShader(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = id
-                if id == vcam.selectedShader { item.state = .on }
-                shaderMenu.addItem(item)
-            }
-
-            shaderItem.submenu = shaderMenu
-            menu.addItem(shaderItem)
-        }
-
-        let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "")
-        updateItem.target = updaterController
-        updateItem.image = sfIcon("arrow.triangle.2.circlepath")
-        menu.addItem(updateItem)
-
-        let quit = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
+        // ── Quit ──
+        let quit = NSMenuItem(title: "Quit RetroMac", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         quit.image = sfIcon("xmark.circle")
         menu.addItem(quit)
@@ -720,29 +921,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
     }
 
+    /// Update the live menu views in-place (header dot/text + pill toggles) without rebuilding the menu.
+    /// Called from toggle actions so the currently-visible menu popup reflects the new state immediately.
+    private func updateMenuLive() {
+        let presetName = presetDisplayName(for: currentPresetName)
+        let overlayStatus = isActive ? "Overlay on" : "Overlay off"
+        let displayName = currentDisplayName()
+        let statusText = "\(overlayStatus) · \(displayName)"
+
+        menuHeaderView?.update(shaderOn: isActive, presetName: presetName, statusText: statusText)
+        shaderPillToggle?.isOn = isActive
+        cameraPillToggle?.isOn = VirtualCameraManager.shared.isRunning
+        viewportPillToggle?.isOn = retroViewport.isActive
+    }
+
     // MARK: - Carbon Global Hotkey
+
+    // Hotkey IDs: signature "RMAC", different id per action
+    private let hotkeySignature = OSType(0x524D4143) // "RMAC"
 
     func registerHotkey() {
         unregisterHotkey()
 
         let settings = AppSettings.shared
-        let hotKeyID = EventHotKeyID(signature: OSType(0x524D4143), id: 1)
-        var ref: EventHotKeyRef?
-        let status = RegisterEventHotKey(
-            settings.hotkeyCode, settings.hotkeyModifiers,
-            hotKeyID, GetApplicationEventTarget(), 0, &ref
-        )
-        if status == noErr { hotKeyRef = ref }
 
+        // 1. Toggle overlay hotkey (id: 1) — require at least one system modifier
+        if settings.hotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 1)
+            if RegisterEventHotKey(settings.hotkeyCode, settings.hotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                hotKeyRef = ref
+            }
+        }
+
+        // 2. Screenshot with shader hotkey (id: 6) — require at least one system modifier
+        if settings.screenshotHotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 6)
+            if RegisterEventHotKey(settings.screenshotHotkeyCode, settings.screenshotHotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                screenshotHotKeyRef = ref
+            }
+        }
+
+        // Install event handler (once)
         if eventHandlerRef == nil {
             var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
             let selfPtr = Unmanaged.passUnretained(self).toOpaque()
             InstallEventHandler(
                 GetApplicationEventTarget(),
-                { (_, _, userData) -> OSStatus in
-                    guard let userData = userData else { return OSStatus(eventNotHandledErr) }
+                { (_, event, userData) -> OSStatus in
+                    guard let userData = userData, let event = event else { return OSStatus(eventNotHandledErr) }
                     let d = Unmanaged<AppDelegate>.fromOpaque(userData).takeUnretainedValue()
-                    DispatchQueue.main.async { d.toggleOverlay() }
+                    var hkID = EventHotKeyID()
+                    GetEventParameter(event, EventParamName(kEventParamDirectObject),
+                                      EventParamType(typeEventHotKeyID), nil,
+                                      MemoryLayout<EventHotKeyID>.size, nil, &hkID)
+                    switch hkID.id {
+                    case 1: DispatchQueue.main.async { d.toggleOverlay() }
+                    case 6: DispatchQueue.main.async { d.captureScreenshotWithShader() }
+                    default: return OSStatus(eventNotHandledErr)
+                    }
                     return noErr
                 },
                 1, &eventSpec, selfPtr, &eventHandlerRef
@@ -754,6 +994,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let ref = hotKeyRef {
             UnregisterEventHotKey(ref)
             hotKeyRef = nil
+        }
+        if let ref = screenshotHotKeyRef {
+            UnregisterEventHotKey(ref)
+            screenshotHotKeyRef = nil
         }
     }
 
@@ -920,6 +1164,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isActive {
             disableAll()
         } else {
+            // Mutual exclusivity: stop camera and viewport first
+            if VirtualCameraManager.shared.isRunning { VirtualCameraManager.shared.stop() }
+            if retroViewport.isActive { retroViewport.hide() }
+
             // Lite presets use transparent overlay — no screen recording needed
             if Self.isLitePreset(currentPresetName) {
                 startCRTLite(mode: .fullScreen)
@@ -1101,6 +1349,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         crtLiteOverlay = overlay
         currentPresetName = preset
         isActive = true
+
+        // Apply bloom settings to Lite overlay
+        let bloomSettings = AppSettings.shared
+        overlay.bloomEnabled = bloomSettings.bloomEnabled
+        overlay.bloomIntensity = bloomSettings.bloomIntensity
+        overlay.bloomRadius = bloomSettings.bloomRadius
+
         updateMenuBarIcon()
         rebuildMenu()
         print("[RetroMac] Lite overlay started: \(preset) (mode: \(mode))")
@@ -1120,6 +1375,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         savedPreset = nil
         savedWasActive = false
 
+        // If the Virtual Camera is running, route preset changes to the camera
+        // ONLY — just like the Retro Viewport. Do NOT touch the full-screen overlay.
+        // Preset IDs and camera shader names share the same namespace
+        // (both resolve through BuiltinShaders.source(for:)), so the preset ID can
+        // be passed straight to changeShader. changeShader tolerates shaders with no
+        // camera equivalent (it logs the failure rather than crashing).
+        if VirtualCameraManager.shared.isRunning {
+            currentPresetName = presetId
+            VirtualCameraManager.shared.changeShader(presetId)
+            rebuildMenu()
+            return
+        }
+
+        // If Retro Viewport is active, route all preset changes to it
+        if retroViewport.isActive {
+            currentPresetName = presetId
+            AppSettings.shared.defaultPreset = presetId
+            AppSettings.shared.viewportPreset = presetId
+            retroViewport.switchPreset(presetId)
+            rebuildMenu()
+            return
+        }
+
         // Lite presets: switch overlay type if changing to/from lite
         if Self.isLitePreset(presetId) {
             // Stop full overlay if running, start Lite
@@ -1136,26 +1414,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 startCRTLite(mode: .fullScreen, presetName: presetId)
             }
         } else {
-            // Stop Lite overlay if running, start full overlay
+            // Set the preset name BEFORE starting overlay — startOverlay is async
+            // and reads currentPresetName to load the correct shader.
+            currentPresetName = presetId
+            AppSettings.shared.defaultPreset = presetId
+
+            // Stop Lite overlay if running
             if crtLiteOverlay?.isActive == true {
                 disableAll()
             }
+
             if !isActive {
+                // Start full overlay — will use currentPresetName (already set above)
                 startOverlay(mode: .fullScreen)
+            } else {
+                // Already running a full overlay — just switch the shader in-place
+                applyPreset(presetId)
             }
-            applyPreset(presetId)
         }
     }
 
     @objc private func setIntensity(_ sender: NSMenuItem) {
         currentIntensity = Float(sender.tag) / 100.0
+        if retroViewport.isActive {
+            retroViewport.intensity = currentIntensity
+        }
         overlayController?.intensity = currentIntensity
+        crtLiteOverlay?.intensity = currentIntensity
         rebuildMenu()
     }
 
     @objc private func setVignette(_ sender: NSMenuItem) {
         currentVignetteIntensity = Float(sender.tag) / 100.0
+        if retroViewport.isActive {
+            retroViewport.vignetteIntensity = currentVignetteIntensity
+        }
         overlayController?.vignetteIntensity = currentVignetteIntensity
+        crtLiteOverlay?.vignetteIntensity = currentVignetteIntensity
         rebuildMenu()
     }
 
@@ -1209,7 +1504,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func showOnboarding() {
-        onboardingWindow.show()
+        welcomeFlow.showSetup()
+    }
+
+    /// Opens Settings so the user can enter a license key (from the coffee page).
+    func openSettingsForLicense() {
+        settingsWindow.show()
     }
 
     func applyOverlayToWindowID(_ windowID: CGWindowID, presetName: String, parentWindow: NSWindow? = nil, saveState: Bool = true) {
@@ -1299,6 +1599,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applyPreset(_ presetID: String) {
         currentPresetName = presetID
+
+        // Switching to a Lite preset: need to tear down full overlay and start lite
+        if Self.isLitePreset(presetID) {
+            overlayController?.stop()
+            overlayController = nil
+            startCRTLite(mode: .fullScreen, presetName: presetID)
+            rebuildMenu()
+            return
+        }
+
+        // Switching away from Lite to a full preset: tear down lite, start full
+        if crtLiteOverlay?.isActive == true {
+            crtLiteOverlay?.stop()
+            crtLiteOverlay = nil
+            isActive = false
+            startOverlay(mode: .fullScreen)
+            rebuildMenu()
+            return
+        }
+
+        // Normal full overlay → full overlay switch
         overlayController?.switchPreset(presetID)
         overlayController?.loadOverlays()
         overlayController?.syncOverlayTextures()
@@ -1320,7 +1641,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func takeScreenshot() {
-        guard let image = overlayController?.captureScreenshot() else {
+        // Try the full overlay's captured frame first
+        var image: NSImage? = overlayController?.captureScreenshot()
+
+        // Lite overlay: no captured frame — grab the composited screen instead
+        if image == nil && crtLiteOverlay?.isActive == true {
+            let displayID = CGMainDisplayID()
+            if let cgImage = CGDisplayCreateImage(displayID) {
+                image = NSImage(cgImage: cgImage, size: NSSize(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height)))
+            }
+        }
+
+        guard let image else {
             print("[RetroMac] Screenshot failed: no frame available")
             return
         }
@@ -1390,14 +1722,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             renderer.bloomIntensity = settings.bloomIntensity
             renderer.bloomRadius = settings.bloomRadius
         }
+        // Also apply to Lite overlay
+        if let lite = crtLiteOverlay, lite.isActive {
+            lite.bloomEnabled = settings.bloomEnabled
+            lite.bloomIntensity = settings.bloomIntensity
+            lite.bloomRadius = settings.bloomRadius
+        }
     }
 
     // MARK: - Retro Viewport
 
-    @objc private func toggleViewport() {
+    @objc func toggleViewport() {
         if retroViewport.isActive {
             retroViewport.hide()
         } else {
+            // Mutual exclusivity: stop shader and camera first
+            if isActive { disableAll() }
+            if VirtualCameraManager.shared.isRunning { VirtualCameraManager.shared.stop() }
+
             let preset = AppSettings.shared.viewportPreset
             retroViewport.show(preset: preset)
         }
@@ -1461,10 +1803,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DockController.shared.start()
         }
         if let preset = settings.presetForTheme(name: name) {
-            if !isActive {
+            if preset == "none" {
+                // Theme wants no shader
+                if isActive { disableAll() }
+            } else if retroViewport.isActive {
+                retroViewport.switchPreset(preset)
+            } else if isActive {
+                applyPreset(preset)
+            } else {
+                currentPresetName = preset
                 startOverlay(mode: .fullScreen)
             }
-            applyPreset(preset)
         }
         rebuildMenu()
     }
@@ -1477,8 +1826,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let themeName = settings.dockTheme
 
         if let preset = settings.presetForTheme(name: themeName) {
+            // "none" means no shader for this theme — disable overlay
+            if preset == "none" {
+                if isActive { disableAll() }
+                rebuildMenu()
+                return
+            }
             // Theme has a shader — apply it
-            if isActive {
+            if retroViewport.isActive {
+                retroViewport.switchPreset(preset)
+            } else if isActive {
                 applyPreset(preset)
             } else {
                 currentPresetName = preset
@@ -1488,9 +1845,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
+    /// Public entry point (e.g. Program Manager "Exit Windows") to turn off the active theme.
+    func deactivateActiveTheme() { disableTheme() }
+
     @objc private func disableTheme() {
         AppSettings.shared.dockEnabled = false
         DockController.shared.stop()
+        DesktopIconsController.shared.hide()
+        ProgramManagerController.shared.hide()
+        SGIDesktopController.shared.hide()
         ThemeManager.shared.clearActiveTheme()
         ThemeManager.shared.restoreWallpapers()
         // Also stop the CRT overlay when disabling theme
@@ -1507,6 +1870,92 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DockController.shared.stop()
         }
         rebuildMenu()
+    }
+
+    // MARK: - Screenshot with Shader
+
+    @objc private func screenshotMenuAction() {
+        captureScreenshotWithShader()
+    }
+
+    /// Capture the full screen including the active CRT shader overlay and save to Desktop.
+    func captureScreenshotWithShader() {
+        guard isActive || retroViewport.isActive else {
+            // Flash the menu bar icon to indicate no shader is active
+            NSSound.beep()
+            print("[Screenshot] No shader active — nothing to capture")
+            return
+        }
+
+        // Brief delay to let any hotkey UI (key-up flash) settle
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            self?.performScreenshotCapture()
+        }
+    }
+
+    private func performScreenshotCapture() {
+        // Capture the entire main display including all windows (shader overlay is a window)
+        let displayID = CGMainDisplayID()
+        guard let cgImage = CGDisplayCreateImage(displayID) else {
+            print("[Screenshot] CGDisplayCreateImage failed")
+            NSSound.beep()
+            return
+        }
+
+        let image = NSImage(cgImage: cgImage, size: NSSize(
+            width: CGFloat(cgImage.width),
+            height: CGFloat(cgImage.height)
+        ))
+
+        // Save to Desktop with timestamp
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        let timestamp = dateFormatter.string(from: Date())
+        let filename = "RetroMac Screenshot \(timestamp).png"
+        let desktopURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first!
+        let fileURL = desktopURL.appendingPathComponent(filename)
+
+        guard let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let pngData = bitmap.representation(using: .png, properties: [:]) else {
+            print("[Screenshot] Image conversion failed")
+            NSSound.beep()
+            return
+        }
+
+        do {
+            try pngData.write(to: fileURL)
+            print("[Screenshot] Saved to \(fileURL.path)")
+
+            // Play camera shutter sound
+            NSSound(named: "Grab")?.play()
+
+            // Brief white flash on the overlay window for visual feedback
+            flashScreenshotFeedback()
+        } catch {
+            print("[Screenshot] Save failed: \(error)")
+            NSSound.beep()
+        }
+    }
+
+    private func flashScreenshotFeedback() {
+        guard let screen = NSScreen.main else { return }
+        let flashWindow = NSWindow(
+            contentRect: screen.frame,
+            styleMask: .borderless,
+            backing: .buffered,
+            defer: false
+        )
+        flashWindow.level = NSWindow.Level(rawValue: 100)
+        flashWindow.isOpaque = false
+        flashWindow.backgroundColor = NSColor.white.withAlphaComponent(0.4)
+        flashWindow.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        flashWindow.ignoresMouseEvents = true
+        flashWindow.orderFront(nil)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            flashWindow.orderOut(nil)
+        }
     }
 
     // MARK: - Doom Launcher
@@ -3110,28 +3559,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 showVirtualCameraLockedAlert()
                 return
             }
+            // Mutual exclusivity: stop shader and viewport first
+            if isActive { disableAll() }
+            if retroViewport.isActive { retroViewport.hide() }
+
             vcam.start()
         }
         rebuildMenu()
     }
 
     private func showVirtualCameraLockedAlert() {
-        let alert = NSAlert()
-        alert.messageText = "Virtual Camera 🔒"
-        alert.informativeText = "Virtual Camera is part of the All Presets pack. Unlock all \(PresetRegistry.builtinPresets.count) presets + virtual camera + custom shaders!"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Get All Presets")
-        alert.addButton(withTitle: "Enter Key")
-        alert.addButton(withTitle: "Cancel")
-
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            if let url = URL(string: LicenseManager.purchaseURL) {
-                NSWorkspace.shared.open(url)
-            }
-        } else if response == .alertSecondButtonReturn {
-            settingsWindow.show()
-        }
+        // Unified unlock screen (with inline key entry + buy/unlock), same as locked presets.
+        welcomeFlow.showCoffee()
     }
 
     @objc private func selectCameraShader(_ sender: NSMenuItem) {
@@ -3198,22 +3637,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func showPresetLockedAlert(presetName: String) {
-        let alert = NSAlert()
-        alert.messageText = "\(presetName) 🔒"
-        alert.informativeText = "This preset is part of the All Presets pack. Unlock all \(PresetRegistry.builtinPresets.count) presets + custom shaders!"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Get All Presets")
-        alert.addButton(withTitle: "Enter Key")
-        alert.addButton(withTitle: "Cancel")
-
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            if let url = URL(string: LicenseManager.purchaseURL) {
-                NSWorkspace.shared.open(url)
-            }
-        } else if response == .alertSecondButtonReturn {
-            settingsWindow.show()
-        }
+        // Show the unified coffee / unlock screen (with inline key entry) instead of the old alert.
+        welcomeFlow.showCoffee()
     }
 }
 

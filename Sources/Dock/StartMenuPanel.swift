@@ -6,6 +6,8 @@ final class StartMenuPanel: NSPanel {
     private var localMonitor: Any?
     private var globalMonitor: Any?
     private weak var dockWindow: NSWindow?
+    /// Screen-space rect of the start button — clicks here are passed through (DockView handles toggle)
+    private var startButtonScreenRect: NSRect = .zero
 
     struct MenuItem {
         let title: String
@@ -62,7 +64,7 @@ final class StartMenuPanel: NSPanel {
 
     // MARK: - Classic Win98 Style
 
-    func show(items: [MenuItem], bannerText: String, at point: NSPoint, in parentView: NSView) {
+    func show(items: [MenuItem], bannerText: String, at point: NSPoint, in parentView: NSView, startButtonRect: NSRect = .zero) {
         let content = ClassicStartMenuContentView(items: items, bannerText: bannerText)
         content.onDismiss = { [weak self] in self?.dismiss() }
         self.menuContentView = content
@@ -71,12 +73,12 @@ final class StartMenuPanel: NSPanel {
         content.frame = NSRect(origin: .zero, size: size)
         self.contentView = content
 
-        positionAndShow(size: size, at: point, in: parentView)
+        positionAndShow(size: size, at: point, in: parentView, startButtonRect: startButtonRect)
     }
 
     // MARK: - XP Luna Blue Style
 
-    func showXP(data: XPMenuData, at point: NSPoint, in parentView: NSView) {
+    func showXP(data: XPMenuData, at point: NSPoint, in parentView: NSView, startButtonRect: NSRect = .zero) {
         let content = XPStartMenuContentView(data: data)
         content.onDismiss = { [weak self] in self?.dismiss() }
         self.menuContentView = content
@@ -85,24 +87,51 @@ final class StartMenuPanel: NSPanel {
         content.frame = NSRect(origin: .zero, size: size)
         self.contentView = content
 
-        positionAndShow(size: size, at: point, in: parentView)
+        positionAndShow(size: size, at: point, in: parentView, startButtonRect: startButtonRect)
     }
 
-    private func positionAndShow(size: NSSize, at point: NSPoint, in parentView: NSView) {
+    private func positionAndShow(size: NSSize, at point: NSPoint, in parentView: NSView, startButtonRect: NSRect = .zero) {
         guard let parentWindow = parentView.window else { return }
         self.dockWindow = parentWindow
+        // Convert start button rect to screen coordinates
+        if !startButtonRect.isEmpty {
+            let winRect = parentView.convert(startButtonRect, to: nil)
+            self.startButtonScreenRect = parentWindow.convertToScreen(winRect)
+        } else {
+            self.startButtonScreenRect = .zero
+        }
         let screenPoint = parentWindow.convertPoint(toScreen: parentView.convert(point, to: nil))
         let panelOrigin = NSPoint(x: screenPoint.x, y: screenPoint.y)
         setFrame(NSRect(origin: panelOrigin, size: size), display: true)
         orderFrontRegardless()
 
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            self?.dismiss()
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self = self else { return }
+            // Don't dismiss if clicking the start button (DockView toggle handles it)
+            if !self.startButtonScreenRect.isEmpty {
+                let loc = NSEvent.mouseLocation
+                if self.startButtonScreenRect.contains(loc) { return }
+            }
+            self.dismiss()
         }
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self else { return event }
             if event.window == self { return event }
-            if event.window == self.dockWindow { return event }
+            // Allow clicks on submenu panels (Favorites, Programs, etc.)
+            if let classic = self.menuContentView as? ClassicStartMenuContentView,
+               let subPanel = classic.submenuPanel,
+               event.window == subPanel {
+                return event
+            }
+            // Click on dock window: only pass through if on start button (DockView toggles)
+            if event.window == self.dockWindow {
+                if !self.startButtonScreenRect.isEmpty {
+                    let loc = NSEvent.mouseLocation
+                    if self.startButtonScreenRect.contains(loc) {
+                        return event
+                    }
+                }
+            }
             self.dismiss()
             return event
         }
@@ -129,9 +158,9 @@ private final class XPStartMenuContentView: NSView {
     private let headerHeight: CGFloat = 54
     private let footerHeight: CGFloat = 36
     private let leftColumnWidth: CGFloat = 190
-    private let itemHeight: CGFloat = 32
-    private let largeItemHeight: CGFloat = 36
-    private let iconSizeLarge: CGFloat = 28
+    private let itemHeight: CGFloat = 34
+    private let largeItemHeight: CGFloat = 40
+    private let iconSizeLarge: CGFloat = 32
     private let iconSizeSmall: CGFloat = 24   // harmonized: all right-column icons same size
     private let borderWidth: CGFloat = 2
     private let separatorHeight: CGFloat = 8
@@ -670,7 +699,8 @@ private final class ClassicStartMenuContentView: NSView {
     private let bevelWidth: CGFloat = 2
     private var hoveredIndex: Int? = nil
     private var trackingArea: NSTrackingArea?
-    private var submenuPanel: StartMenuPanel?
+    /// The currently visible submenu panel (exposed for parent event monitor)
+    private(set) var submenuPanel: StartMenuPanel?
 
     var onDismiss: (() -> Void)?
 

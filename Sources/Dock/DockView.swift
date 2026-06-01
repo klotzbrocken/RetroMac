@@ -2,6 +2,10 @@ import AppKit
 
 final class DockView: NSView {
     private var itemViews: [DockItemView] = []
+    // Resting Y-centres of vertical-dock icons, captured at layout time. The frame-based
+    // vertical magnifier mutates item frames, so it must read REST positions from here
+    // (not the live, already-magnified frames) to avoid compounding spacing/jitter.
+    private var restCentersY: [CGFloat] = []
     private var runningBundleIDs: Set<String> = []
     private var lastItemBundleIDs: [String] = []
     private var wsObserver: NSObjectProtocol?
@@ -25,10 +29,12 @@ final class DockView: NSView {
     private var diskFreeLabel: String = ""   // e.g. "APFS"
     private var diskFreeValue: String = ""   // e.g. "150"
     private var diskFreeUnit: String = ""    // e.g. "GB Free"
+    private var trayIconFrame: NSRect = .zero  // ICQ tray icon (right of clock)
     private var magnificationTrackingArea: NSTrackingArea?
     private var startMenuPanel: StartMenuPanel?
     private var trashMonitorSource: DispatchSourceFileSystemObject?
     private var trashDirectoryFD: Int32 = -1
+    private var trashPollTimer: Timer?
     var magnificationOverflow: CGFloat = 0
     /// Extra width on each side of the window for magnification expansion
     var horizontalMagOverflow: CGFloat = 0
@@ -37,8 +43,18 @@ final class DockView: NSView {
     /// Expanded dock bar rect during magnification (nil = use resting rect)
     private var magnifiedDockBarRect: NSRect?
 
+    // Control Strip state
+    private var controlStripCollapsed = false
+    private var controlStripLeftCap: NSImage?
+    private var controlStripRightCap: NSImage?
+
     private var isVertical: Bool {
         ThemeManager.shared.activeTheme?.config.isVertical ?? false
+    }
+
+    /// Resolved dock edge: "bottom"/"left"/"right".
+    private var dockPosition: String {
+        ThemeManager.shared.activeTheme?.config.effectiveDockPosition ?? "bottom"
     }
 
     private var hasStartButton: Bool {
@@ -65,6 +81,10 @@ final class DockView: NSView {
         ThemeManager.shared.activeTheme?.config.hasGrip ?? false
     }
 
+    private var isControlStrip: Bool {
+        ThemeManager.shared.activeTheme?.config.isControlStrip ?? false
+    }
+
     /// Extra space at the top of a vertical dock for grip dots
     private var gripHeight: CGFloat {
         hasGrip && isVertical ? 22 : 0
@@ -72,6 +92,16 @@ final class DockView: NSView {
 
     /// The resting rect where the dock bar background is drawn (centered within wider window)
     private var dockBarRect: NSRect {
+        if isVertical {
+            // Vertical: magnification expands the bar THICKNESS (width axis) toward
+            // the interior; the bar hugs the screen edge. Along the LONG axis the bar
+            // spans the resting region, leaving headroom (horizontalMagOverflow per
+            // side) for magnified icons to reflow into.
+            let thickness = bounds.width - magnificationOverflow
+            let x = (dockPosition == "right") ? magnificationOverflow : 0
+            let len = bounds.height - horizontalMagOverflow * 2
+            return NSRect(x: x, y: horizontalMagOverflow, width: thickness, height: len)
+        }
         let barWidth = bounds.width - horizontalMagOverflow * 2
         let barHeight = bounds.height - magnificationOverflow
         return NSRect(x: horizontalMagOverflow, y: 0, width: barWidth, height: barHeight)
@@ -82,7 +112,41 @@ final class DockView: NSView {
         magnifiedDockBarRect ?? dockBarRect
     }
 
+    /// Background + border paths for a vertical dock: flush (square) on the
+    /// screen-edge side, rounded on the other three. The border path is open and
+    /// covers only the top, bottom, and interior sides (no border on the edge side).
+    private func verticalBarPaths(rect: NSRect, radius r: CGFloat) -> (fill: NSBezierPath, border: NSBezierPath) {
+        let minX = rect.minX, maxX = rect.maxX, minY = rect.minY, maxY = rect.maxY
+        let fill = NSBezierPath()
+        let border = NSBezierPath()
+        if dockPosition == "right" {
+            // Flush on the RIGHT (screen edge); rounded on the LEFT (interior).
+            fill.move(to: NSPoint(x: maxX, y: minY))
+            fill.line(to: NSPoint(x: maxX, y: maxY))
+            fill.appendArc(from: NSPoint(x: minX, y: maxY), to: NSPoint(x: minX, y: minY), radius: r)
+            fill.appendArc(from: NSPoint(x: minX, y: minY), to: NSPoint(x: maxX, y: minY), radius: r)
+            fill.close()
+            border.move(to: NSPoint(x: maxX, y: maxY))
+            border.appendArc(from: NSPoint(x: minX, y: maxY), to: NSPoint(x: minX, y: minY), radius: r)
+            border.appendArc(from: NSPoint(x: minX, y: minY), to: NSPoint(x: maxX, y: minY), radius: r)
+            border.line(to: NSPoint(x: maxX, y: minY))
+        } else {
+            // Flush on the LEFT (screen edge); rounded on the RIGHT (interior).
+            fill.move(to: NSPoint(x: minX, y: minY))
+            fill.line(to: NSPoint(x: minX, y: maxY))
+            fill.appendArc(from: NSPoint(x: maxX, y: maxY), to: NSPoint(x: maxX, y: minY), radius: r)
+            fill.appendArc(from: NSPoint(x: maxX, y: minY), to: NSPoint(x: minX, y: minY), radius: r)
+            fill.close()
+            border.move(to: NSPoint(x: minX, y: maxY))
+            border.appendArc(from: NSPoint(x: maxX, y: maxY), to: NSPoint(x: maxX, y: minY), radius: r)
+            border.appendArc(from: NSPoint(x: maxX, y: minY), to: NSPoint(x: minX, y: minY), radius: r)
+            border.line(to: NSPoint(x: minX, y: minY))
+        }
+        return (fill, border)
+    }
+
     var onContextMenu: ((String, NSPoint) -> Void)?
+    var onDockContextMenu: ((NSPoint) -> Void)?
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -97,6 +161,7 @@ final class DockView: NSView {
 
     deinit {
         clockTimer?.invalidate()
+        trashPollTimer?.invalidate()
         trashMonitorSource?.cancel()
         if trashDirectoryFD >= 0 { close(trashDirectoryFD) }
         let wsNC = NSWorkspace.shared.notificationCenter
@@ -136,10 +201,18 @@ final class DockView: NSView {
     // MARK: - Trash Monitoring
 
     private func startTrashMonitor() {
-        guard let trashURL = try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else { return }
+        // ALWAYS poll — this is the reliable path. The fs-monitor below is a bonus and
+        // can fail (e.g. opening ~/.Trash is TCC-gated); previously a failed open()
+        // returned early and skipped the poll entirely, so the icon never updated.
+        trashPollTimer?.invalidate()
+        trashPollTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.updateTrashIcon()
+        }
+        updateTrashIcon()
 
+        guard let trashURL = try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else { return }
         let fd = Darwin.open(trashURL.path, O_EVTONLY)
-        guard fd >= 0 else { return }
+        guard fd >= 0 else { return }   // fs-monitor is optional; poll already covers us
         trashDirectoryFD = fd
 
         let source = DispatchSource.makeFileSystemObjectSource(
@@ -159,8 +232,9 @@ final class DockView: NSView {
 
     private func isTrashEmpty() -> Bool {
         guard let trashURL = try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else { return true }
-        let contents = try? FileManager.default.contentsOfDirectory(at: trashURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
-        return (contents ?? []).isEmpty
+        let contents = (try? FileManager.default.contentsOfDirectory(at: trashURL, includingPropertiesForKeys: nil, options: [])) ?? []
+        // Ignore Finder bookkeeping files — any real item means the trash is full.
+        return contents.filter { $0.lastPathComponent != ".DS_Store" }.isEmpty
     }
 
     private func updateTrashIcon() {
@@ -194,28 +268,75 @@ final class DockView: NSView {
         setupMagnificationTracking()
 
         if vertical {
-            var y = padding
+            // Top→bottom, centered on the bar thickness, trash at the bottom — must
+            // match relayoutItems() exactly so the resting layout and magnifier agree.
+            let bar = barRect
+            let x = bar.midX - iconSize / 2
+            var y = bar.maxY - padding - gripHeight - iconSize
             for app in apps {
-                let x = (bounds.width - iconSize) / 2
                 addItem(bundleID: app.bundleID,
                         frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                         theme: theme, iconSize: iconSize)
-                y += iconSize + spacing
+                y -= iconSize + spacing
             }
             let transientApps = runningAppsNotInDock()
             if !transientApps.isEmpty {
-                separatorY = y - spacing / 2
-                y += spacing
+                separatorY = y + iconSize + spacing / 2
+                y -= spacing
                 for bid in transientApps {
-                    let x = (bounds.width - iconSize) / 2
                     addItem(bundleID: bid,
                             frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                             theme: theme, iconSize: iconSize, isTransient: true)
-                    y += iconSize + spacing
+                    y -= iconSize + spacing
                 }
             }
-            // Grip dots take up space at the top of the vertical dock
-            // (icons are laid out bottom-up in flipped coordinates, grip is at the top = maxY)
+            if hasTrash {
+                y -= spacing
+                addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                             theme: theme, iconSize: iconSize)
+            }
+        } else if isControlStrip {
+            // Mac OS 9 Control Strip layout: left cap PNG + icon modules + right cap PNG
+            // Each module = icon + ▶ arrow, separated by grooves
+            loadControlStripCaps()
+            let leftCapW = controlStripLeftCapWidth
+            let arrowWidth: CGFloat = 14   // space for ▶ arrow after icon
+            let grooveWidth: CGFloat = 2   // 1px dark + 1px light
+            var x = barRect.minX + leftCapW
+
+            // Skip start button, clock, disk free, tray icon, trash for Control Strip
+            startButtonFrame = .zero
+            clockFrame = .zero
+            clockTimer?.invalidate()
+            clockTimer = nil
+            trayIconFrame = .zero
+            diskFreeFrame = .zero
+
+            // Pinned apps
+            let allBundleIDs = apps.map { $0.bundleID }
+            for (i, app) in apps.enumerated() {
+                let y = (barRect.height - iconSize) / 2
+                addItem(bundleID: app.bundleID,
+                        frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                        theme: theme, iconSize: iconSize)
+                x += iconSize + arrowWidth
+                if i < apps.count - 1 || !runningAppsNotInDock().isEmpty {
+                    x += grooveWidth
+                }
+            }
+            // Running apps not in dock (transient)
+            let transientApps = runningAppsNotInDock()
+            for (i, bundleID) in transientApps.enumerated() {
+                let y = (barRect.height - iconSize) / 2
+                addItem(bundleID: bundleID,
+                        frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                        theme: theme, iconSize: iconSize)
+                x += iconSize + arrowWidth
+                if i < transientApps.count - 1 {
+                    x += grooveWidth
+                }
+            }
+
         } else {
             var x = barRect.minX + padding
 
@@ -279,8 +400,21 @@ final class DockView: NSView {
                 startButtonFrame = .zero
             }
 
-            // Right-side trays: clock + disk free, positioned from right edge
+            // Right-side trays: clock + tray icon + disk free, positioned from right edge
             var rightEdge = barRect.maxX
+
+            // Pre-calculate tray icon size for Win98/XP (needed to widen systray clockFrame)
+            let hasTrayIcon: Bool
+            let traySize: CGFloat
+            let trayPad: CGFloat = 3
+            if let tn = ThemeManager.shared.activeTheme?.config.name,
+               (tn == "Windows 98" || tn == "Windows XP") {
+                hasTrayIcon = true
+                traySize = max(14, iconSize * 0.55)
+            } else {
+                hasTrayIcon = false
+                traySize = 0
+            }
 
             if hasClock {
                 updateClockString()
@@ -289,7 +423,16 @@ final class DockView: NSView {
                 let clockFontSize = theme.dock.clockFontSize ?? max(11, iconSize * 0.45)
                 let clockFont = NSFont.monospacedDigitSystemFont(ofSize: clockFontSize, weight: .regular)
                 let clockTextWidth = (clockString as NSString).size(withAttributes: [.font: clockFont]).width
-                let clockWidth = clockTextWidth + (isXP ? 20 : 16)
+                var clockWidth = clockTextWidth + (isXP ? 20 : 16)
+                // Widen systray to include ICQ tray icon
+                if hasTrayIcon {
+                    clockWidth += traySize + trayPad * 2 + 2
+                    // On XP the ICQ icon is shifted right past the systray chevron, so
+                    // reserve the extra clearance too (chevron half-width + gap).
+                    if isXP {
+                        clockWidth += max(14, iconSize * 0.55) * 0.9 + 2
+                    }
+                }
                 let isSunkenClock = theme.dock.startButtonStyle == "sunken"
                 if isXP || isSunkenClock {
                     clockFrame = NSRect(x: rightEdge - clockWidth, y: 0, width: clockWidth, height: barRect.height)
@@ -304,6 +447,28 @@ final class DockView: NSView {
                 clockTimer = nil
             }
 
+            // ICQ tray icon — inside the systray area for Windows 98 / Windows XP themes.
+            // On XP the "show hidden icons" chevron is drawn centred on clockFrame.minX,
+            // so it occupies the tray's left half-width. Shift the ICQ icon right past the
+            // chevron's right half (≈ max(14, iconSize*0.55)*0.9) plus a small gap so they
+            // don't overlap. Win98 has no chevron, so keep the tight original offset.
+            if hasTrayIcon && !clockFrame.isEmpty {
+                let trayStartX: CGFloat
+                if theme.isXPStartMenu {
+                    trayStartX = clockFrame.minX + max(14, iconSize * 0.55) * 0.9 + trayPad + 4
+                } else {
+                    trayStartX = clockFrame.minX + trayPad + 2
+                }
+                trayIconFrame = NSRect(
+                    x: trayStartX,
+                    y: clockFrame.midY - traySize / 2,
+                    width: traySize,
+                    height: traySize
+                )
+            } else {
+                trayIconFrame = .zero
+            }
+
             if hasDiskFree {
                 updateDiskFreeString()
                 let fontSize = theme.dock.clockFontSize ?? max(11, iconSize * 0.45)
@@ -314,8 +479,21 @@ final class DockView: NSView {
                 let unitW = (diskFreeUnit as NSString).size(withAttributes: [.font: font]).width
                 // Layout: [pad] label [gap] [valueBox] [gap] unit [pad]
                 let dfWidth: CGFloat = 8 + labelW + 6 + valueW + 8 + 6 + unitW + 8
-                diskFreeFrame = NSRect(x: rightEdge - dfWidth, y: 0, width: dfWidth, height: barRect.height)
-                rightEdge = diskFreeFrame.minX
+                let isSunkenDF = theme.dock.startButtonStyle == "sunken"
+                if isSunkenDF {
+                    // OS/2 WarpCenter: the drive/free-space gauge sits in the MIDDLE area
+                    // of the bar (between the program tabs and the clock), not glued to
+                    // the far-right clock. Anchor its right edge partway between the bar
+                    // centre and the clock, leaving a clear separator gap before the clock.
+                    let clockLeft = clockFrame.isEmpty ? barRect.maxX : clockFrame.minX
+                    let dfRight = barRect.midX + (clockLeft - barRect.midX) * 0.42
+                    let dfX = max(startButtonFrame.maxX + spacing, dfRight - dfWidth)
+                    diskFreeFrame = NSRect(x: dfX, y: 0, width: dfWidth, height: barRect.height)
+                    // rightEdge stays at the clock — gauge no longer consumes right tray space
+                } else {
+                    diskFreeFrame = NSRect(x: rightEdge - dfWidth, y: 0, width: dfWidth, height: barRect.height)
+                    rightEdge = diskFreeFrame.minX
+                }
             } else {
                 diskFreeFrame = .zero
             }
@@ -358,7 +536,7 @@ final class DockView: NSView {
         let apps = AppManager.shared.apps
         let transientApps = runningAppsNotInDock()
         var currentIDs = apps.map { $0.bundleID } + transientApps
-        if hasTrash { currentIDs.append("__trash__") }
+        if hasTrash && !isControlStrip { currentIDs.append("__trash__") }
         if currentIDs != lastItemBundleIDs {
             rebuildItems()
             return
@@ -378,25 +556,71 @@ final class DockView: NSView {
 
         var idx = 0
         if vertical {
-            var y = padding
+            // Icons are centered in the bar thickness and stacked top→bottom
+            // (Finder on top, Trash at the bottom — like a real vertical dock).
+            let bar = dockBarRect
+            let x = bar.midX - iconSize / 2
+            var y = bar.maxY - padding - gripHeight - iconSize
             for _ in apps {
                 guard idx < itemViews.count else { break }
-                let x = (bounds.width - iconSize) / 2
                 itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                 idx += 1
-                y += iconSize + spacing
+                y -= iconSize + spacing
             }
             if !transientApps.isEmpty {
-                separatorY = y - spacing / 2
-                y += spacing
+                separatorY = y + iconSize + spacing / 2
+                y -= spacing
                 for _ in transientApps {
                     guard idx < itemViews.count else { break }
-                    let x = (bounds.width - iconSize) / 2
                     itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                     idx += 1
-                    y += iconSize + spacing
+                    y -= iconSize + spacing
                 }
             }
+            // Trash icon (always the last item) at the bottom of the stack.
+            if hasTrash, idx < itemViews.count {
+                y -= spacing
+                trashSeparatorX = nil
+                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                idx += 1
+            }
+            // Snapshot resting Y-centres for the frame-based magnifier (see restCentersY).
+            restCentersY = itemViews.map { $0.frame.midY }
+        } else if isControlStrip {
+            // Mac OS 9 Control Strip relayout: left cap + icon modules + right cap
+            let leftCapW = controlStripLeftCapWidth
+            let arrowWidth: CGFloat = 14
+            let grooveWidth: CGFloat = 2
+            var x = barRect.minX + leftCapW
+
+            startButtonFrame = .zero
+            clockFrame = .zero
+            trayIconFrame = .zero
+            diskFreeFrame = .zero
+
+            let transientApps = runningAppsNotInDock()
+            let totalCount = apps.count + transientApps.count
+            for i in 0..<apps.count {
+                guard idx < itemViews.count else { break }
+                let y = (barRect.height - iconSize) / 2
+                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                idx += 1
+                x += iconSize + arrowWidth
+                if i < apps.count - 1 || !transientApps.isEmpty {
+                    x += grooveWidth
+                }
+            }
+            for i in 0..<transientApps.count {
+                guard idx < itemViews.count else { break }
+                let y = (barRect.height - iconSize) / 2
+                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                idx += 1
+                x += iconSize + arrowWidth
+                if i < transientApps.count - 1 {
+                    x += grooveWidth
+                }
+            }
+
         } else {
             var x = barRect.minX + padding
 
@@ -464,8 +688,21 @@ final class DockView: NSView {
                 startButtonFrame = .zero
             }
 
-            // Right-side trays: clock + disk free, positioned from right edge
+            // Right-side trays: clock + tray icon + disk free, positioned from right edge
             var rightEdge = barRect.maxX
+
+            // Pre-calculate tray icon size for Win98/XP (needed to widen systray clockFrame)
+            let hasTrayIcon: Bool
+            let traySize: CGFloat
+            let trayPad: CGFloat = 3
+            if let tn = ThemeManager.shared.activeTheme?.config.name,
+               (tn == "Windows 98" || tn == "Windows XP") {
+                hasTrayIcon = true
+                traySize = max(14, iconSize * 0.55)
+            } else {
+                hasTrayIcon = false
+                traySize = 0
+            }
 
             if hasClock {
                 updateClockString()
@@ -474,7 +711,16 @@ final class DockView: NSView {
                 let clockFontSize = theme.dock.clockFontSize ?? max(11, iconSize * 0.45)
                 let clockFont = NSFont.monospacedDigitSystemFont(ofSize: clockFontSize, weight: .regular)
                 let clockTextWidth = (clockString as NSString).size(withAttributes: [.font: clockFont]).width
-                let clockWidth = clockTextWidth + (isXP ? 20 : 16)
+                var clockWidth = clockTextWidth + (isXP ? 20 : 16)
+                // Widen systray to include ICQ tray icon
+                if hasTrayIcon {
+                    clockWidth += traySize + trayPad * 2 + 2
+                    // On XP the ICQ icon is shifted right past the systray chevron, so
+                    // reserve the extra clearance too (chevron half-width + gap).
+                    if isXP {
+                        clockWidth += max(14, iconSize * 0.55) * 0.9 + 2
+                    }
+                }
                 let isSunkenClock = theme.dock.startButtonStyle == "sunken"
                 if isXP || isSunkenClock {
                     clockFrame = NSRect(x: rightEdge - clockWidth, y: 0, width: clockWidth, height: barRect.height)
@@ -489,6 +735,28 @@ final class DockView: NSView {
                 clockTimer = nil
             }
 
+            // ICQ tray icon — inside the systray area for Windows 98 / Windows XP themes.
+            // On XP the "show hidden icons" chevron is drawn centred on clockFrame.minX,
+            // so it occupies the tray's left half-width. Shift the ICQ icon right past the
+            // chevron's right half (≈ max(14, iconSize*0.55)*0.9) plus a small gap so they
+            // don't overlap. Win98 has no chevron, so keep the tight original offset.
+            if hasTrayIcon && !clockFrame.isEmpty {
+                let trayStartX: CGFloat
+                if theme.isXPStartMenu {
+                    trayStartX = clockFrame.minX + max(14, iconSize * 0.55) * 0.9 + trayPad + 4
+                } else {
+                    trayStartX = clockFrame.minX + trayPad + 2
+                }
+                trayIconFrame = NSRect(
+                    x: trayStartX,
+                    y: clockFrame.midY - traySize / 2,
+                    width: traySize,
+                    height: traySize
+                )
+            } else {
+                trayIconFrame = .zero
+            }
+
             if hasDiskFree {
                 updateDiskFreeString()
                 let fontSize = theme.dock.clockFontSize ?? max(11, iconSize * 0.45)
@@ -498,8 +766,19 @@ final class DockView: NSView {
                 let valueW = (diskFreeValue as NSString).size(withAttributes: [.font: boldFont]).width
                 let unitW = (diskFreeUnit as NSString).size(withAttributes: [.font: font]).width
                 let dfWidth: CGFloat = 8 + labelW + 6 + valueW + 8 + 6 + unitW + 8
-                diskFreeFrame = NSRect(x: rightEdge - dfWidth, y: 0, width: dfWidth, height: barRect.height)
-                rightEdge = diskFreeFrame.minX
+                let isSunkenDF = theme.dock.startButtonStyle == "sunken"
+                if isSunkenDF {
+                    // OS/2 WarpCenter: the drive/free-space gauge sits in the MIDDLE area
+                    // of the bar (between the program tabs and the clock), not glued to
+                    // the far-right clock. Keep this in sync with rebuildItems().
+                    let clockLeft = clockFrame.isEmpty ? barRect.maxX : clockFrame.minX
+                    let dfRight = barRect.midX + (clockLeft - barRect.midX) * 0.42
+                    let dfX = max(startButtonFrame.maxX + spacing, dfRight - dfWidth)
+                    diskFreeFrame = NSRect(x: dfX, y: 0, width: dfWidth, height: barRect.height)
+                } else {
+                    diskFreeFrame = NSRect(x: rightEdge - dfWidth, y: 0, width: dfWidth, height: barRect.height)
+                    rightEdge = diskFreeFrame.minX
+                }
             } else {
                 diskFreeFrame = .zero
             }
@@ -612,19 +891,20 @@ final class DockView: NSView {
                 return img
             }
         }
-        // Fallback: SF Symbol (correctly differentiates full vs. empty)
-        let symbolName = trashFull ? "trash.fill" : "trash"
-        let config = NSImage.SymbolConfiguration(pointSize: size * 0.7, weight: .regular)
-        if let img = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Trash")?
-            .withSymbolConfiguration(config) {
-            let finalImg = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
-                let inset = rect.insetBy(dx: size * 0.1, dy: size * 0.1)
-                img.draw(in: inset)
-                return true
-            }
-            return finalImg
+        // Fallback: AppKit's authentic Aqua trash images, which DO reflect full vs.
+        // empty (the .Trash *folder* icon from NSWorkspace does not, so we avoid it).
+        let sysName = trashFull ? "NSTrashFull" : "NSTrashEmpty"
+        if let img = NSImage(named: NSImage.Name(sysName)) {
+            let copy = img.copy() as! NSImage
+            copy.size = NSSize(width: size, height: size)
+            return copy
         }
-        return NSImage()
+        // Last resort: the static folder icon.
+        let trashPath = (FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".Trash")).path
+        let sysIcon = NSWorkspace.shared.icon(forFile: trashPath)
+        sysIcon.size = NSSize(width: size, height: size)
+        return sysIcon
     }
 
     var onRunningAppsChanged: (() -> Void)?
@@ -640,9 +920,12 @@ final class DockView: NSView {
         runningBundleIDs = running
 
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
-        for item in itemViews {
-            if item.bundleID == "__trash__" || item.bundleID.hasPrefix("__folder__") { continue }
-            item.setRunningIndicator(visible: running.contains(item.bundleID), theme: theme)
+        // Control Strip does NOT show running app indicator dots, but still needs rebuild
+        if !theme.isControlStrip {
+            for item in itemViews {
+                if item.bundleID == "__trash__" || item.bundleID.hasPrefix("__folder__") { continue }
+                item.setRunningIndicator(visible: running.contains(item.bundleID), theme: theme)
+            }
         }
 
         if changed && AppSettings.shared.dockShowRunningApps && !isRebuilding {
@@ -658,6 +941,23 @@ final class DockView: NSView {
         let iconSize = theme.dock.iconSize * scale
         let spacing = theme.dock.spacing * scale
         let padding = theme.dock.padding * scale
+
+        // Control Strip: left cap PNG + icon modules + right cap PNG
+        if isControlStrip {
+            loadControlStripCaps()
+            let leftCapW = controlStripLeftCapWidth
+            if controlStripCollapsed {
+                return leftCapW
+            }
+            let grooveWidth: CGFloat = 2    // 1px dark + 1px light
+            let arrowWidth: CGFloat = 14    // ▶ arrow after each icon
+            let rightCapW = controlStripRightCapWidth
+            let pinnedCount = CGFloat(AppManager.shared.apps.count)
+            let transientCount = CGFloat(runningAppsNotInDock().count)
+            let totalCount = pinnedCount + transientCount
+            let modulesWidth = totalCount * (iconSize + arrowWidth) + max(0, totalCount - 1) * grooveWidth
+            return leftCapW + modulesWidth + rightCapW
+        }
 
         let pinnedCount = CGFloat(AppManager.shared.apps.count)
         var width = padding * 2 + pinnedCount * iconSize + max(0, pinnedCount - 1) * spacing
@@ -705,14 +1005,27 @@ final class DockView: NSView {
         let rect = currentBarRect  // Draw background — expands during magnification
         let cr = theme.dock.cornerRadius * scale
 
+        // ── Mac OS 9 Control Strip ──────────────────────────────────────
+        if theme.isControlStrip {
+            drawControlStrip(ctx: ctx, theme: theme, barRect: rect, bgAlpha: bgAlpha)
+            return
+        }
+
         // Background color with user transparency applied
         let bgColor = theme.parsedBackgroundColor.withAlphaComponent(
             theme.parsedBackgroundColor.alphaComponent * bgAlpha
         )
 
         // Build background path first (3D shelf uses trapezoid, flat uses rounded rect)
+        // Vertical docks: flush (square) on the screen-edge side, rounded on the
+        // other three, with the border drawn on those three sides only.
+        var verticalBorderPath: NSBezierPath?
         let bgPath: NSBezierPath
-        if theme.has3DShelf && !theme.isVertical {
+        if theme.isVertical {
+            let paths = verticalBarPaths(rect: rect, radius: cr)
+            bgPath = paths.fill
+            verticalBorderPath = paths.border
+        } else if theme.has3DShelf {
             let topInset = rect.height * 0.15
             bgPath = NSBezierPath()
             bgPath.move(to: NSPoint(x: rect.minX, y: rect.minY))
@@ -764,8 +1077,8 @@ final class DockView: NSView {
             ctx.restoreGState()
         }
 
-        // Shelf highlight line
-        if let shelfColor = theme.parsedShelfLineColor {
+        // Shelf highlight line (horizontal floor — only for bottom docks)
+        if let shelfColor = theme.parsedShelfLineColor, !theme.isVertical {
             shelfColor.withAlphaComponent(shelfColor.alphaComponent * bgAlpha).setStroke()
             let shelfLine = NSBezierPath()
             let shelfY = rect.minY + rect.height * 0.38
@@ -808,11 +1121,13 @@ final class DockView: NSView {
             }
         }
 
-        // Border
+        // Border — vertical docks stroke only the 3 visible sides (top, bottom, and
+        // the interior side toward screen center); the screen-edge side stays flush.
         if theme.dock.borderWidth > 0 {
             theme.parsedBorderColor.setStroke()
-            bgPath.lineWidth = theme.dock.borderWidth
-            bgPath.stroke()
+            let strokePath = verticalBorderPath ?? bgPath
+            strokePath.lineWidth = theme.dock.borderWidth
+            strokePath.stroke()
         }
 
         // Grip dots handle (BeOS deskbar style)
@@ -871,8 +1186,9 @@ final class DockView: NSView {
             let padding = theme.dock.padding * scale
             NSColor.controlAccentColor.setFill()
             if isVertical {
-                let y = padding + CGFloat(idx) * (iconSize + spacing) - spacing / 2
-                NSBezierPath(roundedRect: NSRect(x: 4, y: y - 1, width: rect.width - 8, height: 2),
+                let topY = dockBarRect.maxY - padding - gripHeight
+                let y = topY - CGFloat(idx) * (iconSize + spacing) + spacing / 2
+                NSBezierPath(roundedRect: NSRect(x: rect.minX + 4, y: y - 1, width: rect.width - 8, height: 2),
                              xRadius: 1, yRadius: 1).fill()
             } else {
                 let startOffset = hasStartButton && !startButtonFrame.isEmpty
@@ -1171,9 +1487,23 @@ final class DockView: NSView {
                     .shadow: shadow,
                 ]
                 let timeSize = (clockString as NSString).size(withAttributes: attrs)
-                let tx = clockFrame.midX - timeSize.width / 2 + 2
+                let tx = clockFrame.maxX - timeSize.width - 10
                 let ty = clockFrame.midY - timeSize.height / 2
                 (clockString as NSString).draw(at: NSPoint(x: tx, y: ty), withAttributes: attrs)
+
+                // XP notification-area "show hidden icons" chevron. On real Windows XP
+                // Luna, the round "«" button straddles the notification area's left-edge
+                // separator — half overlapping the tray, half in the taskbar — and is
+                // vertically centred. We draw it centred ON the separator at
+                // clockFrame.minX (the divider drawn above), vertically centred.
+                if let arrow = NSImage(contentsOf: ThemeManager.shared.activeTheme!.iconsDirectory.appendingPathComponent("systray-arrow.png")) {
+                    let aspect = arrow.size.width > 0 ? arrow.size.width / arrow.size.height : 1
+                    let ah = max(14, theme.dock.iconSize * scale * 0.55)
+                    let aw = ah * aspect
+                    let arrowRect = NSRect(x: clockFrame.minX - aw / 2,
+                                           y: clockFrame.midY - ah / 2, width: aw, height: ah)
+                    arrow.draw(in: arrowRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+                }
             } else {
                 let isSunkenClock = theme.dock.startButtonStyle == "sunken"
 
@@ -1252,7 +1582,7 @@ final class DockView: NSView {
                 let font = NSFont.monospacedDigitSystemFont(ofSize: clockFontSize, weight: .regular)
                 let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
                 let timeSize = (clockString as NSString).size(withAttributes: attrs)
-                let tx = clockFrame.midX - timeSize.width / 2
+                let tx = clockFrame.maxX - timeSize.width - 8
                 let ty = clockFrame.midY - timeSize.height / 2
                 (clockString as NSString).draw(at: NSPoint(x: tx, y: ty), withAttributes: attrs)
             }
@@ -1331,13 +1661,211 @@ final class DockView: NSView {
             // Unit (e.g. "GB Free")
             (diskFreeUnit as NSString).draw(at: NSPoint(x: curX, y: textY), withAttributes: blackAttrs)
         }
+
+        // ICQ tray icon (right of clock, for Windows 98 / Windows XP)
+        if !trayIconFrame.isEmpty, let icqImg = startMenuIcon("icq.png") {
+            icqImg.size = trayIconFrame.size
+            icqImg.draw(in: trayIconFrame,
+                        from: .zero,
+                        operation: .sourceOver,
+                        fraction: 1.0)
+        }
+    }
+
+    // MARK: - Control Strip Drawing
+
+    /// Draws the Mac OS 9 Control Strip: a narrow platinum-gray horizontal bar
+    /// Load left.png and right.png end cap images from the active theme bundle.
+    private func loadControlStripCaps() {
+        guard controlStripLeftCap == nil || controlStripRightCap == nil,
+              let theme = ThemeManager.shared.activeTheme else { return }
+        let iconsDir = theme.iconsDirectory
+        let leftURL = iconsDir.appendingPathComponent("controlstrip-left.png")
+        let rightURL = iconsDir.appendingPathComponent("controlstrip-right.png")
+        controlStripLeftCap = NSImage(contentsOf: leftURL)
+        controlStripRightCap = NSImage(contentsOf: rightURL)
+    }
+
+    /// Scale factor for left Control Strip PNG cap (bar height / PNG height).
+    private var controlStripLeftCapScale: CGFloat {
+        let origH: CGFloat = controlStripLeftCap?.size.height ?? 52
+        return dockBarRect.height / origH
+    }
+
+    /// Scale factor for right Control Strip PNG cap (bar height / PNG height).
+    private var controlStripRightCapScale: CGFloat {
+        let origH: CGFloat = controlStripRightCap?.size.height ?? 52
+        return dockBarRect.height / origH
+    }
+
+    /// Kept for border proportion calculations (based on left cap which defines the border style).
+    var controlStripCapScale: CGFloat { controlStripLeftCapScale }
+
+    /// Scaled width for the left end cap PNG.
+    var controlStripLeftCapWidth: CGFloat {
+        let origW: CGFloat = controlStripLeftCap?.size.width ?? 32
+        return origW * controlStripLeftCapScale
+    }
+
+    /// Scaled width for the right end cap PNG (scaled proportionally to its own height).
+    var controlStripRightCapWidth: CGFloat {
+        let origW: CGFloat = controlStripRightCap?.size.width ?? 34
+        return origW * controlStripRightCapScale
+    }
+
+    /// Mac OS 9 Control Strip — uses PNG end caps, ▶ arrows per module, grooves.
+    private func drawControlStrip(ctx: CGContext, theme: DockThemeConfig, barRect: NSRect, bgAlpha: CGFloat) {
+        loadControlStripCaps()
+        let r = barRect
+        let leftCapW = controlStripLeftCapWidth
+        let rightCapW = controlStripRightCapWidth
+        let arrowWidth: CGFloat = 14   // ▶ arrow space per module
+        let grooveWidth: CGFloat = 2
+
+        // -- Colors (measured from PNG pixel values)
+        let platinum = NSColor(calibratedWhite: 0.733, alpha: bgAlpha)       // #BBBBBB — main content fill
+        let grooveDark = NSColor(calibratedWhite: 0.55, alpha: bgAlpha)
+        let grooveLight = NSColor(calibratedWhite: 0.92, alpha: bgAlpha)
+        let arrowColor = NSColor(calibratedWhite: 0.20, alpha: bgAlpha)
+        let borderColor = NSColor(calibratedWhite: 0.149, alpha: bgAlpha)    // #262626 — dark border
+        let bevelLight = NSColor(calibratedWhite: 1.0, alpha: bgAlpha)       // #FFFFFF — top highlight
+        let bevelShadow = NSColor(calibratedWhite: 0.502, alpha: bgAlpha)    // #808080 — bottom shadow
+
+        // Proportional border sizes (PNG is 52px tall: 2+4+content+4+2)
+        let scale = controlStripCapScale  // barRect.height / originalPNGHeight
+        let darkBorderH  = round(2 * scale)   // 2px dark edge
+        let highlightH   = round(4 * scale)   // 4px white bevel (top)
+        let shadowH       = round(4 * scale)   // 4px gray shadow (bottom)
+
+        // 1. Draw left cap PNG (collapse button) — pixel-crisp rendering
+        let leftCapRect = NSRect(x: r.minX, y: r.minY, width: leftCapW, height: r.height)
+        if let leftCap = controlStripLeftCap {
+            ctx.saveGState()
+            ctx.interpolationQuality = .none  // nearest-neighbor for pixel art
+            leftCap.draw(in: leftCapRect, from: .zero, operation: .sourceOver, fraction: bgAlpha)
+            ctx.restoreGState()
+        }
+
+        // If collapsed, only draw left cap
+        if controlStripCollapsed { return }
+
+        // 2. Middle section background — matches PNG border structure exactly
+        let midX = r.minX + leftCapW
+        let midW = r.width - leftCapW - rightCapW
+        if midW > 0 {
+            // a) Dark border — top 2px
+            borderColor.setFill()
+            NSBezierPath(rect: NSRect(x: midX, y: r.maxY - darkBorderH,
+                                      width: midW, height: darkBorderH)).fill()
+            // b) White highlight bevel — 4px below top border
+            bevelLight.setFill()
+            NSBezierPath(rect: NSRect(x: midX, y: r.maxY - darkBorderH - highlightH,
+                                      width: midW, height: highlightH)).fill()
+
+            // c) Platinum content fill
+            let contentY = r.minY + darkBorderH + shadowH
+            let contentH = r.height - darkBorderH * 2 - highlightH - shadowH
+            platinum.setFill()
+            NSBezierPath(rect: NSRect(x: midX, y: contentY,
+                                      width: midW, height: contentH)).fill()
+
+            // d) Gray shadow — 4px above bottom border
+            bevelShadow.setFill()
+            NSBezierPath(rect: NSRect(x: midX, y: r.minY + darkBorderH,
+                                      width: midW, height: shadowH)).fill()
+            // e) Dark border — bottom 2px
+            borderColor.setFill()
+            NSBezierPath(rect: NSRect(x: midX, y: r.minY,
+                                      width: midW, height: darkBorderH)).fill()
+        }
+
+        // 3. Right cap PNG (grip handle) — pixel-crisp rendering for retro look
+        let rightCapRect = NSRect(x: r.maxX - rightCapW, y: r.minY, width: rightCapW, height: r.height)
+        if let rightCap = controlStripRightCap {
+            ctx.saveGState()
+            ctx.interpolationQuality = .none  // nearest-neighbor for pixel art
+            rightCap.draw(in: rightCapRect, from: .zero, operation: .sourceOver, fraction: bgAlpha)
+            ctx.restoreGState()
+        }
+
+        // 4. Arrows ▶ and grooves between icon modules
+        for (i, item) in itemViews.enumerated() {
+            let iconRight = item.frame.maxX
+            // ▶ arrow — larger, matching original proportions
+            let arrowX = iconRight + 3
+            let arrowCY = item.frame.midY
+            let triH: CGFloat = 8
+            let triW: CGFloat = 6
+            let tri = NSBezierPath()
+            tri.move(to: NSPoint(x: arrowX, y: arrowCY - triH / 2))
+            tri.line(to: NSPoint(x: arrowX + triW, y: arrowCY))
+            tri.line(to: NSPoint(x: arrowX, y: arrowCY + triH / 2))
+            tri.close()
+            arrowColor.setFill()
+            tri.fill()
+
+            // Groove between modules (not after the last one)
+            if i < itemViews.count - 1 {
+                let gx = iconRight + arrowWidth
+                let grooveTop = r.minY + darkBorderH + shadowH
+                let grooveBot = r.maxY - darkBorderH - highlightH
+                drawGroove(at: gx, top: grooveTop, bottom: grooveBot,
+                           dark: grooveDark, light: grooveLight)
+            }
+        }
+    }
+
+    /// Callback for Control Strip collapse/expand animation (set by DockController).
+    var onControlStripToggle: ((_ collapsed: Bool) -> Void)?
+
+    /// Handle click on Control Strip left cap (collapse/expand toggle).
+    func handleControlStripCollapseClick(at localPoint: NSPoint) -> Bool {
+        guard isControlStrip else { return false }
+        let leftCapW = controlStripLeftCapWidth
+        // Use full bounds height so click detection works even during animations
+        let capRect = NSRect(x: 0, y: 0, width: leftCapW, height: bounds.height)
+        if capRect.contains(localPoint) {
+            controlStripCollapsed.toggle()
+            onControlStripToggle?(controlStripCollapsed)
+            return true
+        }
+        return false
+    }
+
+    /// Helper: draw a 2px groove (dark + light line) at the given x position.
+    private func drawGroove(at x: CGFloat, top: CGFloat, bottom: CGFloat,
+                            dark: NSColor, light: NSColor) {
+        dark.setStroke()
+        var line = NSBezierPath()
+        line.move(to: NSPoint(x: x, y: top))
+        line.line(to: NSPoint(x: x, y: bottom))
+        line.lineWidth = 1
+        line.stroke()
+        light.setStroke()
+        line = NSBezierPath()
+        line.move(to: NSPoint(x: x + 1, y: top))
+        line.line(to: NSPoint(x: x + 1, y: bottom))
+        line.lineWidth = 1
+        line.stroke()
     }
 
     // MARK: - Hit testing (pass through clicks outside items)
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         let local = convert(point, from: superview)
+        // Control Strip: left cap is clickable (collapse/expand)
+        if isControlStrip {
+            let leftCapW = controlStripLeftCapWidth
+            let capRect = NSRect(x: 0, y: 0, width: leftCapW, height: bounds.height)
+            if capRect.contains(local) { return self }
+            // When collapsed, the entire strip IS the left cap
+            if controlStripCollapsed { return nil }
+        }
         if hasStartButton && startButtonFrame.contains(local) {
+            return self
+        }
+        // ICQ tray icon
+        if !trayIconFrame.isEmpty && trayIconFrame.insetBy(dx: -4, dy: -4).contains(local) {
             return self
         }
         // Check items using their visual (rendered) bounds, not the original frame.
@@ -1359,8 +1887,34 @@ final class DockView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    override func rightMouseDown(with event: NSEvent) {
+        let local = convert(event.locationInWindow, from: nil)
+        // If the right-click is on a dock item, let the item's own menu handle it.
+        // Use the VISUAL (magnified/presentation) frame so a right-click on an
+        // enlarged icon still hits it, matching hitTest(_:).
+        let onItem = itemViews.contains { item in
+            let f = (item.layer?.presentation() ?? item.layer)?.frame ?? item.frame
+            return f.contains(local)
+        }
+        if onItem {
+            super.rightMouseDown(with: event)
+            return
+        }
+        onDockContextMenu?(local)
+    }
+
     override func mouseDown(with event: NSEvent) {
         let local = convert(event.locationInWindow, from: nil)
+
+        // Control Strip: left cap click → collapse/expand
+        if handleControlStripCollapseClick(at: local) { return }
+
+        // ICQ tray icon → open iMessages
+        if !trayIconFrame.isEmpty && trayIconFrame.insetBy(dx: -4, dy: -4).contains(local) {
+            AppLauncher.launchOrActivate(bundleID: "com.apple.MobileSMS")
+            return
+        }
+
         if hasStartButton && startButtonFrame.contains(local) {
             // Toggle: if start menu is visible, dismiss it; otherwise show it
             if let panel = startMenuPanel, panel.isVisible {
@@ -1511,6 +2065,70 @@ final class DockView: NSView {
         let range = baseSize * 3.0  // effect radius
         let barRect = dockBarRect
 
+        // ── Vertical dock magnification ─────────────────────────────────────
+        // Cursor-anchored reflow: the icon under the pointer keeps its position (its
+        // fractional spot in the stack is preserved) while neighbours spread apart so
+        // they never overlap, each bulging toward the screen interior over the long
+        // edge. calculateDockSize reserves enough length headroom that this rarely
+        // clamps. The bar grows in LENGTH only (fixed thickness) to wrap the icons.
+        if isVertical {
+            let count = itemViews.count
+            // Use the REST centres captured at layout time, NOT the live frames (which
+            // the frame-based magnifier mutates — reading them would compound spacing).
+            let originalCentersY = (restCentersY.count == count) ? restCentersY : itemViews.map { $0.frame.midY }
+            var scales: [CGFloat] = []
+            for cYrest in originalCentersY {
+                let dist = abs(point.y - cYrest)
+                if dist < range {
+                    let t = dist / range
+                    scales.append(1.0 + (maxScale - 1.0) * ((1.0 + cos(CGFloat.pi * t)) / 2.0))
+                } else {
+                    scales.append(1.0)
+                }
+            }
+            // Magnified heights are based on the REST icon size (baseSize), not the
+            // current (possibly already-magnified) frame height — avoids compounding.
+            let magHeights = scales.map { $0 * baseSize }
+            var posFromTop = [CGFloat](repeating: 0, count: count)
+            var cum: CGFloat = 0
+            for i in 0..<count { posFromTop[i] = cum + magHeights[i] / 2; cum += magHeights[i] + spacing }
+            let totalMag = max(1, cum - spacing)
+
+            let origTop = (originalCentersY.first ?? 0) + baseSize / 2
+            let origBottom = (originalCentersY.last ?? 0) - baseSize / 2
+            let origTotal = max(1, origTop - origBottom)
+            // Anchor the stack using a cursor position CLAMPED to the icon range, so
+            // moving the mouse past the last icon (e.g. below the Trash) does not drag
+            // the whole stack along with it — it stays put while the end icon shrinks.
+            let anchorY = min(max(point.y, origBottom), origTop)
+            let frac = (origTop - anchorY) / origTotal
+            var newTop = anchorY + frac * totalMag
+            if newTop > bounds.height - padding { newTop = bounds.height - padding }
+            if newTop - totalMag < padding { newTop = max(bounds.height - padding, padding + totalMag) }
+
+            let popDir: CGFloat = (dockPosition == "right") ? -1 : 1  // interior direction
+            // Resize each icon's FRAME (rather than a layer transform). A transform
+            // pushes the icon outside its own frame, and CoreAnimation clips that
+            // overhang asymmetrically (leftward overhang clipped → right dock popped
+            // less). Setting the real frame keeps the content inside it, so both sides
+            // protrude identically. All vertical icons rest centred on barRect.midX.
+            let restCenterX = barRect.midX
+            for (i, item) in itemViews.enumerated() {
+                let magW = scales[i] * baseSize
+                let cx = restCenterX + popDir * (scales[i] - 1.0) * baseSize * 0.9  // pop interior
+                let cy = newTop - posFromTop[i]
+                item.layer?.setAffineTransform(.identity)
+                item.layer?.zPosition = scales[i]
+                item.frame = NSRect(x: cx - magW / 2, y: cy - magW / 2, width: magW, height: magW)
+            }
+            let expandedTop = min(bounds.height, max(barRect.maxY, newTop + padding))
+            let expandedBottom = max(0, min(barRect.minY, newTop - totalMag - padding))
+            magnifiedDockBarRect = NSRect(x: barRect.minX, y: expandedBottom,
+                                          width: barRect.width, height: expandedTop - expandedBottom)
+            needsDisplay = true
+            return
+        }
+
         // 1. Calculate scale for each icon (raised cosine bell curve)
         var scales: [CGFloat] = []
         for item in itemViews {
@@ -1573,6 +2191,8 @@ final class DockView: NSView {
             item.resetMagnification()
         }
         magnifiedDockBarRect = nil
+        // Vertical magnification resizes icon FRAMES, so restore the resting layout.
+        if isVertical { relayoutItems() }
         needsDisplay = true
     }
 
@@ -1616,7 +2236,9 @@ final class DockView: NSView {
         if isXP {
             showXPStartMenu()
         } else {
-            showClassicStartMenu()
+            // Defer to the next runloop tick so the opening click fully completes before
+            // the panel's dismiss monitors are installed (fixes OS/2 needing two clicks).
+            DispatchQueue.main.async { [weak self] in self?.showClassicStartMenu() }
         }
     }
 
@@ -1624,18 +2246,35 @@ final class DockView: NSView {
         typealias MI = StartMenuPanel.MenuItem
 
         // Left column: pinned apps from dock (max 6, like original XP)
+        let xpIconSize: CGFloat = 32
         var leftItems: [MI] = []
         for app in AppManager.shared.apps.prefix(6) {
             let bid = app.bundleID
             if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
                 let name = FileManager.default.displayName(atPath: appURL.path)
                     .replacingOccurrences(of: ".app", with: "")
-                let icon = NSWorkspace.shared.icon(forFile: appURL.path)
-                icon.size = NSSize(width: 28, height: 28)
+                let icon = ThemeManager.shared.icon(for: bid, size: xpIconSize)
                 leftItems.append(MI(title: name, icon: icon, action: {
                     AppLauncher.launchOrActivate(bundleID: bid)
                 }))
             }
+        }
+
+        // Re:Amp (Winamp clone) — pinned in XP start menu (if enabled in theme settings)
+        if AppSettings.shared.reampEnabled {
+            if !leftItems.isEmpty {
+                leftItems.append(MI(separator: true))
+            }
+            let reampXPIcon: NSImage? = {
+                guard let themeBundle = ThemeManager.shared.activeTheme else { return nil }
+                let url = themeBundle.iconsDirectory.appendingPathComponent("reamp.png")
+                guard let img = NSImage(contentsOf: url) else { return nil }
+                img.size = NSSize(width: xpIconSize, height: xpIconSize)
+                return img
+            }()
+            leftItems.append(MI(title: "Re:Amp", icon: reampXPIcon, action: {
+                ReAmpHelper.launchOrInstall()
+            }))
         }
 
         // Add separator and running apps not in dock
@@ -1647,8 +2286,7 @@ final class DockView: NSView {
             if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
                 let name = FileManager.default.displayName(atPath: appURL.path)
                     .replacingOccurrences(of: ".app", with: "")
-                let icon = NSWorkspace.shared.icon(forFile: appURL.path)
-                icon.size = NSSize(width: 28, height: 28)
+                let icon = ThemeManager.shared.icon(for: bid, size: xpIconSize)
                 leftItems.append(MI(title: name, icon: icon, action: {
                     AppLauncher.launchOrActivate(bundleID: bid)
                 }))
@@ -1667,7 +2305,7 @@ final class DockView: NSView {
                 NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents"))
             }, isBold: true),
             MI(title: "My Recent Documents", icon: xpIcon("xp_recent.png"), action: {
-                NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents"))
+                DockView.openRecentDocuments()
             }),
             MI(title: "My Pictures", icon: xpIcon("xp_pictures.png"), action: {
                 NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures"))
@@ -1692,7 +2330,7 @@ final class DockView: NSView {
                 }
             }),
             MI(title: "Help and Support", icon: xpIcon("xp_help.png"), action: {
-                NSApp.sendAction(Selector(("showAbout")), to: nil, from: nil)
+                if let url = URL(string: "https://www.reddit.com") { NSWorkspace.shared.open(url) }
             }),
             MI(title: "Run…", icon: xpIcon("xp_run.png"), action: {
                 NSWorkspace.shared.launchApplication("Terminal")
@@ -1722,26 +2360,33 @@ final class DockView: NSView {
         let panel = StartMenuPanel()
         startMenuPanel = panel
         let pt = NSPoint(x: startButtonFrame.minX, y: startButtonFrame.maxY + 2)
-        panel.showXP(data: data, at: pt, in: self)
+        panel.showXP(data: data, at: pt, in: self, startButtonRect: startButtonFrame)
     }
 
     private func showClassicStartMenu() {
         typealias MI = StartMenuPanel.MenuItem
 
+        // Win98 start-menu icon loader (mirrors the XP `xpIcon` pattern): loads a
+        // 16px glyph from the active theme's icons directory.
+        let win98Icon = { (filename: String) -> NSImage? in
+            self.startMenuIcon(filename)
+        }
+
         // Programs submenu items
         var programItems: [MI] = []
         for app in AppManager.shared.apps {
             let bid = app.bundleID
+            // Use the THEME-mapped icon (same as the dock), not the raw macOS app icon,
+            // so the Programs submenu matches the Win98 look.
+            let icon = ThemeManager.shared.icon(for: bid, size: 20)
             if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
                 let name = FileManager.default.displayName(atPath: appURL.path)
                     .replacingOccurrences(of: ".app", with: "")
-                let icon = NSWorkspace.shared.icon(forFile: appURL.path)
-                icon.size = NSSize(width: 20, height: 20)
                 programItems.append(MI(title: name, icon: icon, action: {
                     AppLauncher.launchOrActivate(bundleID: bid)
                 }))
             } else {
-                programItems.append(MI(title: bid, action: {
+                programItems.append(MI(title: bid, icon: icon, action: {
                     AppLauncher.launchOrActivate(bundleID: bid)
                 }))
             }
@@ -1750,20 +2395,29 @@ final class DockView: NSView {
         if !transient.isEmpty {
             programItems.append(MI(separator: true))
             for bid in transient {
+                let icon = ThemeManager.shared.icon(for: bid, size: 20)
                 if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
                     let name = FileManager.default.displayName(atPath: appURL.path)
                         .replacingOccurrences(of: ".app", with: "")
-                    let icon = NSWorkspace.shared.icon(forFile: appURL.path)
-                    icon.size = NSSize(width: 20, height: 20)
                     programItems.append(MI(title: name, icon: icon, action: {
                         AppLauncher.launchOrActivate(bundleID: bid)
                     }))
                 } else {
-                    programItems.append(MI(title: bid, action: {
+                    programItems.append(MI(title: bid, icon: icon, action: {
                         AppLauncher.launchOrActivate(bundleID: bid)
                     }))
                 }
             }
+        }
+
+        // Re:Amp (Winamp clone) — shown if enabled in theme settings
+        if AppSettings.shared.reampEnabled {
+            let reampIcon = startMenuIcon("reamp.png")
+            let reampItem = MI(title: "Re:Amp", icon: reampIcon, action: {
+                ReAmpHelper.launchOrInstall()
+            })
+            programItems.append(MI(separator: true))
+            programItems.append(reampItem)
         }
 
         // Favorites submenu items
@@ -1796,38 +2450,38 @@ final class DockView: NSView {
 
         // Settings submenu items
         let settingsSubItems: [MI] = [
-            MI(title: "RetroMac Settings…", icon: startMenuIcon("menu-settings.png"), action: {
+            MI(title: "RetroMac Settings…", icon: win98Icon("menu-settings.png"), action: {
                 NSApp.sendAction(Selector(("openSettings")), to: nil, from: nil)
             }),
-            MI(title: "Control Panel", icon: startMenuIcon("menu-sysguard.png"), action: {
+            MI(title: "Control Panel", icon: win98Icon("menu-sysguard.png"), action: {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:")!)
             }),
         ]
 
         // Build top-level items
         let items: [MI] = [
-            MI(title: "Programs", icon: startMenuIcon("menu-programs.png"), submenuItems: programItems),
-            MI(title: "Favorites", icon: startMenuIcon("menu-favorites.png"), submenuItems: favItems),
-            MI(title: "Documents", icon: startMenuIcon("menu-documents.png"), submenuItems: docItems),
-            MI(title: "Settings", icon: startMenuIcon("menu-settings.png"), submenuItems: settingsSubItems),
+            MI(title: "Programs", icon: win98Icon("menu-programs.png"), submenuItems: programItems),
+            MI(title: "Favorites", icon: win98Icon("menu-favorites.png"), submenuItems: favItems),
+            MI(title: "Documents", icon: win98Icon("menu-documents.png"), submenuItems: docItems),
+            MI(title: "Settings", icon: win98Icon("menu-settings.png"), submenuItems: settingsSubItems),
             MI(separator: true),
-            MI(title: "Find…", icon: startMenuIcon("menu-find.png"), action: {
+            MI(title: "Find…", icon: win98Icon("menu-find.png"), action: {
                 if let finderURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder") {
                     NSWorkspace.shared.open(finderURL)
                 }
             }),
-            MI(title: "Help", icon: startMenuIcon("menu-help.png"), action: {
+            MI(title: "Help", icon: win98Icon("menu-help.png"), action: {
                 NSApp.sendAction(Selector(("showAbout")), to: nil, from: nil)
             }),
-            MI(title: "Run…", icon: startMenuIcon("menu-run.png"), action: {
+            MI(title: "Run…", icon: win98Icon("menu-run.png"), action: {
                 NSWorkspace.shared.launchApplication("Terminal")
             }),
             MI(separator: true),
-            MI(title: "Log Off \(NSFullUserName())…", icon: startMenuIcon("menu-logoff.png"), action: {
+            MI(title: "Log Off \(NSFullUserName())…", icon: win98Icon("menu-logoff.png"), action: {
                 let src = "tell application \"System Events\" to log out"
                 NSAppleScript(source: src)?.executeAndReturnError(nil)
             }),
-            MI(title: "Shut Down…", icon: nil, action: {
+            MI(title: "Shut Down…", icon: win98Icon("menu-shutdown.png"), action: {
                 let src = "tell application \"System Events\" to shut down"
                 NSAppleScript(source: src)?.executeAndReturnError(nil)
             }),
@@ -1837,15 +2491,42 @@ final class DockView: NSView {
         let panel = StartMenuPanel()
         startMenuPanel = panel
         let pt = NSPoint(x: startButtonFrame.minX, y: startButtonFrame.maxY + 2)
-        panel.show(items: items, bannerText: bannerText, at: pt, in: self)
+        panel.show(items: items, bannerText: bannerText, at: pt, in: self, startButtonRect: startButtonFrame)
+    }
+
+    /// Opens a Finder window showing recently modified files (macOS "Recents"-style)
+    /// by writing a temporary smart-folder saved search and opening it.
+    static func openRecentDocuments() {
+        let query = "(kMDItemContentModificationDate >= $time.now(-2592000)) && (kMDItemContentType != public.folder)"
+        let plist: [String: Any] = [
+            "RawQuery": query,
+            "RawQueryDict": [
+                "RawQuery": query,
+                "SearchScopes": ["kMDQueryScopeComputer"]
+            ],
+            "SearchCriteria": [:] as [String: Any]
+        ]
+        let dir = FileManager.default.temporaryDirectory
+        let url = dir.appendingPathComponent("RetroMac-Recents.savedSearch")
+        do {
+            let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            try data.write(to: url)
+            NSWorkspace.shared.open(url)
+        } catch {
+            NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents"))
+        }
     }
 
     private func startMenuIcon(_ name: String) -> NSImage? {
+        // Mirror the XP `xpIcon` loader exactly: load straight from the active theme's
+        // icons directory and return the image AS-IS. Do NOT mutate `img.size` here —
+        // the start-menu views draw into their own fixed icon rects via `draw(in:)`, and
+        // pre-shrinking the image to 16×16 (while the views ask for 20px) was the source
+        // of the "Win98 menu icons missing" report. Returning the unmodified image makes
+        // the classic Win98 path identical to the working XP path.
         guard let theme = ThemeManager.shared.activeTheme else { return nil }
         let iconURL = theme.iconsDirectory.appendingPathComponent(name)
-        guard let img = NSImage(contentsOf: iconURL) else { return nil }
-        img.size = NSSize(width: 16, height: 16)
-        return img
+        return NSImage(contentsOf: iconURL)
     }
 
     private func dismissStartMenu() {

@@ -35,7 +35,7 @@
   },
   "wallpaper": "wallpaper.jpg",
   "fallbackIcon": "generic.png",
-  "defaultPreset": "aqua",
+  "defaultPreset": "lcd-lite",
   "iconMappings": {
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",
