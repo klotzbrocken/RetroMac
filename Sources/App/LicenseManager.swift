@@ -228,7 +228,12 @@ final class LicenseManager: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        let body = "product_id=\(Self.gumroadProductID)&license_key=\(key)"
+        func formEncode(_ s: String) -> String {
+            var allowed = CharacterSet.alphanumerics
+            allowed.insert(charactersIn: "-._~")
+            return s.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+        }
+        let body = "product_id=\(formEncode(Self.gumroadProductID))&license_key=\(formEncode(key))"
         request.httpBody = body.data(using: .utf8)
 
         URLSession.shared.dataTask(with: request) { data, response, error in

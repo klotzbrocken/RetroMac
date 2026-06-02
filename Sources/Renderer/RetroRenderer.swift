@@ -200,20 +200,30 @@ final class RetroRenderer {
         commandBuffer.commit()
     }
 
-    // Recording texture (managed storage for CPU readback)
-    private var recordingTexture: MTLTexture?
+    // Recording textures: a small ring (triple-buffered) so consecutive frames don't
+    // serialize on a single managed texture's CPU readback (the per-frame blit + readback
+    // would otherwise stall the GPU waiting on the previous frame's addCompletedHandler).
+    private var recordingTextures: [MTLTexture] = []
+    private var recordingTextureIndex = 0
+    private let recordingRingSize = 3
 
     private func ensureRecordingTexture(width: Int, height: Int) -> MTLTexture? {
-        if let tex = recordingTexture, tex.width == width, tex.height == height {
+        if recordingTextures.count == recordingRingSize,
+           recordingTextures[0].width == width, recordingTextures[0].height == height {
+            let tex = recordingTextures[recordingTextureIndex]
+            recordingTextureIndex = (recordingTextureIndex + 1) % recordingRingSize
             return tex
         }
+        // (Re)build the ring at the current size.
         let desc = MTLTextureDescriptor.texture2DDescriptor(
             pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false
         )
         desc.usage = [.shaderRead, .renderTarget]
         desc.storageMode = .managed
-        recordingTexture = device.makeTexture(descriptor: desc)
-        return recordingTexture
+        recordingTextures = (0..<recordingRingSize).compactMap { _ in device.makeTexture(descriptor: desc) }
+        guard !recordingTextures.isEmpty else { recordingTextureIndex = 0; return nil }
+        recordingTextureIndex = 1 % recordingTextures.count
+        return recordingTextures[0]
     }
 
     func renderToImage(sourceTexture: MTLTexture, viewportSize: CGSize) -> NSImage? {

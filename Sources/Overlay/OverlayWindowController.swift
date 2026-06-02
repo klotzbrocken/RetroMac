@@ -466,9 +466,11 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     private func updateWindowPosition() {
         guard trackedWindowID != 0 else { return }
 
-        let windowList = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+        // Query ONLY the tracked window instead of enumerating every on-screen window —
+        // much cheaper when many windows/displays are open.
+        let windowList = CGWindowListCopyWindowInfo(.optionIncludingWindow, trackedWindowID) as? [[String: Any]] ?? []
 
-        guard let info = windowList.first(where: { ($0[kCGWindowNumber as String] as? CGWindowID) == trackedWindowID }),
+        guard let info = windowList.first,
               let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
               let x = bounds["X"], let y = bounds["Y"],
               let w = bounds["Width"], let h = bounds["Height"] else {

@@ -106,6 +106,16 @@ final class EmulatorInstaller {
                 return
             }
 
+            // SECURITY: verify the downloaded bundle before trusting it. The download
+            // is over the network (curl) — a MITM/CDN/DNS compromise could serve a
+            // malicious binary. Require an intact code signature AND Gatekeeper approval
+            // (Developer ID + notarized). Reject otherwise instead of copying to /Applications.
+            guard self?.verifyAppSignature(at: foundPath) == true else {
+                print("[Installer] SECURITY: signature/notarization check FAILED for \(emulator.displayName) — aborting")
+                self?.finishInstall(success: false, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
+                return
+            }
+
             // Copy to /Applications
             let targetPath = emulator.appPath
             do {
@@ -123,6 +133,29 @@ final class EmulatorInstaller {
                 self?.finishInstall(success: false, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
             }
         }
+    }
+
+    // MARK: - Security
+
+    /// Verify a downloaded .app before installing: (1) intact, unmodified code signature
+    /// (`codesign --verify --deep --strict`), and (2) Gatekeeper acceptance
+    /// (`spctl --assess --type execute` → Developer ID + notarized). Both must pass.
+    /// Runs on the install background queue (no main-thread blocking).
+    private func verifyAppSignature(at path: String) -> Bool {
+        func run(_ tool: String, _ args: [String]) -> Bool {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: tool)
+            p.arguments = args
+            p.standardOutput = FileHandle.nullDevice
+            p.standardError = FileHandle.nullDevice
+            do { try p.run() } catch { return false }
+            p.waitUntilExit()
+            return p.terminationStatus == 0
+        }
+        let codesignOK = run("/usr/bin/codesign", ["--verify", "--deep", "--strict", path])
+        guard codesignOK else { return false }
+        let gatekeeperOK = run("/usr/sbin/spctl", ["--assess", "--type", "execute", path])
+        return gatekeeperOK
     }
 
     // MARK: - Helpers

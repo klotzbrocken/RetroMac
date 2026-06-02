@@ -85,7 +85,9 @@ final class DockFix {
         let config = ThemeManager.shared.activeTheme?.config
 
         if config?.isVertical == true {
-            // Vertical dock on the left
+            // Vertical dock (left OR right) — dockCGRect already reflects the real
+            // on-screen position, so pushing windows past its right edge is correct
+            // for both sides.
             let dockRight = dockCGRect.maxX
             if windowRect.minX < dockRight {
                 let newX = dockRight

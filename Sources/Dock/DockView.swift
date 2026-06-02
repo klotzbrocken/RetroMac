@@ -43,6 +43,11 @@ final class DockView: NSView {
     /// Expanded dock bar rect during magnification (nil = use resting rect)
     private var magnifiedDockBarRect: NSRect?
 
+    // Pac-Man pellet border animation (theme borderStyle == "pacman")
+    private var pacmanTimer: Timer?
+    private var pacmanPhase: CGFloat = 0
+    private var pacmanObserver: NSObjectProtocol?
+
     // Control Strip state
     private var controlStripCollapsed = false
     private var controlStripLeftCap: NSImage?
@@ -161,6 +166,7 @@ final class DockView: NSView {
 
     deinit {
         clockTimer?.invalidate()
+        pacmanTimer?.invalidate()
         trashPollTimer?.invalidate()
         trashMonitorSource?.cancel()
         if trashDirectoryFD >= 0 { close(trashDirectoryFD) }
@@ -170,6 +176,7 @@ final class DockView: NSView {
         if let obs = wsActivateObserver { wsNC.removeObserver(obs) }
         if let obs = appsObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = themeObserver { NotificationCenter.default.removeObserver(obs) }
+        if let obs = pacmanObserver { NotificationCenter.default.removeObserver(obs) }
     }
 
     private func setupObservers() {
@@ -185,6 +192,9 @@ final class DockView: NSView {
         }
         themeObserver = nc2.addObserver(forName: .dockThemeChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuildItems()
+        }
+        pacmanObserver = nc2.addObserver(forName: .pacmanAnimationChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.needsDisplay = true   // re-evaluate timer + redraw (draw() starts/stops the animation)
         }
 
         let wsNC = NSWorkspace.shared.notificationCenter
@@ -1003,6 +1013,96 @@ final class DockView: NSView {
 
     // MARK: - Drawing
 
+    // MARK: - Pac-Man pellet border
+
+    private func startPacmanTimerIfNeeded() {
+        guard pacmanTimer == nil else { return }
+        let t = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            self.pacmanPhase += 1
+            self.needsDisplay = true
+        }
+        RunLoop.main.add(t, forMode: .common)
+        pacmanTimer = t
+    }
+
+    private func stopPacmanTimer() {
+        pacmanTimer?.invalidate()
+        pacmanTimer = nil
+    }
+
+    /// Draw a frame of pellets (dots) around the dock with a yellow Pac-Man. When the
+    /// animation is ON, Pac-Man chomps once around the whole perimeter, eating pellets
+    /// (which respawn each lap). When OFF, a single static Pac-Man sits ~⅓ along the top
+    /// edge and the pellets are dimmer/smaller so they don't distract.
+    private func drawPacmanBorder(ctx: CGContext, rect: NSRect, scale: CGFloat) {
+        let animated = AppSettings.shared.pacmanAnimationEnabled
+        let pacColor = NSColor(red: 1.0, green: 0.85, blue: 0.0, alpha: 1.0)
+        let pelletColor = animated ? NSColor(white: 0.95, alpha: 0.9) : NSColor(white: 0.55, alpha: 0.5)
+        let pelletR: CGFloat = (animated ? 2.2 : 1.6) * scale
+        let inset: CGFloat = 6 * scale
+        let pacR: CGFloat = 7 * scale
+        let spacing: CGFloat = 16 * scale
+
+        let f = rect.insetBy(dx: inset, dy: inset)
+        guard f.width > 4 * pacR, f.height > 2 * pacR else { return }
+
+        // Perimeter, clockwise: top-left → top-right → bottom-right → bottom-left → back.
+        let tl = NSPoint(x: f.minX, y: f.maxY)
+        let tr = NSPoint(x: f.maxX, y: f.maxY)
+        let br = NSPoint(x: f.maxX, y: f.minY)
+        let bl = NSPoint(x: f.minX, y: f.minY)
+        let segs: [(NSPoint, NSPoint)] = [(tl, tr), (tr, br), (br, bl), (bl, tl)]
+        let segLen = segs.map { hypot($0.1.x - $0.0.x, $0.1.y - $0.0.y) }
+        let perim = segLen.reduce(0, +)
+        guard perim > 0 else { return }
+
+        func pointAt(_ dist: CGFloat) -> (pt: NSPoint, angleDeg: CGFloat) {
+            var d = dist.truncatingRemainder(dividingBy: perim); if d < 0 { d += perim }
+            for (i, s) in segs.enumerated() {
+                if d <= segLen[i] || i == segs.count - 1 {
+                    let t = segLen[i] == 0 ? 0 : min(1, d / segLen[i])
+                    let p = NSPoint(x: s.0.x + (s.1.x - s.0.x) * t, y: s.0.y + (s.1.y - s.0.y) * t)
+                    let ang = atan2(s.1.y - s.0.y, s.1.x - s.0.x) * 180 / .pi
+                    return (p, ang)
+                }
+                d -= segLen[i]
+            }
+            return (tl, 0)
+        }
+
+        let pacDist: CGFloat = animated
+            ? (pacmanPhase * 2.2 * scale).truncatingRemainder(dividingBy: perim)
+            : segLen[0] / 3.0   // static: ~first third of the top edge
+        let pac = pointAt(pacDist)
+
+        // Pellets around the whole frame; when animated, those Pac-Man already passed
+        // are eaten (hidden) and reappear each lap.
+        pelletColor.setFill()
+        var d: CGFloat = 0
+        while d < perim {
+            if !(animated && d < pacDist) {
+                let p = pointAt(d).pt
+                NSBezierPath(ovalIn: NSRect(x: p.x - pelletR, y: p.y - pelletR,
+                                            width: pelletR * 2, height: pelletR * 2)).fill()
+            }
+            d += spacing
+        }
+
+        // Pac-Man, rotated to face its travel direction, chomping (animated) or open (static).
+        let mouthDeg: CGFloat = animated ? (sin(pacmanPhase * 0.35) * 0.5 + 0.5) * 38.0 : 30.0
+        ctx.saveGState()
+        ctx.translateBy(x: pac.pt.x, y: pac.pt.y)
+        ctx.rotate(by: pac.angleDeg * .pi / 180)
+        pacColor.setFill()
+        let body = NSBezierPath()
+        body.move(to: .zero)
+        body.appendArc(withCenter: .zero, radius: pacR, startAngle: mouthDeg, endAngle: 360 - mouthDeg)
+        body.close()
+        body.fill()
+        ctx.restoreGState()
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         let ctx = NSGraphicsContext.current!.cgContext
@@ -1135,6 +1235,14 @@ final class DockView: NSView {
             let strokePath = verticalBorderPath ?? bgPath
             strokePath.lineWidth = theme.dock.borderWidth
             strokePath.stroke()
+        }
+
+        // Pac-Man pellet border — replaces the normal bevel/border.
+        if theme.dock.borderStyle == "pacman", !theme.isVertical {
+            if AppSettings.shared.pacmanAnimationEnabled { startPacmanTimerIfNeeded() } else { stopPacmanTimer() }
+            drawPacmanBorder(ctx: ctx, rect: rect, scale: scale)
+        } else {
+            stopPacmanTimer()
         }
 
         // Grip dots handle (BeOS deskbar style)

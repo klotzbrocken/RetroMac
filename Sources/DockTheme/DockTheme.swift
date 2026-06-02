@@ -100,6 +100,7 @@ struct DockThemeConfig: Codable {
         var shelfStyle: String?  // "flat" (default) or "3d" (Snow Leopard perspective)
         var alignment: String?   // "center" (default), "left", "right"
         var edgeOffset: CGFloat? // distance from screen edge in px (default 8)
+        var borderStyle: String? // nil = normal bevel/border; "pacman" = animated pellet border
         var showTrash: Bool?     // show trash icon at end of dock
         var showGrip: Bool?      // show grip dots handle (BeOS deskbar style)
         var startMenuStyle: String?  // "classic" (Win98-style), "xp" (Luna Blue two-column)

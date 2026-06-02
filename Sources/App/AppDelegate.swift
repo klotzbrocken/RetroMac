@@ -28,6 +28,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var sleepObserver: NSObjectProtocol?
     private var lockObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
+    private var tvBookmarkObserver: NSObjectProtocol?
+    private var dockThemeObserver: NSObjectProtocol?
+    private var cameraStateObserver: NSObjectProtocol?
+    private var viewportCloseObserver: NSObjectProtocol?
     private var perAppBundleID: String?
     private var wasActiveBeforeSleep = false
     private var overlayStartTask: Task<Void, Never>?
@@ -83,7 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startSleepObserver()
 
         // Listen for Start menu TV bookmark requests from DockView
-        NotificationCenter.default.addObserver(forName: .init("openTVBookmark"), object: nil, queue: .main) { [weak self] note in
+        tvBookmarkObserver = NotificationCenter.default.addObserver(forName: .init("openTVBookmark"), object: nil, queue: .main) { [weak self] note in
             guard let idString = note.object as? String,
                   let uuid = UUID(uuidString: idString),
                   let bookmark = AppSettings.shared.tvBookmarks.first(where: { $0.id == uuid }) else { return }
@@ -91,7 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Apply theme shader and update desktop overlays when theme changes via Settings
-        NotificationCenter.default.addObserver(forName: .dockThemeChanged, object: nil, queue: .main) { [weak self] _ in
+        dockThemeObserver = NotificationCenter.default.addObserver(forName: .dockThemeChanged, object: nil, queue: .main) { [weak self] _ in
             self?.applyThemePresetIfNeeded()
             DesktopIconsController.shared.update()
             ProgramManagerController.shared.update()
@@ -99,12 +103,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Rebuild menu when virtual camera state changes (start/stop is async)
-        NotificationCenter.default.addObserver(forName: .virtualCameraStateChanged, object: nil, queue: .main) { [weak self] _ in
+        cameraStateObserver = NotificationCenter.default.addObserver(forName: .virtualCameraStateChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuildMenu()
         }
 
         // Rebuild menu when viewport is closed via its window close button
-        NotificationCenter.default.addObserver(forName: .retroViewportDidClose, object: nil, queue: .main) { [weak self] _ in
+        viewportCloseObserver = NotificationCenter.default.addObserver(forName: .retroViewportDidClose, object: nil, queue: .main) { [weak self] _ in
             self?.rebuildMenu()
         }
 
@@ -115,9 +119,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hotkeyStr = settings.hotkeyDisplayString
         print("[RetroMac] Ready. \(hotkeyStr) to toggle.")
 
-        // App always starts deactivated — user must manually enable overlay/theme
-        settings.enableOnLaunch = false
-        settings.dockEnabled = false
+        // Honor the user's saved launch state instead of forcing everything off, so the
+        // theme/overlay are remembered across launches. (ThemeManager already restored the
+        // active theme from settings.dockTheme in its init.)
+        if settings.dockEnabled {
+            DockController.shared.start()
+            applyThemePresetIfNeeded()
+        } else if settings.enableOnLaunch {
+            if currentPresetName == nil { currentPresetName = settings.defaultPreset }
+            startOverlay(mode: .fullScreen)
+        }
 
         // Unified welcome flow: What's New → Setup → Coffee/Unlock, shown conditionally.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
@@ -3814,6 +3825,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let nc = NSWorkspace.shared.notificationCenter
         for obs in [appLaunchObserver, appTerminateObserver, sleepObserver, lockObserver, wakeObserver].compactMap({ $0 }) {
             nc.removeObserver(obs)
+        }
+        for obs in [tvBookmarkObserver, dockThemeObserver, cameraStateObserver, viewportCloseObserver].compactMap({ $0 }) {
+            NotificationCenter.default.removeObserver(obs)
         }
         disableAll()
         DockController.shared.stop()

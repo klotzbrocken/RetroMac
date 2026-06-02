@@ -226,6 +226,14 @@ struct DockSettingsTab: View {
                             .labelsHidden()
                     }
                 }
+                if selectedThemeConfig?.dock.borderStyle == "pacman" {
+                    RMRow(label: "Animate Pac-Man border", hint: "Pac-Man runs once around the dock eating the dots. Off shows a calm static border.") {
+                        Toggle("", isOn: $settings.pacmanAnimationEnabled)
+                            .toggleStyle(.switch)
+                            .tint(.rmAccent)
+                            .labelsHidden()
+                    }
+                }
                 RMRow(label: "Show indicators for running apps") {
                     Toggle("", isOn: $settings.dockShowRunningApps)
                         .toggleStyle(.switch)
