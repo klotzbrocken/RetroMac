@@ -172,6 +172,13 @@ final class AppSettings: ObservableObject {
     @Published var retroModeActivateShader: Bool {
         didSet { defaults.set(retroModeActivateShader, forKey: "retroModeActivateShader") }
     }
+    /// "Maiks Favourite" dock: animate the Pac-Man around the pellet border.
+    @Published var pacmanAnimationEnabled: Bool {
+        didSet {
+            defaults.set(pacmanAnimationEnabled, forKey: "pacmanAnimationEnabled")
+            NotificationCenter.default.post(name: .pacmanAnimationChanged, object: nil)
+        }
+    }
 
     // Timer / automation. Targets: "overlay" (shader on/off) or "retroMode".
     @Published var timerWindowEnabled: Bool {
@@ -486,6 +493,7 @@ final class AppSettings: ObservableObject {
         retroModeHideMenuBar = defaults.object(forKey: "retroModeHideMenuBar") as? Bool ?? true
         retroModeHideDesktopIcons = defaults.object(forKey: "retroModeHideDesktopIcons") as? Bool ?? true
         retroModeActivateShader = defaults.object(forKey: "retroModeActivateShader") as? Bool ?? true
+        pacmanAnimationEnabled = defaults.object(forKey: "pacmanAnimationEnabled") as? Bool ?? true
         timerWindowEnabled = defaults.bool(forKey: "timerWindowEnabled")
         timerWindowStart = defaults.object(forKey: "timerWindowStart") as? Int ?? 20 * 60
         timerWindowEnd = defaults.object(forKey: "timerWindowEnd") as? Int ?? 23 * 60

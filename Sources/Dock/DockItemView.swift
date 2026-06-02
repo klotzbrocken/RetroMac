@@ -155,10 +155,15 @@ final class DockItemView: NSView {
         let theme = ThemeManager.shared.activeTheme?.config
         let scale = theme?.icon.hoverScale ?? 1.15
         let duration = theme?.icon.hoverAnimationDuration ?? 0.15
+        // Bottom dock: grow straight UP out of the dock (anchor the bottom edge) instead
+        // of scaling about the centre (which also grows down/sideways). Vertical docks
+        // keep the centred scale.
+        let isVertical = theme?.isVertical ?? false
+        let dy = isVertical ? 0 : (scale - 1.0) * self.bounds.height / 2.0
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = duration
             ctx.allowsImplicitAnimation = true
-            self.layer?.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
+            self.layer?.setAffineTransform(CGAffineTransform(translationX: 0, y: dy).scaledBy(x: scale, y: scale))
         }
 
         if let tooltip = tooltipText() {

@@ -858,8 +858,7 @@ final class DockController {
         let killall = Process()
         killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
         killall.arguments = ["Dock"]
-        try? killall.run()
-        killall.waitUntilExit()
+        try? killall.run()   // fire-and-forget: don't block the UI on the Dock restart
     }
 
     /// Returns the current dock window frame in screen coordinates (for DockFix)

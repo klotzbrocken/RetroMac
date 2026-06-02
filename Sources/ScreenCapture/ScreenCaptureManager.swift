@@ -116,7 +116,20 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
 
         let filter = SCContentFilter(desktopIndependentWindow: freshWindow)
 
-        let scale = await MainActor.run { Int(NSScreen.main?.backingScaleFactor ?? 2) }
+        // Use the scale of the display the window is ON, not the main display — otherwise
+        // a window on a secondary screen with a different backingScaleFactor is captured
+        // at the wrong resolution. SCWindow.frame is in CG global coords, matching CGDisplayBounds.
+        let windowFrame = freshWindow.frame
+        let scale = await MainActor.run { () -> Int in
+            let center = CGPoint(x: windowFrame.midX, y: windowFrame.midY)
+            for screen in NSScreen.screens {
+                if let num = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+                   CGDisplayBounds(num).contains(center) {
+                    return Int(screen.backingScaleFactor)
+                }
+            }
+            return Int(NSScreen.main?.backingScaleFactor ?? 2)
+        }
         let w = max(Int(freshWindow.frame.width) * scale, 200)
         let h = max(Int(freshWindow.frame.height) * scale, 200)
 

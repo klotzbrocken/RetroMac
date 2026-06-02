@@ -124,8 +124,7 @@ enum SystemUIHelper {
             let kill = Process()
             kill.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
             kill.arguments = ["Dock"]
-            try? kill.run()
-            kill.waitUntilExit()
+            try? kill.run()   // fire-and-forget: don't block on the Dock restart
         }
         print("[SystemUI] Dock auto-hide: \(hide) (AppleScript: \(ok ? "ok" : "fallback"))")
     }
@@ -142,8 +141,7 @@ enum SystemUIHelper {
         let killall = Process()
         killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
         killall.arguments = ["Finder"]
-        try? killall.run()
-        killall.waitUntilExit()
+        try? killall.run()   // fire-and-forget: don't block on the Finder restart
         print("[SystemUI] Desktop icons hidden: \(hidden)")
     }
 

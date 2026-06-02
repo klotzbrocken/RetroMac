@@ -114,4 +114,5 @@ extension Notification.Name {
     static let dockAppsChanged = Notification.Name("DockAppsChanged")
     static let dockThemeChanged = Notification.Name("DockThemeChanged")
     static let virtualCameraStateChanged = Notification.Name("VirtualCameraStateChanged")
+    static let pacmanAnimationChanged = Notification.Name("PacmanAnimationChanged")
 }

@@ -13,13 +13,14 @@
     "backgroundImage": null,
     "backgroundImageMode": "tile",
     "borderColor": "#161616FF",
-    "borderWidth": 1,
+    "borderWidth": 0,
+    "borderStyle": "pacman",
     "shadowEnabled": false,
     "shadowColor": "#00000000",
     "shadowRadius": 0,
     "bevelTopColor": "#EAEAEAFF",
     "bevelBottomColor": "#6E6E6EFF",
-    "bevelWidth": 2,
+    "bevelWidth": 0,
     "orientation": "horizontal",
     "position": "bottom",
     "fullWidth": false,
@@ -35,7 +36,7 @@
     "renderStyle": "pixelated",
     "reflectionEnabled": false,
     "reflectionOpacity": 0,
-    "hoverScale": 1.2,
+    "hoverScale": 1.35,
     "hoverAnimationDuration": 0.12
   },
   "indicator": {
@@ -60,6 +61,8 @@
     "com.apple.iCal": "calendar.png",
     "com.apple.reminders": "tasks.png",
     "com.apple.Terminal": "terminal.png",
+    "com.apple.Music": "music.png",
+    "com.apple.systempreferences": "settings.png",
     "__trash__": "trash.png",
     "__trash_full__": "trash_full.png"
   }
