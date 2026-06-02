@@ -233,6 +233,14 @@ struct DockSettingsTab: View {
                             .tint(.rmAccent)
                             .labelsHidden()
                     }
+                    if settings.pacmanAnimationEnabled {
+                        RMRow(label: "Clock mode", hint: "Dots become 24 hour numbers around the dock; Pac-Man is the clock hand (15-min steps).") {
+                            Toggle("", isOn: $settings.pacmanClockMode)
+                                .toggleStyle(.switch)
+                                .tint(.rmAccent)
+                                .labelsHidden()
+                        }
+                    }
                 }
                 RMRow(label: "Show indicators for running apps") {
                     Toggle("", isOn: $settings.dockShowRunningApps)

@@ -155,20 +155,25 @@ final class DockItemView: NSView {
         let theme = ThemeManager.shared.activeTheme?.config
         let scale = theme?.icon.hoverScale ?? 1.15
         let duration = theme?.icon.hoverAnimationDuration ?? 0.15
-        // Bottom dock: grow straight UP out of the dock (anchor the bottom edge) instead
-        // of scaling about the centre (which also grows down/sideways). Vertical docks
-        // keep the centred scale.
+        // The layer's anchor is the bottom-LEFT corner, so a plain scale grows up AND to
+        // the right. Recenter horizontally (shift left by half the growth) so the icon
+        // pops straight UP out of the dock, bottom edge anchored on the dock floor.
         let isVertical = theme?.isVertical ?? false
-        let dy = isVertical ? 0 : (scale - 1.0) * self.bounds.height / 2.0
+        let dx = isVertical ? 0 : -(scale - 1.0) * self.bounds.width / 2.0
+        // Raise above neighbours so the growth isn't occluded on one side.
+        self.layer?.zPosition = 10
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = duration
             ctx.allowsImplicitAnimation = true
-            self.layer?.setAffineTransform(CGAffineTransform(translationX: 0, y: dy).scaledBy(x: scale, y: scale))
+            self.layer?.setAffineTransform(CGAffineTransform(translationX: dx, y: 0).scaledBy(x: scale, y: scale))
         }
 
         if let tooltip = tooltipText() {
             self.toolTip = tooltip
         }
+
+        // Pac-Man theme: hovering an icon releases a ghost that chases Pac-Man.
+        (self.superview as? DockView)?.spawnGhostNearItem(frame: self.frame)
     }
 
     override func mouseExited(with event: NSEvent) {
@@ -179,6 +184,8 @@ final class DockItemView: NSView {
             ctx.duration = duration
             ctx.allowsImplicitAnimation = true
             self.layer?.setAffineTransform(.identity)
+        } completionHandler: { [weak self] in
+            self?.layer?.zPosition = 0
         }
     }
 

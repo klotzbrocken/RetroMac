@@ -179,6 +179,14 @@ final class AppSettings: ObservableObject {
             NotificationCenter.default.post(name: .pacmanAnimationChanged, object: nil)
         }
     }
+    /// Clock mode: dots become 24 hour numbers around the dock; Pac-Man is the hand
+    /// (steps every 15 min). Only applies when the animation is enabled.
+    @Published var pacmanClockMode: Bool {
+        didSet {
+            defaults.set(pacmanClockMode, forKey: "pacmanClockMode")
+            NotificationCenter.default.post(name: .pacmanAnimationChanged, object: nil)
+        }
+    }
 
     // Timer / automation. Targets: "overlay" (shader on/off) or "retroMode".
     @Published var timerWindowEnabled: Bool {
@@ -494,6 +502,7 @@ final class AppSettings: ObservableObject {
         retroModeHideDesktopIcons = defaults.object(forKey: "retroModeHideDesktopIcons") as? Bool ?? true
         retroModeActivateShader = defaults.object(forKey: "retroModeActivateShader") as? Bool ?? true
         pacmanAnimationEnabled = defaults.object(forKey: "pacmanAnimationEnabled") as? Bool ?? true
+        pacmanClockMode = defaults.object(forKey: "pacmanClockMode") as? Bool ?? false
         timerWindowEnabled = defaults.bool(forKey: "timerWindowEnabled")
         timerWindowStart = defaults.object(forKey: "timerWindowStart") as? Int ?? 20 * 60
         timerWindowEnd = defaults.object(forKey: "timerWindowEnd") as? Int ?? 23 * 60
