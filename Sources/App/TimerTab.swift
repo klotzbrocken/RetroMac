@@ -72,5 +72,8 @@ struct TimerTab: View {
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        // The Settings panel is a fixed light theme (Color.rmBg) — pin this tab to the
+        // light color scheme so text/controls stay readable in system Dark Mode.
+        .environment(\.colorScheme, .light)
     }
 }
