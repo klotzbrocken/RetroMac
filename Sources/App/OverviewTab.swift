@@ -197,6 +197,11 @@ struct OverviewTab: View {
                         }
                     }
                     .buttonStyle(RMGhostButtonStyle())
+                    Button("Reset Permissions\u{2026}") {
+                        (NSApp.delegate as? AppDelegate)?.resetPermissions()
+                    }
+                    .buttonStyle(RMGhostButtonStyle())
+                    .help("Reset Screen Recording & Camera grants, then reopen the panels — useful after an update.")
                 }
             ),
             bodyPadding: 0

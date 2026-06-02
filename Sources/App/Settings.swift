@@ -152,6 +152,47 @@ final class AppSettings: ObservableObject {
     @Published var coffeeAckDate: Date? {
         didSet { defaults.set(coffeeAckDate, forKey: "coffeeAckDate") }
     }
+
+    // Retro Mode (one-click distraction-free favourite)
+    @Published var retroModeTheme: String {
+        didSet { defaults.set(retroModeTheme, forKey: "retroModeTheme") }
+    }
+    @Published var retroModeShader: String {
+        didSet { defaults.set(retroModeShader, forKey: "retroModeShader") }
+    }
+    @Published var retroModeHideDock: Bool {
+        didSet { defaults.set(retroModeHideDock, forKey: "retroModeHideDock") }
+    }
+    @Published var retroModeHideMenuBar: Bool {
+        didSet { defaults.set(retroModeHideMenuBar, forKey: "retroModeHideMenuBar") }
+    }
+    @Published var retroModeHideDesktopIcons: Bool {
+        didSet { defaults.set(retroModeHideDesktopIcons, forKey: "retroModeHideDesktopIcons") }
+    }
+    @Published var retroModeActivateShader: Bool {
+        didSet { defaults.set(retroModeActivateShader, forKey: "retroModeActivateShader") }
+    }
+
+    // Timer / automation. Targets: "overlay" (shader on/off) or "retroMode".
+    @Published var timerWindowEnabled: Bool {
+        didSet { defaults.set(timerWindowEnabled, forKey: "timerWindowEnabled") }
+    }
+    /// Daily window start/end as minutes since midnight.
+    @Published var timerWindowStart: Int {
+        didSet { defaults.set(timerWindowStart, forKey: "timerWindowStart") }
+    }
+    @Published var timerWindowEnd: Int {
+        didSet { defaults.set(timerWindowEnd, forKey: "timerWindowEnd") }
+    }
+    @Published var timerWindowTarget: String {
+        didSet { defaults.set(timerWindowTarget, forKey: "timerWindowTarget") }
+    }
+    @Published var timerCountdownMinutes: Int {
+        didSet { defaults.set(timerCountdownMinutes, forKey: "timerCountdownMinutes") }
+    }
+    @Published var timerCountdownTarget: String {
+        didSet { defaults.set(timerCountdownTarget, forKey: "timerCountdownTarget") }
+    }
     @Published var showFPSOverlay: Bool {
         didSet { defaults.set(showFPSOverlay, forKey: "showFPSOverlay") }
     }
@@ -439,6 +480,18 @@ final class AppSettings: ObservableObject {
         onboardingComplete = defaults.bool(forKey: "onboardingComplete")
         lastSeenVersion = defaults.string(forKey: "lastSeenVersion") ?? ""
         coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
+        retroModeTheme = defaults.string(forKey: "retroModeTheme") ?? "Maiks Favourite"
+        retroModeShader = defaults.string(forKey: "retroModeShader") ?? ""
+        retroModeHideDock = defaults.object(forKey: "retroModeHideDock") as? Bool ?? true
+        retroModeHideMenuBar = defaults.object(forKey: "retroModeHideMenuBar") as? Bool ?? true
+        retroModeHideDesktopIcons = defaults.object(forKey: "retroModeHideDesktopIcons") as? Bool ?? true
+        retroModeActivateShader = defaults.object(forKey: "retroModeActivateShader") as? Bool ?? true
+        timerWindowEnabled = defaults.bool(forKey: "timerWindowEnabled")
+        timerWindowStart = defaults.object(forKey: "timerWindowStart") as? Int ?? 20 * 60
+        timerWindowEnd = defaults.object(forKey: "timerWindowEnd") as? Int ?? 23 * 60
+        timerWindowTarget = defaults.string(forKey: "timerWindowTarget") ?? "overlay"
+        timerCountdownMinutes = defaults.object(forKey: "timerCountdownMinutes") as? Int ?? 25
+        timerCountdownTarget = defaults.string(forKey: "timerCountdownTarget") ?? "overlay"
         showFPSOverlay = defaults.bool(forKey: "showFPSOverlay")
         classicMacModeActive = defaults.bool(forKey: "classicMacModeActive")
 

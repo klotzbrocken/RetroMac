@@ -21,6 +21,8 @@ enum SettingsTab: String, CaseIterable {
     case overview = "overview"
     case effect = "effect"
     case dock = "dock"
+    case retroMode = "retroMode"
+    case timer = "timer"
     case camera = "camera"
     case television = "television"
     case games = "games"
@@ -34,6 +36,8 @@ enum SettingsTab: String, CaseIterable {
         case .overview: return "Overview"
         case .effect: return "Effect"
         case .dock: return "Dock"
+        case .retroMode: return "Retro Mode"
+        case .timer: return "Timer"
         case .camera: return "Camera"
         case .television: return "Television"
         case .games: return "Games"
@@ -49,6 +53,8 @@ enum SettingsTab: String, CaseIterable {
         case .overview: return "house"
         case .effect: return "wand.and.stars.inverse"
         case .dock: return "dock.rectangle"
+        case .retroMode: return "wand.and.stars"
+        case .timer: return "clock"
         case .camera: return "camera.fill"
         case .television: return "tv"
         case .games: return "gamecontroller"
@@ -62,7 +68,7 @@ enum SettingsTab: String, CaseIterable {
     /// Section grouping: nil = Main, "Surfaces", "System"
     var section: String? {
         switch self {
-        case .overview, .effect, .dock: return nil
+        case .overview, .effect, .dock, .retroMode, .timer: return nil
         case .camera, .television, .games: return "Surfaces"
         case .shortcuts, .rules, .about, .updates: return "System"
         }
@@ -122,7 +128,7 @@ struct SettingsSidebar: View {
     @ObservedObject private var settings = AppSettings.shared
 
     // Group tabs by section in order
-    private var mainTabs: [SettingsTab] { [.overview, .effect, .dock] }
+    private var mainTabs: [SettingsTab] { [.overview, .effect, .dock, .retroMode, .timer] }
     private var surfacesTabs: [SettingsTab] { [.camera, .television, .games] }
     private var systemTabs: [SettingsTab] { [.shortcuts, .rules, .about, .updates] }
 
@@ -363,6 +369,10 @@ struct SettingsDetailPane: View {
                     EffectTab()
                 case .dock:
                     DockSettingsTab()
+                case .retroMode:
+                    RetroModeTab()
+                case .timer:
+                    TimerTab()
                 case .camera:
                     CameraTab()
                 case .television:

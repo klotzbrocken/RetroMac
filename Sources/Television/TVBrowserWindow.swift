@@ -6,6 +6,7 @@ import WebKit
 
 final class TVBrowserWindow: NSObject {
     private var window: NSWindow?
+    private var savedFrame: NSRect?   // non-nil while in manual full-screen
     private var player: AVPlayer?
     private var playerView: AVPlayerView?
     private var webView: WKWebView?
@@ -55,6 +56,10 @@ final class TVBrowserWindow: NSObject {
         win.backgroundColor = .black
         win.delegate = self
         win.level = NSWindow.Level(rawValue: 25)
+        // Enable native full-screen (green button / ⌃⌘F). The CRT shader lives in the
+        // window's MTKView content view (autoresizes to fill), so it carries into
+        // full-screen too.
+        win.collectionBehavior = [.fullScreenPrimary]
 
         // Hide centered title, show name right-aligned
         win.titleVisibility = .hidden
@@ -102,8 +107,36 @@ final class TVBrowserWindow: NSObject {
             setupWebView(url: url, size: size, window: win)
         }
 
+        // Double-click the video toggles full-screen (keeps the CRT shader + float level).
+        if let cv = win.contentView {
+            let dbl = NSClickGestureRecognizer(target: self, action: #selector(toggleTVFullscreen))
+            dbl.numberOfClicksRequired = 2
+            dbl.delaysPrimaryMouseButtonEvents = false
+            cv.addGestureRecognizer(dbl)
+        }
+
         win.makeKeyAndOrderFront(nil)
         self.window = win
+    }
+
+    /// Manual full-screen: fill the current screen and hide the title bar, keeping the
+    /// window's MTKView (CRT shader) as content. Reversible. Used instead of native
+    /// full-screen because the TV window floats at an elevated level.
+    @objc private func toggleTVFullscreen() {
+        guard let win = window, let screen = win.screen ?? NSScreen.main else { return }
+        if savedFrame == nil {
+            savedFrame = win.frame
+            win.styleMask.insert(.fullSizeContentView)
+            win.titlebarAppearsTransparent = true
+            win.standardWindowButton(.closeButton)?.superview?.isHidden = true
+            win.setFrame(screen.frame, display: true, animate: true)
+        } else {
+            win.standardWindowButton(.closeButton)?.superview?.isHidden = false
+            win.titlebarAppearsTransparent = false
+            win.styleMask.remove(.fullSizeContentView)
+            if let f = savedFrame { win.setFrame(f, display: true, animate: true) }
+            savedFrame = nil
+        }
     }
 
     // MARK: - Stream with CRT Shader (AVPlayer → VideoOutput → Metal)
