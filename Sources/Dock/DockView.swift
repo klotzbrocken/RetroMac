@@ -43,10 +43,39 @@ final class DockView: NSView {
     /// Expanded dock bar rect during magnification (nil = use resting rect)
     private var magnifiedDockBarRect: NSRect?
 
-    // Pac-Man pellet border animation (theme borderStyle == "pacman")
+    // Pac-Man pellet border animation (theme borderStyle == "pacman") — layer-based
     private var pacmanTimer: Timer?
     private var pacmanPhase: CGFloat = 0
     private var pacmanObserver: NSObjectProtocol?
+    private var occlusionObserver: NSObjectProtocol?
+    private var pelletLayer: CAShapeLayer?
+    private var pacLayer: CAShapeLayer?
+    private var pacmanConfiguredRect: NSRect = .zero
+    private var pacmanConfiguredAnimated: Bool?
+    private var pacPerimSegs: [(CGPoint, CGPoint)] = []
+    private var pacPerimLen: [CGFloat] = []
+    private var pacPerim: CGFloat = 0
+    private var pacTopLen: CGFloat = 0
+    private var pacPelletDists: [CGFloat] = []
+    private var pacPelletR: CGFloat = 2.2
+    private var pacRadius: CGFloat = 7
+    private var pacLastEatenCount: Int = -1
+    private var pacmanConfiguredClock: Bool?
+    private var pacmanIsClock = false
+    private var clockLabelLayers: [CATextLayer] = []
+    private var clockTopStart: CGFloat = 0
+    private var clockTopEnd: CGFloat = 0
+    private var clockDotDists: [CGFloat] = []
+    private var lastClockHour: Int = -1
+    // Ghosts that chase Pac-Man (spawned on icon hover; max 2).
+    private final class PacGhost {
+        let body = CAShapeLayer()
+        var dist: CGFloat
+        init(dist: CGFloat) { self.dist = dist }
+    }
+    private var ghosts: [PacGhost] = []
+    private let maxGhosts = 2
+    private var ghostCGImage: CGImage?
 
     // Control Strip state
     private var controlStripCollapsed = false
@@ -177,6 +206,7 @@ final class DockView: NSView {
         if let obs = appsObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = themeObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = pacmanObserver { NotificationCenter.default.removeObserver(obs) }
+        if let obs = occlusionObserver { NotificationCenter.default.removeObserver(obs) }
     }
 
     private func setupObservers() {
@@ -194,7 +224,13 @@ final class DockView: NSView {
             self?.rebuildItems()
         }
         pacmanObserver = nc2.addObserver(forName: .pacmanAnimationChanged, object: nil, queue: .main) { [weak self] _ in
-            self?.needsDisplay = true   // re-evaluate timer + redraw (draw() starts/stops the animation)
+            self?.needsDisplay = true   // re-configure layers (draw() → updatePacmanBorder)
+        }
+        // Pause the Pac-Man animation while the dock window isn't visible (covered, other
+        // Space, or display asleep) so it costs nothing in the background.
+        occlusionObserver = nc2.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: nil, queue: .main) { [weak self] note in
+            guard let self = self, (note.object as AnyObject?) === self.window else { return }
+            self.refreshPacmanAnimationState()
         }
 
         let wsNC = NSWorkspace.shared.notificationCenter
@@ -1013,94 +1049,385 @@ final class DockView: NSView {
 
     // MARK: - Drawing
 
-    // MARK: - Pac-Man pellet border
+    // MARK: - Pac-Man pellet border (layer-based)
+    //
+    // Pellets and Pac-Man live in dedicated CAShapeLayers on top of the dock, so the
+    // animation NEVER re-rasterizes the whole dock view. A low-rate (15fps) timer moves
+    // only those small layers; perimeter geometry + pellet positions are cached and only
+    // recomputed when the bar rect (or on/off state) changes. The timer is paused whenever
+    // the dock window isn't visible (covered / other Space / display asleep).
 
-    private func startPacmanTimerIfNeeded() {
-        guard pacmanTimer == nil else { return }
-        let t = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+    private func ensurePacmanLayers() {
+        guard pelletLayer == nil else { return }
+        let pl = CAShapeLayer()
+        pl.zPosition = 5
+        pl.actions = ["path": NSNull()]   // no implicit path fades when pellets get eaten
+        layer?.addSublayer(pl)
+        pelletLayer = pl
+        let pc = CAShapeLayer()
+        pc.zPosition = 6
+        pc.fillColor = NSColor(red: 1.0, green: 0.85, blue: 0.0, alpha: 1.0).cgColor
+        layer?.addSublayer(pc)
+        pacLayer = pc
+    }
+
+    private func tearDownPacmanLayers() {
+        pacmanTimer?.invalidate(); pacmanTimer = nil
+        clearClockLabels()
+        clearGhosts()
+        pacmanIsClock = false
+        pelletLayer?.removeFromSuperlayer(); pelletLayer = nil
+        pacLayer?.removeFromSuperlayer(); pacLayer = nil
+        pacmanConfiguredRect = .zero
+        pacmanConfiguredAnimated = nil
+        pacmanConfiguredClock = nil
+    }
+
+    /// Called from draw() while the pacman-border theme is active. (Re)configures the
+    /// layers only when the bar rect or on/off state changed; otherwise the timer keeps
+    /// the existing layers moving without any dock redraw.
+    private func updatePacmanBorder(rect: NSRect, scale: CGFloat) {
+        ensurePacmanLayers()
+        let animated = AppSettings.shared.pacmanAnimationEnabled
+        let clock = AppSettings.shared.pacmanClockMode
+        guard !rect.equalTo(pacmanConfiguredRect)
+              || pacmanConfiguredAnimated != animated
+              || pacmanConfiguredClock != clock else { return }
+        configurePacmanGeometry(rect: rect, scale: scale, animated: animated)
+    }
+
+    private func configurePacmanGeometry(rect: NSRect, scale: CGFloat, animated: Bool) {
+        pacmanConfiguredRect = rect
+        pacmanConfiguredAnimated = animated
+
+        let inset: CGFloat = 11 * scale   // margin between the border elements and the dock edge
+        let spacing: CGFloat = 16 * scale
+        pacPelletR = (animated ? 2.2 : 1.6) * scale
+        pacRadius = 7 * scale
+        let f = rect.insetBy(dx: inset, dy: inset)
+        guard f.width > 4 * pacRadius, f.height > 2 * pacRadius else {
+            pelletLayer?.path = nil; pacLayer?.path = nil; return
+        }
+        let tl = CGPoint(x: f.minX, y: f.maxY), tr = CGPoint(x: f.maxX, y: f.maxY)
+        let br = CGPoint(x: f.maxX, y: f.minY), bl = CGPoint(x: f.minX, y: f.minY)
+        pacPerimSegs = [(tl, tr), (tr, br), (br, bl), (bl, tl)]
+        pacPerimLen = pacPerimSegs.map { hypot($0.1.x - $0.0.x, $0.1.y - $0.0.y) }
+        pacPerim = pacPerimLen.reduce(0, +)
+        pacTopLen = pacPerimLen.first ?? 0
+        pacPelletDists = []
+        var d: CGFloat = 0
+        while d < pacPerim { pacPelletDists.append(d); d += spacing }
+
+        pelletLayer?.frame = bounds
+        pelletLayer?.fillColor = (animated ? NSColor(white: 0.95, alpha: 0.9)
+                                           : NSColor(white: 0.55, alpha: 0.5)).cgColor
+        pacLayer?.bounds = CGRect(x: 0, y: 0, width: pacRadius * 2, height: pacRadius * 2)
+
+        pacmanPhase = 0
+        pacLastEatenCount = -1
+        pacmanConfiguredClock = AppSettings.shared.pacmanClockMode
+        clearGhosts()   // reset on any reconfigure / mode switch
+
+        if animated && AppSettings.shared.pacmanClockMode {
+            configurePacmanClock()
+        } else if animated {
+            pacmanIsClock = false
+            clearClockLabels()
+            rebuildPellets(eatenUpTo: 0)
+            updatePac(dist: 0, mouthDeg: 35, animateMove: false)
+            startPacmanTimerIfVisible()
+        } else {
+            pacmanIsClock = false
+            clearClockLabels()
+            pacmanTimer?.invalidate(); pacmanTimer = nil
+            rebuildPellets(eatenUpTo: -1)                       // all pellets visible
+            updatePac(dist: pacTopLen / 3.0, mouthDeg: 30, animateMove: false)  // static, ~⅓ along top
+        }
+    }
+
+    // MARK: - Clock mode (dots → 24 hour numbers, Pac-Man is the hand)
+
+    private func clearClockLabels() {
+        clockLabelLayers.forEach { $0.removeFromSuperlayer() }
+        clockLabelLayers = []
+    }
+
+    private func configurePacmanClock() {
+        pacmanIsClock = true
+        clearClockLabels()
+        pacmanTimer?.invalidate(); pacmanTimer = nil
+        guard pacPerim > 0 else { return }
+
+        // Full dot ring stays (same look as the run mode). 24 hour numbers are placed
+        // around the dock but all hidden except the CURRENT hour ("current slot");
+        // Pac-Man is the hand sitting on the current time. Dots are not eaten.
+        pacPelletR *= 0.7   // smaller, less obtrusive in clock mode
+        pelletLayer?.fillColor = NSColor(white: 0.62, alpha: 0.4).cgColor
+        rebuildPellets(eatenUpTo: -1)   // all dots visible (dim + small)
+
+        let hours = 24
+        let fontSize = max(13, pacRadius * 2.4)
+        let labelFont = NSFont.systemFont(ofSize: fontSize, weight: .semibold)
+        for h in 0..<hours {
+            let d = clockHourDist(h)
+            let lab = CATextLayer()
+            lab.string = "\(h)"
+            lab.font = labelFont.fontName as CFString
+            lab.fontSize = fontSize
+            lab.foregroundColor = NSColor(white: 0.98, alpha: 1).cgColor
+            lab.alignmentMode = .center
+            lab.contentsScale = window?.backingScaleFactor ?? 2
+            lab.bounds = CGRect(x: 0, y: 0, width: fontSize * 2.6, height: fontSize * 1.3)
+            lab.position = pointOnPerimeter(d).0
+            lab.opacity = 0   // hidden until it's the current slot
+            lab.actions = ["opacity": NSNull(), "position": NSNull(), "bounds": NSNull(),
+                           "contents": NSNull(), "string": NSNull()]
+            layer?.addSublayer(lab)
+            clockLabelLayers.append(lab)
+        }
+        lastClockHour = -1
+        updateClockPac()
+        startPacmanTimerIfVisible()
+    }
+
+    /// Hour `h` mapped around the dock with 06:00 at the start (far-left), wrapping once
+    /// around per day.
+    private func clockHourDist(_ h: Int) -> CGFloat {
+        let idx = ((h - 6) % 24 + 24) % 24
+        return CGFloat(idx) / 24.0 * pacPerim
+    }
+
+    /// Show the two current hours (current + next); move the Pac-Man hand to the current time.
+    private func updateClockPac() {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let hour = c.hour ?? 0, minute = c.minute ?? 0
+        if hour != lastClockHour {
+            lastClockHour = hour
+            let next = (hour + 1) % 24
+            for (i, lab) in clockLabelLayers.enumerated() { lab.opacity = (i == hour || i == next) ? 1 : 0 }
+        }
+        // Pac-Man at the current time on the 06:00-anchored scale, snapped to 15 min.
+        let totalMin = hour * 60 + minute
+        let step = (totalMin / 15) * 15
+        let minSince6 = ((step - 6 * 60) % 1440 + 1440) % 1440
+        let pacDist = CGFloat(minSince6) / 1440.0 * pacPerim
+        updatePac(dist: pacDist, mouthDeg: 32, animateMove: true)
+    }
+
+    // MARK: - Ghosts (chase Pac-Man, spawned on icon hover)
+
+    /// Spawn a random-coloured ghost near a hovered icon; it will chase Pac-Man.
+    /// Only in the running animation (not clock/static), max 2 at a time.
+    func spawnGhostNearItem(frame: CGRect) {
+        guard AppSettings.shared.pacmanAnimationEnabled, !AppSettings.shared.pacmanClockMode,
+              !pacmanIsClock, pacPerim > 0, pelletLayer != nil, ghosts.count < maxGhosts else { return }
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        let g = PacGhost(dist: nearestPerimeterDist(to: center))
+        configureGhost(g)
+        g.body.position = pointOnPerimeter(g.dist).0
+        layer?.addSublayer(g.body)
+        ghosts.append(g)
+        startPacmanTimerIfVisible()   // ensure the tick is running to animate the chase
+    }
+
+    private func clearGhosts() {
+        ghosts.forEach { $0.body.removeFromSuperlayer() }
+        ghosts = []
+    }
+
+    private func nearestPerimeterDist(to p: CGPoint) -> CGFloat {
+        var best: CGFloat = 0, bestSq = CGFloat.greatestFiniteMagnitude
+        var d: CGFloat = 0
+        while d < pacPerim {
+            let q = pointOnPerimeter(d).0
+            let sq = (q.x - p.x) * (q.x - p.x) + (q.y - p.y) * (q.y - p.y)
+            if sq < bestSq { bestSq = sq; best = d }
+            d += 8
+        }
+        return best
+    }
+
+    private func loadGhostImageIfNeeded() {
+        if ghostCGImage != nil { return }
+        guard let dir = ThemeManager.shared.activeTheme?.iconsDirectory,
+              let img = NSImage(contentsOf: dir.appendingPathComponent("ghost.png")) else { return }
+        var rect = CGRect(origin: .zero, size: img.size)
+        ghostCGImage = img.cgImage(forProposedRect: &rect, context: nil, hints: nil)
+    }
+
+    private func configureGhost(_ g: PacGhost) {
+        loadGhostImageIfNeeded()
+        g.body.zPosition = 7   // above pellets(5) and Pac-Man(6)
+        g.body.actions = ["position": NSNull(), "path": NSNull(), "contents": NSNull()]
+        g.body.sublayers?.forEach { $0.removeFromSuperlayer() }
+        if let img = ghostCGImage {
+            // Ghost image at Pac-Man's size.
+            let size = pacRadius * 2.0
+            g.body.bounds = CGRect(x: 0, y: 0, width: size, height: size)
+            g.body.path = nil
+            g.body.fillColor = nil
+            g.body.contents = img
+            g.body.contentsGravity = .resizeAspect
+        } else {
+            // Fallback: drawn random-colour ghost.
+            let gr = pacRadius * 0.95, gw = gr * 2, gh = gr * 2.3
+            g.body.bounds = CGRect(x: 0, y: 0, width: gw, height: gh)
+            g.body.contents = nil
+            g.body.path = ghostPath(gr: gr, gw: gw, gh: gh)
+            g.body.fillColor = NSColor(hue: .random(in: 0...1), saturation: 0.85, brightness: 0.95, alpha: 0.95).cgColor
+            let er = gr * 0.3
+            for ex in [gr * 0.62, gr * 1.38] {
+                let eye = CALayer()
+                eye.frame = CGRect(x: ex - er, y: gh - gr * 0.95 - er, width: er * 2, height: er * 2)
+                eye.cornerRadius = er
+                eye.backgroundColor = NSColor.white.cgColor
+                g.body.addSublayer(eye)
+            }
+        }
+    }
+
+    private func ghostPath(gr: CGFloat, gw: CGFloat, gh: CGFloat) -> CGPath {
+        let p = CGMutablePath()
+        let footY = gr * 0.5
+        p.move(to: CGPoint(x: 0, y: footY))
+        p.addLine(to: CGPoint(x: 0, y: gh - gr))
+        p.addArc(center: CGPoint(x: gr, y: gh - gr), radius: gr, startAngle: .pi, endAngle: 0, clockwise: false)
+        p.addLine(to: CGPoint(x: gw, y: footY))
+        let humps = 3
+        let hw = gw / CGFloat(humps)
+        for i in 0..<humps {
+            let xR = gw - CGFloat(i) * hw
+            let xL = gw - CGFloat(i + 1) * hw
+            p.addLine(to: CGPoint(x: xR, y: footY))
+            p.addQuadCurve(to: CGPoint(x: xL, y: footY), control: CGPoint(x: (xR + xL) / 2, y: -gr * 0.15))
+        }
+        p.closeSubpath()
+        return p
+    }
+
+    /// Advance ghosts toward Pac-Man (faster than him, via the shorter arc); a ghost that
+    /// reaches him "catches" him → it vanishes and Pac-Man respawns at the start.
+    private func updateGhosts(pacDist: CGFloat) {
+        guard pacPerim > 0, !ghosts.isEmpty else { return }
+        let ghostSpeed: CGFloat = 4.4 * 1.35   // a bit faster than Pac-Man
+        let catchDist = pacRadius + 4
+        var survivors: [PacGhost] = []
+        for g in ghosts {
+            // Chase from BEHIND: always move in Pac-Man's travel direction (forward),
+            // gaining on him; catch when they coincide.
+            g.dist += ghostSpeed
+            if g.dist >= pacPerim { g.dist -= pacPerim }
+            let forwardGap = (pacDist - g.dist + pacPerim).truncatingRemainder(dividingBy: pacPerim)
+            if forwardGap < catchDist || forwardGap > pacPerim - catchDist {
+                g.body.removeFromSuperlayer()   // caught Pac-Man from behind
+                pacmanPhase = 0                 // respawn at the start
+                continue
+            }
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(1.0 / 15.0)
+            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .linear))
+            g.body.position = pointOnPerimeter(g.dist).0
+            CATransaction.commit()
+            survivors.append(g)
+        }
+        ghosts = survivors
+    }
+
+    private func pacWedgePath(mouthDeg: CGFloat) -> CGPath {
+        let c = CGPoint(x: pacRadius, y: pacRadius)
+        let p = CGMutablePath()
+        p.move(to: c)
+        p.addArc(center: c, radius: pacRadius,
+                 startAngle: mouthDeg * .pi / 180, endAngle: (360 - mouthDeg) * .pi / 180, clockwise: false)
+        p.closeSubpath()
+        return p
+    }
+
+    private func pointOnPerimeter(_ dist: CGFloat) -> (CGPoint, CGFloat) {
+        guard pacPerim > 0 else { return (.zero, 0) }
+        var d = dist.truncatingRemainder(dividingBy: pacPerim); if d < 0 { d += pacPerim }
+        for (i, s) in pacPerimSegs.enumerated() {
+            if d <= pacPerimLen[i] || i == pacPerimSegs.count - 1 {
+                let t = pacPerimLen[i] == 0 ? 0 : min(1, d / pacPerimLen[i])
+                let p = CGPoint(x: s.0.x + (s.1.x - s.0.x) * t, y: s.0.y + (s.1.y - s.0.y) * t)
+                return (p, atan2(s.1.y - s.0.y, s.1.x - s.0.x))
+            }
+            d -= pacPerimLen[i]
+        }
+        return (pacPerimSegs.first?.0 ?? .zero, 0)
+    }
+
+    /// Set Pac-Man path (mouth) + position + rotation. `animateMove` smooths the 15fps
+    /// step over 1/15s so the render server interpolates to ~display rate.
+    private func updatePac(dist: CGFloat, mouthDeg: CGFloat, animateMove: Bool) {
+        guard let pac = pacLayer else { return }
+        let (pt, angRad) = pointOnPerimeter(dist)
+        CATransaction.begin()
+        if animateMove {
+            CATransaction.setAnimationDuration(1.0 / 15.0)
+            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .linear))
+        } else {
+            CATransaction.setDisableActions(true)
+        }
+        pac.path = pacWedgePath(mouthDeg: mouthDeg)
+        pac.position = pt
+        pac.setAffineTransform(CGAffineTransform(rotationAngle: angRad))
+        CATransaction.commit()
+    }
+
+    /// eatenUpTo < 0 → all pellets; else hide pellets behind Pac-Man (dist < pacDist).
+    private func rebuildPellets(eatenUpTo pacDist: CGFloat) {
+        guard let pl = pelletLayer else { return }
+        let path = CGMutablePath()
+        for d in pacPelletDists where !(pacDist >= 0 && d < pacDist) {
+            let (p, _) = pointOnPerimeter(d)
+            path.addEllipse(in: CGRect(x: p.x - pacPelletR, y: p.y - pacPelletR,
+                                       width: pacPelletR * 2, height: pacPelletR * 2))
+        }
+        pl.path = path
+    }
+
+    private func startPacmanTimerIfVisible() {
+        guard pacmanTimer == nil, pacmanShouldAnimate else { return }
+        // Clock mode only needs to refresh the hand every ~30s (15-min steps); the
+        // run-around mode needs 15fps for smooth motion.
+        let interval = pacmanIsClock ? 30.0 : 1.0 / 15.0
+        let t = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            self.pacmanPhase += 1
-            self.needsDisplay = true
+            if self.pacmanIsClock { self.updateClockPac() } else { self.pacmanTick() }
         }
         RunLoop.main.add(t, forMode: .common)
         pacmanTimer = t
     }
 
-    private func stopPacmanTimer() {
-        pacmanTimer?.invalidate()
-        pacmanTimer = nil
+    private func pacmanTick() {
+        guard pacPerim > 0 else { return }
+        pacmanPhase += 1
+        let speedPerTick: CGFloat = 4.4   // ~66 px/s at 15fps
+        let pacDist = (pacmanPhase * speedPerTick).truncatingRemainder(dividingBy: pacPerim)
+        let mouth = (sin(pacmanPhase * 0.5) * 0.5 + 0.5) * 38.0 + 2.0
+        updatePac(dist: pacDist, mouthDeg: mouth, animateMove: true)
+        let eaten = pacPelletDists.reduce(0) { $0 + ($1 < pacDist ? 1 : 0) }
+        if eaten != pacLastEatenCount {
+            pacLastEatenCount = eaten
+            rebuildPellets(eatenUpTo: pacDist)
+        }
+        updateGhosts(pacDist: pacDist)
     }
 
-    /// Draw a frame of pellets (dots) around the dock with a yellow Pac-Man. When the
-    /// animation is ON, Pac-Man chomps once around the whole perimeter, eating pellets
-    /// (which respawn each lap). When OFF, a single static Pac-Man sits ~⅓ along the top
-    /// edge and the pellets are dimmer/smaller so they don't distract.
-    private func drawPacmanBorder(ctx: CGContext, rect: NSRect, scale: CGFloat) {
-        let animated = AppSettings.shared.pacmanAnimationEnabled
-        let pacColor = NSColor(red: 1.0, green: 0.85, blue: 0.0, alpha: 1.0)
-        let pelletColor = animated ? NSColor(white: 0.95, alpha: 0.9) : NSColor(white: 0.55, alpha: 0.5)
-        let pelletR: CGFloat = (animated ? 2.2 : 1.6) * scale
-        let inset: CGFloat = 6 * scale
-        let pacR: CGFloat = 7 * scale
-        let spacing: CGFloat = 16 * scale
+    /// Should the animation be running right now? (Theme on, animation enabled, dock visible.)
+    private var pacmanShouldAnimate: Bool {
+        guard AppSettings.shared.pacmanAnimationEnabled,
+              ThemeManager.shared.activeTheme?.config.dock.borderStyle == "pacman",
+              ThemeManager.shared.activeTheme?.config.isVertical == false else { return false }
+        if let w = window { return w.occlusionState.contains(.visible) }
+        return true
+    }
 
-        let f = rect.insetBy(dx: inset, dy: inset)
-        guard f.width > 4 * pacR, f.height > 2 * pacR else { return }
-
-        // Perimeter, clockwise: top-left → top-right → bottom-right → bottom-left → back.
-        let tl = NSPoint(x: f.minX, y: f.maxY)
-        let tr = NSPoint(x: f.maxX, y: f.maxY)
-        let br = NSPoint(x: f.maxX, y: f.minY)
-        let bl = NSPoint(x: f.minX, y: f.minY)
-        let segs: [(NSPoint, NSPoint)] = [(tl, tr), (tr, br), (br, bl), (bl, tl)]
-        let segLen = segs.map { hypot($0.1.x - $0.0.x, $0.1.y - $0.0.y) }
-        let perim = segLen.reduce(0, +)
-        guard perim > 0 else { return }
-
-        func pointAt(_ dist: CGFloat) -> (pt: NSPoint, angleDeg: CGFloat) {
-            var d = dist.truncatingRemainder(dividingBy: perim); if d < 0 { d += perim }
-            for (i, s) in segs.enumerated() {
-                if d <= segLen[i] || i == segs.count - 1 {
-                    let t = segLen[i] == 0 ? 0 : min(1, d / segLen[i])
-                    let p = NSPoint(x: s.0.x + (s.1.x - s.0.x) * t, y: s.0.y + (s.1.y - s.0.y) * t)
-                    let ang = atan2(s.1.y - s.0.y, s.1.x - s.0.x) * 180 / .pi
-                    return (p, ang)
-                }
-                d -= segLen[i]
-            }
-            return (tl, 0)
-        }
-
-        let pacDist: CGFloat = animated
-            ? (pacmanPhase * 2.2 * scale).truncatingRemainder(dividingBy: perim)
-            : segLen[0] / 3.0   // static: ~first third of the top edge
-        let pac = pointAt(pacDist)
-
-        // Pellets around the whole frame; when animated, those Pac-Man already passed
-        // are eaten (hidden) and reappear each lap.
-        pelletColor.setFill()
-        var d: CGFloat = 0
-        while d < perim {
-            if !(animated && d < pacDist) {
-                let p = pointAt(d).pt
-                NSBezierPath(ovalIn: NSRect(x: p.x - pelletR, y: p.y - pelletR,
-                                            width: pelletR * 2, height: pelletR * 2)).fill()
-            }
-            d += spacing
-        }
-
-        // Pac-Man, rotated to face its travel direction, chomping (animated) or open (static).
-        let mouthDeg: CGFloat = animated ? (sin(pacmanPhase * 0.35) * 0.5 + 0.5) * 38.0 : 30.0
-        ctx.saveGState()
-        ctx.translateBy(x: pac.pt.x, y: pac.pt.y)
-        ctx.rotate(by: pac.angleDeg * .pi / 180)
-        pacColor.setFill()
-        let body = NSBezierPath()
-        body.move(to: .zero)
-        body.appendArc(withCenter: .zero, radius: pacR, startAngle: mouthDeg, endAngle: 360 - mouthDeg)
-        body.close()
-        body.fill()
-        ctx.restoreGState()
+    /// Pause/resume from the window-occlusion observer (covered window / other Space / sleep).
+    func refreshPacmanAnimationState() {
+        if pacmanShouldAnimate { startPacmanTimerIfVisible() }
+        else { pacmanTimer?.invalidate(); pacmanTimer = nil }
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -1237,12 +1564,12 @@ final class DockView: NSView {
             strokePath.stroke()
         }
 
-        // Pac-Man pellet border — replaces the normal bevel/border.
+        // Pac-Man pellet border — drawn via dedicated CALayers (see updatePacmanBorder),
+        // not into this view's backing, so the animation never re-rasterizes the dock.
         if theme.dock.borderStyle == "pacman", !theme.isVertical {
-            if AppSettings.shared.pacmanAnimationEnabled { startPacmanTimerIfNeeded() } else { stopPacmanTimer() }
-            drawPacmanBorder(ctx: ctx, rect: rect, scale: scale)
+            updatePacmanBorder(rect: rect, scale: scale)
         } else {
-            stopPacmanTimer()
+            tearDownPacmanLayers()
         }
 
         // Grip dots handle (BeOS deskbar style)

@@ -277,7 +277,13 @@ final class DockController {
         }
 
         let effectiveIconSize = iconSize * dynScale
-        let magOverflow: CGFloat = hasMag ? effectiveIconSize * (maxScale - 1.0) : 0
+        // Top overflow above the bar: magnification themes need room for popped icons;
+        // hover-zoom themes (no magnification) need room too so the enlarged icon — and a
+        // pellet/Pac-Man border — aren't clipped at the dock's top edge.
+        let hoverScale = theme?.icon.hoverScale ?? 1.0
+        let magOverflow: CGFloat = hasMag
+            ? effectiveIconSize * (maxScale - 1.0)
+            : max(0, effectiveIconSize * (hoverScale - 1.0))
         let effectiveHMagOverflow = hMagOverflow * dynScale
         let shortAxis = dockBarHeight * dynScale + magOverflow
 
@@ -327,8 +333,10 @@ final class DockController {
         }
         let x: CGFloat
         switch alignment {
-        case "left":  x = visible.minX + offset
-        case "right": x = visible.maxX - width - offset
+        // Flush to the PHYSICAL screen edge (screen.frame), not visibleFrame — otherwise a
+        // system Dock on the left/right pushes our dock inward and leaves a gap.
+        case "left":  x = screen.frame.minX + offset
+        case "right": x = screen.frame.maxX - width - offset
         default:      x = visible.midX - width / 2
         }
         return NSRect(x: x, y: y, width: width, height: height)
