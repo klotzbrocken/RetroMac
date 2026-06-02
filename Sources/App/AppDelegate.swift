@@ -72,11 +72,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Restore system UI if previous session crashed while UI was hidden
         SystemUIHelper.restoreIfNeeded()
+        restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
 
         NSApp.setActivationPolicy(.accessory)
         setupMenuBar()
         registerHotkey()
+        TimerController.shared.start()
         startAppLaunchObserver()
         startSleepObserver()
 
@@ -232,12 +234,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         private let presetLabel = NSTextField(labelWithString: "")
         private let statusLabel = NSTextField(labelWithString: "")
         private let gearButton = NSButton()
+        private let quitButton = NSButton()
+        private let retroButton = NSButton()
         private let iconView = NSView()
         private let glowDot = NSView(frame: NSRect(x: 9, y: 9, width: 8, height: 8))
         private var onGear: (() -> Void)?
+        private var onQuit: (() -> Void)?
+        private var onRetro: (() -> Void)?
 
-        init(presetName: String, statusText: String, shaderOn: Bool, onGear: @escaping () -> Void) {
+        init(presetName: String, statusText: String, shaderOn: Bool, retroActive: Bool, onGear: @escaping () -> Void, onQuit: @escaping () -> Void, onRetro: @escaping () -> Void) {
             self.onGear = onGear
+            self.onQuit = onQuit
+            self.onRetro = onRetro
             super.init(frame: NSRect(x: 0, y: 0, width: 300, height: 50))
             autoresizingMask = .width
 
@@ -280,12 +288,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             gearButton.action = #selector(gearTapped)
             addSubview(gearButton)
 
+            // Quit button — left of the gear
+            quitButton.bezelStyle = .inline
+            quitButton.isBordered = false
+            quitButton.image = NSImage(systemSymbolName: "power", accessibilityDescription: "Quit RetroMac")?
+                .withSymbolConfiguration(gearConfig)
+            quitButton.imagePosition = .imageOnly
+            quitButton.contentTintColor = .secondaryLabelColor
+            quitButton.toolTip = "Quit RetroMac"
+            quitButton.target = self
+            quitButton.action = #selector(quitTapped)
+            addSubview(quitButton)
+
+            // Retro Mode toggle — left of quit
+            retroButton.bezelStyle = .inline
+            retroButton.isBordered = false
+            retroButton.imagePosition = .imageOnly
+            retroButton.toolTip = "Retro Mode — hide desktop & apply your favourite"
+            retroButton.target = self
+            retroButton.action = #selector(retroTapped)
+            addSubview(retroButton)
+
             // Apply initial state
-            update(shaderOn: shaderOn, presetName: presetName, statusText: statusText)
+            update(shaderOn: shaderOn, presetName: presetName, statusText: statusText, retroActive: retroActive)
         }
 
         /// Update header in-place (while menu is open)
-        func update(shaderOn: Bool, presetName: String, statusText: String) {
+        func update(shaderOn: Bool, presetName: String, statusText: String, retroActive: Bool) {
+            let retroConfig = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+            retroButton.image = NSImage(systemSymbolName: retroActive ? "wand.and.stars.inverse" : "wand.and.stars",
+                                        accessibilityDescription: "Retro Mode")?.withSymbolConfiguration(retroConfig)
+            retroButton.contentTintColor = retroActive ? .controlAccentColor : .secondaryLabelColor
+
             let dotColor: NSColor = shaderOn
                 ? NSColor(red: 0.2, green: 0.9, blue: 0.3, alpha: 1)
                 : NSColor(red: 0.85, green: 0.25, blue: 0.2, alpha: 1)
@@ -303,6 +337,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             super.layout()
             let gearSize: CGFloat = 24
             gearButton.frame = NSRect(x: bounds.width - gearSize - 12, y: 13, width: gearSize, height: gearSize)
+            quitButton.frame = NSRect(x: bounds.width - gearSize * 2 - 16, y: 13, width: gearSize, height: gearSize)
+            retroButton.frame = NSRect(x: bounds.width - gearSize * 3 - 20, y: 13, width: gearSize, height: gearSize)
         }
 
         required init?(coder: NSCoder) { fatalError() }
@@ -312,6 +348,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 menu.cancelTracking()
             }
             onGear?()
+        }
+
+        @objc private func quitTapped() {
+            if let menu = enclosingMenuItem?.menu {
+                menu.cancelTracking()
+            }
+            onQuit?()
+        }
+
+        @objc private func retroTapped() {
+            if let menu = enclosingMenuItem?.menu {
+                menu.cancelTracking()
+            }
+            onRetro?()
         }
     }
 
@@ -550,9 +600,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let displayName = currentDisplayName()
         let statusText = "\(overlayStatus) · \(displayName)"
 
-        let headerView = MenuHeaderView(presetName: presetName, statusText: statusText, shaderOn: isActive) { [weak self] in
+        let headerView = MenuHeaderView(presetName: presetName, statusText: statusText, shaderOn: isActive, retroActive: retroModeActive, onGear: { [weak self] in
             self?.openSettings()
-        }
+        }, onQuit: { [weak self] in
+            self?.quitApp()
+        }, onRetro: { [weak self] in
+            self?.toggleRetroMode()
+        })
         menuHeaderView = headerView
         let headerItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         headerItem.view = headerView
@@ -686,10 +740,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         presetsItem.submenu = presetsMenu
         menu.addItem(presetsItem)
 
+        // ── Shader Options submenu (Intensity / Vignette / Bloom) ──
+        let shaderOptionsItem = NSMenuItem(title: "Shader Options", action: nil, keyEquivalent: "")
+        shaderOptionsItem.image = sfIcon("slider.horizontal.3")
+        let shaderOptionsMenu = NSMenu()
+        shaderOptionsItem.submenu = shaderOptionsMenu
+        menu.addItem(shaderOptionsItem)
+
         // Intensity submenu with value chip
         let intensityItem = NSMenuItem(title: "Intensity", action: nil, keyEquivalent: "")
         intensityItem.image = sfIcon("sun.max")
-        intensityItem.attributedTitle = menuTitle("Intensity", value: "\(Int(currentIntensity * 100))%")
+        intensityItem.title = "Intensity — \(Int(currentIntensity * 100))%"
         let intensityMenu = NSMenu()
         for pct in stride(from: 10, through: 100, by: 10) {
             let item = NSMenuItem(title: "\(pct)%", action: #selector(setIntensity(_:)), keyEquivalent: "")
@@ -699,13 +760,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             intensityMenu.addItem(item)
         }
         intensityItem.submenu = intensityMenu
-        menu.addItem(intensityItem)
+        shaderOptionsMenu.addItem(intensityItem)
 
         // Vignette submenu with value chip (disabled for Lite presets)
         let isLitePreset = Self.isLitePreset(currentPresetName)
         let vignetteItem = NSMenuItem(title: "Vignette", action: nil, keyEquivalent: "")
         vignetteItem.image = sfIcon("circle.circle")
-        vignetteItem.attributedTitle = menuTitle("Vignette", value: isLitePreset ? "n/a" : vignetteValueString())
+        vignetteItem.title = "Vignette — \(isLitePreset ? "n/a" : vignetteValueString())"
         vignetteItem.isEnabled = !isLitePreset
         let vignetteMenu = NSMenu()
         let vigOff = NSMenuItem(title: "Off", action: #selector(setVignette(_:)), keyEquivalent: "")
@@ -721,12 +782,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             vignetteMenu.addItem(item)
         }
         vignetteItem.submenu = vignetteMenu
-        menu.addItem(vignetteItem)
+        shaderOptionsMenu.addItem(vignetteItem)
 
         // Bloom submenu with value chip (disabled for Lite presets)
         let bloomItem = NSMenuItem(title: "Bloom", action: nil, keyEquivalent: "")
         bloomItem.image = sfIcon("sparkles")
-        bloomItem.attributedTitle = menuTitle("Bloom", value: isLitePreset ? "n/a" : bloomValueString())
+        bloomItem.title = "Bloom — \(isLitePreset ? "n/a" : bloomValueString())"
         bloomItem.isEnabled = !isLitePreset
         let bloomMenu = NSMenu()
 
@@ -749,7 +810,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             bloomMenu.addItem(item)
         }
         bloomItem.submenu = bloomMenu
-        menu.addItem(bloomItem)
+        shaderOptionsMenu.addItem(bloomItem)
 
         // Display submenu with value chip
         let displayItem = NSMenuItem(title: "Display", action: nil, keyEquivalent: "")
@@ -799,12 +860,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         themesMenu.addItem(offItem)
         themesMenu.addItem(.separator())
 
-        for theme in ThemeManager.shared.availableThemes {
-            let item = NSMenuItem(title: theme.name, action: #selector(selectTheme(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = theme.name
-            if dockOn && theme.name == currentTheme { item.state = .on }
-            themesMenu.addItem(item)
+        func themeCategory(_ name: String) -> String {
+            let n = name.lowercased()
+            if n.contains("mac os") || n.contains("aqua") || n.contains("snow leopard")
+                || n.contains("mountain lion") || n.contains("platinum") || n.contains("classic") { return "Apple" }
+            if n.contains("windows") { return "Windows" }
+            if n.contains("beos") || n.contains("os/2") || n.contains("warp") || n.contains("sgi")
+                || n.contains("irix") || n.contains("amiga") || n.contains("workbench") { return "Unix & Amiga" }
+            return "Other"
+        }
+        for category in ["Apple", "Windows", "Unix & Amiga", "Other"] {
+            let inCategory = ThemeManager.shared.availableThemes.filter { themeCategory($0.name) == category }
+            guard !inCategory.isEmpty else { continue }
+            // Each category is its own submenu entry.
+            let catItem = NSMenuItem(title: category, action: nil, keyEquivalent: "")
+            let catMenu = NSMenu()
+            for theme in inCategory {
+                let item = NSMenuItem(title: theme.name, action: #selector(selectTheme(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = theme.name
+                if dockOn && theme.name == currentTheme { item.state = .on }
+                catMenu.addItem(item)
+            }
+            catItem.submenu = catMenu
+            themesMenu.addItem(catItem)
         }
         themesItem.submenu = themesMenu
         menu.addItem(themesItem)
@@ -910,27 +989,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         screenshotItem.isEnabled = isActive || retroViewport.isActive
         menu.addItem(screenshotItem)
 
-        // ── Reset permissions (troubleshooting) ──
-        let resetPermItem = NSMenuItem(title: "Reset Permissions\u{2026}", action: #selector(resetPermissions), keyEquivalent: "")
-        resetPermItem.target = self
-        resetPermItem.image = sfIcon("lock.rotation")
-        menu.addItem(resetPermItem)
-
-        menu.addItem(NSMenuItem.separator())
-
-        // ── Quit ──
-        let quit = NSMenuItem(title: "Quit RetroMac", action: #selector(quitApp), keyEquivalent: "q")
-        quit.target = self
-        quit.image = sfIcon("xmark.circle")
-        menu.addItem(quit)
-
+        // Quit moved to a power symbol in the header; Reset Permissions moved to Settings.
         statusItem.menu = menu
     }
 
     /// Reset this app's Screen Recording + Camera TCC grants, then point the user at the
     /// right System Settings panes. Useful after a rare update where macOS invalidates a
     /// grant — gives a clean path back into the permission prompts.
-    @objc private func resetPermissions() {
+    @objc func resetPermissions() {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.retromac.app"
         for service in ["ScreenCapture", "Camera"] {
             let proc = Process()
@@ -962,7 +1028,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let displayName = currentDisplayName()
         let statusText = "\(overlayStatus) · \(displayName)"
 
-        menuHeaderView?.update(shaderOn: isActive, presetName: presetName, statusText: statusText)
+        menuHeaderView?.update(shaderOn: isActive, presetName: presetName, statusText: statusText, retroActive: retroModeActive)
         shaderPillToggle?.isOn = isActive
         cameraPillToggle?.isOn = VirtualCameraManager.shared.isRunning
         viewportPillToggle?.isOn = retroViewport.isActive
@@ -1880,6 +1946,129 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Public entry point (e.g. Program Manager "Exit Windows") to turn off the active theme.
     func deactivateActiveTheme() { disableTheme() }
+
+    // MARK: - Retro Mode (one-click distraction-free)
+
+    private(set) var retroModeActive = false
+    private var retroSavedThemeEnabled = false
+    private var retroSavedTheme = ""
+    private var retroSavedShaderActive = false
+    private var retroSavedPreset = ""
+    private var retroHidMenuBar = false
+    private var retroHidDock = false
+    private var retroHidDesktop = false
+
+    @objc func toggleRetroMode() {
+        if retroModeActive { exitRetroMode() } else { enterRetroMode() }
+    }
+
+    private func enterRetroMode() {
+        let s = AppSettings.shared
+        // Snapshot current state for restore
+        retroSavedThemeEnabled = s.dockEnabled
+        retroSavedTheme = s.dockTheme
+        retroSavedShaderActive = isActive
+        retroSavedPreset = currentPresetName
+
+        // Favourite theme
+        let theme = s.retroModeTheme
+        if !theme.isEmpty {
+            ThemeManager.shared.setActiveTheme(name: theme)
+            s.dockEnabled = true
+            DockController.shared.start()
+        }
+        // Favourite shader
+        if s.retroModeActivateShader {
+            let preset = !s.retroModeShader.isEmpty ? s.retroModeShader : (s.presetForTheme(name: theme) ?? (currentPresetName ?? ""))
+            if !preset.isEmpty && preset != "none" {
+                if isActive { applyPreset(preset) } else { currentPresetName = preset; startOverlay(mode: .fullScreen) }
+            }
+        }
+        // Hide system UI (remember exactly what we hid)
+        retroHidMenuBar = s.retroModeHideMenuBar
+        retroHidDock = s.retroModeHideDock
+        retroHidDesktop = s.retroModeHideDesktopIcons
+        if retroHidMenuBar { SystemUIHelper.setMenuBarAutoHide(true) }
+        if retroHidDock { SystemUIHelper.setDockAutoHide(true) }
+        if retroHidDesktop { SystemUIHelper.setDesktopIconsHidden(true) }
+        // Persist what we hid so a quit / crash can restore it (the direct
+        // setMenuBarAutoHide path is not covered by SystemUIHelper.restoreIfNeeded).
+        let d = UserDefaults.standard
+        d.set(retroHidMenuBar, forKey: "retroHidMenuBar")
+        d.set(retroHidDock, forKey: "retroHidDock")
+        d.set(retroHidDesktop, forKey: "retroHidDesktop")
+
+        retroModeActive = true
+        rebuildMenu()
+    }
+
+    /// Restore any system UI that Retro Mode hid (menu bar / dock / desktop icons),
+    /// based on persisted flags. Runs on quit and on launch (crash recovery). No-op
+    /// when nothing was hidden, so a normal quit causes no Finder/Dock restart.
+    private func restoreRetroModeSystemUI() {
+        let d = UserDefaults.standard
+        if d.bool(forKey: "retroHidMenuBar") { SystemUIHelper.setMenuBarAutoHide(false) }
+        if d.bool(forKey: "retroHidDock") { SystemUIHelper.setDockAutoHide(false) }
+        if d.bool(forKey: "retroHidDesktop") { SystemUIHelper.setDesktopIconsHidden(false) }
+        d.removeObject(forKey: "retroHidMenuBar")
+        d.removeObject(forKey: "retroHidDock")
+        d.removeObject(forKey: "retroHidDesktop")
+    }
+
+    private func exitRetroMode() {
+        // Restore system UI
+        if retroHidMenuBar { SystemUIHelper.setMenuBarAutoHide(false) }
+        if retroHidDock { SystemUIHelper.setDockAutoHide(false) }
+        if retroHidDesktop { SystemUIHelper.setDesktopIconsHidden(false) }
+        let d = UserDefaults.standard
+        d.removeObject(forKey: "retroHidMenuBar")
+        d.removeObject(forKey: "retroHidDock")
+        d.removeObject(forKey: "retroHidDesktop")
+
+        let s = AppSettings.shared
+        // Restore theme
+        if retroSavedThemeEnabled {
+            if s.dockTheme != retroSavedTheme { ThemeManager.shared.setActiveTheme(name: retroSavedTheme) }
+            s.dockEnabled = true
+            DockController.shared.start()
+        } else {
+            s.dockEnabled = false
+            DockController.shared.stop()
+            DesktopIconsController.shared.hide()
+            ProgramManagerController.shared.hide()
+            SGIDesktopController.shared.hide()
+            ThemeManager.shared.clearActiveTheme()
+            ThemeManager.shared.restoreWallpapers()
+        }
+        // Restore shader
+        if retroSavedShaderActive, !retroSavedPreset.isEmpty {
+            if isActive { applyPreset(retroSavedPreset) } else { currentPresetName = retroSavedPreset; startOverlay(mode: .fullScreen) }
+        } else if isActive {
+            disableAll()
+        }
+
+        retroModeActive = false
+        rebuildMenu()
+    }
+
+    // MARK: - Timer targets (called by TimerController)
+
+    func setOverlayActive(_ on: Bool) {
+        if on { if !isActive { startOverlay(mode: .fullScreen) } }
+        else { if isActive { disableAll() } }
+    }
+
+    func setRetroMode(_ on: Bool) {
+        if on != retroModeActive { toggleRetroMode() }
+    }
+
+    /// Apply a timer target ("overlay" or "retroMode") on/off.
+    func applyTimerTarget(_ target: String, active: Bool) {
+        switch target {
+        case "retroMode": setRetroMode(active)
+        default: setOverlayActive(active)
+        }
+    }
 
     @objc private func disableTheme() {
         AppSettings.shared.dockEnabled = false
@@ -3629,6 +3818,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         disableAll()
         DockController.shared.stop()
         ThemeManager.shared.restoreWallpapers()
+        restoreRetroModeSystemUI()
     }
 
     // MARK: - Surprise Preset

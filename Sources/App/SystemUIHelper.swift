@@ -111,6 +111,25 @@ enum SystemUIHelper {
         )
     }
 
+    // MARK: - Dock Auto-Hide
+
+    static func setDockAutoHide(_ hide: Bool) {
+        let ok = runAppleScript("tell application \"System Events\" to set the autohide of the dock preferences to \(hide)")
+        if !ok {
+            let task = Process()
+            task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            task.arguments = ["write", "com.apple.dock", "autohide", "-bool", hide ? "true" : "false"]
+            try? task.run()
+            task.waitUntilExit()
+            let kill = Process()
+            kill.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+            kill.arguments = ["Dock"]
+            try? kill.run()
+            kill.waitUntilExit()
+        }
+        print("[SystemUI] Dock auto-hide: \(hide) (AppleScript: \(ok ? "ok" : "fallback"))")
+    }
+
     // MARK: - Desktop Icons
 
     static func setDesktopIconsHidden(_ hidden: Bool) {

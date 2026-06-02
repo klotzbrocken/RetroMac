@@ -2896,7 +2896,10 @@ enum BuiltinShaders {
         float2 texSize    = uniforms.sourceSize.xy;
         float2 outputSize = uniforms.outputSize.xy;
 
-        float2 uv = curveUV_gdv(in.texCoord, 0.03 * intensity, 0.04 * intensity);
+        // Reduced edge curvature (was 0.03/0.04): keeps the GDV look but halves the
+        // see-vs-click cursor mismatch near the edges, where the overlay is warped but
+        // the OS cursor is not. Clicks always land correctly regardless.
+        float2 uv = curveUV_gdv(in.texCoord, 0.015 * intensity, 0.02 * intensity);
 
         if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
             return float4(0.0, 0.0, 0.0, sampleSourceAlpha(source, s, in.texCoord));

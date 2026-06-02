@@ -1,0 +1,66 @@
+{
+  "name": "Maiks Favourite",
+  "version": "1.0",
+  "author": "Maik",
+  "wallpaper": "wallpaper.png",
+  "dock": {
+    "height": 76,
+    "iconSize": 56,
+    "padding": 8,
+    "spacing": 4,
+    "cornerRadius": 0,
+    "backgroundColor": "#0B0B16F2",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#161616FF",
+    "borderWidth": 1,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#EAEAEAFF",
+    "bevelBottomColor": "#6E6E6EFF",
+    "bevelWidth": 2,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "fullWidth": false,
+    "startButton": false,
+    "showClock": false,
+    "magnification": false,
+    "showTrash": true,
+    "showGrip": false,
+    "alignment": "left",
+    "edgeOffset": 8
+  },
+  "icon": {
+    "renderStyle": "pixelated",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.2,
+    "hoverAnimationDuration": 0.12
+  },
+  "indicator": {
+    "style": "square",
+    "color": "#FFD800",
+    "size": 4,
+    "offset": 0
+  },
+  "desktopIcons": [
+    { "name": "Trash", "icon": "trash.png", "iconFull": "trash_full.png", "type": "trash", "gridX": 0, "gridY": 0 }
+  ],
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "lcd-retro-lite",
+  "iconMappings": {
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "safari.png",
+    "ai.perplexity.comet": "comet.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.Notes": "notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.reminders": "tasks.png",
+    "com.apple.Terminal": "terminal.png",
+    "__trash__": "trash.png",
+    "__trash_full__": "trash_full.png"
+  }
+}

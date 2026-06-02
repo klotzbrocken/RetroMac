@@ -178,6 +178,8 @@ final class ThemeManager {
         if let theme = activeTheme, let iconURL = theme.iconURL(for: bundleID) {
             if let img = NSImage(contentsOf: iconURL) {
                 img.size = NSSize(width: size, height: size)
+                // Mapped/custom artwork is shown crisp (hi-res) — only un-mapped system
+                // apps get auto-pixelated (below) so they blend into a pixel theme.
                 return img
             }
         }
@@ -196,6 +198,11 @@ final class ThemeManager {
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
             let icon = NSWorkspace.shared.icon(forFile: url.path)
             icon.size = NSSize(width: size, height: size)
+            // Pixel themes: auto-pixelate un-mapped apps' real icons so the whole dock
+            // reads as one consistent pixel-art set without needing per-app artwork.
+            if activeTheme?.config.isPixelated == true {
+                return pixelated(icon, to: size)
+            }
             return icon
         }
 
@@ -203,6 +210,45 @@ final class ThemeManager {
             ?? NSImage(size: NSSize(width: size, height: size))
         fallback.size = NSSize(width: size, height: size)
         return fallback
+    }
+
+    /// Pixelate `image` only when the active theme is pixelated. For icons loaded
+    /// outside `loadIcon` (e.g. the trash icon) so they match the rest of the dock.
+    func pixelatedIfNeeded(_ image: NSImage, size: CGFloat) -> NSImage {
+        guard activeTheme?.config.isPixelated == true else { return image }
+        return pixelated(image, to: size)
+    }
+
+    /// Downsample an icon to a small grid, then nearest-neighbour upscale → chunky
+    /// pixel-art look. Used for un-mapped apps in pixelated themes.
+    private func pixelated(_ image: NSImage, to size: CGFloat) -> NSImage {
+        let blocks = 24
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: blocks, pixelsHigh: blocks,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else {
+            image.size = NSSize(width: size, height: size)
+            return image
+        }
+        rep.size = NSSize(width: blocks, height: blocks)
+        NSGraphicsContext.saveGraphicsState()
+        if let ctx = NSGraphicsContext(bitmapImageRep: rep) {
+            NSGraphicsContext.current = ctx
+            ctx.imageInterpolation = .high   // smooth downscale into the grid
+            image.draw(in: NSRect(x: 0, y: 0, width: blocks, height: blocks),
+                       from: .zero, operation: .copy, fraction: 1.0)
+        }
+        NSGraphicsContext.restoreGraphicsState()
+
+        let out = NSImage(size: NSSize(width: size, height: size))
+        out.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .none   // nearest upscale → blocky
+        rep.draw(in: NSRect(x: 0, y: 0, width: size, height: size),
+                 from: NSRect(x: 0, y: 0, width: blocks, height: blocks),
+                 operation: .copy, fraction: 1.0, respectFlipped: true,
+                 hints: [.interpolation: NSImageInterpolation.none])
+        out.unlockFocus()
+        return out
     }
 
     /// Returns the real system icon for a bundle ID (no theme icons, no fallback).

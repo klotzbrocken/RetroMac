@@ -827,8 +827,10 @@ final class DockView: NSView {
             }
         } else {
             let icon: NSImage
-            if isTransient && ThemeManager.shared.customIconPath(for: bundleID) == nil {
-                // Transient (running) apps show their real system icon unless user set a custom one
+            if isTransient && ThemeManager.shared.customIconPath(for: bundleID) == nil && !theme.isPixelated {
+                // Transient (running) apps show their real system icon unless user set a
+                // custom one — except in pixel themes, where icon(for:) pixelates the
+                // real icon so the whole dock stays consistent.
                 icon = ThemeManager.shared.systemIcon(for: bundleID, size: iconSize)
             } else {
                 icon = ThemeManager.shared.icon(for: bundleID, size: iconSize)
@@ -872,6 +874,11 @@ final class DockView: NSView {
     }
 
     private func trashIcon(size: CGFloat) -> NSImage {
+        // Pixelate for pixel themes so the trash matches the rest of the dock.
+        return ThemeManager.shared.pixelatedIfNeeded(rawTrashIcon(size: size), size: size)
+    }
+
+    private func rawTrashIcon(size: CGFloat) -> NSImage {
         let trashFull = !isTrashEmpty()
 
         // Try theme-specific trash icon first (trash_full.png / trash.png)
