@@ -33,6 +33,7 @@ final class DockController {
         print("[Dock] Starting")
 
         ThemeManager.shared.reload()
+        AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
         if let theme = ThemeManager.shared.activeTheme {
             SplashController.shared.showIfEnabled(for: theme)
         }
@@ -45,6 +46,7 @@ final class DockController {
         DesktopIconsController.shared.update()
         ProgramManagerController.shared.update()
         SGIDesktopController.shared.update()
+        BeOSDeskbarController.shared.update()
         if AppSettings.shared.hideMenuBar {
             SystemUIHelper.setMenuBarAutoHide(true)
         }
@@ -91,6 +93,7 @@ final class DockController {
         DesktopIconsController.shared.hide()
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
+        BeOSDeskbarController.shared.hide()
         // Restore menu bar and desktop icons
         if AppSettings.shared.hideMenuBar {
             SystemUIHelper.setMenuBarAutoHide(false)
@@ -173,6 +176,7 @@ final class DockController {
             DesktopIconsController.shared.update()
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
+            BeOSDeskbarController.shared.update()
             return
         }
 
@@ -180,6 +184,7 @@ final class DockController {
         // refresh desktop icons, and show the dock bar.
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
+        BeOSDeskbarController.shared.hide()
         DesktopIconsController.shared.update()
 
         createWindow()
@@ -684,6 +689,7 @@ final class DockController {
             ThemeManager.shared.reload(selectTheme: newTheme)
             ThemeManager.shared.clearCache()
             ThemeManager.shared.applyWallpaper()
+            AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
             if let theme = ThemeManager.shared.activeTheme {
                 SplashController.shared.showIfEnabled(for: theme)
             }
@@ -722,6 +728,12 @@ final class DockController {
 
         s.$dockShowRunningApps.dropFirst().sink { [weak self] _ in
             self?.repositionWindow()
+        }.store(in: &settingsObservers)
+
+        s.$dockShowDownloads.dropFirst().sink { [weak self] show in
+            let active = (ThemeManager.shared.activeTheme?.config.hasFolderStacks == true) && show
+            AppManager.shared.syncAutoDownloads(active: active)
+            self?.recreateWindow()
         }.store(in: &settingsObservers)
 
         s.$dockMagnification.dropFirst().sink { [weak self] _ in

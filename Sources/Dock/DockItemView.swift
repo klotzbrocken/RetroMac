@@ -7,6 +7,7 @@ final class DockItemView: NSView {
     private var trackingArea: NSTrackingArea?
     private var isHovered = false
     private var indicatorLayer: CALayer?
+    private var previewTimer: Timer?
 
     var onLeftClick: ((String) -> Void)?
     var onRightClick: ((String, NSPoint) -> Void)?
@@ -172,12 +173,39 @@ final class DockItemView: NSView {
             self.toolTip = tooltip
         }
 
-        // Pac-Man theme: hovering an icon releases a ghost that chases Pac-Man.
+        // Pac-Man theme: hovering an icon releases a ghost that chases Pac-Man, and the
+        // icon also becomes a barrier that reverses whoever runs into it.
         (self.superview as? DockView)?.spawnGhostNearItem(frame: self.frame)
+        (self.superview as? DockView)?.setHoverBarrier(bundleID: bundleID, frame: self.frame, active: true)
+
+        startWindowPreviewIfEligible()
+    }
+
+    /// After ~2s hovering a RUNNING app's icon (themes with windowPreview), show a small
+    /// pixelated snapshot of its front window above the dock.
+    private func startWindowPreviewIfEligible() {
+        previewTimer?.invalidate(); previewTimer = nil
+        let cfg = ThemeManager.shared.activeTheme?.config
+        guard cfg?.hasWindowPreview == true,
+              !bundleID.hasPrefix("__"),
+              AppLauncher.isRunning(bundleID: bundleID) else { return }
+        previewTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: false) { [weak self] _ in
+            guard let self = self, let win = self.window else { return }
+            let screenRect = win.convertToScreen(self.convert(self.bounds, to: nil))
+            DockPreviewController.shared.show(for: self.bundleID, anchorScreenRect: screenRect)
+        }
+    }
+
+    private func cancelWindowPreview() {
+        previewTimer?.invalidate(); previewTimer = nil
+        DockPreviewController.shared.hide()
     }
 
     override func mouseExited(with event: NSEvent) {
         isHovered = false
+        cancelWindowPreview()
+        // Always lift the Pac-Man barrier, regardless of magnification state.
+        (self.superview as? DockView)?.setHoverBarrier(bundleID: bundleID, frame: self.frame, active: false)
         guard !magnificationEnabled else { return }
         let duration = ThemeManager.shared.activeTheme?.config.icon.hoverAnimationDuration ?? 0.15
         NSAnimationContext.runAnimationGroup { ctx in
@@ -206,6 +234,7 @@ final class DockItemView: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func mouseDown(with event: NSEvent) {
+        cancelWindowPreview()
         onLeftClick?(bundleID)
     }
 

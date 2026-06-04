@@ -87,12 +87,17 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                 createOverlayWindow(frame: screen.frame, screen: screen, fps: fps)
             }
         case .singleDisplay(let displayID):
-            if let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) {
-                createOverlayWindow(frame: screen.frame, screen: screen, fps: fps)
-            } else {
-                for screen in NSScreen.screens {
-                    createOverlayWindow(frame: screen.frame, screen: screen, fps: fps)
+            // Resolve to EXACTLY ONE screen so the single capture stream (which feeds
+            // metalViews[0]) always lines up with the single overlay window. A stored
+            // targetDisplayID can go stale across reboots / display reconnects — if it no
+            // longer matches any screen, fall back to the main display instead of spraying
+            // windows over every screen (which left only the main monitor rendering).
+            let target = NSScreen.screens.first(where: { $0.displayID == displayID }) ?? NSScreen.main
+            if let screen = target {
+                if screen.displayID != displayID {
+                    print("[Overlay] singleDisplay: stored id \(displayID) not found — falling back to \(screen.localizedName) (id=\(screen.displayID))")
                 }
+                createOverlayWindow(frame: screen.frame, screen: screen, fps: fps)
             }
         case .singleWindow(let scWindow):
             let nsFrame = Self.cgRectToNS(scWindow.frame)
@@ -266,15 +271,28 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
             print("[Overlay] singleDisplay requested: \(displayID)")
             print("[Overlay] Available SCDisplays: \(content.displays.map { "id=\($0.displayID) \($0.width)x\($0.height)" })")
 
+            // Resolve to the SAME screen the overlay window landed on (setupWindows uses the
+            // identical "match by id, else main" fallback), so a stale targetDisplayID can't
+            // make us capture one display while the window sits on another.
+            let resolvedScreen: NSScreen? = await MainActor.run {
+                let exact = NSScreen.screens.first(where: { $0.displayID == displayID })
+                return exact ?? NSScreen.main
+            }
             let effectiveID: CGDirectDisplayID
             if content.displays.contains(where: { $0.displayID == displayID }) {
                 effectiveID = displayID
-            } else if let screen = await MainActor.run(body: { NSScreen.screens.first(where: { $0.displayID == displayID }) }),
+            } else if let screen = resolvedScreen,
                       let scDisplay = content.displays.first(where: {
                           Int($0.width) == Int(screen.frame.width) && Int($0.height) == Int(screen.frame.height)
                       }) {
                 print("[Overlay] ID mismatch — matched by resolution: \(scDisplay.displayID)")
                 effectiveID = scDisplay.displayID
+            } else if let mainSC = content.displays.first(where: { $0.displayID == CGMainDisplayID() }) {
+                print("[Overlay] singleDisplay: no match for \(displayID) — falling back to main display \(mainSC.displayID)")
+                effectiveID = mainSC.displayID
+            } else if let firstSC = content.displays.first {
+                print("[Overlay] singleDisplay: no match for \(displayID) — falling back to first available display \(firstSC.displayID)")
+                effectiveID = firstSC.displayID
             } else {
                 effectiveID = displayID
             }
@@ -282,7 +300,15 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
             let manager = ScreenCaptureManager(device: device)
             captureManagers.append(manager)
             setupSingleStreamCallbacks(manager: manager, metalView: metalViews[0], captureFPS: captureFPS)
-            try await manager.startDisplay(effectiveID, excludingWindowIDs: windowIDs, content: content)
+            do {
+                try await manager.startDisplay(effectiveID, excludingWindowIDs: windowIDs, content: content)
+                print("[Overlay] Started single-display capture for \(effectiveID)")
+            } catch {
+                // Don't abort the whole overlay (which would leave a stuck transparent
+                // window) — log so the failing display is visible in the user's console.
+                print("[Overlay] FAILED single-display capture for \(effectiveID): \(error)")
+                throw error
+            }
 
         case .singleWindow(let scWindow):
             let manager = ScreenCaptureManager(device: device)

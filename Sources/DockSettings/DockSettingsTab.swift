@@ -242,6 +242,40 @@ struct DockSettingsTab: View {
                         }
                     }
                 }
+                if selectedThemeConfig?.hasFolderStacks == true {
+                    RMRow(label: "Show Downloads folder", hint: "Pins your Downloads folder to the dock; click it to fan out the most recent files.") {
+                        Toggle("", isOn: $settings.dockShowDownloads)
+                            .toggleStyle(.switch)
+                            .tint(.rmAccent)
+                            .labelsHidden()
+                    }
+                }
+                if selectedThemeConfig?.isDeskbar == true {
+                    RMRow(label: "Deskbar position") {
+                        Picker("", selection: $settings.deskbarCorner) {
+                            Text("Bottom Left").tag("bottomLeft")
+                            Text("Bottom Right").tag("bottomRight")
+                            Text("Top Left").tag("topLeft")
+                            Text("Top Right").tag("topRight")
+                        }
+                        .frame(width: 200)
+                    }
+                    ForEach(BeOSDeskbarView.availableShortcuts.indices, id: \.self) { i in
+                        let sc = BeOSDeskbarView.availableShortcuts[i]
+                        RMRow(label: "Show \(sc.label)") {
+                            Toggle("", isOn: Binding(
+                                get: { settings.deskbarShortcuts.contains(sc.bundleID) },
+                                set: { on in
+                                    var list = settings.deskbarShortcuts
+                                    if on { if !list.contains(sc.bundleID) { list.append(sc.bundleID) } }
+                                    else { list.removeAll { $0 == sc.bundleID } }
+                                    settings.deskbarShortcuts = list
+                                }
+                            ))
+                            .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        }
+                    }
+                }
                 RMRow(label: "Show indicators for running apps") {
                     Toggle("", isOn: $settings.dockShowRunningApps)
                         .toggleStyle(.switch)
