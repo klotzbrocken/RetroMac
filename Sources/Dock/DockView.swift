@@ -60,6 +60,15 @@ final class DockView: NSView {
     private var pacPelletR: CGFloat = 2.2
     private var pacRadius: CGFloat = 7
     private var pacLastEatenCount: Int = -1
+    // Run-mode motion is now stateful (position + direction) so hovered icons can act as
+    // barriers that reverse Pac-Man / the ghosts.
+    private var pacDist: CGFloat = 0
+    private var pacDir: CGFloat = 1        // +1 forward / -1 reversed
+    private var pacBlockCooldown: Int = 0  // ticks to ignore barrier re-trigger after a bounce
+    private var eatenPellets: Set<Int> = []
+    // Perimeter positions of currently-hovered dock icons (bundleID → distance). A mover
+    // heading into one of these is blocked and turns around.
+    private var barrierDists: [String: CGFloat] = [:]
     private var pacmanConfiguredClock: Bool?
     private var pacmanIsClock = false
     private var clockLabelLayers: [CATextLayer] = []
@@ -71,11 +80,18 @@ final class DockView: NSView {
     private final class PacGhost {
         let body = CAShapeLayer()
         var dist: CGFloat
+        var dir: CGFloat = 1          // travel direction (+1/-1), flipped by barriers
+        var blockCooldown: Int = 0    // ticks to keep the bounced direction after a barrier hit
         init(dist: CGFloat) { self.dist = dist }
     }
     private var ghosts: [PacGhost] = []
     private let maxGhosts = 2
     private var ghostCGImage: CGImage?
+    // Cherry power-up: eating it lets Pac-Man hunt the ghosts for a while.
+    private var cherryLayer: CALayer?
+    private var cherryDist: CGFloat = 0
+    private var nextCherryPhase: CGFloat = 150     // ~10s after start (15fps)
+    private var poweredUntilPhase: CGFloat = -1
 
     // Control Strip state
     private var controlStripCollapsed = false
@@ -868,8 +884,14 @@ final class DockView: NSView {
             let icon = folderIcon(path: folderPath, size: iconSize)
             itemView.updateIcon(icon)
             itemView.updateTheme(theme)
-            itemView.onLeftClick = { _ in
-                NSWorkspace.shared.open(URL(fileURLWithPath: folderPath))
+            itemView.onLeftClick = { [weak itemView] _ in
+                // Themes with folder stacks fan out the folder's recent files; otherwise
+                // a click just opens the folder in Finder.
+                guard theme.hasFolderStacks, let itemView = itemView, let win = itemView.window else {
+                    NSWorkspace.shared.open(URL(fileURLWithPath: folderPath)); return
+                }
+                let rect = win.convertToScreen(itemView.convert(itemView.bounds, to: nil))
+                DockStackController.shared.toggle(folderPath: folderPath, anchorScreenRect: rect)
             }
         } else {
             let icon: NSImage
@@ -896,6 +918,16 @@ final class DockView: NSView {
     }
 
     private func folderIcon(path: String, size: CGFloat) -> NSImage {
+        // Themed Downloads icon (e.g. Maiks Favourite's retro folder.icns), shown crisp.
+        if let downloads = try? FileManager.default.url(for: .downloadsDirectory, in: .userDomainMask, appropriateFor: nil, create: false),
+           URL(fileURLWithPath: path).standardizedFileURL == downloads.standardizedFileURL,
+           let dir = ThemeManager.shared.activeTheme?.iconsDirectory {
+            let custom = dir.appendingPathComponent("downloads.icns")
+            if let img = NSImage(contentsOf: custom) {
+                img.size = NSSize(width: size, height: size)
+                return img
+            }
+        }
         let img = NSWorkspace.shared.icon(forFile: path)
         img.size = NSSize(width: size, height: size)
         return img
@@ -1125,6 +1157,10 @@ final class DockView: NSView {
 
         pacmanPhase = 0
         pacLastEatenCount = -1
+        pacDist = 0
+        pacDir = 1
+        pacBlockCooldown = 0
+        eatenPellets.removeAll()
         pacmanConfiguredClock = AppSettings.shared.pacmanClockMode
         clearGhosts()   // reset on any reconfigure / mode switch
 
@@ -1223,6 +1259,7 @@ final class DockView: NSView {
               !pacmanIsClock, pacPerim > 0, pelletLayer != nil, ghosts.count < maxGhosts else { return }
         let center = CGPoint(x: frame.midX, y: frame.midY)
         let g = PacGhost(dist: nearestPerimeterDist(to: center))
+        g.dir = pacDir
         configureGhost(g)
         g.body.position = pointOnPerimeter(g.dist).0
         layer?.addSublayer(g.body)
@@ -1233,6 +1270,11 @@ final class DockView: NSView {
     private func clearGhosts() {
         ghosts.forEach { $0.body.removeFromSuperlayer() }
         ghosts = []
+        barrierDists.removeAll()
+        // Reset cherry / power state so a fresh run starts clean.
+        removeCherry()
+        poweredUntilPhase = -1
+        nextCherryPhase = 150
     }
 
     private func nearestPerimeterDist(to p: CGPoint) -> CGFloat {
@@ -1307,22 +1349,100 @@ final class DockView: NSView {
 
     /// Advance ghosts toward Pac-Man (faster than him, via the shorter arc); a ghost that
     /// reaches him "catches" him → it vanishes and Pac-Man respawns at the start.
-    private func updateGhosts(pacDist: CGFloat) {
+    private func perimGap(_ a: CGFloat, _ b: CGFloat) -> CGFloat {
+        guard pacPerim > 0 else { return 0 }
+        let g = (a - b + pacPerim).truncatingRemainder(dividingBy: pacPerim)
+        return min(g, pacPerim - g)
+    }
+
+    /// Signed shortest perimeter offset of `a` relative to `b` (range ±perim/2).
+    private func signedOffset(_ a: CGFloat, from b: CGFloat) -> CGFloat {
+        guard pacPerim > 0 else { return 0 }
+        var d = (a - b).truncatingRemainder(dividingBy: pacPerim)
+        if d > pacPerim / 2 { d -= pacPerim }
+        if d < -pacPerim / 2 { d += pacPerim }
+        return d
+    }
+
+    /// Distance from `pos` to the nearest hovered-icon barrier travelling in `dir`.
+    private func barrierGapAhead(pos: CGFloat, dir: CGFloat) -> CGFloat {
+        guard pacPerim > 0, !barrierDists.isEmpty else { return .greatestFiniteMagnitude }
+        var best = CGFloat.greatestFiniteMagnitude
+        for b in barrierDists.values {
+            let gap = dir >= 0
+                ? (b - pos + pacPerim).truncatingRemainder(dividingBy: pacPerim)
+                : (pos - b + pacPerim).truncatingRemainder(dividingBy: pacPerim)
+            if gap < best { best = gap }
+        }
+        return best
+    }
+
+    private func wrapDist(_ d: CGFloat) -> CGFloat {
+        guard pacPerim > 0 else { return 0 }
+        return (d.truncatingRemainder(dividingBy: pacPerim) + pacPerim).truncatingRemainder(dividingBy: pacPerim)
+    }
+
+    /// Set/clear a barrier at the perimeter point nearest a hovered icon (run mode only).
+    func setHoverBarrier(bundleID: String, frame: CGRect, active: Bool) {
+        guard pacPerim > 0, !pacmanIsClock else { barrierDists.removeValue(forKey: bundleID); return }
+        if active {
+            let c = CGPoint(x: frame.midX, y: frame.midY)
+            barrierDists[bundleID] = nearestPerimeterDist(to: c)
+        } else {
+            barrierDists.removeValue(forKey: bundleID)
+        }
+    }
+
+    /// Run-mode pellets: hide the ones Pac-Man has eaten (tracked as a set so eating works
+    /// in both directions); refill once the whole loop is cleared.
+    private func rebuildPelletsEaten() {
+        guard let pl = pelletLayer else { return }
+        let path = CGMutablePath()
+        for (i, d) in pacPelletDists.enumerated() where !eatenPellets.contains(i) {
+            let (p, _) = pointOnPerimeter(d)
+            path.addEllipse(in: CGRect(x: p.x - pacPelletR, y: p.y - pacPelletR,
+                                       width: pacPelletR * 2, height: pacPelletR * 2))
+        }
+        pl.path = path
+    }
+
+    private func updateGhosts(pacDist: CGFloat, powered: Bool) {
         guard pacPerim > 0, !ghosts.isEmpty else { return }
-        let ghostSpeed: CGFloat = 4.4 * 1.35   // a bit faster than Pac-Man
         let catchDist = pacRadius + 4
         var survivors: [PacGhost] = []
         for g in ghosts {
-            // Chase from BEHIND: always move in Pac-Man's travel direction (forward),
-            // gaining on him; catch when they coincide.
-            g.dist += ghostSpeed
-            if g.dist >= pacPerim { g.dist -= pacPerim }
-            let forwardGap = (pacDist - g.dist + pacPerim).truncatingRemainder(dividingBy: pacPerim)
-            if forwardGap < catchDist || forwardGap > pacPerim - catchDist {
-                g.body.removeFromSuperlayer()   // caught Pac-Man from behind
-                pacmanPhase = 0                 // respawn at the start
+            let speed: CGFloat = powered ? 4.4 * 1.35 * 0.6   // flee slower than Pac-Man
+                                         : 4.4 * 1.35         // chase a bit faster
+            g.body.opacity = powered ? 0.5 : 1.0
+
+            // Pick the desired direction (unless we're still committed to a recent bounce).
+            if g.blockCooldown > 0 {
+                g.blockCooldown -= 1
+            } else if powered {
+                // Flee: move away from Pac-Man (opposite the shorter arc toward him).
+                g.dir = signedOffset(pacDist, from: g.dist) >= 0 ? -1 : 1
+            } else {
+                // Chase from behind: travel the same way Pac-Man is going.
+                g.dir = pacDir
+            }
+
+            // A hovered icon ahead blocks the ghost → it turns around (player influence).
+            if barrierGapAhead(pos: g.dist, dir: g.dir) <= speed + pacRadius {
+                g.dir = -g.dir
+                g.blockCooldown = 10
+            }
+            g.dist = wrapDist(g.dist + g.dir * speed)
+
+            let gap = perimGap(pacDist, g.dist)
+            if powered {
+                if gap < catchDist { g.body.removeFromSuperlayer(); continue }   // eaten
+            } else if gap < catchDist {
+                g.body.removeFromSuperlayer()   // caught Pac-Man
+                pacmanPhase = 0
+                self.pacDist = 0; pacDir = 1; pacBlockCooldown = 0   // respawn at the start
                 continue
             }
+
             CATransaction.begin()
             CATransaction.setAnimationDuration(1.0 / 15.0)
             CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .linear))
@@ -1331,6 +1451,48 @@ final class DockView: NSView {
             survivors.append(g)
         }
         ghosts = survivors
+    }
+
+    // MARK: - Cherry power-up
+
+    private func removeCherry() { cherryLayer?.removeFromSuperlayer(); cherryLayer = nil }
+
+    private func maybeSpawnCherry(pacDist: CGFloat) {
+        guard cherryLayer == nil, pacmanPhase >= nextCherryPhase, pacPerim > 0 else { return }
+        cherryDist = (pacDist + pacPerim * CGFloat.random(in: 0.3...0.6)).truncatingRemainder(dividingBy: pacPerim)
+        let c = buildCherryLayer()
+        c.position = pointOnPerimeter(cherryDist).0
+        layer?.addSublayer(c)
+        cherryLayer = c
+    }
+
+    private func buildCherryLayer() -> CALayer {
+        let sz = pacRadius * 1.7
+        let c = CALayer()
+        c.bounds = CGRect(x: 0, y: 0, width: sz, height: sz)
+        c.zPosition = 6.5
+        c.actions = ["position": NSNull()]
+        let r = sz * 0.26
+        let berries = CAShapeLayer()
+        let bp = CGMutablePath()
+        bp.addEllipse(in: CGRect(x: sz * 0.10, y: sz * 0.06, width: r * 2, height: r * 2))
+        bp.addEllipse(in: CGRect(x: sz * 0.50, y: sz * 0.06, width: r * 2, height: r * 2))
+        berries.path = bp
+        berries.fillColor = NSColor.systemRed.cgColor
+        berries.frame = c.bounds
+        c.addSublayer(berries)
+        let stems = CAShapeLayer()
+        let sp = CGMutablePath()
+        let top = CGPoint(x: sz * 0.70, y: sz * 0.94)
+        sp.move(to: CGPoint(x: sz * 0.10 + r, y: sz * 0.06 + r * 1.6)); sp.addQuadCurve(to: top, control: CGPoint(x: sz * 0.34, y: sz * 0.70))
+        sp.move(to: CGPoint(x: sz * 0.50 + r, y: sz * 0.06 + r * 1.6)); sp.addQuadCurve(to: top, control: CGPoint(x: sz * 0.72, y: sz * 0.62))
+        stems.path = sp
+        stems.strokeColor = NSColor.systemGreen.cgColor
+        stems.fillColor = nil
+        stems.lineWidth = max(1, sz * 0.06)
+        stems.frame = c.bounds
+        c.addSublayer(stems)
+        return c
     }
 
     private func pacWedgePath(mouthDeg: CGFloat) -> CGPath {
@@ -1359,7 +1521,7 @@ final class DockView: NSView {
 
     /// Set Pac-Man path (mouth) + position + rotation. `animateMove` smooths the 15fps
     /// step over 1/15s so the render server interpolates to ~display rate.
-    private func updatePac(dist: CGFloat, mouthDeg: CGFloat, animateMove: Bool) {
+    private func updatePac(dist: CGFloat, mouthDeg: CGFloat, animateMove: Bool, facing: CGFloat = 1) {
         guard let pac = pacLayer else { return }
         let (pt, angRad) = pointOnPerimeter(dist)
         CATransaction.begin()
@@ -1371,7 +1533,8 @@ final class DockView: NSView {
         }
         pac.path = pacWedgePath(mouthDeg: mouthDeg)
         pac.position = pt
-        pac.setAffineTransform(CGAffineTransform(rotationAngle: angRad))
+        // Flip the mouth to point along the actual travel direction when reversed.
+        pac.setAffineTransform(CGAffineTransform(rotationAngle: angRad + (facing < 0 ? .pi : 0)))
         CATransaction.commit()
     }
 
@@ -1404,15 +1567,42 @@ final class DockView: NSView {
         guard pacPerim > 0 else { return }
         pacmanPhase += 1
         let speedPerTick: CGFloat = 4.4   // ~66 px/s at 15fps
-        let pacDist = (pacmanPhase * speedPerTick).truncatingRemainder(dividingBy: pacPerim)
-        let mouth = (sin(pacmanPhase * 0.5) * 0.5 + 0.5) * 38.0 + 2.0
-        updatePac(dist: pacDist, mouthDeg: mouth, animateMove: true)
-        let eaten = pacPelletDists.reduce(0) { $0 + ($1 < pacDist ? 1 : 0) }
-        if eaten != pacLastEatenCount {
-            pacLastEatenCount = eaten
-            rebuildPellets(eatenUpTo: pacDist)
+
+        // Barrier handling: a hovered icon ahead reverses Pac-Man. A short cooldown after a
+        // bounce prevents jittering in the barrier's catch band.
+        if pacBlockCooldown > 0 {
+            pacBlockCooldown -= 1
+        } else if barrierGapAhead(pos: pacDist, dir: pacDir) <= speedPerTick + pacRadius {
+            pacDir = -pacDir
+            pacBlockCooldown = 8
         }
-        updateGhosts(pacDist: pacDist)
+        pacDist = wrapDist(pacDist + pacDir * speedPerTick)
+
+        let mouth = (sin(pacmanPhase * 0.5) * 0.5 + 0.5) * 38.0 + 2.0
+        updatePac(dist: pacDist, mouthDeg: mouth, animateMove: true, facing: pacDir)
+
+        // Eat any pellet Pac-Man is currently on (direction-independent).
+        for (i, d) in pacPelletDists.enumerated() where !eatenPellets.contains(i) {
+            if perimGap(d, pacDist) < pacRadius { eatenPellets.insert(i) }
+        }
+        if eatenPellets.count != pacLastEatenCount {
+            pacLastEatenCount = eatenPellets.count
+            rebuildPelletsEaten()
+        }
+        if !pacPelletDists.isEmpty, eatenPellets.count >= pacPelletDists.count {
+            eatenPellets.removeAll()          // whole loop cleared → refill
+            pacLastEatenCount = 0
+            rebuildPelletsEaten()
+        }
+
+        // Cherry power-up: spawn sporadically; eating it lets Pac-Man hunt the ghosts.
+        maybeSpawnCherry(pacDist: pacDist)
+        if cherryLayer != nil, perimGap(cherryDist, pacDist) < pacRadius + 4 {
+            removeCherry()
+            poweredUntilPhase = pacmanPhase + 120                         // ~8s of power
+            nextCherryPhase = pacmanPhase + CGFloat.random(in: 300...600) // next cherry in 20–40s
+        }
+        updateGhosts(pacDist: pacDist, powered: pacmanPhase < poweredUntilPhase)
     }
 
     /// Should the animation be running right now? (Theme on, animation enabled, dock visible.)

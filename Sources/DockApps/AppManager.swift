@@ -56,8 +56,13 @@ final class AppManager {
     }
 
     func save() {
-        let normalized = apps.enumerated().map { i, app in
-            DockApp(bundleID: app.bundleID, customIconPath: app.customIconPath, order: i)
+        // Preserve ALL fields (esp. folderPath) — only renumber `order`. Reconstructing
+        // with the 3-arg init silently dropped folderPath, turning folder items into
+        // broken "app" entries that vanished on reload.
+        let normalized = apps.enumerated().map { i, app -> DockApp in
+            var a = app
+            a.order = i
+            return a
         }
         apps = normalized
         let config = DockAppsConfig(items: normalized)
@@ -84,6 +89,29 @@ final class AppManager {
         apps.append(DockApp(bundleID: folderID, customIconPath: nil, order: apps.count, folderPath: path))
         save()
         NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
+    }
+
+    /// Pin/unpin the user's Downloads folder automatically for themes that use folder stacks
+    /// (Maiks Favourite). Tracked with a flag so we don't fight a manual remove and so it's
+    /// taken back out when switching to a non-stack theme.
+    func syncAutoDownloads(active: Bool) {
+        let path = NSHomeDirectory() + "/Downloads"
+        let id = "__folder__\(path)"
+        let present = apps.contains { $0.bundleID == id }
+        let flag = "autoDownloadsAdded"
+        let added = UserDefaults.standard.bool(forKey: flag)
+        if active {
+            // Ensure the Downloads folder is present whenever a folder-stack theme is active.
+            guard !present, FileManager.default.fileExists(atPath: path) else { return }
+            apps.append(DockApp(bundleID: id, customIconPath: nil, order: apps.count, folderPath: path))
+            UserDefaults.standard.set(true, forKey: flag)
+            save()
+            NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
+        } else if added {
+            if present { apps.removeAll { $0.bundleID == id }; save() }
+            UserDefaults.standard.set(false, forKey: flag)
+            NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
+        }
     }
 
     func removeApp(bundleID: String) {
@@ -115,4 +143,5 @@ extension Notification.Name {
     static let dockThemeChanged = Notification.Name("DockThemeChanged")
     static let virtualCameraStateChanged = Notification.Name("VirtualCameraStateChanged")
     static let pacmanAnimationChanged = Notification.Name("PacmanAnimationChanged")
+    static let deskbarSettingsChanged = Notification.Name("DeskbarSettingsChanged")
 }

@@ -113,6 +113,8 @@ struct DockThemeConfig: Codable {
         var clockFontSize: CGFloat?    // explicit clock font size override
         var showDiskFree: Bool?        // show disk free space tray (OS/2 WarpCenter style)
         var dockStyle: String?         // nil/"dock" (default), "controlStrip" (Mac OS 9 Control Strip)
+        var windowPreview: Bool?       // hover a running app's icon ~2s → show a (pixel) window preview
+        var folderStacks: Bool?        // click a folder dock item → fan out its recent files
     }
 
     struct IconStyle: Codable {
@@ -184,8 +186,14 @@ extension DockThemeConfig {
     var isXPStartMenu: Bool { startMenuStyle == "xp" }
     var hasDiskFree: Bool { dock.showDiskFree == true }
     var isControlStrip: Bool { dock.dockStyle == "controlStrip" }
-    /// When true, no dock/taskbar bar is shown (e.g. Windows 3.1 Program Manager desktop).
-    var hidesDock: Bool { dock.dockStyle == "none" }
+    /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.
+    var hasWindowPreview: Bool { dock.windowPreview == true }
+    var hasFolderStacks: Bool { dock.folderStacks == true }
+    /// BeOS Classic Deskbar — a vertical panel (Be menu + status + app list) replacing the dock.
+    var isDeskbar: Bool { dock.dockStyle == "deskbar" }
+    /// When true, no dock/taskbar bar is shown (e.g. Windows 3.1 Program Manager desktop,
+    /// or the BeOS Deskbar which provides its own panel instead).
+    var hidesDock: Bool { dock.dockStyle == "none" || dock.dockStyle == "deskbar" }
 }
 
 extension NSColor {

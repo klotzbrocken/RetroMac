@@ -19,6 +19,10 @@ final class VirtualCameraManager: NSObject, ObservableObject {
 
     @Published var isRunning = false
     @Published var extensionActivated = false
+    /// True from the moment the user asks to start until the extension finishes
+    /// activating (or fails). Keeps the menu toggle visually ON during the async
+    /// activation window so it doesn't appear to "switch itself off".
+    @Published var activationPending = false
     @Published var selectedShader: String = "vhs"
     @Published var shaderIntensity: Float = 0.8
 
@@ -138,6 +142,10 @@ final class VirtualCameraManager: NSObject, ObservableObject {
         // Activate extension (handles version upgrades via replacement delegate)
         if !extensionActivated {
             startAfterActivation = true
+            activationPending = true   // keep the toggle ON during async activation
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .virtualCameraStateChanged, object: nil)
+            }
             activateExtension()
             return
         }
@@ -167,11 +175,16 @@ final class VirtualCameraManager: NSObject, ObservableObject {
             publishSurfaceID(0)
             outputSurface = nil
             outputTexture = nil
+            activationPending = false
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .virtualCameraStateChanged, object: nil)
+            }
             return
         }
 
         dispatchPrecondition(condition: .onQueue(.main))
         isRunning = true
+        activationPending = false
         frameCount = 0
 
         // Start periodic re-posting of IOSurface ID for late-starting extensions
@@ -202,6 +215,7 @@ final class VirtualCameraManager: NSObject, ObservableObject {
         outputTexture = nil
 
         isRunning = false
+        activationPending = false
         logger.info("Virtual camera stopped")
 
         DispatchQueue.main.async {
@@ -481,6 +495,38 @@ extension VirtualCameraManager: OSSystemExtensionRequestDelegate {
 
     func requestNeedsUserApproval(_ request: OSSystemExtensionRequest) {
         logger.info("Camera Extension needs user approval — check System Settings → General → Login Items & Extensions → Camera Extensions")
+        DispatchQueue.main.async {
+            self.activationPending = false
+            self.startAfterActivation = false
+            NotificationCenter.default.post(name: .virtualCameraStateChanged, object: nil)
+            self.showActivationAlert(
+                title: "Allow RetroMac’s Camera Extension",
+                body: """
+                    macOS needs you to approve the virtual-camera extension before it can turn on.
+
+                    Open System Settings → General → Login Items & Extensions → Camera Extensions and enable “RetroMac”, then switch the virtual camera on again.
+                    """,
+                openExtensions: true
+            )
+        }
+    }
+
+    /// Show a one-off alert explaining why the virtual camera could not start, with a
+    /// button that jumps straight to the relevant System Settings pane.
+    private func showActivationAlert(title: String, body: String, openExtensions: Bool) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = body
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "OK")
+        if alert.runModal() == .alertFirstButtonReturn {
+            let urlString = openExtensions
+                ? "x-apple.systempreferences:com.apple.ExtensionsPreferences"
+                : "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
+            if let url = URL(string: urlString) {
+                NSWorkspace.shared.open(url)
+            }
+        }
     }
 
     func request(_ request: OSSystemExtensionRequest, didFinishWithResult result: OSSystemExtensionRequest.Result) {
@@ -509,6 +555,16 @@ extension VirtualCameraManager: OSSystemExtensionRequestDelegate {
             }
         case .willCompleteAfterReboot:
             logger.info("Camera Extension will activate after reboot")
+            DispatchQueue.main.async {
+                self.activationPending = false
+                self.startAfterActivation = false
+                NotificationCenter.default.post(name: .virtualCameraStateChanged, object: nil)
+                self.showActivationAlert(
+                    title: "Restart to finish enabling the camera",
+                    body: "macOS will finish installing RetroMac’s virtual-camera extension after you restart your Mac. Once you’re back, switch the virtual camera on again.",
+                    openExtensions: false
+                )
+            }
         @unknown default:
             logger.info("Camera Extension activation result: \(String(describing: result))")
         }
@@ -517,6 +573,21 @@ extension VirtualCameraManager: OSSystemExtensionRequestDelegate {
     func request(_ request: OSSystemExtensionRequest, didFailWithError error: Error) {
         let ns = error as NSError
         logger.error("Camera Extension activation failed: domain=\(ns.domain, privacy: .public) code=\(ns.code, privacy: .public) desc=\(ns.localizedDescription, privacy: .public)")
+        DispatchQueue.main.async {
+            self.activationPending = false
+            self.startAfterActivation = false
+            self.pendingReactivation = false
+            NotificationCenter.default.post(name: .virtualCameraStateChanged, object: nil)
+            self.showActivationAlert(
+                title: "Couldn’t enable the virtual camera",
+                body: """
+                    The camera extension failed to activate (\(ns.localizedDescription)).
+
+                    Make sure “RetroMac” is enabled under System Settings → General → Login Items & Extensions → Camera Extensions. If it still fails, restarting your Mac usually resolves it.
+                    """,
+                openExtensions: true
+            )
+        }
     }
 }
 

@@ -2,79 +2,79 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleExecutable</key>
-    <string>RetroMac</string>
-    <key>CFBundleName</key>
-    <string>RetroMac</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.retromac.app</string>
-    <key>CFBundleVersion</key>
-    <string>1.6.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.6.0</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSScreenCaptureUsageDescription</key>
-    <string>RetroMac needs screen recording permission to apply retro shader effects over your desktop.</string>
-    <key>NSAppleEventsUsageDescription</key>
-    <string>RetroMac uses System Events to hide the Dock and menu bar while the overlay is active.</string>
-    <key>NSCameraUsageDescription</key>
-    <string>RetroMac needs camera access to apply retro shader effects to your webcam for video calls.</string>
-    <key>NSSystemExtensionUsageDescription</key>
-    <string>RetroMac installs a virtual camera so apps like Zoom and Teams can use your retro webcam feed.</string>
-    <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/klotzbrocken/RetroMac/main/appcast.xml</string>
-    <key>SUPublicEDKey</key>
-    <string>BOcdIyAHhHsHTHq3S2mTcYqVqwFfMn18OLdX3xA4zkQ=</string>
-    <key>NSAppTransportSecurity</key>
-    <dict>
-        <key>NSAllowsArbitraryLoadsForMedia</key>
-        <true/>
-        <key>NSAllowsLocalNetworking</key>
-        <true/>
-    </dict>
-    <key>CFBundleDocumentTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleTypeName</key>
-            <string>RetroMac Theme</string>
-            <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
-            <key>LSHandlerRank</key>
-            <string>Owner</string>
-            <key>CFBundleTypeExtensions</key>
-            <array>
-                <string>retromactheme</string>
-            </array>
-            <key>LSItemContentTypes</key>
-            <array>
-                <string>de.klotzbrocken.retromac.theme</string>
-            </array>
-        </dict>
-    </array>
-    <key>UTExportedTypeDeclarations</key>
-    <array>
-        <dict>
-            <key>UTTypeIdentifier</key>
-            <string>de.klotzbrocken.retromac.theme</string>
-            <key>UTTypeDescription</key>
-            <string>RetroMac Dock Theme</string>
-            <key>UTTypeConformsTo</key>
-            <array>
-                <string>com.apple.package</string>
-            </array>
-            <key>UTTypeTagSpecification</key>
-            <dict>
-                <key>public.filename-extension</key>
-                <array>
-                    <string>retromactheme</string>
-                </array>
-            </dict>
-        </dict>
-    </array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>retromactheme</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>RetroMac Theme</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>de.klotzbrocken.retromac.theme</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>RetroMac</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.retromac.app</string>
+	<key>CFBundleName</key>
+	<string>RetroMac</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.6.6</string>
+	<key>CFBundleVersion</key>
+	<string>1.6.6</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoadsForMedia</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>RetroMac uses System Events to hide the Dock and menu bar while the overlay is active.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>RetroMac needs camera access to apply retro shader effects to your webcam for video calls.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>RetroMac needs screen recording permission to apply retro shader effects over your desktop.</string>
+	<key>NSSystemExtensionUsageDescription</key>
+	<string>RetroMac installs a virtual camera so apps like Zoom and Teams can use your retro webcam feed.</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/klotzbrocken/RetroMac/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>BOcdIyAHhHsHTHq3S2mTcYqVqwFfMn18OLdX3xA4zkQ=</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>com.apple.package</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>RetroMac Dock Theme</string>
+			<key>UTTypeIdentifier</key>
+			<string>de.klotzbrocken.retromac.theme</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>retromactheme</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

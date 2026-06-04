@@ -47,6 +47,7 @@ final class ThemeManager {
 
         let activeID = selectTheme ?? AppSettings.shared.dockTheme
         activeTheme = themes.first(where: { $0.config.name == activeID })
+            ?? themes.first(where: { $0.config.name == "Maiks Favourite" })
             ?? themes.first(where: { $0.config.name == "Mountain Lion" })
             ?? themes.first
         print("[Theme] Active: \(activeTheme?.name ?? "nil")")
@@ -121,15 +122,21 @@ final class ThemeManager {
         let ws = NSWorkspace.shared
         for screen in NSScreen.screens {
             let screenKey = "\(screen.displayID)"
+            // Only capture the ORIGINAL once, and never capture our own theme wallpaper
+            // as the "original" (guards against re-entrant applyWallpaper calls that would
+            // otherwise overwrite the backup with the theme image → default on restore).
             if savedWallpapers[screenKey] == nil {
-                if let current = ws.desktopImageURL(for: screen) {
+                if let current = ws.desktopImageURL(for: screen), current != wpURL {
                     savedWallpapers[screenKey] = current
+                    print("[Theme] Saved original wallpaper for screen \(screenKey) (\(screen.localizedName)): \(current.path)")
+                } else {
+                    print("[Theme] WARNING: no original wallpaper captured for screen \(screenKey) (\(screen.localizedName)) — desktopImageURL=\(ws.desktopImageURL(for: screen)?.path ?? "nil")")
                 }
             }
             try? ws.setDesktopImageURL(wpURL, for: screen, options: [:])
         }
         persistWallpaperBackup()
-        print("[Theme] Wallpaper set: \(wpURL.lastPathComponent)")
+        print("[Theme] Wallpaper set on \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent)")
     }
 
     func restoreWallpapers() {
@@ -138,12 +145,20 @@ final class ThemeManager {
         for screen in NSScreen.screens {
             let screenKey = "\(screen.displayID)"
             if let original = savedWallpapers[screenKey] {
-                try? ws.setDesktopImageURL(original, for: screen, options: [:])
+                let ok = FileManager.default.fileExists(atPath: original.path)
+                do {
+                    try ws.setDesktopImageURL(original, for: screen, options: [:])
+                    print("[Theme] Restored screen \(screenKey) (\(screen.localizedName)) → \(original.lastPathComponent)\(ok ? "" : " [WARNING: file missing]")")
+                } catch {
+                    print("[Theme] FAILED to restore screen \(screenKey) (\(screen.localizedName)) → \(original.path): \(error.localizedDescription)")
+                }
+            } else {
+                print("[Theme] No saved wallpaper for screen \(screenKey) (\(screen.localizedName)) — leaving as-is")
             }
         }
         savedWallpapers.removeAll()
         persistWallpaperBackup()
-        print("[Theme] Wallpapers restored")
+        print("[Theme] Wallpaper restore pass complete")
     }
 
     private func persistWallpaperBackup() {
@@ -243,7 +258,10 @@ final class ThemeManager {
         let out = NSImage(size: NSSize(width: size, height: size))
         out.lockFocus()
         NSGraphicsContext.current?.imageInterpolation = .none   // nearest upscale → blocky
-        rep.draw(in: NSRect(x: 0, y: 0, width: size, height: size),
+        // Inset slightly so the pixelated (edge-to-edge) system icons match the visual
+        // size of the padded custom artwork instead of looking a touch larger.
+        let inset = size * 0.08
+        rep.draw(in: NSRect(x: inset, y: inset, width: size - inset * 2, height: size - inset * 2),
                  from: NSRect(x: 0, y: 0, width: blocks, height: blocks),
                  operation: .copy, fraction: 1.0, respectFlipped: true,
                  hints: [.interpolation: NSImageInterpolation.none])

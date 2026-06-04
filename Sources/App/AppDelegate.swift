@@ -100,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DesktopIconsController.shared.update()
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
+            BeOSDeskbarController.shared.update()
         }
 
         // Rebuild menu when virtual camera state changes (start/stop is async)
@@ -641,7 +642,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(shaderItem)
 
         // ── Virtual Camera toggle ──
-        let cameraPill = PillToggleView(isOn: vcam.isRunning)
+        let cameraPill = PillToggleView(isOn: vcam.isRunning || vcam.activationPending)
         cameraPillToggle = cameraPill
         let cameraRow = MenuToggleRowView(
             icon: "camera.fill",
@@ -873,11 +874,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         func themeCategory(_ name: String) -> String {
             let n = name.lowercased()
+            // Check Unix & Amiga first so "BeOS Classic" isn't caught by the Apple "classic" rule.
+            if n.contains("beos") || n.contains("os/2") || n.contains("warp") || n.contains("sgi")
+                || n.contains("irix") || n.contains("amiga") || n.contains("workbench") { return "Unix & Amiga" }
             if n.contains("mac os") || n.contains("aqua") || n.contains("snow leopard")
                 || n.contains("mountain lion") || n.contains("platinum") || n.contains("classic") { return "Apple" }
             if n.contains("windows") { return "Windows" }
-            if n.contains("beos") || n.contains("os/2") || n.contains("warp") || n.contains("sgi")
-                || n.contains("irix") || n.contains("amiga") || n.contains("workbench") { return "Unix & Amiga" }
             return "Other"
         }
         for category in ["Apple", "Windows", "Unix & Amiga", "Other"] {
@@ -1041,7 +1043,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menuHeaderView?.update(shaderOn: isActive, presetName: presetName, statusText: statusText, retroActive: retroModeActive)
         shaderPillToggle?.isOn = isActive
-        cameraPillToggle?.isOn = VirtualCameraManager.shared.isRunning
+        cameraPillToggle?.isOn = VirtualCameraManager.shared.isRunning || VirtualCameraManager.shared.activationPending
         viewportPillToggle?.isOn = retroViewport.isActive
     }
 

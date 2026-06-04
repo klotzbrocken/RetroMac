@@ -290,6 +290,27 @@ final class AppSettings: ObservableObject {
     @Published var dockShowRunningApps: Bool {
         didSet { defaults.set(dockShowRunningApps, forKey: "dockShowRunningApps") }
     }
+    /// BeOS Classic Deskbar corner: "bottomLeft" / "bottomRight" / "topLeft" / "topRight".
+    @Published var deskbarCorner: String {
+        didSet {
+            defaults.set(deskbarCorner, forKey: "deskbarCorner")
+            NotificationCenter.default.post(name: .deskbarSettingsChanged, object: nil)
+        }
+    }
+    /// Maiks Favourite: show the Downloads folder (with file fan) in the dock.
+    @Published var dockShowDownloads: Bool {
+        didSet {
+            defaults.set(dockShowDownloads, forKey: "dockShowDownloads")
+            NotificationCenter.default.post(name: .deskbarSettingsChanged, object: nil)
+        }
+    }
+    /// BeOS Deskbar quick-launch shortcuts (bundle IDs) shown above the status view.
+    @Published var deskbarShortcuts: [String] {
+        didSet {
+            defaults.set(deskbarShortcuts, forKey: "deskbarShortcuts")
+            NotificationCenter.default.post(name: .deskbarSettingsChanged, object: nil)
+        }
+    }
     @Published var dockIconScale: Float {
         didSet { defaults.set(dockIconScale, forKey: "dockIconScale") }
     }
@@ -545,7 +566,11 @@ final class AppSettings: ObservableObject {
         dockHotkeyModifiers = defaults.object(forKey: "dockHotkeyModifiers") as? UInt32 ?? UInt32(cmdKey | optionKey | controlKey)
         dockTransparency = defaults.object(forKey: "dockTransparency") as? Float ?? 0.85
         dockShowRunningApps = defaults.object(forKey: "dockShowRunningApps") as? Bool ?? true
-        dockTheme = defaults.string(forKey: "dockTheme") ?? "Mountain Lion"
+        deskbarCorner = defaults.string(forKey: "deskbarCorner") ?? "bottomLeft"
+        dockShowDownloads = defaults.object(forKey: "dockShowDownloads") as? Bool ?? true
+        deskbarShortcuts = defaults.stringArray(forKey: "deskbarShortcuts")
+            ?? ["com.apple.finder", "com.apple.Safari", "com.apple.mail", "com.apple.MobileSMS", "com.apple.iCal", "com.apple.reminders", "com.apple.Notes"]
+        dockTheme = defaults.string(forKey: "dockTheme") ?? "Maiks Favourite"
         dockIconScale = defaults.object(forKey: "dockIconScale") as? Float ?? 1.0
         dockTargetDisplayID = defaults.object(forKey: "dockTargetDisplayID") as? CGDirectDisplayID ?? 0
         dockMagnification = defaults.object(forKey: "dockMagnification") as? Bool ?? true
