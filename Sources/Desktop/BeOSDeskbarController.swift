@@ -24,6 +24,8 @@ final class BeOSDeskbarController {
 
     func hide() {
         BeOSMenuController.shared.dismissAll()
+        CPUMonitorController.shared.close()
+        AppFolderController.shared.close()
         view?.tearDown()
         window?.orderOut(nil)
         window = nil
@@ -106,9 +108,17 @@ final class BeOSDeskbarView: NSView {
         return Self.availableShortcuts.filter { on.contains($0.bundleID) }
     }
     private var appsH: CGFloat {
-        let n = enabledShortcuts.count
-        guard n > 0 else { return 0 }
-        return CGFloat(n) * appRowH + 4
+        // +1 for the permanent "Applikationen" (App Folder) entry.
+        return CGFloat(enabledShortcuts.count + 1) * appRowH + 4
+    }
+
+    /// The deskbar rows: the App-Folder launcher first, then the configured app shortcuts.
+    private func appRows() -> [(label: String, icon: NSImage?, id: String)] {
+        var rows: [(String, NSImage?, String)] = [("Applications", dimg("folder-app.png"), "__appfolder__")]
+        for sc in enabledShortcuts {
+            rows.append((sc.label, ThemeManager.shared.icon(for: sc.bundleID, size: appListIcon), sc.bundleID))
+        }
+        return rows
     }
     private func cachedDimg(_ name: String) -> NSImage? {
         if let c = iconCache[name] { return c }
@@ -229,22 +239,19 @@ final class BeOSDeskbarView: NSView {
     /// Be menu's Applications submenu — toward the interior, above the status view.
     private func drawApps() {
         appRects = []
-        let items = enabledShortcuts
-        guard !items.isEmpty else { return }
         let ar = appsRect
         let font = BeOSMenuController.menuFont
-        for (i, sc) in items.enumerated() {
+        for (i, row) in appRows().enumerated() {
             let r = NSRect(x: ar.minX, y: ar.minY + 2 + CGFloat(i) * appRowH, width: ar.width, height: appRowH)
-            appRects.append((r, sc.bundleID))
+            appRects.append((r, row.id))
             let selected = i == appHover
             if selected { hiColor.setFill(); r.insetBy(dx: 1, dy: 0).fill() }
-            ThemeManager.shared.icon(for: sc.bundleID, size: appListIcon)
-                .draw(in: NSRect(x: r.minX + 5, y: r.midY - appListIcon / 2, width: appListIcon, height: appListIcon),
-                      from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            row.icon?.draw(in: NSRect(x: r.minX + 5, y: r.midY - appListIcon / 2, width: appListIcon, height: appListIcon),
+                           from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
             let attrs: [NSAttributedString.Key: Any] = [
                 .font: font, .foregroundColor: selected ? NSColor.white : NSColor(calibratedWhite: 0.08, alpha: 1)]
-            let ts = sc.label.size(withAttributes: attrs)
-            sc.label.draw(at: NSPoint(x: r.minX + 28, y: r.midY - ts.height / 2), withAttributes: attrs)
+            let ts = row.label.size(withAttributes: attrs)
+            row.label.draw(at: NSPoint(x: r.minX + 28, y: r.midY - ts.height / 2), withAttributes: attrs)
         }
     }
 
@@ -278,8 +285,12 @@ final class BeOSDeskbarView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        for (r, bid) in appRects where r.contains(p) { AppLauncher.launchOrActivate(bundleID: bid); return }
-        if cpuRect.contains(p) { AppLauncher.launchOrActivate(bundleID: "com.apple.ActivityMonitor"); return }
+        for (r, bid) in appRects where r.contains(p) {
+            if bid == "__appfolder__" { AppFolderController.shared.toggle() }
+            else { AppLauncher.launchOrActivate(bundleID: bid) }
+            return
+        }
+        if cpuRect.contains(p) { CPUMonitorController.shared.toggle(); return }
         if mailRect.contains(p) { AppLauncher.launchOrActivate(bundleID: "com.apple.mail"); return }
         guard headerRect.contains(p) else { return }
         if BeOSMenuController.shared.isOpen { BeOSMenuController.shared.dismissAll(); return }

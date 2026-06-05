@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPU Monitor</title>
+<style>
+  :root{
+    /* BeOS battleship greys */
+    --panel:#bdbdbd;
+    --hi:#f2f2f2;        /* top-left bevel highlight */
+    --hi2:#e2e2e2;
+    --sh:#7a7a7a;        /* bottom-right bevel shadow */
+    --sh2:#5e5e5e;
+    --ink:#101010;
+    --tab:#f3d24a;       /* BeOS yellow window tab */
+    --tab-hi:#fbe88c;
+    --tab-sh:#caa31f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    background:transparent;            /* floating widget — host window is transparent */
+    font-family:Helvetica,Arial,sans-serif;
+    overflow:hidden;
+  }
+
+  #stage{ position:relative; display:inline-block; padding:8px; }
+  #scaler{
+    position:relative;
+    display:inline-block;
+    image-rendering:pixelated;
+  }
+
+  /* ----- ghost windows behind, for the original's layered desktop feel ----- */
+  .ghost{position:absolute;top:34px;border:1px solid #8a8a8a;border-radius:0;}
+  .ghost-tab{
+    position:absolute;height:28px;border:1px solid #8a8a8a;
+    background:#e9e9e9;border-bottom:none;
+  }
+  .ghost-a{left:300px;top:6px;width:170px;}
+  .ghost-b{left:486px;top:6px;width:150px;border-color:#5f8f5f;background:#cfe3cf;}
+
+  /* =========================== WINDOW =========================== */
+  .window{position:relative;width:744px;}
+
+  /* yellow title tab — App Folder Lasche style. Dimensions are scaled up by 1/0.6 so that
+     after the widget's SCALE(0.6) the tab renders at the SAME physical size as the App
+     Folder tab (the body stays compact; only the Lasche is enlarged). */
+  .tab{
+    display:flex;width:fit-content;align-items:center;gap:12px;
+    height:38px;padding:0 13px 0 12px;margin:0;
+    position:relative;z-index:3;
+    background:linear-gradient(180deg,#fbd85c 0%, #f2bd23 100%);
+    border:1.6px solid #2a2a2a;border-bottom:none;border-radius:5px 5px 0 0;
+    box-shadow:inset 1px 1px 0 rgba(255,255,255,.55);
+  }
+  .tab b{font-size:22px;font-weight:700;color:#2a2306;letter-spacing:.2px;white-space:nowrap;}
+  /* BeOS close box — App Folder look (enlarged to match after scaling) */
+  .closebox{
+    width:22px;height:22px;flex:0 0 auto;
+    border:1.6px solid #6f5a10;
+    background:linear-gradient(135deg,#fbe27e,#eab92a);
+    box-shadow:inset 1px 1px 0 rgba(255,255,255,.75), inset -1px -1px 0 rgba(0,0,0,.18);
+    cursor:pointer;
+  }
+  .closebox:active{box-shadow:inset 1px 1px 0 rgba(0,0,0,.25);}
+
+  /* the little red collapse marker that sits above the panel edge */
+  .marker{
+    position:absolute;z-index:4;top:-6px;left:368px;
+    width:0;height:0;
+    border-left:8px solid transparent;border-right:8px solid transparent;
+    border-top:9px solid #cc2a17;
+    filter:drop-shadow(0 1px 0 rgba(0,0,0,.3));
+  }
+
+  /* main grey body, raised bevel */
+  .body{
+    position:relative;z-index:2;
+    margin-top:-1px;
+    padding:16px;
+    background-color:var(--panel);
+    background-image:url(assets/panel.png);
+    background-size:4px 4px;
+    border:1px solid #000;
+    box-shadow:
+      inset 2px 2px 0 var(--hi),
+      inset 3px 3px 0 var(--hi2),
+      inset -2px -2px 0 var(--sh),
+      inset -3px -3px 0 var(--sh2);
+    display:flex;align-items:center;gap:18px;
+  }
+
+  /* =========================== CHIP =========================== */
+  .chip{
+    position:relative;
+    width:152px;height:152px;flex:0 0 auto;
+    background:#a9a9a9;
+    background-image:url(assets/panel.png);
+    background-size:4px 4px;
+    border:1px solid #000;
+    box-shadow:
+      inset 2px 2px 0 var(--hi),
+      inset -2px -2px 0 var(--sh);
+    display:flex;align-items:center;justify-content:center;
+  }
+  /* pin frame */
+  .pins{
+    position:absolute;inset:11px;
+    border:5px solid transparent;
+    background:
+      repeating-linear-gradient(90deg,#5a5a5a 0 2px,#cfcfcf 2px 4px) top/100% 5px no-repeat,
+      repeating-linear-gradient(90deg,#5a5a5a 0 2px,#cfcfcf 2px 4px) bottom/100% 5px no-repeat,
+      repeating-linear-gradient(0deg,#5a5a5a 0 2px,#cfcfcf 2px 4px) left/5px 100% no-repeat,
+      repeating-linear-gradient(0deg,#5a5a5a 0 2px,#cfcfcf 2px 4px) right/5px 100% no-repeat;
+  }
+  /* dark domed die */
+  .die{
+    position:absolute;inset:18px;
+    border-radius:7px;
+    background-color:#3b3b3b;
+    background-image:
+      radial-gradient(120% 110% at 32% 26%, rgba(255,255,255,.22), rgba(255,255,255,0) 42%),
+      radial-gradient(130% 130% at 70% 100%, rgba(0,0,0,.55), rgba(0,0,0,0) 55%),
+      url(assets/chip.png);
+    background-size:auto,auto,4px 4px;
+    border:1px solid #000;
+    box-shadow:inset 1px 1px 0 rgba(255,255,255,.18), inset -1px -1px 0 rgba(0,0,0,.5);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:#e9e9e9;
+    text-shadow:0 1px 1px #000;
+    image-rendering:auto;
+  }
+  .die .silicon{font-size:11px;font-weight:600;letter-spacing:1px;color:#cfcfcf;text-transform:none;margin-bottom:2px;}
+  .die .brand{
+    font-weight:700;font-size:46px;letter-spacing:-1px;line-height:1;
+    color:#f4f4f4;
+    text-shadow:0 1px 0 #000, 0 0 8px rgba(255,255,255,.22);
+  }
+  .die .brand i{font-style:normal;color:#9fd3ff;}
+  .die .model{font-size:13px;font-weight:700;letter-spacing:1px;margin-top:11px;color:#d7d7d7;}
+  .die .clock{font-size:12px;font-weight:700;letter-spacing:.5px;margin-top:9px;color:#bdbdbd;}
+
+  /* =========================== METERS =========================== */
+  .meters{display:flex;flex-direction:column;gap:14px;flex:1 1 auto;}
+  .row{display:flex;align-items:center;gap:12px;}
+
+  /* numbered core button */
+  .num{
+    width:28px;height:28px;flex:0 0 auto;
+    background-color:#bcbcbc;
+    background-image:url(assets/panel.png);
+    background-size:4px 4px;
+    border:1px solid #000;
+    box-shadow:inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--sh);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:15px;color:#1d3a1d;
+    text-shadow:0 1px 0 rgba(255,255,255,.5);
+  }
+
+  /* recessed LED trough */
+  .led-well{
+    flex:1 1 auto;height:34px;
+    background-color:#909090;
+    background-image:url(assets/well.png);
+    background-size:4px 4px;
+    border:1px solid #000;
+    box-shadow:
+      inset 2px 2px 0 var(--sh2),
+      inset -2px -2px 0 #cfcfcf;
+    padding:4px 5px;
+    display:flex;align-items:stretch;gap:3px;
+  }
+  .led{
+    flex:1 1 0;
+    border:1px solid rgba(0,0,0,.55);
+    border-radius:1px;
+  }
+  /* OFF segment */
+  .led.off{
+    background:linear-gradient(#76817a,#5d665f);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  /* USER time (green) */
+  .led.user{
+    background:linear-gradient(#6fde47 0%,#37a81c 55%,#258012 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.5), inset 0 -1px 0 rgba(0,0,0,.25);
+  }
+  /* SYSTEM time (amber) */
+  .led.sys{
+    background:linear-gradient(#ffd75a 0%,#f1a91d 55%,#c9820f 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(0,0,0,.25);
+  }
+
+  /* legend under the meters */
+  .legend{
+    display:flex;justify-content:flex-end;align-items:center;gap:16px;
+    margin-top:2px;padding-right:2px;
+    font-size:11px;font-weight:700;color:#2a2a2a;
+    text-shadow:0 1px 0 rgba(255,255,255,.45);letter-spacing:.3px;
+  }
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:12px;height:12px;border:1px solid #000;display:inline-block;}
+  .legend i.u{background:linear-gradient(#6fde47,#37a81c);}
+  .legend i.s{background:linear-gradient(#ffd75a,#f1a91d);}
+
+  .hint{
+    position:absolute;bottom:14px;left:0;right:0;text-align:center;
+    font-size:11px;color:rgba(255,255,255,.55);
+    font-family:Helvetica,Arial,sans-serif;letter-spacing:.4px;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="scaler">
+      <div class="window">
+        <div class="tab"><span class="closebox" id="closebox" title="Schließen"></span><b>CPU Monitor</b></div>
+        <div class="marker"></div>
+        <div class="body">
+
+          <!-- CPU chip -->
+          <div class="chip">
+            <div class="pins"></div>
+            <div class="die">
+              <div class="silicon">Apple silicon</div>
+              <div class="brand">M4</div>
+              <div class="clock">10&#8209;Core CPU</div>
+            </div>
+          </div>
+
+          <!-- LED meters -->
+          <div class="meters">
+            <div class="row">
+              <div class="num">1</div>
+              <div class="led-well" id="led1"></div>
+            </div>
+            <div class="row">
+              <div class="num">2</div>
+              <div class="led-well" id="led2"></div>
+            </div>
+            <div class="legend">
+              <span><i class="s"></i>1 &middot; System</span>
+              <span><i class="u"></i>2 &middot; Benutzer</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ---------- build LED segments ----------
+  const SEGMENTS = 24;
+  function buildWell(el){
+    el._leds = [];
+    for(let i=0;i<SEGMENTS;i++){
+      const d = document.createElement('div');
+      d.className = 'led off';
+      el.appendChild(d);
+      el._leds.push(d);
+    }
+  }
+  const MAX = SEGMENTS; // 24 segments == 100%
+  function paintBar(el, lit, cls){
+    el._leds.forEach((d,i)=> d.className = 'led ' + (i < lit ? cls : 'off'));
+  }
+
+  const w1 = document.getElementById('led1');
+  const w2 = document.getElementById('led2');
+  buildWell(w1); buildWell(w2);
+
+  // ---------- meters: 1 = System (amber), 2 = Benutzer (green) ----------
+  const meters = [
+    { el:w1, cls:'sys',  val:0, tgt:0 },   // 1 = System %
+    { el:w2, cls:'user', val:0, tgt:0 },   // 2 = Benutzer %
+  ];
+  function approach(c,t){ return c < t ? c+1 : c > t ? c-1 : c; }
+  function frame(){
+    meters.forEach(m=>{ m.val = approach(m.val, m.tgt); paintBar(m.el, m.val, m.cls); });
+  }
+  meters.forEach(m=>paintBar(m.el, m.val, m.cls));
+  setInterval(frame, 70);   // smooth 1-segment glide; native pushes new targets ~1×/s
+
+  // ---------- live data from the native host ----------
+  const segs = p => Math.round(Math.max(0, Math.min(100, p)) / 100 * SEGMENTS);
+  // 1 = System (amber), 2 = Benutzer (green)
+  window.setLoad = function(systemPct, userPct){
+    meters[0].tgt = segs(systemPct);
+    meters[1].tgt = segs(userPct);
+  };
+  window.setCPUInfo = function(silicon, brand, clock){
+    const q = s => document.querySelector(s);
+    if (silicon != null) q('.die .silicon').textContent = silicon;
+    if (brand   != null) q('.die .brand').textContent   = brand;
+    if (clock   != null) q('.die .clock').textContent   = clock;
+  };
+
+  // ---------- close box → tell the native host to close the widget ----------
+  document.getElementById('closebox').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.cpu) {
+      window.webkit.messageHandlers.cpu.postMessage('close');
+    }
+  });
+
+  // ---------- scale the widget down to BeOS-replicant proportions ----------
+  // The prototype draws at ~744px; the real CPU Monitor replicant is a compact panel,
+  // so scale it to sit nicely next to the deskbar/menu.
+  const SCALE = 0.6;
+  const stageEl = document.getElementById('stage');
+  stageEl.style.transformOrigin = 'top left';
+  stageEl.style.transform = 'scale(' + SCALE + ')';
+  // Scaled outer size (for the native host to size its window).
+  window.widgetSize = function(){
+    return [Math.ceil(stageEl.offsetWidth * SCALE), Math.ceil(stageEl.offsetHeight * SCALE)];
+  };
+  // Title-tab + closebox rects (already reflect the transform → scaled viewport px).
+  window.regions = function(){
+    const t = document.querySelector('.tab').getBoundingClientRect();
+    const c = document.getElementById('closebox').getBoundingClientRect();
+    return [t.x, t.y, t.width, t.height, c.x, c.y, c.width, c.height];
+  };
+</script>
+</body>
+</html>
