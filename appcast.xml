@@ -6,6 +6,28 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.7.0</title>
+      <pubDate>Fri, 05 Jun 2026 14:46:34 +0000</pubDate>
+      <sparkle:version>1.7.0</sparkle:version>
+      <sparkle:shortVersionString>1.7.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.7 — The big themes overhaul</h2>
+        <ul>
+          <li><b>Themes Overhaul — BeOS, Windows XP &amp; Mac OS 9:</b> a massive rework, as close to the originals as possible — including a native CPU widget and authentically styled windows in each theme.</li>
+          <li><b>New theme &ldquo;Maiks Favourite&rdquo;:</b> an animated Pac-Man dock and live previews of your running apps.</li>
+          <li><b>Webcam support stabilized:</b> more reliable virtual-camera toggling and retro effects.</li>
+          <li><b>Stability &amp; fixes:</b> numerous bug fixes and general stability improvements.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.7.0/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="eZJcOCYOyOu6Gz9bq4Xu/pfs7u0Qo+/RHxCy2k48hvLHXwc1D2KAg9miXLo0+h94924WlH/VywJ0RHMlCqV5AA=="
+        length="119486707"
+      />
+    </item>
+    <item>
       <title>Version 1.3</title>
       <pubDate>Mon, 26 May 2026 12:00:00 +0000</pubDate>
       <sparkle:version>1.3</sparkle:version>
