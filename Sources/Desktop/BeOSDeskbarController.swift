@@ -108,13 +108,17 @@ final class BeOSDeskbarView: NSView {
         return Self.availableShortcuts.filter { on.contains($0.bundleID) }
     }
     private var appsH: CGFloat {
-        // +1 for the permanent "Applikationen" (App Folder) entry.
-        return CGFloat(enabledShortcuts.count + 1) * appRowH + 4
+        // +2 for the permanent "Applications" (App Folder) and "Music" (TV streams) entries.
+        return CGFloat(enabledShortcuts.count + 2) * appRowH + 4
     }
 
-    /// The deskbar rows: the App-Folder launcher first, then the configured app shortcuts.
+    /// The deskbar rows: App-Folder launcher, Music (TV streams), then the app shortcuts.
+    /// "Applications" and "Music" open their window on click and a BeOS submenu on hover.
     private func appRows() -> [(label: String, icon: NSImage?, id: String)] {
-        var rows: [(String, NSImage?, String)] = [("Applications", dimg("folder-app.png"), "__appfolder__")]
+        var rows: [(String, NSImage?, String)] = [
+            ("Applications", dimg("folder-app.png"), "__appfolder__"),
+            ("Music", dimg("folder-app.png"), "__music__"),
+        ]
         for sc in enabledShortcuts {
             rows.append((sc.label, ThemeManager.shared.icon(for: sc.bundleID, size: appListIcon), sc.bundleID))
         }
@@ -130,13 +134,16 @@ final class BeOSDeskbarView: NSView {
     private var beLogo: NSImage?
     private var statusCPU: NSImage?
     private var statusMail: NSImage?
+    private var statusPac: NSImage?
     private var clockTimer: Timer?
     private var menuOpen = false            // logo bg darkens while the menu is open
+    private var hoverMenuID: String?        // id of the deskbar row whose hover-submenu is open
     var openMenuUp = true
     var openMenuLeft = false
 
     private var cpuRect = NSRect.zero
     private var mailRect = NSRect.zero
+    private var pacRect = NSRect.zero
 
     private let headerH: CGFloat = 40
     private let statusH: CGFloat = 40
@@ -162,6 +169,7 @@ final class BeOSDeskbarView: NSView {
         beLogo = dimg("be-logo.png")
         statusCPU = dimg("status-cpu.png")
         statusMail = dimg("status-mail.png")
+        statusPac = dimg("pac.icns")
         startClock()
     }
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
@@ -225,12 +233,18 @@ final class BeOSDeskbarView: NSView {
             .foregroundColor: NSColor(calibratedWhite: 0.12, alpha: 1)]
         let cs = str.size(withAttributes: attrs)
         let iconSz: CGFloat = 30, gap: CGFloat = 6, edge: CGFloat = 6
-        // Fixed tray order: Mailbox (far left) · Processor · (gap) · Clock (far right).
+        // Fixed tray order: Mailbox (far left) · Processor · Pac-Man · (gap) · Clock (far right).
         mailRect = NSRect(x: s.minX + edge, y: s.midY - iconSz / 2, width: iconSz, height: iconSz)
         cpuRect  = NSRect(x: mailRect.maxX + gap, y: s.midY - iconSz / 2, width: iconSz, height: iconSz)
+        pacRect  = NSRect(x: cpuRect.maxX + gap, y: s.midY - iconSz / 2, width: iconSz, height: iconSz)
         str.draw(at: NSPoint(x: s.maxX - edge - cs.width, y: s.midY - cs.height / 2), withAttributes: attrs)
         statusCPU?.draw(in: cpuRect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         statusMail?.draw(in: mailRect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+        if let p = statusPac {
+            p.draw(in: pacRect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+        } else {
+            drawPacManIcon(pacRect)
+        }
 
         drawApps()
     }
@@ -252,6 +266,17 @@ final class BeOSDeskbarView: NSView {
                 .font: font, .foregroundColor: selected ? NSColor.white : NSColor(calibratedWhite: 0.08, alpha: 1)]
             let ts = row.label.size(withAttributes: attrs)
             row.label.draw(at: NSPoint(x: r.minX + 28, y: r.midY - ts.height / 2), withAttributes: attrs)
+            // Submenu indicator (small right-pointing triangle) for the hover-menu rows.
+            if row.id == "__appfolder__" || row.id == "__music__" {
+                let tx = r.maxX - 11, ty = r.midY
+                let tri = NSBezierPath()
+                tri.move(to: NSPoint(x: tx, y: ty - 4))
+                tri.line(to: NSPoint(x: tx + 5, y: ty))
+                tri.line(to: NSPoint(x: tx, y: ty + 4))
+                tri.close()
+                (selected ? NSColor.white : NSColor(calibratedWhite: 0.08, alpha: 1)).setFill()
+                tri.fill()
+            }
         }
     }
 
@@ -267,8 +292,52 @@ final class BeOSDeskbarView: NSView {
         appHover = -1
         for (i, pair) in appRects.enumerated() where pair.0.contains(p) { appHover = i }
         if old != appHover { needsDisplay = true }
+        // Hover over "Applications" / "Music" pops a BeOS submenu beside the row.
+        let hoveredID = (appHover >= 0 && appHover < appRects.count) ? appRects[appHover].1 : nil
+        if hoveredID == "__appfolder__" || hoveredID == "__music__" {
+            if hoverMenuID != hoveredID { openHoverSubmenu(id: hoveredID!, rowRect: appRects[appHover].0) }
+        } else if hoverMenuID != nil {
+            BeOSMenuController.shared.dismissAll(); hoverMenuID = nil
+        }
+    }
+
+    private func openHoverSubmenu(id: String, rowRect: NSRect) {
+        let items = (id == "__music__") ? tvMenuItems() : applicationsMenuItems()
+        guard !items.isEmpty else { return }
+        let anchor = window?.convertToScreen(convert(rowRect, to: nil)) ?? rowRect
+        let ctrl = BeOSMenuController.shared
+        ctrl.ignoreClickWindow = window
+        ctrl.onDismiss = { [weak self] in self?.hoverMenuID = nil }
+        ctrl.show(items, anchor: anchor, openUp: false, openLeft: openMenuLeft)
+        hoverMenuID = id
+    }
+
+    /// TV streams as a BeOS submenu (BeOS-style folder icon, opens the stream on click).
+    private func tvMenuItems() -> [BeOSMenuItem] {
+        let icon = cachedDimg("folder-app.png")
+        let items = AppSettings.shared.tvBookmarks.map { bm in
+            BeOSMenuItem.action(bm.name, icon: icon) {
+                NotificationCenter.default.post(name: .init("openTVBookmark"), object: bm.id.uuidString)
+            }
+        }
+        return items.isEmpty ? [.action("No streams") {}] : items
     }
     override func mouseExited(with event: NSEvent) { if appHover != -1 { appHover = -1; needsDisplay = true } }
+
+    private func drawPacManIcon(_ r: NSRect) {
+        let d = r.insetBy(dx: 2, dy: 2)
+        NSColor(calibratedRed: 1.0, green: 0.82, blue: 0.0, alpha: 1).setFill()
+        NSBezierPath(ovalIn: d).fill()
+        // mouth wedge (cut in the status-bar colour), opening to the right
+        let p = NSBezierPath()
+        p.move(to: NSPoint(x: d.midX, y: d.midY))
+        p.line(to: NSPoint(x: d.maxX + 1, y: d.midY - d.height * 0.32))
+        p.line(to: NSPoint(x: d.maxX + 1, y: d.midY + d.height * 0.32))
+        p.close()
+        sunkenFace.setFill(); p.fill()
+        NSColor.black.setFill()
+        NSBezierPath(ovalIn: NSRect(x: d.midX - 1.5, y: d.minY + d.height * 0.22, width: 3, height: 3)).fill()
+    }
 
     private func drawBevel(_ r: NSRect, raised: Bool) {
         let top = raised ? lightBevel : darkBevel
@@ -287,10 +356,12 @@ final class BeOSDeskbarView: NSView {
         let p = convert(event.locationInWindow, from: nil)
         for (r, bid) in appRects where r.contains(p) {
             if bid == "__appfolder__" { AppFolderController.shared.toggle() }
+            else if bid == "__music__" { AppFolderController.tv.show() }
             else { AppLauncher.launchOrActivate(bundleID: bid) }
             return
         }
         if cpuRect.contains(p) { CPUMonitorController.shared.toggle(); return }
+        if pacRect.contains(p) { PacmanGame.launch(); return }
         if mailRect.contains(p) { AppLauncher.launchOrActivate(bundleID: "com.apple.mail"); return }
         guard headerRect.contains(p) else { return }
         if BeOSMenuController.shared.isOpen { BeOSMenuController.shared.dismissAll(); return }
@@ -340,7 +411,7 @@ final class BeOSDeskbarView: NSView {
             let key = bid ?? url.path
             guard !seen.contains(key) else { continue }; seen.insert(key)
             let icon = bid.map { ThemeManager.shared.icon(for: $0, size: 18) } ?? NSWorkspace.shared.icon(forFile: url.path)
-            result.append(.action(name, icon: icon) {
+            result.append(.action(name, icon: icon, bundleID: bid) {
                 if let bid = bid { AppLauncher.launchOrActivate(bundleID: bid) } else { NSWorkspace.shared.open(url) }
             })
         }

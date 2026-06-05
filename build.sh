@@ -124,6 +124,42 @@ if [ -d "$SPARKLE_FW" ]; then
     echo "  ✓ Sparkle.framework embedded & signed"
 fi
 
+# --- BeOS Pac-Man demo (built from vendored GPLv2 source in vendor/pacman) ---
+if [ -d "vendor/pacman/src" ] && [ -d "/opt/homebrew/include/SDL2" ]; then
+    PAC_APP="$CONTENTS/Resources/Games/Pacman.app"
+    PAC_C="$PAC_APP/Contents"
+    rm -rf "$PAC_APP"; mkdir -p "$PAC_C/MacOS" "$PAC_C/Resources" "$PAC_C/Frameworks"
+    if clang++ -std=c++14 -O2 -I/opt/homebrew/include -Ivendor/pacman/src \
+         -DPACKAGE_DATA_DIR='"/unused"' \
+         vendor/pacman/src/*.cpp -L/opt/homebrew/lib -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer \
+         -o "$PAC_C/MacOS/pacman" 2>/tmp/pacman_build.log; then
+        cp -R vendor/pacman/data "$PAC_C/Resources/data"
+        cat > "$PAC_C/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleName</key><string>Pacman</string>
+<key>CFBundleIdentifier</key><string>com.retromac.demo.pacman</string>
+<key>CFBundleVersion</key><string>0.9.4</string>
+<key>CFBundleShortVersionString</key><string>0.9.4</string>
+<key>CFBundleExecutable</key><string>pacman</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>NSHighResolutionCapable</key><true/>
+</dict></plist>
+PLIST
+        command -v dylibbundler >/dev/null 2>&1 && \
+            dylibbundler -of -cd -b -x "$PAC_C/MacOS/pacman" -d "$PAC_C/Frameworks" -p @executable_path/../Frameworks >/dev/null 2>&1
+        for dy in "$PAC_C/Frameworks/"*.dylib; do [ -f "$dy" ] && codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$dy"; done
+        codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$PAC_C/MacOS/pacman"
+        codesign --force --sign "$SIGN_ID" $SIGN_FLAGS --identifier "com.retromac.demo.pacman" "$PAC_APP"
+        echo "  ✓ Pac-Man demo built & embedded"
+    else
+        echo "  ⚠ Pac-Man demo build failed (see /tmp/pacman_build.log) — skipping"
+    fi
+else
+    echo "  ⚠ SDL2/vendor sources missing — Pac-Man demo not bundled"
+fi
+
 cat > "$CONTENTS/PkgInfo" <<'PKG'
 APPL????
 PKG

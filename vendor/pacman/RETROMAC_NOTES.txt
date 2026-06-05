@@ -1,0 +1,2 @@
+Vendored from https://github.com/ebuc99/pacman (GPLv2).
+Local patches: src/screen.{h,cpp}, src/platform.cpp, src/config.h add a theme-aware BeOS window frame + app-relative data path. Source: this directory + upstream repo.

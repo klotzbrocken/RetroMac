@@ -63,6 +63,9 @@ struct GamesSettingsTab: View {
             }
             ROMLibrarySection()
 
+            // Bundled arcade demo
+            pacmanSection
+
             // PC Games (existing — each is its own collapsible section)
             doomSection
             razeSection
@@ -304,6 +307,24 @@ struct GamesSettingsTab: View {
     }
 
     // MARK: - Heretic
+
+    private var pacmanSection: some View {
+        Section {
+            DisclosureGroup("Pac-Man") {
+                HStack {
+                    Image(systemName: PacmanGame.isAvailable ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(PacmanGame.isAvailable ? .green : .red)
+                    Text("Pac-Man (BeOS demo)")
+                    Spacer()
+                    Button("Play") { PacmanGame.launch() }
+                        .disabled(!PacmanGame.isAvailable)
+                }
+                Text("Bundled SDL Pac-Man clone. The window frame matches the active theme (BeOS Lasche on the BeOS theme).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
 
     private var hereticSection: some View {
         Section {

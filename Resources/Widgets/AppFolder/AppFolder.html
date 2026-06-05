@@ -97,6 +97,80 @@
   .be-resize{width:15px;height:15px;flex:0 0 auto;background:var(--be-grey);border-left:1px solid var(--be-sh);box-shadow:inset 1px 1px 0 var(--be-hi);position:relative;}
   .be-resize::after{content:"";position:absolute;inset:3px;
     background:linear-gradient(135deg,transparent 0 33%,#8a8a8a 33% 45%,transparent 45% 66%,#8a8a8a 66% 78%,transparent 78%);}
+
+  /* ===== Mac OS 9 (Platinum) chrome — active only in theme-macos9 ===== */
+  .m9-title,.m9-info{display:none;}
+  body.theme-macos9 .be-tab{display:none;}
+  body.theme-macos9 .be-menubar{display:none;}
+  body.theme-macos9 .be-win{top:0;border:1px solid #000;background:#d8d8d8;
+    box-shadow:1px 1px 0 rgba(0,0,0,.35), 3px 3px 8px rgba(0,0,0,.30);}
+  body.theme-macos9 .be-content{box-shadow:inset 1px 1px 0 #555;}
+  /* title bar */
+  body.theme-macos9 .m9-title{display:flex;position:relative;height:21px;flex:0 0 21px;
+    align-items:center;border-bottom:1px solid #808080;background:#d8d8d8;}
+  .m9-stripes{position:absolute;inset:1px 0;
+    background:repeating-linear-gradient(to bottom,#ededed 0 1px,#bdbdbd 1px 2px);}
+  .m9-title>*{position:relative;z-index:2;}
+  .m9-ctl{width:13px;height:13px;flex:0 0 13px;background:#d8d8d8;border:1px solid #555;
+    border-top-color:#fff;border-left-color:#fff;
+    box-shadow:inset -1px -1px 0 #808080, inset 1px 1px 0 #fff;}
+  .m9-close{margin-left:7px;cursor:pointer;}
+  .m9-plaque{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    background:#d8d8d8;padding:0 8px;height:15px;display:flex;align-items:center;gap:5px;
+    font-size:13px;font-weight:700;letter-spacing:.2px;color:#000;}
+  .m9-disk{width:16px;height:11px;background:linear-gradient(#e9e9e9,#c9c9c9);border:1px solid #555;border-radius:1px;display:inline-block;}
+  .m9-right{margin-left:auto;display:flex;gap:5px;padding-right:7px;}
+  .m9-collapse,.m9-zoom{position:relative;}
+  .m9-zoom::after{content:"";position:absolute;inset:2px;border:1px solid #555;}
+  .m9-zoom::before{content:"";position:absolute;left:2px;top:2px;width:5px;height:5px;border:1px solid #555;}
+  .m9-collapse::before{content:"";position:absolute;left:3px;right:3px;top:3px;height:3px;border:1px solid #555;border-bottom:none;}
+  /* info bar */
+  body.theme-macos9 .m9-info{display:block;text-align:center;font-size:11px;height:18px;line-height:18px;
+    background:#d8d8d8;border-bottom:1px solid #808080;box-shadow:inset 0 1px 0 #fff;color:#000;}
+  /* Platinum scrollbars / status */
+  body.theme-macos9 .vsb,body.theme-macos9 .hsb,body.theme-macos9 .be-status{background:#d8d8d8;}
+  body.theme-macos9 .sb-btn{background:linear-gradient(#f3f3f3,#cfcfcf);border:1px solid #808080;box-shadow:none;}
+  body.theme-macos9 .sb-trough{background:repeating-linear-gradient(45deg,#d2d2d2 0 1px,#c4c4c4 1px 3px);}
+  body.theme-macos9 .sb-thumb{background:linear-gradient(90deg,#fff,#e3e3e3 40%,#c7c7c7);border:1px solid #808080;}
+  body.theme-macos9 .be-count{background:#d8d8d8;color:#000;border-right:1px solid #808080;box-shadow:inset 0 1px 0 #fff;}
+  body.theme-macos9 .be-resize{background:#d8d8d8;border-left:1px solid #808080;box-shadow:inset 0 1px 0 #fff;}
+  /* grid: Geneva-ish labels, no dotted underline */
+  body.theme-macos9 .be-item .lbl{border-bottom:none;}
+  body.theme-macos9 .be-grid.list .be-item.sel,body.theme-macos9 .be-item.sel .lbl{background:#000;color:#fff;}
+
+  /* ===== Windows XP (Luna Blue) chrome — active only in theme-winxp ===== */
+  .xp-title{display:none;}
+  body.theme-winxp .be-tab{display:none;}
+  body.theme-winxp .be-win{top:0;border-radius:8px 8px 2px 2px;background:#0831D9;overflow:hidden;
+    box-shadow:2px 5px 14px rgba(0,0,0,.45);}            /* blue = 4px sizing frame */
+  body.theme-winxp .xp-title{display:flex;align-items:center;height:30px;flex:0 0 30px;
+    gap:6px;padding:0 4px 0 6px;border-radius:8px 8px 0 0;
+    background:linear-gradient(180deg,#0997FF 0%,#0053EE 8%,#0053EE 45%,#0066FF 52%,#0846E0 80%,#003DD2 100%);}
+  .xp-sysicon{width:16px;height:16px;flex:0 0 16px;border-radius:3px;
+    background:radial-gradient(circle at 30% 30%,#fff,#cfe0ff 70%,#7fa8ee);box-shadow:0 0 0 1px rgba(0,0,0,.15);}
+  .xp-caption{color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    font:700 13px "Trebuchet MS","Segoe UI",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,40,.5);}
+  .xp-btns{margin-left:auto;display:flex;gap:2px;}
+  .xp-btn{width:21px;height:21px;border-radius:3px;position:relative;cursor:pointer;
+    border:1px solid rgba(255,255,255,.55);box-shadow:inset 0 1px 1px rgba(255,255,255,.65);}
+  /* Minimise omitted: a borderless floating widget has no taskbar entry to minimise into. */
+  body.theme-winxp .xp-min{display:none;}
+  .xp-min,.xp-max{background:linear-gradient(180deg,#5cb0ff,#1D63F0 55%,#0B46CF);}
+  .xp-close{width:23px;flex:0 0 23px;background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
+  .xp-btn:active{box-shadow:inset 1px 1px 2px rgba(0,0,0,.4);}
+  .xp-min::after{content:"";position:absolute;left:5px;right:5px;bottom:4px;height:2px;background:#fff;}
+  .xp-max::after{content:"";position:absolute;inset:5px;border:1px solid #fff;border-top-width:3px;border-radius:1px;}
+  .xp-close::before,.xp-close::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:2px;background:#fff;border-radius:1px;}
+  .xp-close::before{transform:translate(-50%,-50%) rotate(45deg);}
+  .xp-close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  /* content/menu inset by 4px to reveal the blue frame on sides + bottom */
+  body.theme-winxp .be-menubar{margin:0 4px;background:#ECE9D8;color:#000;border:none;
+    font:11px Tahoma,"Segoe UI",sans-serif;}
+  body.theme-winxp .be-mid{margin:0 4px;background:#fff;}
+  body.theme-winxp .be-status{margin:0 4px 4px;background:#ECE9D8;color:#000;border:none;}
+  body.theme-winxp .be-content{background:#fff;}
+  body.theme-winxp .be-item .lbl{border-bottom:none;}
+  body.theme-winxp .be-grid.list .be-item.sel,body.theme-winxp .be-item.sel .lbl{background:#316AC5;color:#fff;}
 </style>
 </head>
 <body>
@@ -105,6 +179,24 @@
       <span class="be-close" id="close" title="Close"></span>
       <span class="be-title">Applications</span>
       <span class="be-zoom"></span>
+    </div>
+    <!-- Mac OS 9 Platinum title bar (shown only in theme-macos9) -->
+    <div class="m9-title" id="m9title">
+      <div class="m9-stripes"></div>
+      <span class="m9-ctl m9-close" id="m9close"></span>
+      <div class="m9-plaque"><span class="m9-disk"></span><span>Applications</span></div>
+      <div class="m9-right"><span class="m9-ctl m9-zoom" id="m9zoom"></span><span class="m9-ctl m9-collapse" id="m9collapse"></span></div>
+    </div>
+    <div class="m9-info" id="m9info">0 Objekte</div>
+    <!-- Windows XP Luna title bar (shown only in theme-winxp) -->
+    <div class="xp-title" id="xptitle">
+      <span class="xp-sysicon"></span>
+      <span class="xp-caption">Programme</span>
+      <span class="xp-btns">
+        <span class="xp-btn xp-min" id="xpmin" title="Minimieren"></span>
+        <span class="xp-btn xp-max" id="xpmax" title="Maximieren"></span>
+        <span class="xp-btn xp-close" id="xpclose" title="Schließen"></span>
+      </span>
     </div>
     <div class="be-menubar"><span>File</span><span>Window</span></div>
     <div class="be-mid">
@@ -166,7 +258,9 @@
       el.style.left = list ? PAD+'px' : (PAD+c*v.CW)+'px';
       el.style.top = (PAD+r*v.CH)+'px';
       if(list) el.style.width = listW+'px';
-      el.innerHTML=`<div class="ic">${BEOS_ICONS.get(it.icon)}</div><div class="lbl">${esc(it.name)}</div>`;
+      const cl=document.body.classList, themed=cl.contains('theme-macos9')||cl.contains('theme-winxp');
+      const icHTML=(themed && it.img) ? `<img src="${it.img}">` : BEOS_ICONS.get(it.icon);
+      el.innerHTML=`<div class="ic">${icHTML}</div><div class="lbl">${esc(it.name)}</div>`;
       el.addEventListener('mousedown',(e)=>{
         e.preventDefault(); closeMenus();
         grid.querySelectorAll('.be-item.sel').forEach(s=>s.classList.remove('sel')); el.classList.add('sel');
@@ -188,13 +282,24 @@
       grid.appendChild(el);
     });
     document.getElementById('count').textContent=apps.length+' items';
+    const m9=document.getElementById('m9info'); if(m9) m9.textContent=apps.length+' Objekte';
     updateScroll();
   }
   window.setApps=function(list){ apps=Array.isArray(list)?list:[]; buildGrid(); };
+  // Host sets the chrome theme ('beos' default · 'macos9' = Platinum Finder window).
+  window.setTheme=function(k){ document.body.className='theme-'+(k||'beos'); buildGrid(); };
+  // Host sets the window title across all three chromes (BeOS tab / Mac OS 9 plaque / XP caption).
+  window.setTitle=function(t){
+    document.querySelectorAll('.be-title,.xp-caption').forEach(e=>e.textContent=t);
+    const pl=document.querySelector('.m9-plaque span:last-child'); if(pl) pl.textContent=t;
+  };
   window.regions=function(){
-    const t=document.getElementById('tab').getBoundingClientRect();
-    const c=document.getElementById('close').getBoundingClientRect();
-    return [t.x,t.y,t.width,t.height,c.x,c.y,c.width,c.height];
+    const cl=document.body.classList, m9=cl.contains('theme-macos9'), xp=cl.contains('theme-winxp');
+    const R=id=>{const e=document.getElementById(id);if(!e)return[0,0,0,0];const b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
+    // [title, close, minimise/collapse, maximise/zoom]
+    if(xp){ return [...R('xptitle'),...R('xpclose'),...R('xpmin'),...R('xpmax')]; }
+    if(m9){ return [...R('m9title'),...R('m9close'),...R('m9collapse'),...R('m9zoom')]; }
+    return [...R('tab'),...R('close')];
   };
 
   function viewSize(){ return {w:content.clientWidth,h:content.clientHeight}; }
@@ -273,7 +378,7 @@
       {label:'Move to', on:s, sub:FOLDERS.map(f=>({label:f, action:()=>post({a:'moveto',path:selected.path,dest:f})}))},
       {label:'Copy to', on:s, sub:FOLDERS.map(f=>({label:f, action:()=>post({a:'copyto',path:selected.path,dest:f})}))},
       {label:'Create Link', on:s, action:()=>post({a:'createlink',path:selected.path,name:selected.name})},
-      {label:'Icon', on:s, sub:[...ICON_KEYS.map(k=>({label:k, action:()=>setIcon(selected,k)})), {sep:1}, {label:'Own…', action:()=>post({a:'iconown'})}]},
+      {label:'Icon', on:s, sub:[...ICON_KEYS.map(k=>({label:k, action:()=>setIcon(selected,k)})), {sep:1}, {label:'Set Custom Icon…', action:()=>post({a:'iconown', id:selected&&selected.id, name:selected&&selected.name})}]},
       {sep:1},
       {label:'Add Ons', on:false},
     ];
@@ -326,6 +431,27 @@
   // click empty content → deselect + close menus
   content.addEventListener('mousedown',e=>{ if(e.target===content||e.target===grid){ selected=null; grid.querySelectorAll('.be-item.sel').forEach(s=>s.classList.remove('sel')); } });
   document.addEventListener('mousedown',e=>{ if(openMenuEl && !e.target.closest('.menu') && !e.target.closest('.be-menubar')) closeMenus(); });
+
+  // Right-click an item → context menu (incl. Icon ▸ Set Custom Icon…). Always preventDefault
+  // so the native WebView "Reload" menu never appears.
+  function selectItemEl(el){
+    grid.querySelectorAll('.be-item.sel').forEach(s=>s.classList.remove('sel'));
+    el.classList.add('sel');
+    const i=[...grid.children].indexOf(el);
+    selected = (i>=0) ? apps[i] : null;
+  }
+  document.addEventListener('contextmenu',e=>{
+    e.preventDefault();
+    const el=e.target.closest('.be-item');
+    closeMenus();
+    if(!el) return;
+    selectItemEl(el);
+    const m=buildMenu(fileSpec());
+    document.body.appendChild(m);
+    m.style.left=Math.min(e.clientX, window.innerWidth-170)+'px';
+    m.style.top=Math.min(e.clientY, window.innerHeight-20)+'px';
+    openMenuEl=m;
+  });
 
   window.addEventListener('resize',buildGrid);
   buildGrid();

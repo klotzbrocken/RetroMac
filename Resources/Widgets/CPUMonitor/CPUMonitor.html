@@ -210,12 +210,81 @@
     font-size:11px;color:rgba(255,255,255,.55);
     font-family:Helvetica,Arial,sans-serif;letter-spacing:.4px;
   }
+
+  /* ===== Mac OS 9 (Platinum) chrome — counter-scaled 1/0.6 like the BeOS tab so it
+     renders at the same physical size after the widget's SCALE(0.6). ===== */
+  .m9-title{display:none;}
+  body.theme-macos9 .tab,body.theme-macos9 .marker{display:none;}
+  body.theme-macos9 .window{border:1.6px solid #000;background:#d8d8d8;
+    box-shadow:2px 2px 0 rgba(0,0,0,.30);}
+  body.theme-macos9 .body{border:none;box-shadow:none;margin-top:0;}
+  body.theme-macos9 .m9-title{display:flex;position:relative;align-items:center;
+    height:35px;border-bottom:1.6px solid #808080;background:#d8d8d8;}
+  .m9-stripes{position:absolute;inset:1px 0;
+    background:repeating-linear-gradient(to bottom,#ededed 0 2px,#bdbdbd 2px 4px);}
+  .m9-title>*{position:relative;z-index:2;}
+  .m9-ctl{width:22px;height:22px;flex:0 0 22px;background:#d8d8d8;border:1px solid #555;
+    border-top-color:#fff;border-left-color:#fff;
+    box-shadow:inset -1px -1px 0 #808080, inset 1px 1px 0 #fff;}
+  .m9-close{margin-left:12px;cursor:pointer;}
+  .m9-collapse,.m9-zoom{position:relative;cursor:pointer;}
+  .m9-plaque{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    background:#d8d8d8;padding:0 12px;height:26px;display:flex;align-items:center;gap:8px;
+    font-size:22px;font-weight:700;color:#000;font-family:"Charcoal","ChicagoFLF","Helvetica Neue",Helvetica,sans-serif;}
+  .m9-disk{width:26px;height:18px;background:linear-gradient(#e9e9e9,#c9c9c9);border:1px solid #555;border-radius:1px;}
+  .m9-right{margin-left:auto;display:flex;gap:8px;padding-right:12px;}
+  .m9-zoom::after{content:"";position:absolute;inset:3px;border:1px solid #555;}
+  .m9-zoom::before{content:"";position:absolute;left:3px;top:3px;width:8px;height:8px;border:1px solid #555;}
+  .m9-collapse::before{content:"";position:absolute;left:5px;right:5px;top:5px;height:5px;border:1px solid #555;border-bottom:none;}
+
+  /* ===== Windows XP (Luna Blue) chrome — counter-scaled 1/0.6 like the BeOS tab. ===== */
+  .xp-title{display:none;}
+  body.theme-winxp .tab,body.theme-winxp .marker{display:none;}
+  body.theme-winxp .window{border-radius:13px 13px 3px 3px;background:#0831D9;overflow:hidden;
+    box-shadow:3px 7px 18px rgba(0,0,0,.45);}
+  body.theme-winxp .body{border:none;box-shadow:none;margin:0 7px 7px;}
+  body.theme-winxp .xp-title{display:flex;align-items:center;height:50px;gap:10px;padding:0 7px 0 10px;
+    border-radius:13px 13px 0 0;
+    background:linear-gradient(180deg,#0997FF 0%,#0053EE 8%,#0053EE 45%,#0066FF 52%,#0846E0 80%,#003DD2 100%);}
+  .xp-sysicon{width:26px;height:26px;flex:0 0 26px;border-radius:5px;
+    background:radial-gradient(circle at 30% 30%,#fff,#cfe0ff 70%,#7fa8ee);}
+  .xp-caption{color:#fff;white-space:nowrap;font:700 22px "Trebuchet MS","Segoe UI",Tahoma,sans-serif;
+    text-shadow:1px 1px 1px rgba(0,0,40,.5);}
+  .xp-btns{margin-left:auto;display:flex;gap:3px;}
+  .xp-btn{width:35px;height:35px;border-radius:5px;position:relative;cursor:pointer;
+    border:1px solid rgba(255,255,255,.55);box-shadow:inset 0 1px 2px rgba(255,255,255,.65);}
+  /* Minimise omitted: a borderless floating widget has no taskbar entry to minimise into. */
+  body.theme-winxp .xp-min{display:none;}
+  .xp-min,.xp-max{background:linear-gradient(180deg,#5cb0ff,#1D63F0 55%,#0B46CF);}
+  .xp-close{width:38px;flex:0 0 38px;background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
+  .xp-min::after{content:"";position:absolute;left:8px;right:8px;bottom:7px;height:3px;background:#fff;}
+  .xp-max::after{content:"";position:absolute;inset:8px;border:2px solid #fff;border-top-width:5px;border-radius:2px;}
+  .xp-close::before,.xp-close::after{content:"";position:absolute;left:50%;top:50%;width:20px;height:3px;background:#fff;border-radius:2px;}
+  .xp-close::before{transform:translate(-50%,-50%) rotate(45deg);}
+  .xp-close::after{transform:translate(-50%,-50%) rotate(-45deg);}
 </style>
 </head>
 <body>
   <div id="stage">
     <div id="scaler">
       <div class="window">
+        <!-- Mac OS 9 Platinum title bar (theme-macos9 only) -->
+        <div class="m9-title" id="m9title">
+          <div class="m9-stripes"></div>
+          <span class="m9-ctl m9-close" id="m9close" title="Schließen"></span>
+          <div class="m9-plaque"><span class="m9-disk"></span><span>CPU Monitor</span></div>
+          <div class="m9-right"><span class="m9-ctl m9-zoom" id="m9zoom"></span><span class="m9-ctl m9-collapse" id="m9collapse"></span></div>
+        </div>
+        <!-- Windows XP Luna title bar (theme-winxp only) -->
+        <div class="xp-title" id="xptitle">
+          <span class="xp-sysicon"></span>
+          <span class="xp-caption">CPU Monitor</span>
+          <span class="xp-btns">
+            <span class="xp-btn xp-min" id="xpmin"></span>
+            <span class="xp-btn xp-max" id="xpmax"></span>
+            <span class="xp-btn xp-close" id="xpclose" title="Schließen"></span>
+          </span>
+        </div>
         <div class="tab"><span class="closebox" id="closebox" title="Schließen"></span><b>CPU Monitor</b></div>
         <div class="marker"></div>
         <div class="body">
@@ -312,16 +381,44 @@
   const SCALE = 0.6;
   const stageEl = document.getElementById('stage');
   stageEl.style.transformOrigin = 'top left';
-  stageEl.style.transform = 'scale(' + SCALE + ')';
+  let zoomed = false, collapsed = false;
+  function applyScale(){ stageEl.style.transform = 'scale(' + (zoomed ? 0.85 : SCALE) + ')'; }
+  applyScale();
   // Scaled outer size (for the native host to size its window).
   window.widgetSize = function(){
-    return [Math.ceil(stageEl.offsetWidth * SCALE), Math.ceil(stageEl.offsetHeight * SCALE)];
+    const s = zoomed ? 0.85 : SCALE;
+    return [Math.ceil(stageEl.offsetWidth * s), Math.ceil(stageEl.offsetHeight * s)];
   };
-  // Title-tab + closebox rects (already reflect the transform → scaled viewport px).
+
+  // Host sets the chrome theme: 'beos' (yellow tab, default) · 'macos9' (Platinum window).
+  window.setTheme = function(k){ document.body.className = 'theme-' + (k || 'beos'); };
+
+  // Mac OS 9 title controls — return new widget size so the host can resize its window.
+  window.toggleCollapse = function(){
+    collapsed = !collapsed;
+    document.querySelector('.body').style.display = collapsed ? 'none' : '';
+    return window.widgetSize();
+  };
+  window.toggleZoom = function(){ zoomed = !zoomed; applyScale(); return window.widgetSize(); };
+
+  function postClose(){
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.cpu)
+      window.webkit.messageHandlers.cpu.postMessage('close');
+  }
+  document.getElementById('m9close').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
+  document.getElementById('xpclose').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
+
+  // Title rects (already reflect the transform → scaled viewport px).
   window.regions = function(){
-    const t = document.querySelector('.tab').getBoundingClientRect();
-    const c = document.getElementById('closebox').getBoundingClientRect();
-    return [t.x, t.y, t.width, t.height, c.x, c.y, c.width, c.height];
+    const cl = document.body.classList;
+    const R = id => { const e = document.getElementById(id) || document.querySelector(id); const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height]; };
+    if (cl.contains('theme-winxp')) {
+      return [...R('xptitle'), ...R('xpclose'), ...R('xpmin'), ...R('xpmax')];
+    }
+    if (cl.contains('theme-macos9')) {
+      return [...R('m9title'), ...R('m9close'), ...R('m9collapse'), ...R('m9zoom')];
+    }
+    return [...R('.tab'), ...R('closebox')];
   };
 </script>
 </body>
