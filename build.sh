@@ -85,6 +85,12 @@ if [ -d "Resources/Sounds" ]; then
     rsync -a --delete Resources/Sounds/ "$CONTENTS/Resources/Sounds/"
 fi
 
+# Copy desktop widgets (e.g. BeOS CPU Monitor HTML widget)
+if [ -d "Resources/Widgets" ]; then
+    mkdir -p "$CONTENTS/Resources/Widgets"
+    rsync -a --delete Resources/Widgets/ "$CONTENTS/Resources/Widgets/"
+fi
+
 # Copy Doom CRT shader PK3
 if [ -f "Resources/RetroMac-CRT.pk3" ]; then
     cp Resources/RetroMac-CRT.pk3 "$CONTENTS/Resources/RetroMac-CRT.pk3"

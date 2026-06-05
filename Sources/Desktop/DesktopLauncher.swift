@@ -34,6 +34,9 @@ enum DesktopLauncher {
                 NSWorkspace.shared.open(url)
             }
 
+        case "appfolder":
+            AppFolderController.shared.show()
+
         default:
             break
         }

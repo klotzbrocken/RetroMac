@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>App Folder</title>
+<style>
+  :root{
+    --be-grey:#d6d6d6; --be-grey-d:#c2c2c2; --be-hi:#ffffff; --be-sh:#8a8a8a;
+    --be-sh-l:#b4b4b4; --be-line:#2a2a2a; --be-yellow-1:#fbd85c; --be-yellow-2:#f2bd23;
+    --be-yellow-br:#a07c10; --tracker-grey:#d8d8d8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{ font-family:Helvetica,Arial,sans-serif; overflow:hidden;
+        background:transparent; -webkit-font-smoothing:antialiased; }
+
+  .be-win{
+    position:absolute; left:0; right:0; top:22px; bottom:0;
+    display:flex;flex-direction:column;
+    border:1px solid var(--be-line); background:var(--tracker-grey);
+    box-shadow:2px 3px 7px rgba(0,0,0,.32); user-select:none;
+  }
+  /* title tab — flush left (BeOS Lasche), protrudes up into the top margin */
+  .be-tab{
+    position:absolute;top:-22px;left:0;z-index:3;
+    display:flex;align-items:center;gap:7px;height:23px;padding:0 8px 0 7px;
+    background:linear-gradient(180deg,var(--be-yellow-1) 0%, var(--be-yellow-2) 100%);
+    border:1px solid var(--be-line);border-bottom:none;border-radius:3px 3px 0 0;
+    box-shadow:inset 1px 1px 0 rgba(255,255,255,.55);max-width:80%;
+  }
+  .be-close{
+    width:13px;height:13px;flex:0 0 auto;border:1px solid #6f5a10;
+    background:linear-gradient(135deg,#fbe27e,#eab92a);
+    box-shadow:inset 1px 1px 0 rgba(255,255,255,.75), inset -1px -1px 0 rgba(0,0,0,.18);cursor:pointer;
+  }
+  .be-title{font-size:13px;font-weight:700;color:#2a2306;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .be-zoom{width:14px;height:13px;flex:0 0 auto;margin-left:2px;position:relative;}
+  .be-zoom::before,.be-zoom::after{content:"";position:absolute;border:1px solid #6f5a10;background:#fbe27e;}
+  .be-zoom::before{left:0;top:3px;width:9px;height:9px;}
+  .be-zoom::after{right:0;top:0;width:7px;height:7px;background:#f8d75a;}
+
+  .be-menubar{display:flex;align-items:center;gap:2px;height:21px;padding:0 4px;
+    background:var(--tracker-grey);border-bottom:1px solid var(--be-sh);box-shadow:inset 0 1px 0 var(--be-hi);}
+  .be-menubar span{font-size:12.5px;color:#1c1c1c;padding:1px 8px;border-radius:1px;cursor:default;}
+  .be-menubar span:hover{background:#404a6e;color:#fff;}
+  .be-menubar span.open{background:#404a6e;color:#fff;}
+
+  /* BeOS dropdown menus */
+  .menu{position:absolute;z-index:9999;background:#d8d8d8;border:1px solid #2a2a2a;
+    box-shadow:2px 2px 5px rgba(0,0,0,.35);min-width:150px;padding:2px 0;
+    font-family:Helvetica,Arial,sans-serif;font-size:12.5px;user-select:none;}
+  .menu .mi{padding:3px 22px 3px 14px;white-space:nowrap;position:relative;cursor:default;color:#1c1c1c;}
+  .menu .mi.disabled{color:#a0a0a0;}
+  .menu .mi:not(.disabled):hover{background:#404a6e;color:#fff;}
+  .menu .mi.has-sub::after{content:"▸";position:absolute;right:7px;top:3px;}
+  .menu .sep{height:1px;background:#9a9a9a;margin:3px 6px;}
+  .menu .submenu{top:-3px;left:100%;min-width:150px;}
+
+  .be-mid{display:flex;flex:1 1 auto;min-height:0;}
+  .be-content{position:relative;flex:1 1 auto;overflow:hidden;background:#ffffff;box-shadow:inset 1px 1px 0 rgba(0,0,0,.06);}
+  .be-grid{position:absolute;top:0;left:0;will-change:transform;}
+  .be-item{position:absolute;width:76px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:7px;cursor:default;}
+  .be-item .ic{width:44px;height:44px;display:flex;align-items:center;justify-content:center;}
+  .be-item .ic svg,.be-item .ic img{width:100%;height:100%;display:block;object-fit:contain;}
+  /* Mini Icon View */
+  .be-grid.mini .be-item{width:66px;padding-top:5px;gap:2px;}
+  .be-grid.mini .be-item .ic{width:16px;height:16px;}
+  .be-grid.mini .be-item .lbl{font-size:11px;max-width:64px;}
+  /* List View — small icon + name in full-width rows */
+  .be-grid.list .be-item{flex-direction:row;justify-content:flex-start;align-items:center;gap:6px;padding:2px 8px;text-align:left;}
+  .be-grid.list .be-item .ic{width:16px;height:16px;flex:0 0 auto;}
+  .be-grid.list .be-item .lbl{font-size:12px;max-width:none;border-bottom:none;flex:1 1 auto;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .be-grid.list .be-item.sel{background:#3c63c8;}
+  .be-grid.list .be-item.sel .lbl{color:#fff;}
+  .be-item .lbl{font-size:12px;color:#161616;line-height:1.15;max-width:74px;border-bottom:1px dotted #b0b0b0;padding-bottom:1px;
+    white-space:normal;overflow-wrap:anywhere;text-align:center;}
+  .be-item.sel .lbl{background:#3c63c8;color:#fff;border-bottom-color:transparent;}
+
+  .vsb{width:15px;flex:0 0 auto;display:flex;flex-direction:column;background:var(--be-grey);border-left:1px solid var(--be-sh);}
+  .hsb{height:15px;flex:1 1 auto;display:flex;background:var(--be-grey);border-top:1px solid var(--be-sh);}
+  .sb-arrows{display:flex;flex:0 0 auto;}
+  .vsb .sb-arrows{flex-direction:column;}
+  .sb-btn{width:15px;height:15px;flex:0 0 auto;background:var(--be-grey);border:1px solid var(--be-sh);
+    box-shadow:inset 1px 1px 0 var(--be-hi), inset -1px -1px 0 var(--be-sh-l);display:flex;align-items:center;justify-content:center;cursor:default;}
+  .sb-btn:active{box-shadow:inset 1px 1px 0 var(--be-sh), inset -1px -1px 0 var(--be-hi);}
+  .sb-trough{position:relative;flex:1 1 auto;background:#c4c4c4;box-shadow:inset 1px 1px 0 rgba(0,0,0,.16), inset -1px -1px 0 rgba(255,255,255,.5);}
+  .sb-thumb{position:absolute;background:var(--be-grey);border:1px solid var(--be-sh);
+    box-shadow:inset 1px 1px 0 var(--be-hi), inset -1px -1px 0 var(--be-sh-l);display:flex;align-items:center;justify-content:center;gap:3px;cursor:default;}
+  .vsb .sb-thumb{left:0;right:0;flex-direction:column;}
+  .hsb .sb-thumb{top:0;bottom:0;}
+  .grip{width:3px;height:3px;border-radius:50%;background:#7e7e7e;box-shadow:0 1px 0 rgba(255,255,255,.7);}
+
+  .be-status{display:flex;height:15px;background:var(--be-grey);border-top:1px solid var(--be-line);}
+  .be-count{flex:0 0 auto;min-width:96px;height:15px;display:flex;align-items:center;padding:0 8px;font-size:11px;color:#2a2a2a;
+    background:var(--be-grey);border-right:1px solid var(--be-sh);box-shadow:inset 1px 1px 0 var(--be-hi);}
+  .be-resize{width:15px;height:15px;flex:0 0 auto;background:var(--be-grey);border-left:1px solid var(--be-sh);box-shadow:inset 1px 1px 0 var(--be-hi);position:relative;}
+  .be-resize::after{content:"";position:absolute;inset:3px;
+    background:linear-gradient(135deg,transparent 0 33%,#8a8a8a 33% 45%,transparent 45% 66%,#8a8a8a 66% 78%,transparent 78%);}
+</style>
+</head>
+<body>
+  <div class="be-win active" id="win">
+    <div class="be-tab" id="tab">
+      <span class="be-close" id="close" title="Close"></span>
+      <span class="be-title">Applications</span>
+      <span class="be-zoom"></span>
+    </div>
+    <div class="be-menubar"><span>File</span><span>Window</span></div>
+    <div class="be-mid">
+      <div class="be-content"><div class="be-grid" id="grid"></div></div>
+      <div class="vsb">
+        <div class="sb-arrows"><div class="sb-btn" data-v="-1"></div><div class="sb-btn" data-v="1"></div></div>
+        <div class="sb-trough" data-trough="v"><div class="sb-thumb" data-thumb="v"></div></div>
+        <div class="sb-arrows"><div class="sb-btn" data-v="-1"></div><div class="sb-btn" data-v="1"></div></div>
+      </div>
+    </div>
+    <div class="be-status">
+      <div class="be-count" id="count">0 items</div>
+      <div class="hsb">
+        <div class="sb-arrows"><div class="sb-btn" data-h="-1"></div><div class="sb-btn" data-h="1"></div></div>
+        <div class="sb-trough" data-trough="h"><div class="sb-thumb" data-thumb="h"></div></div>
+        <div class="sb-arrows"><div class="sb-btn" data-h="-1"></div><div class="sb-btn" data-h="1"></div></div>
+      </div>
+      <div class="be-resize"></div>
+    </div>
+  </div>
+
+<script src="beos-icons.js"></script>
+<script>
+  const ARROW = {
+    up:'<svg viewBox="0 0 9 9" width="9" height="9"><polygon points="4.5,2 8,7 1,7" fill="#2c2c2c"/></svg>',
+    down:'<svg viewBox="0 0 9 9" width="9" height="9"><polygon points="1,2 8,2 4.5,7" fill="#2c2c2c"/></svg>',
+    left:'<svg viewBox="0 0 9 9" width="9" height="9"><polygon points="2,4.5 7,1 7,8" fill="#2c2c2c"/></svg>',
+    right:'<svg viewBox="0 0 9 9" width="9" height="9"><polygon points="2,1 7,4.5 2,8" fill="#2c2c2c"/></svg>',
+  };
+  document.querySelectorAll('.sb-btn[data-v="-1"]').forEach(b=>b.innerHTML=ARROW.up);
+  document.querySelectorAll('.sb-btn[data-v="1"]').forEach(b=>b.innerHTML=ARROW.down);
+  document.querySelectorAll('.sb-btn[data-h="-1"]').forEach(b=>b.innerHTML=ARROW.left);
+  document.querySelectorAll('.sb-btn[data-h="1"]').forEach(b=>b.innerHTML=ARROW.right);
+  document.querySelectorAll('.sb-thumb').forEach(t=>t.innerHTML='<i class="grip"></i><i class="grip"></i><i class="grip"></i>');
+
+  let viewMode='icon';
+  const VIEW={icon:{CW:82,CH:92}, mini:{CW:74,CH:46}, list:{CW:0,CH:20}}, PAD=8;
+  const win=document.getElementById('win'), grid=document.getElementById('grid');
+  const content=win.querySelector('.be-content');
+  const st={x:0,y:0,gridW:0,gridH:0,maxX:0,maxY:0};
+  let apps=[]; let selected=null;
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const post=o=>{ if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.appfolder) window.webkit.messageHandlers.appfolder.postMessage(o); };
+
+  function buildGrid(){
+    const v=VIEW[viewMode];
+    grid.className='be-grid'+(viewMode==='mini'?' mini':'')+(viewMode==='list'?' list':'');
+    const list = viewMode==='list';
+    const cols = list ? 1 : Math.max(1, Math.floor((content.clientWidth - PAD*2)/v.CW));
+    const rows=Math.max(1, Math.ceil(apps.length/cols));
+    const listW = Math.max(160, content.clientWidth - PAD*2);
+    st.gridW = list ? content.clientWidth : cols*v.CW+PAD*2;
+    st.gridH = rows*v.CH+PAD*2;
+    grid.style.width=st.gridW+'px'; grid.style.height=st.gridH+'px';
+    grid.innerHTML='';
+    apps.forEach((it,i)=>{
+      const c=i%cols, r=(i/cols)|0;
+      const el=document.createElement('div'); el.className='be-item';
+      el.style.left = list ? PAD+'px' : (PAD+c*v.CW)+'px';
+      el.style.top = (PAD+r*v.CH)+'px';
+      if(list) el.style.width = listW+'px';
+      el.innerHTML=`<div class="ic">${BEOS_ICONS.get(it.icon)}</div><div class="lbl">${esc(it.name)}</div>`;
+      el.addEventListener('mousedown',(e)=>{
+        e.preventDefault(); closeMenus();
+        grid.querySelectorAll('.be-item.sel').forEach(s=>s.classList.remove('sel')); el.classList.add('sel');
+        selected = it;
+        // Free-drag the icon within the folder (BeOS Tracker style); a click without
+        // movement just selects, a double-click launches.
+        const sx=e.clientX, sy=e.clientY, ox=parseFloat(el.style.left), oy=parseFloat(el.style.top);
+        let dragging=false;
+        const move=ev=>{
+          if(!dragging && Math.hypot(ev.clientX-sx,ev.clientY-sy)<4) return;
+          dragging=true; el.style.zIndex=5;
+          el.style.left=Math.max(0,ox+(ev.clientX-sx))+'px';
+          el.style.top=Math.max(0,oy+(ev.clientY-sy))+'px';
+        };
+        const up=()=>{ el.style.zIndex=''; window.removeEventListener('mousemove',move); window.removeEventListener('mouseup',up); };
+        window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+      });
+      el.addEventListener('dblclick',()=>{ post({a:'open',id:it.id,path:it.path,name:it.name}); });
+      grid.appendChild(el);
+    });
+    document.getElementById('count').textContent=apps.length+' items';
+    updateScroll();
+  }
+  window.setApps=function(list){ apps=Array.isArray(list)?list:[]; buildGrid(); };
+  window.regions=function(){
+    const t=document.getElementById('tab').getBoundingClientRect();
+    const c=document.getElementById('close').getBoundingClientRect();
+    return [t.x,t.y,t.width,t.height,c.x,c.y,c.width,c.height];
+  };
+
+  function viewSize(){ return {w:content.clientWidth,h:content.clientHeight}; }
+  function clampScroll(){
+    const v=viewSize();
+    st.maxX=Math.max(0,st.gridW-v.w); st.maxY=Math.max(0,st.gridH-v.h);
+    st.x=Math.min(Math.max(0,st.x),st.maxX); st.y=Math.min(Math.max(0,st.y),st.maxY);
+  }
+  function updateScroll(){
+    clampScroll();
+    grid.style.transform=`translate(${-st.x}px,${-st.y}px)`;
+    const v=viewSize();
+    const vt=win.querySelector('.sb-trough[data-trough="v"]'), vthumb=win.querySelector('.sb-thumb[data-thumb="v"]');
+    const vTrough=vt.clientHeight, vThumbH=Math.max(18,Math.min(1,v.h/st.gridH)*vTrough);
+    vthumb.style.height=vThumbH+'px'; vthumb.style.top=(st.maxY?(st.y/st.maxY)*(vTrough-vThumbH):0)+'px';
+    const ht=win.querySelector('.sb-trough[data-trough="h"]'), hthumb=win.querySelector('.sb-thumb[data-thumb="h"]');
+    const hTrough=ht.clientWidth, hThumbW=Math.max(18,Math.min(1,v.w/st.gridW)*hTrough);
+    hthumb.style.width=hThumbW+'px'; hthumb.style.left=(st.maxX?(st.x/st.maxX)*(hTrough-hThumbW):0)+'px';
+  }
+  content.addEventListener('wheel',e=>{ e.preventDefault(); if(e.shiftKey){st.x+=e.deltaY;}else{st.y+=e.deltaY;st.x+=e.deltaX;} updateScroll(); },{passive:false});
+  win.querySelectorAll('.sb-btn').forEach(btn=>{
+    btn.addEventListener('mousedown',e=>{ e.stopPropagation();
+      const dv=+(btn.dataset.v||0), dh=+(btn.dataset.h||0);
+      const step=()=>{ st.y+=dv*22; st.x+=dh*22; updateScroll(); }; step();
+      const iv=setInterval(step,70); const up=()=>{clearInterval(iv);window.removeEventListener('mouseup',up);}; window.addEventListener('mouseup',up);
+    });
+  });
+  win.querySelectorAll('.sb-trough').forEach(tr=>{
+    tr.addEventListener('mousedown',e=>{ if(e.target.classList.contains('sb-thumb'))return;
+      const v=viewSize(), thumb=tr.querySelector('.sb-thumb');
+      if(tr.dataset.trough==='v'){ st.y+=(e.offsetY<thumb.offsetTop?-1:1)*v.h*0.9; } else { st.x+=(e.offsetX<thumb.offsetLeft?-1:1)*v.w*0.9; }
+      updateScroll();
+    });
+  });
+  function dragThumb(thumb,axis){
+    thumb.addEventListener('mousedown',e=>{ e.stopPropagation(); e.preventDefault();
+      const startM=axis==='v'?e.clientY:e.clientX, tr=thumb.parentElement, start=axis==='v'?st.y:st.x;
+      const move=ev=>{ const cur=axis==='v'?ev.clientY:ev.clientX;
+        const troughLen=axis==='v'?tr.clientHeight:tr.clientWidth, thumbLen=axis==='v'?thumb.offsetHeight:thumb.offsetWidth;
+        const max=axis==='v'?st.maxY:st.maxX, range=troughLen-thumbLen, d=(cur-startM)/(range||1)*max;
+        if(axis==='v')st.y=start+d; else st.x=start+d; updateScroll(); };
+      const up=()=>{window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up);};
+      window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+    });
+  }
+  dragThumb(win.querySelector('.sb-thumb[data-thumb="v"]'),'v');
+  dragThumb(win.querySelector('.sb-thumb[data-thumb="h"]'),'h');
+
+  /* ---------- File / Window menus (BeOS dropdowns) ---------- */
+  const FOLDERS=['Desktop','Documents','Downloads','Home','Applications'];
+  const ICON_KEYS=['generic','folder','browser','mail','messages','maps','photos','video','calendar','people','notes','settings','clock','calculator','terminal','text'];
+  let openMenuEl=null, openSpan=null;
+  function closeMenus(){ if(openMenuEl){openMenuEl.remove();openMenuEl=null;} if(openSpan){openSpan.classList.remove('open');openSpan=null;} }
+
+  function setIcon(app,key){
+    app.icon=key; const i=apps.indexOf(app);
+    if(i>=0 && grid.children[i]) grid.children[i].querySelector('.ic').innerHTML=BEOS_ICONS.get(key);
+  }
+  window.setOwnIcon=function(dataURL){
+    if(!selected) return; const i=apps.indexOf(selected);
+    if(i>=0 && grid.children[i]) grid.children[i].querySelector('.ic').innerHTML='<img src="'+dataURL+'" style="width:44px;height:44px;object-fit:contain">';
+  };
+
+  function fileSpec(){
+    const s=!!selected;
+    return [
+      {label:'Find', action:()=>post({a:'find'})},
+      {label:'New Folder', action:()=>post({a:'newfolder'})},
+      {sep:1},
+      {label:'Open', on:s, action:()=>post({a:'open',id:selected.id,path:selected.path,name:selected.name})},
+      {label:'Get Info', on:s, action:()=>post({a:'getinfo',path:selected.path,name:selected.name})},
+      {label:'Edit Name', on:s, action:()=>post({a:'editname',path:selected.path,name:selected.name})},
+      {label:'Duplicate', on:s, action:()=>post({a:'duplicate',path:selected.path,name:selected.name})},
+      {label:'Move to Trash', on:s, action:()=>post({a:'trash',path:selected.path,name:selected.name})},
+      {sep:1},
+      {label:'Move to', on:s, sub:FOLDERS.map(f=>({label:f, action:()=>post({a:'moveto',path:selected.path,dest:f})}))},
+      {label:'Copy to', on:s, sub:FOLDERS.map(f=>({label:f, action:()=>post({a:'copyto',path:selected.path,dest:f})}))},
+      {label:'Create Link', on:s, action:()=>post({a:'createlink',path:selected.path,name:selected.name})},
+      {label:'Icon', on:s, sub:[...ICON_KEYS.map(k=>({label:k, action:()=>setIcon(selected,k)})), {sep:1}, {label:'Own…', action:()=>post({a:'iconown'})}]},
+      {sep:1},
+      {label:'Add Ons', on:false},
+    ];
+  }
+  function windowSpec(){
+    return [
+      {label:'Icon View', action:()=>{ viewMode='icon'; selected=null; buildGrid(); }},
+      {label:'Mini Icon View', action:()=>{ viewMode='mini'; selected=null; buildGrid(); }},
+      {label:'List View', action:()=>{ viewMode='list'; selected=null; buildGrid(); }},
+      {sep:1},
+      {label:'Resize to fit', action:()=>post({a:'resizefit', w:Math.ceil(st.gridW+17), h:Math.ceil(st.gridH+60)})},
+      {label:'Clean Up', action:()=>{ selected=null; buildGrid(); }},
+      {label:'Select All', action:()=>grid.querySelectorAll('.be-item').forEach(s=>s.classList.add('sel'))},
+      {sep:1},
+      {label:'Open Parent', action:()=>post({a:'openparent'})},
+      {label:'Close', action:()=>post({a:'close'})},
+    ];
+  }
+  function buildMenu(spec){
+    const m=document.createElement('div'); m.className='menu';
+    spec.forEach(it=>{
+      if(it.sep){ const s=document.createElement('div'); s.className='sep'; m.appendChild(s); return; }
+      const d=document.createElement('div');
+      const enabled = it.on!==false;
+      d.className='mi'+(enabled?'':' disabled')+(it.sub?' has-sub':'');
+      d.textContent=it.label; m.appendChild(d);
+      if(!enabled) return;
+      if(it.sub){
+        let sub=null;
+        d.addEventListener('mouseenter',()=>{ if(sub)return; sub=buildMenu(it.sub); sub.classList.add('submenu'); d.appendChild(sub); });
+        d.addEventListener('mouseleave',()=>{ if(sub){sub.remove();sub=null;} });
+      } else {
+        d.addEventListener('mousedown',e=>{ e.stopPropagation(); const fn=it.action; closeMenus(); fn&&fn(); });
+      }
+    });
+    return m;
+  }
+  function openMenu(name,span){
+    closeMenus();
+    const m=buildMenu(name==='File'?fileSpec():windowSpec());
+    document.body.appendChild(m);
+    const r=span.getBoundingClientRect();
+    m.style.left=r.left+'px'; m.style.top=r.bottom+'px';
+    openMenuEl=m; openSpan=span; span.classList.add('open');
+  }
+  document.querySelectorAll('.be-menubar span').forEach(sp=>{
+    sp.addEventListener('mousedown',e=>{ e.stopPropagation(); if(openSpan===sp){closeMenus();return;} openMenu(sp.textContent.trim(),sp); });
+    sp.addEventListener('mouseenter',()=>{ if(openMenuEl && openSpan!==sp) openMenu(sp.textContent.trim(),sp); });
+  });
+  // click empty content → deselect + close menus
+  content.addEventListener('mousedown',e=>{ if(e.target===content||e.target===grid){ selected=null; grid.querySelectorAll('.be-item.sel').forEach(s=>s.classList.remove('sel')); } });
+  document.addEventListener('mousedown',e=>{ if(openMenuEl && !e.target.closest('.menu') && !e.target.closest('.be-menubar')) closeMenus(); });
+
+  window.addEventListener('resize',buildGrid);
+  buildGrid();
+</script>
+</body>
+</html>
