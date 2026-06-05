@@ -84,15 +84,19 @@ struct WelcomeFlowView: View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
-                Text("What's New in RetroMac").font(.title2.bold())
-                Text("Themes, Program Manager, SGI desktop & more").font(.subheadline).foregroundStyle(.secondary)
+                Text("What's New in RetroMac 1.7").font(.title2.bold())
+                Text("The big themes overhaul").font(.subheadline).foregroundStyle(.secondary)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("desktopcomputer", .cyan, "Retro Desktops", "Windows 3.1 Program Manager & SGI IRIX desktops — authentic windows, menus, and icons.")
-                    feature("paintpalette.fill", .pink, "More Themes", "Mac OS 9, Windows XP, BeOS, OS/2 Warp and more — each with matching wallpapers and shaders.")
-                    feature("camera.fill", .purple, "Screenshot with Shader", "Capture the screen with the active CRT/VHS effect baked in, via a global hotkey.")
-                    feature("gamecontroller.fill", .green, "Retro Games", "Drop ROMs to play with CRT shaders; native Quake engines included.")
+                    feature("macwindow.on.rectangle", .blue, "Themes Overhaul — BeOS, Windows XP & Mac OS 9",
+                            "A massive rework, as close to the originals as possible — including a native CPU widget and authentically styled windows in each theme.")
+                    feature("star.fill", .yellow, "New Theme: Maiks Favourite",
+                            "A custom theme with an animated Pac-Man dock and live previews of your running apps.")
+                    feature("camera.fill", .purple, "Webcam Support Stabilized",
+                            "More reliable virtual-camera toggling and retro effects for your video calls.")
+                    feature("checkmark.seal.fill", .green, "Stability & Fixes",
+                            "Numerous bug fixes and general stability improvements across the app.")
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
         }
