@@ -16,7 +16,17 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
     private var moveObserver: NSObjectProtocol?
     private var prev: (user: Double, system: Double, idle: Double, nice: Double)?
 
-    private override init() { super.init() }
+    private override init() {
+        super.init()
+        NotificationCenter.default.addObserver(self, selector: #selector(themeChanged),
+                                               name: .dockThemeChanged, object: nil)
+    }
+
+    /// Rebuild the widget fresh on theme switch (correct chrome, no stale collapsed/zoom state).
+    @objc private func themeChanged() {
+        timer?.invalidate(); timer = nil
+        panel?.close(); panel = nil; webView = nil; dragOverlay = nil
+    }
 
     func toggle() {
         if panel?.isVisible == true { close() } else { show() }
@@ -50,7 +60,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
 
             let p = NSPanel(contentRect: initial,
                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-            p.level = .floating
+            p.level = .normal   // behaves like a normal window (not always-on-top)
             p.isOpaque = false
             p.backgroundColor = .clear
             p.hasShadow = true
@@ -116,6 +126,8 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         pushCPUInfo()
+        // Theme the window chrome (BeOS tab vs Mac OS 9 Platinum) before sizing.
+        webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
         // Size the panel to the SCALED widget, then capture the draggable title-tab region.
         webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [0,0]") { [weak self] result, _ in
             guard let self = self, let panel = self.panel,
@@ -132,16 +144,39 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
     private func captureDragRegions() {
         webView?.evaluateJavaScript("window.regions ? window.regions() : []") { [weak self] result, _ in
             guard let self = self, let wv = self.webView, let overlay = self.dragOverlay,
-                  let a = result as? [NSNumber], a.count == 8 else { return }
-            let v = a.map { CGFloat(truncating: $0) }
-            // [tab.x, tab.y, tab.w, tab.h, close.x, close.y, close.w, close.h] — top-left CSS px.
-            let tabX = v[0], tabY = v[1], tabW = v[2], tabH = v[3]
-            let cX = v[4], cY = v[5], cW = v[6], cH = v[7]
+                  let a = (result as? [NSNumber])?.map({ CGFloat(truncating: $0) }), a.count >= 8 else { return }
+            // [title.x,y,w,h, close.x,y,w,h, (collapse…, zoom…)] — top-left CSS px.
+            let tabX = a[0], tabY = a[1], tabW = a[2], tabH = a[3]
             let H = wv.bounds.height
-            // Overlay sits over the tab strip (AppKit bottom-left coords).
             overlay.frame = CGRect(x: tabX, y: H - (tabY + tabH), width: tabW, height: tabH)
-            // Close box relative to the overlay (bottom-left within the tab).
-            overlay.closeRect = CGRect(x: cX - tabX, y: tabH - ((cY - tabY) + cH), width: cW, height: cH)
+            func local(_ i: Int) -> CGRect {
+                CGRect(x: a[i] - tabX, y: tabH - ((a[i+1] - tabY) + a[i+3]), width: a[i+2], height: a[i+3])
+            }
+            overlay.closeRect = local(4)
+            if a.count >= 16 {   // Mac OS 9: collapse (WindowShade) + zoom boxes
+                overlay.collapseRect = local(8)
+                overlay.zoomRect = local(12)
+                overlay.onCollapse = { [weak self] in self?.resizeToWidget("window.toggleCollapse ? window.toggleCollapse() : [0,0]") }
+                overlay.onZoom = { [weak self] in self?.resizeToWidget("window.toggleZoom ? window.toggleZoom() : [0,0]") }
+            } else {
+                overlay.collapseRect = .zero; overlay.zoomRect = .zero
+            }
+        }
+    }
+
+    /// Run a JS title-control that returns the new widget size; resize the panel
+    /// (top-left anchored) and re-capture the title regions.
+    private func resizeToWidget(_ js: String) {
+        webView?.evaluateJavaScript(js) { [weak self] result, _ in
+            guard let self = self, let panel = self.panel,
+                  let arr = result as? [NSNumber], arr.count == 2 else { return }
+            let w = CGFloat(truncating: arr[0]), h = CGFloat(truncating: arr[1])
+            guard w > 20, h > 20 else { return }
+            let top = panel.frame.maxY
+            panel.setContentSize(NSSize(width: w, height: h))
+            self.webView?.frame = NSRect(origin: .zero, size: NSSize(width: w, height: h))
+            var f = panel.frame; f.origin.y = top - f.height; panel.setFrame(f, display: true)
+            self.captureDragRegions()
         }
     }
 
@@ -229,11 +264,17 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
 /// fires because the web content's internal views swallow the event — hence this overlay.)
 final class DragOverlayView: NSView {
     var onClose: (() -> Void)?
+    var onCollapse: (() -> Void)?       // Mac OS 9 WindowShade (collapse box)
+    var onZoom: (() -> Void)?           // Mac OS 9 zoom box
     var closeRect: CGRect = .zero
+    var collapseRect: CGRect = .zero
+    var zoomRect: CGRect = .zero
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if closeRect.contains(p) { onClose?(); return }
+        if !collapseRect.isEmpty, collapseRect.contains(p) { onCollapse?(); return }
+        if !zoomRect.isEmpty, zoomRect.contains(p) { onZoom?(); return }
         window?.performDrag(with: event)
     }
 }

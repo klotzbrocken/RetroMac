@@ -68,6 +68,7 @@ final class ROMLauncher {
         let config = NSWorkspace.OpenConfiguration()
         config.arguments = emulator.launchArguments(romPath: romPath, system: system)
         config.activates = true
+        config.environment = RetroFrameTheme.gameEnv()   // theme hook (engines that support it use it)
 
         NSWorkspace.shared.openApplication(at: appURL, configuration: config) { app, error in
             if let error = error {

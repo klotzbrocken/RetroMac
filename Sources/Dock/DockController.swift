@@ -1005,7 +1005,11 @@ final class DockController {
         let current = theme.effectiveDockPosition
         let posTitle = NSMenuItem(title: "Dock Position", action: nil, keyEquivalent: "")
         let posMenu = NSMenu()
-        for (label, value) in [("Bottom", "bottom"), ("Left", "left"), ("Right", "right")] {
+        // Windows XP taskbar is bottom-only — hide the left/right options for that theme.
+        let isXP = theme.name.lowercased().contains("windows xp") || theme.name.lowercased().contains("xp")
+        var positions = [("Bottom", "bottom"), ("Left", "left"), ("Right", "right")]
+        if isXP { positions = [("Bottom", "bottom")] }
+        for (label, value) in positions {
             let mi = NSMenuItem(title: label, action: #selector(menuSetDockPosition(_:)), keyEquivalent: "")
             mi.target = self; mi.representedObject = value
             if value == current { mi.state = .on }

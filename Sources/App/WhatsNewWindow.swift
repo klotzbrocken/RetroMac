@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 1.6")
+                Text("What's New in RetroMac 1.7")
                     .font(.title2.bold())
-                Text("Bloom, Retro Viewport, Video Recording & more")
+                Text("The big themes overhaul")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,45 +21,31 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "sun.max.fill",
+                        icon: "macwindow.on.rectangle",
+                        color: .blue,
+                        title: "Themes Overhaul — BeOS, Windows XP & Mac OS 9",
+                        description: "A massive rework of the BeOS Classic, Windows XP and Macintosh Classic themes — as close to the originals as possible, including a native CPU widget and authentically styled windows in each theme."
+                    )
+
+                    featureRow(
+                        icon: "star.fill",
                         color: .yellow,
-                        title: "Bloom / Glow Effect",
-                        description: "GPU-accelerated bloom using MetalPerformanceShaders — adds authentic CRT phosphor glow to bright areas."
-                    )
-
-                    featureRow(
-                        icon: "viewfinder",
-                        color: .cyan,
-                        title: "Retro Viewport",
-                        description: "A movable, resizable shader lens — drag it over any part of your screen to see retro effects in real-time."
-                    )
-
-                    featureRow(
-                        icon: "record.circle",
-                        color: .red,
-                        title: "Video Recording",
-                        description: "Record your desktop with shader effects applied — export as .mov video with all CRT/VHS effects baked in."
-                    )
-
-                    featureRow(
-                        icon: "bolt.fill",
-                        color: .orange,
-                        title: "10 Lite Shaders",
-                        description: "CRT, LCD, VHS, Scanlines, Film Scratches and more — lightweight overlays without screen recording permission."
-                    )
-
-                    featureRow(
-                        icon: "gamecontroller.fill",
-                        color: .green,
-                        title: "Native Quake Engines",
-                        description: "Quake via vkQuake and Quake II via Yamagi Q2 — no RetroArch needed, better performance and per-game shaders."
+                        title: "New Theme: Maiks Favourite",
+                        description: "A custom theme with an animated Pac-Man dock and live previews of your running apps."
                     )
 
                     featureRow(
                         icon: "camera.fill",
                         color: .purple,
-                        title: "Webcam Lite Shaders",
-                        description: "All Lite shaders available for your virtual camera — retro video calls with no lag."
+                        title: "Webcam Support Stabilized",
+                        description: "More reliable virtual-camera toggling and retro effects for your video calls."
+                    )
+
+                    featureRow(
+                        icon: "checkmark.seal.fill",
+                        color: .green,
+                        title: "Stability & Fixes",
+                        description: "Numerous bug fixes and general stability improvements across the app."
                     )
                 }
                 .padding(.horizontal, 24)

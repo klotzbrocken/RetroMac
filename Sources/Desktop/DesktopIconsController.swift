@@ -140,6 +140,9 @@ final class DesktopIconsController {
             }
             updateTrashState()
         }
+        // Always refresh after a (re)build so a freshly created trash icon (e.g. after a
+        // theme switch) immediately reflects full/empty instead of waiting for the next poll.
+        updateTrashState()
 
         window?.orderFront(nil)
         isVisible = true

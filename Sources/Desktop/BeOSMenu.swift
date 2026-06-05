@@ -11,10 +11,12 @@ struct BeOSMenuItem {
     var title: String
     var icon: NSImage?
     var kind: Kind
+    /// App bundle id — enables the right-click "Set Custom Icon…" context menu.
+    var bundleID: String? = nil
 
     static func separator() -> BeOSMenuItem { BeOSMenuItem(title: "", icon: nil, kind: .separator) }
-    static func action(_ title: String, icon: NSImage? = nil, _ run: @escaping () -> Void) -> BeOSMenuItem {
-        BeOSMenuItem(title: title, icon: icon, kind: .action(run))
+    static func action(_ title: String, icon: NSImage? = nil, bundleID: String? = nil, _ run: @escaping () -> Void) -> BeOSMenuItem {
+        BeOSMenuItem(title: title, icon: icon, kind: .action(run), bundleID: bundleID)
     }
     static func submenu(_ title: String, icon: NSImage? = nil, _ items: [BeOSMenuItem]) -> BeOSMenuItem {
         BeOSMenuItem(title: title, icon: icon, kind: .submenu(items))
@@ -242,6 +244,15 @@ private final class BeOSMenuView: NSView {
     }
 
     override func mouseExited(with event: NSEvent) { /* keep highlight so submenu stays reachable */ }
+
+    override func rightMouseDown(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        for i in items.indices where rowRect(i).contains(p) {
+            guard let bid = items[i].bundleID else { return }
+            CustomIconPicker.present(for: bid, in: self, at: p) { [weak self] in self?.controller?.dismissAll() }
+            return
+        }
+    }
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)

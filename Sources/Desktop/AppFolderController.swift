@@ -6,13 +6,31 @@ import WebKit
 /// "Applikationen" folder. Movable by its yellow title-tab.
 final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
 
-    static let shared = AppFolderController()
+    enum Kind { case apps, tv }
 
+    static let shared = AppFolderController(kind: .apps)
+    /// Second instance reusing the same window design to list the RetroMac "Television" streams.
+    static let tv = AppFolderController(kind: .tv)
+
+    private let kind: Kind
     private var panel: NSPanel?
     private var webView: WKWebView?
     private var dragOverlay: DragOverlayView?
+    private var windowTitle: String { kind == .tv ? "Television" : "Applications" }
 
-    private override init() { super.init() }
+    private init(kind: Kind) {
+        self.kind = kind
+        super.init()
+        NotificationCenter.default.addObserver(self, selector: #selector(themeChanged),
+                                               name: .dockThemeChanged, object: nil)
+    }
+
+    /// On theme switch, drop the cached window so it rebuilds fresh (correct chrome, no
+    /// stale collapsed/zoom state — fixes the "only BeOS tab, no window" carry-over).
+    @objc private func themeChanged() {
+        panel?.close(); panel = nil; webView = nil; dragOverlay = nil
+        collapsed = false; preZoomFrame = nil; preCollapseHeight = 0
+    }
 
     func toggle() { if panel?.isVisible == true { close() } else { show() } }
 
@@ -36,6 +54,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
             let resize = ResizeOverlayView(frame: NSRect(x: initial.width - 15, y: 0, width: 15, height: 15))
             resize.autoresizingMask = [.minXMargin]   // pin to the bottom-right resize gadget
+            resize.onResize = { [weak self] p in self?.resizeBy(corner: p) }   // resize THIS instance's window
 
             let container = NSView(frame: initial)
             container.addSubview(wv)
@@ -44,7 +63,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
             let p = NSPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
-            p.level = .floating
+            p.level = .normal   // behaves like a normal window (not always-on-top)
             p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = container
@@ -73,20 +92,94 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     // MARK: - WKNavigationDelegate
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        let apps = Self.installedApps()
-        if let data = try? JSONSerialization.data(withJSONObject: apps),
+        // Theme the window chrome (BeOS tab vs Mac OS 9 Platinum) before populating.
+        webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        let escTitle = windowTitle.replacingOccurrences(of: "'", with: "\\'")
+        webView.evaluateJavaScript("window.setTitle && window.setTitle('\(escTitle)')")
+        let items = (kind == .tv) ? Self.tvItems() : Self.installedApps()
+        if let data = try? JSONSerialization.data(withJSONObject: items),
            let json = String(data: data, encoding: .utf8) {
             webView.evaluateJavaScript("window.setApps && window.setApps(\(json))")
         }
-        // Position the drag/close overlay over the yellow title-tab.
+        // Position the drag/close overlay over the title bar (BeOS tab or Mac OS 9 bar).
         webView.evaluateJavaScript("window.regions ? window.regions() : []") { [weak self] result, _ in
             guard let self = self, let wv = self.webView, let overlay = self.dragOverlay,
-                  let a = (result as? [NSNumber]).map({ $0.map { CGFloat(truncating: $0) } }), a.count == 8 else { return }
+                  let a = (result as? [NSNumber]).map({ $0.map { CGFloat(truncating: $0) } }),
+                  a.count >= 8 else { return }
             let tabX = a[0], tabY = a[1], tabW = a[2], tabH = a[3]
-            let cX = a[4], cY = a[5], cW = a[6], cH = a[7]
             let H = wv.bounds.height
             overlay.frame = CGRect(x: tabX, y: H - (tabY + tabH), width: tabW, height: tabH)
-            overlay.closeRect = CGRect(x: cX - tabX, y: tabH - ((cY - tabY) + cH), width: cW, height: cH)
+            self.titleStripHeight = tabH   // for WindowShade collapse
+            // Map an absolute web rect into overlay-local (flipped) coordinates.
+            func local(_ i: Int) -> CGRect {
+                CGRect(x: a[i] - tabX, y: tabH - ((a[i+1] - tabY) + a[i+3]), width: a[i+2], height: a[i+3])
+            }
+            overlay.closeRect = local(4)
+            if a.count >= 16 {   // Mac OS 9: collapse (WindowShade) + zoom boxes
+                overlay.collapseRect = local(8)
+                overlay.zoomRect = local(12)
+                overlay.onCollapse = { [weak self] in self?.toggleCollapse() }
+                overlay.onZoom = { [weak self] in self?.toggleZoom() }
+            } else {
+                overlay.collapseRect = .zero; overlay.zoomRect = .zero
+            }
+        }
+    }
+
+    // MARK: - Mac OS 9 title-bar controls
+
+    private var collapsed = false
+    private var preCollapseHeight: CGFloat = 0
+    private var preZoomFrame: NSRect?
+    private var titleStripHeight: CGFloat = 22   // active chrome's title-bar height (captured live)
+
+    /// WindowShade: roll the window up to just the title bar, or restore.
+    private func toggleCollapse() {
+        guard let panel = panel else { return }
+        if collapsed {
+            panel.setContentSize(NSSize(width: panel.frame.width, height: preCollapseHeight))
+            collapsed = false
+        } else {
+            preCollapseHeight = panel.frame.height
+            let top = panel.frame.maxY
+            panel.setContentSize(NSSize(width: panel.frame.width, height: titleStripHeight))
+            var f = panel.frame; f.origin.y = top - f.height; panel.setFrame(f, display: true)
+            collapsed = true
+        }
+        repositionOverlay()
+    }
+
+    /// Zoom: toggle between the current size and a standard full-content size.
+    private func toggleZoom() {
+        guard let panel = panel, let screen = NSScreen.main else { return }
+        if collapsed { toggleCollapse() }
+        let vf = screen.visibleFrame
+        if let f = preZoomFrame {
+            panel.setFrame(f, display: true); preZoomFrame = nil
+        } else {
+            preZoomFrame = panel.frame
+            let top = panel.frame.maxY
+            let w = min(820, vf.width - 20), h = min(620, vf.height - 40)
+            panel.setContentSize(NSSize(width: w, height: h))
+            var f = panel.frame; f.origin.y = top - f.height; panel.setFrame(f, display: true)
+        }
+        repositionOverlay()
+    }
+
+    /// Re-run regions() so the overlay tracks the title bar after a resize.
+    private func repositionOverlay() {
+        webView?.evaluateJavaScript("window.regions ? window.regions() : []") { [weak self] result, _ in
+            guard let self = self, let wv = self.webView, let overlay = self.dragOverlay,
+                  let a = (result as? [NSNumber]).map({ $0.map { CGFloat(truncating: $0) } }),
+                  a.count >= 8 else { return }
+            let tabX = a[0], tabY = a[1], tabW = a[2], tabH = a[3]
+            let H = wv.bounds.height
+            overlay.frame = CGRect(x: tabX, y: H - (tabY + tabH), width: tabW, height: tabH)
+            func local(_ i: Int) -> CGRect {
+                CGRect(x: a[i] - tabX, y: tabH - ((a[i+1] - tabY) + a[i+3]), width: a[i+2], height: a[i+3])
+            }
+            overlay.closeRect = local(4)
+            if a.count >= 16 { overlay.collapseRect = local(8); overlay.zoomRect = local(12) }
         }
     }
 
@@ -100,7 +193,10 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         switch a {
         case "open":
             if let id = d["id"] as? String {
-                if id.hasPrefix("/") { NSWorkspace.shared.open(URL(fileURLWithPath: id)) }
+                if id.hasPrefix("tv:") {
+                    // TV folder entry → open the stream via AppDelegate's retained TV window.
+                    NotificationCenter.default.post(name: .init("openTVBookmark"), object: String(id.dropFirst(3)))
+                } else if id.hasPrefix("/") { NSWorkspace.shared.open(URL(fileURLWithPath: id)) }
                 else { AppLauncher.launchOrActivate(bundleID: id) }
             }
         case "close":   close()
@@ -116,7 +212,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         case "moveto": if let p = path, let dest = d["dest"] as? String { transfer(p, to: dest, copy: false) }
         case "copyto": if let p = path, let dest = d["dest"] as? String { transfer(p, to: dest, copy: true) }
         case "createlink": if let p = path { createLink(p, name: name) }
-        case "iconown": pickOwnIcon()
+        case "iconown": pickOwnIcon(bundleID: d["id"] as? String)
         default: break
         }
     }
@@ -215,14 +311,29 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         panel.setFrame(NSRect(x: f.minX, y: f.maxY - newH, width: newW, height: newH), display: true)
     }
 
-    private func pickOwnIcon() {
+    private func pickOwnIcon(bundleID: String?) {
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.png, .jpeg, .tiff, .icns, .image]
         panel.allowsMultipleSelection = false; panel.message = "Choose an icon image"
         guard panel.runModal() == .OK, let url = panel.url,
               let data = try? Data(contentsOf: url) else { return }
+        // Persist per-theme (so the same icon also shows in the Dock / Start menu) when this
+        // entry is a real app; path-only entries fall back to the per-window visual below.
+        if let bid = bundleID, !bid.hasPrefix("/") {
+            ThemeManager.shared.setCustomIcon(for: bid, path: url.path)
+            reloadApps()   // rebuild the grid so the themed icon picks up the override
+        }
         let mime = url.pathExtension.lowercased() == "png" ? "image/png" : "image/jpeg"
         let dataURL = "data:\(mime);base64,\(data.base64EncodedString())"
         webView?.evaluateJavaScript("window.setOwnIcon && window.setOwnIcon('\(dataURL)')")
+    }
+
+    /// Re-scan installed apps and push them to the grid (picks up icon overrides).
+    private func reloadApps() {
+        let apps = Self.installedApps()
+        if let data = try? JSONSerialization.data(withJSONObject: apps),
+           let json = String(data: data, encoding: .utf8) {
+            webView?.evaluateJavaScript("window.setApps && window.setApps(\(json))")
+        }
     }
 
     // MARK: - Installed apps + BeOS icon mapping
@@ -267,7 +378,55 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         return "generic"
     }
 
+    /// Themed icon (mapped PNG, else real app icon) as a small PNG data URL — the Mac OS 9 /
+    /// Windows XP equivalent of BeOS' SVG icon set. Rendered into a FIXED 40×40 bitmap:
+    /// NSImage.tiffRepresentation would otherwise emit the largest underlying rep (often 512px),
+    /// so 30+ system icons produced multi-megabyte JSON that froze the main thread.
+    private static func iconDataURL(bundleID: String?, path: String) -> String? {
+        let img: NSImage
+        if let b = bundleID { img = ThemeManager.shared.icon(for: b, size: 40) }
+        else { img = NSWorkspace.shared.icon(forFile: path) }
+        return pngDataURL(img)
+    }
+
+    /// Render an NSImage into a fixed 40×40 PNG data URL (bounded size — see note above).
+    private static func pngDataURL(_ img: NSImage) -> String? {
+        let side = 40
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: side, pixelsHigh: side,
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+        rep.size = NSSize(width: side, height: side)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        img.draw(in: NSRect(x: 0, y: 0, width: side, height: side),
+                 from: .zero, operation: .copy, fraction: 1.0)
+        NSGraphicsContext.restoreGraphicsState()
+        guard let png = rep.representation(using: .png, properties: [:]) else { return nil }
+        return "data:image/png;base64," + png.base64EncodedString()
+    }
+
+    /// The RetroMac "Television" streams as folder items (id = "tv:<uuid>").
+    private static func tvItems() -> [[String: String]] {
+        // A themed music/TV icon (used by the Mac OS 9 / Windows XP grids that show it.img).
+        var img: String? = nil
+        if let dir = ThemeManager.shared.activeTheme?.iconsDirectory {
+            for cand in ["xp_music.png", "music.png", "video.png", "tv.png", "quicktime.png"] {
+                let u = dir.appendingPathComponent(cand)
+                if FileManager.default.fileExists(atPath: u.path), let i = NSImage(contentsOf: u) {
+                    img = pngDataURL(i); break
+                }
+            }
+        }
+        return AppSettings.shared.tvBookmarks.map { bm in
+            var rec: [String: String] = ["id": "tv:\(bm.id.uuidString)", "name": bm.name, "path": "", "icon": "video"]
+            if let img = img { rec["img"] = img }
+            return rec
+        }
+    }
+
     private static func installedApps() -> [[String: String]] {
+        let k = RetroFrameTheme.key()
+        let themed = (k == "macos9" || k == "winxp")
         let fm = FileManager.default
         var dirs = ["/Applications", "/Applications/Utilities",
                     "/System/Applications", "/System/Applications/Utilities"]
@@ -284,8 +443,10 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
                 guard !seen.contains(key) else { continue }
                 seen.insert(key)
                 let name = fm.displayName(atPath: path).replacingOccurrences(of: ".app", with: "")
-                out.append(["id": bundleID ?? path, "name": name, "path": path,
-                            "icon": iconKey(bundleID: bundleID, name: name)])
+                var rec: [String: String] = ["id": bundleID ?? path, "name": name, "path": path,
+                                             "icon": iconKey(bundleID: bundleID, name: name)]
+                if themed, let dataURL = iconDataURL(bundleID: bundleID, path: path) { rec["img"] = dataURL }
+                out.append(rec)
             }
         }
         return out.sorted { ($0["name"] ?? "").localizedCaseInsensitiveCompare($1["name"] ?? "") == .orderedAscending }
@@ -295,10 +456,11 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 /// Transparent grip over the BeOS bottom-right resize gadget: dragging it resizes the
 /// window (top-left anchored).
 final class ResizeOverlayView: NSView {
+    var onResize: ((NSPoint) -> Void)?   // owning controller resizes ITS window
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
     override func mouseDown(with event: NSEvent) {}
     override func mouseDragged(with event: NSEvent) {
-        AppFolderController.shared.resizeBy(corner: NSEvent.mouseLocation)
+        onResize?(NSEvent.mouseLocation)
     }
 }

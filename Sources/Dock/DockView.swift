@@ -2903,7 +2903,7 @@ final class DockView: NSView {
                 let icon = ThemeManager.shared.icon(for: bid, size: xpIconSize)
                 leftItems.append(MI(title: name, icon: icon, action: {
                     AppLauncher.launchOrActivate(bundleID: bid)
-                }))
+                }, bundleID: bid))
             }
         }
 
@@ -2936,7 +2936,7 @@ final class DockView: NSView {
                 let icon = ThemeManager.shared.icon(for: bid, size: xpIconSize)
                 leftItems.append(MI(title: name, icon: icon, action: {
                     AppLauncher.launchOrActivate(bundleID: bid)
-                }))
+                }, bundleID: bid))
             }
         }
 
@@ -2958,7 +2958,7 @@ final class DockView: NSView {
                 NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures"))
             }),
             MI(title: "My Music", icon: xpIcon("xp_music.png"), action: {
-                NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Music"))
+                AppFolderController.tv.show()   // TV-streams folder, styled like the App Folder
             }),
             MI(title: "My Computer", icon: xpIcon("xp_mycomputer.png"), action: {
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/"))
@@ -3031,11 +3031,11 @@ final class DockView: NSView {
                     .replacingOccurrences(of: ".app", with: "")
                 programItems.append(MI(title: name, icon: icon, action: {
                     AppLauncher.launchOrActivate(bundleID: bid)
-                }))
+                }, bundleID: bid))
             } else {
                 programItems.append(MI(title: bid, icon: icon, action: {
                     AppLauncher.launchOrActivate(bundleID: bid)
-                }))
+                }, bundleID: bid))
             }
         }
         let transient = runningAppsNotInDock()
@@ -3048,11 +3048,11 @@ final class DockView: NSView {
                         .replacingOccurrences(of: ".app", with: "")
                     programItems.append(MI(title: name, icon: icon, action: {
                         AppLauncher.launchOrActivate(bundleID: bid)
-                    }))
+                    }, bundleID: bid))
                 } else {
                     programItems.append(MI(title: bid, icon: icon, action: {
                         AppLauncher.launchOrActivate(bundleID: bid)
-                    }))
+                    }, bundleID: bid))
                 }
             }
         }

@@ -7,6 +7,7 @@ import WebKit
 final class TVBrowserWindow: NSObject {
     private var window: NSWindow?
     private var savedFrame: NSRect?   // non-nil while in manual full-screen
+    private var mac9PreCollapseHeight: CGFloat?   // non-nil while Mac OS 9 WindowShade-collapsed
     private var player: AVPlayer?
     private var playerView: AVPlayerView?
     private var webView: WKWebView?
@@ -46,7 +47,7 @@ final class TVBrowserWindow: NSObject {
                              y: screen.frame.midY - size.height / 2)
         let contentRect = NSRect(origin: origin, size: size)
 
-        let win = NSWindow(
+        let win = KeyableWindow(
             contentRect: contentRect,
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
@@ -61,19 +62,23 @@ final class TVBrowserWindow: NSObject {
         // full-screen too.
         win.collectionBehavior = [.fullScreenPrimary]
 
-        // Hide centered title, show name right-aligned
+        // Hide centered title; show a theme-dependent title bar (general hook for our own
+        // windows). BeOS → yellow Lasche chip; other themes → plain right-aligned name.
         win.titleVisibility = .hidden
         win.title = bookmark.name
 
-        let titleLabel = NSTextField(labelWithString: bookmark.name)
-        titleLabel.font = .systemFont(ofSize: 11, weight: .medium)
-        titleLabel.textColor = .secondaryLabelColor
-        titleLabel.alignment = .right
-
-        let accessory = NSTitlebarAccessoryViewController()
-        accessory.view = titleLabel
-        accessory.layoutAttribute = .right
-        win.addTitlebarAccessoryViewController(accessory)
+        // Default theme: native right-aligned name. BeOS / Mac OS 9 get a borderless themed
+        // frame applied AFTER the content view is set up (see applyBeOSChrome / applyMac9Chrome).
+        if RetroFrameTheme.key() == "default" {
+            let titleLabel = NSTextField(labelWithString: bookmark.name)
+            titleLabel.font = .systemFont(ofSize: 11, weight: .medium)
+            titleLabel.textColor = .secondaryLabelColor
+            titleLabel.alignment = .right
+            let accessory = NSTitlebarAccessoryViewController()
+            accessory.view = titleLabel
+            accessory.layoutAttribute = .right
+            win.addTitlebarAccessoryViewController(accessory)
+        }
 
         // Determine effective preset: bookmark-specific > active global preset > app default.
         let effectivePresetID: String?
@@ -107,6 +112,13 @@ final class TVBrowserWindow: NSObject {
             setupWebView(url: url, size: size, window: win)
         }
 
+        // BeOS theme: wrap the content in a borderless window with a protruding yellow Lasche.
+        applyBeOSChrome(win, title: bookmark.name)
+        // Mac OS 9 theme: wrap the content in a borderless Platinum window.
+        applyMac9Chrome(win, title: bookmark.name)
+        // Windows XP theme: wrap the content in a borderless Luna window.
+        applyWinXPChrome(win, title: bookmark.name)
+
         // Double-click the video toggles full-screen (keeps the CRT shader + float level).
         if let cv = win.contentView {
             let dbl = NSClickGestureRecognizer(target: self, action: #selector(toggleTVFullscreen))
@@ -117,6 +129,85 @@ final class TVBrowserWindow: NSObject {
 
         win.makeKeyAndOrderFront(nil)
         self.window = win
+    }
+
+    /// BeOS theme: convert the TV window to a borderless window with a protruding yellow
+    /// Lasche (drag to move, click the box to close); the content sits below the tab.
+    private func applyBeOSChrome(_ win: NSWindow, title: String) {
+        guard RetroFrameTheme.key() == "beos", let content = win.contentView else { return }
+        let tab = BeOSTVChromeView.tabH
+        let size = win.frame.size
+        win.styleMask = [.borderless, .resizable]
+        win.isOpaque = false
+        win.backgroundColor = .clear
+        win.hasShadow = true
+        content.frame = NSRect(x: 0, y: 0, width: size.width, height: size.height - tab)
+        content.autoresizingMask = [.width, .height]
+        let chrome = BeOSTVChromeView(frame: NSRect(origin: .zero, size: size))
+        chrome.wantsLayer = true
+        chrome.title = title
+        chrome.onClose = { [weak self] in self?.window?.close() }
+        chrome.addSubview(content)
+        win.contentView = chrome
+    }
+
+    /// Mac OS 9 theme: borderless Platinum window — pinstripe title bar with close box left
+    /// and collapse (WindowShade) + zoom boxes right; content below.
+    private func applyMac9Chrome(_ win: NSWindow, title: String) {
+        guard RetroFrameTheme.key() == "macos9", let content = win.contentView else { return }
+        let bar = Mac9TVChromeView.barH
+        let size = win.frame.size
+        win.styleMask = [.borderless, .resizable]
+        win.isOpaque = false
+        win.backgroundColor = .clear
+        win.hasShadow = true
+        content.frame = NSRect(x: 0, y: 0, width: size.width, height: size.height - bar)
+        content.autoresizingMask = [.width, .height]
+        let chrome = Mac9TVChromeView(frame: NSRect(origin: .zero, size: size))
+        chrome.wantsLayer = true
+        chrome.title = title
+        chrome.onClose = { [weak self] in self?.window?.close() }
+        chrome.onCollapse = { [weak self] in self?.toggleMac9Collapse() }
+        chrome.onZoom = { [weak self] in self?.toggleTVFullscreen() }
+        chrome.addSubview(content)
+        win.contentView = chrome
+    }
+
+    /// Windows XP theme: borderless Luna window — gradient title bar with system icon left
+    /// and minimise / maximise / close caption buttons right; content inset by the 4px frame.
+    private func applyWinXPChrome(_ win: NSWindow, title: String) {
+        guard RetroFrameTheme.key() == "winxp", let content = win.contentView else { return }
+        let bar = WinXPTVChromeView.barH, b = WinXPTVChromeView.border
+        let size = win.frame.size
+        win.styleMask = [.borderless, .resizable]
+        win.isOpaque = false
+        win.backgroundColor = .clear
+        win.hasShadow = true
+        content.frame = NSRect(x: b, y: b, width: size.width - 2 * b, height: size.height - bar - b)
+        content.autoresizingMask = [.width, .height]
+        let chrome = WinXPTVChromeView(frame: NSRect(origin: .zero, size: size))
+        chrome.wantsLayer = true
+        chrome.title = title
+        chrome.onClose = { [weak self] in self?.window?.close() }
+        chrome.onMin = { [weak self] in self?.toggleMac9Collapse() }   // roll up (no taskbar for the float window)
+        chrome.onMax = { [weak self] in self?.toggleTVFullscreen() }
+        chrome.addSubview(content)
+        win.contentView = chrome
+    }
+
+    /// Mac OS 9 WindowShade: roll the TV window up to just the title bar, or restore.
+    private func toggleMac9Collapse() {
+        guard let win = window else { return }
+        let bar = Mac9TVChromeView.barH
+        if let h = mac9PreCollapseHeight {
+            var f = win.frame; let top = f.maxY; f.size.height = h; f.origin.y = top - h
+            win.setFrame(f, display: true, animate: true)
+            mac9PreCollapseHeight = nil
+        } else {
+            mac9PreCollapseHeight = win.frame.height
+            var f = win.frame; let top = f.maxY; f.size.height = bar; f.origin.y = top - bar
+            win.setFrame(f, display: true, animate: true)
+        }
     }
 
     /// Manual full-screen: fill the current screen and hide the title bar, keeping the

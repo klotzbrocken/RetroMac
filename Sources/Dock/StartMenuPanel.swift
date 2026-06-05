@@ -16,14 +16,18 @@ final class StartMenuPanel: NSPanel {
         let submenuItems: [MenuItem]?
         let isSeparator: Bool
         let isBold: Bool
+        /// App bundle id, when this entry represents a launchable app — enables the
+        /// right-click "Set Custom Icon…" context menu (persisted via ThemeManager).
+        let bundleID: String?
 
-        init(title: String, icon: NSImage? = nil, action: (() -> Void)? = nil, submenuItems: [MenuItem]? = nil, isBold: Bool = false) {
+        init(title: String, icon: NSImage? = nil, action: (() -> Void)? = nil, submenuItems: [MenuItem]? = nil, isBold: Bool = false, bundleID: String? = nil) {
             self.title = title
             self.icon = icon
             self.action = action
             self.submenuItems = submenuItems
             self.isSeparator = false
             self.isBold = isBold
+            self.bundleID = bundleID
         }
 
         init(separator: Bool) {
@@ -33,6 +37,7 @@ final class StartMenuPanel: NSPanel {
             self.submenuItems = nil
             self.isSeparator = true
             self.isBold = false
+            self.bundleID = nil
         }
     }
 
@@ -46,6 +51,50 @@ final class StartMenuPanel: NSPanel {
         let userName: String
         let logOffIcon: NSImage?
         let shutDownIcon: NSImage?
+    }
+
+    // MARK: - macOS account picture (for the XP start-menu avatar)
+
+    private static var cachedUserPicture: NSImage?? = nil
+    static func macUserPicture() -> NSImage? {
+        if let cached = cachedUserPicture { return cached }
+        let img = loadMacUserPicture()
+        cachedUserPicture = .some(img)
+        return img
+    }
+    private static func dsclRead(_ key: String) -> String {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/dscl")
+        p.arguments = [".", "-read", "/Users/\(NSUserName())", key]
+        let pipe = Pipe(); p.standardOutput = pipe; p.standardError = Pipe()
+        do { try p.run() } catch { return "" }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        return String(data: data, encoding: .utf8) ?? ""
+    }
+    private static func loadMacUserPicture() -> NSImage? {
+        // Custom photo set in System Settings is stored as a hex JPEGPhoto attribute.
+        let jpeg = dsclRead("JPEGPhoto")
+        if jpeg.contains("JPEGPhoto") {
+            let hex = jpeg.replacingOccurrences(of: "JPEGPhoto:", with: "")
+                .components(separatedBy: .whitespacesAndNewlines).joined()
+            if hex.count > 64 {
+                var bytes = [UInt8](); bytes.reserveCapacity(hex.count / 2)
+                var idx = hex.startIndex
+                while let next = hex.index(idx, offsetBy: 2, limitedBy: hex.endIndex), next <= hex.endIndex {
+                    if let b = UInt8(hex[idx..<next], radix: 16) { bytes.append(b) }
+                    idx = next
+                }
+                if let img = NSImage(data: Data(bytes)) { return img }
+            }
+        }
+        // Otherwise the Picture attribute points to an image file on disk.
+        let pic = dsclRead("Picture")
+        if let line = pic.components(separatedBy: "\n").first(where: { $0.contains("/") }) {
+            let path = line.replacingOccurrences(of: "Picture:", with: "").trimmingCharacters(in: .whitespaces)
+            if let img = NSImage(contentsOfFile: path) { return img }
+        }
+        return nil
     }
 
     init() {
@@ -287,6 +336,19 @@ private final class XPStartMenuContentView: NSView {
         }
     }
 
+    override func rightMouseDown(with event: NSEvent) {
+        let local = convert(event.locationInWindow, from: nil)
+        guard let section = hitSection(at: local) else { return }
+        let item: StartMenuPanel.MenuItem?
+        switch section {
+        case .left(let idx):  item = data.leftItems[idx]
+        case .right(let idx): item = data.rightItems[idx]
+        default:              item = nil
+        }
+        guard let it = item, let bid = it.bundleID else { return }
+        CustomIconPicker.present(for: bid, in: self, at: local) { [weak self] in self?.onDismiss?() }
+    }
+
     private func hitSection(at point: NSPoint) -> HoverSection? {
         let bw = borderWidth
         let cHeight = contentHeight
@@ -389,8 +451,14 @@ private final class XPStartMenuContentView: NSView {
         avatarFrame.lineWidth = 2
         avatarFrame.stroke()
 
-        // Draw person SF Symbol inside
-        if let personImg = NSImage(systemSymbolName: "person.fill", accessibilityDescription: "User") {
+        // Real macOS account picture, clipped to the rounded avatar frame; falls back to the
+        // generic person glyph when no account picture is available.
+        if let photo = StartMenuPanel.macUserPicture() {
+            NSGraphicsContext.saveGraphicsState()
+            NSBezierPath(roundedRect: avatarRect.insetBy(dx: 1, dy: 1), xRadius: 3, yRadius: 3).addClip()
+            photo.draw(in: avatarRect.insetBy(dx: 1, dy: 1), from: .zero, operation: .sourceOver, fraction: 1.0)
+            NSGraphicsContext.restoreGraphicsState()
+        } else if let personImg = NSImage(systemSymbolName: "person.fill", accessibilityDescription: "User") {
             let config = NSImage.SymbolConfiguration(pointSize: 20, weight: .regular)
             if let configured = personImg.withSymbolConfiguration(config) {
                 let imgSize: CGFloat = 24
@@ -765,6 +833,13 @@ private final class ClassicStartMenuContentView: NSView {
         onDismiss?()
     }
 
+    override func rightMouseDown(with event: NSEvent) {
+        let local = convert(event.locationInWindow, from: nil)
+        guard let idx = itemIndex(at: local), !items[idx].isSeparator,
+              let bid = items[idx].bundleID else { return }
+        CustomIconPicker.present(for: bid, in: self, at: local) { [weak self] in self?.onDismiss?() }
+    }
+
     func dismissSubmenu() {
         submenuPanel?.dismiss()
         submenuPanel = nil
@@ -986,6 +1061,13 @@ private final class SubmenuContentView: NSView {
         guard let idx = itemIndex(at: local), !items[idx].isSeparator else { return }
         items[idx].action?()
         onDismiss?()
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        let local = convert(event.locationInWindow, from: nil)
+        guard let idx = itemIndex(at: local), !items[idx].isSeparator,
+              let bid = items[idx].bundleID else { return }
+        CustomIconPicker.present(for: bid, in: self, at: local) { [weak self] in self?.onDismiss?() }
     }
 
     private func itemIndex(at point: NSPoint) -> Int? {

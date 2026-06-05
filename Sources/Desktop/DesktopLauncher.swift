@@ -37,6 +37,15 @@ enum DesktopLauncher {
         case "appfolder":
             AppFolderController.shared.show()
 
+        case "tvfolder":
+            AppFolderController.tv.show()
+
+        case "cpumonitor":
+            CPUMonitorController.shared.show()
+
+        case "pacman":
+            PacmanGame.launch()
+
         default:
             break
         }
