@@ -8,7 +8,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static weak var shared: AppDelegate?
 
     private var statusItem: NSStatusItem!
-    private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    // Sparkle only runs in the notarized Developer-ID build. Debug ("…​.dev") bundles are
+    // signed with Apple Development and aren't notarized, so Gatekeeper rejects Sparkle's
+    // installer helpers ("An error occurred while launching the installer"). Don't start it.
+    private static let sparkleEnabled = !(Bundle.main.bundleIdentifier ?? "").hasSuffix(".dev")
+    private let updaterController = SPUStandardUpdaterController(startingUpdater: AppDelegate.sparkleEnabled, updaterDelegate: nil, userDriverDelegate: nil)
     private(set) var overlayController: OverlayWindowController?
     private(set) var crtLiteOverlay: CRTLiteOverlay?
     private(set) var isActive = false
