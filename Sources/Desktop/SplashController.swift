@@ -10,9 +10,17 @@ final class SplashController {
 
     private init() {}
 
+    /// Themes whose boot screen is shown by default. Per request, only Windows XP boots with
+    /// a splash; other themes define a splash image but stay silent unless this list grows.
+    private func splashEnabledByDefault(_ theme: ThemeBundle) -> Bool {
+        let n = theme.config.name.lowercased()
+        return n.contains("windows xp") || n == "xp" || n.hasPrefix("xp ")
+    }
+
     /// Show the splash for the active theme if enabled. No-op otherwise.
     func showIfEnabled(for theme: ThemeBundle) {
         guard AppSettings.shared.showSplashScreen,
+              splashEnabledByDefault(theme),
               let file = theme.config.splashScreen else { return }
         let url = theme.url.appendingPathComponent(file)
         guard let image = NSImage(contentsOf: url), let screen = NSScreen.main else { return }

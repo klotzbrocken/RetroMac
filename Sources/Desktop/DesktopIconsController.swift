@@ -11,6 +11,7 @@ final class DesktopIconsController {
     private var iconViews: [DesktopIconView] = []
     private var isVisible = false
     private var trashObserver: Any?
+    private var screenObserver: Any?
     private var trashPollTimer: Timer?
     private var custom = DesktopStore.ThemeCustom()
     private var themeName: String { ThemeManager.shared.activeTheme?.config.name ?? "?" }
@@ -46,6 +47,10 @@ final class DesktopIconsController {
             DistributedNotificationCenter.default().removeObserver(obs)
             trashObserver = nil
         }
+        if let obs = screenObserver {
+            NotificationCenter.default.removeObserver(obs)
+            screenObserver = nil
+        }
         trashPollTimer?.invalidate(); trashPollTimer = nil
         window?.orderOut(nil)
         window = nil
@@ -67,7 +72,12 @@ final class DesktopIconsController {
                 backing: .buffered,
                 defer: false
             )
-            panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
+            // Sit just BELOW normal app windows (behind every app) but NOT at the desktop /
+            // desktop-icon level: at desktop level macOS Sonoma treats a click here as a
+            // "click wallpaper to reveal desktop" gesture and slides all windows off-screen.
+            // A sub-normal level keeps the icons behind apps while a click is consumed as a
+            // normal window click, so the reveal gesture no longer fires.
+            panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.normalWindow)) - 1)
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = false
@@ -86,7 +96,7 @@ final class DesktopIconsController {
         }
 
         guard let contentView = window?.contentView else { return }
-        window?.setFrame(screenFrame, display: false)
+        window?.setFrame(screenFrame, display: true)
         contentView.frame = NSRect(origin: .zero, size: screenFrame.size)
 
         // Remove old icons
@@ -140,11 +150,26 @@ final class DesktopIconsController {
             }
             updateTrashState()
         }
+        // Re-frame + rebuild when the display configuration changes. On a headless Mac (e.g.
+        // Mac mini with one external 1080p monitor) the screen's final frame is sometimes
+        // reported a beat after launch/wake; without this the panel keeps a stale frame,
+        // showing a transparent border around the desktop and icons that only paint after a
+        // click forces a redraw.
+        if screenObserver == nil {
+            screenObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil, queue: .main
+            ) { [weak self] _ in
+                guard let self = self, self.isVisible else { return }
+                self.update()
+            }
+        }
         // Always refresh after a (re)build so a freshly created trash icon (e.g. after a
         // theme switch) immediately reflects full/empty instead of waiting for the next poll.
         updateTrashState()
 
         window?.orderFront(nil)
+        window?.displayIfNeeded()   // paint immediately — don't wait for a desktop click
         isVisible = true
     }
 
