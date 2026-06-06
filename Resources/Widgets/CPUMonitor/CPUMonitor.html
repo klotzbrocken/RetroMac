@@ -262,6 +262,22 @@
   .xp-close::before,.xp-close::after{content:"";position:absolute;left:50%;top:50%;width:20px;height:3px;background:#fff;border-radius:2px;}
   .xp-close::before{transform:translate(-50%,-50%) rotate(45deg);}
   .xp-close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+
+  /* ===== Maiks Favourite — pixel-art macOS window (counter-scaled 1/0.6) ===== */
+  .mf-title{display:none;}
+  body.theme-maiksfav .tab,body.theme-maiksfav .marker{display:none;}
+  body.theme-maiksfav .window{background:#ECECEC;border:3px solid #262626;border-radius:16px;overflow:hidden;
+    box-shadow:inset 3px 3px 0 #ffffff, inset -3px -3px 0 #c4c4c4, 8px 8px 0 rgba(0,0,0,.35);}
+  body.theme-maiksfav .body{border:none;box-shadow:none;margin:0 7px 7px;}
+  body.theme-maiksfav .mf-title{display:flex;align-items:center;position:relative;height:46px;gap:13px;padding:0 16px;
+    background:#E3E3E3;border-bottom:3px solid #262626;
+    font-family:"Pixelify Sans","Silkscreen","ChicagoFLF",monospace;}
+  .mf-lights{display:flex;gap:13px;align-items:center;z-index:2;}
+  .mf-btn{width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,.30);cursor:pointer;
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.5);}
+  .mf-close{background:#FF5F57;} .mf-min{background:#FEBC2E;} .mf-zoom{background:#28C840;}
+  .mf-caption{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font-size:23px;font-weight:700;color:#3a3a3a;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -284,6 +300,15 @@
             <span class="xp-btn xp-max" id="xpmax"></span>
             <span class="xp-btn xp-close" id="xpclose" title="Schließen"></span>
           </span>
+        </div>
+        <!-- Maiks Favourite pixel-macOS title bar (theme-maiksfav only) -->
+        <div class="mf-title" id="mftitle">
+          <span class="mf-lights">
+            <span class="mf-btn mf-close" id="mfclose" title="Schließen"></span>
+            <span class="mf-btn mf-min" id="mfmin"></span>
+            <span class="mf-btn mf-zoom" id="mfzoom"></span>
+          </span>
+          <span class="mf-caption">CPU Monitor</span>
         </div>
         <div class="tab"><span class="closebox" id="closebox" title="Schließen"></span><b>CPU Monitor</b></div>
         <div class="marker"></div>
@@ -407,11 +432,15 @@
   }
   document.getElementById('m9close').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
   document.getElementById('xpclose').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
+  document.getElementById('mfclose').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
 
   // Title rects (already reflect the transform → scaled viewport px).
   window.regions = function(){
     const cl = document.body.classList;
     const R = id => { const e = document.getElementById(id) || document.querySelector(id); const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height]; };
+    if (cl.contains('theme-maiksfav')) {
+      return [...R('mftitle'), ...R('mfclose'), ...R('mfmin'), ...R('mfzoom')];
+    }
     if (cl.contains('theme-winxp')) {
       return [...R('xptitle'), ...R('xpclose'), ...R('xpmin'), ...R('xpmax')];
     }

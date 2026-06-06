@@ -19,7 +19,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var currentPresetName: String!
     private var hotKeyRef: EventHotKeyRef?
     private var screenshotHotKeyRef: EventHotKeyRef?
+    private var menuBarHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
+    private var menuBarHiddenByHotkey = false
     private(set) var currentIntensity: Float!
     private(set) var currentVignetteIntensity: Float!
     private let settingsWindow = SettingsWindowController()
@@ -1081,6 +1083,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // 3. Toggle system menu bar hotkey (id: 7) — require at least one system modifier
+        if settings.menuBarToggleHotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 7)
+            if RegisterEventHotKey(settings.menuBarToggleHotkeyCode, settings.menuBarToggleHotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                menuBarHotKeyRef = ref
+            }
+        }
+
         // Install event handler (once)
         if eventHandlerRef == nil {
             var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
@@ -1097,6 +1109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     switch hkID.id {
                     case 1: DispatchQueue.main.async { d.toggleOverlay() }
                     case 6: DispatchQueue.main.async { d.captureScreenshotWithShader() }
+                    case 7: DispatchQueue.main.async { d.toggleMenuBar() }
                     default: return OSStatus(eventNotHandledErr)
                     }
                     return noErr
@@ -1115,6 +1128,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             UnregisterEventHotKey(ref)
             screenshotHotKeyRef = nil
         }
+        if let ref = menuBarHotKeyRef {
+            UnregisterEventHotKey(ref)
+            menuBarHotKeyRef = nil
+        }
+    }
+
+    /// Global hotkey: toggle the system menu bar auto-hide on/off.
+    func toggleMenuBar() {
+        menuBarHiddenByHotkey.toggle()
+        SystemUIHelper.setMenuBarAutoHide(menuBarHiddenByHotkey)
     }
 
     // MARK: - Per-App Launch Observer

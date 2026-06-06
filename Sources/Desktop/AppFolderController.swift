@@ -410,7 +410,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         // A themed music/TV icon (used by the Mac OS 9 / Windows XP grids that show it.img).
         var img: String? = nil
         if let dir = ThemeManager.shared.activeTheme?.iconsDirectory {
-            for cand in ["xp_music.png", "music.png", "video.png", "tv.png", "quicktime.png"] {
+            for cand in ["TVStreams.icns", "xp_music.png", "music.png", "video.png", "tv.png", "quicktime.png"] {
                 let u = dir.appendingPathComponent(cand)
                 if FileManager.default.fileExists(atPath: u.path), let i = NSImage(contentsOf: u) {
                     img = pngDataURL(i); break
@@ -426,7 +426,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
     private static func installedApps() -> [[String: String]] {
         let k = RetroFrameTheme.key()
-        let themed = (k == "macos9" || k == "winxp")
+        let themed = (k == "macos9" || k == "winxp" || k == "maiksfav")
         let fm = FileManager.default
         var dirs = ["/Applications", "/Applications/Utilities",
                     "/System/Applications", "/System/Applications/Utilities"]

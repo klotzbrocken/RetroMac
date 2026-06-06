@@ -275,17 +275,37 @@ private final class DockStackView: NSView, NSDraggingSource {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        NSColor(calibratedWhite: 0.96, alpha: 0.98).setFill(); bounds.fill()
-        (dropActive ? NSColor(calibratedRed: 0.2, green: 0.5, blue: 1, alpha: 1)
-                    : NSColor(calibratedWhite: 0.30, alpha: 1)).setStroke()
-        let border = NSBezierPath(rect: bounds.insetBy(dx: 1, dy: 1)); border.lineWidth = dropActive ? 2 : 1; border.stroke()
-
         let header = NSRect(x: 0, y: 0, width: bounds.width, height: headerH)
-        NSColor(calibratedRed: 0.16, green: 0.16, blue: 0.18, alpha: 1).setFill(); header.fill()
-        let hAttrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 11, weight: .bold),
-            .foregroundColor: NSColor(calibratedRed: 1.0, green: 0.85, blue: 0.0, alpha: 1)]
-        (folderURL?.lastPathComponent ?? "Folder").draw(at: NSPoint(x: 8, y: 4), withAttributes: hAttrs)
+        if RetroFrameTheme.key() == "maiksfav" {
+            // Pixel-art macOS window (matches the CPU widget / App Folder in this theme).
+            NSColor(calibratedWhite: 0.925, alpha: 1).setFill(); bounds.fill()   // #ECECEC
+            NSColor(calibratedWhite: 0.149, alpha: 1).setStroke()                 // #262626 outline
+            let b = NSBezierPath(rect: bounds.insetBy(dx: 1, dy: 1)); b.lineWidth = 2; b.stroke()
+            NSColor(calibratedWhite: 0.89, alpha: 1).setFill(); header.fill()     // #E3E3E3 toolbar
+            NSColor(calibratedWhite: 0.149, alpha: 1).setStroke()
+            let sep = NSBezierPath(); sep.move(to: NSPoint(x: 0, y: headerH)); sep.line(to: NSPoint(x: bounds.width, y: headerH)); sep.lineWidth = 2; sep.stroke()
+            let dots = [NSColor(srgbRed: 1, green: 0.373, blue: 0.341, alpha: 1),
+                        NSColor(srgbRed: 0.996, green: 0.737, blue: 0.180, alpha: 1),
+                        NSColor(srgbRed: 0.157, green: 0.784, blue: 0.251, alpha: 1)]
+            var dx: CGFloat = 9
+            for c in dots { c.setFill(); NSBezierPath(ovalIn: NSRect(x: dx, y: headerH/2 - 5, width: 10, height: 10)).fill(); dx += 16 }
+            let title = folderURL?.lastPathComponent ?? "Folder"
+            let ha: [NSAttributedString.Key: Any] = [
+                .font: NSFont(name: "Pixelify Sans", size: 12) ?? .boldSystemFont(ofSize: 12),
+                .foregroundColor: NSColor(calibratedWhite: 0.23, alpha: 1)]
+            let ts = title.size(withAttributes: ha)
+            title.draw(at: NSPoint(x: bounds.width/2 - ts.width/2, y: 4), withAttributes: ha)
+        } else {
+            NSColor(calibratedWhite: 0.96, alpha: 0.98).setFill(); bounds.fill()
+            (dropActive ? NSColor(calibratedRed: 0.2, green: 0.5, blue: 1, alpha: 1)
+                        : NSColor(calibratedWhite: 0.30, alpha: 1)).setStroke()
+            let border = NSBezierPath(rect: bounds.insetBy(dx: 1, dy: 1)); border.lineWidth = dropActive ? 2 : 1; border.stroke()
+            NSColor(calibratedRed: 0.16, green: 0.16, blue: 0.18, alpha: 1).setFill(); header.fill()
+            let hAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 11, weight: .bold),
+                .foregroundColor: NSColor(calibratedRed: 1.0, green: 0.85, blue: 0.0, alpha: 1)]
+            (folderURL?.lastPathComponent ?? "Folder").draw(at: NSPoint(x: 8, y: 4), withAttributes: hAttrs)
+        }
 
         if files.isEmpty {
             let a: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 12),

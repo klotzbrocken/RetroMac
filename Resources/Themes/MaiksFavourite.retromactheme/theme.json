@@ -48,14 +48,17 @@
     "offset": 0
   },
   "desktopIcons": [
-    { "name": "Trash", "icon": "trash.png", "iconFull": "trash_full.png", "type": "trash", "gridX": 0, "gridY": 0 }
+    { "name": "Trash", "icon": "trash.png", "iconFull": "trash_full.png", "type": "trash", "gridX": 0, "gridY": 0 },
+    { "name": "Applications", "icon": "finder.png", "type": "appfolder", "gridX": 0, "gridY": 1 },
+    { "name": "CPU", "icon": "Proz.icns", "type": "cpumonitor", "gridX": 0, "gridY": 2 },
+    { "name": "Music", "icon": "TVStreams.icns", "type": "tvfolder", "gridX": 0, "gridY": 3 }
   ],
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-retro-lite",
   "iconMappings": {
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",
-    "ai.perplexity.comet": "comet.png",
+    "ai.perplexity.comet": "comet.icns",
     "com.apple.mail": "mail.png",
     "com.apple.Photos": "photos.png",
     "com.apple.MobileSMS": "messages.png",

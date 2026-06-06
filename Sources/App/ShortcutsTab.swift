@@ -103,10 +103,12 @@ struct ShortcutsTab: View {
                     onSet: { code, mods in
                         settings.menuBarToggleHotkeyCode = code
                         settings.menuBarToggleHotkeyModifiers = mods
+                        AppDelegate.shared?.registerHotkey()
                     },
                     onClear: {
                         settings.menuBarToggleHotkeyCode = 0
                         settings.menuBarToggleHotkeyModifiers = 0
+                        AppDelegate.shared?.registerHotkey()
                     }
                 )
 
