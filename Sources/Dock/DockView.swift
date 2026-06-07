@@ -2500,6 +2500,14 @@ final class DockView: NSView {
         if !trayIconFrame.isEmpty && trayIconFrame.insetBy(dx: -4, dy: -4).contains(local) {
             return self
         }
+        // Clock / systray strip (right edge): clicks here open the clock widget — must reach
+        // DockView, not the app-button subviews that can overlap into this area.
+        if !clockFrame.isEmpty {
+            let strip = NSRect(x: clockFrame.minX, y: 0,
+                               width: max(clockFrame.width, bounds.maxX - clockFrame.minX),
+                               height: bounds.height)
+            if strip.contains(local) { return self }
+        }
         // Check items using their visual (rendered) bounds, not the original frame.
         // When magnification is active, icons are repositioned via layer transforms.
         for item in itemViews {
