@@ -913,11 +913,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 item.target = self
                 item.representedObject = theme.name
                 if dockOn && theme.name == currentTheme { item.state = .on }
-                // Crown marks the "Special" themes with full retro window chrome / widgets.
+                // Crown marks the "Special" themes with full retro window chrome / widgets —
+                // only the Classic variants (not plain "BeOS" / "Mac OS 9.2").
                 let tn = theme.name.lowercased()
-                if tn.contains("windows xp") || tn.contains("mac os 9") || tn.contains("beos") || tn.contains("maiks favourite") {
-                    item.image = sfIcon("crown.fill")
-                }
+                let special = tn.contains("windows xp")
+                    || (tn.contains("mac os 9") && tn.contains("classic"))
+                    || (tn.contains("beos") && tn.contains("classic"))
+                    || tn.contains("maiks favourite")
+                if special { item.image = sfIcon("crown.fill") }
                 catMenu.addItem(item)
             }
             catItem.submenu = catMenu

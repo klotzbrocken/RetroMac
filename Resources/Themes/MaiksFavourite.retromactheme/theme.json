@@ -52,7 +52,7 @@
     { "name": "Applications", "icon": "finder.png", "type": "appfolder", "gridX": 0, "gridY": 1 },
     { "name": "CPU", "icon": "Proz.icns", "type": "cpumonitor", "gridX": 0, "gridY": 2 },
     { "name": "Music", "icon": "TVStreams.icns", "type": "tvfolder", "gridX": 0, "gridY": 3 },
-    { "name": "Clock", "icon": "clock.png", "type": "clock", "gridX": 0, "gridY": 4 }
+    { "name": "Clock", "icon": "clock.icns", "type": "clock", "gridX": 0, "gridY": 4 }
   ],
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-retro-lite",
