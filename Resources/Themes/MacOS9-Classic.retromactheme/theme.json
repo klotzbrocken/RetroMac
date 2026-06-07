@@ -56,7 +56,8 @@
     { "name": "CPU", "icon": "computer.png", "type": "cpumonitor", "gridX": 0, "gridY": 3 },
     { "name": "Pac-Man", "icon": "pac.icns", "type": "pacman", "gridX": 0, "gridY": 4 },
     { "name": "TV", "icon": "folder.png", "type": "tvfolder", "gridX": 0, "gridY": 5 },
-    { "name": "Trash", "icon": "trash_empty.png", "iconFull": "trash_full.png", "type": "trash", "gridX": 0, "gridY": 6 }
+    { "name": "Clock", "icon": "clock.png", "type": "clock", "gridX": 0, "gridY": 6 },
+    { "name": "Trash", "icon": "trash_empty.png", "iconFull": "trash_full.png", "type": "trash", "gridX": 0, "gridY": 7 }
   ],
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-broken-lite",
