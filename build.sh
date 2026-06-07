@@ -110,15 +110,21 @@ SPARKLE_FW=".build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86
 if [ -d "$SPARKLE_FW" ]; then
     mkdir -p "$CONTENTS/Frameworks"
     rsync -a --delete "$SPARKLE_FW/" "$CONTENTS/Frameworks/Sparkle.framework/"
-    # Deep-sign Sparkle: inner bundles first, then outer framework
-    codesign --force --sign "$SIGN_ID" $SIGN_FLAGS \
-        "$CONTENTS/Frameworks/Sparkle.framework/Versions/B/XPCServices/Downloader.xpc"
-    codesign --force --sign "$SIGN_ID" $SIGN_FLAGS \
-        "$CONTENTS/Frameworks/Sparkle.framework/Versions/B/XPCServices/Installer.xpc"
-    codesign --force --sign "$SIGN_ID" $SIGN_FLAGS \
-        "$CONTENTS/Frameworks/Sparkle.framework/Versions/B/Updater.app"
-    codesign --force --sign "$SIGN_ID" $SIGN_FLAGS \
-        "$CONTENTS/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+    SPK_B="$CONTENTS/Frameworks/Sparkle.framework/Versions/B"
+    if [ "$MODE" = "release" ]; then
+        # Deep-sign Sparkle: inner bundles first, then outer framework
+        codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$SPK_B/XPCServices/Downloader.xpc"
+        codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$SPK_B/XPCServices/Installer.xpc"
+        codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$SPK_B/Updater.app"
+        codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$SPK_B/Autoupdate"
+    else
+        # Debug: the auto-updater is disabled in .dev builds, so drop Sparkle's helper bundles.
+        # Otherwise the Apple-Development-signed Updater.app shares the bundle id
+        # org.sparkle-project.Sparkle.Updater with an installed release app, and LaunchServices
+        # can launch the (Gatekeeper-rejected) dev copy → "An error occurred while launching the
+        # installer" for the RELEASE app. The Sparkle dylib stays, so the app still links/launches.
+        rm -rf "$SPK_B/XPCServices" "$SPK_B/Updater.app" "$SPK_B/Autoupdate"
+    fi
     codesign --force --sign "$SIGN_ID" $SIGN_FLAGS \
         "$CONTENTS/Frameworks/Sparkle.framework"
     echo "  ✓ Sparkle.framework embedded & signed"
