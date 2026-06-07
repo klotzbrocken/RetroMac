@@ -144,6 +144,7 @@ final class BeOSDeskbarView: NSView {
     private var cpuRect = NSRect.zero
     private var mailRect = NSRect.zero
     private var pacRect = NSRect.zero
+    private var clockRect = NSRect.zero
 
     private let headerH: CGFloat = 40
     private let statusH: CGFloat = 40
@@ -237,7 +238,9 @@ final class BeOSDeskbarView: NSView {
         mailRect = NSRect(x: s.minX + edge, y: s.midY - iconSz / 2, width: iconSz, height: iconSz)
         cpuRect  = NSRect(x: mailRect.maxX + gap, y: s.midY - iconSz / 2, width: iconSz, height: iconSz)
         pacRect  = NSRect(x: cpuRect.maxX + gap, y: s.midY - iconSz / 2, width: iconSz, height: iconSz)
-        str.draw(at: NSPoint(x: s.maxX - edge - cs.width, y: s.midY - cs.height / 2), withAttributes: attrs)
+        let clockX = s.maxX - edge - cs.width
+        clockRect = NSRect(x: clockX - 4, y: s.midY - cs.height / 2 - 3, width: cs.width + 8, height: cs.height + 6)
+        str.draw(at: NSPoint(x: clockX, y: s.midY - cs.height / 2), withAttributes: attrs)
         statusCPU?.draw(in: cpuRect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         statusMail?.draw(in: mailRect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         if let p = statusPac {
@@ -360,6 +363,7 @@ final class BeOSDeskbarView: NSView {
             else { AppLauncher.launchOrActivate(bundleID: bid) }
             return
         }
+        if clockRect.contains(p) { ClockWidgetController.shared.toggle(); return }
         if cpuRect.contains(p) { CPUMonitorController.shared.toggle(); return }
         if pacRect.contains(p) { PacmanGame.launch(); return }
         if mailRect.contains(p) { AppLauncher.launchOrActivate(bundleID: "com.apple.mail"); return }

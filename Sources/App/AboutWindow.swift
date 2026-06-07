@@ -225,8 +225,46 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("Bundled Game & Libraries") {
+                    Link("ebuc99/pacman on GitHub",
+                         destination: URL(string: "https://github.com/ebuc99/pacman")!)
+                        .font(.caption)
+                    Text("Pac-Man clone (GPLv2) — bundled & built from source as the default game.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("libsdl-org/SDL on GitHub",
+                         destination: URL(string: "https://github.com/libsdl-org/SDL")!)
+                        .font(.caption)
+                    Text("SDL2 — render/input layer for the bundled Pac-Man.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("sparkle-project/Sparkle on GitHub",
+                         destination: URL(string: "https://github.com/sparkle-project/Sparkle")!)
+                        .font(.caption)
+                    Text("Sparkle — secure automatic app updates.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Game Engines (user-installed)") {
+                    Link("ZDoom/gzdoom on GitHub",
+                         destination: URL(string: "https://github.com/ZDoom/gzdoom")!)
+                        .font(.caption)
+                    Link("ZDoom/Raze on GitHub",
+                         destination: URL(string: "https://github.com/ZDoom/Raze")!)
+                        .font(.caption)
+                    Link("Novum/vkQuake on GitHub",
+                         destination: URL(string: "https://github.com/Novum/vkQuake")!)
+                        .font(.caption)
+                    Text("Optional external engines RetroMac can launch with CRT shaders.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Open Source") {
-                    Text("RetroMac uses the following Apple frameworks: Metal, MetalKit, ScreenCaptureKit, AVKit, WebKit, AppKit, SwiftUI. No third-party libraries are used.")
+                    Text("RetroMac uses these Apple frameworks: Metal, MetalKit, ScreenCaptureKit, AVKit, WebKit, AppKit, SwiftUI — plus Sparkle (updates) and a bundled Pac-Man built on SDL2 (see above).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
