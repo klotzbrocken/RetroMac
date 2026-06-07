@@ -2371,17 +2371,19 @@ enum BuiltinShaders {
         float alpha = 0.0;
 
         // --- Black matrix grid (pixel boundaries) ---
-        float gridScale = 5.0;
+        // Chunkier cell + stronger lines so the LCD screen-door is clearly visible as a
+        // semi-transparent overlay (the previous values were almost imperceptible).
+        float gridScale = 6.0;
 
         float gridY = fract(uv.y * outSize.y / gridScale);
         float gridX = fract(uv.x * outSize.x / gridScale);
 
         // Visible dark lines at pixel edges
-        float hLine = (gridY < 0.14 || gridY > 0.86) ? 1.0 : 0.0;
-        float vLine = (gridX < 0.14 || gridX > 0.86) ? 1.0 : 0.0;
+        float hLine = (gridY < 0.16 || gridY > 0.84) ? 1.0 : 0.0;
+        float vLine = (gridX < 0.16 || gridX > 0.84) ? 1.0 : 0.0;
 
         float grid = max(hLine, vLine);
-        alpha += grid * 0.25 * intensity;
+        alpha += grid * 0.50 * intensity;
 
         // --- RGB subpixel columns ---
         float subX = fract(uv.x * outSize.x / gridScale) * 3.0;
@@ -2389,20 +2391,20 @@ enum BuiltinShaders {
         float subGap = fract(subX);
 
         // Dark gaps between subpixels
-        float subDark = (subGap < 0.12 || subGap > 0.88) ? 1.0 : 0.0;
-        alpha += subDark * 0.15 * intensity;
+        float subDark = (subGap < 0.16 || subGap > 0.84) ? 1.0 : 0.0;
+        alpha += subDark * 0.32 * intensity;
 
-        // Per-channel tinting (subpixel color cast)
+        // Per-channel tinting (subpixel color cast) — stronger for a visible RGB stripe.
         float3 tint = float3(0.0);
         if (subCol < 1.0) {
-            tint = float3(0.0, 0.03, 0.03);
+            tint = float3(0.0, 0.07, 0.07);
         } else if (subCol < 2.0) {
-            tint = float3(0.03, 0.0, 0.03);
+            tint = float3(0.07, 0.0, 0.07);
         } else {
-            tint = float3(0.03, 0.03, 0.0);
+            tint = float3(0.07, 0.07, 0.0);
         }
 
-        alpha = clamp(alpha, 0.0, 0.4);
+        alpha = clamp(alpha, 0.0, 0.70);
 
         // Composite: blend overlay with source (webcam pass-through)
         float4 src = source.sample(s, uv);

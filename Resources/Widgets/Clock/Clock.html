@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-user-select:none;}
+  #win{position:relative;width:200px;}
+
+  /* ---- BeOS yellow tab (default chrome) ---- */
+  .tab{display:flex;align-items:center;gap:8px;height:22px;padding:0 8px;width:fit-content;
+    position:relative;z-index:3;border:1.4px solid #2a2a2a;border-bottom:none;border-radius:5px 5px 0 0;
+    background:linear-gradient(180deg,#fbd85c,#f2bd23);box-shadow:inset 1px 1px 0 rgba(255,255,255,.55);}
+  .tab b{font-size:12px;font-weight:700;color:#2a2306;white-space:nowrap;}
+  .closebox{width:13px;height:13px;border:1.4px solid #6f5a10;cursor:pointer;
+    background:linear-gradient(135deg,#fbe27e,#eab92a);box-shadow:inset 1px 1px 0 rgba(255,255,255,.75);}
+  .body{position:relative;z-index:2;margin-top:-1px;padding:10px;border:1px solid #000;
+    background:#d8d3c0;box-shadow:inset 2px 2px 0 #efeada,inset -2px -2px 0 #b3ad98;}
+  .face{display:block;margin:0 auto;background:transparent;}
+
+  /* ===== Mac OS 9 (Platinum) ===== */
+  .m9-title,.xp-title,.mf-title{display:none;}
+  body.theme-macos9 .tab{display:none;}
+  body.theme-macos9 #win{border:1px solid #000;background:#d8d8d8;box-shadow:2px 2px 8px rgba(0,0,0,.3);}
+  body.theme-macos9 .body{border:none;background:#d8d8d8;box-shadow:none;margin:0;}
+  body.theme-macos9 .m9-title{display:flex;align-items:center;position:relative;height:20px;
+    border-bottom:1px solid #808080;background:repeating-linear-gradient(to bottom,#ededed 0 1px,#bdbdbd 1px 2px);}
+  .m9-close{width:13px;height:13px;margin-left:7px;background:#d8d8d8;border:1px solid #555;
+    border-top-color:#fff;border-left-color:#fff;box-shadow:inset -1px -1px 0 #808080,inset 1px 1px 0 #fff;cursor:pointer;z-index:2;}
+  .m9-plaque{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#d8d8d8;
+    padding:0 8px;font-size:12px;font-weight:700;color:#000;}
+
+  /* ===== Windows XP (Luna) ===== */
+  body.theme-winxp .tab{display:none;}
+  body.theme-winxp #win{border-radius:8px 8px 2px 2px;background:#0831D9;overflow:hidden;box-shadow:2px 5px 14px rgba(0,0,0,.45);}
+  body.theme-winxp .body{border:none;background:#ECE9D8;margin:0 4px 4px;}
+  body.theme-winxp .xp-title{display:flex;align-items:center;height:26px;gap:6px;padding:0 4px 0 8px;
+    border-radius:8px 8px 0 0;background:linear-gradient(180deg,#0997FF,#0053EE 45%,#0066FF 52%,#003DD2);}
+  .xp-cap{color:#fff;font:700 12px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,40,.5);}
+  .xp-close{margin-left:auto;width:21px;height:19px;border-radius:3px;position:relative;cursor:pointer;
+    border:1px solid rgba(255,255,255,.55);background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
+  .xp-close::before,.xp-close::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#fff;}
+  .xp-close::before{transform:translate(-50%,-50%) rotate(45deg);} .xp-close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+
+  /* ===== Maiks Favourite (pixel macOS) ===== */
+  body.theme-maiksfav .tab{display:none;}
+  body.theme-maiksfav #win{background:#ECECEC;border:2px solid #262626;border-radius:10px;overflow:hidden;
+    box-shadow:inset 2px 2px 0 #fff,inset -2px -2px 0 #c4c4c4,6px 6px 0 rgba(0,0,0,.35);}
+  body.theme-maiksfav .body{border:none;background:#ECECEC;margin:0;}
+  body.theme-maiksfav .mf-title{display:flex;align-items:center;position:relative;height:26px;gap:8px;padding:0 10px;
+    background:#E3E3E3;border-bottom:2px solid #262626;font-family:"Pixelify Sans",monospace;}
+  .mf-close{width:12px;height:12px;border-radius:50%;background:#FF5F57;border:1px solid rgba(0,0,0,.3);cursor:pointer;}
+  .mf-cap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:700;color:#3a3a3a;}
+</style>
+</head>
+<body>
+  <div id="win">
+    <!-- BeOS tab (default) -->
+    <div class="tab"><span class="closebox" id="bxclose" title="Close"></span><b>Clock</b></div>
+    <!-- Mac OS 9 -->
+    <div class="m9-title" id="m9title"><span class="m9-close" id="m9close"></span><div class="m9-plaque">Clock</div></div>
+    <!-- Windows XP -->
+    <div class="xp-title" id="xptitle"><span class="xp-cap">Clock</span><span class="xp-close" id="xpclose"></span></div>
+    <!-- Maiks Favourite -->
+    <div class="mf-title" id="mftitle"><span class="mf-close" id="mfclose"></span><span class="mf-cap">Clock</span></div>
+    <div class="body">
+      <canvas class="face" id="face" width="176" height="176"></canvas>
+    </div>
+  </div>
+<script>
+  const cv = document.getElementById('face'), ctx = cv.getContext('2d');
+  let theme = 'beos';
+
+  // Per-theme clock face styling (authentic-ish to each OS).
+  function style(){
+    switch(theme){
+      case 'macos9': return {bg:'#ffffff', ring:'#000000', tick:'#000000', hand:'#000000', sec:'#cc2a17', num:false, face:'#ffffff'};
+      case 'winxp':  return {bg:'#ffffff', ring:'#0831D9', tick:'#333333', hand:'#1a1a1a', sec:'#E35F44', num:true,  face:'#ffffff'};
+      case 'maiksfav': return {bg:'#ffffff', ring:'#262626', tick:'#262626', hand:'#262626', sec:'#FF5F57', num:false, face:'#ffffff'};
+      default:       return {bg:'#1d1d1d', ring:'#f2bd23', tick:'#f2bd23', hand:'#fbe27e', sec:'#ffffff', num:false, face:'#2b2b2b'}; // BeOS dark replicant
+    }
+  }
+  function draw(){
+    const s = style(), W = cv.width, R = W/2, cx = R, cy = R, rad = R-8;
+    ctx.clearRect(0,0,W,W);
+    // face
+    ctx.beginPath(); ctx.arc(cx,cy,rad,0,7); ctx.fillStyle=s.face; ctx.fill();
+    ctx.lineWidth=3; ctx.strokeStyle=s.ring; ctx.stroke();
+    // ticks
+    for(let i=0;i<60;i++){
+      const a=i*Math.PI/30, major=(i%5===0);
+      const r1=rad-(major?12:6), r2=rad-2;
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.sin(a)*r1, cy-Math.cos(a)*r1);
+      ctx.lineTo(cx+Math.sin(a)*r2, cy-Math.cos(a)*r2);
+      ctx.lineWidth=major?2.5:1; ctx.strokeStyle=s.tick; ctx.stroke();
+    }
+    // numbers (XP)
+    if(s.num){ ctx.fillStyle=s.tick; ctx.font='bold 14px Tahoma,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      for(let n=1;n<=12;n++){ const a=n*Math.PI/6, rr=rad-24; ctx.fillText(n, cx+Math.sin(a)*rr, cy-Math.cos(a)*rr); } }
+    const now=new Date();
+    const hh=now.getHours()%12, mm=now.getMinutes(), ss=now.getSeconds();
+    const hand=(ang,len,w,col)=>{ ctx.beginPath(); ctx.moveTo(cx,cy);
+      ctx.lineTo(cx+Math.sin(ang)*len, cy-Math.cos(ang)*len); ctx.lineWidth=w; ctx.lineCap='round'; ctx.strokeStyle=col; ctx.stroke(); };
+    hand((hh+mm/60)*Math.PI/6, rad*0.52, 4.5, s.hand);
+    hand((mm+ss/60)*Math.PI/30, rad*0.74, 3, s.hand);
+    hand(ss*Math.PI/30, rad*0.80, 1.5, s.sec);
+    ctx.beginPath(); ctx.arc(cx,cy,3.5,0,7); ctx.fillStyle=s.hand; ctx.fill();
+  }
+  setInterval(draw, 1000); draw();
+
+  window.setTheme=function(k){ theme=k||'beos'; document.body.className='theme-'+theme; draw(); };
+
+  function postClose(){ if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.clock) webkit.messageHandlers.clock.postMessage('close'); }
+  ['bxclose','m9close','xpclose','mfclose'].forEach(id=>{ const e=document.getElementById(id); if(e) e.addEventListener('click',ev=>{ev.stopPropagation();postClose();}); });
+
+  // Title + close rects for the native drag/close overlay.
+  window.regions=function(){
+    const cl=document.body.classList;
+    const R=id=>{const e=document.getElementById(id);if(!e)return[0,0,0,0];const b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
+    if(cl.contains('theme-maiksfav')) return [...R('mftitle'),...R('mfclose')];
+    if(cl.contains('theme-winxp'))    return [...R('xptitle'),...R('xpclose')];
+    if(cl.contains('theme-macos9'))   return [...R('m9title'),...R('m9close')];
+    return [...R('tab'),...R('bxclose')];
+  };
+  window.widgetSize=function(){ const w=document.getElementById('win'); return [w.offsetWidth, w.offsetHeight]; };
+</script>
+</body>
+</html>

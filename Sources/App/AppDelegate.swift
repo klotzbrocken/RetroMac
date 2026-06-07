@@ -126,16 +126,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hotkeyStr = settings.hotkeyDisplayString
         print("[RetroMac] Ready. \(hotkeyStr) to toggle.")
 
-        // Honor the user's saved launch state instead of forcing everything off, so the
-        // theme/overlay are remembered across launches. (ThemeManager already restored the
-        // active theme from settings.dockTheme in its init.)
-        if settings.dockEnabled {
-            DockController.shared.start()
-            applyThemePresetIfNeeded()
-        } else if settings.enableOnLaunch {
-            if currentPresetName == nil { currentPresetName = settings.defaultPreset }
-            startOverlay(mode: .fullScreen)
-        }
+        // Change request: RetroMac starts CLEAN by default — no theme, dock or shader overlay
+        // is auto-activated on launch. The selected theme/preset stay remembered (ThemeManager
+        // restored settings.dockTheme in its init), so the user can turn them on manually.
+        // dockEnabled is reset so the menu/settings consistently reflect the inactive state.
+        settings.dockEnabled = false
+        isActive = false
 
         // Unified welcome flow: What's New → Setup → Coffee/Unlock, shown conditionally.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
@@ -703,7 +699,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         basicMenu.addItem(NSMenuItem.separator())
 
         let allBuiltin = PresetRegistry.builtinPresets
-        for preset in allBuiltin where LicenseManager.freePresetIDs.contains(preset.id) {
+        let byName: (PresetInfo, PresetInfo) -> Bool = { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        for preset in allBuiltin.filter({ LicenseManager.freePresetIDs.contains($0.id) }).sorted(by: byName) {
             let item = NSMenuItem(title: preset.displayName, action: #selector(selectPreset(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = preset.id
@@ -715,13 +712,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             basicItem.state = .mixed
         }
         presetsMenu.addItem(basicItem)
+
+        // "Lite (Permission free)" — directly under Free, ABOVE the divider, with its own icon.
+        if let liteEntry = PresetRegistry.categorizedPresets.first(where: { $0.0 == .lite }) {
+            let catItem = NSMenuItem(title: liteEntry.0.rawValue, action: nil, keyEquivalent: "")
+            catItem.image = sfIcon("bolt.fill")
+            let catMenu = NSMenu()
+            for preset in liteEntry.1.sorted(by: byName) {
+                let item = NSMenuItem(title: preset.displayName, action: #selector(selectPreset(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = preset.id
+                if preset.id == currentPresetName { item.state = .on }
+                catMenu.addItem(item)
+            }
+            catItem.submenu = catMenu
+            if liteEntry.1.contains(where: { $0.id == currentPresetName }) { catItem.state = .mixed }
+            presetsMenu.addItem(catItem)
+        }
         presetsMenu.addItem(NSMenuItem.separator())
 
-        // Category submenus (all presets, locked ones get lock icon)
-        for (category, presets) in PresetRegistry.categorizedPresets {
+        // Category submenus (alphabetical within each; Lite already shown above the divider)
+        for (category, presets) in PresetRegistry.categorizedPresets where category != .lite {
             let catItem = NSMenuItem(title: category.rawValue, action: nil, keyEquivalent: "")
             let catMenu = NSMenu()
-            for preset in presets {
+            for preset in presets.sorted(by: byName) {
                 let isFree = LicenseManager.freePresetIDs.contains(preset.id)
                 let locked = !isFree && !lm.hasAllPresets
                 let item = NSMenuItem(title: preset.displayName, action: #selector(selectPreset(_:)), keyEquivalent: "")
@@ -894,11 +908,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Each category is its own submenu entry.
             let catItem = NSMenuItem(title: category, action: nil, keyEquivalent: "")
             let catMenu = NSMenu()
-            for theme in inCategory {
+            for theme in inCategory.sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }) {
                 let item = NSMenuItem(title: theme.name, action: #selector(selectTheme(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = theme.name
                 if dockOn && theme.name == currentTheme { item.state = .on }
+                // Crown marks the "Special" themes with full retro window chrome / widgets.
+                let tn = theme.name.lowercased()
+                if tn.contains("windows xp") || tn.contains("mac os 9") || tn.contains("beos") || tn.contains("maiks favourite") {
+                    item.image = sfIcon("crown.fill")
+                }
                 catMenu.addItem(item)
             }
             catItem.submenu = catMenu

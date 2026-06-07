@@ -2547,6 +2547,19 @@ final class DockView: NSView {
             return
         }
 
+        // Taskbar clock → open the themed analog-clock widget. Use a generous hit region
+        // covering the whole right-edge systray/clock strip (full bar height) so the click
+        // is reliably caught regardless of exact text metrics.
+        if !clockFrame.isEmpty {
+            let clockHit = NSRect(x: clockFrame.minX, y: 0,
+                                  width: max(clockFrame.width, bounds.maxX - clockFrame.minX),
+                                  height: bounds.height)
+            if clockHit.contains(local) {
+                ClockWidgetController.shared.toggle()
+                return
+            }
+        }
+
         if hasStartButton && startButtonFrame.contains(local) {
             // Toggle: if start menu is visible, dismiss it; otherwise show it
             if let panel = startMenuPanel, panel.isVisible {
