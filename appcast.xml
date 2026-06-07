@@ -6,6 +6,28 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.7.2</title>
+      <pubDate>Sun, 07 Jun 2026 12:47:43 +0000</pubDate>
+      <sparkle:version>1.7.2</sparkle:version>
+      <sparkle:shortVersionString>1.7.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.7.2</h2>
+        <ul>
+          <li><b>Clock widget:</b> a themed analog clock (BeOS, Mac OS 9, Windows XP, Maiks Favourite) — open it from the deskbar/taskbar clock or a desktop icon.</li>
+          <li><b>Maiks Favourite:</b> pixel-art macOS window chrome for the CPU widget, App Folder, Music (TV streams) folder and the Downloads dock fan.</li>
+          <li><b>Menu polish:</b> themes and shaders sorted alphabetically; a crown marks the special themes; the permission-free &ldquo;Lite&rdquo; shaders sit right under Free.</li>
+          <li><b>Stronger LCD Lite shader, clean start (nothing auto-activated), and numerous fixes.</b></li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.7.2/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="a7jBEw9cTZ/9b8sbQLOalYXKo3wze+H1EtULUNuPalIwpNjtZg8nywSJVkHZN2YQSYx0NgAuYcPRhUuljIC6BQ=="
+        length="128111434"
+      />
+    </item>
+    <item>
       <title>Version 1.7.0</title>
       <pubDate>Fri, 05 Jun 2026 14:46:34 +0000</pubDate>
       <sparkle:version>1.7.0</sparkle:version>
