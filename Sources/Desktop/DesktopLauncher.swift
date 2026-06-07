@@ -43,6 +43,9 @@ enum DesktopLauncher {
         case "cpumonitor":
             CPUMonitorController.shared.show()
 
+        case "clock":
+            ClockWidgetController.shared.show()
+
         case "pacman":
             PacmanGame.launch()
 
