@@ -6,6 +6,28 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.7.3</title>
+      <pubDate>Mon, 08 Jun 2026 02:12:25 +0000</pubDate>
+      <sparkle:version>1.7.3</sparkle:version>
+      <sparkle:shortVersionString>1.7.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.7.3</h2>
+        <ul>
+          <li><b>Clock widget:</b> now remembers its last position and no longer jumps on screen when opened.</li>
+          <li><b>BeOS Classic:</b> drag the clock by its yellow tab again.</li>
+          <li><b>CPU widget:</b> opens directly at its saved spot &mdash; no more visible jump.</li>
+          <li><b>Dock right-click</b> now offers &ldquo;RetroMac Settings&rdquo; and &ldquo;Quit RetroMac&rdquo;.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.7.3/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="XIUG0fxLoV3/fqU9aUpH8ZxyJTKuWV9K/YWxzV6XKf9kQEnJB4O0cjHOPeyDioBxA8aKgkGDt0w4mZwKjVpvDA=="
+        length="128115510"
+      />
+    </item>
+    <item>
       <title>Version 1.7.2</title>
       <pubDate>Sun, 07 Jun 2026 12:47:43 +0000</pubDate>
       <sparkle:version>1.7.2</sparkle:version>
