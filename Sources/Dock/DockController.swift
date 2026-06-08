@@ -1023,6 +1023,24 @@ final class DockController {
             ah.state = theme.dockAutoHideEnabled ? .on : .off
             menu.addItem(ah)
         }
+        // App-level actions on every dock context menu.
+        menu.addItem(.separator())
+        let settings = NSMenuItem(title: "RetroMac Settings…", action: #selector(menuRetroMacSettings), keyEquivalent: "")
+        settings.target = self
+        menu.addItem(settings)
+        let quit = NSMenuItem(title: "Quit RetroMac", action: #selector(menuQuitRetroMac), keyEquivalent: "")
+        quit.target = self
+        menu.addItem(quit)
+    }
+
+    @objc private func menuRetroMacSettings() {
+        NSApp.sendAction(Selector(("openSettings")), to: nil, from: nil)
+    }
+    @objc private func menuQuitRetroMac() {
+        // Route through AppDelegate.quitApp so cleanup (wallpaper/dock/menu-bar restore) runs.
+        if !NSApp.sendAction(Selector(("quitApp")), to: nil, from: nil) {
+            NSApp.terminate(nil)
+        }
     }
 
     @objc private func menuActivate(_ sender: NSMenuItem) {

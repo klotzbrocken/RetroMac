@@ -75,7 +75,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
         }
 
         webView?.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
-        positionDefault()
+        restorePosition()   // place at the saved spot BEFORE showing (no visible jump)
         panel?.orderFrontRegardless()
         startSampling()
     }

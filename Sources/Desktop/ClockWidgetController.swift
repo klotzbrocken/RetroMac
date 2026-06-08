@@ -11,6 +11,8 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
     private var panel: NSPanel?
     private var webView: WKWebView?
     private var dragOverlay: DragOverlayView?
+    private var moveObserver: NSObjectProtocol?
+    private let posKey = "clockWidgetOrigin"
 
     private override init() {
         super.init()
@@ -23,7 +25,25 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
     }
 
     func toggle() { if panel?.isVisible == true { close() } else { show() } }
-    func close() { panel?.orderOut(nil) }
+    func close() { saveOrigin(); panel?.orderOut(nil) }
+
+    private func saveOrigin() {
+        guard let panel = panel, panel.isVisible else { return }
+        UserDefaults.standard.set(NSStringFromPoint(panel.frame.origin), forKey: posKey)
+    }
+    private func restorePosition() {
+        guard let panel = panel else { return }
+        if let s = UserDefaults.standard.string(forKey: posKey) {
+            let origin = NSPointFromString(s)
+            if NSScreen.screens.contains(where: { $0.visibleFrame.intersects(NSRect(origin: origin, size: panel.frame.size)) }) {
+                panel.setFrameOrigin(origin); return
+            }
+        }
+        if let screen = NSScreen.main {
+            let vf = screen.visibleFrame
+            panel.setFrameOrigin(NSPoint(x: vf.midX - panel.frame.width / 2, y: vf.midY - panel.frame.height / 2))
+        }
+    }
 
     func show() {
         guard let html = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Clock/Clock.html"),
@@ -51,13 +71,12 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = container
             self.panel = p; self.webView = wv; self.dragOverlay = overlay
+            moveObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didMoveNotification, object: p, queue: .main) { [weak self] _ in self?.saveOrigin() }
         }
 
         webView?.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
-        if let panel = panel, let screen = NSScreen.main {
-            let vf = screen.visibleFrame
-            panel.setFrameOrigin(NSPoint(x: vf.midX - panel.frame.width / 2, y: vf.midY - panel.frame.height / 2))
-        }
+        restorePosition()   // remember the last spot (no jump on show)
         panel?.orderFrontRegardless()
     }
 
@@ -81,10 +100,12 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
         webView?.evaluateJavaScript("window.regions ? window.regions() : []") { [weak self] result, _ in
             guard let self = self, let wv = self.webView, let overlay = self.dragOverlay,
                   let a = (result as? [NSNumber])?.map({ CGFloat(truncating: $0) }), a.count >= 8 else { return }
-            let tabX = a[0], tabY = a[1], tabW = a[2], tabH = a[3]
+            let tabY = a[1], tabH = a[3]
             let H = wv.bounds.height
-            overlay.frame = CGRect(x: tabX, y: H - (tabY + tabH), width: tabW, height: tabH)
-            overlay.closeRect = CGRect(x: a[4] - tabX, y: tabH - ((a[5] - tabY) + a[7]), width: a[6], height: a[7])
+            // Full-width title strip as the drag region (robust — the BeOS tab is narrow;
+            // dragging anywhere along the top now moves the window). Close box mapped within it.
+            overlay.frame = CGRect(x: 0, y: H - (tabY + tabH), width: wv.bounds.width, height: tabH)
+            overlay.closeRect = CGRect(x: a[4], y: tabH - ((a[5] - tabY) + a[7]), width: a[6], height: a[7])
             overlay.collapseRect = .zero; overlay.zoomRect = .zero
         }
     }
