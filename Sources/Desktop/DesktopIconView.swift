@@ -70,7 +70,10 @@ final class DesktopIconView: NSView {
         imageView.frame = NSRect(x: imgX, y: imgY, width: iconSize, height: iconSize)
 
         let labelH: CGFloat = 30
-        label.frame = NSRect(x: -6, y: 0, width: w + 12, height: labelH)   // room for 2-line names
+        // Label hugs the icon; the remaining cell space below becomes spacing to the
+        // NEXT row (instead of a growing icon→label gap).
+        let labelY = max(0, bounds.height - iconSize - 4 - labelH)
+        label.frame = NSRect(x: -8, y: labelY, width: w + 16, height: labelH)
     }
 
     override func draw(_ dirtyRect: NSRect) {

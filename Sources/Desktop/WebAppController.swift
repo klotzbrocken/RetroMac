@@ -10,7 +10,7 @@ final class WebAppPanel: NSPanel {
 /// Themed app window: NATIVE chrome (Win98 spec / XP Luna / plain) drawn in Swift —
 /// crisp at any scale, close always works — hosting a WKWebView that loads the target
 /// URL top-level (sites that forbid iframes, like yahoo.com, work fine).
-final class WebAppController: NSObject {
+final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
 
     private static var openWindows: [String: WebAppController] = [:]
 
@@ -46,13 +46,22 @@ final class WebAppController: NSObject {
 
     private func show() {
         let frame = NSRect(origin: .zero, size: size)
-        let chrome = WebAppChromeView(frame: frame, title: appName)
+        // Browser-style windows (real websites) get back/forward navigation in the chrome;
+        // the self-contained 98.js apps don't need it.
+        let showNav = !appURL.contains("github.io")
+        let chrome = WebAppChromeView(frame: frame, title: appName, showNav: showNav)
         chrome.onClose = { [weak self] in self?.close() }
 
-        let wv = WKWebView(frame: chrome.contentRect())
+        let cfg = WKWebViewConfiguration()
+        cfg.preferences.javaScriptCanOpenWindowsAutomatically = true
+        let wv = WKWebView(frame: chrome.contentRect(), configuration: cfg)
         wv.autoresizingMask = [.width, .height]
+        wv.navigationDelegate = self
+        wv.uiDelegate = self
         if let u = URL(string: appURL) { wv.load(URLRequest(url: u)) }
         chrome.addSubview(wv)
+        chrome.onBack = { [weak wv] in if wv?.canGoBack == true { wv?.goBack() } }
+        chrome.onForward = { [weak wv] in if wv?.canGoForward == true { wv?.goForward() } }
 
         let p = WebAppPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
@@ -74,6 +83,56 @@ final class WebAppController: NSObject {
         panel?.orderOut(nil); panel = nil
         WebAppController.openWindows.removeValue(forKey: appURL)
     }
+
+    // MARK: - File dialogs / popups / downloads (Notepad & Paint open/save support)
+
+    func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
+        let p = NSOpenPanel()
+        p.allowsMultipleSelection = parameters.allowsMultipleSelection
+        p.canChooseDirectories = parameters.allowsDirectories
+        NSApp.activate(ignoringOtherApps: true)
+        p.begin { resp in completionHandler(resp == .OK ? p.urls : nil) }
+    }
+
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                 for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        // window.open / target=_blank → load in the same window instead of nothing.
+        if navigationAction.targetFrame == nil { webView.load(navigationAction.request) }
+        return nil
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
+                 decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        decisionHandler(navigationResponse.canShowMIMEType ? .allow : .download)
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+
+    func download(_ download: WKDownload, decideDestinationUsing response: URLResponse,
+                  suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+        let dir = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+        var url = dir.appendingPathComponent(suggestedFilename)
+        var i = 2
+        while FileManager.default.fileExists(atPath: url.path) {
+            let base = (suggestedFilename as NSString).deletingPathExtension
+            let ext = (suggestedFilename as NSString).pathExtension
+            url = dir.appendingPathComponent(ext.isEmpty ? "\(base) \(i)" : "\(base) \(i).\(ext)")
+            i += 1
+        }
+        completionHandler(url)
+    }
 }
 
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
@@ -82,12 +141,18 @@ final class WebAppChromeView: NSView {
     enum Style { case win98, winxp, plain }
 
     var onClose: (() -> Void)?
+    var onBack: (() -> Void)?
+    var onForward: (() -> Void)?
     private let title: String
     private let style: Style
+    private let showNav: Bool
     private var closeHit: CGRect = .zero
+    private var backHit: CGRect = .zero
+    private var fwdHit: CGRect = .zero
 
-    init(frame: NSRect, title: String) {
+    init(frame: NSRect, title: String, showNav: Bool = false) {
         self.title = title
+        self.showNav = showNav
         switch RetroFrameTheme.key() {
         case "win98": style = .win98
         case "winxp": style = .winxp
@@ -172,9 +237,35 @@ final class WebAppChromeView: NSView {
         x.stroke()
         closeHit = closeR.insetBy(dx: -3, dy: -3)
 
+        // optional navigation (browser windows): ◀ ▶ raised buttons left in the caption
+        var titleX = cap.minX + 6
+        backHit = .zero; fwdHit = .zero
+        if showNav {
+            let backR = NSRect(x: cap.minX + 3, y: by, width: bw, height: bh)
+            let fwdR  = NSRect(x: backR.maxX + 2, y: by, width: bw, height: bh)
+            for r in [backR, fwdR] { drawW98Button(ctx, r) }
+            NSColor.black.setFill()
+            func tri(_ r: NSRect, left: Bool) {
+                let t = NSBezierPath()
+                if left {
+                    t.move(to: NSPoint(x: r.minX + 13, y: r.minY + 4))
+                    t.line(to: NSPoint(x: r.minX + 13, y: r.maxY - 4))
+                    t.line(to: NSPoint(x: r.minX + 6,  y: r.midY))
+                } else {
+                    t.move(to: NSPoint(x: r.minX + 7, y: r.minY + 4))
+                    t.line(to: NSPoint(x: r.minX + 7, y: r.maxY - 4))
+                    t.line(to: NSPoint(x: r.minX + 14, y: r.midY))
+                }
+                t.close(); t.fill()
+            }
+            tri(backR, left: true); tri(fwdR, left: false)
+            backHit = backR.insetBy(dx: -2, dy: -3); fwdHit = fwdR.insetBy(dx: -2, dy: -3)
+            titleX = fwdR.maxX + 7
+        }
+
         // title text — bold, white, left
         let font = NSFont(name: "Tahoma-Bold", size: 12) ?? NSFont.boldSystemFont(ofSize: 12)
-        (title as NSString).draw(at: NSPoint(x: cap.minX + 6, y: cap.minY + (titleH - 15) / 2),
+        (title as NSString).draw(at: NSPoint(x: titleX, y: cap.minY + (titleH - 15) / 2),
                                  withAttributes: [.font: font, .foregroundColor: NSColor.white])
     }
 
@@ -236,10 +327,38 @@ final class WebAppChromeView: NSView {
         x.stroke()
         closeHit = closeR.insetBy(dx: -3, dy: -3)
 
+        var titleX: CGFloat = 9
+        backHit = .zero; fwdHit = .zero
+        if showNav {
+            let backR = NSRect(x: 6, y: by, width: bw, height: bh)
+            let fwdR  = NSRect(x: backR.maxX + 2, y: by, width: bw, height: bh)
+            for r in [backR, fwdR] {
+                gel(r, top: NSColor(srgbRed: 0.61, green: 0.85, blue: 0.55, alpha: 1),
+                       bottom: NSColor(srgbRed: 0.13, green: 0.55, blue: 0.18, alpha: 1), alpha: 1.0)
+            }
+            NSColor.white.setFill()
+            func tri(_ r: NSRect, left: Bool) {
+                let t = NSBezierPath()
+                if left {
+                    t.move(to: NSPoint(x: r.minX + 14, y: r.minY + 4))
+                    t.line(to: NSPoint(x: r.minX + 14, y: r.maxY - 4))
+                    t.line(to: NSPoint(x: r.minX + 6,  y: r.midY))
+                } else {
+                    t.move(to: NSPoint(x: r.minX + 7, y: r.minY + 4))
+                    t.line(to: NSPoint(x: r.minX + 7, y: r.maxY - 4))
+                    t.line(to: NSPoint(x: r.minX + 15, y: r.midY))
+                }
+                t.close(); t.fill()
+            }
+            tri(backR, left: true); tri(fwdR, left: false)
+            backHit = backR.insetBy(dx: -2, dy: -3); fwdHit = fwdR.insetBy(dx: -2, dy: -3)
+            titleX = fwdR.maxX + 8
+        }
+
         let font = NSFont(name: "Trebuchet MS Bold", size: 13) ?? NSFont.boldSystemFont(ofSize: 13)
         let shadow = NSShadow(); shadow.shadowColor = NSColor(white: 0, alpha: 0.5)
         shadow.shadowOffset = NSSize(width: 1, height: -1)
-        (title as NSString).draw(at: NSPoint(x: 9, y: (titleH - 16) / 2),
+        (title as NSString).draw(at: NSPoint(x: titleX, y: (titleH - 16) / 2),
                                  withAttributes: [.font: font, .foregroundColor: NSColor.white, .shadow: shadow])
     }
 
@@ -264,6 +383,8 @@ final class WebAppChromeView: NSView {
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if closeHit.contains(p) { onClose?(); return }
+        if backHit.contains(p) { onBack?(); return }
+        if fwdHit.contains(p) { onForward?(); return }
         if p.y <= pad + titleH + 2 { window?.performDrag(with: event) }
     }
 }
