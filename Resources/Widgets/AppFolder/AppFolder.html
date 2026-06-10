@@ -59,13 +59,13 @@
   .be-mid{display:flex;flex:1 1 auto;min-height:0;}
   .be-content{position:relative;flex:1 1 auto;overflow:hidden;background:#ffffff;box-shadow:inset 1px 1px 0 rgba(0,0,0,.06);}
   .be-grid{position:absolute;top:0;left:0;will-change:transform;}
-  .be-item{position:absolute;width:76px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:7px;cursor:default;}
-  .be-item .ic{width:44px;height:44px;display:flex;align-items:center;justify-content:center;}
+  .be-item{position:absolute;width:88px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:7px;cursor:default;}
+  .be-item .ic{width:64px;height:64px;display:flex;align-items:center;justify-content:center;}
   .be-item .ic svg,.be-item .ic img{width:100%;height:100%;display:block;object-fit:contain;}
   /* Mini Icon View */
-  .be-grid.mini .be-item{width:66px;padding-top:5px;gap:2px;}
-  .be-grid.mini .be-item .ic{width:16px;height:16px;}
-  .be-grid.mini .be-item .lbl{font-size:11px;max-width:64px;}
+  .be-grid.mini .be-item{width:76px;padding-top:6px;gap:2px;}
+  .be-grid.mini .be-item .ic{width:44px;height:44px;}
+  .be-grid.mini .be-item .lbl{font-size:11px;max-width:72px;}
   /* List View — small icon + name in full-width rows */
   .be-grid.list .be-item{flex-direction:row;justify-content:flex-start;align-items:center;gap:6px;padding:2px 8px;text-align:left;}
   .be-grid.list .be-item .ic{width:16px;height:16px;flex:0 0 auto;}
@@ -73,7 +73,7 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .be-grid.list .be-item.sel{background:#3c63c8;}
   .be-grid.list .be-item.sel .lbl{color:#fff;}
-  .be-item .lbl{font-size:12px;color:#161616;line-height:1.15;max-width:74px;border-bottom:1px dotted #b0b0b0;padding-bottom:1px;
+  .be-item .lbl{font-size:12px;color:#161616;line-height:1.15;max-width:86px;border-bottom:1px dotted #b0b0b0;padding-bottom:1px;
     white-space:normal;overflow-wrap:anywhere;text-align:center;}
   .be-item.sel .lbl{background:#3c63c8;color:#fff;border-bottom-color:transparent;}
 
@@ -192,6 +192,48 @@
   body.theme-maiksfav .be-status{background:#E3E3E3;color:#262626;border:none;}
   body.theme-maiksfav .be-item .lbl{border-bottom:none;font-family:"Pixelify Sans","ChicagoFLF",monospace;}
   body.theme-maiksfav .be-grid.list .be-item.sel,body.theme-maiksfav .be-item.sel .lbl{background:#3B76E0;color:#fff;}
+
+  /* ===== Mac OS X — Aqua 10.0–10.4 ===== */
+  .mx-title{display:none;}
+  body.theme-macosx .be-tab,body.theme-macosx .m9-title,body.theme-macosx .m9-info,body.theme-macosx .xp-title,body.theme-macosx .mf-title{display:none;}
+  body.theme-macosx .be-win{top:0;background:#ededed;border:1px solid #5c5c5c;border-radius:7px 7px 4px 4px;overflow:hidden;
+    box-shadow:0 22px 50px rgba(0,0,0,.45),0 6px 14px rgba(0,0,0,.30);}
+  body.theme-macosx .mx-title{display:flex;align-items:center;position:relative;height:22px;flex:0 0 22px;gap:6px;padding:0 8px;
+    background:linear-gradient(to bottom,#fafafa,#ededed 26%,#dadada 60%,#c6c6c6 92%,#bcbcbc);
+    border-bottom:1px solid #888;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
+  body.theme-macosx .mx-title::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(to bottom,rgba(255,255,255,.14) 0 1px,rgba(0,0,0,.028) 1px 2px);}
+  .mx-lights{display:flex;gap:6px;align-items:center;position:relative;z-index:1;}
+  .mx-gel{width:14px;height:14px;border-radius:50%;position:relative;flex:0 0 14px;cursor:pointer;
+    box-shadow:inset 0 0 1px .5px rgba(0,0,0,.38),inset 0 -2.5px 3px rgba(0,0,0,.32),inset 0 2px 2px rgba(255,255,255,.30),0 1px 1.5px rgba(0,0,0,.42);}
+  .mx-gel::before{content:"";position:absolute;left:2.5px;right:2.5px;top:1.5px;height:6px;border-radius:50%;z-index:1;
+    background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.98),rgba(255,255,255,.55) 52%,rgba(255,255,255,0));}
+  .mx-close{background:radial-gradient(circle at 50% 34%,#ffe6df,#ff8f7c 20%,#fb5038 46%,#e22a16 66%,#b51d0d 84%,#861309);}
+  .mx-min{background:radial-gradient(circle at 50% 34%,#fff1cf,#ffd069 20%,#fcab1e 46%,#ef8d00 66%,#c06d00 84%,#8a4f00);}
+  .mx-zoom{background:radial-gradient(circle at 50% 34%,#e7fbcb,#aef071 20%,#62d227 46%,#3aa90e 66%,#2b8908 84%,#1c6207);}
+  .mx-glyph{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+    font:700 11px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
+    text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
+  body.hovering .mx-glyph{opacity:1;}
+  .mx-caption{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font:700 13px "Lucida Grande","Helvetica Neue",Helvetica,Arial,sans-serif;color:#1a1a1a;text-shadow:0 1px 0 rgba(255,255,255,.6);white-space:nowrap;}
+  body.theme-macosx .be-menubar{color:#2a2a2a;border:none;border-bottom:1px solid #9b9b9b;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+    background:repeating-linear-gradient(to bottom,rgba(0,0,0,.028) 0 1px,rgba(255,255,255,.12) 1px 2px),linear-gradient(to bottom,#f4f4f4,#dcdcdc);}
+  body.theme-macosx .be-mid,body.theme-macosx .be-content{background:#fff;}
+  body.theme-macosx .be-content{box-shadow:inset 1px 0 0 #e5e5e5;}
+  body.theme-macosx .be-status{color:#333;border:none;border-top:1px solid #c7c7c7;
+    background:linear-gradient(to bottom,#f4f4f4,#dcdcdc);}
+  /* Aqua blue gel scrollbars */
+  body.theme-macosx .vsb,body.theme-macosx .hsb{background:linear-gradient(90deg,#f3f3f3,#e2e2e2);border-color:#c7c7c7;}
+  body.theme-macosx .sb-trough{background:linear-gradient(90deg,#f3f3f3,#e2e2e2);}
+  body.theme-macosx .sb-thumb{border-radius:7px;border:1px solid #3a6398;
+    background:linear-gradient(90deg,#e6f2ff 0%,#abcef6 26%,#6a9ddd 60%,#5184c9 100%);
+    box-shadow:inset 1.5px 1px 1px rgba(255,255,255,.95),inset -1px -1px 2px rgba(20,60,120,.45);}
+  body.theme-macosx .sb-thumb .grip{display:none;}
+  body.theme-macosx .sb-btn{color:#5a6470;border:1px solid #cfcfcf;background:linear-gradient(180deg,#fafafa,#e6e6e6);box-shadow:none;}
+  /* Aqua selection + labels */
+  body.theme-macosx .be-item .lbl{border-bottom:none;border-radius:3px;}
+  body.theme-macosx .be-grid .be-item.sel .lbl,body.theme-macosx .be-grid.list .be-item.sel{background:#3a72c8;color:#fff;}
 </style>
 </head>
 <body>
@@ -228,6 +270,15 @@
       </span>
       <span class="mf-caption">Applications</span>
     </div>
+    <!-- Mac OS X Aqua title bar (shown only in theme-macosx) -->
+    <div class="mx-title" id="mxtitle">
+      <span class="mx-lights">
+        <span class="mx-gel mx-close" id="mxclose" title="Close"><span class="mx-glyph">&times;</span></span>
+        <span class="mx-gel mx-min" id="mxmin" title="Minimieren"><span class="mx-glyph">&minus;</span></span>
+        <span class="mx-gel mx-zoom" id="mxzoom" title="Zoom"><span class="mx-glyph">+</span></span>
+      </span>
+      <span class="mx-caption">Applications</span>
+    </div>
     <div class="be-menubar"><span>File</span><span>Window</span></div>
     <div class="be-mid">
       <div class="be-content"><div class="be-grid" id="grid"></div></div>
@@ -263,7 +314,7 @@
   document.querySelectorAll('.sb-thumb').forEach(t=>t.innerHTML='<i class="grip"></i><i class="grip"></i><i class="grip"></i>');
 
   let viewMode='icon';
-  const VIEW={icon:{CW:82,CH:92}, mini:{CW:74,CH:46}, list:{CW:0,CH:20}}, PAD=8;
+  const VIEW={icon:{CW:90,CH:108}, mini:{CW:80,CH:74}, list:{CW:0,CH:20}}, PAD=8;
   const win=document.getElementById('win'), grid=document.getElementById('grid');
   const content=win.querySelector('.be-content');
   const st={x:0,y:0,gridW:0,gridH:0,maxX:0,maxY:0};
@@ -288,7 +339,7 @@
       el.style.left = list ? PAD+'px' : (PAD+c*v.CW)+'px';
       el.style.top = (PAD+r*v.CH)+'px';
       if(list) el.style.width = listW+'px';
-      const cl=document.body.classList, themed=cl.contains('theme-macos9')||cl.contains('theme-winxp')||cl.contains('theme-maiksfav');
+      const cl=document.body.classList, themed=cl.contains('theme-macos9')||cl.contains('theme-winxp')||cl.contains('theme-maiksfav')||cl.contains('theme-macosx');
       const icHTML=(themed && it.img) ? `<img src="${it.img}">` : BEOS_ICONS.get(it.icon);
       el.innerHTML=`<div class="ic">${icHTML}</div><div class="lbl">${esc(it.name)}</div>`;
       el.addEventListener('mousedown',(e)=>{
@@ -318,15 +369,17 @@
   window.setApps=function(list){ apps=Array.isArray(list)?list:[]; buildGrid(); };
   // Host sets the chrome theme ('beos' default · 'macos9' = Platinum Finder window).
   window.setTheme=function(k){ document.body.className='theme-'+(k||'beos'); buildGrid(); };
+  window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
   // Host sets the window title across all three chromes (BeOS tab / Mac OS 9 plaque / XP caption).
   window.setTitle=function(t){
-    document.querySelectorAll('.be-title,.xp-caption,.mf-caption').forEach(e=>e.textContent=t);
+    document.querySelectorAll('.be-title,.xp-caption,.mf-caption,.mx-caption').forEach(e=>e.textContent=t);
     const pl=document.querySelector('.m9-plaque span:last-child'); if(pl) pl.textContent=t;
   };
   window.regions=function(){
-    const cl=document.body.classList, m9=cl.contains('theme-macos9'), xp=cl.contains('theme-winxp'), mf=cl.contains('theme-maiksfav');
+    const cl=document.body.classList, m9=cl.contains('theme-macos9'), xp=cl.contains('theme-winxp'), mf=cl.contains('theme-maiksfav'), mx=cl.contains('theme-macosx');
     const R=id=>{const e=document.getElementById(id);if(!e)return[0,0,0,0];const b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
     // [title, close, minimise/collapse, maximise/zoom]
+    if(mx){ return [...R('mxtitle'),...R('mxclose'),...R('mxmin'),...R('mxzoom')]; }
     if(mf){ return [...R('mftitle'),...R('mfclose'),...R('mfmin'),...R('mfzoom')]; }
     if(xp){ return [...R('xptitle'),...R('xpclose'),...R('xpmin'),...R('xpmax')]; }
     if(m9){ return [...R('m9title'),...R('m9close'),...R('m9collapse'),...R('m9zoom')]; }

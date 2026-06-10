@@ -46,18 +46,78 @@
   },
   "wallpaper": "wallpaper.jpg",
   "wallpapers": [
-    { "name": "Mac OS 9 Default", "file": "wallpaper.jpg" },
-    { "name": "Blue Dalmatian", "file": "wallpaper-blue-dalmatian.png" },
-    { "name": "Mac OS 9 Background", "file": "wallpaper-macos9.png" }
+    {
+      "name": "Mac OS 9 Default",
+      "file": "wallpaper.jpg"
+    },
+    {
+      "name": "Blue Dalmatian",
+      "file": "wallpaper-blue-dalmatian.png"
+    },
+    {
+      "name": "Mac OS 9 Background",
+      "file": "wallpaper-macos9.png"
+    }
   ],
   "desktopIcons": [
-    { "name": "Macintosh HD", "icon": "harddrive.png", "type": "folder", "path": "/", "gridX": 0, "gridY": 1 },
-    { "name": "Applications", "icon": "folder.png", "type": "appfolder", "gridX": 0, "gridY": 2 },
-    { "name": "CPU", "icon": "computer.png", "type": "cpumonitor", "gridX": 0, "gridY": 3 },
-    { "name": "Pac-Man", "icon": "pac.icns", "type": "pacman", "gridX": 0, "gridY": 4 },
-    { "name": "TV", "icon": "folder.png", "type": "tvfolder", "gridX": 0, "gridY": 5 },
-    { "name": "Clock", "icon": "clock.png", "type": "clock", "gridX": 0, "gridY": 6 },
-    { "name": "Trash", "icon": "trash_empty.png", "iconFull": "trash_full.png", "type": "trash", "gridX": 0, "gridY": 7 }
+    {
+      "name": "Macintosh HD",
+      "icon": "harddrive.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Applications",
+      "icon": "folder.png",
+      "type": "appfolder",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "CPU",
+      "icon": "computer.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Pac-Man",
+      "icon": "pac.icns",
+      "type": "pacman",
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "TV",
+      "icon": "folder.png",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 5
+    },
+    {
+      "name": "Clock",
+      "icon": "clock.png",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 6
+    },
+    {
+      "name": "Trash",
+      "icon": "trash_empty.png",
+      "iconFull": "trash_full.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": 7
+    },
+    {
+      "name": "Notepad",
+      "icon": "notes.png",
+      "type": "notepad",
+      "gridX": 0,
+      "gridY": 8
+    }
   ],
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-broken-lite",

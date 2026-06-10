@@ -33,6 +33,7 @@ enum PresetRegistry {
             PresetInfo(id: "crt-lite", displayName: "CRT Lite", description: "Transparent CRT overlay — no screen recording"),
             PresetInfo(id: "lcd-lite", displayName: "LCD Lite", description: "Standard TFT LCD pixel grid overlay"),
             PresetInfo(id: "lcd-retro-lite", displayName: "LCD Retro Lite", description: "Chunky early-2000s TN panel pixel grid"),
+            PresetInfo(id: "lcd-macbook", displayName: "LCD MacBook", description: "Glossy early-2000s Apple laptop TFT — sharp subpixels + screen gloss"),
             PresetInfo(id: "lcd-sharp-lite", displayName: "LCD Sharp Lite", description: "Fine IPS-style pixel grid, clean and precise"),
             PresetInfo(id: "lcd-broken-lite", displayName: "LCD Broken Lite", description: "Damaged LCD — dead pixels, stuck lines, pressure marks"),
             PresetInfo(id: "bw-lite", displayName: "B&W Lite", description: "Grayscale + film grain — uses macOS Accessibility"),

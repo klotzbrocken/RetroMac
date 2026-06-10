@@ -102,6 +102,9 @@ struct DockThemeConfig: Codable {
         var edgeOffset: CGFloat? // distance from screen edge in px (default 8)
         var borderStyle: String? // nil = normal bevel/border; "pacman" = animated pellet border
         var showTrash: Bool?     // show trash icon at end of dock
+        var showUrlLauncher: Bool?   // editable URL-launcher tile, placed left of the trash
+        var pinstripe: Bool?         // fine horizontal Aqua pinstripe texture over the dock bg
+        var showLabels: Bool?        // show the app name above the magnified icon (Aqua dock)
         var showGrip: Bool?      // show grip dots handle (BeOS deskbar style)
         var startMenuStyle: String?  // "classic" (Win98-style), "xp" (Luna Blue two-column)
         var startButtonColor: String?
@@ -181,6 +184,7 @@ extension DockThemeConfig {
     var dockAlignment: String { dock.alignment ?? "center" }
     var dockEdgeOffset: CGFloat { dock.edgeOffset ?? 8 }
     var hasTrash: Bool { dock.showTrash == true }
+    var hasUrlLauncher: Bool { dock.showUrlLauncher == true }
     var hasGrip: Bool { dock.showGrip == true }
     var startMenuStyle: String { dock.startMenuStyle ?? "classic" }
     var isXPStartMenu: Bool { startMenuStyle == "xp" }

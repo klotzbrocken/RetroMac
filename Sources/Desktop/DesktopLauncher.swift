@@ -46,6 +46,9 @@ enum DesktopLauncher {
         case "clock":
             ClockWidgetController.shared.show()
 
+        case "notepad":
+            NotepadController.shared.show()
+
         case "pacman":
             PacmanGame.launch()
 

@@ -401,14 +401,53 @@ final class ThemeManager {
     }
 
     func importTheme(from sourceURL: URL) throws {
-        let destURL = userThemesDir.appendingPathComponent(sourceURL.lastPathComponent)
         let fm = FileManager.default
-        if fm.fileExists(atPath: destURL.path) {
-            try fm.removeItem(at: destURL)
+        try fm.createDirectory(at: userThemesDir, withIntermediateDirectories: true)
+
+        if sourceURL.pathExtension.lowercased() == "zip" {
+            // Unzip to a temp dir, then install the .retromactheme bundle found inside.
+            let tmp = fm.temporaryDirectory.appendingPathComponent("rmtheme-import-\(UUID().uuidString)")
+            try fm.createDirectory(at: tmp, withIntermediateDirectories: true)
+            defer { try? fm.removeItem(at: tmp) }
+
+            let unzip = Process()
+            unzip.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+            unzip.arguments = ["-x", "-k", sourceURL.path, tmp.path]
+            unzip.standardOutput = FileHandle.nullDevice
+            unzip.standardError = FileHandle.nullDevice
+            try unzip.run(); unzip.waitUntilExit()
+            guard unzip.terminationStatus == 0 else {
+                throw NSError(domain: "RetroMac", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not unzip the theme archive."])
+            }
+            guard let bundle = Self.findThemeBundle(in: tmp) else {
+                throw NSError(domain: "RetroMac", code: 2, userInfo: [NSLocalizedDescriptionKey: "No .retromactheme bundle found inside the .zip."])
+            }
+            try installThemeBundle(bundle)
+        } else {
+            try installThemeBundle(sourceURL)
         }
-        try fm.copyItem(at: sourceURL, to: destURL)
         reload()
         print("[Theme] Imported theme from \(sourceURL.lastPathComponent)")
+    }
+
+    private func installThemeBundle(_ src: URL) throws {
+        let fm = FileManager.default
+        let destURL = userThemesDir.appendingPathComponent(src.lastPathComponent)
+        if fm.fileExists(atPath: destURL.path) { try fm.removeItem(at: destURL) }
+        try fm.copyItem(at: src, to: destURL)
+    }
+
+    /// Locate a *.retromactheme bundle at the archive root or one level deep (skips __MACOSX).
+    private static func findThemeBundle(in dir: URL) -> URL? {
+        let fm = FileManager.default
+        guard let items = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.isDirectoryKey]) else { return nil }
+        if let direct = items.first(where: { $0.pathExtension == "retromactheme" }) { return direct }
+        for sub in items where sub.lastPathComponent != "__MACOSX"
+            && ((try? sub.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true) {
+            if let nested = (try? fm.contentsOfDirectory(at: sub, includingPropertiesForKeys: nil))?
+                .first(where: { $0.pathExtension == "retromactheme" }) { return nested }
+        }
+        return nil
     }
 
     func deleteTheme(_ theme: ThemeBundle) throws {

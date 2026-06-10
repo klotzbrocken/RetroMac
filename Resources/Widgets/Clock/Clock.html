@@ -19,7 +19,7 @@
   .face{display:block;margin:0 auto;background:transparent;}
 
   /* ===== Mac OS 9 (Platinum) ===== */
-  .m9-title,.xp-title,.mf-title{display:none;}
+  .m9-title,.xp-title,.mf-title,.mx-title{display:none;}
   body.theme-macos9 .tab{display:none;}
   body.theme-macos9 #win{border:1px solid #000;background:#d8d8d8;box-shadow:2px 2px 8px rgba(0,0,0,.3);}
   body.theme-macos9 .body{border:none;background:#d8d8d8;box-shadow:none;margin:0;}
@@ -51,6 +51,32 @@
     background:#E3E3E3;border-bottom:2px solid #262626;font-family:"Pixelify Sans",monospace;}
   .mf-close{width:12px;height:12px;border-radius:50%;background:#FF5F57;border:1px solid rgba(0,0,0,.3);cursor:pointer;}
   .mf-cap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:700;color:#3a3a3a;}
+
+  /* ===== Mac OS X (Aqua 10.0–10.4) ===== */
+  body.theme-macosx .tab{display:none;}
+  body.theme-macosx #win{border-radius:7px 7px 4px 4px;overflow:hidden;border:1px solid #5c5c5c;
+    box-shadow:0 22px 50px rgba(0,0,0,.45),0 6px 14px rgba(0,0,0,.30);}
+  body.theme-macosx .body{border:none;margin:0;padding:10px;background:#ededed;box-shadow:none;}
+  body.theme-macosx .mx-title{display:flex;align-items:center;position:relative;height:22px;gap:6px;padding:0 8px;
+    background:linear-gradient(to bottom,#fafafa,#ededed 26%,#dadada 60%,#c6c6c6 92%,#bcbcbc);
+    border-bottom:1px solid #888;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
+  body.theme-macosx .mx-title::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(to bottom,rgba(255,255,255,.14) 0 1px,rgba(0,0,0,.028) 1px 2px);}
+  .mx-lights{display:flex;gap:6px;align-items:center;position:relative;z-index:1;}
+  .mx-gel{width:14px;height:14px;border-radius:50%;position:relative;flex:0 0 14px;
+    box-shadow:inset 0 0 1px .5px rgba(0,0,0,.38),inset 0 -2.5px 3px rgba(0,0,0,.32),inset 0 2px 2px rgba(255,255,255,.30),0 1px 1.5px rgba(0,0,0,.42);}
+  .mx-gel::before{content:"";position:absolute;left:2.5px;right:2.5px;top:1.5px;height:6px;border-radius:50%;z-index:1;
+    background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.98),rgba(255,255,255,.55) 52%,rgba(255,255,255,0));}
+  .mx-close{background:radial-gradient(circle at 50% 34%,#ffe6df,#ff8f7c 20%,#fb5038 46%,#e22a16 66%,#b51d0d 84%,#861309);cursor:pointer;}
+  /* Clock has only a Close action → minimise/zoom are shown disabled (grey gel, no glyph). */
+  .mx-min,.mx-zoom{background:radial-gradient(circle at 50% 34%,#ffffff,#f2f2f2 20%,#dedede 48%,#c2c2c2 70%,#a6a6a6 86%,#858585);}
+  .mx-min .mx-glyph,.mx-zoom .mx-glyph{display:none;}
+  .mx-cap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;
+    font:700 13px "Lucida Grande","Helvetica Neue",Helvetica,Arial,sans-serif;color:#1a1a1a;text-shadow:0 1px 0 rgba(255,255,255,.6);}
+  .mx-glyph{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+    font:700 11px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
+    text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
+  body.hovering .mx-glyph{opacity:1;}
 </style>
 </head>
 <body>
@@ -63,6 +89,11 @@
     <div class="xp-title" id="xptitle"><span class="xp-cap">Clock</span><span class="xp-close" id="xpclose"></span></div>
     <!-- Maiks Favourite -->
     <div class="mf-title" id="mftitle"><span class="mf-close" id="mfclose"></span><span class="mf-cap">Clock</span></div>
+    <!-- Mac OS X Aqua -->
+    <div class="mx-title" id="mxtitle">
+      <span class="mx-lights"><span class="mx-gel mx-close" id="mxclose" title="Close"><span class="mx-glyph">&times;</span></span><span class="mx-gel mx-min"><span class="mx-glyph">&minus;</span></span><span class="mx-gel mx-zoom"><span class="mx-glyph">+</span></span></span>
+      <span class="mx-cap">Clock</span>
+    </div>
     <div class="body">
       <canvas class="face" id="face" width="176" height="176"></canvas>
     </div>
@@ -77,6 +108,7 @@
       case 'macos9': return {bg:'#ffffff', ring:'#000000', tick:'#000000', hand:'#000000', sec:'#cc2a17', num:false, face:'#ffffff'};
       case 'winxp':  return {bg:'#ffffff', ring:'#0831D9', tick:'#333333', hand:'#1a1a1a', sec:'#E35F44', num:true,  face:'#ffffff'};
       case 'maiksfav': return {bg:'#ffffff', ring:'#262626', tick:'#262626', hand:'#262626', sec:'#FF5F57', num:false, face:'#ffffff'};
+      case 'macosx': return {bg:'#ffffff', ring:'#2a5db0', tick:'#333333', hand:'#1a1a1a', sec:'#e8483a', num:false, face:'#ffffff'};
       default:       return {bg:'#1d1d1d', ring:'#f2bd23', tick:'#f2bd23', hand:'#fbe27e', sec:'#ffffff', num:false, face:'#2b2b2b'}; // BeOS dark replicant
     }
   }
@@ -110,14 +142,16 @@
   setInterval(draw, 1000); draw();
 
   window.setTheme=function(k){ theme=k||'beos'; document.body.className='theme-'+theme; draw(); };
+  window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
 
   function postClose(){ if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.clock) webkit.messageHandlers.clock.postMessage('close'); }
-  ['bxclose','m9close','xpclose','mfclose'].forEach(id=>{ const e=document.getElementById(id); if(e) e.addEventListener('click',ev=>{ev.stopPropagation();postClose();}); });
+  ['bxclose','m9close','xpclose','mfclose','mxclose'].forEach(id=>{ const e=document.getElementById(id); if(e) e.addEventListener('click',ev=>{ev.stopPropagation();postClose();}); });
 
   // Title + close rects for the native drag/close overlay.
   window.regions=function(){
     const cl=document.body.classList;
     const R=id=>{const e=document.getElementById(id);if(!e)return[0,0,0,0];const b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
+    if(cl.contains('theme-macosx'))   return [...R('mxtitle'),...R('mxclose')];
     if(cl.contains('theme-maiksfav')) return [...R('mftitle'),...R('mfclose')];
     if(cl.contains('theme-winxp'))    return [...R('xptitle'),...R('xpclose')];
     if(cl.contains('theme-macos9'))   return [...R('m9title'),...R('m9close')];

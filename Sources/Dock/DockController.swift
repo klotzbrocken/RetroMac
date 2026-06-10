@@ -916,6 +916,23 @@ final class DockController {
     private func showContextMenu(for bundleID: String, at point: NSPoint) {
         let menu = NSMenu()
 
+        // URL launcher tile: open + edit the target URL
+        if bundleID == "__urllauncher__" {
+            let open = NSMenuItem(title: "Open Link", action: #selector(menuOpenURLLauncher(_:)), keyEquivalent: "")
+            open.target = self
+            menu.addItem(open)
+            menu.addItem(.separator())
+            let setURL = NSMenuItem(title: "Change URL…", action: #selector(menuSetURLLauncher(_:)), keyEquivalent: "")
+            setURL.target = self
+            menu.addItem(setURL)
+            if let window = window {
+                window.makeKeyAndOrderFront(nil)
+                let localPoint = window.convertPoint(fromScreen: point)
+                menu.popUp(positioning: nil, at: localPoint, in: window.contentView)
+            }
+            return
+        }
+
         // Trash has its own context menu
         if bundleID == "__trash__" {
             let openTrash = NSMenuItem(title: "Open Trash", action: #selector(menuOpenTrash(_:)), keyEquivalent: "")
@@ -1224,6 +1241,28 @@ final class DockController {
             // Refresh trash icon
             dockView?.rebuildItems()
         }
+    }
+
+    @objc private func menuOpenURLLauncher(_ sender: NSMenuItem) {
+        if let u = URL(string: DockView.urlLauncherURL) { NSWorkspace.shared.open(u) }
+    }
+
+    @objc private func menuSetURLLauncher(_ sender: NSMenuItem) {
+        let alert = NSAlert()
+        alert.messageText = "Change Link URL"
+        alert.informativeText = "Enter the URL to open when the dock tile is clicked:"
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        field.stringValue = DockView.urlLauncherURL
+        field.placeholderString = DockView.urlLauncherDefault
+        alert.accessoryView = field
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        var s = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if s.isEmpty { s = DockView.urlLauncherDefault }
+        if !s.contains("://") { s = "https://" + s }
+        UserDefaults.standard.set(s, forKey: "urlLauncherURL")
     }
 
     // MARK: - Hotkey

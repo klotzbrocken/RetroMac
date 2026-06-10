@@ -60,6 +60,9 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
 
             let overlay = DragOverlayView(frame: .zero)
             overlay.onClose = { [weak self] in self?.close() }
+            overlay.onHover = { [weak self] h in
+                self?.webView?.evaluateJavaScript("window.setHover && window.setHover(\(h))")
+            }
 
             let container = NSView(frame: initial)
             container.addSubview(wv); container.addSubview(overlay)
