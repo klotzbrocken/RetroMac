@@ -483,10 +483,18 @@ struct DetailTitleBar: View {
 
     private func importTheme() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "retromactheme")!]
-        panel.message = "Select a .retromactheme bundle to install"
+        panel.allowedContentTypes = [.init(filenameExtension: "retromactheme")!, .zip]
+        panel.message = "Select a .retromactheme bundle or a .zip to install"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        try? ThemeManager.shared.importTheme(from: url)
+        do {
+            try ThemeManager.shared.importTheme(from: url)
+        } catch {
+            let a = NSAlert()
+            a.alertStyle = .warning
+            a.messageText = "Theme import failed"
+            a.informativeText = error.localizedDescription
+            a.runModal()
+        }
     }
 }
 

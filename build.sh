@@ -244,6 +244,15 @@ echo "  Run:  open /Applications/$INSTALL_NAME"
 echo ""
 echo "First launch: grant Screen Recording + Camera in System Settings → Privacy & Security"
 
+# Debug: relaunch the freshly built dev app. Re-selecting a theme only reloads
+# resources (theme.json / widget HTML) — compiled Swift changes need a full relaunch.
+if [ "$MODE" = "debug" ]; then
+    echo "  ↻ Relaunching $INSTALL_NAME (loads the fresh binary)…"
+    pkill -f "/Applications/$INSTALL_NAME/Contents/MacOS/RetroMac" 2>/dev/null || true
+    sleep 1
+    open "/Applications/$INSTALL_NAME" || true
+fi
+
 # --- DMG creation (pass 'dmg' as second arg) ---
 if [ "${2}" = "dmg" ]; then
     echo ""

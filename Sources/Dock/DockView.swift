@@ -6,6 +6,7 @@ final class DockView: NSView {
     // vertical magnifier mutates item frames, so it must read REST positions from here
     // (not the live, already-magnified frames) to avoid compounding spacing/jitter.
     private var restCentersY: [CGFloat] = []
+    private var restCentersX: [CGFloat] = []
     private var runningBundleIDs: Set<String> = []
     private var lastItemBundleIDs: [String] = []
     private var wsObserver: NSObjectProtocol?
@@ -121,6 +122,9 @@ final class DockView: NSView {
 
     private var hasTrash: Bool {
         ThemeManager.shared.activeTheme?.config.hasTrash ?? false
+    }
+    private var hasUrlLauncher: Bool {
+        ThemeManager.shared.activeTheme?.config.hasUrlLauncher ?? false
     }
 
     private var hasDiskFree: Bool {
@@ -352,10 +356,17 @@ final class DockView: NSView {
                     y -= iconSize + spacing
                 }
             }
-            if hasTrash {
+            if hasUrlLauncher || hasTrash {
                 y -= spacing
-                addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                             theme: theme, iconSize: iconSize)
+                if hasUrlLauncher {
+                    addURLLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                       theme: theme, iconSize: iconSize)
+                    y -= iconSize + spacing
+                }
+                if hasTrash {
+                    addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                 theme: theme, iconSize: iconSize)
+                }
             }
         } else if isControlStrip {
             // Mac OS 9 Control Strip layout: left cap PNG + icon modules + right cap PNG
@@ -580,16 +591,24 @@ final class DockView: NSView {
                 }
             }
 
-            if hasTrash {
+            if hasUrlLauncher || hasTrash {
                 trashSeparatorX = x - spacing / 2
                 x += spacing
                 let y = (barRect.height - iconSize) / 2
-                addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                             theme: theme, iconSize: iconSize)
+                if hasUrlLauncher {
+                    addURLLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                       theme: theme, iconSize: iconSize)
+                    x += iconSize + spacing
+                }
+                if hasTrash {
+                    addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                 theme: theme, iconSize: iconSize)
+                }
             }
         }
 
         lastItemBundleIDs = itemViews.map { $0.bundleID }
+        restCentersX = itemViews.map { $0.frame.midX }
         updateRunningIndicators()
         needsDisplay = true
     }
@@ -598,6 +617,7 @@ final class DockView: NSView {
         let apps = AppManager.shared.apps
         let transientApps = runningAppsNotInDock()
         var currentIDs = apps.map { $0.bundleID } + transientApps
+        if hasUrlLauncher && !isControlStrip { currentIDs.append("__urllauncher__") }
         if hasTrash && !isControlStrip { currentIDs.append("__trash__") }
         if currentIDs != lastItemBundleIDs {
             rebuildItems()
@@ -640,6 +660,13 @@ final class DockView: NSView {
                 }
             }
             // Trash icon (always the last item) at the bottom of the stack.
+            if hasUrlLauncher, idx < itemViews.count {
+                y -= spacing
+                trashSeparatorX = nil
+                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                idx += 1
+                y -= iconSize
+            }
             if hasTrash, idx < itemViews.count {
                 y -= spacing
                 trashSeparatorX = nil
@@ -863,14 +890,23 @@ final class DockView: NSView {
                     x += iconSize + spacing
                 }
             }
-            if hasTrash && idx < itemViews.count {
+            if (hasUrlLauncher || hasTrash) && idx < itemViews.count {
                 trashSeparatorX = x - spacing / 2
                 x += spacing
                 let y = (barRect.height - iconSize) / 2
-                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                if hasUrlLauncher, idx < itemViews.count {
+                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                    idx += 1
+                    x += iconSize + spacing
+                }
+                if hasTrash, idx < itemViews.count {
+                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                    idx += 1
+                }
             }
         }
 
+        restCentersX = itemViews.map { $0.frame.midX }
         needsDisplay = true
     }
 
@@ -943,6 +979,32 @@ final class DockView: NSView {
             if let trashURL = try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
                 NSWorkspace.shared.open(trashURL)
             }
+        }
+        item.onRightClick = { [weak self] bid, point in
+            self?.onContextMenu?(bid, point)
+        }
+        addSubview(item)
+        itemViews.append(item)
+    }
+
+    static let urlLauncherDefault = "https://myretromac.app"
+    static var urlLauncherURL: String {
+        UserDefaults.standard.string(forKey: "urlLauncherURL") ?? urlLauncherDefault
+    }
+
+    private func addURLLauncherItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
+        let item = DockItemView(bundleID: "__urllauncher__", frame: frame)
+        item.magnificationEnabled = theme.hasMagnification && AppSettings.shared.dockMagnification
+        if let dir = ThemeManager.shared.activeTheme?.iconsDirectory {
+            let url = dir.appendingPathComponent("genericurl.png")
+            if let img = NSImage(contentsOf: url) {
+                img.size = NSSize(width: iconSize, height: iconSize)
+                item.updateIcon(img)
+            }
+        }
+        item.updateTheme(theme)
+        item.onLeftClick = { _ in
+            if let u = URL(string: DockView.urlLauncherURL) { NSWorkspace.shared.open(u) }
         }
         item.onRightClick = { [weak self] bid, point in
             self?.onContextMenu?(bid, point)
@@ -1050,6 +1112,9 @@ final class DockView: NSView {
         let transientApps = runningAppsNotInDock()
         if !transientApps.isEmpty {
             width += spacing + CGFloat(transientApps.count) * (iconSize + spacing)
+        }
+        if hasUrlLauncher {
+            width += spacing + iconSize
         }
         if hasTrash {
             width += spacing + iconSize + spacing
@@ -1683,6 +1748,22 @@ final class DockView: NSView {
         } else {
             bgColor.setFill()
             bgPath.fill()
+        }
+
+        // Aqua pinstripe texture: fine horizontal lines over the (clipped) background.
+        if theme.dock.pinstripe == true {
+            ctx.saveGState()
+            bgPath.addClip()
+            NSColor.white.withAlphaComponent(0.07 * bgAlpha).setStroke()
+            let pen = NSBezierPath(); pen.lineWidth = 1
+            var yy = rect.minY + 1.5
+            while yy < rect.maxY {
+                pen.move(to: NSPoint(x: rect.minX, y: yy))
+                pen.line(to: NSPoint(x: rect.maxX, y: yy))
+                yy += 2
+            }
+            pen.stroke()
+            ctx.restoreGState()
         }
 
         // 3D shelf: glass highlight on upper portion
@@ -2797,49 +2878,62 @@ final class DockView: NSView {
             return
         }
 
-        // 1. Calculate scale for each icon (raised cosine bell curve)
+        // Rest geometry captured at layout time — NEVER read live frames here, or the
+        // frame-based magnification compounds on every mouse move. (Layer-transform
+        // magnification proved unreliable — it expanded the bar but didn't render the
+        // icon scale — so the horizontal dock now resizes frames, like the vertical one.)
+        let count = itemViews.count
+        let restX = (restCentersX.count == count) ? restCentersX : itemViews.map { $0.frame.midX }
+
+        // 1. Per-icon scale (raised cosine bell curve)
         var scales: [CGFloat] = []
-        for item in itemViews {
-            let center = item.frame.midX
-            let dist = abs(point.x - center)
+        for cx in restX {
+            let dist = abs(point.x - cx)
             if dist < range {
                 let t = dist / range
-                let factor = (1.0 + cos(CGFloat.pi * t)) / 2.0
-                scales.append(1.0 + (maxScale - 1.0) * factor)
+                scales.append(1.0 + (maxScale - 1.0) * ((1.0 + cos(CGFloat.pi * t)) / 2.0))
             } else {
                 scales.append(1.0)
             }
         }
 
-        // 2. Calculate magnified widths and total
-        let originalCenters = itemViews.map { $0.frame.midX }
-        let magnifiedWidths = zip(scales, itemViews).map { $1.frame.width * $0 }
-        let spacingTotal = CGFloat(max(0, itemViews.count - 1)) * spacing
+        // 2. Magnified widths from the REST icon size (baseSize), not live frames
+        let magnifiedWidths = scales.map { baseSize * $0 }
+        let spacingTotal = CGFloat(max(0, count - 1)) * spacing
         let totalMagnified = magnifiedWidths.reduce(CGFloat(0), +) + spacingTotal
 
-        // 3. Position icons centered — the dock bar expands to contain them
-        guard let firstStart = itemViews.first?.frame.minX,
-              let lastEnd = itemViews.last?.frame.maxX else { return }
-        let totalOriginal = itemViews.reduce(CGFloat(0)) { $0 + $1.frame.width } + spacingTotal
-        let expansion = totalMagnified - totalOriginal
-
-        // Center the magnified layout around the original center
+        // 3. Centre the magnified row around the resting centre
+        let firstStart = (restX.first ?? barRect.midX) - baseSize / 2
+        let lastEnd = (restX.last ?? barRect.midX) + baseSize / 2
         let originalCenter = (firstStart + lastEnd) / 2
         var x = originalCenter - totalMagnified / 2
-
-        // Clamp within window bounds (not dock bar — the window is wider)
         if x < padding { x = padding }
         if x + totalMagnified > bounds.width - padding {
             x = max(padding, bounds.width - padding - totalMagnified)
         }
 
+        var maxIdx = 0
+        for i in 0..<scales.count where scales[i] > scales[maxIdx] { maxIdx = i }
+        var labelX: CGFloat = 0, labelTopY: CGFloat = 0
+        let floorY = barRect.minY + (barRect.height - baseSize) / 2   // rest baseline; icons grow upward from here
+
+        // 4. Resize each icon's FRAME (reliable scaling — the icon image fills the frame).
         for (i, item) in itemViews.enumerated() {
-            let magnifiedW = magnifiedWidths[i]
-            let newCenter = x + magnifiedW / 2
-            let dx = newCenter - originalCenters[i]
-            let dy = (scales[i] - 1.0) * baseSize / 2  // pop up from dock bar
-            item.applyMagnification(scale: scales[i], dx: dx, dy: dy)
-            x += magnifiedW + spacing
+            let magW = magnifiedWidths[i]
+            let magH = baseSize * scales[i]
+            item.resetMagnification()
+            item.frame = NSRect(x: x, y: floorY, width: magW, height: magH)
+            item.layer?.zPosition = scales[i]
+            if i == maxIdx { labelX = x + magW / 2; labelTopY = floorY + magH }
+            x += magW + spacing
+        }
+
+        // Aqua app-name label above the most-magnified icon.
+        if ThemeManager.shared.activeTheme?.config.dock.showLabels == true,
+           !itemViews.isEmpty, scales[maxIdx] > 1.08 {
+            showHoverLabel(text: nameFor(itemViews[maxIdx].bundleID), centerX: labelX, aboveY: labelTopY)
+        } else {
+            hoverLabel?.isHidden = true
         }
 
         // 4. Expand the dock bar background to contain magnified icons
@@ -2854,13 +2948,54 @@ final class DockView: NSView {
         needsDisplay = true
     }
 
+    // MARK: - Aqua hover name label
+
+    private var hoverLabel: NSTextField?
+
+    private func nameFor(_ bundleID: String) -> String {
+        if bundleID == "__trash__" { return "Trash" }
+        if bundleID == "__urllauncher__" { return "Link" }
+        if let app = AppManager.shared.apps.first(where: { $0.bundleID == bundleID }) { return app.displayName }
+        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first {
+            return app.localizedName ?? bundleID
+        }
+        return bundleID
+    }
+
+    private func showHoverLabel(text: String, centerX: CGFloat, aboveY: CGFloat) {
+        let lbl: NSTextField
+        if let l = hoverLabel { lbl = l } else {
+            let l = NSTextField(labelWithString: "")
+            l.font = NSFont(name: "Lucida Grande", size: 12) ?? .systemFont(ofSize: 12)
+            l.textColor = .white
+            l.alignment = .center
+            l.drawsBackground = false
+            l.isBezeled = false; l.isEditable = false; l.isSelectable = false
+            l.wantsLayer = true
+            l.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.62).cgColor
+            l.layer?.cornerRadius = 5
+            l.layer?.zPosition = 10_000   // above the magnified icons (which raise zPosition)
+            hoverLabel = l; lbl = l
+        }
+        lbl.stringValue = text
+        let tw = ceil((text as NSString).size(withAttributes: [.font: lbl.font as Any]).width)
+        let w = tw + 16, h: CGFloat = 18
+        let cx = max(w / 2 + 2, min(centerX, bounds.width - w / 2 - 2))
+        let y = min(aboveY + 6, bounds.height - h)
+        lbl.frame = NSRect(x: cx - w / 2, y: y, width: w, height: h)
+        if lbl.superview == nil { addSubview(lbl) } else { addSubview(lbl, positioned: .above, relativeTo: nil) }
+        lbl.isHidden = false
+    }
+
     private func resetMagnification() {
+        hoverLabel?.isHidden = true
         for item in itemViews {
             item.resetMagnification()
         }
         magnifiedDockBarRect = nil
-        // Vertical magnification resizes icon FRAMES, so restore the resting layout.
-        if isVertical { relayoutItems() }
+        // Both axes now resize icon FRAMES during magnification, so restore the
+        // resting layout when the pointer leaves.
+        relayoutItems()
         needsDisplay = true
     }
 

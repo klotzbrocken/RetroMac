@@ -53,6 +53,9 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
             // swallow the event) and the close box.
             let overlay = DragOverlayView(frame: .zero)
             overlay.onClose = { [weak self] in self?.close() }
+            overlay.onHover = { [weak self] h in
+                self?.webView?.evaluateJavaScript("window.setHover && window.setHover(\(h))")
+            }
 
             let container = NSView(frame: initial)
             container.addSubview(wv)
@@ -266,10 +269,21 @@ final class DragOverlayView: NSView {
     var onClose: (() -> Void)?
     var onCollapse: (() -> Void)?       // Mac OS 9 WindowShade (collapse box)
     var onZoom: (() -> Void)?           // Mac OS 9 zoom box
+    var onHover: ((Bool) -> Void)?      // title-bar hover (Aqua reveals traffic-light glyphs)
     var closeRect: CGRect = .zero
     var collapseRect: CGRect = .zero
     var zoomRect: CGRect = .zero
+    private var hoverTracking: NSTrackingArea?
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let t = hoverTracking { removeTrackingArea(t) }
+        let t = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                               owner: self, userInfo: nil)
+        addTrackingArea(t); hoverTracking = t
+    }
+    override func mouseEntered(with event: NSEvent) { onHover?(true) }
+    override func mouseExited(with event: NSEvent) { onHover?(false) }
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if closeRect.contains(p) { onClose?(); return }

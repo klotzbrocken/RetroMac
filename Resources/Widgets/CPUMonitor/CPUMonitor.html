@@ -278,6 +278,34 @@
   .mf-close{background:#FF5F57;} .mf-min{background:#FEBC2E;} .mf-zoom{background:#28C840;}
   .mf-caption{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
     font-size:23px;font-weight:700;color:#3a3a3a;white-space:nowrap;}
+
+  /* ===== Mac OS X — Aqua 10.0–10.4 (counter-scaled like Maiks Favourite) ===== */
+  .mx-title{display:none;}
+  body.theme-macosx .tab,body.theme-macosx .marker{display:none;}
+  body.theme-macosx .window{background:#ededed;border:1px solid #5c5c5c;border-radius:11px 11px 6px 6px;overflow:hidden;
+    box-shadow:0 22px 50px rgba(0,0,0,.45),0 6px 14px rgba(0,0,0,.30);}
+  body.theme-macosx .body{border:none;box-shadow:none;margin:0 7px 7px;}
+  body.theme-macosx .mx-title{display:flex;align-items:center;position:relative;height:40px;gap:11px;padding:0 14px;
+    background:linear-gradient(to bottom,#fafafa,#ededed 26%,#dadada 60%,#c6c6c6 92%,#bcbcbc);
+    border-bottom:1px solid #888;box-shadow:inset 0 2px 0 rgba(255,255,255,.7);}
+  body.theme-macosx .mx-title::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(to bottom,rgba(255,255,255,.13) 0 2px,rgba(0,0,0,.025) 2px 4px);}
+  .mx-lights{display:flex;gap:11px;align-items:center;z-index:2;position:relative;}
+  .mx-btn{width:22px;height:22px;border-radius:50%;position:relative;cursor:default;
+    box-shadow:inset 0 0 1.5px 1px rgba(0,0,0,.38),inset 0 -4px 5px rgba(0,0,0,.32),inset 0 3px 3px rgba(255,255,255,.30),0 2px 2.5px rgba(0,0,0,.42);}
+  .mx-btn::before{content:"";position:absolute;left:4px;right:4px;top:2.5px;height:9px;border-radius:50%;z-index:1;
+    background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.98),rgba(255,255,255,.55) 52%,rgba(255,255,255,0));}
+  .mx-close{background:radial-gradient(circle at 50% 34%,#ffe6df,#ff8f7c 20%,#fb5038 46%,#e22a16 66%,#b51d0d 84%,#861309);cursor:pointer;}
+  /* Collapse (yellow) disabled on Aqua CPU → grey gel, no glyph. */
+  .mx-min{background:radial-gradient(circle at 50% 34%,#ffffff,#f2f2f2 20%,#dedede 48%,#c2c2c2 70%,#a6a6a6 86%,#858585);}
+  .mx-min .mx-glyph{display:none;}
+  .mx-zoom{background:radial-gradient(circle at 50% 34%,#e7fbcb,#aef071 20%,#62d227 46%,#3aa90e 66%,#2b8908 84%,#1c6207);}
+  .mx-caption{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font:700 21px "Lucida Grande","Helvetica Neue",Helvetica,Arial,sans-serif;color:#1a1a1a;text-shadow:0 1px 0 rgba(255,255,255,.6);white-space:nowrap;}
+  .mx-glyph{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+    font:700 17px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
+    text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
+  body.hovering .mx-glyph{opacity:1;}
 </style>
 </head>
 <body>
@@ -309,6 +337,15 @@
             <span class="mf-btn mf-zoom" id="mfzoom"></span>
           </span>
           <span class="mf-caption">CPU Monitor</span>
+        </div>
+        <!-- Mac OS X Aqua title bar (theme-macosx only) -->
+        <div class="mx-title" id="mxtitle">
+          <span class="mx-lights">
+            <span class="mx-btn mx-close" id="mxclose" title="Schließen"><span class="mx-glyph">&times;</span></span>
+            <span class="mx-btn mx-min" id="mxmin"><span class="mx-glyph">&minus;</span></span>
+            <span class="mx-btn mx-zoom" id="mxzoom"><span class="mx-glyph">+</span></span>
+          </span>
+          <span class="mx-caption">CPU Monitor</span>
         </div>
         <div class="tab"><span class="closebox" id="closebox" title="Schließen"></span><b>CPU Monitor</b></div>
         <div class="body">
@@ -416,6 +453,7 @@
 
   // Host sets the chrome theme: 'beos' (yellow tab, default) · 'macos9' (Platinum window).
   window.setTheme = function(k){ document.body.className = 'theme-' + (k || 'beos'); };
+  window.setHover = function(h){ document.body.classList.toggle('hovering', !!h); };
 
   // Mac OS 9 title controls — return new widget size so the host can resize its window.
   window.toggleCollapse = function(){
@@ -432,11 +470,16 @@
   document.getElementById('m9close').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
   document.getElementById('xpclose').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
   document.getElementById('mfclose').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
+  document.getElementById('mxclose').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
 
   // Title rects (already reflect the transform → scaled viewport px).
   window.regions = function(){
     const cl = document.body.classList;
     const R = id => { const e = document.getElementById(id) || document.querySelector(id); const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height]; };
+    if (cl.contains('theme-macosx')) {
+      // Aqua CPU: Close + Zoom only — collapse (yellow) is disabled, so its rect is zeroed.
+      return [...R('mxtitle'), ...R('mxclose'), 0,0,0,0, ...R('mxzoom')];
+    }
     if (cl.contains('theme-maiksfav')) {
       return [...R('mftitle'), ...R('mfclose'), ...R('mfmin'), ...R('mfzoom')];
     }

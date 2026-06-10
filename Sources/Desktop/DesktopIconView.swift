@@ -75,10 +75,17 @@ final class DesktopIconView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         if isSelected {
-            // Mac OS 9 style: only the label gets a highlight background, not the icon
-            let labelRect = label.frame.insetBy(dx: -2, dy: -1)
-            NSColor.selectedContentBackgroundColor.withAlphaComponent(0.8).setFill()
-            NSBezierPath(roundedRect: labelRect, xRadius: 2, yRadius: 2).fill()
+            // Highlight hugs the LABEL TEXT only (the word), not the full two-line cell.
+            let font = label.font ?? NSFont.systemFont(ofSize: 11, weight: .medium)
+            let textW = ceil((entry.name as NSString).size(withAttributes: [.font: font]).width)
+            let lineH = ceil(font.ascender - font.descender + font.leading)
+            let lf = label.frame
+            let twoLines = textW > (lf.width - 4)
+            let hiW = twoLines ? lf.width : min(textW + 8, lf.width)
+            let hiH = (twoLines ? lineH * 2 : lineH) + 4
+            let hiRect = NSRect(x: lf.midX - hiW / 2, y: lf.midY - hiH / 2, width: hiW, height: hiH)
+            NSColor.selectedContentBackgroundColor.withAlphaComponent(0.85).setFill()
+            NSBezierPath(roundedRect: hiRect, xRadius: 3, yRadius: 3).fill()
         }
     }
 

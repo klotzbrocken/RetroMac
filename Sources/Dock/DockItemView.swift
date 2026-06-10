@@ -122,6 +122,26 @@ final class DockItemView: NSView {
         }
 
         let color = NSColor.fromHex(theme.indicator.color)
+        if theme.indicator.style == "triangle" {
+            // Classic Mac OS X running indicator: a small solid triangle pointing
+            // toward the icon (up for bottom docks, sideways for vertical docks).
+            let tri = CAShapeLayer()
+            tri.frame = dot.frame
+            let p = CGMutablePath()
+            if theme.isVertical {
+                let pointRight = theme.effectiveDockPosition != "right"
+                if pointRight { p.move(to: CGPoint(x: sz, y: sz/2)); p.addLine(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: 0, y: sz)) }
+                else          { p.move(to: CGPoint(x: 0, y: sz/2)); p.addLine(to: CGPoint(x: sz, y: 0)); p.addLine(to: CGPoint(x: sz, y: sz)) }
+            } else {
+                p.move(to: CGPoint(x: sz/2, y: sz)); p.addLine(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: sz, y: 0))
+            }
+            p.closeSubpath()
+            tri.path = p
+            tri.fillColor = color.cgColor
+            layer?.addSublayer(tri)
+            indicatorLayer = tri
+            return
+        }
         if theme.indicator.style == "square" {
             dot.backgroundColor = color.cgColor
         } else {

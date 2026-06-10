@@ -110,6 +110,7 @@ enum BuiltinShaders {
         "crt-lite": crtLiteShader,
         "lcd-lite": lcdLiteShader,
         "lcd-retro-lite": lcdRetroLiteShader,
+        "lcd-macbook": lcdMacBookShader,
         "lcd-sharp-lite": lcdSharpLiteShader,
         "lcd-broken-lite": lcdBrokenLiteShader,
         "bw-lite": bwLiteShader,
@@ -2474,6 +2475,64 @@ enum BuiltinShaders {
         float4 src = source.sample(s, uv);
         float3 overlayColor = tint * intensity;
         return float4(mix(src.rgb, overlayColor, alpha), max(src.a, alpha));
+    }
+    """
+
+    // MARK: - LCD MacBook — glossy early-2000s Apple laptop TFT (permission-free overlay)
+
+    private static let lcdMacBookShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 outSize = uniforms.outputSize.xy;
+        float intensity = uniforms.intensity;
+
+        // Glossy Apple TFT laptop screen (~2003 PowerBook/early MacBook): fine SHARP
+        // RGB subpixels, faint cool fringe, a soft glossy reflection sweep and a gentle
+        // edge vignette. Translucent overlay only — never reads the screen (Lite/no perms).
+
+        float alpha = 0.0;
+        float3 tint = float3(0.0);
+
+        // Fine sharp RGB subpixel columns (tight gaps, crisp panel)
+        float gridScale = 3.0;
+        float cellX = fract(uv.x * outSize.x / gridScale);
+        float subX = cellX * 3.0;
+        float subCol = floor(subX);
+        float subLocal = fract(subX);
+        float subDark = (subLocal < 0.20 || subLocal > 0.80) ? 1.0 : 0.0;
+        alpha += subDark * 0.09 * intensity;
+        if (subCol < 1.0)      { tint += float3(0.00, 0.03, 0.04); }
+        else if (subCol < 2.0) { tint += float3(0.03, 0.00, 0.04); }
+        else                   { tint += float3(0.03, 0.03, 0.00); }
+
+        // Fine horizontal pixel rows
+        float rowY = fract(uv.y * outSize.y / gridScale);
+        float hLine = (rowY < 0.18) ? 1.0 : 0.0;
+        alpha += hLine * 0.05 * intensity;
+
+        // Soft edge vignette (slight darkening toward the bezel)
+        float2 d = uv - float2(0.5);
+        float vig = clamp(dot(d, d) * 0.7, 0.0, 1.0);
+        alpha += vig * 0.10 * intensity;
+
+        // Composite the dark/cool overlay
+        float4 src = source.sample(s, uv);
+        float a = clamp(alpha, 0.0, 0.4);
+        float3 outc = mix(src.rgb, tint * intensity, a);
+        float outa = max(src.a, a);
+
+        // Glossy reflection: a broad translucent white sweep across the upper area
+        float gloss = smoothstep(0.55, 0.0, uv.y) * smoothstep(0.75, 0.0, abs(uv.x - 0.40));
+        float ga = gloss * 0.05 * intensity;
+        outc = mix(outc, float3(1.0), ga);
+        outa = max(outa, ga);
+
+        return float4(outc, outa);
     }
     """
 

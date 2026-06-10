@@ -179,6 +179,13 @@ final class AppSettings: ObservableObject {
             NotificationCenter.default.post(name: .pacmanAnimationChanged, object: nil)
         }
     }
+    /// Desktop pet (Windows XP / 98 themes) — a small sprite that wanders the desktop.
+    @Published var desktopPetEnabled: Bool {
+        didSet {
+            defaults.set(desktopPetEnabled, forKey: "desktopPetEnabled")
+            DesktopPetController.shared.applyForCurrentTheme()
+        }
+    }
     /// Clock mode: dots become 24 hour numbers around the dock; Pac-Man is the hand
     /// (steps every 15 min). Only applies when the animation is enabled.
     @Published var pacmanClockMode: Bool {
@@ -523,6 +530,7 @@ final class AppSettings: ObservableObject {
         retroModeHideDesktopIcons = defaults.object(forKey: "retroModeHideDesktopIcons") as? Bool ?? true
         retroModeActivateShader = defaults.object(forKey: "retroModeActivateShader") as? Bool ?? true
         pacmanAnimationEnabled = defaults.object(forKey: "pacmanAnimationEnabled") as? Bool ?? true
+        desktopPetEnabled = defaults.object(forKey: "desktopPetEnabled") as? Bool ?? true
         pacmanClockMode = defaults.object(forKey: "pacmanClockMode") as? Bool ?? false
         timerWindowEnabled = defaults.bool(forKey: "timerWindowEnabled")
         timerWindowStart = defaults.object(forKey: "timerWindowStart") as? Int ?? 20 * 60

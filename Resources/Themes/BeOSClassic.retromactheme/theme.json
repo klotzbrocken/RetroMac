@@ -46,9 +46,36 @@
     "offset": 3
   },
   "desktopIcons": [
-    { "name": "Boot Disk", "icon": "finder.png", "type": "folder", "path": "/", "gridX": 0, "gridY": 1 },
-    { "name": "Applications", "icon": "appfolder.png", "type": "appfolder", "gridX": 0, "gridY": 3 },
-    { "name": "Trash", "icon": "trash.png", "iconFull": "trash_full.png", "type": "trash", "gridX": 0, "gridY": 5 }
+    {
+      "name": "Boot Disk",
+      "icon": "finder.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Applications",
+      "icon": "appfolder.png",
+      "type": "appfolder",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Trash",
+      "icon": "trash.png",
+      "iconFull": "trash_full.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": 5
+    },
+    {
+      "name": "Notepad",
+      "icon": "notes.png",
+      "type": "notepad",
+      "gridX": 0,
+      "gridY": 6
+    }
   ],
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-retro-lite",

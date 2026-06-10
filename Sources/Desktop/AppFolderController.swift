@@ -50,16 +50,30 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
             let overlay = DragOverlayView(frame: .zero)
             overlay.onClose = { [weak self] in self?.close() }
+            overlay.onHover = { [weak self] h in
+                self?.webView?.evaluateJavaScript("window.setHover && window.setHover(\(h))")
+            }
             overlay.autoresizingMask = [.minYMargin]   // stay pinned to the top tab on resize
-
-            let resize = ResizeOverlayView(frame: NSRect(x: initial.width - 15, y: 0, width: 15, height: 15))
-            resize.autoresizingMask = [.minXMargin]   // pin to the bottom-right resize gadget
-            resize.onResize = { [weak self] p in self?.resizeBy(corner: p) }   // resize THIS instance's window
 
             let container = NSView(frame: initial)
             container.addSubview(wv)
             container.addSubview(overlay)
-            container.addSubview(resize)
+
+            // Resize gadgets on all four corners (Aqua only had bottom-right, but the user
+            // wants every corner). Each anchors the OPPOSITE corner.
+            let g: CGFloat = 16
+            let corners: [(ResizeCorner, NSRect, NSView.AutoresizingMask)] = [
+                (.br, NSRect(x: initial.width - g, y: 0, width: g, height: g), [.minXMargin]),
+                (.bl, NSRect(x: 0, y: 0, width: g, height: g), [.maxXMargin]),
+                (.tr, NSRect(x: initial.width - g, y: initial.height - g, width: g, height: g), [.minXMargin, .minYMargin]),
+                (.tl, NSRect(x: 0, y: initial.height - g, width: g, height: g), [.maxXMargin, .minYMargin]),
+            ]
+            for (corner, frame, mask) in corners {
+                let r = ResizeOverlayView(frame: frame)
+                r.autoresizingMask = mask
+                r.onResize = { [weak self] p in self?.resizeBy(corner: corner, to: p) }
+                container.addSubview(r)
+            }
 
             let p = NSPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
@@ -303,12 +317,18 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         do { try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: false); NSWorkspace.shared.activateFileViewerSelecting([dir]) }
         catch { NSSound.beep() }
     }
-    fileprivate func resizeBy(corner mouse: NSPoint) {
+    fileprivate func resizeBy(corner: ResizeCorner, to mouse: NSPoint) {
         guard let panel = panel else { return }
         let f = panel.frame
-        let newW = max(360, mouse.x - f.minX)
-        let newH = max(220, f.maxY - mouse.y)            // keep the top edge anchored
-        panel.setFrame(NSRect(x: f.minX, y: f.maxY - newH, width: newW, height: newH), display: true)
+        let minW: CGFloat = 360, minH: CGFloat = 220
+        var x = f.minX, y = f.minY, w = f.width, h = f.height
+        switch corner {
+        case .br:  w = max(minW, mouse.x - f.minX); h = max(minH, f.maxY - mouse.y); x = f.minX;        y = f.maxY - h
+        case .bl:  w = max(minW, f.maxX - mouse.x); h = max(minH, f.maxY - mouse.y); x = f.maxX - w;    y = f.maxY - h
+        case .tr:  w = max(minW, mouse.x - f.minX); h = max(minH, mouse.y - f.minY); x = f.minX;        y = f.minY
+        case .tl:  w = max(minW, f.maxX - mouse.x); h = max(minH, mouse.y - f.minY); x = f.maxX - w;    y = f.minY
+        }
+        panel.setFrame(NSRect(x: x, y: y, width: w, height: h), display: true)
     }
 
     private func pickOwnIcon(bundleID: String?) {
@@ -384,14 +404,14 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     /// so 30+ system icons produced multi-megabyte JSON that froze the main thread.
     private static func iconDataURL(bundleID: String?, path: String) -> String? {
         let img: NSImage
-        if let b = bundleID { img = ThemeManager.shared.icon(for: b, size: 40) }
+        if let b = bundleID { img = ThemeManager.shared.icon(for: b, size: 128) }
         else { img = NSWorkspace.shared.icon(forFile: path) }
         return pngDataURL(img)
     }
 
     /// Render an NSImage into a fixed 40×40 PNG data URL (bounded size — see note above).
     private static func pngDataURL(_ img: NSImage) -> String? {
-        let side = 40
+        let side = 128
         guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: side, pixelsHigh: side,
                                          bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
                                          colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
@@ -426,7 +446,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
     private static func installedApps() -> [[String: String]] {
         let k = RetroFrameTheme.key()
-        let themed = (k == "macos9" || k == "winxp" || k == "maiksfav")
+        let themed = (k == "macos9" || k == "winxp" || k == "maiksfav" || k == "macosx")
         let fm = FileManager.default
         var dirs = ["/Applications", "/Applications/Utilities",
                     "/System/Applications", "/System/Applications/Utilities"]
@@ -453,8 +473,10 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     }
 }
 
-/// Transparent grip over the BeOS bottom-right resize gadget: dragging it resizes the
-/// window (top-left anchored).
+enum ResizeCorner { case br, bl, tr, tl }
+
+/// Transparent grip over a window resize gadget: dragging it resizes the window,
+/// anchoring the opposite corner.
 final class ResizeOverlayView: NSView {
     var onResize: ((NSPoint) -> Void)?   // owning controller resizes ITS window
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }

@@ -84,6 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemUIHelper.restoreIfNeeded()
         restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
+        _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98
 
         NSApp.setActivationPolicy(.accessory)
         setupMenuBar()
@@ -920,6 +921,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     || (tn.contains("mac os 9") && tn.contains("classic"))
                     || (tn.contains("beos") && tn.contains("classic"))
                     || tn.contains("maiks favourite")
+                    || tn == "mac os x"
                 if special { item.image = sfIcon("crown.fill") }
                 catMenu.addItem(item)
             }

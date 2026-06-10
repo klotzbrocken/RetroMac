@@ -1,0 +1,16 @@
+{
+  "name": "RetroSheep",
+  "image": "pets/retropet.png",
+  "frameWidth": 48,
+  "frameHeight": 48,
+  "frames": 6,
+  "speed": 40,
+  "scale": 1.35,
+  "animations": {
+    "walk":  { "frames": [0, 1], "frameMs": 230, "loop": true },
+    "run":   { "frames": [0, 4], "frameMs": 120, "loop": true },
+    "idle":  { "frames": [2], "frameMs": 1000, "loop": true },
+    "fall":  { "frames": [3], "frameMs": 200, "loop": true },
+    "held":  { "frames": [5], "frameMs": 200, "loop": true }
+  }
+}
