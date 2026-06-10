@@ -214,6 +214,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
                 else { AppLauncher.launchOrActivate(bundleID: id) }
             }
         case "close":   close()
+        case "zoom":    toggleZoom()
         case "openparent": NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications"))
         case "resizefit":
             if let w = (d["w"] as? NSNumber)?.doubleValue, let h = (d["h"] as? NSNumber)?.doubleValue { resizeTo(CGFloat(w), CGFloat(h)) }
@@ -446,7 +447,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
     private static func installedApps() -> [[String: String]] {
         let k = RetroFrameTheme.key()
-        let themed = (k == "macos9" || k == "winxp" || k == "maiksfav" || k == "macosx")
+        let themed = (k == "macos9" || k == "winxp" || k == "maiksfav" || k == "macosx" || k == "win98")
         let fm = FileManager.default
         var dirs = ["/Applications", "/Applications/Utilities",
                     "/System/Applications", "/System/Applications/Utilities"]

@@ -19,7 +19,7 @@
   .face{display:block;margin:0 auto;background:transparent;}
 
   /* ===== Mac OS 9 (Platinum) ===== */
-  .m9-title,.xp-title,.mf-title,.mx-title{display:none;}
+  .m9-title,.xp-title,.mf-title,.mx-title,.w98-title{display:none;}
   body.theme-macos9 .tab{display:none;}
   body.theme-macos9 #win{border:1px solid #000;background:#d8d8d8;box-shadow:2px 2px 8px rgba(0,0,0,.3);}
   body.theme-macos9 .body{border:none;background:#d8d8d8;box-shadow:none;margin:0;}
@@ -77,6 +77,22 @@
     font:700 11px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
     text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
   body.hovering .mx-glyph{opacity:1;}
+
+  /* ===== Windows 98 — SPEC-Farben/-Bevels, leicht skaliert für Lesbarkeit ===== */
+  .w98-cap{color:#fff;font:700 12px "Pixelated MS Sans Serif","MS Sans Serif","Microsoft Sans Serif",Tahoma,sans-serif;
+    -webkit-font-smoothing:none;flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .w98-btn{width:20px;height:18px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;
+    font:700 13px Tahoma,Verdana,sans-serif;color:#000;display:flex;align-items:center;justify-content:center;line-height:1;}
+  .w98-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #dbdbdb,inset 2px 2px 0 #808080,inset -2px -2px 0 #fff;}
+  .w98-btn.w98-dis{color:#808080;text-shadow:1px 1px 0 #fff;cursor:default;}
+  .w98-close{margin-left:3px;}
+  body.theme-win98 .tab{display:none;}
+  body.theme-win98 #win{background:#c4c4c4;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;}
+  body.theme-win98 .body{border:none;background:#c4c4c4;box-shadow:none;margin:0;padding:8px;}
+  body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:22px;margin:3px 3px 0;padding:0 2px 0 6px;
+    background:linear-gradient(90deg,#00007b,#1085d2);}
 </style>
 </head>
 <body>
@@ -94,6 +110,8 @@
       <span class="mx-lights"><span class="mx-gel mx-close" id="mxclose" title="Close"><span class="mx-glyph">&times;</span></span><span class="mx-gel mx-min"><span class="mx-glyph">&minus;</span></span><span class="mx-gel mx-zoom"><span class="mx-glyph">+</span></span></span>
       <span class="mx-cap">Clock</span>
     </div>
+    <!-- Windows 98 -->
+    <div class="w98-title" id="w98title"><span class="w98-cap">Clock</span><span class="w98-btn" id="w98close">×</span></div>
     <div class="body">
       <canvas class="face" id="face" width="176" height="176"></canvas>
     </div>
@@ -109,6 +127,7 @@
       case 'winxp':  return {bg:'#ffffff', ring:'#0831D9', tick:'#333333', hand:'#1a1a1a', sec:'#E35F44', num:true,  face:'#ffffff'};
       case 'maiksfav': return {bg:'#ffffff', ring:'#262626', tick:'#262626', hand:'#262626', sec:'#FF5F57', num:false, face:'#ffffff'};
       case 'macosx': return {bg:'#ffffff', ring:'#2a5db0', tick:'#333333', hand:'#1a1a1a', sec:'#e8483a', num:false, face:'#ffffff'};
+      case 'win98': return {bg:'#ffffff', ring:'#000000', tick:'#000000', hand:'#000000', sec:'#ff0000', num:true, face:'#ffffff'};
       default:       return {bg:'#1d1d1d', ring:'#f2bd23', tick:'#f2bd23', hand:'#fbe27e', sec:'#ffffff', num:false, face:'#2b2b2b'}; // BeOS dark replicant
     }
   }
@@ -145,12 +164,13 @@
   window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
 
   function postClose(){ if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.clock) webkit.messageHandlers.clock.postMessage('close'); }
-  ['bxclose','m9close','xpclose','mfclose','mxclose'].forEach(id=>{ const e=document.getElementById(id); if(e) e.addEventListener('click',ev=>{ev.stopPropagation();postClose();}); });
+  ['bxclose','m9close','xpclose','mfclose','mxclose','w98close'].forEach(id=>{ const e=document.getElementById(id); if(e) e.addEventListener('click',ev=>{ev.stopPropagation();postClose();}); });
 
   // Title + close rects for the native drag/close overlay.
   window.regions=function(){
     const cl=document.body.classList;
     const R=id=>{const e=document.getElementById(id);if(!e)return[0,0,0,0];const b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
+    if(cl.contains('theme-win98'))    return [...R('w98title'),...R('w98close')];
     if(cl.contains('theme-macosx'))   return [...R('mxtitle'),...R('mxclose')];
     if(cl.contains('theme-maiksfav')) return [...R('mftitle'),...R('mfclose')];
     if(cl.contains('theme-winxp'))    return [...R('xptitle'),...R('xpclose')];

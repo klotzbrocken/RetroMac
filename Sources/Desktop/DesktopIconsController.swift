@@ -18,6 +18,7 @@ final class DesktopIconsController {
 
     // Computed grid layout — scales with screen resolution
     private var iconSize: CGFloat {
+        if let s = ThemeManager.shared.activeTheme?.config.desktopIconSize, s > 8 { return s }
         let scale = NSScreen.main?.backingScaleFactor ?? 2.0
         // At 2x (Retina): 64pt icon, at 1x: 48pt
         return scale >= 2.0 ? 64 : 48
@@ -109,6 +110,15 @@ final class DesktopIconsController {
 
         // Apply user customizations (added shortcuts, removals, drag positions, icon overrides)
         custom = DesktopStore.load(theme: themeName)
+        // When the theme's DEFAULT icon layout changes (new/renamed/re-gridded entries),
+        // stale user-dragged positions would stack old and new icons on top of each
+        // other — drop saved positions once and re-align to the fresh grid.
+        let layoutHash = entries.map { "\($0.name):\($0.gridX ?? -1):\($0.gridY ?? -1)" }.joined(separator: "|")
+        if custom.layoutHash != layoutHash {
+            custom.positions.removeAll()
+            custom.layoutHash = layoutHash
+            DesktopStore.save(custom, theme: themeName)
+        }
         let effective = entries.filter { !custom.removed.contains($0.name) } + custom.added.filter { !custom.removed.contains($0.name) }
 
         let cw = cellWidth, ch = cellHeight
@@ -199,6 +209,11 @@ final class DesktopIconsController {
     // MARK: - Icon Loading
 
     private func loadIconImage(for entry: DockThemeConfig.DesktopIconEntry, theme: ThemeBundle?, size: CGFloat) -> NSImage {
+        // sheep.exe: prefer the ORIGINAL eSheep icon (fetched at runtime like the sprite —
+        // never bundled); the theme's own sheep.png is the offline fallback.
+        if entry.type == "sheep", let img = NSImage(contentsOf: DesktopPetController.sheepIconCacheURL) {
+            return img
+        }
         if let theme = theme {
             let iconURL = theme.iconsDirectory.appendingPathComponent(entry.icon)
             if let img = NSImage(contentsOf: iconURL) {

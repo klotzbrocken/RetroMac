@@ -8,6 +8,7 @@ enum DesktopStore {
         var iconOverrides: [String: String] = [:]   // item name → absolute icon path
         var positions: [String: [CGFloat]] = [:]     // item name → [x, y] (panel coords)
         var removed: [String] = []                    // item names hidden
+        var layoutHash: String? = nil                 // default-layout fingerprint (reset positions on change)
     }
 
     private static func key(_ theme: String) -> String { "desktopCustom.\(theme)" }

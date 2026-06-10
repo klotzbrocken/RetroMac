@@ -18,6 +18,9 @@ final class DockController {
     private var didHideSystemDock = false
     private var originalDockAutoHide: Bool?
     private var originalDockPosition: String?
+    private var originalMinimizeToApp: Bool?
+    private var originalMinEffect: String?
+    private var originalAutohideDelay: String?
 
     // Auto-hide state
     private var globalMouseMonitor: Any?
@@ -76,6 +79,10 @@ final class DockController {
         observeSettings()
         evaluateVisibility()
 
+        // Track minimized windows (AX): clicking an app's dock tile restores them —
+        // with the system Dock hidden, the tile click is how windows come back.
+        MinimizedWindowTracker.shared.start()
+
         if autoHideActive {
             installAutoHideMonitors()
         }
@@ -89,6 +96,7 @@ final class DockController {
         print("[Dock] Stopping")
         removeAutoHideMonitors()
         DockFix.shared.stop()
+        MinimizedWindowTracker.shared.stop()
         restoreSystemDock()
         DesktopIconsController.shared.hide()
         ProgramManagerController.shared.hide()
@@ -773,6 +781,9 @@ final class DockController {
             if originalDockAutoHide == nil {
                 originalDockAutoHide = readSystemDockPref("autohide") == "1"
                 originalDockPosition = readSystemDockPref("orientation") ?? "bottom"
+                originalMinimizeToApp = readSystemDockPref("minimize-to-application") == "1"
+                originalMinEffect = readSystemDockPref("mineffect") ?? "genie"
+                originalAutohideDelay = readSystemDockPref("autohide-delay")
                 print("[Dock] Saved original dock state: autohide=\(originalDockAutoHide ?? false), position=\(originalDockPosition ?? "bottom")")
             }
             // Move the real macOS Dock to a DIFFERENT screen edge than RetroMac's
@@ -783,33 +794,40 @@ final class DockController {
             // is honored, not just the theme's baked-in default.
             let themePos = ThemeManager.shared.activeTheme?.config.effectiveDockPosition ?? "bottom"
             let hidePosition = systemDockEdge(forThemeEdge: themePos)
-            setSystemDockPrefs(autohide: true, position: hidePosition)
+            // minimize-to-application: no window thumbnails pile up in the (hidden)
+            // system Dock — the RetroMac dock tile is the only place they appear.
+            // mineffect scale: quick shrink instead of the genie swoosh into the
+            // hidden Dock's corner.
+            setSystemDockPrefs(autohide: true, position: hidePosition,
+                               minimizeToApp: true, minEffect: "scale",
+                               autohideDelay: "1000000")
             didHideSystemDock = true
             // Crash-safe: persist so we can restore even after a force-quit/crash.
             let d = UserDefaults.standard
             d.set(true, forKey: "sysDockHidden")
             d.set(originalDockAutoHide ?? false, forKey: "sysDockOrigAutohide")
             d.set(originalDockPosition ?? "bottom", forKey: "sysDockOrigPosition")
+            d.set(originalMinimizeToApp ?? false, forKey: "sysDockOrigMinToApp")
+            d.set(originalMinEffect ?? "genie", forKey: "sysDockOrigMinEffect")
+            if let v = originalAutohideDelay { d.set(v, forKey: "sysDockOrigAutohideDelay") }
+            else { d.removeObject(forKey: "sysDockOrigAutohideDelay") }
             print("[Dock] System dock moved to \(hidePosition) + auto-hide (theme dock is \(themePos))")
         } else if didHideSystemDock {
             restoreSystemDock()
         }
     }
 
-    /// Maps RetroMac's dock edge to a macOS-Dock edge that does NOT share the
-    /// same screen edge, so the real Dock never overlaps RetroMac's dock.
+    /// The system Dock stays on the SAME edge as RetroMac's dock (it is auto-hidden
+    /// with a huge autohide-delay, so it never reveals): the minimize animation then
+    /// points at our dock's location instead of flying off to another screen edge.
     /// macOS Dock orientation only supports "left", "bottom", "right" (no top).
-    ///   - RetroMac bottom → system left
-    ///   - RetroMac left   → system bottom
-    ///   - RetroMac right  → system bottom  (left is occupied/visually close on right-side layouts)
-    ///   - RetroMac top    → system bottom  (top isn't a valid Dock edge anyway)
     private func systemDockEdge(forThemeEdge themeEdge: String) -> String {
         switch themeEdge {
-        case "bottom": return "left"
-        case "left":   return "bottom"
-        case "right":  return "bottom"
+        case "bottom": return "bottom"
+        case "left":   return "left"
+        case "right":  return "right"
         case "top":    return "bottom"
-        default:       return "left"
+        default:       return "bottom"
         }
     }
 
@@ -817,10 +835,17 @@ final class DockController {
         guard didHideSystemDock else { return }
         let restoreHide = originalDockAutoHide ?? false
         let restorePos = originalDockPosition ?? "bottom"
-        setSystemDockPrefs(autohide: restoreHide, position: restorePos)
+        setSystemDockPrefs(autohide: restoreHide, position: restorePos,
+                           minimizeToApp: originalMinimizeToApp ?? false,
+                           minEffect: originalMinEffect ?? "genie",
+                           autohideDelay: originalAutohideDelay,
+                           deleteAutohideDelay: originalAutohideDelay == nil)
         didHideSystemDock = false
         originalDockAutoHide = nil
         originalDockPosition = nil
+        originalMinimizeToApp = nil
+        originalMinEffect = nil
+        originalAutohideDelay = nil
         clearPersistedDockState()
         print("[Dock] System dock restored (autohide=\(restoreHide), position=\(restorePos))")
     }
@@ -830,6 +855,9 @@ final class DockController {
         d.removeObject(forKey: "sysDockHidden")
         d.removeObject(forKey: "sysDockOrigAutohide")
         d.removeObject(forKey: "sysDockOrigPosition")
+        d.removeObject(forKey: "sysDockOrigMinToApp")
+        d.removeObject(forKey: "sysDockOrigMinEffect")
+        d.removeObject(forKey: "sysDockOrigAutohideDelay")
     }
 
     /// Crash recovery: if a previous session left the system dock hidden (force-quit /
@@ -840,7 +868,15 @@ final class DockController {
         guard d.bool(forKey: "sysDockHidden") else { return }
         let restoreHide = d.bool(forKey: "sysDockOrigAutohide")
         let restorePos = d.string(forKey: "sysDockOrigPosition") ?? "bottom"
-        setSystemDockPrefs(autohide: restoreHide, position: restorePos)
+        // Older persisted states may lack the minimize keys — only restore when saved.
+        let isNewState = d.object(forKey: "sysDockOrigMinToApp") != nil
+        let minToApp = isNewState ? d.bool(forKey: "sysDockOrigMinToApp") : nil
+        let minEffect = d.string(forKey: "sysDockOrigMinEffect")
+        let delay = d.string(forKey: "sysDockOrigAutohideDelay")
+        setSystemDockPrefs(autohide: restoreHide, position: restorePos,
+                           minimizeToApp: minToApp, minEffect: minEffect,
+                           autohideDelay: delay,
+                           deleteAutohideDelay: isNewState && delay == nil)
         didHideSystemDock = false
         originalDockAutoHide = nil
         originalDockPosition = nil
@@ -862,7 +898,33 @@ final class DockController {
         return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func setSystemDockPrefs(autohide: Bool, position: String) {
+    private func setSystemDockPrefs(autohide: Bool, position: String,
+                                    minimizeToApp: Bool? = nil, minEffect: String? = nil,
+                                    autohideDelay: String? = nil, deleteAutohideDelay: Bool = false) {
+        if let delay = autohideDelay {
+            let w = Process()
+            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            w.arguments = ["write", "com.apple.dock", "autohide-delay", "-float", delay]
+            try? w.run(); w.waitUntilExit()
+        } else if deleteAutohideDelay {
+            let w = Process()
+            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            w.arguments = ["delete", "com.apple.dock", "autohide-delay"]
+            w.standardError = FileHandle.nullDevice
+            try? w.run(); w.waitUntilExit()
+        }
+        if let m = minimizeToApp {
+            let w = Process()
+            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            w.arguments = ["write", "com.apple.dock", "minimize-to-application", "-bool", m ? "true" : "false"]
+            try? w.run(); w.waitUntilExit()
+        }
+        if let e = minEffect {
+            let w = Process()
+            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            w.arguments = ["write", "com.apple.dock", "mineffect", "-string", e]
+            try? w.run(); w.waitUntilExit()
+        }
         let writeHide = Process()
         writeHide.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
         writeHide.arguments = ["write", "com.apple.dock", "autohide", "-bool", autohide ? "true" : "false"]

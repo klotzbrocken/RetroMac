@@ -11,6 +11,7 @@ enum RetroFrameTheme {
         if name.contains("beos") { return "beos" }
         if name.contains("mac os 9") { return "macos9" }
         if name.contains("mac os x") { return "macosx" }
+        if name.contains("windows 98") { return "win98" }
         if name.contains("windows xp") || name == "xp" || name.hasPrefix("xp ") { return "winxp" }
         if name.contains("maiks favourite") || name.contains("maiks favorite") { return "maiksfav" }
         return "default"

@@ -234,6 +234,39 @@
   /* Aqua selection + labels */
   body.theme-macosx .be-item .lbl{border-bottom:none;border-radius:3px;}
   body.theme-macosx .be-grid .be-item.sel .lbl,body.theme-macosx .be-grid.list .be-item.sel{background:#3a72c8;color:#fff;}
+
+  /* ===== Windows 98 — SPEC-Farben/-Bevels, leicht skaliert für Lesbarkeit ===== */
+  .w98-cap{color:#fff;font:700 12px "Pixelated MS Sans Serif","MS Sans Serif","Microsoft Sans Serif",Tahoma,sans-serif;
+    -webkit-font-smoothing:none;flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .w98-btn{width:20px;height:18px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;
+    font:700 13px Tahoma,Verdana,sans-serif;color:#000;display:flex;align-items:center;justify-content:center;line-height:1;}
+  .w98-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #dbdbdb,inset 2px 2px 0 #808080,inset -2px -2px 0 #fff;}
+  .w98-btn.w98-dis{color:#808080;text-shadow:1px 1px 0 #fff;cursor:default;}
+  .w98-close{margin-left:3px;}
+  body.theme-win98 .be-tab,body.theme-win98 .m9-title,body.theme-win98 .m9-info,body.theme-win98 .xp-title,body.theme-win98 .mf-title,body.theme-win98 .mx-title{display:none;}
+  .w98-title{display:none;}
+  body.theme-win98 .be-win{top:0;background:#c4c4c4;border-radius:0;border:none;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;}
+  body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:22px;flex:0 0 22px;margin:3px 3px 0;padding:0 2px 0 6px;
+    background:linear-gradient(90deg,#00007b,#1085d2);}
+  body.theme-win98 .be-menubar{height:22px;background:#bfbfbf;color:#000;border:none;margin:0 3px;
+    font:13px Tahoma,"Microsoft Sans Serif",sans-serif;}
+  body.theme-win98 .be-menubar span{font-size:13px;}
+  body.theme-win98 .be-menubar span:hover{background:#000080;color:#fff;}
+  body.theme-win98 .be-mid{margin:0 3px;}
+  body.theme-win98 .be-content{background:#fff;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
+  body.theme-win98 .be-status{background:#c4c4c4;color:#000;border:none;margin:0 3px 3px;
+    box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
+  body.theme-win98 .vsb,body.theme-win98 .hsb{background:#c4c4c4;border-color:#808080;}
+  body.theme-win98 .sb-btn{background:#c4c4c4;border:none;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
+  body.theme-win98 .sb-trough{background:repeating-conic-gradient(#fff 0% 25%,#c4c4c4 0% 50%) 0 0/2px 2px;}
+  body.theme-win98 .sb-thumb{background:#c4c4c4;border:none;border-radius:0;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
+  body.theme-win98 .sb-thumb .grip{display:none;}
+  body.theme-win98 .be-item .lbl{border-bottom:none;font:12px Tahoma,"Microsoft Sans Serif",sans-serif;}
+  body.theme-win98 .be-grid.list .be-item.sel,body.theme-win98 .be-item.sel .lbl{background:#000080;color:#fff;}
 </style>
 </head>
 <body>
@@ -278,6 +311,13 @@
         <span class="mx-gel mx-zoom" id="mxzoom" title="Zoom"><span class="mx-glyph">+</span></span>
       </span>
       <span class="mx-caption">Applications</span>
+    </div>
+    <!-- Windows 98 classic title bar (shown only in theme-win98) -->
+    <div class="w98-title" id="w98title">
+      <span class="w98-cap" id="w98cap">Applications</span>
+      <span class="w98-btn w98-dis" id="w98min">_</span>
+      <span class="w98-btn" id="w98max">□</span>
+      <span class="w98-btn" id="w98close">×</span>
     </div>
     <div class="be-menubar"><span>File</span><span>Window</span></div>
     <div class="be-mid">
@@ -339,7 +379,7 @@
       el.style.left = list ? PAD+'px' : (PAD+c*v.CW)+'px';
       el.style.top = (PAD+r*v.CH)+'px';
       if(list) el.style.width = listW+'px';
-      const cl=document.body.classList, themed=cl.contains('theme-macos9')||cl.contains('theme-winxp')||cl.contains('theme-maiksfav')||cl.contains('theme-macosx');
+      const cl=document.body.classList, themed=cl.contains('theme-macos9')||cl.contains('theme-winxp')||cl.contains('theme-maiksfav')||cl.contains('theme-macosx')||cl.contains('theme-win98');
       const icHTML=(themed && it.img) ? `<img src="${it.img}">` : BEOS_ICONS.get(it.icon);
       el.innerHTML=`<div class="ic">${icHTML}</div><div class="lbl">${esc(it.name)}</div>`;
       el.addEventListener('mousedown',(e)=>{
@@ -372,13 +412,24 @@
   window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
   // Host sets the window title across all three chromes (BeOS tab / Mac OS 9 plaque / XP caption).
   window.setTitle=function(t){
-    document.querySelectorAll('.be-title,.xp-caption,.mf-caption,.mx-caption').forEach(e=>e.textContent=t);
+    document.querySelectorAll('.be-title,.xp-caption,.mf-caption,.mx-caption,.w98-cap').forEach(e=>e.textContent=t);
     const pl=document.querySelector('.m9-plaque span:last-child'); if(pl) pl.textContent=t;
   };
+  (function(){
+    const c=document.getElementById('w98close'), m=document.getElementById('w98max');
+    const fire=(el,act)=>{ if(!el) return; ['click','pointerup'].forEach(ev=>
+      el.addEventListener(ev, e=>{ e.stopPropagation(); e.preventDefault(); post({a:act}); })); };
+    fire(c,'close'); fire(m,'zoom');
+  })();
   window.regions=function(){
-    const cl=document.body.classList, m9=cl.contains('theme-macos9'), xp=cl.contains('theme-winxp'), mf=cl.contains('theme-maiksfav'), mx=cl.contains('theme-macosx');
+    const cl=document.body.classList, m9=cl.contains('theme-macos9'), xp=cl.contains('theme-winxp'), mf=cl.contains('theme-maiksfav'), mx=cl.contains('theme-macosx'), w98=cl.contains('theme-win98');
     const R=id=>{const e=document.getElementById(id);if(!e)return[0,0,0,0];const b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
     // [title, close, minimise/collapse, maximise/zoom]
+    if(w98){
+      // Drag region = caption only; the 3D buttons take real DOM clicks (close/zoom
+      // are posted to the host instead of being mapped through the native overlay).
+      return [...R('w98cap'),0,0,0,0,0,0,0,0,0,0,0,0];
+    }
     if(mx){ return [...R('mxtitle'),...R('mxclose'),...R('mxmin'),...R('mxzoom')]; }
     if(mf){ return [...R('mftitle'),...R('mfclose'),...R('mfmin'),...R('mfzoom')]; }
     if(xp){ return [...R('xptitle'),...R('xpclose'),...R('xpmin'),...R('xpmax')]; }

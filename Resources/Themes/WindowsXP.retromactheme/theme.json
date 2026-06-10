@@ -98,30 +98,83 @@
       "gridY": 3
     },
     {
-      "name": "Quake",
-      "icon": "quake.png",
-      "type": "app",
-      "bundleID": "com.macsourceports.vkQuake",
+      "name": "Internet Explorer",
+      "icon": "ie.png",
+      "type": "webapp",
+      "url": "https://www.yahoo.com",
       "args": [
-        "-basedir",
-        "~/Library/Application Support/RetroMac/Games/Quake"
+        "1020",
+        "720"
       ],
       "gridX": 0,
       "gridY": 4
     },
     {
-      "name": "Pac-Man",
-      "icon": "pac.icns",
-      "type": "pacman",
+      "name": "Notepad",
+      "icon": "notepad98.png",
+      "type": "webapp",
+      "url": "https://bored-entertainment.github.io/98.js/programs/notepad/index.html",
+      "args": [
+        "660",
+        "500"
+      ],
       "gridX": 0,
       "gridY": 5
     },
     {
-      "name": "Notepad",
-      "icon": "notes.png",
-      "type": "notepad",
+      "name": "Paint",
+      "icon": "paint98.png",
+      "type": "webapp",
+      "url": "https://bored-entertainment.github.io/98.js/programs/jspaint/index.html",
+      "args": [
+        "920",
+        "640"
+      ],
       "gridX": 0,
       "gridY": 6
+    },
+    {
+      "name": "Minesweeper",
+      "icon": "mines.png",
+      "type": "webapp",
+      "url": "https://bored-entertainment.github.io/98.js/programs/minesweeper/index.html",
+      "args": [
+        "360",
+        "460"
+      ],
+      "gridX": 1,
+      "gridY": 0
+    },
+    {
+      "name": "Solitaire",
+      "icon": "solitaire.png",
+      "type": "webapp",
+      "url": "https://bored-entertainment.github.io/98.js/programs/js-solitaire/index.html",
+      "args": [
+        "800",
+        "600"
+      ],
+      "gridX": 1,
+      "gridY": 1
+    },
+    {
+      "name": "3D Pinball",
+      "icon": "pinball.png",
+      "type": "webapp",
+      "url": "https://bored-entertainment.github.io/98.js/programs/pinball/space-cadet.html",
+      "args": [
+        "640",
+        "620"
+      ],
+      "gridX": 1,
+      "gridY": 2
+    },
+    {
+      "name": "sheep.exe",
+      "icon": "sheep.png",
+      "type": "sheep",
+      "gridX": 1,
+      "gridY": 3
     }
   ],
   "fallbackIcon": "generic.png",
@@ -137,5 +190,6 @@
     "com.apple.systempreferences": "settings.png",
     "com.apple.Music": "music.png",
     "com.apple.Terminal": "terminal.png"
-  }
+  },
+  "desktopIconSize": 48
 }

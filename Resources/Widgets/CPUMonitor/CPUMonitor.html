@@ -306,6 +306,24 @@
     font:700 17px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
     text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
   body.hovering .mx-glyph{opacity:1;}
+
+  /* ===== Windows 98 — exakt nach SPEC, counter-scaled (1/0.6) ===== */
+  .w98-title{display:none;}
+  body.theme-win98 .tab,body.theme-win98 .marker{display:none;}
+  body.theme-win98 .window{background:#c4c4c4;border-radius:0;overflow:hidden;border:none;
+    box-shadow:inset -2px -2px 0 #000,inset 2px 2px 0 #fff,inset -4px -4px 0 #808080,inset 4px 4px 0 #dbdbdb;}
+  body.theme-win98 .body{border:none;box-shadow:none;margin:0 8px 8px;}
+  body.theme-win98 .w98-title{display:flex;align-items:center;gap:3px;height:30px;margin:5px 5px 3px;padding:0 3px 0 8px;
+    background:linear-gradient(90deg,#00007b,#1085d2);}
+  .w98-cap{color:#fff;font:700 18px "Pixelated MS Sans Serif","MS Sans Serif","Microsoft Sans Serif",Tahoma,sans-serif;
+    -webkit-font-smoothing:none;flex:1 1 auto;text-align:left;white-space:nowrap;}
+  .w98-btn{width:27px;height:23px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
+    box-shadow:inset -2px -2px 0 #000,inset 2px 2px 0 #dbdbdb,inset -4px -4px 0 #808080,inset 4px 4px 0 #fff;
+    font:700 17px Tahoma,Verdana,sans-serif;color:#000;
+    display:flex;align-items:center;justify-content:center;line-height:1;}
+  .w98-btn:active{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
+  .w98-btn.w98-dis{color:#808080;text-shadow:2px 2px 0 #fff;cursor:default;}
+  .w98-btn:last-child{margin-left:3px;}
 </style>
 </head>
 <body>
@@ -346,6 +364,13 @@
             <span class="mx-btn mx-zoom" id="mxzoom"><span class="mx-glyph">+</span></span>
           </span>
           <span class="mx-caption">CPU Monitor</span>
+        </div>
+        <!-- Windows 98 classic title bar (theme-win98 only) -->
+        <div class="w98-title" id="w98title">
+          <span class="w98-cap">CPU Monitor</span>
+          <span class="w98-btn w98-dis" id="w98min">_</span>
+          <span class="w98-btn" id="w98max">□</span>
+          <span class="w98-btn" id="w98close">×</span>
         </div>
         <div class="tab"><span class="closebox" id="closebox" title="Schließen"></span><b>CPU Monitor</b></div>
         <div class="body">
@@ -471,11 +496,16 @@
   document.getElementById('xpclose').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
   document.getElementById('mfclose').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
   document.getElementById('mxclose').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
+  document.getElementById('w98close').addEventListener('click', (e)=>{ e.stopPropagation(); postClose(); });
 
   // Title rects (already reflect the transform → scaled viewport px).
   window.regions = function(){
     const cl = document.body.classList;
     const R = id => { const e = document.getElementById(id) || document.querySelector(id); const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height]; };
+    if (cl.contains('theme-win98')) {
+      // [title, close, collapse(disabled→zeros), zoom]
+      return [...R('w98title'), ...R('w98close'), 0,0,0,0, ...R('w98max')];
+    }
     if (cl.contains('theme-macosx')) {
       // Aqua CPU: Close + Zoom only — collapse (yellow) is disabled, so its rect is zeroed.
       return [...R('mxtitle'), ...R('mxclose'), 0,0,0,0, ...R('mxzoom')];
