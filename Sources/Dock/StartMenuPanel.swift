@@ -925,26 +925,34 @@ private final class ClassicStartMenuContentView: NSView {
         line.lineWidth = bw; line.stroke()
 
         let bannerRect = NSRect(x: bw, y: bw + 1, width: bannerWidth, height: bounds.height - bw * 2 - 2)
+        // Win98 banner, Figma-exact: #00007B (bottom) → #1085D2 (top).
         let bannerGrad = NSGradient(
-            starting: NSColor(red: 0.0, green: 0.0, blue: 0.50, alpha: 1.0),
-            ending: NSColor(red: 0.0, green: 0.30, blue: 0.85, alpha: 1.0)
+            starting: NSColor(red: 0.0, green: 0.0, blue: 0.482, alpha: 1.0),
+            ending: NSColor(red: 0.063, green: 0.522, blue: 0.824, alpha: 1.0)
         )
         bannerGrad?.draw(in: bannerRect, angle: 90)
 
         if !bannerText.isEmpty {
             let ctx = NSGraphicsContext.current!.cgContext
             ctx.saveGState()
-            let font = NSFont.boldSystemFont(ofSize: 16)
-            let attrs: [NSAttributedString.Key: Any] = [
-                .font: font,
-                .foregroundColor: NSColor.white,
-            ]
-            let textSize = (bannerText as NSString).size(withAttributes: attrs)
+            // Original banner reads "Windows" (bold) + "98" (regular) with NO space.
+            let size: CGFloat = 16
+            let boldFont = NSFont(name: "Tahoma-Bold", size: size) ?? NSFont.boldSystemFont(ofSize: size)
+            let regFont  = NSFont(name: "Tahoma", size: size) ?? NSFont.systemFont(ofSize: size)
+            let parts = bannerText.split(separator: " ", maxSplits: 1).map(String.init)
+            let text = NSMutableAttributedString()
+            text.append(NSAttributedString(string: parts.first ?? bannerText,
+                                           attributes: [.font: boldFont, .foregroundColor: NSColor.white]))
+            if parts.count > 1 {
+                text.append(NSAttributedString(string: parts[1],
+                                               attributes: [.font: regFont, .foregroundColor: NSColor.white]))
+            }
+            let textSize = text.size()
             let tx = bannerRect.minX + (bannerRect.width + textSize.height) / 2
             let ty = bannerRect.minY + 6
             ctx.translateBy(x: tx, y: ty)
             ctx.rotate(by: CGFloat.pi / 2)
-            (bannerText as NSString).draw(at: .zero, withAttributes: attrs)
+            text.draw(at: .zero)
             ctx.restoreGState()
         }
 
@@ -985,7 +993,7 @@ private final class ClassicStartMenuContentView: NSView {
             }
 
             let textX = iconX + iconSize + 6
-            let font = NSFont.systemFont(ofSize: 12)
+            let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
             let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textColor]
             let textSize = (item.title as NSString).size(withAttributes: attrs)
             let textY = itemRect.midY - textSize.height / 2
@@ -1146,7 +1154,7 @@ private final class SubmenuContentView: NSView {
             }
 
             let textX = iconX + iconSize + 6
-            let font = NSFont.systemFont(ofSize: 12)
+            let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
             let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textColor]
             let textSize = (item.title as NSString).size(withAttributes: attrs)
             let textY = itemRect.midY - textSize.height / 2

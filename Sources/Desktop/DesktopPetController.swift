@@ -21,15 +21,36 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
     private var petScreenRect: CGRect = .zero   // current pet bounds in screen coords
 
     private static let sheepXML = "https://raw.githubusercontent.com/Adrianotiger/desktopPet/master/Pets/esheep64/animations.xml"
+    private static let sheepIconPNG = "https://raw.githubusercontent.com/Adrianotiger/desktopPet/master/Pets/esheep64/icon.png"
+
+    /// Runtime-cached original eSheep icon (used by the sheep.exe desktop shortcut).
+    static var sheepIconCacheURL: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("RetroMac/Pets/sheep-icon.png")
+    }
 
     private override init() {
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(themeChanged),
                                                name: .dockThemeChanged, object: nil)
         applyForCurrentTheme()
+        downloadSheepIconIfNeeded()
     }
 
     @objc private func themeChanged() { applyForCurrentTheme() }
+
+    private func downloadSheepIconIfNeeded() {
+        let dest = Self.sheepIconCacheURL
+        guard !FileManager.default.fileExists(atPath: dest.path),
+              let url = URL(string: Self.sheepIconPNG) else { return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data, data.count > 100 else { return }
+            try? FileManager.default.createDirectory(at: dest.deletingLastPathComponent(),
+                                                     withIntermediateDirectories: true)
+            try? data.write(to: dest)
+            DispatchQueue.main.async { DesktopIconsController.shared.update() }
+        }.resume()
+    }
 
     private var enabledForActiveTheme: Bool {
         guard AppSettings.shared.desktopPetEnabled else { return false }
@@ -100,12 +121,33 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
 
     func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == "pet", let d = message.body as? [String: Any], let win = panel else { return }
+        if (d["action"] as? String) == "menu" { showPetMenu(); return }
         func num(_ k: String) -> CGFloat { (d[k] as? NSNumber).map { CGFloat(truncating: $0) } ?? 0 }
         let wx = num("x"), wy = num("y"), ww = num("w"), wh = num("h")
         guard ww > 0, wh > 0 else { return }
         // web (top-left) → screen (bottom-left)
         let f = win.frame
         petScreenRect = CGRect(x: f.minX + wx, y: f.minY + (f.height - (wy + wh)), width: ww, height: wh)
+    }
+
+    private func showPetMenu() {
+        let menu = NSMenu()
+        let fresh = NSMenuItem(title: "New Sheep", action: #selector(menuNewSheep(_:)), keyEquivalent: "")
+        fresh.target = self
+        menu.addItem(fresh)
+        menu.addItem(.separator())
+        let quit = NSMenuItem(title: "Quit Sheep", action: #selector(menuQuitSheep(_:)), keyEquivalent: "")
+        quit.target = self
+        menu.addItem(quit)
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+    }
+
+    @objc private func menuNewSheep(_ sender: NSMenuItem) {
+        applyForCurrentTheme()   // reloads the overlay → a fresh sheep falls in
+    }
+
+    @objc private func menuQuitSheep(_ sender: NSMenuItem) {
+        AppSettings.shared.desktopPetEnabled = false   // didSet hides the pet; sheep.exe re-enables
     }
 
     // MARK: - WKNavigationDelegate
@@ -127,8 +169,18 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
             .appendingPathComponent("RetroMac/Pets/esheep64.b64")
     }
 
+    /// The XML wraps the base64 in <![CDATA[ ... ]]> — strip wrapper + whitespace.
+    private static func cleanBase64(_ s: String) -> String {
+        var t = s.components(separatedBy: .whitespacesAndNewlines).joined()
+        if t.hasPrefix("<![CDATA[") { t.removeFirst("<![CDATA[".count) }
+        if t.hasSuffix("]]>") { t.removeLast(3) }
+        return t
+    }
+
     private func loadSpriteSpec(completion: @escaping (String?) -> Void) {
-        if let b64 = try? String(contentsOf: cacheURL, encoding: .utf8), !b64.isEmpty {
+        if let cached = try? String(contentsOf: cacheURL, encoding: .utf8), !cached.isEmpty {
+            let b64 = Self.cleanBase64(cached)   // heals caches written before the CDATA fix
+            if b64 != cached { try? b64.write(to: cacheURL, atomically: true, encoding: .utf8) }
             completion(Self.sheepSpec(b64: b64)); return
         }
         guard let url = URL(string: Self.sheepXML) else { completion(fallbackSpec()); return }
@@ -136,8 +188,7 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
             var b64: String?
             if let data = data, let xml = String(data: data, encoding: .utf8),
                let a = xml.range(of: "<png>"), let b = xml.range(of: "</png>"), a.upperBound < b.lowerBound {
-                b64 = String(xml[a.upperBound..<b.lowerBound])
-                    .components(separatedBy: .whitespacesAndNewlines).joined()
+                b64 = Self.cleanBase64(String(xml[a.upperBound..<b.lowerBound]))
             }
             DispatchQueue.main.async {
                 guard let self = self else { return }
@@ -156,11 +207,14 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
     /// Classic eSheep: 16×11 sprite grid; frame indices taken from the pet's animation table
     /// (walk #1, run #7, drag #4, fall #5, eat #26).
     private static func sheepSpec(b64: String) -> String {
-        "{\"name\":\"eSheep\",\"image\":\"data:image/png;base64,\(b64)\",\"tilesx\":16,\"tilesy\":11,\"speed\":38,\"scale\":1.0,\"animations\":{" +
+        "{\"name\":\"eSheep\",\"image\":\"data:image/png;base64,\(b64)\",\"tilesx\":16,\"tilesy\":11,\"speed\":38,\"scale\":1.5,\"animations\":{" +
         "\"walk\":{\"frames\":[2,3],\"frameMs\":200,\"loop\":true}," +
         "\"run\":{\"frames\":[5,4,4],\"frameMs\":100,\"loop\":true}," +
         "\"idle\":{\"frames\":[3],\"frameMs\":1000,\"loop\":true}," +
         "\"eat\":{\"frames\":[6,6,6,6,58,59,59,60,61,60,61,6],\"frameMs\":300,\"loop\":true}," +
+        "\"sleep\":{\"frames\":[3,6,7,8,8,7,8,8],\"frameMs\":260,\"loop\":true}," +
+        "\"pee\":{\"frames\":[3,12,13,103,104,105,106,104,105,104,103,13,12],\"frameMs\":200,\"loop\":true}," +
+        "\"rotate\":{\"frames\":[3,9,10,10,9,3],\"frameMs\":200,\"loop\":true}," +
         "\"fall\":{\"frames\":[133],\"frameMs\":100,\"loop\":true}," +
         "\"held\":{\"frames\":[42,43,43,42,44,44],\"frameMs\":100,\"loop\":true}}}"
     }

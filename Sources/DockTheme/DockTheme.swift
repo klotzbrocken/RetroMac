@@ -13,6 +13,7 @@ struct DockThemeConfig: Codable {
     var defaultPreset: String? = nil
     var iconMappings: [String: String]
     var desktopIcons: [DesktopIconEntry]? = nil
+    var desktopIconSize: CGFloat? = nil        // per-theme desktop icon size (e.g. Win98: 40)
     var programManager: ProgramManagerConfig? = nil
     var sgiDesktop: SGIDesktopConfig? = nil
     var splashScreen: String? = nil   // boot splash image shown briefly on theme activation

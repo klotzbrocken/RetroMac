@@ -49,6 +49,19 @@ enum DesktopLauncher {
         case "notepad":
             NotepadController.shared.show()
 
+        case "webapp":
+            // Hosted 98.js app (Notepad/Paint/IE/games) in a theme-chromed window.
+            if let urlString = entry.url {
+                let a = entry.args ?? []
+                let w = CGFloat(Int(a.count > 0 ? a[0] : "") ?? 800)
+                let h = CGFloat(Int(a.count > 1 ? a[1] : "") ?? 600)
+                WebAppController.open(name: entry.name, url: urlString, width: w, height: h)
+            }
+
+        case "sheep":
+            // sheep.exe: (re)start the desktop sheep — also re-enables it after Quit Sheep.
+            AppSettings.shared.desktopPetEnabled = true
+
         case "pacman":
             PacmanGame.launch()
 

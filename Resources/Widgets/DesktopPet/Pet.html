@@ -33,7 +33,7 @@
     const fr = anim ? anim.frames[frameIdx % anim.frames.length] : 0;
     const col = fr % sheetCols, row = (fr/sheetCols)|0;
     el.style.backgroundPosition = `-${col*pw()}px -${row*ph()}px`;
-    el.style.transform = `scaleX(${dir})`;
+    el.style.transform = `scaleX(${-dir})`;   // sheet faces left → flip when walking right
     el.style.left = Math.round(x)+'px';
     el.style.top  = Math.round(y)+'px';
     report();
@@ -45,9 +45,15 @@
   }
   function pick(){
     const r=Math.random();
-    if(r<0.16){ state='idle'; setAnim('idle'); vx=0; stateTimer=1200+Math.random()*2600; }
-    else if(r<0.30 && spec.animations.eat){ state='eat'; setAnim('eat'); vx=0; stateTimer=2500+Math.random()*2000; }
-    else if(r<0.42){ state='run'; setAnim('run'); dir=Math.random()<0.5?-1:1; vx=dir*walkSpeed*2.2; stateTimer=700+Math.random()*1300; }
+    const extras=['eat','sleep','pee','rotate'].filter(k=>spec.animations[k]);
+    if(r<0.14){ state='idle'; setAnim('idle'); vx=0; stateTimer=1200+Math.random()*2200; }
+    else if(r<0.36 && extras.length){
+      const k=extras[(Math.random()*extras.length)|0];
+      state=k; setAnim(k); vx=0;
+      const a=spec.animations[k];
+      stateTimer=a.frames.length*a.frameMs*(Math.random()<0.4?2:1)+200;   // play 1–2 loops
+    }
+    else if(r<0.48){ state='run'; setAnim('run'); dir=Math.random()<0.5?-1:1; vx=dir*walkSpeed*2.2; stateTimer=700+Math.random()*1300; }
     else { state='walk'; setAnim('walk'); dir=Math.random()<0.5?-1:1; vx=dir*walkSpeed; stateTimer=1800+Math.random()*3600; }
   }
   function tick(t){
@@ -57,7 +63,8 @@
     if(anim){ frameTimer+=dt; if(frameTimer>=anim.frameMs){ frameTimer=0; frameIdx = anim.loop?(frameIdx+1):Math.min(frameIdx+1,anim.frames.length-1); } }
     if(held){ paint(); return; }                       // following the cursor
     if(state==='fall'){
-      vy += 0.9*dt; y += vy*dt/16;
+      vy += 600*dt/1000; if(vy>280) vy=280;   // gentle fall with terminal velocity
+      y += vy*dt/1000;
       if(y>=ground){ y=ground; vy=0; pick(); }
     } else {
       if(y < ground-1){ state='fall'; setAnim('fall'); vy=0; }
@@ -94,6 +101,11 @@
   }
   el.addEventListener('pointerup', release);
   el.addEventListener('pointercancel', release);
+  el.addEventListener('contextmenu', e=>{
+    e.preventDefault();
+    if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.pet)
+      webkit.messageHandlers.pet.postMessage({action:'menu'});
+  });
 
   window.setGround = function(px){ groundOffsetPx = Math.max(0, px||0); };
   window.startPet = function(specJSON){

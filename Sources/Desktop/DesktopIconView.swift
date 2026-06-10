@@ -40,8 +40,9 @@ final class DesktopIconView: NSView {
         label.font = NSFont.systemFont(ofSize: 11, weight: .medium)
         label.textColor = .white
         label.alignment = .center
-        label.lineBreakMode = .byTruncatingTail
+        label.lineBreakMode = .byWordWrapping     // wrap to a second line instead of clipping
         label.maximumNumberOfLines = 2
+        label.cell?.wraps = true
         label.cell?.truncatesLastVisibleLine = true
         label.backgroundColor = .clear
         label.drawsBackground = false
@@ -69,7 +70,7 @@ final class DesktopIconView: NSView {
         imageView.frame = NSRect(x: imgX, y: imgY, width: iconSize, height: iconSize)
 
         let labelH: CGFloat = 30
-        label.frame = NSRect(x: 0, y: 0, width: w, height: labelH)
+        label.frame = NSRect(x: -6, y: 0, width: w + 12, height: labelH)   // room for 2-line names
     }
 
     override func draw(_ dirtyRect: NSRect) {

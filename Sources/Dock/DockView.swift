@@ -16,6 +16,7 @@ final class DockView: NSView {
     private var wsActivateObserver: NSObjectProtocol?
     private var dropInsertionIndex: Int?
     private var separatorX: CGFloat?
+    private var startSeparatorX: CGFloat?
     private var separatorY: CGFloat?
     private var trashSeparatorX: CGFloat?
     private var startButtonFrame: NSRect = .zero
@@ -126,6 +127,11 @@ final class DockView: NSView {
     private var hasUrlLauncher: Bool {
         ThemeManager.shared.activeTheme?.config.hasUrlLauncher ?? false
     }
+    /// Win98-style taskbar (classic start menu): etched groove separators + Show Desktop.
+    private var isClassicTaskbar: Bool {
+        ThemeManager.shared.activeTheme?.config.dock.startMenuStyle == "classic"
+    }
+    private var hasShowDesktop: Bool { isClassicTaskbar && !isVertical && !isControlStrip }
 
     private var hasDiskFree: Bool {
         ThemeManager.shared.activeTheme?.config.hasDiskFree ?? false
@@ -318,6 +324,7 @@ final class DockView: NSView {
         separatorX = nil
         separatorY = nil
         trashSeparatorX = nil
+        startSeparatorX = nil
         startButtonIcon = nil
         startButtonImages = nil
         diskFreeFrame = .zero
@@ -469,6 +476,7 @@ final class DockView: NSView {
                 let isSunkenLayout = theme.dock.startButtonStyle == "sunken"
                 startButtonFrame = NSRect(x: barRect.minX + (isXP || isSunkenLayout ? 0 : 3), y: btnY, width: btnWidth, height: btnHeight)
                 x = startButtonFrame.maxX + spacing
+                if isClassicTaskbar { startSeparatorX = x - spacing / 2; x += 2 }
             } else {
                 startButtonFrame = .zero
             }
@@ -578,6 +586,12 @@ final class DockView: NSView {
                         theme: theme, iconSize: iconSize)
                 x += iconSize + spacing
             }
+            if hasShowDesktop {
+                addShowDesktopItem(frame: NSRect(x: x, y: (barRect.height - iconSize) / 2,
+                                                 width: iconSize, height: iconSize),
+                                   theme: theme, iconSize: iconSize)
+                x += iconSize + spacing
+            }
             let transientApps = runningAppsNotInDock()
             if !transientApps.isEmpty {
                 separatorX = x - spacing / 2
@@ -616,7 +630,9 @@ final class DockView: NSView {
     func relayoutItems() {
         let apps = AppManager.shared.apps
         let transientApps = runningAppsNotInDock()
-        var currentIDs = apps.map { $0.bundleID } + transientApps
+        var currentIDs = apps.map { $0.bundleID }
+        if hasShowDesktop { currentIDs.append("__showdesktop__") }
+        currentIDs += transientApps
         if hasUrlLauncher && !isControlStrip { currentIDs.append("__urllauncher__") }
         if hasTrash && !isControlStrip { currentIDs.append("__trash__") }
         if currentIDs != lastItemBundleIDs {
@@ -635,6 +651,7 @@ final class DockView: NSView {
         separatorX = nil
         separatorY = nil
         trashSeparatorX = nil
+        startSeparatorX = nil
 
         var idx = 0
         if vertical {
@@ -773,6 +790,7 @@ final class DockView: NSView {
                 let isSunkenLayout = theme.dock.startButtonStyle == "sunken"
                 startButtonFrame = NSRect(x: barRect.minX + (isXP || isSunkenLayout ? 0 : 3), y: btnY, width: btnWidth, height: btnHeight)
                 x = startButtonFrame.maxX + spacing
+                if isClassicTaskbar { startSeparatorX = x - spacing / 2; x += 2 }
             } else {
                 startButtonFrame = .zero
             }
@@ -879,6 +897,12 @@ final class DockView: NSView {
                 idx += 1
                 x += iconSize + spacing
             }
+            if hasShowDesktop, idx < itemViews.count {
+                let y = (barRect.height - iconSize) / 2
+                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                idx += 1
+                x += iconSize + spacing
+            }
             if !transientApps.isEmpty {
                 separatorX = x - spacing / 2
                 x += spacing
@@ -942,6 +966,9 @@ final class DockView: NSView {
             itemView.updateIcon(icon)
             itemView.updateTheme(theme)
             itemView.onLeftClick = { [weak self] bid in
+                // With the system Dock hidden, the app tile is how minimized windows
+                // come back: de-miniaturize them before activating (macOS behavior).
+                MinimizedWindowTracker.shared.restoreWindows(for: bid)
                 AppLauncher.launchOrActivate(bundleID: bid)
                 self?.updateRunningIndicators()
             }
@@ -1009,6 +1036,38 @@ final class DockView: NSView {
         item.onRightClick = { [weak self] bid, point in
             self?.onContextMenu?(bid, point)
         }
+        addSubview(item)
+        itemViews.append(item)
+    }
+
+    /// Win98 Quick-Launch "Show Desktop": hides every regular app (toggle restores them).
+    private static var showDesktopHidden: [NSRunningApplication] = []
+
+    static func toggleShowDesktop() {
+        if showDesktopHidden.isEmpty {
+            let own = Bundle.main.bundleIdentifier
+            for app in NSWorkspace.shared.runningApplications
+            where app.activationPolicy == .regular && app.bundleIdentifier != own && !app.isHidden {
+                if app.hide() { showDesktopHidden.append(app) }
+            }
+        } else {
+            for app in showDesktopHidden { app.unhide() }
+            showDesktopHidden.removeAll()
+        }
+    }
+
+    private func addShowDesktopItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
+        let item = DockItemView(bundleID: "__showdesktop__", frame: frame)
+        item.magnificationEnabled = theme.hasMagnification && AppSettings.shared.dockMagnification
+        if let dir = ThemeManager.shared.activeTheme?.iconsDirectory,
+           let img = NSImage(contentsOf: dir.appendingPathComponent("showdesktop.png")) {
+            img.size = NSSize(width: iconSize, height: iconSize)
+            item.updateIcon(img)
+        }
+        item.updateTheme(theme)
+        item.toolTip = "Show Desktop"
+        item.onLeftClick = { _ in DockView.toggleShowDesktop() }
+        item.onRightClick = { [weak self] bid, point in self?.onContextMenu?(bid, point) }
         addSubview(item)
         itemViews.append(item)
     }
@@ -1109,6 +1168,9 @@ final class DockView: NSView {
         let pinnedCount = CGFloat(AppManager.shared.apps.count)
         var width = padding * 2 + pinnedCount * iconSize + max(0, pinnedCount - 1) * spacing
 
+        if hasShowDesktop {
+            width += iconSize + spacing + 4   // tile + start-button groove allowance
+        }
         let transientApps = runningAppsNotInDock()
         if !transientApps.isEmpty {
             width += spacing + CGFloat(transientApps.count) * (iconSize + spacing)
@@ -1872,25 +1934,31 @@ final class DockView: NSView {
             }
         }
 
-        // Separator between pinned and running apps
-        if let sepX = separatorX {
-            let sepColor = theme.parsedBorderColor.withAlphaComponent(0.4)
-            sepColor.setFill()
-            NSBezierPath(roundedRect: NSRect(x: sepX - 0.5, y: rect.height * 0.15, width: 1, height: rect.height * 0.7),
-                         xRadius: 0.5, yRadius: 0.5).fill()
+        // Vertical taskbar separators. Win98 (classic start menu) draws the authentic
+        // etched groove (1px shadow + 1px highlight, almost full bar height).
+        func drawTaskbarSeparator(atX sx: CGFloat) {
+            if theme.dock.startMenuStyle == "classic" {
+                NSColor(white: 0.50, alpha: 1).setFill()
+                NSBezierPath(rect: NSRect(x: sx - 1, y: rect.minY + 3, width: 1, height: rect.height - 6)).fill()
+                NSColor.white.setFill()
+                NSBezierPath(rect: NSRect(x: sx, y: rect.minY + 3, width: 1, height: rect.height - 6)).fill()
+            } else {
+                let sepColor = theme.parsedBorderColor.withAlphaComponent(0.4)
+                sepColor.setFill()
+                NSBezierPath(roundedRect: NSRect(x: sx - 0.5, y: rect.height * 0.15, width: 1, height: rect.height * 0.7),
+                             xRadius: 0.5, yRadius: 0.5).fill()
+            }
         }
+        if let startSepX = startSeparatorX { drawTaskbarSeparator(atX: startSepX) }
+        // Separator between pinned (quick launch) and running apps
+        if let sepX = separatorX { drawTaskbarSeparator(atX: sepX) }
         if let sepY = separatorY {
             let sepColor = theme.parsedBorderColor.withAlphaComponent(0.4)
             sepColor.setFill()
             NSBezierPath(roundedRect: NSRect(x: rect.width * 0.15, y: sepY - 0.5, width: rect.width * 0.7, height: 1),
                          xRadius: 0.5, yRadius: 0.5).fill()
         }
-        if let trashSepX = trashSeparatorX {
-            let sepColor = theme.parsedBorderColor.withAlphaComponent(0.4)
-            sepColor.setFill()
-            NSBezierPath(roundedRect: NSRect(x: trashSepX - 0.5, y: rect.height * 0.15, width: 1, height: rect.height * 0.7),
-                         xRadius: 0.5, yRadius: 0.5).fill()
-        }
+        if let trashSepX = trashSeparatorX { drawTaskbarSeparator(atX: trashSepX) }
 
         // Drop insertion indicator
         if let idx = dropInsertionIndex {
@@ -3267,7 +3335,6 @@ final class DockView: NSView {
             MI(title: "Favorites", icon: win98Icon("menu-favorites.png"), submenuItems: favItems),
             MI(title: "Documents", icon: win98Icon("menu-documents.png"), submenuItems: docItems),
             MI(title: "Settings", icon: win98Icon("menu-settings.png"), submenuItems: settingsSubItems),
-            MI(separator: true),
             MI(title: "Find…", icon: win98Icon("menu-find.png"), action: {
                 if let finderURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder") {
                     NSWorkspace.shared.open(finderURL)

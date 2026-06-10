@@ -21,7 +21,7 @@
     "padding": 4,
     "spacing": 4,
     "cornerRadius": 0,
-    "backgroundColor": "#C0C0C0FF",
+    "backgroundColor": "#C4C4C4FF",
     "backgroundImage": null,
     "backgroundImageMode": "tile",
     "borderColor": "#000000FF",
@@ -87,5 +87,120 @@
     "com.apple.FaceTime": "facetime.png",
     "com.apple.clock": "clock.png",
     "com.apple.podcasts": "podcasts.png"
-  }
+  },
+  "desktopIcons": [
+    {
+      "name": "My Computer",
+      "icon": "computer.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "My Documents",
+      "icon": "documents.png",
+      "type": "folder",
+      "path": "~/Documents",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Programs",
+      "icon": "programsfolder.png",
+      "type": "appfolder",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "Internet Explorer",
+      "icon": "ie.png",
+      "type": "webapp",
+      "url": "https://www.yahoo.com",
+      "args": [
+        "1020",
+        "720"
+      ],
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Notepad",
+      "icon": "notepad98.png",
+      "type": "webapp",
+      "url": "https://bored-entertainment.github.io/98.js/programs/notepad/index.html",
+      "args": [
+        "660",
+        "500"
+      ],
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "Paint",
+      "icon": "paint98.png",
+      "type": "webapp",
+      "url": "https://bored-entertainment.github.io/98.js/programs/jspaint/index.html",
+      "args": [
+        "920",
+        "640"
+      ],
+      "gridX": 0,
+      "gridY": 5
+    },
+    {
+      "name": "Minesweeper",
+      "icon": "mines.png",
+      "type": "webapp",
+      "url": "https://bored-entertainment.github.io/98.js/programs/minesweeper/index.html",
+      "args": [
+        "360",
+        "460"
+      ],
+      "gridX": 0,
+      "gridY": 6
+    },
+    {
+      "name": "Solitaire",
+      "icon": "solitaire.png",
+      "type": "webapp",
+      "url": "https://bored-entertainment.github.io/98.js/programs/js-solitaire/index.html",
+      "args": [
+        "800",
+        "600"
+      ],
+      "gridX": 0,
+      "gridY": 7
+    },
+    {
+      "name": "CPU Monitor",
+      "icon": "menu-sysguard.png",
+      "type": "cpumonitor",
+      "gridX": 1,
+      "gridY": 0
+    },
+    {
+      "name": "Clock",
+      "icon": "clock.png",
+      "type": "clock",
+      "gridX": 1,
+      "gridY": 1
+    },
+    {
+      "name": "sheep.exe",
+      "icon": "sheep.png",
+      "type": "sheep",
+      "gridX": 1,
+      "gridY": 2
+    },
+    {
+      "name": "Recycle Bin",
+      "icon": "trash.png",
+      "iconFull": "trash_full.png",
+      "type": "trash",
+      "gridX": 1,
+      "gridY": 3
+    }
+  ],
+  "desktopIconSize": 40
 }
