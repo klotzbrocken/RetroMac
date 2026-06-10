@@ -23,8 +23,8 @@ final class DesktopIconsController {
         // At 2x (Retina): 64pt icon, at 1x: 48pt
         return scale >= 2.0 ? 64 : 48
     }
-    private var cellWidth: CGFloat { iconSize + 24 }
-    private var cellHeight: CGFloat { iconSize + 40 }
+    private var cellWidth: CGFloat { iconSize + 32 }      // breathing room between columns
+    private var cellHeight: CGFloat { iconSize + 52 }     // … and between rows
     private var marginX: CGFloat { 16 }
     private var marginY: CGFloat { 8 }
 

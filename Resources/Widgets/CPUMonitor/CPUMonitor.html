@@ -313,17 +313,23 @@
   body.theme-win98 .window{background:#c4c4c4;border-radius:0;overflow:hidden;border:none;
     box-shadow:inset -2px -2px 0 #000,inset 2px 2px 0 #fff,inset -4px -4px 0 #808080,inset 4px 4px 0 #dbdbdb;}
   body.theme-win98 .body{border:none;box-shadow:none;margin:0 8px 8px;}
-  body.theme-win98 .w98-title{display:flex;align-items:center;gap:3px;height:30px;margin:5px 5px 3px;padding:0 3px 0 8px;
+  body.theme-win98 .w98-title{display:flex;align-items:center;gap:3px;height:37px;margin:7px 7px 4px;padding:0 3px 0 10px;
     background:linear-gradient(90deg,#00007b,#1085d2);}
-  .w98-cap{color:#fff;font:700 18px "Pixelated MS Sans Serif","MS Sans Serif","Microsoft Sans Serif",Tahoma,sans-serif;
-    -webkit-font-smoothing:none;flex:1 1 auto;text-align:left;white-space:nowrap;}
-  .w98-btn{width:27px;height:23px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
+  .w98-cap{color:#fff;font:700 20px Tahoma,"Microsoft Sans Serif",sans-serif;
+    flex:1 1 auto;text-align:left;white-space:nowrap;}
+  .w98-btn{width:33px;height:30px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
     box-shadow:inset -2px -2px 0 #000,inset 2px 2px 0 #dbdbdb,inset -4px -4px 0 #808080,inset 4px 4px 0 #fff;
-    font:700 17px Tahoma,Verdana,sans-serif;color:#000;
+    font:700 20px Tahoma,Verdana,sans-serif;color:#000;
     display:flex;align-items:center;justify-content:center;line-height:1;}
   .w98-btn:active{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
   .w98-btn.w98-dis{color:#808080;text-shadow:2px 2px 0 #fff;cursor:default;}
-  .w98-btn:last-child{margin-left:3px;}
+  .w98-btn:last-child{margin-left:5px;}
+  .w98-btn{font-size:0;position:relative;}
+  #w98close::before,#w98close::after{content:"";position:absolute;left:50%;top:50%;width:18px;height:3px;background:#000;}
+  #w98close::before{transform:translate(-50%,-50%) rotate(45deg);}
+  #w98close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  #w98min::before{content:"";position:absolute;left:7px;bottom:7px;width:13px;height:3px;background:#808080;box-shadow:2px 2px 0 #fff;}
+  #w98max::before{content:"";position:absolute;left:7px;top:5px;width:16px;height:15px;border:2px solid #808080;border-top-width:4px;box-shadow:2px 2px 0 #fff;}
 </style>
 </head>
 <body>

@@ -116,10 +116,10 @@
       "name": "Internet Explorer",
       "icon": "ie.png",
       "type": "webapp",
-      "url": "https://www.yahoo.com",
+      "url": "https://bored-entertainment.github.io/98.js/programs/explorer/index.html?address=https%3A%2F%2Fwww.google.com%2Fwebhp%3Figu%3D1",
       "args": [
         "1020",
-        "720"
+        "740"
       ],
       "gridX": 0,
       "gridY": 3

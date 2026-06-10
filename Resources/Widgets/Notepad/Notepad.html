@@ -131,14 +131,21 @@
   body.theme-maiksfav .np-toolbar button{font-family:"Pixelify Sans",monospace;}
 
   /* ===== Windows 98 — SPEC-Farben/-Bevels, leicht skaliert für Lesbarkeit ===== */
-  .w98-cap{color:#fff;font:700 12px "Pixelated MS Sans Serif","MS Sans Serif","Microsoft Sans Serif",Tahoma,sans-serif;
-    -webkit-font-smoothing:none;flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .w98-cap{color:#fff;font:700 12px Tahoma,"Microsoft Sans Serif",sans-serif;
+    flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .w98-btn{width:20px;height:18px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;
     font:700 13px Tahoma,Verdana,sans-serif;color:#000;display:flex;align-items:center;justify-content:center;line-height:1;}
   .w98-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #dbdbdb,inset 2px 2px 0 #808080,inset -2px -2px 0 #fff;}
   .w98-btn.w98-dis{color:#808080;text-shadow:1px 1px 0 #fff;cursor:default;}
   .w98-close{margin-left:3px;}
+  /* Marlett-artige Glyphen (gezeichnet) — identisch zum nativen App-Fenster-Chrome */
+  .w98-btn{font-size:0;position:relative;}
+  #w98close::before,#w98close::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#000;}
+  #w98close::before{transform:translate(-50%,-50%) rotate(45deg);}
+  #w98close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  #w98min::before{content:"";position:absolute;left:4px;bottom:4px;width:8px;height:2px;background:#808080;box-shadow:1px 1px 0 #fff;}
+  #w98max::before{content:"";position:absolute;left:4px;top:3px;width:10px;height:9px;border:1px solid #808080;border-top-width:2px;box-shadow:1px 1px 0 #fff;}
   body.theme-win98 .tab{display:none;}
   body.theme-win98 #win{background:#c4c4c4;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;}
