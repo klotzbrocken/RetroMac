@@ -153,13 +153,21 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
     // MARK: - WKNavigationDelegate
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        // Floor = top of the RetroMac taskbar so the sheep walks ON it.
-        let taskbarH = DockController.shared.currentDockFrame()?.height ?? 0
-        webView.evaluateJavaScript("window.setGround && window.setGround(\(Int(taskbarH)))")
+        applyGround()
+        // Re-apply shortly after: right after a theme switch the new theme's dock frame
+        // can still be settling, so the first read may be stale (e.g. Win98 vs XP). This
+        // makes the sheep reliably walk ON the taskbar in every themed desktop.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.applyGround() }
         loadSpriteSpec { [weak self] spec in
             guard let spec = spec else { return }
             self?.webView?.evaluateJavaScript("window.startPet && window.startPet(\(spec))")
         }
+    }
+
+    /// Floor = top of the RetroMac taskbar so the sheep walks ON it (all themed desktops).
+    private func applyGround() {
+        let taskbarH = DockController.shared.currentDockFrame()?.height ?? 0
+        webView?.evaluateJavaScript("window.setGround && window.setGround(\(Int(taskbarH)))")
     }
 
     // MARK: - Sprite: runtime download of the classic sheep (cached), bundled fallback

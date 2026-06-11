@@ -54,7 +54,7 @@
     "offset": 3
   },
   "fallbackIcon": "generic.png",
-  "defaultPreset": "vhs-lite",
+  "defaultPreset": "crt-lite",
   "iconMappings": {
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",

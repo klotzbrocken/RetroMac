@@ -918,6 +918,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // only the Classic variants (not plain "BeOS" / "Mac OS 9.2").
                 let tn = theme.name.lowercased()
                 let special = tn.contains("windows xp")
+                    || tn.contains("windows 98")
                     || (tn.contains("mac os 9") && tn.contains("classic"))
                     || (tn.contains("beos") && tn.contains("classic"))
                     || tn.contains("maiks favourite")
