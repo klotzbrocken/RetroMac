@@ -10,7 +10,7 @@ final class WebAppPanel: NSPanel {
 /// Themed app window: NATIVE chrome (Win98 spec / XP Luna / plain) drawn in Swift —
 /// crisp at any scale, close always works — hosting a WKWebView that loads the target
 /// URL top-level (sites that forbid iframes, like yahoo.com, work fine).
-final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandler {
 
     private static var openWindows: [String: WebAppController] = [:]
 
@@ -34,6 +34,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     private let appURL: String
     private let size: NSSize
     private var panel: WebAppPanel?
+    private weak var webView: WKWebView?
 
     private init(name: String, url: String, size: NSSize) {
         self.appName = name; self.appURL = url; self.size = size
@@ -54,12 +55,24 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 
         let cfg = WKWebViewConfiguration()
         cfg.preferences.javaScriptCanOpenWindowsAutomatically = true
+        // Bridge the hosted apps' File/Print menus to native macOS: window.print() and
+        // <a download> clicks (how Notepad/Paint "Save"/"Save As" fall back when the
+        // File System Access API is unavailable, as it is in WKWebView) are routed to Swift.
+        let ucc = WKUserContentController()
+        ucc.add(self, name: "webapp")
+        ucc.addUserScript(WKUserScript(source: Self.bridgeJS, injectionTime: .atDocumentStart,
+                                       forMainFrameOnly: false))
+        ucc.addUserScript(WKUserScript(source: Self.saveAsJS, injectionTime: .atDocumentEnd,
+                                       forMainFrameOnly: false))
+        cfg.userContentController = ucc
+
         let wv = WKWebView(frame: chrome.contentRect(), configuration: cfg)
         wv.autoresizingMask = [.width, .height]
         wv.navigationDelegate = self
         wv.uiDelegate = self
         if let u = URL(string: appURL) { wv.load(URLRequest(url: u)) }
-        chrome.addSubview(wv)
+        chrome.embed(wv)
+        self.webView = wv
         chrome.onBack = { [weak wv] in if wv?.canGoBack == true { wv?.goBack() } }
         chrome.onForward = { [weak wv] in if wv?.canGoForward == true { wv?.goForward() } }
 
@@ -68,6 +81,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         p.level = .normal
         p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
         p.hidesOnDeactivate = false
+        p.minSize = NSSize(width: 360, height: 240)            // resizable, with a floor
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         p.contentView = chrome
         self.panel = p
@@ -133,6 +147,98 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         }
         completionHandler(url)
     }
+
+    // MARK: - JS bridge (Save / Save As / Print / Page Setup)
+
+    /// Injected at document start. Routes the hosted apps' save/print actions to native macOS.
+    /// Save paths covered: real <a download> clicks (jspaint), programmatic a.click(), and
+    /// FileSaver.js / blob saveAs() which dispatch a click on a *detached* anchor (Notepad).
+    private static let bridgeJS = """
+    (function(){
+      function post(m){ try{ window.webkit.messageHandlers.webapp.postMessage(m); }catch(e){} }
+      function saveHref(href, name){
+        if(!href) return;
+        fetch(href).then(function(r){return r.blob();}).then(function(b){
+          var fr = new FileReader();
+          fr.onload = function(){ post({action:'save', name:(name||'document'), data:fr.result}); };
+          fr.readAsDataURL(b);
+        }).catch(function(){});
+      }
+      // Print + Page Setup → native print panel.
+      window.print = function(){ post({action:'print'}); };
+      // Real clicks on a download link (capture phase).
+      document.addEventListener('click', function(e){
+        var a = e.target && e.target.closest ? e.target.closest('a[download]') : null;
+        if(!a || !a.href) return;
+        e.preventDefault(); e.stopPropagation();
+        saveHref(a.href, a.getAttribute('download'));
+      }, true);
+      // Programmatic anchor.click() on a download link.
+      var origClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function(){
+        if(this.download && this.href){ saveHref(this.href, this.download); return; }
+        return origClick.apply(this, arguments);
+      };
+      // FileSaver.js path: dispatchEvent(new MouseEvent('click')) on a detached anchor.
+      var origDispatch = EventTarget.prototype.dispatchEvent;
+      EventTarget.prototype.dispatchEvent = function(ev){
+        if(ev && ev.type === 'click' && this.tagName === 'A' && this.download && this.href){
+          saveHref(this.href, this.download); return true;
+        }
+        return origDispatch.call(this, ev);
+      };
+    })();
+    """
+
+    /// Injected at document end — after FileSaver.js has installed its global — so Notepad's
+    /// saveAs(blob, name) is captured directly even if the anchor path is missed.
+    private static let saveAsJS = """
+    (function(){
+      function post(m){ try{ window.webkit.messageHandlers.webapp.postMessage(m); }catch(e){} }
+      if (typeof window.saveAs === 'function') {
+        window.saveAs = function(blob, name){
+          var fr = new FileReader();
+          fr.onload = function(){ post({action:'save', name:(name||'document'), data:fr.result}); };
+          fr.readAsDataURL(blob);
+        };
+      }
+    })();
+    """
+
+    func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard let body = message.body as? [String: Any],
+              let action = body["action"] as? String else { return }
+        switch action {
+        case "print": runPrint()
+        case "save":  saveFromBridge(name: body["name"] as? String ?? "document",
+                                     dataURL: body["data"] as? String ?? "")
+        default: break
+        }
+    }
+
+    private func runPrint() {
+        guard let wv = webView else { return }
+        let info = NSPrintInfo.shared
+        let op = wv.printOperation(with: info)
+        op.showsPrintPanel = true          // the print panel also exposes paper/orientation (Page Setup)
+        op.showsProgressPanel = true
+        if let win = panel { op.runModal(for: win, delegate: nil, didRun: nil, contextInfo: nil) }
+        else { op.run() }
+    }
+
+    private func saveFromBridge(name: String, dataURL: String) {
+        // data:[<mime>][;base64],<payload>
+        guard let comma = dataURL.firstIndex(of: ","),
+              let data = Data(base64Encoded: String(dataURL[dataURL.index(after: comma)...])) else { return }
+        let sp = NSSavePanel()
+        sp.nameFieldStringValue = name
+        sp.canCreateDirectories = true
+        NSApp.activate(ignoringOtherApps: true)
+        sp.begin { resp in
+            guard resp == .OK, let url = sp.url else { return }
+            try? data.write(to: url)
+        }
+    }
 }
 
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
@@ -149,6 +255,8 @@ final class WebAppChromeView: NSView {
     private var closeHit: CGRect = .zero
     private var backHit: CGRect = .zero
     private var fwdHit: CGRect = .zero
+    private weak var hosted: NSView?
+    private var grip: ResizeGripView?
 
     init(frame: NSRect, title: String, showNav: Bool = false) {
         self.title = title
@@ -176,6 +284,28 @@ final class WebAppChromeView: NSView {
         return NSRect(x: pad, y: topOffset,
                       width: bounds.width - pad * 2,
                       height: bounds.height - topOffset - pad)
+    }
+
+    /// Host the webview and add a bottom-right resize grip on top of it.
+    func embed(_ view: NSView) {
+        hosted = view
+        view.frame = contentRect()
+        addSubview(view)
+        let g = ResizeGripView(frame: .zero)
+        grip = g
+        addSubview(g)   // last → stays on top of the webview, so the corner is grabbable
+        layoutContents()
+    }
+
+    private func layoutContents() {
+        hosted?.frame = contentRect()
+        let s: CGFloat = 16
+        grip?.frame = NSRect(x: bounds.maxX - pad - s, y: bounds.maxY - pad - s, width: s, height: s)
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        layoutContents()
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -386,5 +516,45 @@ final class WebAppChromeView: NSView {
         if backHit.contains(p) { onBack?(); return }
         if fwdHit.contains(p) { onForward?(); return }
         if p.y <= pad + titleH + 2 { window?.performDrag(with: event) }
+    }
+}
+
+/// Bottom-right corner grip that resizes the borderless window (Notepad/Paint/IE et al.).
+final class ResizeGripView: NSView {
+    private var startMouse: NSPoint = .zero
+    private var startFrame: NSRect = .zero
+
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // three subtle diagonal hatch lines, like a classic resize gripper
+        NSColor(white: 0, alpha: 0.28).setStroke()
+        let p = NSBezierPath(); p.lineWidth = 1
+        for o in [CGFloat(3), 7, 11] {
+            p.move(to: NSPoint(x: bounds.maxX - o, y: bounds.maxY - 1))
+            p.line(to: NSPoint(x: bounds.maxX - 1, y: bounds.maxY - o))
+        }
+        p.stroke()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let win = window else { return }
+        startMouse = NSEvent.mouseLocation
+        startFrame = win.frame
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let win = window else { return }
+        let now = NSEvent.mouseLocation
+        let dx = now.x - startMouse.x
+        let dy = now.y - startMouse.y                 // screen y grows upward
+        var newW = startFrame.width + dx
+        var newH = startFrame.height - dy             // drag down (dy<0) → taller
+        newW = max(win.minSize.width, newW)
+        newH = max(win.minSize.height, newH)
+        let top = startFrame.maxY                      // keep the title bar anchored
+        win.setFrame(NSRect(x: startFrame.minX, y: top - newH, width: newW, height: newH),
+                     display: true, animate: false)
     }
 }

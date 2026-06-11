@@ -87,7 +87,9 @@ final class DesktopIconView: NSView {
             let twoLines = textW > (lf.width - 4)
             let hiW = twoLines ? lf.width : min(textW + 8, lf.width)
             let hiH = (twoLines ? lineH * 2 : lineH) + 4
-            let hiRect = NSRect(x: lf.midX - hiW / 2, y: lf.midY - hiH / 2, width: hiW, height: hiH)
+            // The label wraps to ≤2 lines and is TOP-aligned in its frame, so anchor the
+            // highlight to the top of the label (not its vertical centre) to hug the text.
+            let hiRect = NSRect(x: lf.midX - hiW / 2, y: lf.maxY - hiH + 2, width: hiW, height: hiH)
             NSColor.selectedContentBackgroundColor.withAlphaComponent(0.85).setFill()
             NSBezierPath(roundedRect: hiRect, xRadius: 3, yRadius: 3).fill()
         }

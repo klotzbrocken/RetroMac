@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 1.7")
+                Text("What's New in RetroMac 1.8")
                     .font(.title2.bold())
-                Text("The big themes overhaul")
+                Text("Themes, reborn — now with classic apps")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,31 +21,31 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "macwindow.on.rectangle",
+                        icon: "apps.iphone",
                         color: .blue,
-                        title: "Themes Overhaul — BeOS, Windows XP & Mac OS 9",
-                        description: "A massive rework of the BeOS Classic, Windows XP and Macintosh Classic themes — as close to the originals as possible, including a native CPU widget and authentically styled windows in each theme."
+                        title: "Themes Overhaul — with Classic Apps",
+                        description: "The Windows themes now come alive with real classic apps: Notepad, Solitaire, Internet Explorer, Paint, Minesweeper — and even sheep.exe wandering across your taskbar."
                     )
 
                     featureRow(
-                        icon: "star.fill",
-                        color: .yellow,
-                        title: "New Theme: Maiks Favourite",
-                        description: "A custom theme with an animated Pac-Man dock and live previews of your running apps."
+                        icon: "sparkles",
+                        color: .cyan,
+                        title: "New Theme: Mac OS X",
+                        description: "The glossy Aqua desktop joins the collection — pinstripes, gel buttons and a magnifying dock, just like the original."
                     )
 
                     featureRow(
-                        icon: "camera.fill",
-                        color: .purple,
-                        title: "Webcam Support Stabilized",
-                        description: "More reliable virtual-camera toggling and retro effects for your video calls."
+                        icon: "arrow.down.right.and.arrow.up.left.rectangle",
+                        color: .orange,
+                        title: "Smarter Minimize",
+                        description: "Windows now minimize in the right direction — into the themed dock instead of the system Dock."
                     )
 
                     featureRow(
-                        icon: "checkmark.seal.fill",
+                        icon: "macwindow",
                         color: .green,
-                        title: "Stability & Fixes",
-                        description: "Numerous bug fixes and general stability improvements across the app."
+                        title: "New Window Designs",
+                        description: "Authentic window chrome and menus across the themes — pixel-matched title bars, buttons and menu styling, plus resizable app windows."
                     )
                 }
                 .padding(.horizontal, 24)

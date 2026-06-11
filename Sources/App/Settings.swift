@@ -530,7 +530,9 @@ final class AppSettings: ObservableObject {
         retroModeHideDesktopIcons = defaults.object(forKey: "retroModeHideDesktopIcons") as? Bool ?? true
         retroModeActivateShader = defaults.object(forKey: "retroModeActivateShader") as? Bool ?? true
         pacmanAnimationEnabled = defaults.object(forKey: "pacmanAnimationEnabled") as? Bool ?? true
-        desktopPetEnabled = defaults.object(forKey: "desktopPetEnabled") as? Bool ?? true
+        // Desktop pet (sheep) NEVER auto-starts: not on app launch, not on theme selection.
+        // It only appears when the user explicitly runs sheep.exe (in-memory, not persisted).
+        desktopPetEnabled = false
         pacmanClockMode = defaults.object(forKey: "pacmanClockMode") as? Bool ?? false
         timerWindowEnabled = defaults.bool(forKey: "timerWindowEnabled")
         timerWindowStart = defaults.object(forKey: "timerWindowStart") as? Int ?? 20 * 60
