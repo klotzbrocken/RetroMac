@@ -85,20 +85,34 @@ final class DockFix {
         let config = ThemeManager.shared.activeTheme?.config
 
         if config?.isVertical == true {
-            // Vertical dock (left OR right) — dockCGRect already reflects the real
-            // on-screen position, so pushing windows past its right edge is correct
-            // for both sides.
-            let dockRight = dockCGRect.maxX
-            if windowRect.minX < dockRight {
-                let newX = dockRight
-                let newWidth = max(200, windowRect.maxX - dockRight)
-                var newPos = CGPoint(x: newX, y: pos.y)
-                var newSize = CGSize(width: newWidth, height: size.height)
-                if let val = AXValueCreate(.cgPoint, &newPos) {
-                    AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, val)
+            // Vertical dock — clear the window off whichever edge the dock actually sits on.
+            // A LEFT dock pushes overlapping windows to its right edge; a RIGHT dock clamps
+            // them to its left edge. Treating both as "left" shoved windows off the right
+            // side of the screen for right-edge docks.
+            let isRight = (config?.effectiveDockPosition == "right")
+            if isRight {
+                let dockLeft = dockCGRect.minX
+                if windowRect.maxX > dockLeft {
+                    // Keep the window's left edge; shrink its right edge to the dock's left.
+                    let newWidth = max(200, dockLeft - windowRect.minX)
+                    var newSize = CGSize(width: newWidth, height: size.height)
+                    if newWidth != size.width, let val = AXValueCreate(.cgSize, &newSize) {
+                        AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, val)
+                    }
                 }
-                if newWidth != size.width, let val = AXValueCreate(.cgSize, &newSize) {
-                    AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, val)
+            } else {
+                let dockRight = dockCGRect.maxX
+                if windowRect.minX < dockRight {
+                    let newX = dockRight
+                    let newWidth = max(200, windowRect.maxX - dockRight)
+                    var newPos = CGPoint(x: newX, y: pos.y)
+                    var newSize = CGSize(width: newWidth, height: size.height)
+                    if let val = AXValueCreate(.cgPoint, &newPos) {
+                        AXUIElementSetAttributeValue(window, kAXPositionAttribute as CFString, val)
+                    }
+                    if newWidth != size.width, let val = AXValueCreate(.cgSize, &newSize) {
+                        AXUIElementSetAttributeValue(window, kAXSizeAttribute as CFString, val)
+                    }
                 }
             }
         } else {

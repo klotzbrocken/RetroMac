@@ -58,13 +58,19 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         // Bridge the hosted apps' File/Print menus to native macOS: window.print() and
         // <a download> clicks (how Notepad/Paint "Save"/"Save As" fall back when the
         // File System Access API is unavailable, as it is in WKWebView) are routed to Swift.
-        let ucc = WKUserContentController()
-        ucc.add(self, name: "webapp")
-        ucc.addUserScript(WKUserScript(source: Self.bridgeJS, injectionTime: .atDocumentStart,
-                                       forMainFrameOnly: false))
-        ucc.addUserScript(WKUserScript(source: Self.saveAsJS, injectionTime: .atDocumentEnd,
-                                       forMainFrameOnly: false))
-        cfg.userContentController = ucc
+        //
+        // SECURITY: only install the bridge for the self-contained 98.js app windows — NOT
+        // for the IE/browser windows (`showNav`), which load arbitrary websites. And only in
+        // the main frame, so embedded ad iframes can never trigger a native save/print dialog.
+        if !showNav {
+            let ucc = WKUserContentController()
+            ucc.add(self, name: "webapp")
+            ucc.addUserScript(WKUserScript(source: Self.bridgeJS, injectionTime: .atDocumentStart,
+                                           forMainFrameOnly: true))
+            ucc.addUserScript(WKUserScript(source: Self.saveAsJS, injectionTime: .atDocumentEnd,
+                                           forMainFrameOnly: true))
+            cfg.userContentController = ucc
+        }
 
         let wv = WKWebView(frame: chrome.contentRect(), configuration: cfg)
         wv.autoresizingMask = [.width, .height]
@@ -136,16 +142,15 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 
     func download(_ download: WKDownload, decideDestinationUsing response: URLResponse,
                   suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
-        let dir = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
-        var url = dir.appendingPathComponent(suggestedFilename)
-        var i = 2
-        while FileManager.default.fileExists(atPath: url.path) {
-            let base = (suggestedFilename as NSString).deletingPathExtension
-            let ext = (suggestedFilename as NSString).pathExtension
-            url = dir.appendingPathComponent(ext.isEmpty ? "\(base) \(i)" : "\(base) \(i).\(ext)")
-            i += 1
+        // Always ask the user where to save — never write to ~/Downloads silently, so a page
+        // (e.g. inside the IE window) can't drop files without explicit consent.
+        let sp = NSSavePanel()
+        sp.nameFieldStringValue = suggestedFilename
+        sp.canCreateDirectories = true
+        NSApp.activate(ignoringOtherApps: true)
+        sp.begin { resp in
+            completionHandler(resp == .OK ? sp.url : nil)
         }
-        completionHandler(url)
     }
 
     // MARK: - JS bridge (Save / Save As / Print / Page Setup)
@@ -226,17 +231,30 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         else { op.run() }
     }
 
+    /// Max accepted bridge-save payload (the base64 string length, pre-decode).
+    private static let maxSavePayloadBytes = 25 * 1024 * 1024
+
     private func saveFromBridge(name: String, dataURL: String) {
         // data:[<mime>][;base64],<payload>
-        guard let comma = dataURL.firstIndex(of: ","),
-              let data = Data(base64Encoded: String(dataURL[dataURL.index(after: comma)...])) else { return }
-        let sp = NSSavePanel()
-        sp.nameFieldStringValue = name
-        sp.canCreateDirectories = true
-        NSApp.activate(ignoringOtherApps: true)
-        sp.begin { resp in
-            guard resp == .OK, let url = sp.url else { return }
-            try? data.write(to: url)
+        guard let comma = dataURL.firstIndex(of: ",") else { return }
+        let payload = String(dataURL[dataURL.index(after: comma)...])
+        guard payload.utf8.count <= Self.maxSavePayloadBytes else {
+            NSLog("[WebApp] Save rejected — payload exceeds %d bytes", Self.maxSavePayloadBytes)
+            return
+        }
+        // Decode off the main thread (large images can be multi-MB), then present the panel.
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let data = Data(base64Encoded: payload) else { return }
+            DispatchQueue.main.async {
+                let sp = NSSavePanel()
+                sp.nameFieldStringValue = name
+                sp.canCreateDirectories = true
+                NSApp.activate(ignoringOtherApps: true)
+                sp.begin { resp in
+                    guard resp == .OK, let url = sp.url else { return }
+                    try? data.write(to: url)
+                }
+            }
         }
     }
 }

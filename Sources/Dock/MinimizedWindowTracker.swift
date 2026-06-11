@@ -5,11 +5,13 @@ extension Notification.Name {
     static let minimizedWindowsChanged = Notification.Name("minimizedWindowsChanged")
 }
 
-/// Tracks minimized windows of regular apps via the Accessibility API so the themed dock
-/// can show a tile for each (the system Dock is hidden, so minimized windows would
-/// otherwise vanish into nowhere). Clicking a tile de-minimizes the window and activates
-/// the app. Poll-based (1.5s) — AX miniaturize notifications would need one observer per
-/// app; polling is simpler and plenty fast for a dock.
+/// Tracks minimized windows of regular apps via the Accessibility API. The system Dock is
+/// hidden while a theme is active, so a minimized window would otherwise vanish with no way
+/// back; the themed dock therefore surfaces a tile for any non-pinned app that has minimized
+/// windows (see DockView.runningAppsNotInDock), and clicking that tile calls
+/// `restoreWindows(for:)` to de-minimize them. Poll-based (1.5s) — AX miniaturize
+/// notifications would need one observer per app; polling is simpler and plenty fast.
+/// The AX scan runs on a background queue; only the published `entries` are touched on main.
 final class MinimizedWindowTracker {
 
     static let shared = MinimizedWindowTracker()
@@ -24,6 +26,8 @@ final class MinimizedWindowTracker {
     private(set) var entries: [Entry] = []
     private var timer: Timer?
     private var didPrompt = false
+    /// Serial queue for the (potentially slow) Accessibility scan so the main thread never blocks.
+    private let scanQueue = DispatchQueue(label: "com.retromac.minimized-tracker")
 
     func start() {
         guard timer == nil else { return }
@@ -65,29 +69,41 @@ final class MinimizedWindowTracker {
 
     private func poll() {
         guard AXIsProcessTrusted() else { return }
-        var found: [Entry] = []
+        // Snapshot the running apps on main, then do the AX queries off-main: a slow-to-respond
+        // app must not stall the main thread every 1.5s.
         let ownBundleID = Bundle.main.bundleIdentifier ?? ""
-        for app in NSWorkspace.shared.runningApplications where app.activationPolicy == .regular {
-            guard let bid = app.bundleIdentifier, bid != ownBundleID else { continue }
-            let axApp = AXUIElementCreateApplication(app.processIdentifier)
-            var winsRef: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &winsRef) == .success,
-                  let wins = winsRef as? [AXUIElement] else { continue }
-            for w in wins {
-                var minRef: CFTypeRef?
-                guard AXUIElementCopyAttributeValue(w, kAXMinimizedAttribute as CFString, &minRef) == .success,
-                      (minRef as? Bool) == true else { continue }
-                var titleRef: CFTypeRef?
-                AXUIElementCopyAttributeValue(w, kAXTitleAttribute as CFString, &titleRef)
-                let title = (titleRef as? String).flatMap { $0.isEmpty ? nil : $0 }
-                    ?? app.localizedName ?? bid
-                found.append(Entry(pid: app.processIdentifier, bundleID: bid, title: title, window: w))
+        let apps: [(pid_t, String, String?)] = NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular }
+            .compactMap { app in
+                guard let bid = app.bundleIdentifier, bid != ownBundleID else { return nil }
+                return (app.processIdentifier, bid, app.localizedName)
+            }
+        scanQueue.async { [weak self] in
+            guard let self = self else { return }
+            var found: [Entry] = []
+            for (pid, bid, localName) in apps {
+                let axApp = AXUIElementCreateApplication(pid)
+                var winsRef: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &winsRef) == .success,
+                      let wins = winsRef as? [AXUIElement] else { continue }
+                for w in wins {
+                    var minRef: CFTypeRef?
+                    guard AXUIElementCopyAttributeValue(w, kAXMinimizedAttribute as CFString, &minRef) == .success,
+                          (minRef as? Bool) == true else { continue }
+                    var titleRef: CFTypeRef?
+                    AXUIElementCopyAttributeValue(w, kAXTitleAttribute as CFString, &titleRef)
+                    let title = (titleRef as? String).flatMap { $0.isEmpty ? nil : $0 }
+                        ?? localName ?? bid
+                    found.append(Entry(pid: pid, bundleID: bid, title: title, window: w))
+                }
+            }
+            DispatchQueue.main.async {
+                let changed = found.count != self.entries.count
+                    || zip(found, self.entries).contains(where: { $0.bundleID != $1.bundleID || $0.title != $1.title })
+                self.entries = found
+                if changed { self.notify() }
             }
         }
-        let changed = found.count != entries.count
-            || zip(found, entries).contains(where: { $0.bundleID != $1.bundleID || $0.title != $1.title })
-        entries = found
-        if changed { notify() }
     }
 
     private func notify() {

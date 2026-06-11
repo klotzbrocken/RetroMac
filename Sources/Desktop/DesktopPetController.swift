@@ -33,11 +33,21 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(themeChanged),
                                                name: .dockThemeChanged, object: nil)
+        // Keep the full-screen pet panel sized to the current main screen across display /
+        // resolution changes (otherwise it keeps a stale geometry from when it was created).
+        NotificationCenter.default.addObserver(self, selector: #selector(screenParamsChanged),
+                                               name: NSApplication.didChangeScreenParametersNotification, object: nil)
         applyForCurrentTheme()
         downloadSheepIconIfNeeded()
     }
 
     @objc private func themeChanged() { applyForCurrentTheme() }
+
+    @objc private func screenParamsChanged() {
+        guard let panel = panel, let screen = NSScreen.main else { return }
+        panel.setFrame(screen.frame, display: true)   // webView autoresizes with the panel
+        applyGround()                                   // recompute the taskbar floor
+    }
 
     private func downloadSheepIconIfNeeded() {
         let dest = Self.sheepIconCacheURL
@@ -101,20 +111,31 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
         panel = nil; webView = nil; petScreenRect = .zero
     }
 
-    /// Click-through everywhere except over the pet. Poll-based (60ms) — works without any
-    /// extra permissions (a global mouseMoved monitor missed events over our own window).
-    /// While the button is held over the pet, keep accepting events so the drag never drops.
+    /// Click-through everywhere except over the pet. Poll-based (a global mouseMoved monitor
+    /// missed events over our own window). Adaptive: it only polls at 60ms when the cursor is
+    /// near the pet (so a grab feels instant) or a drag is in progress — otherwise it idles at
+    /// 250ms. It pauses entirely while the panel isn't visible.
     private func installHoverTimer() {
         hoverTimer?.invalidate()
-        let t = Timer(timeInterval: 0.06, repeats: true) { [weak self] _ in
-            guard let self = self, let panel = self.panel else { return }
-            let dragging = !panel.ignoresMouseEvents && (NSEvent.pressedMouseButtons & 1) == 1
-            let over = self.petScreenRect.insetBy(dx: -10, dy: -10).contains(NSEvent.mouseLocation)
-            let want = over || dragging
-            if panel.ignoresMouseEvents == want { panel.ignoresMouseEvents = !want }
-        }
+        scheduleHoverTick(after: 0.06)
+    }
+
+    private func scheduleHoverTick(after interval: TimeInterval) {
+        let t = Timer(timeInterval: interval, repeats: false) { [weak self] _ in self?.hoverTick() }
         RunLoop.main.add(t, forMode: .common)
         hoverTimer = t
+    }
+
+    private func hoverTick() {
+        guard let panel = panel, panel.isVisible else { hoverTimer = nil; return }  // pause when hidden
+        let mouse = NSEvent.mouseLocation
+        let dragging = !panel.ignoresMouseEvents && (NSEvent.pressedMouseButtons & 1) == 1
+        let over = petScreenRect.insetBy(dx: -10, dy: -10).contains(mouse)
+        let want = over || dragging
+        if panel.ignoresMouseEvents == want { panel.ignoresMouseEvents = !want }
+        // Fast cadence only near the pet / while dragging; lazy otherwise.
+        let near = petScreenRect.insetBy(dx: -120, dy: -120).contains(mouse)
+        scheduleHoverTick(after: (near || dragging) ? 0.06 : 0.25)
     }
 
     // MARK: - WKScriptMessageHandler (pet reports its rect in web/top-left px)
