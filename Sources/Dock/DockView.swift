@@ -50,6 +50,7 @@ final class DockView: NSView {
     private var pacmanPhase: CGFloat = 0
     private var pacmanObserver: NSObjectProtocol?
     private var occlusionObserver: NSObjectProtocol?
+    private var minimizedObserver: NSObjectProtocol?
     private var pelletLayer: CAShapeLayer?
     private var pacLayer: CAShapeLayer?
     private var pacmanConfiguredRect: NSRect = .zero
@@ -233,6 +234,7 @@ final class DockView: NSView {
         if let obs = themeObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = pacmanObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = occlusionObserver { NotificationCenter.default.removeObserver(obs) }
+        if let obs = minimizedObserver { NotificationCenter.default.removeObserver(obs) }
     }
 
     private func setupObservers() {
@@ -247,6 +249,13 @@ final class DockView: NSView {
             self?.rebuildItems()
         }
         themeObserver = nc2.addObserver(forName: .dockThemeChanged, object: nil, queue: .main) { [weak self] _ in
+            // The new theme may not have a "Show Desktop" tile — un-hide anything the old
+            // theme's tile hid so those apps aren't stranded.
+            DockView.restoreShowDesktop()
+            self?.rebuildItems()
+        }
+        // Minimized windows of non-pinned apps surface as dock tiles; rebuild when they change.
+        minimizedObserver = nc2.addObserver(forName: .minimizedWindowsChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuildItems()
         }
         pacmanObserver = nc2.addObserver(forName: .pacmanAnimationChanged, object: nil, queue: .main) { [weak self] _ in
@@ -1056,6 +1065,15 @@ final class DockView: NSView {
         }
     }
 
+    /// Un-hide any apps that "Show Desktop" hid, without toggling. Called when the Show
+    /// Desktop tile goes away (theme switch, dock stop, app quit) so apps never stay hidden
+    /// with no way to bring them back.
+    static func restoreShowDesktop() {
+        guard !showDesktopHidden.isEmpty else { return }
+        for app in showDesktopHidden { app.unhide() }
+        showDesktopHidden.removeAll()
+    }
+
     private func addShowDesktopItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
         let item = DockItemView(bundleID: "__showdesktop__", frame: frame)
         item.magnificationEnabled = theme.hasMagnification && AppSettings.shared.dockMagnification
@@ -1191,10 +1209,21 @@ final class DockView: NSView {
     }
 
     private func runningAppsNotInDock() -> [String] {
-        guard AppSettings.shared.dockShowRunningApps else { return [] }
         let pinnedIDs = Set(AppManager.shared.apps.map { $0.bundleID })
         let ownBundleID = Bundle.main.bundleIdentifier ?? ""
-        return NSWorkspace.shared.runningApplications
+
+        // Apps that currently have minimized windows MUST get a tile regardless of the
+        // "show running apps" toggle: the system Dock is hidden, so the tile is the only
+        // way to bring those windows back (clicking it calls restoreWindows(for:)).
+        let minimizedIDs = Set(MinimizedWindowTracker.shared.entries
+            .map { $0.bundleID }
+            .filter { !pinnedIDs.contains($0) && $0 != ownBundleID })
+
+        guard AppSettings.shared.dockShowRunningApps else {
+            return minimizedIDs.sorted()
+        }
+
+        var ids = Set(NSWorkspace.shared.runningApplications
             .filter { app in
                 guard let bid = app.bundleIdentifier,
                       !pinnedIDs.contains(bid),
@@ -1202,8 +1231,9 @@ final class DockView: NSView {
                       app.activationPolicy == .regular else { return false }
                 return true
             }
-            .compactMap { $0.bundleIdentifier }
-            .sorted()
+            .compactMap { $0.bundleIdentifier })
+        ids.formUnion(minimizedIDs)   // a minimized non-pinned app must never be missing
+        return ids.sorted()
     }
 
     // MARK: - Drawing

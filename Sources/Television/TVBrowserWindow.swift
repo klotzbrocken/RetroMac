@@ -315,10 +315,20 @@ final class TVBrowserWindow: NSObject {
         let wv = WKWebView(frame: NSRect(origin: .zero, size: size), configuration: config)
         wv.autoresizingMask = [.width, .height]
         wv.load(URLRequest(url: url))
-        window.contentView = wv
+
+        // Web bookmarks can't run the real Metal CRT shader (no pixel-buffer stream like
+        // AVPlayer), so give them a lightweight scanline + vignette OVERLAY for a retro look.
+        let container = NSView(frame: NSRect(origin: .zero, size: size))
+        container.autoresizingMask = [.width, .height]
+        container.addSubview(wv)
+        let overlay = CRTWebOverlay(frame: NSRect(origin: .zero, size: size))
+        overlay.autoresizingMask = [.width, .height]
+        container.addSubview(overlay)
+        window.contentView = container
+
         self.webView = wv
         self.contentMode = .webContent
-        print("[TV] Web content: \(url.absoluteString)")
+        print("[TV] Web content (CRT overlay): \(url.absoluteString)")
     }
 
     // MARK: - Aspect Ratio
@@ -455,6 +465,45 @@ extension TVBrowserWindow: NSWindowDelegate {
         if dockWasRunning {
             DockController.shared.start()
             dockWasRunning = false
+        }
+    }
+}
+
+/// Lightweight CRT look for web bookmarks: horizontal scanlines + edge vignette, drawn over
+/// the WKWebView. Click-through (hitTest returns nil) so the page stays interactive. This is
+/// NOT the full Metal shader (web content has no pixel-buffer stream) — just a tasteful overlay.
+final class CRTWebOverlay: NSView {
+    override var isOpaque: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { false }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }   // pass all clicks through
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        let b = bounds
+        let intensity = max(0, min(1, CGFloat(AppSettings.shared.defaultIntensity)))
+        let vig = max(0, min(1, CGFloat(AppSettings.shared.vignetteIntensity)))
+
+        // Scanlines: a 1pt dark line every 3pt, alpha scaled by intensity.
+        let lineAlpha = 0.10 + 0.18 * intensity
+        NSColor.black.withAlphaComponent(lineAlpha).setFill()
+        var y = b.minY
+        while y < b.maxY {
+            ctx.fill(CGRect(x: b.minX, y: y, width: b.width, height: 1))
+            y += 3
+        }
+
+        // Vignette: radial darkening toward the corners.
+        if vig > 0.01 {
+            let colors = [NSColor.clear.cgColor,
+                          NSColor.black.withAlphaComponent(0.55 * vig).cgColor] as CFArray
+            if let grad = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                     colors: colors, locations: [0.55, 1.0]) {
+                let center = CGPoint(x: b.midX, y: b.midY)
+                let radius = max(b.width, b.height) * 0.72
+                ctx.drawRadialGradient(grad, startCenter: center, startRadius: 0,
+                                       endCenter: center, endRadius: radius,
+                                       options: [.drawsAfterEndLocation])
+            }
         }
     }
 }

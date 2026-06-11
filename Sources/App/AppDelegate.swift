@@ -3884,7 +3884,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NotificationCenter.default.removeObserver(obs)
         }
         disableAll()
-        DockController.shared.stop()
+        DockController.shared.stop(synchronous: true)   // must finish before the process exits
         ThemeManager.shared.restoreWallpapers()
         restoreRetroModeSystemUI()
     }

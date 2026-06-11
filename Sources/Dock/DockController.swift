@@ -92,12 +92,16 @@ final class DockController {
         }
     }
 
-    func stop() {
+    /// Stop the dock. Pass `synchronous: true` from the quit path so the system-Dock restore
+    /// completes before the process exits.
+    func stop(synchronous: Bool = false) {
         print("[Dock] Stopping")
         removeAutoHideMonitors()
         DockFix.shared.stop()
         MinimizedWindowTracker.shared.stop()
-        restoreSystemDock()
+        // Un-hide any apps the Win98 "Show Desktop" tile hid — the tile is gone now.
+        DockView.restoreShowDesktop()
+        restoreSystemDock(synchronous: synchronous)
         DesktopIconsController.shared.hide()
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
@@ -798,23 +802,38 @@ final class DockController {
             // system Dock — the RetroMac dock tile is the only place they appear.
             // mineffect scale: quick shrink instead of the genie swoosh into the
             // hidden Dock's corner.
-            setSystemDockPrefs(autohide: true, position: hidePosition,
-                               minimizeToApp: true, minEffect: "scale",
-                               autohideDelay: "1000000")
             didHideSystemDock = true
-            // Crash-safe: persist so we can restore even after a force-quit/crash.
-            let d = UserDefaults.standard
-            d.set(true, forKey: "sysDockHidden")
-            d.set(originalDockAutoHide ?? false, forKey: "sysDockOrigAutohide")
-            d.set(originalDockPosition ?? "bottom", forKey: "sysDockOrigPosition")
-            d.set(originalMinimizeToApp ?? false, forKey: "sysDockOrigMinToApp")
-            d.set(originalMinEffect ?? "genie", forKey: "sysDockOrigMinEffect")
-            if let v = originalAutohideDelay { d.set(v, forKey: "sysDockOrigAutohideDelay") }
-            else { d.removeObject(forKey: "sysDockOrigAutohideDelay") }
-            print("[Dock] System dock moved to \(hidePosition) + auto-hide (theme dock is \(themePos))")
+            // Crash-safe: persist the recovery state BEFORE mutating the system Dock, so a
+            // crash mid-change can still be recovered (otherwise autohide-delay=1000000 /
+            // mineffect=scale could be left behind with no recovery marker).
+            persistDockRecoveryState()
+            // Apply off the main thread — spawning ~5 `defaults` processes + `killall Dock`
+            // synchronously would visibly hang theme/dock switches.
+            DockController.dockPrefsQueue.async { [weak self] in
+                _ = self?.setSystemDockPrefs(autohide: true, position: hidePosition,
+                                             minimizeToApp: true, minEffect: "scale",
+                                             autohideDelay: "1000000")
+            }
+            print("[Dock] System dock moving to \(hidePosition) + auto-hide (theme dock is \(themePos))")
         } else if didHideSystemDock {
             restoreSystemDock()
         }
+    }
+
+    /// Serial queue for the `defaults`/`killall Dock` shell-outs so they never block the
+    /// main thread during theme/dock switches.
+    private static let dockPrefsQueue = DispatchQueue(label: "com.retromac.dock-prefs")
+
+    /// Persist the saved original system-Dock state for crash recovery.
+    private func persistDockRecoveryState() {
+        let d = UserDefaults.standard
+        d.set(true, forKey: "sysDockHidden")
+        d.set(originalDockAutoHide ?? false, forKey: "sysDockOrigAutohide")
+        d.set(originalDockPosition ?? "bottom", forKey: "sysDockOrigPosition")
+        d.set(originalMinimizeToApp ?? false, forKey: "sysDockOrigMinToApp")
+        d.set(originalMinEffect ?? "genie", forKey: "sysDockOrigMinEffect")
+        if let v = originalAutohideDelay { d.set(v, forKey: "sysDockOrigAutohideDelay") }
+        else { d.removeObject(forKey: "sysDockOrigAutohideDelay") }
     }
 
     /// The system Dock stays on the SAME edge as RetroMac's dock (it is auto-hidden
@@ -831,23 +850,48 @@ final class DockController {
         }
     }
 
-    private func restoreSystemDock() {
+    /// Restore the system Dock to its saved state. Runs off-main by default (so it never
+    /// hangs an interactive theme/dock switch); pass `synchronous: true` from the quit path,
+    /// where the process must not exit before the `defaults` writes have completed.
+    /// The recovery keys are only cleared on SUCCESS — a failed restore is retried next time.
+    private func restoreSystemDock(synchronous: Bool = false) {
         guard didHideSystemDock else { return }
         let restoreHide = originalDockAutoHide ?? false
         let restorePos = originalDockPosition ?? "bottom"
-        setSystemDockPrefs(autohide: restoreHide, position: restorePos,
-                           minimizeToApp: originalMinimizeToApp ?? false,
-                           minEffect: originalMinEffect ?? "genie",
-                           autohideDelay: originalAutohideDelay,
-                           deleteAutohideDelay: originalAutohideDelay == nil)
-        didHideSystemDock = false
-        originalDockAutoHide = nil
-        originalDockPosition = nil
-        originalMinimizeToApp = nil
-        originalMinEffect = nil
-        originalAutohideDelay = nil
-        clearPersistedDockState()
-        print("[Dock] System dock restored (autohide=\(restoreHide), position=\(restorePos))")
+        let minToApp = originalMinimizeToApp ?? false
+        let minEffect = originalMinEffect ?? "genie"
+        let delay = originalAutohideDelay
+        let deleteDelay = originalAutohideDelay == nil
+
+        let apply: () -> Bool = { [weak self] in
+            self?.setSystemDockPrefs(autohide: restoreHide, position: restorePos,
+                                     minimizeToApp: minToApp, minEffect: minEffect,
+                                     autohideDelay: delay, deleteAutohideDelay: deleteDelay) ?? false
+        }
+        let onDone: (Bool) -> Void = { [weak self] ok in
+            guard let self = self else { return }
+            if ok {
+                self.didHideSystemDock = false
+                self.originalDockAutoHide = nil
+                self.originalDockPosition = nil
+                self.originalMinimizeToApp = nil
+                self.originalMinEffect = nil
+                self.originalAutohideDelay = nil
+                self.clearPersistedDockState()
+                print("[Dock] System dock restored (autohide=\(restoreHide), position=\(restorePos))")
+            } else {
+                print("[Dock] ⚠️ System dock restore failed — keeping recovery keys for retry")
+            }
+        }
+
+        if synchronous {
+            onDone(apply())
+        } else {
+            DockController.dockPrefsQueue.async {
+                let ok = apply()
+                DispatchQueue.main.async { onDone(ok) }
+            }
+        }
     }
 
     private func clearPersistedDockState() {
@@ -873,10 +917,14 @@ final class DockController {
         let minToApp = isNewState ? d.bool(forKey: "sysDockOrigMinToApp") : nil
         let minEffect = d.string(forKey: "sysDockOrigMinEffect")
         let delay = d.string(forKey: "sysDockOrigAutohideDelay")
-        setSystemDockPrefs(autohide: restoreHide, position: restorePos,
-                           minimizeToApp: minToApp, minEffect: minEffect,
-                           autohideDelay: delay,
-                           deleteAutohideDelay: isNewState && delay == nil)
+        let ok = setSystemDockPrefs(autohide: restoreHide, position: restorePos,
+                                    minimizeToApp: minToApp, minEffect: minEffect,
+                                    autohideDelay: delay,
+                                    deleteAutohideDelay: isNewState && delay == nil)
+        guard ok else {
+            print("[Dock] ⚠️ System dock recovery failed — keeping recovery keys for next launch")
+            return
+        }
         didHideSystemDock = false
         originalDockAutoHide = nil
         originalDockPosition = nil
@@ -898,49 +946,46 @@ final class DockController {
         return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Writes the given system-Dock prefs and restarts the Dock. Returns `true` only if every
+    /// `defaults` write succeeded (terminationStatus 0) — callers clear recovery state only on
+    /// success. Synchronous: callers wrap it in `dockPrefsQueue` to stay off the main thread.
+    @discardableResult
     private func setSystemDockPrefs(autohide: Bool, position: String,
                                     minimizeToApp: Bool? = nil, minEffect: String? = nil,
-                                    autohideDelay: String? = nil, deleteAutohideDelay: Bool = false) {
+                                    autohideDelay: String? = nil, deleteAutohideDelay: Bool = false) -> Bool {
+        var ok = true
+        /// Run one `defaults` invocation; track failure unless it's an ignorable delete.
+        func defaultsWrite(_ args: [String], ignoreFailure: Bool = false) {
+            let w = Process()
+            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            w.arguments = args
+            if ignoreFailure { w.standardError = FileHandle.nullDevice }
+            do {
+                try w.run(); w.waitUntilExit()
+                if !ignoreFailure && w.terminationStatus != 0 { ok = false }
+            } catch { if !ignoreFailure { ok = false } }
+        }
+
         if let delay = autohideDelay {
-            let w = Process()
-            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            w.arguments = ["write", "com.apple.dock", "autohide-delay", "-float", delay]
-            try? w.run(); w.waitUntilExit()
+            defaultsWrite(["write", "com.apple.dock", "autohide-delay", "-float", delay])
         } else if deleteAutohideDelay {
-            let w = Process()
-            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            w.arguments = ["delete", "com.apple.dock", "autohide-delay"]
-            w.standardError = FileHandle.nullDevice
-            try? w.run(); w.waitUntilExit()
+            // The key may not exist — a non-zero status here is expected, not a failure.
+            defaultsWrite(["delete", "com.apple.dock", "autohide-delay"], ignoreFailure: true)
         }
         if let m = minimizeToApp {
-            let w = Process()
-            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            w.arguments = ["write", "com.apple.dock", "minimize-to-application", "-bool", m ? "true" : "false"]
-            try? w.run(); w.waitUntilExit()
+            defaultsWrite(["write", "com.apple.dock", "minimize-to-application", "-bool", m ? "true" : "false"])
         }
         if let e = minEffect {
-            let w = Process()
-            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            w.arguments = ["write", "com.apple.dock", "mineffect", "-string", e]
-            try? w.run(); w.waitUntilExit()
+            defaultsWrite(["write", "com.apple.dock", "mineffect", "-string", e])
         }
-        let writeHide = Process()
-        writeHide.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        writeHide.arguments = ["write", "com.apple.dock", "autohide", "-bool", autohide ? "true" : "false"]
-        try? writeHide.run()
-        writeHide.waitUntilExit()
-
-        let writePos = Process()
-        writePos.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        writePos.arguments = ["write", "com.apple.dock", "orientation", "-string", position]
-        try? writePos.run()
-        writePos.waitUntilExit()
+        defaultsWrite(["write", "com.apple.dock", "autohide", "-bool", autohide ? "true" : "false"])
+        defaultsWrite(["write", "com.apple.dock", "orientation", "-string", position])
 
         let killall = Process()
         killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
         killall.arguments = ["Dock"]
-        try? killall.run()   // fire-and-forget: don't block the UI on the Dock restart
+        try? killall.run()   // fire-and-forget: don't block on the Dock restart
+        return ok
     }
 
     /// Returns the current dock window frame in screen coordinates (for DockFix)
