@@ -84,19 +84,19 @@ struct WelcomeFlowView: View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
-                Text("What's New in RetroMac 1.7").font(.title2.bold())
-                Text("The big themes overhaul").font(.subheadline).foregroundStyle(.secondary)
+                Text("What's New in RetroMac 1.8").font(.title2.bold())
+                Text("Three new Special Themes — and even more retro vibes").font(.subheadline).foregroundStyle(.secondary)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("macwindow.on.rectangle", .blue, "Themes Overhaul — BeOS, Windows XP & Mac OS 9",
-                            "A massive rework, as close to the originals as possible — including a native CPU widget and authentically styled windows in each theme.")
-                    feature("star.fill", .yellow, "New Theme: Maiks Favourite",
-                            "A custom theme with an animated Pac-Man dock and live previews of your running apps.")
-                    feature("camera.fill", .purple, "Webcam Support Stabilized",
-                            "More reliable virtual-camera toggling and retro effects for your video calls.")
-                    feature("checkmark.seal.fill", .green, "Stability & Fixes",
-                            "Numerous bug fixes and general stability improvements across the app.")
+                    feature("sparkles", .cyan, "New Special Themes — true to the originals",
+                            "Windows 98 (with classic games and sheep.exe!), Windows XP, and Mac OS X with its glossy Aqua look.")
+                    feature("globe", .blue, "Surf the past",
+                            "Under Windows XP and Windows 98 you can now browse the web with Internet Explorer — just like back in the day.")
+                    feature("arrow.down.right.and.arrow.up.left.rectangle", .orange, "Smarter Minimize",
+                            "Windows now minimize into the right dock — the themed dock instead of the system Dock.")
+                    feature("gauge.with.dots.needle.67percent", .green, "New Widgets & lots of polish",
+                            "Fresh widgets like the CPU Monitor and Desktop Clock, plus stability improvements and a ton of detail work.")
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
         }
