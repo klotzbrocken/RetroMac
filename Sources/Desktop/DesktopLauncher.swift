@@ -58,6 +58,9 @@ enum DesktopLauncher {
                 WebAppController.open(name: entry.name, url: urlString, width: w, height: h)
             }
 
+        case "screensaver":
+            ScreensaverController.shared.start()
+
         case "sheep":
             // sheep.exe: (re)start the desktop sheep — also re-enables it after Quit Sheep.
             AppSettings.shared.desktopPetEnabled = true

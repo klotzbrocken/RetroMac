@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/* Flying Toasters — After Dark homage. Toaster artwork (MIT) from
+   github.com/robertventurini/FlyingToasters. Original canvas engine. */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+function resize(){ cv.width = innerWidth; cv.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+const toasterImgs = ['toaster01.png','toaster02.png','toaster03.png','toaster04.png']
+  .map(s => { const i = new Image(); i.src = 'assets/' + s; return i; });
+const toastImgs = ['toast0.gif','toast1.gif','toast2.gif','toast3.gif']
+  .map(s => { const i = new Image(); i.src = 'assets/' + s; return i; });
+
+const SIZE = 80, SPEED = 2.0;
+let items = [];
+function spawn(it){
+  it.x = cv.width + Math.random() * cv.width * 0.6;
+  it.y = -SIZE - Math.random() * cv.height * 0.6;
+  it.frame = Math.random() * 4;
+  it.flap = 0.18 + Math.random() * 0.12;
+}
+function make(isToast){
+  const it = { isToast, img: isToast ? toastImgs[(Math.random()*toastImgs.length)|0] : null };
+  spawn(it);
+  it.x = Math.random() * cv.width;   // first frame: scatter on screen
+  it.y = Math.random() * cv.height;
+  return it;
+}
+function populate(){
+  const n = Math.max(14, (cv.width * cv.height / 80000) | 0);
+  items = [];
+  for (let i = 0; i < n; i++) items.push(make(Math.random() < 0.22));
+}
+populate();
+
+function step(){
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  for (const it of items){
+    it.x -= SPEED;
+    it.y += SPEED * 0.62;                       // diagonal: down-left
+    if (it.x < -SIZE || it.y > cv.height + SIZE) spawn(it);
+    if (it.isToast){
+      if (it.img.complete) ctx.drawImage(it.img, it.x, it.y, SIZE * 0.62, SIZE * 0.42);
+    } else {
+      it.frame = (it.frame + it.flap) % 4;       // wing flap
+      const img = toasterImgs[it.frame | 0];
+      if (img.complete) ctx.drawImage(img, it.x, it.y, SIZE, SIZE);
+    }
+  }
+  requestAnimationFrame(step);
+}
+step();
+</script>
+</body>
+</html>

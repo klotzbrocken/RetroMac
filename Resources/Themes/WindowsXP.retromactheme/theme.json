@@ -175,6 +175,13 @@
       "type": "sheep",
       "gridX": 1,
       "gridY": 3
+    },
+    {
+      "name": "Screen Saver",
+      "icon": "screensaver.png",
+      "type": "screensaver",
+      "gridX": 1,
+      "gridY": 4
     }
   ],
   "fallbackIcon": "generic.png",
@@ -191,5 +198,7 @@
     "com.apple.Music": "music.png",
     "com.apple.Terminal": "terminal.png"
   },
-  "desktopIconSize": 48
+  "desktopIconSize": 48,
+  "splashVideo": "boot.mp4",
+  "screensaver": "pipes"
 }

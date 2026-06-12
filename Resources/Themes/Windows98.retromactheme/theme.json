@@ -200,7 +200,16 @@
       "type": "trash",
       "gridX": 1,
       "gridY": 3
+    },
+    {
+      "name": "Screen Saver",
+      "icon": "screensaver.png",
+      "type": "screensaver",
+      "gridX": 1,
+      "gridY": 4
     }
   ],
-  "desktopIconSize": 40
+  "desktopIconSize": 40,
+  "splashVideo": "boot.mp4",
+  "screensaver": "flowerbox"
 }

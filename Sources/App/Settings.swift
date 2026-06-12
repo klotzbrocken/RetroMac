@@ -472,6 +472,22 @@ final class AppSettings: ObservableObject {
     @Published var showSplashScreen: Bool {
         didSet { defaults.set(showSplashScreen, forKey: "showSplashScreen") }
     }
+    /// Per-theme boot screen on/off (image or video). Absent = default on for themes that define one.
+    @Published var themeBootscreenEnabled: [String: Bool] {
+        didSet { defaults.set(themeBootscreenEnabled, forKey: "themeBootscreenEnabled") }
+    }
+    /// Screensaver master switch.
+    @Published var screensaverEnabled: Bool {
+        didSet { defaults.set(screensaverEnabled, forKey: "screensaverEnabled") }
+    }
+    /// Idle minutes before the screensaver starts.
+    @Published var screensaverIdleMinutes: Int {
+        didSet { defaults.set(screensaverIdleMinutes, forKey: "screensaverIdleMinutes") }
+    }
+    /// Per-theme chosen screensaver id (overrides the theme's default). "none" disables it.
+    @Published var themeScreensaverOverrides: [String: String] {
+        didSet { defaults.set(themeScreensaverOverrides, forKey: "themeScreensaverOverrides") }
+    }
 
     // Settings Redesign — per-app rules with reason
     struct PerAppRule: Codable, Equatable {
@@ -550,6 +566,10 @@ final class AppSettings: ObservableObject {
         themeDockAutoHide = defaults.dictionary(forKey: "themeDockAutoHide") as? [String: Bool] ?? [:]
         themeWallpaperOverrides = defaults.dictionary(forKey: "themeWallpaperOverrides") as? [String: String] ?? [:]
         themeCustomWallpaper = defaults.dictionary(forKey: "themeCustomWallpaper") as? [String: String] ?? [:]
+        themeBootscreenEnabled = defaults.dictionary(forKey: "themeBootscreenEnabled") as? [String: Bool] ?? [:]
+        screensaverEnabled = defaults.bool(forKey: "screensaverEnabled")
+        screensaverIdleMinutes = defaults.object(forKey: "screensaverIdleMinutes") as? Int ?? 5
+        themeScreensaverOverrides = defaults.dictionary(forKey: "themeScreensaverOverrides") as? [String: String] ?? [:]
         reampEnabled = defaults.bool(forKey: "reampEnabled")
 
         // Television
