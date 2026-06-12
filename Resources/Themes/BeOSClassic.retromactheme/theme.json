@@ -75,6 +75,13 @@
       "type": "notepad",
       "gridX": 0,
       "gridY": 6
+    },
+    {
+      "name": "CPU",
+      "icon": "cpu.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 7
     }
   ],
   "fallbackIcon": "generic.png",

@@ -698,16 +698,23 @@ final class DockController {
         }.store(in: &settingsObservers)
 
         s.$dockTheme.dropFirst().sink { [weak self] newTheme in
-            ThemeManager.shared.reload(selectTheme: newTheme)
-            ThemeManager.shared.clearCache()
-            ThemeManager.shared.applyWallpaper()
-            AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
-            if let theme = ThemeManager.shared.activeTheme {
-                SplashController.shared.showIfEnabled(for: theme)
+            // @Published fires in willSet (before the value is stored) — and this is invoked
+            // straight from the SwiftUI theme-picker mutation. Doing the heavy theme switch
+            // (reload + window rebuild + splash) synchronously here re-enters the SwiftUI
+            // update and drops the tile click (the card "loses focus" / needs several tries).
+            // Defer to the next runloop tick so the click completes first, like the handlers below.
+            DispatchQueue.main.async {
+                ThemeManager.shared.reload(selectTheme: newTheme)
+                ThemeManager.shared.clearCache()
+                ThemeManager.shared.applyWallpaper()
+                AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
+                if let theme = ThemeManager.shared.activeTheme {
+                    SplashController.shared.showIfEnabled(for: theme)
+                }
+                self?.recreateWindow()
+                // Note: no .dockThemeChanged post needed — recreateWindow() already
+                // creates a fresh DockView with the new theme's layout.
             }
-            self?.recreateWindow()
-            // Note: no .dockThemeChanged post needed — recreateWindow() already
-            // creates a fresh DockView with the new theme's layout.
         }.store(in: &settingsObservers)
 
         // NOTE: @Published fires in willSet — BEFORE the new value is stored. These
