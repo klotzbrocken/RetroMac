@@ -225,6 +225,36 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("Web Apps & Desktop Extras") {
+                    Link("Bored-Entertainment/98.js on GitHub",
+                         destination: URL(string: "https://github.com/Bored-Entertainment/98.js")!)
+                        .font(.caption)
+                    Text("Classic Windows apps & screensavers (Internet Explorer, Notepad, Paint, Minesweeper, Solitaire, 3D Pipes, FlowerBox) used in the Windows XP & 98 themes — loaded at runtime, nothing bundled.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("Adrianotiger/desktopPet on GitHub",
+                         destination: URL(string: "https://github.com/Adrianotiger/desktopPet")!)
+                        .font(.caption)
+                    Text("eSheep desktop pet (GPL) — original sprite artwork fetched & cached at runtime for sheep.exe on the Windows themes.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("nestoris/Win98SE on GitHub",
+                         destination: URL(string: "https://github.com/nestoris/Win98SE")!)
+                        .font(.caption)
+                    Text("Windows 98 SE start-menu icons.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("robertventurini/FlyingToasters on GitHub",
+                         destination: URL(string: "https://github.com/robertventurini/FlyingToasters")!)
+                        .font(.caption)
+                    Text("After Dark “Flying Toasters” artwork (MIT) — basis for the Mac OS 9 screensaver.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Bundled Game & Libraries") {
                     Link("ebuc99/pacman on GitHub",
                          destination: URL(string: "https://github.com/ebuc99/pacman")!)

@@ -69,6 +69,11 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
                                            forMainFrameOnly: true))
             ucc.addUserScript(WKUserScript(source: Self.saveAsJS, injectionTime: .atDocumentEnd,
                                            forMainFrameOnly: true))
+            // Internet Explorer (98.js explorer shell): point its hardcoded Home button at RetroMac.
+            if appURL.contains("programs/explorer") {
+                ucc.addUserScript(WKUserScript(source: Self.homeOverrideJS, injectionTime: .atDocumentStart,
+                                               forMainFrameOnly: true))
+            }
             cfg.userContentController = ucc
         }
 
@@ -192,6 +197,21 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         }
         return origDispatch.call(this, ev);
       };
+    })();
+    """
+
+    /// Repoints the 98.js explorer's hardcoded Home button at RetroMac. A capture-phase
+    /// listener runs before jQuery's bubble handler and cancels the original go_home().
+    private static let homeOverrideJS = """
+    (function(){
+      var HOME = "https://www.myretromac.app";
+      document.addEventListener('click', function(e){
+        var h = e.target && e.target.closest ? e.target.closest('.home-button') : null;
+        if(!h) return;
+        e.stopImmediatePropagation(); e.preventDefault();
+        if (typeof window.go_to === 'function') { window.go_to(HOME); }
+        else { var a = document.getElementById('address'); if(a){ a.value = HOME; } window.location.href = window.location.href; }
+      }, true);
     })();
     """
 
