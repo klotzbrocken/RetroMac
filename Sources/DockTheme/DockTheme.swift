@@ -18,6 +18,8 @@ struct DockThemeConfig: Codable {
     var sgiDesktop: SGIDesktopConfig? = nil
     var splashScreen: String? = nil   // boot splash image shown briefly on theme activation
     var splashFullscreen: Bool? = nil // true = fill the whole screen (e.g. Win 98 boot)
+    var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present
+    var screensaver: String? = nil    // default screensaver id for this theme (pipes/flowerbox/flying-toasters/flurry/none)
 
     struct WallpaperOption: Codable {
         var name: String

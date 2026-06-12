@@ -16,6 +16,7 @@ final class DockController {
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var didHideSystemDock = false
+    private var lastAppliedHidePosition: String?   // guards against re-running killall Dock per theme switch
     private var originalDockAutoHide: Bool?
     private var originalDockPosition: String?
     private var originalMinimizeToApp: Bool?
@@ -82,6 +83,7 @@ final class DockController {
         // Track minimized windows (AX): clicking an app's dock tile restores them —
         // with the system Dock hidden, the tile click is how windows come back.
         MinimizedWindowTracker.shared.start()
+        ScreensaverController.shared.beginIdleWatch()
 
         if autoHideActive {
             installAutoHideMonitors()
@@ -99,6 +101,7 @@ final class DockController {
         removeAutoHideMonitors()
         DockFix.shared.stop()
         MinimizedWindowTracker.shared.stop()
+        ScreensaverController.shared.endIdleWatch()
         // Un-hide any apps the Win98 "Show Desktop" tile hid — the tile is gone now.
         DockView.restoreShowDesktop()
         restoreSystemDock(synchronous: synchronous)
@@ -805,11 +808,17 @@ final class DockController {
             // is honored, not just the theme's baked-in default.
             let themePos = ThemeManager.shared.activeTheme?.config.effectiveDockPosition ?? "bottom"
             let hidePosition = systemDockEdge(forThemeEdge: themePos)
+            // Idempotent: if the system Dock is already hidden on this same edge, do NOT
+            // re-apply. recreateWindow() calls this on every theme switch; re-running
+            // `killall Dock` each time restores all minimized windows (the Dock loses its
+            // minimized-window proxies on restart with minimize-to-application).
+            if didHideSystemDock && lastAppliedHidePosition == hidePosition { return }
             // minimize-to-application: no window thumbnails pile up in the (hidden)
             // system Dock — the RetroMac dock tile is the only place they appear.
             // mineffect scale: quick shrink instead of the genie swoosh into the
             // hidden Dock's corner.
             didHideSystemDock = true
+            lastAppliedHidePosition = hidePosition
             // Crash-safe: persist the recovery state BEFORE mutating the system Dock, so a
             // crash mid-change can still be recovered (otherwise autohide-delay=1000000 /
             // mineffect=scale could be left behind with no recovery marker).
@@ -879,6 +888,7 @@ final class DockController {
             guard let self = self else { return }
             if ok {
                 self.didHideSystemDock = false
+                self.lastAppliedHidePosition = nil
                 self.originalDockAutoHide = nil
                 self.originalDockPosition = nil
                 self.originalMinimizeToApp = nil
@@ -933,6 +943,7 @@ final class DockController {
             return
         }
         didHideSystemDock = false
+        lastAppliedHidePosition = nil
         originalDockAutoHide = nil
         originalDockPosition = nil
         clearPersistedDockState()

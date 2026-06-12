@@ -52,12 +52,57 @@
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-retro-lite",
   "desktopIcons": [
-    { "name": "Macintosh HD", "icon": "harddisk.png", "type": "folder", "path": "/", "gridX": 0, "gridY": 0 },
-    { "name": "Applications", "icon": "applications.png", "type": "appfolder", "gridX": 0, "gridY": 1 },
-    { "name": "Clock", "icon": "clock.png", "type": "clock", "gridX": 0, "gridY": 2 },
-    { "name": "CPU Monitor", "icon": "cpuwidget.png", "type": "cpumonitor", "gridX": 0, "gridY": 3 },
-    { "name": "Notepad", "icon": "notepad.png", "type": "notepad", "gridX": 0, "gridY": 4 },
-    { "name": "Sherlock", "icon": "sherlock.png", "type": "url", "url": "https://www.google.com", "gridX": 0, "gridY": 5 }
+    {
+      "name": "Macintosh HD",
+      "icon": "harddisk.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Applications",
+      "icon": "applications.png",
+      "type": "appfolder",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Clock",
+      "icon": "clock.png",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "CPU Monitor",
+      "icon": "cpuwidget.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Notepad",
+      "icon": "notepad.png",
+      "type": "notepad",
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "Sherlock",
+      "icon": "sherlock.png",
+      "type": "url",
+      "url": "https://www.google.com",
+      "gridX": 0,
+      "gridY": 5
+    },
+    {
+      "name": "Screen Saver",
+      "icon": "screensaver.png",
+      "type": "screensaver",
+      "gridX": 0,
+      "gridY": 6
+    }
   ],
   "iconMappings": {
     "com.apple.finder": "finder.png",
@@ -94,5 +139,6 @@
     "com.apple.DVDPlayer": "dvdplayer.png",
     "com.apple.keychainaccess": "keychain.png",
     "com.apple.clock": "clock.png"
-  }
+  },
+  "screensaver": "flurry"
 }

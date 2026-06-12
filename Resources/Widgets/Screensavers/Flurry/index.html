@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/* Flurry — homage to the classic Mac OS X default screensaver. Flowing, colour-shifting
+   particle streamers radiating from a slowly drifting attractor. Original canvas engine. */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+function resize(){ cv.width = innerWidth; cv.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+const N = 900;
+const parts = [];
+function reset(p){
+  const a = Math.random() * Math.PI * 2;
+  p.x = cv.width / 2; p.y = cv.height / 2;
+  p.a = a;
+  p.spd = 0.6 + Math.random() * 2.2;
+  p.life = 0; p.max = 60 + Math.random() * 120;
+  p.spin = (Math.random() - 0.5) * 0.06;
+  p.hueOff = Math.random() * 40 - 20;
+}
+for (let i = 0; i < N; i++){ const p = {}; reset(p); p.life = Math.random() * p.max; parts.push(p); }
+
+let t = 0;
+let cx = 0, cy = 0;                 // attractor offset, drifts slowly
+function step(){
+  t += 0.01;
+  // gentle fade instead of full clear → trails
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgba(0,0,0,0.10)';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+
+  cx = Math.cos(t * 0.7) * cv.width * 0.18;
+  cy = Math.sin(t * 0.9) * cv.height * 0.18;
+  const ox = cv.width / 2 + cx, oy = cv.height / 2 + cy;
+  const baseHue = (t * 30) % 360;
+
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of parts){
+    p.a += p.spin + Math.sin(t + p.life * 0.05) * 0.03;
+    const r = p.life * p.spd;
+    p.x = ox + Math.cos(p.a) * r;
+    p.y = oy + Math.sin(p.a) * r;
+    p.life++;
+    if (p.life > p.max || p.x < -50 || p.x > cv.width + 50 || p.y < -50 || p.y > cv.height + 50) reset(p);
+
+    const k = 1 - p.life / p.max;
+    const hue = (baseHue + p.hueOff + r * 0.4) % 360;
+    const size = 1 + k * 2.5;
+    ctx.fillStyle = 'hsla(' + hue + ',100%,' + (55 + k * 20) + '%,' + (0.5 * k) + ')';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  requestAnimationFrame(step);
+}
+step();
+</script>
+</body>
+</html>

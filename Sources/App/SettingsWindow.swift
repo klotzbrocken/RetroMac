@@ -26,6 +26,7 @@ enum SettingsTab: String, CaseIterable {
     case camera = "camera"
     case television = "television"
     case games = "games"
+    case screensaver = "screensaver"
     case shortcuts = "shortcuts"
     case rules = "rules"
     case about = "about"
@@ -41,6 +42,7 @@ enum SettingsTab: String, CaseIterable {
         case .camera: return "Camera"
         case .television: return "Television"
         case .games: return "Games"
+        case .screensaver: return "Screensaver"
         case .shortcuts: return "Shortcuts"
         case .rules: return "Per-App Rules"
         case .about: return "About"
@@ -58,6 +60,7 @@ enum SettingsTab: String, CaseIterable {
         case .camera: return "camera.fill"
         case .television: return "tv"
         case .games: return "gamecontroller"
+        case .screensaver: return "display"
         case .shortcuts: return "keyboard"
         case .rules: return "app.connected.to.app.below.fill"
         case .about: return "info.circle"
@@ -69,7 +72,7 @@ enum SettingsTab: String, CaseIterable {
     var section: String? {
         switch self {
         case .overview, .effect, .dock, .retroMode, .timer: return nil
-        case .camera, .television, .games: return "Surfaces"
+        case .camera, .television, .games, .screensaver: return "Surfaces"
         case .shortcuts, .rules, .about, .updates: return "System"
         }
     }
@@ -379,6 +382,8 @@ struct SettingsDetailPane: View {
                     TVSettingsTab()
                 case .games:
                     GamesSettingsTab()
+                case .screensaver:
+                    ScreensaverSettingsTab()
                 case .shortcuts:
                     ShortcutsTab()
                 case .rules:
