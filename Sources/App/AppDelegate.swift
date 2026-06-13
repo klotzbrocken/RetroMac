@@ -85,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
         _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98
+        ScreensaverController.shared.beginIdleWatch()   // works regardless of the themed dock
 
         NSApp.setActivationPolicy(.accessory)
         setupMenuBar()
@@ -3884,6 +3885,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NotificationCenter.default.removeObserver(obs)
         }
         disableAll()
+        ScreensaverController.shared.endIdleWatch()
         DockController.shared.stop(synchronous: true)   // must finish before the process exits
         ThemeManager.shared.restoreWallpapers()
         restoreRetroModeSystemUI()

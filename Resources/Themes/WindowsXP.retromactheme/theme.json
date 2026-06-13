@@ -44,14 +44,16 @@
     "startButton": true,
     "startButtonLabel": "start",
     "startButtonIcon": "startxpblue.png",
-    "startButtonImage": "startxpbluebutton.png",
-    "startButtonColor": "#40AE2A",
-    "startButtonGradientTop": "#52BD38",
-    "startButtonGradientBottom": "#2D8E1B",
+    "startButtonColor": "#3F9E27",
+    "startButtonGradientTop": "#62C341",
+    "startButtonGradientBottom": "#2C7E16",
     "showClock": true,
     "magnification": false,
     "showTrash": false,
-    "startMenuStyle": "xp"
+    "startMenuStyle": "xp",
+    "gradientTop": "#3F86E8FF",
+    "gradientBottom": "#16429EFF",
+    "startButtonImage": "startxpgreen.png"
   },
   "icon": {
     "renderStyle": "smooth",

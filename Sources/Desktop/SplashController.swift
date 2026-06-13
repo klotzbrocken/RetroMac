@@ -3,12 +3,13 @@ import AVKit
 import AVFoundation
 
 /// Shows a theme's boot screen on theme activation: a fullscreen video (with sound) if the
-/// theme defines `splashVideo`, otherwise the `splashScreen` image (~3 s). Per-theme on/off
-/// via AppSettings.themeBootscreenEnabled (default on for themes with a video or the XP image).
+/// theme defines `splashVideo`, otherwise the `splashScreen` image (~3 s). Covers every
+/// display; a mouse click or any key skips straight to the desktop. Per-theme on/off via
+/// AppSettings.themeBootscreenEnabled (default on for themes with a video or image).
 final class SplashController {
 
     static let shared = SplashController()
-    private var window: NSWindow?
+    private var windows: [NSWindow] = []          // main content window + black covers on other screens
     private var dismissTimer: Timer?
     private var player: AVPlayer?
     private var endObserver: NSObjectProtocol?
@@ -41,24 +42,49 @@ final class SplashController {
         show(image: image, on: screen, fullscreen: theme.config.splashFullscreen == true)
     }
 
+    /// Borderless boot window that can become key so keystrokes reach BootDismissView.
+    private final class BootWindow: NSWindow {
+        override var canBecomeKey: Bool { true }
+    }
+
     private func bootWindow(_ frame: NSRect, opaque: Bool) -> NSWindow {
-        let win = NSWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        let win = BootWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
         win.level = .screenSaver
         win.isOpaque = opaque
         win.backgroundColor = .black
-        win.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        win.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         win.ignoresMouseEvents = false   // a click skips straight to the desktop
         return win
     }
 
-    /// Top-level content view that dismisses the boot screen on a mouse click (skip to desktop).
-    private func dismissView(_ frame: NSRect, content: NSView) -> NSView {
+    /// Top-level content view that dismisses the boot screen on a mouse click / key (skip to desktop).
+    private func dismissView(_ frame: NSRect, content: NSView?) -> BootDismissView {
         let v = BootDismissView(frame: frame)
         v.onDismiss = { [weak self] in self?.dismiss() }
-        content.frame = v.bounds
-        content.autoresizingMask = [.width, .height]
-        v.addSubview(content)
+        if let content = content {
+            content.frame = v.bounds
+            content.autoresizingMask = [.width, .height]
+            v.addSubview(content)
+        }
         return v
+    }
+
+    /// Black, click-to-dismiss cover windows on every screen except the main one.
+    private func addCoverScreens(except main: NSScreen) {
+        for scr in NSScreen.screens where scr.frame != main.frame {
+            let win = bootWindow(scr.frame, opaque: true)
+            win.contentView = dismissView(NSRect(origin: .zero, size: scr.frame.size), content: nil)
+            win.orderFrontRegardless()
+            windows.append(win)
+        }
+    }
+
+    /// Show the main window key + first-responder so it also receives key events.
+    private func present(_ win: NSWindow, dismissView: BootDismissView) {
+        windows.append(win)
+        NSApp.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
+        win.makeFirstResponder(dismissView)
     }
 
     private func showVideo(url: URL, on screen: NSScreen) {
@@ -72,10 +98,12 @@ final class SplashController {
         pv.player = player
         pv.controlsStyle = .none
         pv.videoGravity = .resizeAspect
-        win.contentView = dismissView(NSRect(origin: .zero, size: frame.size), content: pv)
-        win.orderFrontRegardless()
-        self.window = win
+        let dv = dismissView(NSRect(origin: .zero, size: frame.size), content: pv)
+        win.contentView = dv
         self.player = player
+
+        addCoverScreens(except: screen)
+        present(win, dismissView: dv)
 
         endObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main
@@ -110,10 +138,11 @@ final class SplashController {
         let iv = NSImageView(frame: NSRect(origin: .zero, size: frame.size))
         iv.image = image
         iv.imageScaling = .scaleProportionallyUpOrDown
-        win.contentView = dismissView(NSRect(origin: .zero, size: frame.size), content: iv)
+        let dv = dismissView(NSRect(origin: .zero, size: frame.size), content: iv)
+        win.contentView = dv
 
-        win.orderFrontRegardless()
-        self.window = win
+        addCoverScreens(except: screen)
+        present(win, dismissView: dv)
 
         dismissTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
             self?.dismiss()
@@ -124,12 +153,12 @@ final class SplashController {
         dismissTimer?.invalidate(); dismissTimer = nil
         if let obs = endObserver { NotificationCenter.default.removeObserver(obs); endObserver = nil }
         player?.pause(); player = nil
-        window?.orderOut(nil)
-        window = nil
+        windows.forEach { $0.orderOut(nil) }
+        windows.removeAll()
     }
 }
 
-/// Covers the boot screen; any mouse click (or key) dismisses it and skips to the desktop.
+/// Covers the boot screen; any mouse click or key dismisses it and skips to the desktop.
 private final class BootDismissView: NSView {
     var onDismiss: (() -> Void)?
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }

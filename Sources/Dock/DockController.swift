@@ -17,6 +17,7 @@ final class DockController {
     private var eventHandlerRef: EventHandlerRef?
     private var didHideSystemDock = false
     private var lastAppliedHidePosition: String?   // guards against re-running killall Dock per theme switch
+    private var dockOpGeneration = 0               // supersedes stale async hide/restore completions
     private var originalDockAutoHide: Bool?
     private var originalDockPosition: String?
     private var originalMinimizeToApp: Bool?
@@ -83,7 +84,8 @@ final class DockController {
         // Track minimized windows (AX): clicking an app's dock tile restores them —
         // with the system Dock hidden, the tile click is how windows come back.
         MinimizedWindowTracker.shared.start()
-        ScreensaverController.shared.beginIdleWatch()
+        // (Screensaver idle-watch is started at app launch, not here — it must work even
+        //  when the themed dock is off.)
 
         if autoHideActive {
             installAutoHideMonitors()
@@ -101,7 +103,7 @@ final class DockController {
         removeAutoHideMonitors()
         DockFix.shared.stop()
         MinimizedWindowTracker.shared.stop()
-        ScreensaverController.shared.endIdleWatch()
+        // (Screensaver idle-watch keeps running while the app lives; it is not tied to the dock.)
         // Un-hide any apps the Win98 "Show Desktop" tile hid — the tile is gone now.
         DockView.restoreShowDesktop()
         restoreSystemDock(synchronous: synchronous)
@@ -808,27 +810,32 @@ final class DockController {
             // is honored, not just the theme's baked-in default.
             let themePos = ThemeManager.shared.activeTheme?.config.effectiveDockPosition ?? "bottom"
             let hidePosition = systemDockEdge(forThemeEdge: themePos)
-            // Idempotent: if the system Dock is already hidden on this same edge, do NOT
-            // re-apply. recreateWindow() calls this on every theme switch; re-running
-            // `killall Dock` each time restores all minimized windows (the Dock loses its
-            // minimized-window proxies on restart with minimize-to-application).
+            // Idempotent on INTENT: if we already intend the Dock hidden on this same edge,
+            // do nothing — recreateWindow() calls this on every theme switch and re-running
+            // `killall Dock` would restore all minimized windows. (Intent-based so a
+            // restore→hide sequence still re-applies.)
             if didHideSystemDock && lastAppliedHidePosition == hidePosition { return }
-            // minimize-to-application: no window thumbnails pile up in the (hidden)
-            // system Dock — the RetroMac dock tile is the only place they appear.
-            // mineffect scale: quick shrink instead of the genie swoosh into the
-            // hidden Dock's corner.
+            // Set intent immediately; a generation token guards the async commit so a stale
+            // in-flight restore can't flip the Dock back on after this hide.
             didHideSystemDock = true
             lastAppliedHidePosition = hidePosition
-            // Crash-safe: persist the recovery state BEFORE mutating the system Dock, so a
-            // crash mid-change can still be recovered (otherwise autohide-delay=1000000 /
-            // mineffect=scale could be left behind with no recovery marker).
             persistDockRecoveryState()
-            // Apply off the main thread — spawning ~5 `defaults` processes + `killall Dock`
-            // synchronously would visibly hang theme/dock switches.
+            dockOpGeneration += 1
+            let gen = dockOpGeneration
             DockController.dockPrefsQueue.async { [weak self] in
-                _ = self?.setSystemDockPrefs(autohide: true, position: hidePosition,
-                                             minimizeToApp: true, minEffect: "scale",
-                                             autohideDelay: "1000000")
+                let ok = self?.setSystemDockPrefs(autohide: true, position: hidePosition,
+                                                  minimizeToApp: true, minEffect: "scale",
+                                                  autohideDelay: "1000000") ?? false
+                DispatchQueue.main.async {
+                    guard let self = self, gen == self.dockOpGeneration else { return }  // superseded
+                    if !ok {
+                        // Failed → drop the intent so the next attempt (theme switch / re-enable) retries.
+                        self.didHideSystemDock = false
+                        self.lastAppliedHidePosition = nil
+                        self.clearPersistedDockState()
+                        print("[Dock] ⚠️ System dock hide failed — will retry")
+                    }
+                }
             }
             print("[Dock] System dock moving to \(hidePosition) + auto-hide (theme dock is \(themePos))")
         } else if didHideSystemDock {
@@ -879,16 +886,21 @@ final class DockController {
         let delay = originalAutohideDelay
         let deleteDelay = originalAutohideDelay == nil
 
+        // Drop the hide INTENT immediately so a fast re-hide that arrives before this
+        // completes won't be skipped by the idempotency guard.
+        didHideSystemDock = false
+        lastAppliedHidePosition = nil
+        dockOpGeneration += 1
+        let gen = dockOpGeneration
+
         let apply: () -> Bool = { [weak self] in
             self?.setSystemDockPrefs(autohide: restoreHide, position: restorePos,
                                      minimizeToApp: minToApp, minEffect: minEffect,
                                      autohideDelay: delay, deleteAutohideDelay: deleteDelay) ?? false
         }
         let onDone: (Bool) -> Void = { [weak self] ok in
-            guard let self = self else { return }
+            guard let self = self, gen == self.dockOpGeneration else { return }  // superseded by a newer op
             if ok {
-                self.didHideSystemDock = false
-                self.lastAppliedHidePosition = nil
                 self.originalDockAutoHide = nil
                 self.originalDockPosition = nil
                 self.originalMinimizeToApp = nil
@@ -897,6 +909,9 @@ final class DockController {
                 self.clearPersistedDockState()
                 print("[Dock] System dock restored (autohide=\(restoreHide), position=\(restorePos))")
             } else {
+                // Restore failed → the Dock is still hidden; re-assert intent so a later
+                // restore (or quit) retries, and keep the recovery keys.
+                self.didHideSystemDock = true
                 print("[Dock] ⚠️ System dock restore failed — keeping recovery keys for retry")
             }
         }
@@ -999,10 +1014,15 @@ final class DockController {
         defaultsWrite(["write", "com.apple.dock", "autohide", "-bool", autohide ? "true" : "false"])
         defaultsWrite(["write", "com.apple.dock", "orientation", "-string", position])
 
+        // Restart the Dock so the prefs take effect; a failed restart means the change
+        // hasn't been applied yet, so don't report success (callers keep recovery state).
         let killall = Process()
         killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
         killall.arguments = ["Dock"]
-        try? killall.run()   // fire-and-forget: don't block on the Dock restart
+        do {
+            try killall.run(); killall.waitUntilExit()
+            if killall.terminationStatus != 0 { ok = false }
+        } catch { ok = false }
         return ok
     }
 

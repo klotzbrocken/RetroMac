@@ -112,9 +112,9 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
     private func saverURL(_ id: String) -> URL? {
         switch id {
         case "pipes":
-            return URL(string: "https://bored-entertainment.github.io/98.js/programs/pipes/index.html")
+            return Bundle.main.resourceURL?.appendingPathComponent("Widgets/Screensavers/Pipes/index.html")
         case "flowerbox":
-            return URL(string: "https://bored-entertainment.github.io/98.js/programs/3D-FlowerBox/index.html")
+            return Bundle.main.resourceURL?.appendingPathComponent("Widgets/Screensavers/FlowerBox/index.html")
         case "flying-toasters":
             return Bundle.main.resourceURL?.appendingPathComponent("Widgets/Screensavers/FlyingToasters/index.html")
         case "flurry":

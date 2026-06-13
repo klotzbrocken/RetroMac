@@ -438,13 +438,19 @@ final class DockView: NSView {
                 let btnWidth: CGFloat
                 let btnY: CGFloat
 
-                if isXP {
-                    // XP Luna: content-based sizing — large icon + text fill the button
+                if isXP, let imgs = startButtonImages {
+                    // XP Luna bitmap start button: fills the full bar height (no top/bottom
+                    // margin), width follows the sprite's aspect ratio, drawn 1:1.
                     btnHeight = barRect.height
                     btnY = 0
-                    let iconSz = max(24, btnHeight * 0.60)
+                    btnWidth = btnHeight * (imgs.normal.size.width / imgs.normal.size.height)
+                } else if isXP {
+                    // Fallback (no sprite): content-based programmatic green button.
+                    btnHeight = barRect.height
+                    btnY = 0
+                    let iconSz = max(20, btnHeight * 0.52)
                     let label = theme.dock.startButtonLabel ?? "start"
-                    let fontSize = max(16, btnHeight * 0.47)
+                    let fontSize = max(15, btnHeight * 0.46)
                     let boldFont = NSFont.boldSystemFont(ofSize: fontSize)
                     let italicFont = NSFont(descriptor: boldFont.fontDescriptor.withSymbolicTraits(.italic), size: fontSize) ?? boldFont
                     let labelWidth = (label as NSString).size(withAttributes: [.font: italicFont]).width
@@ -1781,7 +1787,8 @@ final class DockView: NSView {
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         let ctx = NSGraphicsContext.current!.cgContext
         let scale = CGFloat(AppSettings.shared.dockIconScale)
-        let bgAlpha = CGFloat(AppSettings.shared.dockTransparency)
+        // The real Windows XP Luna start bar is fully opaque — never apply the transparency slider.
+        let bgAlpha = theme.isXPStartMenu ? 1.0 : CGFloat(AppSettings.shared.dockTransparency)
 
         let rect = currentBarRect  // Draw background — expands during magnification
         let cr = theme.dock.cornerRadius * scale
@@ -1855,6 +1862,18 @@ final class DockView: NSView {
                 yy += 2
             }
             pen.stroke()
+            ctx.restoreGState()
+        }
+
+        // Windows XP Luna taskbar: a bright highlight line along the very top edge + a thin
+        // gloss band just below it, the way the real Luna start bar catches the light.
+        if theme.isXPStartMenu && !theme.isVertical {
+            ctx.saveGState()
+            bgPath.addClip()
+            NSColor(srgbRed: 0.62, green: 0.82, blue: 1.0, alpha: 0.9 * bgAlpha).setFill()
+            ctx.fill(NSRect(x: rect.minX, y: rect.maxY - 1, width: rect.width, height: 1))
+            NSColor.white.withAlphaComponent(0.16 * bgAlpha).setFill()
+            ctx.fill(NSRect(x: rect.minX, y: rect.maxY - 4, width: rect.width, height: 3))
             ctx.restoreGState()
         }
 
@@ -2084,21 +2103,39 @@ final class DockView: NSView {
                                     respectFlipped: true,
                                     hints: [.interpolation: NSImageInterpolation.high.rawValue])
                 } else {
-                    // Fallback: simple green gradient
-                    let gradTop = theme.dock.startButtonGradientTop.map { NSColor.fromHex($0) }
-                        ?? NSColor(red: 0.32, green: 0.74, blue: 0.22, alpha: 1.0)
-                    let gradBottom = theme.dock.startButtonGradientBottom.map { NSColor.fromHex($0) }
-                        ?? NSColor(red: 0.18, green: 0.56, blue: 0.10, alpha: 1.0)
-                    let top = startButtonPressed ? gradBottom : gradTop
-                    let bottom = startButtonPressed ? gradTop : gradBottom
-                    let btnPath = NSBezierPath(roundedRect: btnRect, xRadius: 3, yRadius: 3)
-                    if let grad = NSGradient(starting: bottom, ending: top) {
-                        grad.draw(in: btnPath, angle: 90)
+                    // Authentic XP Luna green start button: glossy, rounded pill, hover-lift.
+                    var gTop = theme.dock.startButtonGradientTop.map { NSColor.fromHex($0) }
+                        ?? NSColor(red: 0.38, green: 0.76, blue: 0.25, alpha: 1.0)
+                    var gBot = theme.dock.startButtonGradientBottom.map { NSColor.fromHex($0) }
+                        ?? NSColor(red: 0.17, green: 0.49, blue: 0.09, alpha: 1.0)
+                    if startButtonHovered && !startButtonPressed {
+                        gTop = gTop.blended(withFraction: 0.18, of: .white) ?? gTop
+                        gBot = gBot.blended(withFraction: 0.10, of: .white) ?? gBot
                     }
+                    let top = startButtonPressed ? gBot : gTop
+                    let bottom = startButtonPressed ? gTop : gBot
+                    let btnPath = NSBezierPath(roundedRect: btnRect, xRadius: 6, yRadius: 6)
+                    NSGradient(starting: bottom, ending: top)?.draw(in: btnPath, angle: 90)
+                    // glossy white highlight over the top ~half
+                    NSGraphicsContext.current?.saveGraphicsState(); btnPath.addClip()
+                    let gloss = NSRect(x: btnRect.minX, y: btnRect.midY,
+                                       width: btnRect.width, height: btnRect.height * 0.5)
+                    NSGradient(starting: NSColor.white.withAlphaComponent(0),
+                               ending: NSColor.white.withAlphaComponent(startButtonPressed ? 0.12 : 0.42))?
+                        .draw(in: gloss, angle: 90)
+                    NSGraphicsContext.current?.restoreGraphicsState()
+                    // light inner edge + dark outline for the beveled look
+                    NSColor.white.withAlphaComponent(0.5).setStroke()
+                    NSBezierPath(roundedRect: btnRect.insetBy(dx: 0.75, dy: 0.75), xRadius: 5, yRadius: 5).stroke()
+                    NSColor(red: 0.12, green: 0.34, blue: 0.06, alpha: 0.85).setStroke()
+                    btnPath.stroke()
                 }
 
+                // The bitmap sprite already bakes in the flag + "start"; only the programmatic
+                // green fallback needs the flag/label overlay below.
+                if startButtonImages == nil {
                 // Windows flag icon — large, proportional to button height
-                let iconSz = max(24, btnH * 0.60)
+                let iconSz = max(20, btnH * 0.52)
                 if let icon = startButtonIcon {
                     let iconRect = NSRect(
                         x: btnRect.minX + 8 + pressOffset,
@@ -2109,7 +2146,7 @@ final class DockView: NSView {
 
                 // "start" label — white bold italic with shadow
                 let label = theme.dock.startButtonLabel ?? "start"
-                let fontSize = max(16, btnH * 0.47)
+                let fontSize = max(15, btnH * 0.46)
                 let boldFont = NSFont.boldSystemFont(ofSize: fontSize)
                 let italicFont = NSFont(descriptor: boldFont.fontDescriptor.withSymbolicTraits(.italic),
                                         size: fontSize) ?? boldFont
@@ -2126,6 +2163,7 @@ final class DockView: NSView {
                 let labelX = btnRect.minX + 8 + iconSz + 3 + pressOffset
                 let labelY = btnRect.midY - labelSize.height / 2 - pressOffset
                 (label as NSString).draw(at: NSPoint(x: labelX, y: labelY), withAttributes: attrs)
+                }   // end programmatic-fallback flag + label
             } else {
                 let btnStyle = theme.dock.startButtonStyle ?? "raised"
                 let bw: CGFloat = btnStyle == "flat" ? 0 : (theme.dock.bevelWidth > 0 ? theme.dock.bevelWidth : 1)
@@ -3178,21 +3216,8 @@ final class DockView: NSView {
             }))
         }
 
-        // Add separator and running apps not in dock
-        let transient = runningAppsNotInDock()
-        if !transient.isEmpty && !leftItems.isEmpty {
-            leftItems.append(MI(separator: true))
-        }
-        for bid in transient.prefix(4) {
-            if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
-                let name = FileManager.default.displayName(atPath: appURL.path)
-                    .replacingOccurrences(of: ".app", with: "")
-                let icon = ThemeManager.shared.icon(for: bid, size: xpIconSize)
-                leftItems.append(MI(title: name, icon: icon, action: {
-                    AppLauncher.launchOrActivate(bundleID: bid)
-                }, bundleID: bid))
-            }
-        }
+        // (The real XP Start menu lists pinned/frequent programs only — running apps live on
+        // the taskbar, not here, so they are intentionally NOT injected into the left column.)
 
         // Right column: system locations with authentic XP icons
         let xpIcon = { (filename: String) -> NSImage? in
