@@ -15,12 +15,10 @@ final class SplashController {
 
     private init() {}
 
-    /// Default boot-screen state for a theme when the user hasn't toggled it: on for any theme
-    /// with a boot video, plus the Windows XP image (the only image splash shown historically).
+    /// Default boot-screen state when the user hasn't toggled it: ON for any theme that
+    /// defines a boot video or image.
     private func bootscreenDefaultOn(_ theme: ThemeBundle) -> Bool {
-        if theme.config.splashVideo != nil { return true }
-        let n = theme.config.name.lowercased()
-        return n.contains("windows xp") || n == "xp" || n.hasPrefix("xp ")
+        theme.config.splashVideo != nil || theme.config.splashScreen != nil
     }
 
     /// Show the boot screen for the active theme if enabled. No-op otherwise.
@@ -49,8 +47,18 @@ final class SplashController {
         win.isOpaque = opaque
         win.backgroundColor = .black
         win.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-        win.ignoresMouseEvents = true
+        win.ignoresMouseEvents = false   // a click skips straight to the desktop
         return win
+    }
+
+    /// Top-level content view that dismisses the boot screen on a mouse click (skip to desktop).
+    private func dismissView(_ frame: NSRect, content: NSView) -> NSView {
+        let v = BootDismissView(frame: frame)
+        v.onDismiss = { [weak self] in self?.dismiss() }
+        content.frame = v.bounds
+        content.autoresizingMask = [.width, .height]
+        v.addSubview(content)
+        return v
     }
 
     private func showVideo(url: URL, on screen: NSScreen) {
@@ -64,7 +72,7 @@ final class SplashController {
         pv.player = player
         pv.controlsStyle = .none
         pv.videoGravity = .resizeAspect
-        win.contentView = pv
+        win.contentView = dismissView(NSRect(origin: .zero, size: frame.size), content: pv)
         win.orderFrontRegardless()
         self.window = win
         self.player = player
@@ -102,7 +110,7 @@ final class SplashController {
         let iv = NSImageView(frame: NSRect(origin: .zero, size: frame.size))
         iv.image = image
         iv.imageScaling = .scaleProportionallyUpOrDown
-        win.contentView = iv
+        win.contentView = dismissView(NSRect(origin: .zero, size: frame.size), content: iv)
 
         win.orderFrontRegardless()
         self.window = win
@@ -119,4 +127,14 @@ final class SplashController {
         window?.orderOut(nil)
         window = nil
     }
+}
+
+/// Covers the boot screen; any mouse click (or key) dismisses it and skips to the desktop.
+private final class BootDismissView: NSView {
+    var onDismiss: (() -> Void)?
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var acceptsFirstResponder: Bool { true }
+    override func mouseDown(with event: NSEvent) { onDismiss?() }
+    override func rightMouseDown(with event: NSEvent) { onDismiss?() }
+    override func keyDown(with event: NSEvent) { onDismiss?() }
 }

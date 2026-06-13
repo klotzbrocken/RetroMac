@@ -19,8 +19,7 @@ struct ScreensaverSettingsTab: View {
     }
 
     private var bootDefaultOn: Bool {
-        if themeConfig?.splashVideo != nil { return true }
-        return themeName.lowercased().contains("windows xp")
+        themeConfig?.splashVideo != nil || themeConfig?.splashScreen != nil
     }
 
     private var bootBinding: Binding<Bool> {
