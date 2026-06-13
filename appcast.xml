@@ -6,6 +6,28 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.8.1</title>
+      <pubDate>Sat, 13 Jun 2026 02:01:53 +0000</pubDate>
+      <sparkle:version>1.8.1</sparkle:version>
+      <sparkle:shortVersionString>1.8.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.8 — new Special Themes, boot screens & screensavers</h2>
+        <ul>
+          <li><b>New Special Themes:</b> Windows 98 (with classic games and sheep.exe!), Windows XP, and Mac OS X with its glossy Aqua look &mdash; plus classic apps like Internet Explorer, Notepad and Paint.</li>
+          <li><b>Boot screens:</b> authentic startup videos when you switch to Windows XP, Windows 98 or Mac OS 9 &mdash; click to skip to the desktop.</li>
+          <li><b>Classic screensavers:</b> a per-theme saver (3D Pipes, FlowerBox, Flying Toasters, Flurry) &mdash; pick yours in Settings &#9656; Screensaver.</li>
+          <li><b>Smarter minimize</b> into the themed dock, new CPU Monitor &amp; Desktop Clock widgets, plus widget, dock and stability fixes throughout.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.8.1/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="oXybM04s6LPGny98DTDma4P+FNZpuFMtN1yD0k26QxsD/PDrDMEOQ2vG6pZIogCiIC7KKGyK4w1Hx9sz9IAXBQ=="
+        length="134043447"
+      />
+    </item>
+    <item>
       <title>Version 1.8.0</title>
       <pubDate>Thu, 11 Jun 2026 18:23:42 +0000</pubDate>
       <sparkle:version>1.8.0</sparkle:version>
