@@ -147,5 +147,7 @@
     "com.apple.Dictionary": "dictionary.png",
     "com.apple.reminders": "reminders.png"
   },
-  "screensaver": "flying-toasters"
+  "screensaver": "flying-toasters",
+  "splashVideo": "boot.mp4",
+  "splashFullscreen": true
 }
