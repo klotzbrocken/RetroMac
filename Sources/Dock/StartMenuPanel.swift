@@ -203,10 +203,10 @@ private final class XPStartMenuContentView: NSView {
     var onDismiss: (() -> Void)?
 
     // Layout constants
-    private let menuWidth: CGFloat = 370
+    private let menuWidth: CGFloat = 440
     private let headerHeight: CGFloat = 54
     private let footerHeight: CGFloat = 36
-    private let leftColumnWidth: CGFloat = 190
+    private let leftColumnWidth: CGFloat = 212
     private let itemHeight: CGFloat = 34
     private let largeItemHeight: CGFloat = 40
     private let iconSizeLarge: CGFloat = 32
@@ -215,8 +215,8 @@ private final class XPStartMenuContentView: NSView {
     private let separatorHeight: CGFloat = 8
 
     // Colors
-    private let headerBlueTop = NSColor(red: 0.15, green: 0.33, blue: 0.77, alpha: 1.0)
-    private let headerBlueBottom = NSColor(red: 0.04, green: 0.16, blue: 0.57, alpha: 1.0)
+    private let headerBlueTop = NSColor(red: 0.21, green: 0.46, blue: 0.86, alpha: 1.0)
+    private let headerBlueBottom = NSColor(red: 0.05, green: 0.22, blue: 0.66, alpha: 1.0)
     private let leftPanelBg = NSColor.white
     private let rightPanelBg = NSColor(red: 0.82, green: 0.87, blue: 0.96, alpha: 1.0)
     private let footerGray = NSColor(red: 0.82, green: 0.87, blue: 0.96, alpha: 1.0)
@@ -505,6 +505,16 @@ private final class XPStartMenuContentView: NSView {
         )
         rightPanelBg.setFill()
         NSBezierPath(rect: rightRect).fill()
+
+        // Iconic XP amber separator bands: under the header and above the footer.
+        let amberTop = NSColor(srgbRed: 0.97, green: 0.69, blue: 0.33, alpha: 1)
+        let amberBot = NSColor(srgbRed: 0.85, green: 0.45, blue: 0.13, alpha: 1)
+        func amberBand(_ y: CGFloat) {
+            NSGradient(starting: amberBot, ending: amberTop)?
+                .draw(in: NSRect(x: bw, y: y, width: innerRect.width, height: 2), angle: 90)
+        }
+        amberBand(contentTop - 2)
+        amberBand(contentBottom)
 
         // Subtle separator line between columns
         let sepLineColor = NSColor(red: 0.75, green: 0.80, blue: 0.90, alpha: 1.0)

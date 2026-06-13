@@ -25,6 +25,15 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         c.show()
     }
 
+    /// True only for the exact 98.js host + path prefix (https://bored-entertainment.github.io/98.js/…).
+    static func isTrusted98App(_ urlString: String) -> Bool {
+        guard let c = URLComponents(string: urlString),
+              c.scheme == "https",
+              c.host == "bored-entertainment.github.io",
+              c.path.hasPrefix("/98.js/") else { return false }
+        return true
+    }
+
     static func closeAll() {
         for (_, c) in openWindows { c.panel?.orderOut(nil) }
         openWindows.removeAll()
@@ -47,9 +56,12 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 
     private func show() {
         let frame = NSRect(origin: .zero, size: size)
-        // Browser-style windows (real websites) get back/forward navigation in the chrome;
-        // the self-contained 98.js apps don't need it.
-        let showNav = !appURL.contains("github.io")
+        // A window is a trusted self-contained 98.js app ONLY if it is served from the exact
+        // 98.js host + path — not any URL that merely contains "github.io" somewhere (e.g.
+        // github.io.evil.com or example.com/?github.io). Trusted apps get the native
+        // Save/Print bridge and no nav chrome; everything else is a plain browser window.
+        let isTrusted98 = Self.isTrusted98App(appURL)
+        let showNav = !isTrusted98
         let chrome = WebAppChromeView(frame: frame, title: appName, showNav: showNav)
         chrome.onClose = { [weak self] in self?.close() }
 
@@ -454,39 +466,57 @@ final class WebAppChromeView: NSView {
 
     // ---- Windows XP (Luna) ----
     private func drawXP(_ ctx: CGContext, _ b: NSRect) {
-        NSColor(srgbRed: 0.031, green: 0.192, blue: 0.851, alpha: 1).setFill()   // #0831D9 frame
+        // Outer Luna frame — blue, rounded; the white content sits inside a thin border.
+        NSColor(srgbRed: 0.012, green: 0.31, blue: 0.78, alpha: 1).setFill()      // #0250C7
         NSBezierPath(roundedRect: b, xRadius: 8, yRadius: 8).fill()
-        ctx.fill(NSRect(x: 0, y: b.height - 12, width: b.width, height: 12))      // square bottom
 
+        // Title bar: authentic Luna blue — bright glossy top, dip, slight lift at the bottom.
         let cap = NSRect(x: 0, y: 0, width: b.width, height: titleH)
-        let grad = NSGradient(colorsAndLocations:
-            (NSColor(srgbRed: 0.035, green: 0.592, blue: 1.0, alpha: 1), 0.0),    // #0997FF
-            (NSColor(srgbRed: 0.0, green: 0.325, blue: 0.933, alpha: 1), 0.45),   // #0053EE
-            (NSColor(srgbRed: 0.0, green: 0.4, blue: 1.0, alpha: 1), 0.52),       // #0066FF
-            (NSColor(srgbRed: 0.0, green: 0.239, blue: 0.824, alpha: 1), 1.0))    // #003DD2
         let capPath = NSBezierPath(roundedRect: cap, xRadius: 8, yRadius: 8)
+        let grad = NSGradient(colorsAndLocations:
+            (NSColor(srgbRed: 0.27, green: 0.60, blue: 0.99, alpha: 1), 0.0),     // #459AFD bright top
+            (NSColor(srgbRed: 0.11, green: 0.47, blue: 0.96, alpha: 1), 0.08),    // gloss
+            (NSColor(srgbRed: 0.04, green: 0.38, blue: 0.93, alpha: 1), 0.42),
+            (NSColor(srgbRed: 0.02, green: 0.31, blue: 0.86, alpha: 1), 0.50),    // dip
+            (NSColor(srgbRed: 0.06, green: 0.27, blue: 0.83, alpha: 1), 0.55),
+            (NSColor(srgbRed: 0.10, green: 0.33, blue: 0.88, alpha: 1), 1.0))     // bottom lift
         grad?.draw(in: capPath, angle: -90)
-        ctx.fill(NSRect(x: 0, y: titleH - 6, width: 0, height: 0))
+        // 1px white top highlight + soft gloss over the upper ~40%
+        NSColor.white.withAlphaComponent(0.5).setFill()
+        ctx.fill(NSRect(x: 8, y: 0, width: b.width - 16, height: 1))
+        NSColor.white.withAlphaComponent(0.12).setFill()
+        ctx.fill(NSRect(x: 1, y: 1, width: b.width - 2, height: titleH * 0.40))
 
-        // close (red), min/max dimmed
+        // Caption buttons: min/max full blue gel, close red gel — each with a glossy top.
         let bw: CGFloat = 21, bh: CGFloat = 19
         let by = (titleH - bh) / 2
         let closeR = NSRect(x: b.width - 6 - bw, y: by, width: bw, height: bh)
         let maxR   = NSRect(x: closeR.minX - 2 - bw, y: by, width: bw, height: bh)
         let minR   = NSRect(x: maxR.minX - 2 - bw, y: by, width: bw, height: bh)
-        func gel(_ r: NSRect, top: NSColor, bottom: NSColor, alpha: CGFloat) {
+        func gel(_ r: NSRect, top: NSColor, bottom: NSColor, alpha: CGFloat = 1.0) {
             let p = NSBezierPath(roundedRect: r, xRadius: 3, yRadius: 3)
             NSGradient(starting: top.withAlphaComponent(alpha), ending: bottom.withAlphaComponent(alpha))?
                 .draw(in: p, angle: -90)
+            // glossy highlight over the top ~42%
+            let hl = NSBezierPath(roundedRect: NSRect(x: r.minX + 1.5, y: r.minY + 1.5,
+                                                      width: r.width - 3, height: r.height * 0.42),
+                                  xRadius: 2, yRadius: 2)
+            NSColor.white.withAlphaComponent(0.45 * alpha).setFill(); hl.fill()
             NSColor.white.withAlphaComponent(0.55 * alpha).setStroke(); p.stroke()
         }
-        gel(minR, top: NSColor(srgbRed: 0.61, green: 0.75, blue: 0.97, alpha: 1),
-                  bottom: NSColor(srgbRed: 0.16, green: 0.31, blue: 0.72, alpha: 1), alpha: 0.45)
-        gel(maxR, top: NSColor(srgbRed: 0.61, green: 0.75, blue: 0.97, alpha: 1),
-                  bottom: NSColor(srgbRed: 0.16, green: 0.31, blue: 0.72, alpha: 1), alpha: 0.45)
-        gel(closeR, top: NSColor(srgbRed: 0.97, green: 0.70, blue: 0.62, alpha: 1),
-                    bottom: NSColor(srgbRed: 0.77, green: 0.22, blue: 0.16, alpha: 1), alpha: 1.0)
+        let blueTop = NSColor(srgbRed: 0.42, green: 0.66, blue: 0.98, alpha: 1)
+        let blueBot = NSColor(srgbRed: 0.07, green: 0.28, blue: 0.74, alpha: 1)
+        gel(minR, top: blueTop, bottom: blueBot)
+        gel(maxR, top: blueTop, bottom: blueBot)
+        gel(closeR, top: NSColor(srgbRed: 0.96, green: 0.55, blue: 0.45, alpha: 1),
+                    bottom: NSColor(srgbRed: 0.72, green: 0.13, blue: 0.09, alpha: 1))
+        // glyphs (white): min underscore, max square, close ×
+        NSColor.white.setFill()
+        ctx.fill(NSRect(x: minR.minX + 5, y: minR.maxY - 6, width: bw - 11, height: 2))
+        let mb = NSRect(x: maxR.minX + 5, y: maxR.minY + 4, width: bw - 11, height: bh - 9)
         NSColor.white.setStroke()
+        let mp = NSBezierPath(rect: mb); mp.lineWidth = 1.5; mp.stroke()
+        ctx.fill(NSRect(x: mb.minX, y: mb.minY, width: mb.width, height: 2))
         let x = NSBezierPath(); x.lineWidth = 2
         x.move(to: NSPoint(x: closeR.minX + 6, y: closeR.minY + 5))
         x.line(to: NSPoint(x: closeR.maxX - 6, y: closeR.maxY - 5))

@@ -26,6 +26,8 @@ final class MinimizedWindowTracker {
     private(set) var entries: [Entry] = []
     private var timer: Timer?
     private var didPrompt = false
+    private var scanInProgress = false   // don't pile up scans if an app responds slowly
+    private var scanGeneration = 0       // stop()/new scans invalidate stale in-flight results
     /// Serial queue for the (potentially slow) Accessibility scan so the main thread never blocks.
     private let scanQueue = DispatchQueue(label: "com.retromac.minimized-tracker")
 
@@ -45,6 +47,8 @@ final class MinimizedWindowTracker {
 
     func stop() {
         timer?.invalidate(); timer = nil
+        scanGeneration += 1          // invalidate any in-flight scan so it can't republish entries
+        scanInProgress = false
         if !entries.isEmpty { entries = []; notify() }
     }
 
@@ -69,6 +73,10 @@ final class MinimizedWindowTracker {
 
     private func poll() {
         guard AXIsProcessTrusted() else { return }
+        guard !scanInProgress else { return }   // a scan is still running — don't queue another
+        scanInProgress = true
+        scanGeneration += 1
+        let gen = scanGeneration
         // Snapshot the running apps on main, then do the AX queries off-main: a slow-to-respond
         // app must not stall the main thread every 1.5s.
         let ownBundleID = Bundle.main.bundleIdentifier ?? ""
@@ -98,6 +106,8 @@ final class MinimizedWindowTracker {
                 }
             }
             DispatchQueue.main.async {
+                self.scanInProgress = false
+                guard gen == self.scanGeneration else { return }   // superseded by stop()/newer scan
                 let changed = found.count != self.entries.count
                     || zip(found, self.entries).contains(where: { $0.bundleID != $1.bundleID || $0.title != $1.title })
                 self.entries = found
