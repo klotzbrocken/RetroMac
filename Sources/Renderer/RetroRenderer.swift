@@ -328,7 +328,15 @@ final class RetroRenderer {
     }
 
     /// Render shader directly to an IOSurface-backed texture (zero-copy, for virtual camera)
-    func renderToTexture(sourceTexture: MTLTexture, target: MTLTexture, viewportSize: CGSize) {
+    /// A lower-third pass to composite into the SAME command buffer as the shader.
+    struct LowerThirdPass {
+        let texture: MTLTexture
+        let pipeline: MTLRenderPipelineState
+        let slideOffset: Float
+    }
+
+    func renderToTexture(sourceTexture: MTLTexture, target: MTLTexture, viewportSize: CGSize,
+                         lowerThird: LowerThirdPass? = nil) {
         guard let pipeline = currentPipeline,
               let commandBuffer = commandQueue.makeCommandBuffer() else { return }
 
@@ -366,6 +374,27 @@ final class RetroRenderer {
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
         encoder.endEncoding()
+
+        // Composite the lower third into the SAME command buffer (loadAction .load) so the
+        // IOSurface flips from old frame → shader+bar atomically. A separate command buffer
+        // let the camera extension read a shader-only frame in the gap → periodic flicker.
+        if let lt = lowerThird {
+            let ltDesc = MTLRenderPassDescriptor()
+            ltDesc.colorAttachments[0].texture = target
+            ltDesc.colorAttachments[0].loadAction = .load
+            ltDesc.colorAttachments[0].storeAction = .store
+            if let ltEnc = commandBuffer.makeRenderCommandEncoder(descriptor: ltDesc) {
+                var slide = lt.slideOffset
+                ltEnc.setRenderPipelineState(lt.pipeline)
+                ltEnc.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
+                ltEnc.setVertexBytes(&slide, length: MemoryLayout<Float>.size, index: 1)
+                ltEnc.setFragmentTexture(lt.texture, index: 0)
+                ltEnc.setFragmentSamplerState(sampler, index: 0)
+                ltEnc.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+                ltEnc.endEncoding()
+            }
+        }
+
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
         frameCount &+= 1

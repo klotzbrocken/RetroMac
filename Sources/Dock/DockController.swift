@@ -917,7 +917,10 @@ final class DockController {
         }
 
         if synchronous {
-            onDone(apply())
+            // Serialize on the prefs queue so any in-flight hide finishes FIRST — otherwise a
+            // pending hide could run after this restore and leave the system Dock hidden after quit.
+            let ok = DockController.dockPrefsQueue.sync { apply() }
+            onDone(ok)
         } else {
             DockController.dockPrefsQueue.async {
                 let ok = apply()

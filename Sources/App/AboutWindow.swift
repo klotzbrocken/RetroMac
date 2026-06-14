@@ -1,6 +1,51 @@
 import Sparkle
 import SwiftUI
 
+/// Live view of the captured diagnostics log with Copy / Save (About → Diagnostics).
+struct DiagnosticsSectionView: View {
+    @State private var text = DiagnosticsLog.shared.snapshot()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView {
+                Text(text.isEmpty ? "No log yet." : text)
+                    .font(.system(size: 10, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(6)
+            }
+            .frame(height: 170)
+            .background(Color(nsColor: .textBackgroundColor))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.secondary.opacity(0.3)))
+
+            HStack {
+                Button("Refresh") { text = DiagnosticsLog.shared.snapshot() }
+                Button("Copy") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(DiagnosticsLog.shared.fullReport(), forType: .string)
+                }
+                Button("Save\u{2026}") { saveReport() }
+                Spacer()
+            }
+            .font(.caption)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: DiagnosticsLog.didChange)) { _ in
+            text = DiagnosticsLog.shared.snapshot()
+        }
+    }
+
+    private func saveReport() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "RetroMac-diagnostics.txt"
+        panel.canCreateDirectories = true
+        NSApp.activate(ignoringOtherApps: true)
+        panel.begin { resp in
+            guard resp == .OK, let url = panel.url else { return }
+            try? DiagnosticsLog.shared.fullReport().write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+}
+
 struct AboutTab: View {
     @ObservedObject private var license = LicenseManager.shared
     @State private var keyInput: String = ""
@@ -297,6 +342,13 @@ struct AboutTab: View {
                     Text("RetroMac uses these Apple frameworks: Metal, MetalKit, ScreenCaptureKit, AVKit, WebKit, AppKit, SwiftUI — plus Sparkle (updates) and a bundled Pac-Man built on SDL2 (see above).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                Section("Diagnostics") {
+                    Text("Captures the app's console output (display matching, screen-capture errors, dock, etc.). Reproduce a problem, then Copy or Save the report and send it over.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    DiagnosticsSectionView()
                 }
 
                 Section {
