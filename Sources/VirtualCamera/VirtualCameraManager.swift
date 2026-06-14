@@ -624,37 +624,33 @@ extension VirtualCameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
               let cvTex = cvTexture,
               let sourceTexture = CVMetalTextureGetTexture(cvTex) else { return }
 
-        // Render shader to IOSurface-backed texture (zero-copy to Camera Extension).
-        // Synchronous render: the extension reads the surface cross-process, so it must be
-        // fully written before we return (async render caused unresolved/half-written frames).
         let viewportSize = CGSize(width: outputWidth, height: outputHeight)
-        renderer.renderToTexture(sourceTexture: sourceTexture, target: outputTexture, viewportSize: viewportSize)
 
-        // Lower-third overlay (only for Late Night CRT / Newsroom 1987)
+        // Build the lower-third pass FIRST so it can be composited in the SAME command buffer
+        // as the shader (atomic surface update → no shader-only frame for the extension to
+        // catch, which was the periodic flicker). Only for Late Night CRT / Newsroom 1987.
+        var ltPass: RetroRenderer.LowerThirdPass? = nil
         if let ltRenderer = lowerThirdRenderer {
             let settings = AppSettings.shared
             let shaderSupportsLT = selectedShader == "late-night-crt" || selectedShader == "newsroom-1987"
             let enabled = shaderSupportsLT && settings.lowerThirdEnabled && !settings.lowerThirdName.isEmpty
             ltRenderer.tick(enabled: enabled)
-
-            if ltRenderer.hasContent, let pipeline = ltRenderer.compositePipeline {
-                let style = selectedShader == "newsroom-1987" ? "newsroom" : "latenight"
-                if let ltTexture = ltRenderer.texture(
-                    name: settings.lowerThirdName,
-                    title: settings.lowerThirdTitle,
-                    style: style,
-                    width: outputWidth, height: outputHeight
-                ) {
-                    renderer.compositeLowerThird(
-                        texture: ltTexture,
-                        pipeline: pipeline,
-                        target: outputTexture,
-                        viewportSize: viewportSize,
-                        slideOffset: Float(ltRenderer.slideOffset)
-                    )
-                }
+            if ltRenderer.hasContent, let pipeline = ltRenderer.compositePipeline,
+               let ltTexture = ltRenderer.texture(
+                   name: settings.lowerThirdName,
+                   title: settings.lowerThirdTitle,
+                   style: settings.lowerThirdStyle,   // honor the Settings "Style" picker
+                   width: outputWidth, height: outputHeight
+               ) {
+                ltPass = RetroRenderer.LowerThirdPass(
+                    texture: ltTexture, pipeline: pipeline, slideOffset: Float(ltRenderer.slideOffset))
             }
         }
+
+        // Render shader (+ optional lower third) to the IOSurface-backed texture in one
+        // synchronous, atomic command buffer — the extension reads it cross-process.
+        renderer.renderToTexture(sourceTexture: sourceTexture, target: outputTexture,
+                                 viewportSize: viewportSize, lowerThird: ltPass)
 
         frameCount += 1
     }

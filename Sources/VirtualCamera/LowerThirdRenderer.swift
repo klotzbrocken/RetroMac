@@ -47,7 +47,11 @@ final class LowerThirdRenderer {
         // Regenerate if parameters changed
         if name != cachedName || title != cachedTitle || style != cachedStyle
             || width != cachedWidth || height != cachedHeight {
-            cachedTexture = renderTexture(name: name, title: title, style: style, width: width, height: height)
+            // Keep the last good texture if a render transiently fails — otherwise a single
+            // failed frame would blank the bar and read as a flicker.
+            if let tex = renderTexture(name: name, title: title, style: style, width: width, height: height) {
+                cachedTexture = tex
+            }
             cachedName = name
             cachedTitle = title
             cachedStyle = style
@@ -164,28 +168,21 @@ final class LowerThirdRenderer {
         ctx.setFillColor(CGColor(red: 1.0, green: 0.85, blue: 0.30, alpha: 1.0))
         ctx.fill(CGRect(x: barX, y: nameBarY, width: stripeWidth, height: barHeight))
 
-        // Name text (white, bold)
-        let nameFont = CTFontCreateWithName("Helvetica-Bold" as CFString, nameBarHeight * 0.55, nil)
-        let nameAttrs: [NSAttributedString.Key: Any] = [
-            .font: nameFont,
-            .foregroundColor: NSColor.white,
-        ]
-        let nameStr = NSAttributedString(string: name, attributes: nameAttrs)
-        let nameSize = nameStr.size()
+        // Name + title text, auto-shrunk so a long name never runs off the bar / frame.
         let nameX = barX + stripeWidth + 10
-        let nameTextY = nameBarY + (nameBarHeight - nameSize.height) / 2
+        let availW = barWidth - stripeWidth - 20
         let nameNSCtx = NSGraphicsContext(cgContext: ctx, flipped: true)
         NSGraphicsContext.current = nameNSCtx
+
+        let nameStr = Self.fittedAttr(name, fontName: "Helvetica-Bold", baseSize: nameBarHeight * 0.55,
+                                      color: .white, maxWidth: availW)
+        let nameTextY = nameBarY + (nameBarHeight - nameStr.size().height) / 2
         nameStr.draw(at: NSPoint(x: nameX, y: nameTextY))
 
-        // Title text (gold/amber, regular)
         if !title.isEmpty {
-            let titleFont = CTFontCreateWithName("Helvetica" as CFString, titleBarHeight * 0.55, nil)
-            let titleAttrs: [NSAttributedString.Key: Any] = [
-                .font: titleFont,
-                .foregroundColor: NSColor(red: 1.0, green: 0.88, blue: 0.45, alpha: 1.0),
-            ]
-            let titleStr = NSAttributedString(string: title, attributes: titleAttrs)
+            let titleStr = Self.fittedAttr(title, fontName: "Helvetica", baseSize: titleBarHeight * 0.55,
+                                           color: NSColor(red: 1.0, green: 0.88, blue: 0.45, alpha: 1.0),
+                                           maxWidth: availW)
             let titleTextY = titleBarY + (titleBarHeight - titleStr.size().height) / 2
             titleStr.draw(at: NSPoint(x: nameX, y: titleTextY))
         }
@@ -232,34 +229,39 @@ final class LowerThirdRenderer {
         ctx.setLineWidth(1.0)
         ctx.stroke(CGRect(x: barX, y: nameBarY, width: barWidth, height: barHeight))
 
-        // Name text (white, bold, slightly larger — broadcast style)
-        let nameFont = CTFontCreateWithName("Helvetica-Bold" as CFString, nameBarHeight * 0.58, nil)
-        let nameAttrs: [NSAttributedString.Key: Any] = [
-            .font: nameFont,
-            .foregroundColor: NSColor.white,
-        ]
-        let nameStr = NSAttributedString(string: name.uppercased(), attributes: nameAttrs)
-        let nameSize = nameStr.size()
+        // Name + title text, auto-shrunk so it never runs off the bar / frame.
         let nameX = barX + 12
-        let nameTextY = nameBarY + (nameBarHeight - nameSize.height) / 2
-
+        let availW = barWidth - 24
         let nameNSCtx = NSGraphicsContext(cgContext: ctx, flipped: true)
         NSGraphicsContext.current = nameNSCtx
+
+        let nameStr = Self.fittedAttr(name.uppercased(), fontName: "Helvetica-Bold",
+                                      baseSize: nameBarHeight * 0.58, color: .white, maxWidth: availW)
+        let nameTextY = nameBarY + (nameBarHeight - nameStr.size().height) / 2
         nameStr.draw(at: NSPoint(x: nameX, y: nameTextY))
 
-        // Title text (white, regular)
         if !title.isEmpty {
-            let titleFont = CTFontCreateWithName("Helvetica" as CFString, titleBarHeight * 0.52, nil)
-            let titleAttrs: [NSAttributedString.Key: Any] = [
-                .font: titleFont,
-                .foregroundColor: NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.95),
-            ]
-            let titleStr = NSAttributedString(string: title, attributes: titleAttrs)
+            let titleStr = Self.fittedAttr(title, fontName: "Helvetica", baseSize: titleBarHeight * 0.52,
+                                           color: NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.95),
+                                           maxWidth: availW)
             let titleTextY = titleBarY + (titleBarHeight - titleStr.size().height) / 2
             titleStr.draw(at: NSPoint(x: nameX, y: titleTextY))
         }
 
         NSGraphicsContext.current = nil
+    }
+
+    /// Build an attributed string whose font is shrunk so it fits within `maxWidth` (no overflow).
+    private static func fittedAttr(_ s: String, fontName: String, baseSize: CGFloat,
+                                   color: NSColor, maxWidth: CGFloat) -> NSAttributedString {
+        func make(_ size: CGFloat) -> NSAttributedString {
+            let f = CTFontCreateWithName(fontName as CFString, size, nil)
+            return NSAttributedString(string: s, attributes: [.font: f, .foregroundColor: color])
+        }
+        let attr = make(baseSize)
+        let w = attr.size().width
+        guard w > maxWidth, w > 0 else { return attr }
+        return make(max(7, floor(baseSize * maxWidth / w)))
     }
 
     private var colorSpace: CGColorSpace { CGColorSpaceCreateDeviceRGB() }

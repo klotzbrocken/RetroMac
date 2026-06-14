@@ -73,6 +73,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DiagnosticsLog.shared.start()   // capture console output for the About → Diagnostics view
         AppDelegate.shared = self
         settingsWindow.updater = updaterController.updater
         let settings = AppSettings.shared

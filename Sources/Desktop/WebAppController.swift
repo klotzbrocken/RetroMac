@@ -35,7 +35,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     }
 
     static func closeAll() {
-        for (_, c) in openWindows { c.panel?.orderOut(nil) }
+        Array(openWindows.values).forEach { $0.close() }   // full teardown (handlers + webview), not just orderOut
         openWindows.removeAll()
     }
 
@@ -44,6 +44,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     private let size: NSSize
     private var panel: WebAppPanel?
     private weak var webView: WKWebView?
+    private var bridgeActive = false   // true only for trusted 98.js windows (native Save/Print)
 
     private init(name: String, url: String, size: NSSize) {
         self.appName = name; self.appURL = url; self.size = size
@@ -62,6 +63,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         // Save/Print bridge and no nav chrome; everything else is a plain browser window.
         let isTrusted98 = Self.isTrusted98App(appURL)
         let showNav = !isTrusted98
+        bridgeActive = isTrusted98
         let chrome = WebAppChromeView(frame: frame, title: appName, showNav: showNav)
         chrome.onClose = { [weak self] in self?.close() }
 
@@ -117,6 +119,17 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     }
 
     private func close() {
+        // Tear down the WebView explicitly: removing the script-message handler breaks the
+        // userContentController → self retain cycle (WebKit can otherwise keep the handler,
+        // config and web content process alive long after the window is gone).
+        if let wv = webView {
+            wv.stopLoading()
+            wv.navigationDelegate = nil
+            wv.uiDelegate = nil
+            wv.configuration.userContentController.removeAllScriptMessageHandlers()
+            wv.removeFromSuperview()
+        }
+        webView = nil
         panel?.orderOut(nil); panel = nil
         WebAppController.openWindows.removeValue(forKey: appURL)
     }
@@ -141,7 +154,17 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
+        if navigationAction.shouldPerformDownload { decisionHandler(.download); return }
+        // Bridge-equipped (trusted 98.js) windows must STAY on the trusted host — a redirect
+        // or link to another domain must not inherit the native Save/Print bridge.
+        if bridgeActive,
+           navigationAction.targetFrame?.isMainFrame == true,
+           let url = navigationAction.request.url,
+           let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
+           url.host != "bored-entertainment.github.io" {
+            decisionHandler(.cancel); return
+        }
+        decisionHandler(.allow)
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
