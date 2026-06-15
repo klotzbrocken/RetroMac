@@ -6,6 +6,27 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.8.2</title>
+      <pubDate>Mon, 15 Jun 2026 03:28:11 +0000</pubDate>
+      <sparkle:version>1.8.2</sparkle:version>
+      <sparkle:shortVersionString>1.8.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.8.2</h2>
+        <ul>
+          <li><b>Webcam lower-third fixes:</b> the on-screen name bar no longer flickers, the Late Night (Gold) / Newsroom style now follows your setting, and long names fit the bar.</li>
+          <li><b>Built-in diagnostics:</b> Settings &#9656; About &#9656; Diagnostics captures a log you can copy or save &mdash; making display, camera and dock issues much easier to track down.</li>
+          <li>Plus stability hardening: the system Dock reliably comes back after quitting, and assorted dock/window fixes.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.8.2/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="wazwi70iwG1Y3qJpDjeShEVkBf+/KWVN+sOC1YksPh5kG6tJcPe6t2mqUj6t4K2OIyiSw/HQOcBi66FQRzg5DA=="
+        length="133797162"
+      />
+    </item>
+    <item>
       <title>Version 1.8.1</title>
       <pubDate>Sat, 13 Jun 2026 02:01:53 +0000</pubDate>
       <sparkle:version>1.8.1</sparkle:version>
