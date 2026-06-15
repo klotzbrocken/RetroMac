@@ -99,6 +99,10 @@ struct WelcomeFlowView: View {
                             "Windows now minimize into the themed dock instead of the system Dock.")
                     feature("gauge.with.dots.needle.67percent", .green, "New Widgets & lots of fixes",
                             "CPU Monitor and Desktop Clock widgets, plus widget, dock and stability fixes throughout.")
+                    feature("rectangle.badge.person.crop", .pink, "Webcam Lower-Third Fixes",
+                            "The on-screen name bar no longer flickers, the Late Night (Gold) / Newsroom style now follows your setting, and long names fit the bar.")
+                    feature("ladybug", .gray, "Built-in Diagnostics",
+                            "Settings ▸ About ▸ Diagnostics captures a log you can copy or save — making display, camera and dock issues much easier to track down.")
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
         }
