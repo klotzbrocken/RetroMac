@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var wakeObserver: NSObjectProtocol?
     private var tvBookmarkObserver: NSObjectProtocol?
     private var dockThemeObserver: NSObjectProtocol?
+    private var dockModeObserver: NSObjectProtocol?
     private var cameraStateObserver: NSObjectProtocol?
     private var viewportCloseObserver: NSObjectProtocol?
     private var perAppBundleID: String?
@@ -88,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98
         ScreensaverController.shared.beginIdleWatch()   // works regardless of the themed dock
 
-        NSApp.setActivationPolicy(.accessory)
+        applyDockMode()   // .accessory (menu-bar only) or .regular (Dock icon) per setting
         setupMenuBar()
         registerHotkey()
         TimerController.shared.start()
@@ -106,10 +107,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Apply theme shader and update desktop overlays when theme changes via Settings
         dockThemeObserver = NotificationCenter.default.addObserver(forName: .dockThemeChanged, object: nil, queue: .main) { [weak self] _ in
             self?.applyThemePresetIfNeeded()
+            self?.updateDockIcon()   // Dock Mode: keep the Dock icon in sync with the theme
             DesktopIconsController.shared.update()
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
             BeOSDeskbarController.shared.update()
+        }
+
+        // Apply Dock Mode when the user toggles it in Settings
+        dockModeObserver = NotificationCenter.default.addObserver(forName: .dockModeChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.applyDockMode()
         }
 
         // Rebuild menu when virtual camera state changes (start/stop is async)
@@ -153,6 +160,89 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updateMenuBarIcon()
         rebuildMenu()
     }
+
+    // MARK: - Dock Mode + Launcher
+
+    /// Toggle the app between menu-bar-only (.accessory) and showing a Dock icon (.regular).
+    func applyDockMode() {
+        if AppSettings.shared.dockModeEnabled {
+            NSApp.setActivationPolicy(.regular)
+            updateDockIcon()
+        } else {
+            NSApp.setActivationPolicy(.accessory)
+            LauncherController.shared.close()
+        }
+    }
+
+    /// Set the Dock icon to the active theme's icon (Dock Mode only); nil → default app icon.
+    func updateDockIcon() {
+        guard AppSettings.shared.dockModeEnabled else { return }
+        if let url = ThemeManager.shared.activeTheme?.dockIconURL(),
+           let img = NSImage(contentsOf: url) {
+            NSApp.applicationIconImage = img
+        } else {
+            NSApp.applicationIconImage = nil   // fall back to the bundled AppIcon
+        }
+    }
+
+    /// Left-click on the Dock icon (no windows) → toggle the launcher popover.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if AppSettings.shared.dockModeEnabled {
+            LauncherController.shared.toggle()
+        }
+        return true
+    }
+
+    /// Right-click on the Dock icon → a compact native menu (theme / shader / webcam / settings).
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        guard AppSettings.shared.dockModeEnabled else { return nil }
+        let menu = NSMenu()
+
+        let themeItem = NSMenuItem(title: "Theme", action: nil, keyEquivalent: "")
+        let themeMenu = NSMenu()
+        let active = ThemeManager.shared.activeTheme?.config.name
+        for t in ThemeManager.shared.availableThemes {
+            let mi = NSMenuItem(title: t.config.name, action: #selector(selectTheme(_:)), keyEquivalent: "")
+            mi.target = self
+            mi.representedObject = t.config.name
+            mi.state = (t.config.name == active) ? .on : .off
+            themeMenu.addItem(mi)
+        }
+        themeItem.submenu = themeMenu
+        menu.addItem(themeItem)
+
+        menu.addItem(.separator())
+        let shader = NSMenuItem(title: "Shader", action: #selector(toggleOverlay), keyEquivalent: "")
+        shader.target = self
+        shader.state = isActive ? .on : .off
+        menu.addItem(shader)
+        let cam = NSMenuItem(title: "Virtual Camera", action: #selector(toggleVirtualCamera), keyEquivalent: "")
+        cam.target = self
+        cam.state = VirtualCameraManager.shared.isRunning ? .on : .off
+        menu.addItem(cam)
+
+        menu.addItem(.separator())
+        let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: "")
+        settings.target = self
+        menu.addItem(settings)
+        return menu
+    }
+
+    // Internal entry points for the SwiftUI launcher (which lives in another file).
+    func launcherActivateTheme(_ name: String) {
+        let item = NSMenuItem(); item.representedObject = name
+        selectTheme(item)
+    }
+    func launcherDisableTheme() { disableTheme() }
+    func launcherToggleShader() { toggleOverlay() }
+    func launcherToggleWebcam() { toggleVirtualCamera() }
+    func launcherOpenSettings() { openSettings() }
+    func launcherSelectPreset(_ id: String) {
+        let item = NSMenuItem(); item.representedObject = id
+        selectPreset(item)
+    }
+    var launcherShaderActive: Bool { isActive }
+    var launcherCurrentPreset: String { currentPresetName ?? AppSettings.shared.defaultPreset }
 
     private func updateMenuBarIcon() {
         guard let button = statusItem.button else { return }
@@ -3882,7 +3972,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for obs in [appLaunchObserver, appTerminateObserver, sleepObserver, lockObserver, wakeObserver].compactMap({ $0 }) {
             nc.removeObserver(obs)
         }
-        for obs in [tvBookmarkObserver, dockThemeObserver, cameraStateObserver, viewportCloseObserver].compactMap({ $0 }) {
+        for obs in [tvBookmarkObserver, dockThemeObserver, dockModeObserver, cameraStateObserver, viewportCloseObserver].compactMap({ $0 }) {
             NotificationCenter.default.removeObserver(obs)
         }
         disableAll()

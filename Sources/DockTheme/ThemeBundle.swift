@@ -23,6 +23,31 @@ final class ThemeBundle {
         return FileManager.default.fileExists(atPath: previewURL.path) ? previewURL : nil
     }
 
+    /// Icon for the app's Dock icon in Dock Mode. Only an explicit per-theme `dock.appIcon`
+    /// overrides it; otherwise nil → keep the default RetroMac app icon (theming comes later).
+    func dockIconURL() -> URL? {
+        if let filename = config.dock.appIcon {
+            let u = iconsDirectory.appendingPathComponent(filename)
+            if FileManager.default.fileExists(atPath: u.path) { return u }
+        }
+        return nil
+    }
+
+    /// Small square icon representing the theme (for the launcher's theme strip). Prefers
+    /// `dock.appIcon`, then a bundled `appIcon.png` / `icon.png`. Nil → caller shows a
+    /// placeholder (per-theme icons are supplied later).
+    func themeIconURL() -> URL? {
+        if let filename = config.dock.appIcon {
+            let u = iconsDirectory.appendingPathComponent(filename)
+            if FileManager.default.fileExists(atPath: u.path) { return u }
+        }
+        for name in ["appIcon.png", "icon.png"] {
+            let u = url.appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: u.path) { return u }
+        }
+        return nil
+    }
+
     func iconURL(for bundleID: String) -> URL? {
         guard let filename = config.iconMappings[bundleID] else { return nil }
         let iconURL = iconsDirectory.appendingPathComponent(filename)

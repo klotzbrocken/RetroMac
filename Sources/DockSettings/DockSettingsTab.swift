@@ -188,6 +188,12 @@ struct DockSettingsTab: View {
     private var behaviorCard: some View {
         RMCard(title: "Behavior", bodyPadding: 0) {
             VStack(spacing: 0) {
+                RMRow(label: "Show RetroMac in the Dock", hint: "Adds a theme-aware Dock icon; click it for a quick launcher (themes, effects, apps).") {
+                    Toggle("", isOn: $settings.dockModeEnabled)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                }
                 RMRow(label: "Show retro dock") {
                     Toggle("", isOn: $settings.dockEnabled)
                         .toggleStyle(.switch)

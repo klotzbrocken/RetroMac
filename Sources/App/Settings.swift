@@ -153,6 +153,15 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(coffeeAckDate, forKey: "coffeeAckDate") }
     }
 
+    /// Dock Mode: show a Dock icon (theme-aware) with a launcher popover. When off, the app
+    /// stays a menu-bar-only accessory. Posts `.dockModeChanged` so AppDelegate applies it.
+    @Published var dockModeEnabled: Bool {
+        didSet {
+            defaults.set(dockModeEnabled, forKey: "dockModeEnabled")
+            NotificationCenter.default.post(name: .dockModeChanged, object: nil)
+        }
+    }
+
     // Retro Mode (one-click distraction-free favourite)
     @Published var retroModeTheme: String {
         didSet { defaults.set(retroModeTheme, forKey: "retroModeTheme") }
@@ -539,6 +548,7 @@ final class AppSettings: ObservableObject {
         onboardingComplete = defaults.bool(forKey: "onboardingComplete")
         lastSeenVersion = defaults.string(forKey: "lastSeenVersion") ?? ""
         coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
+        dockModeEnabled = defaults.object(forKey: "dockModeEnabled") as? Bool ?? false
         retroModeTheme = defaults.string(forKey: "retroModeTheme") ?? "Maiks Favourite"
         retroModeShader = defaults.string(forKey: "retroModeShader") ?? ""
         retroModeHideDock = defaults.object(forKey: "retroModeHideDock") as? Bool ?? true
