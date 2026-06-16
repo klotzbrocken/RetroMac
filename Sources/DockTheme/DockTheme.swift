@@ -121,6 +121,7 @@ struct DockThemeConfig: Codable {
         var dockStyle: String?         // nil/"dock" (default), "controlStrip" (Mac OS 9 Control Strip)
         var windowPreview: Bool?       // hover a running app's icon ~2s → show a (pixel) window preview
         var folderStacks: Bool?        // click a folder dock item → fan out its recent files
+        var appIcon: String?           // icons/<file>: app's Dock icon in Dock Mode (theme-aware)
     }
 
     struct IconStyle: Codable {
