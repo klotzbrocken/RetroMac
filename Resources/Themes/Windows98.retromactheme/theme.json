@@ -38,6 +38,7 @@
     "startButton": true,
     "startButtonLabel": "Start",
     "startButtonIcon": "start.png",
+    "startMenuStyle": "classic",
     "showClock": true
   },
   "icon": {

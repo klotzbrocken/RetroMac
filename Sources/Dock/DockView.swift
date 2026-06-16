@@ -2,6 +2,7 @@ import AppKit
 
 final class DockView: NSView {
     private var itemViews: [DockItemView] = []
+    private var taskButtonViews: [TaskButtonView] = []   // Win98/XP per-window taskbar buttons
     // Resting Y-centres of vertical-dock icons, captured at layout time. The frame-based
     // vertical magnifier mutates item frames, so it must read REST positions from here
     // (not the live, already-magnified frames) to avoid compounding spacing/jitter.
@@ -330,6 +331,8 @@ final class DockView: NSView {
     func rebuildItems() {
         itemViews.forEach { $0.removeFromSuperview() }
         itemViews.removeAll()
+        taskButtonViews.forEach { $0.removeFromSuperview() }
+        taskButtonViews.removeAll()
         separatorX = nil
         separatorY = nil
         trashSeparatorX = nil
@@ -594,44 +597,77 @@ final class DockView: NSView {
                 diskFreeFrame = .zero
             }
 
-            for app in apps {
-                let y = (barRect.height - iconSize) / 2
-                addItem(bundleID: app.bundleID,
-                        frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                        theme: theme, iconSize: iconSize)
-                x += iconSize + spacing
-            }
-            if hasShowDesktop {
-                addShowDesktopItem(frame: NSRect(x: x, y: (barRect.height - iconSize) / 2,
-                                                 width: iconSize, height: iconSize),
-                                   theme: theme, iconSize: iconSize)
-                x += iconSize + spacing
-            }
-            let transientApps = runningAppsNotInDock()
-            if !transientApps.isEmpty {
-                separatorX = x - spacing / 2
-                x += spacing
-                for bid in transientApps {
-                    let y = (barRect.height - iconSize) / 2
-                    addItem(bundleID: bid,
-                            frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                            theme: theme, iconSize: iconSize, isTransient: true)
-                    x += iconSize + spacing
-                }
-            }
-
-            if hasUrlLauncher || hasTrash {
-                trashSeparatorX = x - spacing / 2
-                x += spacing
-                let y = (barRect.height - iconSize) / 2
-                if hasUrlLauncher {
-                    addURLLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+            // Win98 / XP show their open windows as elongated taskbar buttons (one per window),
+            // plus a launch button for each pinned app that isn't running. Other horizontal
+            // themes keep the classic icon tiles.
+            let winTaskbar = (theme.dock.startMenuStyle == "classic" || theme.isXPStartMenu)
+            if winTaskbar {
+                // Authentic Win98/XP layout: Start | Quick Launch (pinned apps as small icon
+                // tiles) | separator | task buttons (one elongated button per open window).
+                let quickLaunchStart = x
+                if hasShowDesktop {
+                    addShowDesktopItem(frame: NSRect(x: x, y: (barRect.height - iconSize) / 2,
+                                                     width: iconSize, height: iconSize),
                                        theme: theme, iconSize: iconSize)
                     x += iconSize + spacing
                 }
-                if hasTrash {
-                    addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                 theme: theme, iconSize: iconSize)
+                for app in apps {
+                    let y = (barRect.height - iconSize) / 2
+                    addItem(bundleID: app.bundleID,
+                            frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                            theme: theme, iconSize: iconSize)
+                    x += iconSize + spacing
+                }
+                if x > quickLaunchStart {           // had quick-launch icons → divider before tasks
+                    separatorX = x - spacing / 2
+                    x += spacing
+                }
+                // Keep the tabs clear of the systray separator. On XP the "show hidden icons"
+                // chevron straddles clockFrame.minX (its left half sits in the tab area), so
+                // reserve that half-width; a small gap keeps Win98 off the divider too.
+                var taskRightEdge = rightEdge - 2
+                if theme.isXPStartMenu { taskRightEdge -= max(14, iconSize * 0.55) * 0.9 + 4 }
+                addTaskButtonStrip(startX: x, rightEdge: taskRightEdge, barRect: barRect, theme: theme)
+            } else {
+                for app in apps {
+                    let y = (barRect.height - iconSize) / 2
+                    addItem(bundleID: app.bundleID,
+                            frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                            theme: theme, iconSize: iconSize)
+                    x += iconSize + spacing
+                }
+                if hasShowDesktop {
+                    addShowDesktopItem(frame: NSRect(x: x, y: (barRect.height - iconSize) / 2,
+                                                     width: iconSize, height: iconSize),
+                                       theme: theme, iconSize: iconSize)
+                    x += iconSize + spacing
+                }
+                let transientApps = runningAppsNotInDock()
+                if !transientApps.isEmpty {
+                    separatorX = x - spacing / 2
+                    x += spacing
+                    for bid in transientApps {
+                        let y = (barRect.height - iconSize) / 2
+                        addItem(bundleID: bid,
+                                frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                theme: theme, iconSize: iconSize, isTransient: true)
+                        x += iconSize + spacing
+                    }
+                }
+
+                if hasUrlLauncher || hasTrash {
+                    trashSeparatorX = x - spacing / 2
+                    x += spacing
+                    let y = (barRect.height - iconSize) / 2
+                    if hasUrlLauncher {
+                        addURLLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                           theme: theme, iconSize: iconSize)
+                        x += iconSize + spacing
+                    }
+                    if hasTrash {
+                        addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                     theme: theme, iconSize: iconSize)
+                    }
                 }
             }
         }
@@ -1032,6 +1068,80 @@ final class DockView: NSView {
     static let urlLauncherDefault = "https://myretromac.app"
     static var urlLauncherURL: String {
         UserDefaults.standard.string(forKey: "urlLauncherURL") ?? urlLauncherDefault
+    }
+
+    // MARK: - Win98/XP task buttons
+
+    /// One elongated taskbar button per open window (Win98/XP), plus a launch button for each
+    /// pinned app that isn't running. Fills the bar from `startX` up to the right-side trays.
+    private func addTaskButtonStrip(startX: CGFloat, rightEdge: CGFloat, barRect: NSRect, theme: DockThemeConfig) {
+        let style: TaskButtonView.Style = theme.isXPStartMenu ? .winxp : .win98
+        let models = buildTaskModels()
+        guard !models.isEmpty else { return }
+        let gap: CGFloat = 2
+        let available = max(0, rightEdge - startX - gap)
+        let n = CGFloat(models.count)
+        var bw = (available - gap * (n - 1)) / n
+        bw = min(160, max(40, bw))
+        let h = barRect.height - 4
+        let y = (barRect.height - h) / 2
+        var x = startX
+        for m in models {
+            if x + bw > rightEdge { break }   // don't draw under the trays
+            let btn = TaskButtonView(frame: NSRect(x: x, y: y, width: bw, height: h),
+                                     title: m.label, icon: m.icon, style: style, isActive: m.active)
+            let wasActive = m.active
+            btn.onClick = { [weak self, weak btn] in
+                m.action()
+                // Immediate feedback: clicking an active window minimizes it (→ inactive);
+                // clicking any other window raises it (→ active, others cleared). The 1.5s
+                // tracker poll reconciles the real state afterwards.
+                guard let self = self, let btn = btn else { return }
+                if wasActive {
+                    btn.setActive(false)
+                } else {
+                    for v in self.taskButtonViews { v.setActive(v === btn) }
+                }
+            }
+            addSubview(btn)
+            taskButtonViews.append(btn)
+            x += bw + gap
+        }
+    }
+
+    /// One task button per open window. Pinned apps already appear as Quick-Launch icon tiles,
+    /// so they are NOT repeated here as launch buttons — only their open windows show (exactly
+    /// like real Windows, where a quick-launch icon and its taskbar button are separate). Pinned
+    /// apps' windows are grouped first for a stable order, then any remaining windows.
+    private func buildTaskModels() -> [(label: String, icon: NSImage?, active: Bool, action: () -> Void)] {
+        var models: [(label: String, icon: NSImage?, active: Bool, action: () -> Void)] = []
+        let all = MinimizedWindowTracker.shared.allWindows
+        let pinnedBundles = Set(AppManager.shared.apps.map { $0.bundleID })
+        for bid in AppManager.shared.apps.map({ $0.bundleID }) {
+            for w in all where w.bundleID == bid { models.append(windowModel(w)) }
+        }
+        for w in all where !pinnedBundles.contains(w.bundleID) {
+            models.append(windowModel(w))
+        }
+        return models
+    }
+
+    private func windowModel(_ w: MinimizedWindowTracker.Entry) -> (label: String, icon: NSImage?, active: Bool, action: () -> Void) {
+        // Use the themed icon (respects the theme's custom icon mapping / pixelation),
+        // not the raw system icon, so program tabs match the rest of the themed dock.
+        let icon = ThemeManager.shared.icon(for: w.bundleID, size: 18)
+        // Active (focused, non-minimized) → minimize; minimized or background → restore + raise.
+        return (w.title, icon, w.isFocused && !w.isMinimized, {
+            if !w.isMinimized && w.isFocused { MinimizedWindowTracker.shared.minimize(w) }
+            else { MinimizedWindowTracker.shared.activate(w) }
+        })
+    }
+
+    private func appDisplayName(_ bundleID: String) -> String {
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+        }
+        return bundleID
     }
 
     private func addURLLauncherItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
@@ -2738,6 +2848,10 @@ final class DockView: NSView {
             if renderFrame.contains(local) {
                 return item
             }
+        }
+        // Win98/XP taskbar buttons (not in itemViews, no magnification → plain frame test).
+        for btn in taskButtonViews where btn.frame.contains(local) {
+            return btn
         }
         return nil
     }
