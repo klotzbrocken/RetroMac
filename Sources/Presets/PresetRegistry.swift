@@ -54,6 +54,8 @@ enum PresetRegistry {
             PresetInfo(id: "newpixie-crt", displayName: "NewPixie CRT", description: "Soft warm CRT + curvature"),
             PresetInfo(id: "newpixie", displayName: "NewPixie", description: "Soft pixelation + warm color"),
             PresetInfo(id: "curvature-x", displayName: "CurvatureX 0.01", description: "Very subtle barrel distortion"),
+            PresetInfo(id: "retro-crisis-composite", displayName: "Retro Crisis Composite", description: "GDV-NTSC composite look — dot crawl, chroma fringe, mask + scanlines"),
+            PresetInfo(id: "retro-crisis-rgb", displayName: "Retro Crisis RGB", description: "GDV clean RGB — crisp mask + scanlines, no composite noise"),
         ]),
         (.proMonitor, [
             PresetInfo(id: "pvm-2730qm", displayName: "Sony PVM 2730QM", description: "Pro monitor, sharp aperture grille"),

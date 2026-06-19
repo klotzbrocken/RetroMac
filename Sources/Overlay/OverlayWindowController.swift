@@ -119,12 +119,15 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         metalView.presentsWithTransaction = false
         metalView.delegate = self
 
-        let window: NSWindow
-        if let screen = screen {
-            window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false, screen: screen)
-        } else {
-            window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
-        }
+        // NOTE: do NOT pass `screen:` here. When a screen is supplied, AppKit interprets
+        // contentRect RELATIVE to that screen's origin — but `frame` is already in GLOBAL
+        // coordinates. On a secondary display (non-zero origin, e.g. the built-in when an
+        // external is main) that double-applies the offset and pushes the window offscreen
+        // (window.screen == nil), so it renders but is never visible. Create in global
+        // coordinates and set the frame explicitly.
+        _ = screen
+        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.setFrame(frame, display: false)
         // singleWindow overlay needs level 28 (above TV window at 25, above dock at 24, above start menu at 27)
         // fullScreen/singleDisplay uses level 28 (above start menu at 27)
         let overlayLevel: Int
@@ -411,14 +414,13 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
 
     func draw(in view: MTKView) {
         let viewID = ObjectIdentifier(view)
-        let (texture, isDirty) = textureLock.withLock {
-            let t = viewTextures[viewID]
-            let d = viewDirtyFlags[viewID] ?? false
-            if d { viewDirtyFlags[viewID] = false }
-            return (t, d)
-        }
-        guard isDirty, let texture = texture,
-              let drawable = view.currentDrawable else { return }
+        // Render the last captured texture EVERY tick, not only on a fresh frame. ScreenCaptureKit
+        // stops delivering frames once a display is static (it sends status-only frames with no
+        // buffer), so a "dirty"-gated draw left such a display (e.g. the built-in) permanently
+        // blank after its single frame. The ScreenCaptureManager now retains that frame's buffer,
+        // so its texture stays valid and re-presenting it is safe.
+        let texture = textureLock.withLock { viewTextures[viewID] }
+        guard let texture = texture, let drawable = view.currentDrawable else { return }
         renderer.render(sourceTexture: texture, to: drawable, viewportSize: view.drawableSize)
         fpsFrameCount += 1
     }
