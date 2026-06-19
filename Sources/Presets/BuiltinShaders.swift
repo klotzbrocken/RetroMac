@@ -120,6 +120,8 @@ enum BuiltinShaders {
         "grain-lite": grainLiteShader,
         // Special Thx
         "joel-gdv-ntsc": joelGdvNtscShader,
+        "retro-crisis-composite": retroCrisisCompositeShader,
+        "retro-crisis-rgb": retroCrisisRGBShader,
     ]
 
     // MARK: - zfast CRT — scanlines + chromatic aberration, NO barrel distortion
@@ -3033,6 +3035,150 @@ enum BuiltinShaders {
         // Vignette
         color = applyVignette(color, in.texCoord, uniforms.vignetteIntensity);
 
+        return float4(clamp(color, 0.0, 1.0), sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
+    // MARK: - Retro Crisis (GDV-NTSC) — single-pass Metal approximations of the multi-pass
+    // crt-guest-advanced-ntsc "Retro Crisis" preset pack (Guest.r). Two looks the pack centres
+    // on: a "Dirty" composite signal (full NTSC artifacts) and a "Clean" RGB feed (no composite
+    // noise, crisp mask + scanlines). Not a 1:1 port of the 18-pass chain — a tuned likeness.
+
+    private static let retroCrisisCompositeShader = """
+    float2 rcCurve(float2 uv, float cx, float cy) {
+        uv = uv * 2.0 - 1.0;
+        uv *= float2(1.0 + (uv.y * uv.y) * cx, 1.0 + (uv.x * uv.x) * cy);
+        return uv * 0.5 + 0.5;
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float intensity   = clamp(uniforms.intensity, 0.0, 1.0);
+        float time        = float(uniforms.frameCount) / 60.0;
+        float2 texSize    = uniforms.sourceSize.xy;
+        float2 outputSize = uniforms.outputSize.xy;
+
+        float2 uv = rcCurve(in.texCoord, 0.020 * intensity, 0.028 * intensity);
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+            return float4(0.0, 0.0, 0.0, sampleSourceAlpha(source, s, in.texCoord));
+
+        float3 original = source.sample(s, uv).rgb;
+        float3 color    = original;
+
+        // Composite dot crawl
+        float dotCrawl = sin(uv.x * texSize.x * M_PI_F * 2.0 / 3.0 + time * M_PI_F * 2.0) * 0.05 * intensity;
+        color.r += dotCrawl;
+        color.b -= dotCrawl;
+
+        // Chroma fringing
+        float cs = 0.0040 * intensity;
+        float cr = source.sample(s, clamp(uv + float2(cs, 0.0), float2(0.0), float2(1.0))).r;
+        float cb = source.sample(s, clamp(uv - float2(cs, 0.0), float2(0.0), float2(1.0))).b;
+        color.r  = mix(color.r, cr, 0.65 * intensity);
+        color.b  = mix(color.b, cb, 0.65 * intensity);
+
+        // Luma bandwidth blur (composite softness)
+        float3 t1 = source.sample(s, clamp(uv + float2(1.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        float3 t2 = source.sample(s, clamp(uv - float2(1.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        color = mix(color, color * 0.5 + t1 * 0.25 + t2 * 0.25, 0.5 * intensity);
+
+        // Rainbow edge artifacts
+        float luma    = dot(original, float3(0.299, 0.587, 0.114));
+        float lumaR   = dot(source.sample(s, clamp(uv + float2(1.5 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb, float3(0.299, 0.587, 0.114));
+        float edge    = abs(luma - lumaR);
+        float rainbow = sin(uv.x * texSize.x * M_PI_F + time * 3.0) * edge * 0.22 * intensity;
+        color.r += rainbow;
+        color.g -= rainbow * 0.5;
+        color.b += rainbow;
+
+        // NTSC warm tint
+        color *= float3(1.03, 1.0, 0.97);
+
+        // 525-line scanlines
+        float scan  = 0.5 + 0.5 * sin(uv.y * 525.0 * M_PI_F);
+        float depth = 0.10 * intensity;
+        color *= 1.0 - depth + depth * scan;
+
+        // Slot / aperture-grille mask
+        float colpx = uv.x * outputSize.x;
+        float phase = fract(fmod(colpx, 3.0) / 3.0);
+        float3 mask;
+        mask.r = 0.22 + 0.78 * (smoothstep(0.0,  0.15, phase) * smoothstep(0.48, 0.33, phase));
+        mask.g = 0.22 + 0.78 * (smoothstep(0.33, 0.48, phase) * smoothstep(0.81, 0.66, phase));
+        mask.b = 0.22 + 0.78 * (smoothstep(0.66, 0.81, phase) * smoothstep(1.0,  0.85, phase));
+        color *= mix(float3(1.0), mask, 0.32 * intensity);
+
+        // Horizontal glow / bloom
+        float3 glow = float3(0.0);
+        glow += source.sample(s, clamp(uv + float2(-3.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        glow += source.sample(s, clamp(uv + float2(-1.5 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        glow += source.sample(s, uv).rgb;
+        glow += source.sample(s, clamp(uv + float2( 1.5 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        glow += source.sample(s, clamp(uv + float2( 3.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        glow /= 5.0;
+        color += glow * 0.18 * intensity;
+
+        color = mix(original, clamp(color, 0.0, 1.0), intensity);
+        color = applyVignette(color, in.texCoord, uniforms.vignetteIntensity);
+        return float4(clamp(color, 0.0, 1.0), sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
+    private static let retroCrisisRGBShader = """
+    float2 rcCurve(float2 uv, float cx, float cy) {
+        uv = uv * 2.0 - 1.0;
+        uv *= float2(1.0 + (uv.y * uv.y) * cx, 1.0 + (uv.x * uv.x) * cy);
+        return uv * 0.5 + 0.5;
+    }
+
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float intensity   = clamp(uniforms.intensity, 0.0, 1.0);
+        float2 texSize    = uniforms.sourceSize.xy;
+        float2 outputSize = uniforms.outputSize.xy;
+
+        float2 uv = rcCurve(in.texCoord, 0.015 * intensity, 0.020 * intensity);
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+            return float4(0.0, 0.0, 0.0, sampleSourceAlpha(source, s, in.texCoord));
+
+        float3 original = source.sample(s, uv).rgb;
+        float3 color    = original;
+
+        // Clean RGB: light sharpen instead of composite blur
+        float3 blur = (source.sample(s, clamp(uv + float2(1.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb
+                     + source.sample(s, clamp(uv - float2(1.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb) * 0.5;
+        color = clamp(color + (color - blur) * 0.35 * intensity, 0.0, 1.5);
+
+        // Brightness-weighted scanlines (guest-style: bright lines bleed less)
+        float lum   = dot(color, float3(0.299, 0.587, 0.114));
+        float scan  = 0.5 + 0.5 * sin(uv.y * outputSize.y * M_PI_F);
+        float depth = mix(0.12, 0.03, lum) * intensity;
+        color *= 1.0 - depth + depth * scan;
+
+        // Aperture-grille / slot mask
+        float colpx = uv.x * outputSize.x;
+        float phase = fract(fmod(colpx, 3.0) / 3.0);
+        float3 mask;
+        mask.r = 0.25 + 0.75 * (smoothstep(0.0,  0.15, phase) * smoothstep(0.48, 0.33, phase));
+        mask.g = 0.25 + 0.75 * (smoothstep(0.33, 0.48, phase) * smoothstep(0.81, 0.66, phase));
+        mask.b = 0.25 + 0.75 * (smoothstep(0.66, 0.81, phase) * smoothstep(1.0,  0.85, phase));
+        color *= mix(float3(1.0), mask, 0.28 * intensity);
+
+        // Subtle horizontal phosphor glow
+        float3 glow = source.sample(s, clamp(uv + float2(-2.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb
+                    + source.sample(s, clamp(uv + float2( 2.0 / texSize.x, 0.0), float2(0.0), float2(1.0))).rgb;
+        color += glow * 0.06 * intensity;
+
+        color = mix(original, clamp(color, 0.0, 1.0), intensity);
+        color = applyVignette(color, in.texCoord, uniforms.vignetteIntensity);
         return float4(clamp(color, 0.0, 1.0), sampleSourceAlpha(source, s, in.texCoord));
     }
     """

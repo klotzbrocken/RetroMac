@@ -7,6 +7,7 @@ import AppKit
 final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
     private var stream: SCStream?
     private var textureCache: CVMetalTextureCache?
+    private var retainedTexture: CVMetalTexture?   // keeps the latest frame's IOSurface alive
     private let device: MTLDevice
     var onNewFrame: ((MTLTexture) -> Void)?
     private var hasReceivedFirstFrame = false
@@ -269,6 +270,13 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
             }
             return
         }
+
+        // Retain THIS frame's CVMetalTexture so its IOSurface stays alive. ScreenCaptureKit only
+        // delivers new frames when the display content changes; a static display (e.g. the
+        // built-in) sends one frame then goes idle. Without holding the buffer, SCK recycles it
+        // and the cached MTLTexture turns to garbage/black. Holding the latest keeps it valid so
+        // the overlay can keep presenting it. (Replaced — and the old one released — each frame.)
+        retainedTexture = cvTex
 
         if !hasReceivedFirstFrame {
             hasReceivedFirstFrame = true

@@ -69,6 +69,7 @@ struct AboutTab: View {
         ("vcr-tracking", "Inspired by VHS aesthetics", "Original"),
         ("cinema-film", "Inspired by analog film processing", "Original"),
         ("joel-gdv-ntsc", "Joel (Special Thanks)", "Contributed"),
+        ("retro-crisis", "Retro Crisis (inspired) — Guest.r, crt-guest-advanced-ntsc", "GPL-2.0"),
     ]
 
     var body: some View {
