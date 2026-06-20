@@ -6,6 +6,29 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.9.0</title>
+      <pubDate>Sat, 20 Jun 2026 13:38:59 +0000</pubDate>
+      <sparkle:version>1.9.0</sparkle:version>
+      <sparkle:shortVersionString>1.9.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.9 &mdash; Dock launcher, taskbar tabs &amp; shaders on every screen</h2>
+        <ul>
+          <li><b>Dock Mode &amp; quick launcher:</b> optionally show RetroMac in the Dock; click its icon for a slim launcher to switch themes and toggle the shader or virtual camera. Turn it on in Settings &#9656; Dock.</li>
+          <li><b>Authentic Windows taskbar:</b> Windows 98 and XP now show one elongated taskbar button per open window &mdash; click to minimize or restore, just like the real thing.</li>
+          <li><b>Shaders on all your displays:</b> the CRT shader now works on secondary monitors &mdash; &ldquo;All Displays&rdquo; lights up every screen, not just the main one.</li>
+          <li><b>New Retro Crisis shaders + fixes:</b> two GDV-NTSC &ldquo;Retro Crisis&rdquo; looks (Composite &amp; RGB), and the classic 98.js desktop apps (Notepad, Paint, Minesweeper&hellip;) work again.</li>
+          <li><b>Quick fix:</b> the Settings, Quit and Retro Mode icons in the menu could go missing on a dark desktop &mdash; they&rsquo;re back and reliable.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.9.0/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="FOAe2mY0Y54NG7nvGeGMCPYxba2EwK2QLNhnQ5ElRznFyxis8sZVkC+fmezo5UnvJTwRhKxmfwHMxqS4VcGhAQ=="
+        length="133940019"
+      />
+    </item>
+    <item>
       <title>Version 1.8.2</title>
       <pubDate>Mon, 15 Jun 2026 03:28:11 +0000</pubDate>
       <sparkle:version>1.8.2</sparkle:version>
