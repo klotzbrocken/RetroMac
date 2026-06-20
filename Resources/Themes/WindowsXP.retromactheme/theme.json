@@ -103,7 +103,7 @@
       "name": "Internet Explorer",
       "icon": "safari.png",
       "type": "webapp",
-      "url": "https://bored-entertainment.github.io/98.js/programs/explorer/index.html?address=https%3A%2F%2Fwww.amazon.com",
+      "url": "https://bored-win98.pisaucer.com/programs/explorer/index.html?address=https%3A%2F%2Fwww.amazon.com",
       "args": [
         "1020",
         "740"
@@ -115,7 +115,7 @@
       "name": "Notepad",
       "icon": "notepad98.png",
       "type": "webapp",
-      "url": "https://bored-entertainment.github.io/98.js/programs/notepad/index.html",
+      "url": "https://bored-win98.pisaucer.com/programs/notepad/index.html",
       "args": [
         "660",
         "500"
@@ -127,7 +127,7 @@
       "name": "Paint",
       "icon": "paint98.png",
       "type": "webapp",
-      "url": "https://bored-entertainment.github.io/98.js/programs/jspaint/index.html",
+      "url": "https://bored-win98.pisaucer.com/programs/jspaint/index.html",
       "args": [
         "920",
         "640"
@@ -139,7 +139,7 @@
       "name": "Minesweeper",
       "icon": "mines.png",
       "type": "webapp",
-      "url": "https://bored-entertainment.github.io/98.js/programs/minesweeper/index.html",
+      "url": "https://bored-win98.pisaucer.com/programs/minesweeper/index.html",
       "args": [
         "360",
         "460"
@@ -151,7 +151,7 @@
       "name": "Solitaire",
       "icon": "solitaire.png",
       "type": "webapp",
-      "url": "https://bored-entertainment.github.io/98.js/programs/js-solitaire/index.html",
+      "url": "https://bored-win98.pisaucer.com/programs/js-solitaire/index.html",
       "args": [
         "800",
         "600"
@@ -163,7 +163,7 @@
       "name": "3D Pinball",
       "icon": "pinball.png",
       "type": "webapp",
-      "url": "https://bored-entertainment.github.io/98.js/programs/pinball/space-cadet.html",
+      "url": "https://bored-win98.pisaucer.com/programs/pinball/space-cadet.html",
       "args": [
         "640",
         "620"
