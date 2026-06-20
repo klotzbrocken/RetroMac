@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 1.8")
+                Text("What's New in RetroMac 1.9")
                     .font(.title2.bold())
-                Text("Three new Special Themes — and even more retro vibes")
+                Text("A Dock launcher, real taskbar tabs, and shaders on every screen")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,31 +21,31 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "sparkles",
-                        color: .cyan,
-                        title: "New Special Themes — true to the originals",
-                        description: "Windows 98 (with classic games and sheep.exe!), Windows XP, and Mac OS X with its glossy Aqua look."
-                    )
-
-                    featureRow(
-                        icon: "globe",
+                        icon: "menubar.dock.rectangle",
                         color: .blue,
-                        title: "Surf the past",
-                        description: "Under Windows XP and Windows 98 you can now browse the web with Internet Explorer — just like back in the day."
+                        title: "Dock Mode & quick launcher",
+                        description: "Optionally show RetroMac in the Dock; click its icon for a slim launcher to switch themes and toggle the shader or virtual camera. Turn it on in Settings ▸ Dock."
                     )
 
                     featureRow(
-                        icon: "arrow.down.right.and.arrow.up.left.rectangle",
-                        color: .orange,
-                        title: "Smarter Minimize",
-                        description: "Windows now minimize into the right dock — the themed dock instead of the system Dock."
+                        icon: "rectangle.on.rectangle",
+                        color: .cyan,
+                        title: "Authentic Windows taskbar",
+                        description: "Windows 98 and XP now show one elongated taskbar button per open window — click to minimize or restore, just like the real thing."
                     )
 
                     featureRow(
-                        icon: "gauge.with.dots.needle.67percent",
+                        icon: "display.2",
                         color: .green,
-                        title: "New Widgets & lots of polish",
-                        description: "Fresh widgets like the CPU Monitor and Desktop Clock, plus stability improvements and a ton of detail work for even more retro vibes."
+                        title: "Shaders on all your displays",
+                        description: "Fixed the CRT shader on secondary monitors — \"All Displays\" now lights up every screen, not just the main one."
+                    )
+
+                    featureRow(
+                        icon: "tv.inset.filled",
+                        color: .orange,
+                        title: "New Retro Crisis shaders + fixes",
+                        description: "Two GDV-NTSC \"Retro Crisis\" looks (Composite & RGB), and the classic 98.js desktop apps (Notepad, Paint, Minesweeper…) work again."
                     )
                 }
                 .padding(.horizontal, 24)
