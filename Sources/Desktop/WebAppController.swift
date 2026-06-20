@@ -25,13 +25,21 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         c.show()
     }
 
-    /// True only for the exact 98.js host + path prefix (https://bored-entertainment.github.io/98.js/…).
+    /// Hosts that serve the self-contained 98.js apps and may carry the native Save/Print
+    /// bridge. The project moved from GitHub Pages to its own domain — the old github.io URL
+    /// now 301-redirects there, so both must be trusted (otherwise the cross-host redirect is
+    /// blocked by the navigation confinement below and the app never loads).
+    static func isTrusted98Host(_ host: String?) -> Bool {
+        host == "bored-win98.pisaucer.com" || host == "bored-entertainment.github.io"
+    }
+
+    /// True only for a trusted 98.js host (current dedicated domain, or the legacy github.io
+    /// path-scoped URL which redirects to it).
     static func isTrusted98App(_ urlString: String) -> Bool {
-        guard let c = URLComponents(string: urlString),
-              c.scheme == "https",
-              c.host == "bored-entertainment.github.io",
-              c.path.hasPrefix("/98.js/") else { return false }
-        return true
+        guard let c = URLComponents(string: urlString), c.scheme == "https" else { return false }
+        if c.host == "bored-win98.pisaucer.com" { return true }
+        if c.host == "bored-entertainment.github.io" && c.path.hasPrefix("/98.js/") { return true }
+        return false
     }
 
     static func closeAll() {
@@ -161,7 +169,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
            navigationAction.targetFrame?.isMainFrame == true,
            let url = navigationAction.request.url,
            let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
-           url.host != "bored-entertainment.github.io" {
+           !Self.isTrusted98Host(url.host) {
             decisionHandler(.cancel); return
         }
         decisionHandler(.allow)
