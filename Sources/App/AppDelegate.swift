@@ -340,9 +340,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private final class MenuHeaderView: NSView {
         private let presetLabel = NSTextField(labelWithString: "")
         private let statusLabel = NSTextField(labelWithString: "")
-        private let gearButton = NSButton()
-        private let quitButton = NSButton()
-        private let retroButton = NSButton()
+        private let gearButton = NSImageView()
+        private let quitButton = NSImageView()
+        private let retroButton = NSImageView()
         private let iconView = NSView()
         private let glowDot = NSView(frame: NSRect(x: 9, y: 9, width: 8, height: 8))
         private var onGear: (() -> Void)?
@@ -383,37 +383,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             statusLabel.lineBreakMode = .byTruncatingTail
             addSubview(statusLabel)
 
-            // Gear button — far right
-            gearButton.bezelStyle = .inline
-            gearButton.isBordered = false
+            // Gear / quit / retro icons — far right. These use NSImageView, not
+            // borderless NSButton: an image-only borderless button renders invisibly
+            // inside a vibrant menu-item view on some setups (e.g. dark desktop on
+            // Sequoia), while NSImageView honours contentTintColor reliably. Clicks are
+            // dispatched from mouseUp(with:) below, mirroring MenuToggleRowView.
             let gearConfig = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
             gearButton.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Settings")?
                 .withSymbolConfiguration(gearConfig)
-            gearButton.imagePosition = .imageOnly
             gearButton.contentTintColor = .secondaryLabelColor
-            gearButton.target = self
-            gearButton.action = #selector(gearTapped)
+            gearButton.toolTip = "Settings"
             addSubview(gearButton)
 
-            // Quit button — left of the gear
-            quitButton.bezelStyle = .inline
-            quitButton.isBordered = false
+            // Quit icon — left of the gear
             quitButton.image = NSImage(systemSymbolName: "power", accessibilityDescription: "Quit RetroMac")?
                 .withSymbolConfiguration(gearConfig)
-            quitButton.imagePosition = .imageOnly
             quitButton.contentTintColor = .secondaryLabelColor
             quitButton.toolTip = "Quit RetroMac"
-            quitButton.target = self
-            quitButton.action = #selector(quitTapped)
             addSubview(quitButton)
 
-            // Retro Mode toggle — left of quit
-            retroButton.bezelStyle = .inline
-            retroButton.isBordered = false
-            retroButton.imagePosition = .imageOnly
+            // Retro Mode toggle — left of quit (image + tint set in update())
             retroButton.toolTip = "Retro Mode — hide desktop & apply your favourite"
-            retroButton.target = self
-            retroButton.action = #selector(retroTapped)
             addSubview(retroButton)
 
             // Apply initial state
@@ -449,6 +439,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         required init?(coder: NSCoder) { fatalError() }
+
+        /// The three icons are NSImageViews, so route clicks here (same approach as
+        /// MenuToggleRowView). Hit areas are padded since the icons are only 24×24.
+        override func mouseUp(with event: NSEvent) {
+            let p = convert(event.locationInWindow, from: nil)
+            if gearButton.frame.insetBy(dx: -2, dy: -8).contains(p) { gearTapped() }
+            else if quitButton.frame.insetBy(dx: -2, dy: -8).contains(p) { quitTapped() }
+            else if retroButton.frame.insetBy(dx: -2, dy: -8).contains(p) { retroTapped() }
+        }
 
         @objc private func gearTapped() {
             if let menu = enclosingMenuItem?.menu {

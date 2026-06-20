@@ -47,6 +47,13 @@ struct WhatsNewView: View {
                         title: "New Retro Crisis shaders + fixes",
                         description: "Two GDV-NTSC \"Retro Crisis\" looks (Composite & RGB), and the classic 98.js desktop apps (Notepad, Paint, Minesweeper…) work again."
                     )
+
+                    featureRow(
+                        icon: "wrench.and.screwdriver",
+                        color: .gray,
+                        title: "Quick fix: menu buttons",
+                        description: "The Settings, Quit and Retro Mode icons in the menu could go missing on a dark desktop — they're back and reliable."
+                    )
                 }
                 .padding(.horizontal, 24)
             }
