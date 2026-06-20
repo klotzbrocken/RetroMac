@@ -1,21 +1,38 @@
-MIT License
+RetroMac License — All Rights Reserved (Source-Available)
 
-Copyright (c) 2026 Maik Klotz
+Copyright (c) 2026 Maik Klotz. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This source code is made available for reference, evaluation, and personal
+study only. It is NOT open-source software.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+You MAY:
+  - View and read the source code.
+  - Build it locally for your own personal, non-commercial evaluation.
+
+You MAY NOT, without prior written permission from the copyright holder:
+  - Redistribute, publish, sublicense, or sell this software or substantial
+    portions of it, in source or binary form, modified or unmodified.
+  - Use this software or any part of it for commercial purposes.
+  - Distribute modified versions, forks, or derivative works.
+  - Remove, disable, or circumvent any licensing, activation, or
+    feature-gating mechanism.
+
+The official RetroMac application is distributed as a separate, notarized
+binary and is governed by its own end-user terms.
+
+THIRD-PARTY COMPONENTS
+This repository includes shader ports and assets derived from third-party
+projects that remain under their own upstream licenses (for example, several
+CRT shaders are GPL-2.0 or MIT). Those components keep their original licenses
+and are credited in the app under Settings ▸ About. Nothing in this license
+overrides or relicenses those third-party terms.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+AUTHOR OR COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+For licensing inquiries, contact: maik.klotz@gmail.com
