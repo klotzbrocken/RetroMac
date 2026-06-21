@@ -162,6 +162,27 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// When a theme is selected, automatically turn on its CRT shader (if it defines one).
+    @Published var shaderOnThemeChange: Bool {
+        didSet { defaults.set(shaderOnThemeChange, forKey: "shaderOnThemeChange") }
+    }
+    /// When a theme is selected, also show its desktop widgets (currently the Clock); when
+    /// off, themes only apply dock & wallpaper.
+    @Published var themeIncludeWidgets: Bool {
+        didSet { defaults.set(themeIncludeWidgets, forKey: "themeIncludeWidgets") }
+    }
+    /// Set once the post-install Setup Assistant has been completed/dismissed.
+    @Published var setupWizardComplete: Bool {
+        didSet { defaults.set(setupWizardComplete, forKey: "setupWizardComplete") }
+    }
+    /// Show the floating, draggable launcher button (bottom-right by default).
+    @Published var floatingLauncherEnabled: Bool {
+        didSet {
+            defaults.set(floatingLauncherEnabled, forKey: "floatingLauncherEnabled")
+            FloatingLauncherButton.shared.setEnabled(floatingLauncherEnabled)
+        }
+    }
+
     // Retro Mode (one-click distraction-free favourite)
     @Published var retroModeTheme: String {
         didSet { defaults.set(retroModeTheme, forKey: "retroModeTheme") }
@@ -549,6 +570,10 @@ final class AppSettings: ObservableObject {
         lastSeenVersion = defaults.string(forKey: "lastSeenVersion") ?? ""
         coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
         dockModeEnabled = defaults.object(forKey: "dockModeEnabled") as? Bool ?? false
+        shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? true
+        themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? false
+        setupWizardComplete = defaults.bool(forKey: "setupWizardComplete")
+        floatingLauncherEnabled = defaults.object(forKey: "floatingLauncherEnabled") as? Bool ?? true
         retroModeTheme = defaults.string(forKey: "retroModeTheme") ?? "Maiks Favourite"
         retroModeShader = defaults.string(forKey: "retroModeShader") ?? ""
         retroModeHideDock = defaults.object(forKey: "retroModeHideDock") as? Bool ?? true
