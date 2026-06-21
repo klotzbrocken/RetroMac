@@ -71,7 +71,7 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
     func applyForCurrentTheme() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            if self.enabledForActiveTheme { self.show() } else { self.hide() }
+            if self.enabledForActiveTheme { self.show() } else { self.destroy() }
         }
     }
 
@@ -105,8 +105,16 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
         panel?.orderFrontRegardless()
     }
 
-    private func hide() {
+    /// Cold teardown — removes the "pet" script-message handler (breaks the
+    /// userContentController→self retain cycle) and releases the WebView + WebContent process.
+    private func destroy() {
         hoverTimer?.invalidate(); hoverTimer = nil
+        if let wv = webView {
+            wv.stopLoading()
+            wv.navigationDelegate = nil
+            wv.configuration.userContentController.removeAllScriptMessageHandlers()
+            wv.removeFromSuperview()
+        }
         panel?.orderOut(nil)
         panel = nil; webView = nil; petScreenRect = .zero
     }

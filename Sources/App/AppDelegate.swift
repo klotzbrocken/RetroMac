@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var currentVignetteIntensity: Float!
     private let settingsWindow = SettingsWindowController()
     private let welcomeFlow = WelcomeFlowWindowController()
+    private let setupWizard = SetupWizardWindowController()
     private let fpsOverlay = FPSOverlayController()
     private let windowPicker = WindowPicker()
     private let tvBrowser = TVBrowserWindow()
@@ -90,6 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ScreensaverController.shared.beginIdleWatch()   // works regardless of the themed dock
 
         applyDockMode()   // .accessory (menu-bar only) or .regular (Dock icon) per setting
+        if AppSettings.shared.floatingLauncherEnabled { FloatingLauncherButton.shared.show() }
         setupMenuBar()
         registerHotkey()
         TimerController.shared.start()
@@ -143,9 +145,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.dockEnabled = false
         isActive = false
 
-        // Unified welcome flow: What's New → Setup → Coffee/Unlock, shown conditionally.
+        // First run: the Setup Assistant is the primary onboarding (incl. permissions).
+        // After it finishes, fall through to the welcome flow for What's New / Coffee.
+        // On subsequent launches the wizard is skipped and only the welcome flow runs.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            self.welcomeFlow.showIfNeeded()
+            if !AppSettings.shared.setupWizardComplete {
+                self.setupWizard.onFinishExtra = { [weak self] in self?.welcomeFlow.showIfNeeded() }
+                self.setupWizard.show()
+            } else {
+                self.welcomeFlow.showIfNeeded()
+            }
         }
 
         // Sparkle auto-updates (checks automatically on launch)
@@ -171,6 +180,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             NSApp.setActivationPolicy(.accessory)
             LauncherController.shared.close()
+            LauncherController.shared.closeWindow()
         }
     }
 
@@ -185,10 +195,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Left-click on the Dock icon (no windows) → toggle the launcher popover.
+    /// Left-click on the Dock icon (no windows) → toggle the launcher window (movable).
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if AppSettings.shared.dockModeEnabled {
-            LauncherController.shared.toggle()
+            LauncherController.shared.toggleWindow()
         }
         return true
     }
@@ -244,11 +254,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var launcherShaderActive: Bool { isActive }
     var launcherCurrentPreset: String { currentPresetName ?? AppSettings.shared.defaultPreset }
 
+    /// The menu-bar glyph as a template image (used by the floating launcher button).
+    func menuBarIconImage(size: NSSize) -> NSImage {
+        let icon = makeMenuBarIcon(size: size, active: isActive)
+        icon.isTemplate = true
+        return icon
+    }
+
     private func updateMenuBarIcon() {
         guard let button = statusItem.button else { return }
         let icon = makeMenuBarIcon(size: NSSize(width: 18, height: 18), active: isActive)
         icon.isTemplate = true
         button.image = icon
+        FloatingLauncherButton.shared.refreshIcon()
     }
 
     private func makeMenuBarIcon(size: NSSize, active: Bool = false) -> NSImage {
@@ -1124,6 +1142,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         screenshotItem.isEnabled = isActive || retroViewport.isActive
         menu.addItem(screenshotItem)
 
+        menu.addItem(NSMenuItem.separator())
+        let wizardItem = NSMenuItem(title: "Setup Assistant\u{2026}", action: #selector(openSetupWizard), keyEquivalent: "")
+        wizardItem.target = self
+        wizardItem.image = sfIcon("wand.and.stars")
+        menu.addItem(wizardItem)
+
+        let floatItem = NSMenuItem(title: "Floating Launcher Button", action: #selector(toggleFloatingLauncher), keyEquivalent: "")
+        floatItem.target = self
+        floatItem.image = sfIcon("circle.dashed")
+        floatItem.state = AppSettings.shared.floatingLauncherEnabled ? .on : .off
+        menu.addItem(floatItem)
+
         // Quit moved to a power symbol in the header; Reset Permissions moved to Settings.
         statusItem.menu = menu
     }
@@ -1751,6 +1781,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow.show()
     }
 
+    /// Launch the post-install Setup Assistant on demand (menu / Settings ▸ Overview).
+    @objc func openSetupWizard() {
+        setupWizard.show()
+    }
+
+    /// Toggle the floating, draggable launcher button.
+    @objc func toggleFloatingLauncher() {
+        AppSettings.shared.floatingLauncherEnabled.toggle()
+        rebuildMenu()
+    }
+
     @objc private func openTVBookmark(_ sender: NSMenuItem) {
         guard let idString = sender.representedObject as? String,
               let uuid = UUID(uuidString: idString),
@@ -2065,12 +2106,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 retroViewport.switchPreset(preset)
             } else if isActive {
                 applyPreset(preset)
-            } else {
+            } else if settings.shaderOnThemeChange {
                 currentPresetName = preset
                 startOverlay(mode: .fullScreen)
+            } else {
+                // Remember the theme's preset but don't auto-activate the shader.
+                currentPresetName = preset
             }
         }
+        applyThemeWidgets(for: name)
         rebuildMenu()
+    }
+
+    /// Show or hide the theme's desktop widgets based on the `themeIncludeWidgets`
+    /// preference (set in the Setup Assistant). First version = the desktop Clock.
+    private func applyThemeWidgets(for themeName: String) {
+        if AppSettings.shared.themeIncludeWidgets {
+            ClockWidgetController.shared.show()
+        } else {
+            ClockWidgetController.shared.destroy()   // fully release the WebView when widgets are off
+        }
     }
 
     /// Apply the active theme's shader preset when theme changes (from Settings or menu).
@@ -2092,9 +2147,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 retroViewport.switchPreset(preset)
             } else if isActive {
                 applyPreset(preset)
-            } else {
+            } else if settings.shaderOnThemeChange {
                 currentPresetName = preset
                 startOverlay(mode: .fullScreen)
+            } else {
+                currentPresetName = preset
             }
         }
         rebuildMenu()

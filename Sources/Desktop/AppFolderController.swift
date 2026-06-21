@@ -27,10 +27,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
     /// On theme switch, drop the cached window so it rebuilds fresh (correct chrome, no
     /// stale collapsed/zoom state — fixes the "only BeOS tab, no window" carry-over).
-    @objc private func themeChanged() {
-        panel?.close(); panel = nil; webView = nil; dragOverlay = nil
-        collapsed = false; preZoomFrame = nil; preCollapseHeight = 0
-    }
+    @objc private func themeChanged() { destroy() }
 
     func toggle() { if panel?.isVisible == true { close() } else { show() } }
 
@@ -92,7 +89,22 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         panel?.orderFrontRegardless()
     }
 
+    /// Warm hide — keeps the WebView alive for instant reopen.
     func close() { panel?.orderOut(nil) }
+
+    /// Cold teardown — removes the script-message handler and releases the WebView.
+    func destroy() {
+        if let wv = webView {
+            wv.stopLoading()
+            wv.navigationDelegate = nil
+            wv.configuration.userContentController.removeAllScriptMessageHandlers()
+            wv.removeFromSuperview()
+        }
+        webView = nil
+        dragOverlay = nil
+        panel?.orderOut(nil); panel = nil
+        collapsed = false; preZoomFrame = nil; preCollapseHeight = 0
+    }
 
     private func resizeTo(_ w: CGFloat, _ h: CGFloat) {
         guard let panel = panel, let screen = NSScreen.main else { return }

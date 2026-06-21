@@ -23,10 +23,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
     }
 
     /// Rebuild the widget fresh on theme switch (correct chrome, no stale collapsed/zoom state).
-    @objc private func themeChanged() {
-        timer?.invalidate(); timer = nil
-        panel?.close(); panel = nil; webView = nil; dragOverlay = nil
-    }
+    @objc private func themeChanged() { destroy() }
 
     func toggle() {
         if panel?.isVisible == true { close() } else { show() }
@@ -83,11 +80,29 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
         startSampling()
     }
 
+    /// Warm hide — stops sampling but keeps the WebView for instant reopen.
     func close() {
         saveOrigin()
         timer?.invalidate(); timer = nil
         prev = nil
         panel?.orderOut(nil)
+    }
+
+    /// Cold teardown — removes the script-message handler and releases the WebView.
+    func destroy() {
+        saveOrigin()
+        timer?.invalidate(); timer = nil
+        prev = nil
+        if let mo = moveObserver { NotificationCenter.default.removeObserver(mo); moveObserver = nil }
+        if let wv = webView {
+            wv.stopLoading()
+            wv.navigationDelegate = nil
+            wv.configuration.userContentController.removeAllScriptMessageHandlers()
+            wv.removeFromSuperview()
+        }
+        webView = nil
+        dragOverlay = nil
+        panel?.orderOut(nil); panel = nil
     }
 
     private let posKey = "cpuMonitorOrigin"
