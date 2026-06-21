@@ -133,8 +133,10 @@ final class MinimizedWindowTracker {
             }
             let minimized = all.filter { $0.isMinimized }
             DispatchQueue.main.async {
-                self.scanInProgress = false
+                // Check generation FIRST: a stale scan must not clear a newer scan's in-progress
+                // flag (that would let a third scan start while the newer one is still running).
                 guard gen == self.scanGeneration else { return }   // superseded by stop()/newer scan
+                self.scanInProgress = false
                 func sig(_ list: [Entry]) -> [String] {
                     list.map { "\($0.bundleID)|\($0.title)|\($0.isMinimized ? 1 : 0)|\($0.isFocused ? 1 : 0)" }
                 }
