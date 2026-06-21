@@ -10,6 +10,7 @@ struct DockSettingsTab: View {
     @State private var showingSaveSheet: Bool = false
     @State private var iconOverrideRefresh: Bool = false
     @State private var showAllApps: Bool = false
+    @State private var showAdvanced: Bool = false
 
     private var selectedThemeConfig: DockThemeConfig? {
         themes.first(where: { $0.name == settings.dockTheme })?.config
@@ -27,17 +28,24 @@ struct DockSettingsTab: View {
                 // 1. Theme cards
                 themeSection
 
-                // 2. Behavior + Appearance side by side
-                HStack(alignment: .top, spacing: RMSpacing.xxl) {
-                    behaviorCard
-                    appearanceCard
-                }
+                // 2. Behavior (core)
+                behaviorCard
 
                 // 3. Apps in the dock
                 appsCard
 
-                // 4. Advanced (shader, wallpaper, system icons, management)
-                advancedSection
+                // 4. Advanced — appearance fine-tuning, wallpaper, shader, system icons,
+                //    management — collapsed by default to keep the tab simple.
+                DisclosureGroup(isExpanded: $showAdvanced) {
+                    VStack(spacing: RMSpacing.section) {
+                        appearanceCard
+                        advancedSection
+                    }
+                    .padding(.top, 8)
+                } label: {
+                    Label("Advanced appearance & themes", systemImage: "slider.horizontal.3")
+                        .font(.headline)
+                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
