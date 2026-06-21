@@ -382,6 +382,11 @@ final class AppSettings: ObservableObject {
     @Published var doomWadFolder: String {
         didSet { defaults.set(doomWadFolder, forKey: "doomWadFolder") }
     }
+    /// Single global switch for the CRT look across all bundled PC games (replaces the old
+    /// per-game CRT/VHS/Warp toggles). Drives the GZDoom/Raze SH_CRTEnable shader pass.
+    @Published var gamesCRTEnabled: Bool {
+        didSet { defaults.set(gamesCRTEnabled, forKey: "gamesCRTEnabled") }
+    }
     @Published var doomCRTShaderEnabled: Bool {
         didSet { defaults.set(doomCRTShaderEnabled, forKey: "doomCRTShaderEnabled") }
     }
@@ -648,6 +653,7 @@ final class AppSettings: ObservableObject {
         // Games — Doom
         let defaultWadDir = NSHomeDirectory() + "/Library/Application Support/gzdoom"
         doomWadFolder = defaults.string(forKey: "doomWadFolder") ?? defaultWadDir
+        gamesCRTEnabled = defaults.object(forKey: "gamesCRTEnabled") as? Bool ?? true
         doomCRTShaderEnabled = defaults.object(forKey: "doomCRTShaderEnabled") as? Bool ?? true
         doomVHSEnabled = defaults.bool(forKey: "doomVHSEnabled")
         doomWarpEnabled = defaults.object(forKey: "doomWarpEnabled") as? Bool ?? true

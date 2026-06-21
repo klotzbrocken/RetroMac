@@ -57,6 +57,13 @@ struct GamesSettingsTab: View {
 
     var body: some View {
         Form {
+            // One global CRT switch for all bundled PC games (replaces per-game toggles).
+            Section("Game effects") {
+                Toggle("Apply CRT effect to games", isOn: $settings.gamesCRTEnabled)
+                Text("Adds the bundled CRT shader to Doom, Raze, Heretic, Shadow Warrior and Freedoom.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             // Retro Console ROMs (drop zone + library)
             Section("Retro Games") {
                 ROMDropZone()
@@ -155,53 +162,6 @@ struct GamesSettingsTab: View {
                 .font(.caption)
             }
 
-            Divider()
-
-            // Window Size
-            Picker("Window Size", selection: Binding(
-                get: { DoomWindowSize(width: settings.doomWindowWidth, height: settings.doomWindowHeight) },
-                set: { size in
-                    settings.doomWindowWidth = size.width
-                    settings.doomWindowHeight = size.height
-                }
-            )) {
-                ForEach(DoomWindowSize.allCases) { size in
-                    Text(size.displayName).tag(size)
-                }
-            }
-            .pickerStyle(.menu)
-
-            Divider()
-
-            // Shader settings
-            Text("Shaders")
-                .font(.headline)
-
-            Toggle("CRT Effect", isOn: $settings.doomCRTShaderEnabled)
-            Text("Classic CRT scanline and curvature effect.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Toggle("Screen Warp", isOn: $settings.doomWarpEnabled)
-            Text("Subtle screen distortion for retro feel.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Toggle("VHS Noise", isOn: $settings.doomVHSEnabled)
-            Text("Adds VHS tape noise and tracking lines.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            if !hasCRTPK3() {
-                HStack(spacing: 4) {
-                    Image(systemName: "info.circle")
-                        .font(.caption)
-                        .foregroundStyle(.blue)
-                    Text("Shader PK3 not found in app bundle. Shaders won't be applied.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
             }
         }
     }
@@ -279,29 +239,6 @@ struct GamesSettingsTab: View {
                 .font(.caption)
             }
 
-            Divider()
-
-            // Window Size
-            Picker("Window Size", selection: Binding(
-                get: { DoomWindowSize(width: settings.razeWindowWidth, height: settings.razeWindowHeight) },
-                set: { size in
-                    settings.razeWindowWidth = size.width
-                    settings.razeWindowHeight = size.height
-                }
-            )) {
-                ForEach(DoomWindowSize.allCases) { size in
-                    Text(size.displayName).tag(size)
-                }
-            }
-            .pickerStyle(.menu)
-
-            Divider()
-
-            // CRT Overlay (uses RetroMac screen overlay, not PK3)
-            Toggle("CRT Overlay", isOn: $settings.razeCRTShaderEnabled)
-            Text("Apply RetroMac CRT shader overlay to the game window on launch.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
         }
     }
@@ -343,12 +280,6 @@ struct GamesSettingsTab: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Divider()
-
-            Toggle("CRT Effect", isOn: $settings.hereticCRTShaderEnabled)
-            Text("Classic CRT scanline and curvature effect via PK3 shader.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
         }
     }
@@ -371,13 +302,6 @@ struct GamesSettingsTab: View {
             Text("Uses Raze engine and GRP folder from Duke Nukem 3D settings.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-
-            Divider()
-
-            Toggle("CRT Overlay", isOn: $settings.shadowWarriorCRTEnabled)
-            Text("Apply RetroMac CRT shader overlay to the game window on launch.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
         }
     }
@@ -398,13 +322,6 @@ struct GamesSettingsTab: View {
             }
 
             Text("Freedoom is a free, open-source replacement for Doom. Auto-downloads on first launch.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Divider()
-
-            Toggle("CRT Shader", isOn: $settings.freedoomCRTShaderEnabled)
-            Text("Native GZDoom CRT shader (no input lag).")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
@@ -597,7 +514,4 @@ struct GamesSettingsTab: View {
         path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
     }
 
-    private func hasCRTPK3() -> Bool {
-        Bundle.main.path(forResource: "RetroMac-CRT", ofType: "pk3") != nil
-    }
 }
