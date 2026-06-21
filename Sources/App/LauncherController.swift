@@ -4,21 +4,36 @@ import SwiftUI
 /// Dock Mode launcher: a slim, popover-styled borderless panel shown just above the Dock
 /// when the user left-clicks RetroMac's Dock icon. Quick access to themes, effect toggles,
 /// the active theme's apps, and Settings/Quit. Closes on outside click or Esc.
+/// Borderless launcher window that can still become key (so its controls take keyboard
+/// focus) and closes on Escape. A plain borderless NSWindow returns false for canBecomeKey.
+private final class LauncherWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+    var onCancel: (() -> Void)?
+    override func cancelOperation(_ sender: Any?) { onCancel?() }
+}
+
 final class LauncherController {
     static let shared = LauncherController()
 
     private var panel: NSPanel?
+    private var window: NSWindow?
     private var globalMonitor: Any?
     private var localMonitor: Any?
 
     var isOpen: Bool { panel?.isVisible == true }
+    var isWindowOpen: Bool { window?.isVisible == true }
 
     func toggle() { isOpen ? close() : open() }
+    func toggle(anchorRect: NSRect?) { isOpen ? close() : open(anchorRect: anchorRect) }
+    func toggleWindow() { isWindowOpen ? closeWindow() : openWindow() }
 
-    func open() {
+    /// Open the popover. When `anchorRect` (screen coords, e.g. the floating button's frame)
+    /// is given, the popover hangs next to it instead of centring above the Dock.
+    func open(anchorRect: NSRect? = nil) {
         if panel == nil { buildPanel() }
         guard let panel = panel else { return }
-        position(panel)
+        if let rect = anchorRect { position(panel, near: rect) } else { position(panel) }
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         installDismissMonitors()
@@ -27,6 +42,41 @@ final class LauncherController {
     func close() {
         removeDismissMonitors()
         panel?.orderOut(nil)
+    }
+
+    // MARK: - Window mode (Dock Mode: a real, movable, persistent window)
+
+    func openWindow() {
+        if window == nil { buildWindow() }
+        guard let window = window else { return }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func closeWindow() { window?.orderOut(nil) }
+
+    private func buildWindow() {
+        let host = NSHostingView(rootView: LauncherView { [weak self] in self?.closeWindow() })
+        host.setFrameSize(host.fittingSize)
+        let w = LauncherWindow(contentRect: NSRect(origin: .zero, size: host.fittingSize),
+                               styleMask: [.borderless, .fullSizeContentView],
+                               backing: .buffered, defer: false)
+        w.isOpaque = false
+        w.backgroundColor = .clear
+        w.hasShadow = true
+        w.isMovableByWindowBackground = true   // drag the card anywhere to move it
+        w.level = .floating
+        w.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        w.onCancel = { [weak self] in self?.closeWindow() }   // Esc closes the window
+        w.contentView = host
+        // Restore the remembered position; first ever launch → sit just above the Dock.
+        if !w.setFrameUsingName("RetroMacLauncherWindow") {
+            if let vf = NSScreen.main?.visibleFrame {
+                w.setFrameOrigin(NSPoint(x: vf.midX - w.frame.width / 2, y: vf.minY + 12))
+            } else { w.center() }
+        }
+        w.setFrameAutosaveName("RetroMacLauncherWindow")
+        window = w
     }
 
     private func buildPanel() {
@@ -57,6 +107,21 @@ final class LauncherController {
         panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
 
+    /// Position the popover hanging next to `rect` (the floating button): above it and
+    /// right-aligned, flipping below if there's no room, clamped to the visible frame.
+    private func position(_ panel: NSPanel, near rect: NSRect) {
+        if let host = panel.contentView { panel.setContentSize(host.fittingSize) }
+        let size = panel.frame.size
+        let screen = NSScreen.screens.first { $0.frame.contains(NSPoint(x: rect.midX, y: rect.midY)) } ?? NSScreen.main
+        guard let vf = screen?.visibleFrame else { position(panel); return }
+        var x = rect.maxX - size.width          // right edges aligned
+        var y = rect.maxY + 8                    // hang above the button
+        if y + size.height > vf.maxY { y = rect.minY - 8 - size.height }   // no room above → below
+        x = min(max(x, vf.minX + 8), vf.maxX - size.width - 8)
+        y = min(max(y, vf.minY + 8), vf.maxY - size.height - 8)
+        panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
     private func installDismissMonitors() {
         removeDismissMonitors()
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -68,8 +133,11 @@ final class LauncherController {
                 if event.keyCode == 53 { self.close(); return nil }   // Esc
                 return event
             }
-            // Click outside the panel → dismiss.
-            if event.window !== panel { self.close() }
+            // Click outside the panel → dismiss. Clicks on the floating button are left to
+            // the button itself (so it can toggle the popover closed).
+            if event.window !== panel && event.window !== FloatingLauncherButton.shared.buttonWindow {
+                self.close()
+            }
             return event
         }
     }

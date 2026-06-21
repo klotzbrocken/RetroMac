@@ -230,9 +230,11 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                             }
                         }
                         manager.onFirstFrame = { [weak self] in
-                            guard let self = self else { return }
-                            metalView.isPaused = false
-                            self.handleFirstFrame()
+                            DispatchQueue.main.async {
+                                guard let self = self else { return }
+                                metalView.isPaused = false
+                                self.handleFirstFrame()
+                            }
                         }
                         manager.setFrameRate(fps: captureFPS)
                         do {
@@ -256,9 +258,11 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                     }
                 }
                 manager.onFirstFrame = { [weak self] in
-                    guard let self = self else { return }
-                    metalView.isPaused = false
-                    self.handleFirstFrame()
+                    DispatchQueue.main.async {
+                        guard let self = self else { return }
+                        metalView.isPaused = false
+                        self.handleFirstFrame()
+                    }
                 }
                 manager.setFrameRate(fps: captureFPS)
                 do {
