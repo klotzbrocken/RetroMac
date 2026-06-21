@@ -30,7 +30,6 @@ enum SettingsTab: String, CaseIterable {
     case shortcuts = "shortcuts"
     case rules = "rules"
     case about = "about"
-    case updates = "updates"
 
     var label: String {
         switch self {
@@ -46,7 +45,6 @@ enum SettingsTab: String, CaseIterable {
         case .shortcuts: return "Shortcuts"
         case .rules: return "Per-App Rules"
         case .about: return "About"
-        case .updates: return "Updates"
         }
     }
 
@@ -64,7 +62,6 @@ enum SettingsTab: String, CaseIterable {
         case .shortcuts: return "keyboard"
         case .rules: return "app.connected.to.app.below.fill"
         case .about: return "info.circle"
-        case .updates: return "arrow.down.circle"
         }
     }
 
@@ -73,7 +70,7 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         case .overview, .effect, .dock, .retroMode, .timer: return nil
         case .camera, .television, .games, .screensaver: return "Surfaces"
-        case .shortcuts, .rules, .about, .updates: return "System"
+        case .shortcuts, .rules, .about: return "System"
         }
     }
 
@@ -133,7 +130,7 @@ struct SettingsSidebar: View {
     // Group tabs by section in order
     private var mainTabs: [SettingsTab] { [.overview, .effect, .dock, .retroMode, .timer] }
     private var surfacesTabs: [SettingsTab] { [.camera, .television, .games] }
-    private var systemTabs: [SettingsTab] { [.shortcuts, .rules, .about, .updates] }
+    private var systemTabs: [SettingsTab] { [.shortcuts, .rules, .about] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -390,8 +387,6 @@ struct SettingsDetailPane: View {
                     PerAppRulesTab()
                 case .about:
                     AboutTab(updater: updater)
-                case .updates:
-                    UpdatesTab(updater: updater)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -504,51 +499,6 @@ struct DetailTitleBar: View {
 }
 
 // MARK: - Updates Tab
-
-struct UpdatesTab: View {
-    let updater: SPUUpdater
-    @State private var autoCheck: Bool
-
-    init(updater: SPUUpdater) {
-        self.updater = updater
-        _autoCheck = State(initialValue: updater.automaticallyChecksForUpdates)
-    }
-
-    private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
-    }
-
-    var body: some View {
-        ScrollView {
-            Form {
-                Section("Software Updates") {
-                    LabeledContent("Current version", value: appVersion)
-                    HStack {
-                        Button("Check for Updates…") { updater.checkForUpdates() }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(!updater.canCheckForUpdates)
-                        Spacer()
-                    }
-                    if let last = updater.lastUpdateCheckDate {
-                        LabeledContent("Last checked") {
-                            Text(last.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                }
-
-                Section("Automatic") {
-                    Toggle("Automatically check for updates", isOn: $autoCheck)
-                        .onChange(of: autoCheck) { updater.automaticallyChecksForUpdates = $0 }
-                    Text("RetroMac uses Sparkle to deliver signed, notarized updates directly from the developer.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            .formStyle(.grouped)
-        }
-        .padding(.top, 8)
-    }
-}
 
 // MARK: - Camera Tab (kept from old cameraTab)
 

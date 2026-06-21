@@ -245,9 +245,6 @@ final class AppSettings: ObservableObject {
     @Published var timerCountdownTarget: String {
         didSet { defaults.set(timerCountdownTarget, forKey: "timerCountdownTarget") }
     }
-    @Published var showFPSOverlay: Bool {
-        didSet { defaults.set(showFPSOverlay, forKey: "showFPSOverlay") }
-    }
     @Published var classicMacModeActive: Bool {
         didSet { defaults.set(classicMacModeActive, forKey: "classicMacModeActive") }
     }
@@ -591,7 +588,6 @@ final class AppSettings: ObservableObject {
         timerWindowTarget = defaults.string(forKey: "timerWindowTarget") ?? "overlay"
         timerCountdownMinutes = defaults.object(forKey: "timerCountdownMinutes") as? Int ?? 25
         timerCountdownTarget = defaults.string(forKey: "timerCountdownTarget") ?? "overlay"
-        showFPSOverlay = defaults.bool(forKey: "showFPSOverlay")
         classicMacModeActive = defaults.bool(forKey: "classicMacModeActive")
 
         // Per-theme preset overrides
