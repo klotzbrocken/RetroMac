@@ -19,31 +19,25 @@ struct AppInfo: Identifiable, Hashable {
 
 enum SettingsTab: String, CaseIterable {
     case overview = "overview"
-    case effect = "effect"
     case dock = "dock"
     case retroMode = "retroMode"
-    case timer = "timer"
     case camera = "camera"
     case television = "television"
     case games = "games"
     case screensaver = "screensaver"
-    case shortcuts = "shortcuts"
-    case rules = "rules"
+    case advanced = "advanced"
     case about = "about"
 
     var label: String {
         switch self {
         case .overview: return "Overview"
-        case .effect: return "Effect"
         case .dock: return "Dock"
         case .retroMode: return "Retro Mode"
-        case .timer: return "Timer"
         case .camera: return "Camera"
         case .television: return "Television"
         case .games: return "Games"
         case .screensaver: return "Screensaver"
-        case .shortcuts: return "Shortcuts"
-        case .rules: return "Per-App Rules"
+        case .advanced: return "Advanced"
         case .about: return "About"
         }
     }
@@ -51,16 +45,13 @@ enum SettingsTab: String, CaseIterable {
     var icon: String {
         switch self {
         case .overview: return "house"
-        case .effect: return "wand.and.stars.inverse"
         case .dock: return "dock.rectangle"
         case .retroMode: return "wand.and.stars"
-        case .timer: return "clock"
         case .camera: return "camera.fill"
         case .television: return "tv"
         case .games: return "gamecontroller"
         case .screensaver: return "display"
-        case .shortcuts: return "keyboard"
-        case .rules: return "app.connected.to.app.below.fill"
+        case .advanced: return "slider.horizontal.3"
         case .about: return "info.circle"
         }
     }
@@ -68,18 +59,17 @@ enum SettingsTab: String, CaseIterable {
     /// Section grouping: nil = Main, "Surfaces", "System"
     var section: String? {
         switch self {
-        case .overview, .effect, .dock, .retroMode, .timer: return nil
+        case .overview, .dock, .retroMode: return nil
         case .camera, .television, .games, .screensaver: return "Surfaces"
-        case .shortcuts, .rules, .about: return "System"
+        case .advanced, .about: return "System"
         }
     }
 
     /// Title bar subtitle
     var subtitle: String? {
         switch self {
-        case .effect: return "Choose how the screen looks under the overlay."
         case .dock: return "A retro dock that floats above the system one."
-        case .shortcuts: return "One place for every key combo and per-app rule."
+        case .advanced: return "Performance, hotkeys, per-app rules and timers."
         default: return nil
         }
     }
@@ -128,9 +118,9 @@ struct SettingsSidebar: View {
     @ObservedObject private var settings = AppSettings.shared
 
     // Group tabs by section in order
-    private var mainTabs: [SettingsTab] { [.overview, .effect, .dock, .retroMode, .timer] }
+    private var mainTabs: [SettingsTab] { [.overview, .dock, .retroMode] }
     private var surfacesTabs: [SettingsTab] { [.camera, .television, .games] }
-    private var systemTabs: [SettingsTab] { [.shortcuts, .rules, .about] }
+    private var systemTabs: [SettingsTab] { [.advanced, .about] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -365,14 +355,10 @@ struct SettingsDetailPane: View {
                 switch selectedTab {
                 case .overview:
                     OverviewTab(selectedTab: $selectedTab)
-                case .effect:
-                    EffectTab()
                 case .dock:
                     DockSettingsTab()
                 case .retroMode:
                     RetroModeTab()
-                case .timer:
-                    TimerTab()
                 case .camera:
                     CameraTab()
                 case .television:
@@ -381,10 +367,8 @@ struct SettingsDetailPane: View {
                     GamesSettingsTab()
                 case .screensaver:
                     ScreensaverSettingsTab()
-                case .shortcuts:
-                    ShortcutsTab()
-                case .rules:
-                    PerAppRulesTab()
+                case .advanced:
+                    AdvancedTab()
                 case .about:
                     AboutTab(updater: updater)
                 }
@@ -437,20 +421,6 @@ struct DetailTitleBar: View {
         case .overview:
             Button("Open Settings Assistant") {}
                 .buttonStyle(RMPrimaryButtonStyle())
-        case .effect:
-            HStack(spacing: 8) {
-                Button { importMetal() } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 11))
-                        Text("Import .metal")
-                    }
-                }
-                .buttonStyle(RMGhostButtonStyle())
-
-                Button("Save as preset\u{2026}") {}
-                    .buttonStyle(RMPrimaryButtonStyle())
-            }
         case .dock:
             HStack(spacing: 8) {
                 Button("Import theme\u{2026}") { importTheme() }
@@ -464,20 +434,6 @@ struct DetailTitleBar: View {
             }
         default:
             EmptyView()
-        }
-    }
-
-    private func importMetal() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "metal")!]
-        panel.allowsMultipleSelection = true
-        panel.message = "Select Metal shader files to import"
-        guard panel.runModal() == .OK else { return }
-
-        let dest = AppSettings.shared.customPresetsDirectory
-        for url in panel.urls {
-            let target = dest.appendingPathComponent(url.lastPathComponent)
-            try? FileManager.default.copyItem(at: url, to: target)
         }
     }
 
