@@ -22,21 +22,17 @@ enum SettingsTab: String, CaseIterable {
     case dock = "dock"
     case retroMode = "retroMode"
     case camera = "camera"
-    case television = "television"
     case games = "games"
-    case screensaver = "screensaver"
     case advanced = "advanced"
     case about = "about"
 
     var label: String {
         switch self {
         case .overview: return "Overview"
-        case .dock: return "Dock"
+        case .dock: return "Dock & Themes"
         case .retroMode: return "Retro Mode"
-        case .camera: return "Camera"
-        case .television: return "Television"
+        case .camera: return "Camera & Streaming"
         case .games: return "Games"
-        case .screensaver: return "Screensaver"
         case .advanced: return "Advanced"
         case .about: return "About"
         }
@@ -48,9 +44,7 @@ enum SettingsTab: String, CaseIterable {
         case .dock: return "dock.rectangle"
         case .retroMode: return "wand.and.stars"
         case .camera: return "camera.fill"
-        case .television: return "tv"
         case .games: return "gamecontroller"
-        case .screensaver: return "display"
         case .advanced: return "slider.horizontal.3"
         case .about: return "info.circle"
         }
@@ -60,7 +54,7 @@ enum SettingsTab: String, CaseIterable {
     var section: String? {
         switch self {
         case .overview, .dock, .retroMode: return nil
-        case .camera, .television, .games, .screensaver: return "Surfaces"
+        case .camera, .games: return "Surfaces"
         case .advanced, .about: return "System"
         }
     }
@@ -119,7 +113,7 @@ struct SettingsSidebar: View {
 
     // Group tabs by section in order
     private var mainTabs: [SettingsTab] { [.overview, .dock, .retroMode] }
-    private var surfacesTabs: [SettingsTab] { [.camera, .television, .games] }
+    private var surfacesTabs: [SettingsTab] { [.camera, .games] }
     private var systemTabs: [SettingsTab] { [.advanced, .about] }
 
     var body: some View {
@@ -356,17 +350,13 @@ struct SettingsDetailPane: View {
                 case .overview:
                     OverviewTab(selectedTab: $selectedTab)
                 case .dock:
-                    DockSettingsTab()
+                    DockThemesTab()
                 case .retroMode:
                     RetroModeTab()
                 case .camera:
-                    CameraTab()
-                case .television:
-                    TVSettingsTab()
+                    CameraStreamingTab()
                 case .games:
                     GamesSettingsTab()
-                case .screensaver:
-                    ScreensaverSettingsTab()
                 case .advanced:
                     AdvancedTab()
                 case .about:
