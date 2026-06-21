@@ -30,12 +30,27 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
                                                name: .dockThemeChanged, object: nil)
     }
 
-    @objc private func themeChanged() {
-        panel?.close(); panel = nil; webView = nil; dragOverlay = nil
-    }
+    @objc private func themeChanged() { destroy() }
 
     func toggle() { if panel?.isVisible == true { close() } else { show() } }
+
+    /// Warm hide — keeps the WebView alive for instant reopen.
     func close() { saveOrigin(); panel?.orderOut(nil) }
+
+    /// Cold teardown — removes the script-message handler and releases the WebView.
+    func destroy() {
+        saveOrigin()
+        if let mo = moveObserver { NotificationCenter.default.removeObserver(mo); moveObserver = nil }
+        if let wv = webView {
+            wv.stopLoading()
+            wv.navigationDelegate = nil
+            wv.configuration.userContentController.removeAllScriptMessageHandlers()
+            wv.removeFromSuperview()
+        }
+        webView = nil
+        dragOverlay = nil
+        panel?.orderOut(nil); panel = nil
+    }
 
     private func saveOrigin() {
         guard let panel = panel, panel.isVisible else { return }
