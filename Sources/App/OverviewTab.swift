@@ -164,14 +164,14 @@ struct OverviewTab: View {
             RMSectionHeaderView(title: "Quick actions")
 
             HStack(spacing: RMSpacing.lg) {
-                QuickActionTile(icon: "wand.and.stars.inverse", label: "Switch effect", value: presetDisplayName) {
-                    selectedTab = .effect
-                }
-                QuickActionTile(icon: "display", label: "Target display", value: NSScreen.main?.localizedName ?? "Built-in") {
-                    selectedTab = .effect
-                }
                 QuickActionTile(icon: "dock.rectangle", label: "Retro dock", value: settings.dockEnabled ? "On" : "Off") {
                     selectedTab = .dock
+                }
+                QuickActionTile(icon: "wand.and.stars", label: "Retro Mode", value: "Configure") {
+                    selectedTab = .retroMode
+                }
+                QuickActionTile(icon: "slider.horizontal.3", label: "Advanced", value: "Performance, hotkeys") {
+                    selectedTab = .advanced
                 }
                 QuickActionTile(icon: "wand.and.stars", label: "Setup Assistant", value: "Re-run") {
                     (NSApp.delegate as? AppDelegate)?.openSetupWizard()
