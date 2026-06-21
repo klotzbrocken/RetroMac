@@ -50,6 +50,18 @@ enum BuiltinShaders {
         return source.sample(s, uv).a;
     }
 
+    // Smooth aperture-grille / phosphor-triad mask. Real CRTs have NO sharp pixel borders
+    // regardless of the mask type — hard if/else RGB stripes read as TFT subpixels ("fly
+    // screen"). Each channel's brightness instead varies as a soft cosine across the triad,
+    // so it reads as glowing phosphors. `sub` is the horizontal position in SUBPIXELS (3 per
+    // RGB triad); `strength` (0..1) blends from no mask to full mask.
+    float3 crtPhosphorMask(float sub, float strength) {
+        float a = sub * 2.09439510239;                          // 2*pi/3 per subpixel
+        float3 phase = float3(0.0, 2.09439510239, 4.18879020479); // 0/120/240 degrees
+        float3 m = 0.6 + 0.4 * cos(a - phase);                  // soft lobes, never fully black
+        return mix(float3(1.0), m, clamp(strength, 0.0, 1.0));
+    }
+
     struct VertexData {
         packed_float2 position;
         packed_float2 texCoord;
@@ -911,19 +923,9 @@ enum BuiltinShaders {
         float3 original = source.sample(s, uv).rgb;
         float3 color = original;
 
-        // Vertical aperture grille (Trinitron-style RGB stripes)
-        float col = uv.x * outputSize.x;
-        float stripe = fmod(col, 3.0);
-        float3 mask;
-        if (stripe < 1.0) {
-            mask = float3(1.0, 0.25, 0.25);
-        } else if (stripe < 2.0) {
-            mask = float3(0.25, 1.0, 0.25);
-        } else {
-            mask = float3(0.25, 0.25, 1.0);
-        }
+        // Vertical aperture grille (Trinitron-style) — soft phosphor stripes, no hard borders.
         float maskStr = 0.3 * intensity;
-        color *= mix(float3(1.0), mask, maskStr);
+        color *= crtPhosphorMask(uv.x * outputSize.x, maskStr);
 
         // Horizontal scanlines (lighter than shadow mask CRTs)
         float scanStr = 0.12 * intensity;
@@ -1172,18 +1174,8 @@ enum BuiltinShaders {
         // Sharp image — minimal blur
         float3 color = original;
 
-        // Fine aperture grille (Trinitron)
-        float col = uv.x * outputSize.x;
-        float stripe = fmod(col, 3.0);
-        float3 mask;
-        if (stripe < 1.0) {
-            mask = float3(1.0, 0.18, 0.18);
-        } else if (stripe < 2.0) {
-            mask = float3(0.18, 1.0, 0.18);
-        } else {
-            mask = float3(0.18, 0.18, 1.0);
-        }
-        color *= mix(float3(1.0), mask, 0.35 * intensity);
+        // Fine aperture grille (Trinitron) — soft phosphor stripes, no hard borders.
+        color *= crtPhosphorMask(uv.x * outputSize.x, 0.35 * intensity);
 
         // Tight scanlines (high TVL)
         float scanStr = 0.15 * intensity;
@@ -1222,22 +1214,13 @@ enum BuiltinShaders {
         float3 original = source.sample(s, uv).rgb;
         float3 color = original;
 
-        // Slot mask pattern (groups of 3 with vertical gaps)
+        // Slot mask — soft RGB phosphors with a gentle vertical slot gap (no hard borders).
         float2 pixelPos = uv * outputSize;
-        float col = fmod(pixelPos.x, 3.0);
         float row = fmod(pixelPos.y, 2.0);
-        float3 mask;
-        if (col < 1.0) {
-            mask = float3(1.0, 0.22, 0.22);
-        } else if (col < 2.0) {
-            mask = float3(0.22, 1.0, 0.22);
-        } else {
-            mask = float3(0.22, 0.22, 1.0);
-        }
-        // Vertical slot gap
+        float3 mask = crtPhosphorMask(pixelPos.x, 0.3 * intensity);
         float slotGap = smoothstep(0.0, 0.3, row) * smoothstep(2.0, 1.7, row);
-        mask = mix(float3(0.15), mask, slotGap);
-        color *= mix(float3(1.0), mask, 0.3 * intensity);
+        mask *= mix(1.0 - 0.18 * intensity, 1.0, slotGap);   // soft row darkening
+        color *= mask;
 
         // Scanlines
         float scanStr = 0.2 * intensity;
@@ -1281,17 +1264,8 @@ enum BuiltinShaders {
         float3 tap2 = source.sample(s, uv - float2(0.7 / texSize.x, 0)).rgb;
         color = color * 0.6 + tap1 * 0.2 + tap2 * 0.2;
 
-        // Very subtle shadow mask (high quality tube)
-        float col = fmod(uv.x * outputSize.x, 3.0);
-        float3 mask;
-        if (col < 1.0) {
-            mask = float3(1.0, 0.85, 0.85);
-        } else if (col < 2.0) {
-            mask = float3(0.85, 1.0, 0.85);
-        } else {
-            mask = float3(0.85, 0.85, 1.0);
-        }
-        color *= mix(float3(1.0), mask, 0.12 * intensity);
+        // Very subtle shadow mask (high quality tube) — soft phosphors, no hard borders.
+        color *= crtPhosphorMask(uv.x * outputSize.x, 0.12 * intensity);
 
         // Very light scanlines (100Hz set = less visible)
         float scanStr = 0.06 * intensity;
@@ -1340,17 +1314,8 @@ enum BuiltinShaders {
         float3 original = source.sample(s, uv).rgb;
         float3 color = original;
 
-        // Aperture grille mask
-        float col = fmod(uv.x * outputSize.x, 3.0);
-        float3 mask;
-        if (col < 1.0) {
-            mask = float3(1.0, 0.2, 0.2);
-        } else if (col < 2.0) {
-            mask = float3(0.2, 1.0, 0.2);
-        } else {
-            mask = float3(0.2, 0.2, 1.0);
-        }
-        color *= mix(float3(1.0), mask, 0.3 * intensity);
+        // Aperture grille mask — soft phosphor stripes, no hard borders.
+        color *= crtPhosphorMask(uv.x * outputSize.x, 0.3 * intensity);
 
         // Scanlines
         float scanStr = 0.22 * intensity;
@@ -1470,20 +1435,8 @@ enum BuiltinShaders {
         float3 original = source.sample(s, uv).rgb;
         float3 color = original;
 
-        // Ultra-fine Trinitron stripes (every pixel)
-        float col = fmod(uv.x * outputSize.x, 3.0);
-        float3 mask;
-        if (col < 1.0) {
-            mask = float3(1.3, 0.6, 0.6);
-        } else if (col < 2.0) {
-            mask = float3(0.6, 1.3, 0.6);
-        } else {
-            mask = float3(0.6, 0.6, 1.3);
-        }
-        // Smooth transitions between stripes
-        float transition = smoothstep(0.0, 0.3, fract(col))
-                         * smoothstep(1.0, 0.7, fract(col));
-        color *= mix(float3(0.85), mask, transition * 0.4 * intensity);
+        // Ultra-fine Trinitron stripes — soft phosphors, no hard borders.
+        color *= crtPhosphorMask(uv.x * outputSize.x, 0.4 * intensity);
 
         // Light scanlines (high TVL = less visible)
         float scanStr = 0.1 * intensity;
@@ -1722,15 +1675,8 @@ enum BuiltinShaders {
         // Linear space
         float3 color = pow(original, float3(2.2));
 
-        // Phosphor triad mask — RGB vertical stripes
-        float maskPos = uv.x * texSize.x * 3.0;
-        int maskPhase = int(maskPos) % 3;
-        float3 mask = float3(0.3);
-        if (maskPhase == 0) mask.r = 1.0;
-        else if (maskPhase == 1) mask.g = 1.0;
-        else mask.b = 1.0;
-        mask = mix(float3(1.0), mask, 0.35 * intensity);
-        color *= mask;
+        // Phosphor triad mask — soft RGB stripes, no hard borders.
+        color *= crtPhosphorMask(uv.x * texSize.x * 3.0, 0.35 * intensity);
 
         // Scanlines with brightness-dependent depth
         float scanPos = uv.y * texSize.y;
@@ -1789,16 +1735,8 @@ enum BuiltinShaders {
         float b = source.sample(s, uv - float2(ca, 0)).b;
         float3 color = float3(r, g, b);
 
-        // Aperture grille — vertical RGB stripes (Trinitron signature)
-        float grillePitch = texSize.x * 1.0;
-        float grillePos = uv.x * grillePitch;
-        float grilleFrac = fract(grillePos);
-        float3 grille;
-        if (grilleFrac < 0.333) grille = float3(1.0, 0.7, 0.7);
-        else if (grilleFrac < 0.666) grille = float3(0.7, 1.0, 0.7);
-        else grille = float3(0.7, 0.7, 1.0);
-        grille = mix(float3(1.0), grille, 0.25 * intensity);
-        color *= grille;
+        // Aperture grille (Trinitron signature) — soft RGB stripes, no hard borders.
+        color *= crtPhosphorMask(uv.x * texSize.x * 3.0, 0.25 * intensity);
 
         // Scanlines — moderate depth
         float scanline = sin(uv.y * texSize.y * M_PI_F) * 0.5 + 0.5;
@@ -2088,18 +2026,8 @@ enum BuiltinShaders {
         float scanStr = 0.18 * intensity;
         color *= 1.0 - scanStr * (1.0 - interlace);
 
-        // Phosphor dot pattern (shadow mask)
-        float2 pixelPos = uv * outputSize;
-        float col = fmod(pixelPos.x, 3.0);
-        float3 mask;
-        if (col < 1.0) {
-            mask = float3(1.0, 0.7, 0.7);
-        } else if (col < 2.0) {
-            mask = float3(0.7, 1.0, 0.7);
-        } else {
-            mask = float3(0.7, 0.7, 1.0);
-        }
-        color *= mix(float3(1.0), mask, 0.15 * intensity);
+        // Phosphor dot pattern (shadow mask) — soft phosphors, no hard borders.
+        color *= crtPhosphorMask(uv.x * outputSize.x, 0.15 * intensity);
 
         // Bottom phosphor aging — lower 15% slightly darker
         float bottomDarken = smoothstep(0.85, 1.0, uv.y) * 0.15 * intensity;
