@@ -2460,9 +2460,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ]
 
         // Load native CRT shader PK3 if bundled and any shader is enabled
-        let crtEnabled = gameSettings.doomCRTShaderEnabled
-        let vhsEnabled = gameSettings.doomVHSEnabled
-        let warpEnabled = gameSettings.doomWarpEnabled
+        let crtEnabled = gameSettings.gamesCRTEnabled
+        let vhsEnabled = false
+        let warpEnabled = gameSettings.gamesCRTEnabled
         if (crtEnabled || vhsEnabled || warpEnabled),
            let crtPath = Bundle.main.path(forResource: "RetroMac-CRT", ofType: "pk3") {
             args.append(contentsOf: ["-file", crtPath])
@@ -2568,7 +2568,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var args = ["-iwad", grpPath]
 
         // Load native CRT shader PK3 if enabled (Raze supports -file like GZDoom)
-        let crtEnabled = gameName == "Shadow Warrior" ? settings.shadowWarriorCRTEnabled : settings.razeCRTShaderEnabled
+        let crtEnabled = settings.gamesCRTEnabled
         if crtEnabled,
            let crtPath = Bundle.main.path(forResource: "RetroMac-CRT", ofType: "pk3") {
             args.append(contentsOf: ["-file", crtPath])
@@ -2703,7 +2703,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Load CRT shader PK3 if enabled (NOT compatible with shareware WADs —
         // GZDoom blocks -file with shareware IWADs, so shader is simply skipped)
-        let crtEnabled = gameName == "Heretic" ? settings.hereticCRTShaderEnabled : settings.doomCRTShaderEnabled
+        let crtEnabled = settings.gamesCRTEnabled
         if isShareware {
             print("[\(gameName)] Shareware WAD detected — native PK3 shader not supported, skipping")
         } else if crtEnabled, let crtPath = Bundle.main.path(forResource: "RetroMac-CRT", ofType: "pk3") {
@@ -2945,7 +2945,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ]
 
         // Load native CRT shader PK3 — Freedoom is NOT shareware, -file always works
-        if settings.freedoomCRTShaderEnabled,
+        if settings.gamesCRTEnabled,
            let crtPath = Bundle.main.path(forResource: "RetroMac-CRT", ofType: "pk3") {
             args.append(contentsOf: ["-file", crtPath, "+SH_CRTEnable", "true"])
             print("[Freedoom] Loading CRT shader PK3")
