@@ -829,11 +829,13 @@ final class DockController {
                 DispatchQueue.main.async {
                     guard let self = self, gen == self.dockOpGeneration else { return }  // superseded
                     if !ok {
-                        // Failed → drop the intent so the next attempt (theme switch / re-enable) retries.
-                        self.didHideSystemDock = false
+                        // Partial/failed hide — KEEP the recovery keys + captured original state so a
+                        // later restore / quit / relaunch can put the Dock back (the Dock may be left
+                        // half-modified). Re-assert intent and reset the idempotency guard so the next
+                        // attempt re-applies. Recovery data is only discarded after a CONFIRMED restore.
+                        self.didHideSystemDock = true
                         self.lastAppliedHidePosition = nil
-                        self.clearPersistedDockState()
-                        print("[Dock] ⚠️ System dock hide failed — will retry")
+                        print("[Dock] ⚠️ System dock hide failed/partial — keeping recovery keys for retry")
                     }
                 }
             }
