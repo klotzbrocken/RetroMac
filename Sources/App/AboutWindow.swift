@@ -51,10 +51,12 @@ struct AboutTab: View {
     @State private var keyInput: String = ""
     @State private var activationMessage: String?
     @State private var activationSuccess: Bool?
+    @State private var autoCheck: Bool
     private let updater: SPUUpdater
 
     init(updater: SPUUpdater) {
         self.updater = updater
+        _autoCheck = State(initialValue: updater.automaticallyChecksForUpdates)
     }
 
     private let shaderCredits: [(name: String, author: String, license: String)] = [
@@ -100,6 +102,21 @@ struct AboutTab: View {
                         Spacer()
                     }
                     .padding(.vertical, 8)
+                }
+
+                Section("Software Updates") {
+                    HStack {
+                        Button("Check for Updates…") { updater.checkForUpdates() }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!updater.canCheckForUpdates)
+                        Spacer()
+                        if let last = updater.lastUpdateCheckDate {
+                            Text("Last checked \(last.formatted(date: .abbreviated, time: .shortened))")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    Toggle("Automatically check for updates", isOn: $autoCheck)
+                        .onChange(of: autoCheck) { updater.automaticallyChecksForUpdates = $0 }
                 }
 
                 Section("Developer") {
