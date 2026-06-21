@@ -986,6 +986,7 @@ final class HotkeyNSView: NSView {
 final class SettingsWindowController {
     private var window: NSWindow?
     private var savedMenu: NSMenu?
+    private var windowDelegate: SettingsWindowDelegate?
     var updater: SPUUpdater?
 
     func show() {
@@ -1009,7 +1010,9 @@ final class SettingsWindowController {
         window.contentView = hostingView
         window.center()
         window.isReleasedWhenClosed = false
-        window.delegate = SettingsWindowDelegate(controller: self)
+        let delegate = SettingsWindowDelegate(controller: self)
+        self.windowDelegate = delegate
+        window.delegate = delegate
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         self.window = window

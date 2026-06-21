@@ -173,8 +173,8 @@ struct OverviewTab: View {
                 QuickActionTile(icon: "dock.rectangle", label: "Retro dock", value: settings.dockEnabled ? "On" : "Off") {
                     selectedTab = .dock
                 }
-                QuickActionTile(icon: "star", label: "Save preset", value: "My Look 1") {
-                    selectedTab = .effect
+                QuickActionTile(icon: "wand.and.stars", label: "Setup Assistant", value: "Re-run") {
+                    (NSApp.delegate as? AppDelegate)?.openSetupWizard()
                 }
             }
         }
@@ -217,13 +217,15 @@ struct OverviewTab: View {
                     name: "Accessibility",
                     hint: "Needed for global hotkey + window targeting.",
                     granted: accessibilityGranted,
-                    isLast: false
+                    isLast: false,
+                    pane: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
                 )
                 PermissionRow(
                     name: "Automation",
                     hint: "Lets RetroMac auto-switch presets per app.",
                     granted: automationGranted,
-                    isLast: true
+                    isLast: true,
+                    pane: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
                 )
             }
             .padding(.vertical, 4)
@@ -362,6 +364,8 @@ private struct PermissionRow: View {
     var hint: String
     var granted: Bool?
     var isLast: Bool
+    /// System Settings pane this permission lives in (Screen Recording / Accessibility / Automation).
+    var pane: String = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -394,7 +398,7 @@ private struct PermissionRow: View {
                         .controlSize(.small)
                 } else {
                     Button("Grant\u{2026}") {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                        if let url = URL(string: pane) {
                             NSWorkspace.shared.open(url)
                         }
                     }
