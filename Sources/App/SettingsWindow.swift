@@ -18,7 +18,6 @@ struct AppInfo: Identifiable, Hashable {
 // MARK: - Settings Tab
 
 enum SettingsTab: String, CaseIterable {
-    case overview = "overview"
     case dock = "dock"
     case retroMode = "retroMode"
     case camera = "camera"
@@ -28,7 +27,6 @@ enum SettingsTab: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .overview: return "Overview"
         case .dock: return "Dock & Themes"
         case .retroMode: return "Retro Mode"
         case .camera: return "Camera & Streaming"
@@ -40,7 +38,6 @@ enum SettingsTab: String, CaseIterable {
 
     var icon: String {
         switch self {
-        case .overview: return "house"
         case .dock: return "dock.rectangle"
         case .retroMode: return "wand.and.stars"
         case .camera: return "camera.fill"
@@ -53,7 +50,7 @@ enum SettingsTab: String, CaseIterable {
     /// Section grouping: nil = Main, "Surfaces", "System"
     var section: String? {
         switch self {
-        case .overview, .dock, .retroMode: return nil
+        case .dock, .retroMode: return nil
         case .camera, .games: return "Surfaces"
         case .advanced, .about: return "System"
         }
@@ -79,7 +76,7 @@ struct SettingsView: View {
     init(updater: SPUUpdater) {
         self.updater = updater
         let saved = AppSettings.shared.lastSettingsTab
-        _selectedTab = State(initialValue: SettingsTab(rawValue: saved) ?? .overview)
+        _selectedTab = State(initialValue: SettingsTab(rawValue: saved) ?? .dock)
     }
 
     var body: some View {
@@ -112,7 +109,7 @@ struct SettingsSidebar: View {
     @ObservedObject private var settings = AppSettings.shared
 
     // Group tabs by section in order
-    private var mainTabs: [SettingsTab] { [.overview, .dock, .retroMode] }
+    private var mainTabs: [SettingsTab] { [.dock, .retroMode] }
     private var surfacesTabs: [SettingsTab] { [.camera, .games] }
     private var systemTabs: [SettingsTab] { [.advanced, .about] }
 
@@ -347,8 +344,6 @@ struct SettingsDetailPane: View {
             // Content
             Group {
                 switch selectedTab {
-                case .overview:
-                    OverviewTab(selectedTab: $selectedTab)
                 case .dock:
                     DockThemesTab()
                 case .retroMode:
@@ -408,9 +403,6 @@ struct DetailTitleBar: View {
     @ViewBuilder
     private var toolbarButtons: some View {
         switch tab {
-        case .overview:
-            Button("Open Settings Assistant") {}
-                .buttonStyle(RMPrimaryButtonStyle())
         case .dock:
             HStack(spacing: 8) {
                 Button("Import theme\u{2026}") { importTheme() }
