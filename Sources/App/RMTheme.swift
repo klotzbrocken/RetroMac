@@ -80,23 +80,6 @@ enum RMRadius {
     static let chip: CGFloat = 999
 }
 
-// MARK: - CRT scanline (Retro skin)
-
-/// Very subtle horizontal scanline overlay for the Settings window background.
-struct RMScanline: View {
-    var body: some View {
-        Canvas { ctx, size in
-            let line = Color.black.opacity(0.022)
-            var y: CGFloat = 0
-            while y < size.height {
-                ctx.fill(Path(CGRect(x: 0, y: y, width: size.width, height: 1)), with: .color(line))
-                y += 3
-            }
-        }
-        .allowsHitTesting(false)
-    }
-}
-
 // MARK: - Shadow Modifiers
 
 extension View {
