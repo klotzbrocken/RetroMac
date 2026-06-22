@@ -225,26 +225,6 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    // Timer / automation. Targets: "overlay" (shader on/off) or "retroMode".
-    @Published var timerWindowEnabled: Bool {
-        didSet { defaults.set(timerWindowEnabled, forKey: "timerWindowEnabled") }
-    }
-    /// Daily window start/end as minutes since midnight.
-    @Published var timerWindowStart: Int {
-        didSet { defaults.set(timerWindowStart, forKey: "timerWindowStart") }
-    }
-    @Published var timerWindowEnd: Int {
-        didSet { defaults.set(timerWindowEnd, forKey: "timerWindowEnd") }
-    }
-    @Published var timerWindowTarget: String {
-        didSet { defaults.set(timerWindowTarget, forKey: "timerWindowTarget") }
-    }
-    @Published var timerCountdownMinutes: Int {
-        didSet { defaults.set(timerCountdownMinutes, forKey: "timerCountdownMinutes") }
-    }
-    @Published var timerCountdownTarget: String {
-        didSet { defaults.set(timerCountdownTarget, forKey: "timerCountdownTarget") }
-    }
     @Published var classicMacModeActive: Bool {
         didSet { defaults.set(classicMacModeActive, forKey: "classicMacModeActive") }
     }
@@ -387,15 +367,6 @@ final class AppSettings: ObservableObject {
     @Published var gamesCRTEnabled: Bool {
         didSet { defaults.set(gamesCRTEnabled, forKey: "gamesCRTEnabled") }
     }
-    @Published var doomCRTShaderEnabled: Bool {
-        didSet { defaults.set(doomCRTShaderEnabled, forKey: "doomCRTShaderEnabled") }
-    }
-    @Published var doomVHSEnabled: Bool {
-        didSet { defaults.set(doomVHSEnabled, forKey: "doomVHSEnabled") }
-    }
-    @Published var doomWarpEnabled: Bool {
-        didSet { defaults.set(doomWarpEnabled, forKey: "doomWarpEnabled") }
-    }
     @Published var doomWindowWidth: Int {
         didSet { defaults.set(doomWindowWidth, forKey: "doomWindowWidth") }
     }
@@ -407,35 +378,11 @@ final class AppSettings: ObservableObject {
     @Published var razeGrpFolder: String {
         didSet { defaults.set(razeGrpFolder, forKey: "razeGrpFolder") }
     }
-    @Published var razeCRTShaderEnabled: Bool {
-        didSet { defaults.set(razeCRTShaderEnabled, forKey: "razeCRTShaderEnabled") }
-    }
-    @Published var razeVHSEnabled: Bool {
-        didSet { defaults.set(razeVHSEnabled, forKey: "razeVHSEnabled") }
-    }
-    @Published var razeWarpEnabled: Bool {
-        didSet { defaults.set(razeWarpEnabled, forKey: "razeWarpEnabled") }
-    }
     @Published var razeWindowWidth: Int {
         didSet { defaults.set(razeWindowWidth, forKey: "razeWindowWidth") }
     }
     @Published var razeWindowHeight: Int {
         didSet { defaults.set(razeWindowHeight, forKey: "razeWindowHeight") }
-    }
-
-    // Games — Heretic (uses GZDoom engine, shares WAD folder with Doom)
-    @Published var hereticCRTShaderEnabled: Bool {
-        didSet { defaults.set(hereticCRTShaderEnabled, forKey: "hereticCRTShaderEnabled") }
-    }
-
-    // Games — Shadow Warrior (uses Raze engine, shares GRP folder with Duke3D)
-    @Published var shadowWarriorCRTEnabled: Bool {
-        didSet { defaults.set(shadowWarriorCRTEnabled, forKey: "shadowWarriorCRTEnabled") }
-    }
-
-    // Games — Freedoom (uses GZDoom engine, shares WAD folder with Doom)
-    @Published var freedoomCRTShaderEnabled: Bool {
-        didSet { defaults.set(freedoomCRTShaderEnabled, forKey: "freedoomCRTShaderEnabled") }
     }
 
     // Games — Quake 1 & 2 (vkQuake / Yamagi Quake II + Lite overlay shader)
@@ -587,12 +534,6 @@ final class AppSettings: ObservableObject {
         // It only appears when the user explicitly runs sheep.exe (in-memory, not persisted).
         desktopPetEnabled = false
         pacmanClockMode = defaults.object(forKey: "pacmanClockMode") as? Bool ?? false
-        timerWindowEnabled = defaults.bool(forKey: "timerWindowEnabled")
-        timerWindowStart = defaults.object(forKey: "timerWindowStart") as? Int ?? 20 * 60
-        timerWindowEnd = defaults.object(forKey: "timerWindowEnd") as? Int ?? 23 * 60
-        timerWindowTarget = defaults.string(forKey: "timerWindowTarget") ?? "overlay"
-        timerCountdownMinutes = defaults.object(forKey: "timerCountdownMinutes") as? Int ?? 25
-        timerCountdownTarget = defaults.string(forKey: "timerCountdownTarget") ?? "overlay"
         classicMacModeActive = defaults.bool(forKey: "classicMacModeActive")
 
         // Per-theme preset overrides
@@ -654,29 +595,14 @@ final class AppSettings: ObservableObject {
         let defaultWadDir = NSHomeDirectory() + "/Library/Application Support/gzdoom"
         doomWadFolder = defaults.string(forKey: "doomWadFolder") ?? defaultWadDir
         gamesCRTEnabled = defaults.object(forKey: "gamesCRTEnabled") as? Bool ?? true
-        doomCRTShaderEnabled = defaults.object(forKey: "doomCRTShaderEnabled") as? Bool ?? true
-        doomVHSEnabled = defaults.bool(forKey: "doomVHSEnabled")
-        doomWarpEnabled = defaults.object(forKey: "doomWarpEnabled") as? Bool ?? true
         doomWindowWidth = defaults.object(forKey: "doomWindowWidth") as? Int ?? 640
         doomWindowHeight = defaults.object(forKey: "doomWindowHeight") as? Int ?? 480
 
         // Games — Duke Nukem 3D (Raze)
         let defaultGrpDir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games"
         razeGrpFolder = defaults.string(forKey: "razeGrpFolder") ?? defaultGrpDir
-        razeCRTShaderEnabled = defaults.object(forKey: "razeCRTShaderEnabled") as? Bool ?? true
-        razeVHSEnabled = defaults.bool(forKey: "razeVHSEnabled")
-        razeWarpEnabled = defaults.object(forKey: "razeWarpEnabled") as? Bool ?? true
         razeWindowWidth = defaults.object(forKey: "razeWindowWidth") as? Int ?? 640
         razeWindowHeight = defaults.object(forKey: "razeWindowHeight") as? Int ?? 480
-
-        // Games — Heretic
-        hereticCRTShaderEnabled = defaults.object(forKey: "hereticCRTShaderEnabled") as? Bool ?? true
-
-        // Games — Shadow Warrior
-        shadowWarriorCRTEnabled = defaults.object(forKey: "shadowWarriorCRTEnabled") as? Bool ?? true
-
-        // Games — Freedoom
-        freedoomCRTShaderEnabled = defaults.object(forKey: "freedoomCRTShaderEnabled") as? Bool ?? true
 
         // Games — Quake 1 & 2 (vkQuake / Yamagi)
         let defaultQuakeDir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games/Quake"

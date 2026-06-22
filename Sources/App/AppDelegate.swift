@@ -94,7 +94,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if AppSettings.shared.floatingLauncherEnabled { FloatingLauncherButton.shared.show() }
         setupMenuBar()
         registerHotkey()
-        TimerController.shared.start()
         startAppLaunchObserver()
         startSleepObserver()
 
@@ -2262,25 +2261,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         retroModeActive = false
         rebuildMenu()
-    }
-
-    // MARK: - Timer targets (called by TimerController)
-
-    func setOverlayActive(_ on: Bool) {
-        if on { if !isActive { startOverlay(mode: .fullScreen) } }
-        else { if isActive { disableAll() } }
-    }
-
-    func setRetroMode(_ on: Bool) {
-        if on != retroModeActive { toggleRetroMode() }
-    }
-
-    /// Apply a timer target ("overlay" or "retroMode") on/off.
-    func applyTimerTarget(_ target: String, active: Bool) {
-        switch target {
-        case "retroMode": setRetroMode(active)
-        default: setOverlayActive(active)
-        }
     }
 
     @objc private func disableTheme() {
