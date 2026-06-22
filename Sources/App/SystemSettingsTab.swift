@@ -25,6 +25,7 @@ struct SystemSettingsTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: RMSpacing.section) {
+                setupCard
                 startupCard
                 permissionsCard
                 sleepCard
@@ -33,6 +34,19 @@ struct SystemSettingsTab: View {
             .padding(.vertical, 20)
         }
         .task { checkPermissions() }
+    }
+
+    private var setupCard: some View {
+        RMCard(title: "Setup", bodyPadding: 0) {
+            RMRow(label: "Setup Assistant",
+                  hint: "Re-run the post-install configuration wizard.",
+                  isLast: true) {
+                Button("Re-run\u{2026}") {
+                    (NSApp.delegate as? AppDelegate)?.openSetupWizard()
+                }
+                .buttonStyle(RMDefaultButtonStyle())
+            }
+        }
     }
 
     private var startupCard: some View {
