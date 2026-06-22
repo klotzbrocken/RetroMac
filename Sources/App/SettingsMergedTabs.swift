@@ -32,7 +32,7 @@ struct CameraStreamingTab: View {
 struct DockThemesTab: View {
     @State private var section: Sec = .dock
     enum Sec: String, CaseIterable, Identifiable {
-        case dock = "Dock", screensaver = "Screensaver"
+        case dock = "Themes", screensaver = "Screensaver"
         var id: String { rawValue }
     }
     var body: some View {
