@@ -11,6 +11,7 @@ struct AdvancedTab: View {
     enum AdvSection: String, CaseIterable, Identifiable {
         case performance = "Performance"
         case presets = "Presets"
+        case effects = "Effects"
         case hotkeys = "Hotkeys"
         case rules = "Per-App"
         case system = "System"
@@ -33,6 +34,7 @@ struct AdvancedTab: View {
                 switch section {
                 case .performance: PerformanceSection()
                 case .presets:     CustomPresetsSection()
+                case .effects:     EffectsSection()
                 case .hotkeys:     ShortcutsTab()
                 case .rules:       PerAppRulesTab()
                 case .system:      SystemSettingsTab()
@@ -65,6 +67,54 @@ private struct PerformanceSection: View {
                                 .toggleStyle(.switch)
                                 .tint(.rmAccent)
                                 .labelsHidden()
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+        }
+    }
+}
+
+/// Overlay effects layered on top of the active shader — scanline overlay + glass
+/// reflection (restored from the former Effect tab; selection lives only here now).
+private struct EffectsSection: View {
+    @ObservedObject private var settings = AppSettings.shared
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: RMSpacing.section) {
+                RMCard(title: "Overlay effects",
+                       subtitle: "Extra layers drawn on top of the shader.",
+                       bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Scanline overlay") {
+                            Picker("", selection: $settings.scanlineOverlayName) {
+                                Text("None").tag("")
+                                Text("Light").tag("scanlines-light")
+                                Text("Medium").tag("scanlines-medium")
+                                Text("Heavy").tag("scanlines-heavy")
+                            }
+                            .labelsHidden().frame(width: 160)
+                        }
+                        RMRow(label: "Scanline intensity") {
+                            Slider(value: $settings.scanlineOverlayIntensity, in: 0...1)
+                                .frame(width: 160)
+                                .disabled(settings.scanlineOverlayName.isEmpty)
+                        }
+                        RMRow(label: "Glass reflection") {
+                            Picker("", selection: $settings.reflectionName) {
+                                Text("None").tag("")
+                                Text("Subtle").tag("reflection-subtle")
+                                Text("Strong").tag("reflection-strong")
+                            }
+                            .labelsHidden().frame(width: 160)
+                        }
+                        RMRow(label: "Reflection intensity", isLast: true) {
+                            Slider(value: $settings.reflectionIntensity, in: 0...1)
+                                .frame(width: 160)
+                                .disabled(settings.reflectionName.isEmpty)
                         }
                     }
                 }
