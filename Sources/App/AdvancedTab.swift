@@ -10,7 +10,7 @@ struct AdvancedTab: View {
         case performance = "Performance"
         case hotkeys = "Hotkeys"
         case rules = "Per-App"
-        case timer = "Timer"
+        case system = "System"
         var id: String { rawValue }
     }
 
@@ -31,7 +31,7 @@ struct AdvancedTab: View {
                 case .performance: PerformanceSection()
                 case .hotkeys:     ShortcutsTab()
                 case .rules:       PerAppRulesTab()
-                case .timer:       TimerTab()
+                case .system:      SystemSettingsTab()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
