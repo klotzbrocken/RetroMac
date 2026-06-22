@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 /// Advanced settings — power-user options collected behind one tab so the rest of the
 /// Settings window stays simple. A segmented control switches between sub-sections; only
@@ -8,6 +10,7 @@ struct AdvancedTab: View {
 
     enum AdvSection: String, CaseIterable, Identifiable {
         case performance = "Performance"
+        case presets = "Presets"
         case hotkeys = "Hotkeys"
         case rules = "Per-App"
         case system = "System"
@@ -29,6 +32,7 @@ struct AdvancedTab: View {
             Group {
                 switch section {
                 case .performance: PerformanceSection()
+                case .presets:     CustomPresetsSection()
                 case .hotkeys:     ShortcutsTab()
                 case .rules:       PerAppRulesTab()
                 case .system:      SystemSettingsTab()
@@ -68,5 +72,67 @@ private struct PerformanceSection: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
         }
+    }
+}
+
+/// Import / manage custom .metal CRT shaders. Imported files land in the custom-presets
+/// directory and appear under "Shader Presets" in the status-bar menu.
+private struct CustomPresetsSection: View {
+    @State private var files: [String] = []
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: RMSpacing.section) {
+                RMCard(title: "Custom presets",
+                       subtitle: "Import your own .metal CRT shaders — they show up under Shader Presets in the menu.",
+                       bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Import shaders", isLast: files.isEmpty) {
+                            Button("Import .metal\u{2026}") { importMetal() }
+                                .buttonStyle(RMDefaultButtonStyle())
+                        }
+                        ForEach(Array(files.enumerated()), id: \.offset) { idx, name in
+                            RMRow(label: (name as NSString).deletingPathExtension,
+                                  isLast: idx == files.count - 1) {
+                                Button("Remove") { remove(name) }
+                                    .buttonStyle(RMGhostButtonStyle())
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+        }
+        .onAppear(perform: refresh)
+    }
+
+    private func refresh() {
+        let dir = AppSettings.shared.customPresetsDirectory
+        let urls = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+        files = urls.filter { $0.pathExtension == "metal" }.map { $0.lastPathComponent }.sorted()
+    }
+
+    private func importMetal() {
+        let panel = NSOpenPanel()
+        if let metalType = UTType(filenameExtension: "metal") {
+            panel.allowedContentTypes = [metalType]
+        }
+        panel.allowsMultipleSelection = true
+        panel.message = "Select Metal shader files to import"
+        guard panel.runModal() == .OK else { return }
+        let dest = AppSettings.shared.customPresetsDirectory
+        for url in panel.urls {
+            let target = dest.appendingPathComponent(url.lastPathComponent)
+            try? FileManager.default.removeItem(at: target)   // overwrite on re-import
+            try? FileManager.default.copyItem(at: url, to: target)
+        }
+        refresh()
+    }
+
+    private func remove(_ filename: String) {
+        let url = AppSettings.shared.customPresetsDirectory.appendingPathComponent(filename)
+        try? FileManager.default.removeItem(at: url)
+        refresh()
     }
 }
