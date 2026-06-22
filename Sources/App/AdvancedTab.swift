@@ -83,6 +83,8 @@ private struct CustomPresetsSection: View {
     var body: some View {
         ScrollView {
             VStack(spacing: RMSpacing.section) {
+                installedCard
+
                 RMCard(title: "Custom presets",
                        subtitle: "Import your own .metal CRT shaders — they show up under Shader Presets in the menu.",
                        bodyPadding: 0) {
@@ -105,6 +107,36 @@ private struct CustomPresetsSection: View {
             .padding(.vertical, 20)
         }
         .onAppear(perform: refresh)
+    }
+
+    /// Read-only catalogue of the built-in presets, grouped by category (collapsed).
+    private var installedCard: some View {
+        RMCard(title: "Installed presets",
+               subtitle: "Built-in shaders — choose them from Shader Presets in the menu.",
+               bodyPadding: RMSpacing.card) {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(PresetRegistry.categorizedPresets, id: \.0) { category, presets in
+                    DisclosureGroup("\(category.rawValue)  (\(presets.count))") {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(presets, id: \.id) { p in
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(p.displayName)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.rmTextPrimary)
+                                    Text(p.description)
+                                        .font(.rmSecondary)
+                                        .foregroundColor(.rmTextSecondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .padding(.top, 4)
+                        .padding(.leading, 8)
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                }
+            }
+        }
     }
 
     private func refresh() {
