@@ -95,7 +95,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: 920, height: 640)
-        .background(Color.rmBg)
+        .background(ZStack { Color.rmBg; RMScanline() })
         .onChange(of: selectedTab) { newTab in
             settings.lastSettingsTab = newTab.rawValue
         }
