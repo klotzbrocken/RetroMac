@@ -1,51 +1,5 @@
 import SwiftUI
 
-/// Window size preset for Doom
-enum DoomWindowSize: String, CaseIterable, Identifiable {
-    case small = "640x480"
-    case medium = "800x600"
-    case large = "1024x768"
-    case hd = "1280x720"
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .small: return "640 x 480 (VGA)"
-        case .medium: return "800 x 600 (SVGA)"
-        case .large: return "1024 x 768 (XGA)"
-        case .hd: return "1280 x 720 (HD)"
-        }
-    }
-
-    var width: Int {
-        switch self {
-        case .small: return 640
-        case .medium: return 800
-        case .large: return 1024
-        case .hd: return 1280
-        }
-    }
-
-    var height: Int {
-        switch self {
-        case .small: return 480
-        case .medium: return 600
-        case .large: return 768
-        case .hd: return 720
-        }
-    }
-
-    init(width: Int, height: Int) {
-        switch (width, height) {
-        case (800, 600): self = .medium
-        case (1024, 768): self = .large
-        case (1280, 720): self = .hd
-        default: self = .small
-        }
-    }
-}
-
 struct GamesSettingsTab: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var wadFiles: [String] = []
