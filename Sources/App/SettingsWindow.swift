@@ -27,7 +27,7 @@ enum SettingsTab: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .dock: return "Dock & Themes"
+        case .dock: return "Themes"
         case .retroMode: return "Retro Mode"
         case .camera: return "Camera & Streaming"
         case .games: return "Games"
@@ -38,7 +38,7 @@ enum SettingsTab: String, CaseIterable {
 
     var icon: String {
         switch self {
-        case .dock: return "dock.rectangle"
+        case .dock: return "paintpalette"
         case .retroMode: return "wand.and.stars"
         case .camera: return "camera.fill"
         case .games: return "gamecontroller"
@@ -59,7 +59,7 @@ enum SettingsTab: String, CaseIterable {
     /// Title bar subtitle
     var subtitle: String? {
         switch self {
-        case .dock: return "A retro dock that floats above the system one."
+        case .dock: return "Pick a theme and configure the retro dock."
         case .advanced: return "Performance, hotkeys, per-app rules and timers."
         default: return nil
         }

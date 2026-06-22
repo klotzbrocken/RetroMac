@@ -77,46 +77,60 @@ struct DockSettingsTab: View {
     // MARK: - Theme Section
 
     private var themeSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: RMSpacing.md) {
             RMSectionHeaderView(title: "Theme")
 
-            let columns = [
-                GridItem(.flexible(), spacing: RMSpacing.sm),
-                GridItem(.flexible(), spacing: RMSpacing.sm),
-                GridItem(.flexible(), spacing: RMSpacing.sm),
-                GridItem(.flexible(), spacing: RMSpacing.sm)
-            ]
-            LazyVGrid(columns: columns, spacing: RMSpacing.sm) {
-                ForEach(themeCards, id: \.name) { card in
-                    ThemeCard(
-                        name: card.name,
-                        subtitle: card.subtitle,
-                        gradientColors: card.colors,
-                        isActive: settings.dockTheme == card.themeName,
-                        isAddCard: card.isAdd,
-                        previewImageURL: card.previewImageURL
-                    ) {
-                        if card.isAdd {
-                            importTheme()
-                        } else {
-                            settings.dockTheme = card.themeName
-                        }
+            HStack(spacing: RMSpacing.md) {
+                Picker("", selection: $settings.dockTheme) {
+                    ForEach(themes, id: \.name) { theme in
+                        Text(themeShortName(theme.name)).tag(theme.name)
                     }
                 }
+                .labelsHidden()
+                .frame(maxWidth: 280)
+
+                Spacer()
+
+                Button("Add custom\u{2026}") { importTheme() }
+                    .buttonStyle(RMGhostButtonStyle())
             }
+
+            themePreview
         }
     }
 
-    private var themeCards: [ThemeCardData] {
-        var cards: [ThemeCardData] = []
-        for theme in themes {
-            let displayName = themeShortName(theme.name)
-            let subtitle = themeSubtitle(theme.name)
-            let colors = themeGradient(theme.name)
-            cards.append(ThemeCardData(name: displayName, subtitle: subtitle, themeName: theme.name, colors: colors, isAdd: false, previewImageURL: theme.previewImageURL))
+    /// Large preview of the selected theme (dock + overall look). Shows the theme's bundled
+    /// preview.png if present, otherwise a placeholder until screenshots are dropped in.
+    private var themePreview: some View {
+        let bundle = themes.first(where: { $0.name == settings.dockTheme }) ?? ThemeManager.shared.activeTheme
+        let gradient = themeGradient(settings.dockTheme)
+        return ZStack {
+            RoundedRectangle(cornerRadius: RMRadius.card)
+                .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
+
+            if let url = bundle?.previewImageURL, let img = NSImage(contentsOf: url) {
+                Image(nsImage: img)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(8)
+            } else {
+                VStack(spacing: 8) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 34))
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text(themeShortName(settings.dockTheme))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text("Preview image coming soon")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+            }
         }
-        cards.append(ThemeCardData(name: "Add custom\u{2026}", subtitle: ".retromactheme bundles", themeName: "", colors: [Color.rmSurface2, Color.rmSurface2], isAdd: true))
-        return cards
+        .frame(height: 260)
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
+        .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1))
     }
 
     private func themeShortName(_ name: String) -> String {
@@ -131,21 +145,6 @@ struct DockSettingsTab: View {
         case "BeOS": return "BeOS"
         case "Sleek Retro": return "Sleek Retro"
         default: return name
-        }
-    }
-
-    private func themeSubtitle(_ name: String) -> String {
-        switch name {
-        case "Mountain Lion": return "Glossy translucent"
-        case "Snow Leopard": return "3D shelf \u{00B7} magnification"
-        case "Mac OS 9.2": return "Beveled 3D \u{00B7} pixelated"
-        case "Mac OS 9.2 Classic": return "Control Strip \u{00B7} authentic"
-        case "Windows 98": return "Classic taskbar \u{00B7} Start menu"
-        case "Windows XP": return "Luna Blue \u{00B7} glossy"
-        case "OS/2 Warp 4": return "WarpCenter tray"
-        case "BeOS": return "Deskbar \u{00B7} minimal"
-        case "Sleek Retro": return "Modern retro blend"
-        default: return "Custom theme"
         }
     }
 
@@ -739,123 +738,6 @@ struct DockSettingsTab: View {
 }
 
 // MARK: - Theme Card
-
-private struct ThemeCardData {
-    var name: String
-    var subtitle: String
-    var themeName: String
-    var colors: [Color]
-    var isAdd: Bool
-    var previewImageURL: URL? = nil
-}
-
-private struct ThemeCard: View {
-    var name: String
-    var subtitle: String
-    var gradientColors: [Color]
-    var isActive: Bool
-    var isAddCard: Bool
-    var previewImageURL: URL? = nil
-    var onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            VStack(spacing: 0) {
-                // Preview area
-                ZStack {
-                    if isAddCard {
-                        // Hatched/dashed pattern
-                        Color.rmSurface2
-                            .overlay(
-                                ZStack {
-                                    Circle()
-                                        .strokeBorder(Color.rmBorderStrong, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-                                        .frame(width: 22, height: 22)
-                                        .overlay(
-                                            Image(systemName: "plus")
-                                                .font(.system(size: 12, weight: .medium))
-                                                .foregroundColor(.rmTextSecondary)
-                                        )
-                                }
-                            )
-                    } else if let previewURL = previewImageURL,
-                              let nsImage = NSImage(contentsOf: previewURL) {
-                        // Real preview image from theme bundle
-                        GeometryReader { geo in
-                            Image(nsImage: nsImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: geo.size.width, height: geo.size.height)
-                                .clipped()
-                        }
-                    } else {
-                        // Fallback: gradient with placeholder icons
-                        LinearGradient(colors: gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
-                            .overlay(
-                                RadialGradient(
-                                    colors: [Color.white.opacity(0.10), Color.clear],
-                                    center: UnitPoint(x: 0.30, y: 0.20),
-                                    startRadius: 0,
-                                    endRadius: 50
-                                )
-                            )
-
-                        HStack(spacing: 2) {
-                            ForEach(0..<5) { i in
-                                let colors: [Color] = [.blue, .red, .green, .orange, .purple]
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(colors[i].opacity(0.9))
-                                    .frame(width: 14, height: 14)
-                            }
-                        }
-                        .padding(.bottom, 8)
-                        .frame(maxHeight: .infinity, alignment: .bottom)
-                    }
-                }
-                .frame(height: 56)
-                .clipped()
-                .overlay(
-                    Rectangle()
-                        .fill(isActive ? Color.rmAccent.opacity(0.3) : Color.rmBorder)
-                        .frame(height: 1),
-                    alignment: .bottom
-                )
-
-                // Footer
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(name)
-                            .font(.system(size: 12.5, weight: .semibold))
-                            .tracking(-0.05)
-                            .foregroundColor(.rmTextPrimary)
-                            .lineLimit(1)
-                        Text(subtitle)
-                            .font(.system(size: 11))
-                            .foregroundColor(.rmTextSecondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-
-                    if isActive {
-                        RMChip(text: "In use", tone: .on)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .padding(.bottom, 1)
-            }
-            .background(Color.rmSurface)
-            .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
-            .overlay(
-                RoundedRectangle(cornerRadius: RMRadius.card)
-                    .stroke(isActive ? Color.rmAccent.opacity(0.6) : Color.rmBorder, lineWidth: isActive ? 1.5 : 1)
-            )
-            .rmCardShadow()
-        }
-        .buttonStyle(.plain)
-    }
-}
 
 // MARK: - Kept from original
 
