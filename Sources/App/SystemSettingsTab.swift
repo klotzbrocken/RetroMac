@@ -25,6 +25,7 @@ struct SystemSettingsTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: RMSpacing.section) {
+                startupCard
                 permissionsCard
                 sleepCard
             }
@@ -32,6 +33,21 @@ struct SystemSettingsTab: View {
             .padding(.vertical, 20)
         }
         .task { checkPermissions() }
+    }
+
+    private var startupCard: some View {
+        RMCard(title: "Startup", bodyPadding: 0) {
+            VStack(spacing: 0) {
+                RMRow(label: "Start RetroMac at login") {
+                    Toggle("", isOn: $settings.launchAtLogin)
+                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                }
+                RMRow(label: "Turn the shader on when RetroMac launches", isLast: true) {
+                    Toggle("", isOn: $settings.enableOnLaunch)
+                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                }
+            }
+        }
     }
 
     private var permissionsCard: some View {
