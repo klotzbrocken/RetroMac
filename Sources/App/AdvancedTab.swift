@@ -142,9 +142,19 @@ private struct CustomPresetsSection: View {
                        subtitle: "Import your own .metal CRT shaders — they show up under Shader Presets in the menu.",
                        bodyPadding: 0) {
                     VStack(spacing: 0) {
-                        RMRow(label: "Import shaders", isLast: files.isEmpty) {
+                        RMRow(label: "Import shaders") {
                             Button("Import .metal\u{2026}") { importMetal() }
                                 .buttonStyle(RMDefaultButtonStyle())
+                        }
+                        RMRow(label: "How to build a shader",
+                              hint: "Metal format + a copy-paste template.",
+                              isLast: files.isEmpty) {
+                            Button("Open guide") {
+                                if let u = URL(string: "https://github.com/klotzbrocken/RetroMac/blob/main/docs/CUSTOM-SHADERS.md") {
+                                    NSWorkspace.shared.open(u)
+                                }
+                            }
+                            .buttonStyle(RMDefaultButtonStyle())
                         }
                         ForEach(Array(files.enumerated()), id: \.offset) { idx, name in
                             RMRow(label: (name as NSString).deletingPathExtension,
