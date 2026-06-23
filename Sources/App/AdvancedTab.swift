@@ -20,11 +20,14 @@ struct AdvancedTab: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $section) {
-                ForEach(AdvSection.allCases) { Text($0.rawValue).tag($0) }
+            HStack(spacing: 8) {
+                Text("Section").font(.rmSecondary).foregroundColor(.rmTextSecondary)
+                Picker("", selection: $section) {
+                    ForEach(AdvSection.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .labelsHidden().pickerStyle(.menu).frame(width: 180)
+                Spacer()
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
 
