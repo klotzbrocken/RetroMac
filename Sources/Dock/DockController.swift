@@ -711,9 +711,15 @@ final class DockController {
             DispatchQueue.main.async {
                 ThemeManager.shared.reload(selectTheme: newTheme)
                 ThemeManager.shared.clearCache()
-                ThemeManager.shared.applyWallpaper()
+                // "Dock only": restyle the Dock without touching the desktop wallpaper or
+                // showing the theme's boot splash (those are whole-system changes).
+                if AppSettings.shared.dockOnly {
+                    ThemeManager.shared.restoreWallpapers()
+                } else {
+                    ThemeManager.shared.applyWallpaper()
+                }
                 AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
-                if let theme = ThemeManager.shared.activeTheme {
+                if !AppSettings.shared.dockOnly, let theme = ThemeManager.shared.activeTheme {
                     SplashController.shared.showIfEnabled(for: theme)
                 }
                 self?.recreateWindow()
