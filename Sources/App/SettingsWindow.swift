@@ -83,7 +83,7 @@ struct SettingsView: View {
         HStack(spacing: 0) {
             // Sidebar
             SettingsSidebar(selectedTab: $selectedTab)
-                .frame(width: 190)
+                .frame(width: 200)
 
             // Vertical divider
             Rectangle()
@@ -94,7 +94,7 @@ struct SettingsView: View {
             SettingsDetailPane(selectedTab: $selectedTab, updater: updater)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 644, height: 640)
+        .frame(width: 700, height: 640)
         .background(ZStack { Color.rmBg; RMScanline() })
         .onChange(of: selectedTab) { newTab in
             settings.lastSettingsTab = newTab.rawValue
@@ -393,9 +393,10 @@ struct DetailTitleBar: View {
             }
             .frame(height: 46)
             .padding(.horizontal, 20)
+            .background(Color.rmSurface)
 
             Rectangle()
-                .fill(Color.rmDivider)
+                .fill(Color.rmBorder)
                 .frame(height: 1)
         }
     }
@@ -404,34 +405,14 @@ struct DetailTitleBar: View {
     private var toolbarButtons: some View {
         switch tab {
         case .dock:
-            HStack(spacing: 8) {
-                Button("Import theme\u{2026}") { importTheme() }
-                    .buttonStyle(RMGhostButtonStyle())
-
-                Button("Show dock now") {
-                    AppSettings.shared.dockEnabled = true
-                    DockController.shared.start()
-                }
-                .buttonStyle(RMPrimaryButtonStyle())
+            // Theme import lives in-context as "Add custom…" in the Themes section.
+            Button("Show dock now") {
+                AppSettings.shared.dockEnabled = true
+                DockController.shared.start()
             }
+            .buttonStyle(RMPrimaryButtonStyle())
         default:
             EmptyView()
-        }
-    }
-
-    private func importTheme() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "retromactheme")!, .zip]
-        panel.message = "Select a .retromactheme bundle or a .zip to install"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            try ThemeManager.shared.importTheme(from: url)
-        } catch {
-            let a = NSAlert()
-            a.alertStyle = .warning
-            a.messageText = "Theme import failed"
-            a.informativeText = error.localizedDescription
-            a.runModal()
         }
     }
 }
@@ -895,7 +876,7 @@ final class SettingsWindowController {
 
         let hostingView = NSHostingView(rootView: SettingsView(updater: updater!))
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 644, height: 640),
+            contentRect: NSRect(x: 0, y: 0, width: 700, height: 640),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false

@@ -14,6 +14,8 @@ struct GamesSettingsTab: View {
             // One global CRT switch for all bundled PC games (replaces per-game toggles).
             Section("Game effects") {
                 Toggle("Apply CRT effect to games", isOn: $settings.gamesCRTEnabled)
+                    .toggleStyle(.switch)
+                    .tint(.rmAccent)
                 Text("Adds the bundled CRT shader to Doom, Raze, Heretic, Shadow Warrior and Freedoom.")
                     .font(.caption).foregroundStyle(.secondary)
             }
