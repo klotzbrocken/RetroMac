@@ -104,33 +104,32 @@ struct DockSettingsTab: View {
     private var themePreview: some View {
         let bundle = themes.first(where: { $0.name == settings.dockTheme }) ?? ThemeManager.shared.activeTheme
         let gradient = themeGradient(settings.dockTheme)
-        return ZStack {
-            RoundedRectangle(cornerRadius: RMRadius.card)
-                .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
-
-            if let url = bundle?.previewImageURL, let img = NSImage(contentsOf: url) {
-                // Preview screenshots are 16:9 — fill the 16:9 box edge to edge.
-                Image(nsImage: img)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .font(.system(size: 30))
-                        .foregroundStyle(.white.opacity(0.85))
-                    Text(themeShortName(settings.dockTheme))
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text("Preview image coming soon (16:9)")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.8))
+        // Robust 16:9 box: Color.clear drives the ratio, content goes in the overlay.
+        return Color.clear
+            .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .overlay(
+                ZStack {
+                    LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+                    if let url = bundle?.previewImageURL, let img = NSImage(contentsOf: url) {
+                        Image(nsImage: img).resizable().scaledToFill()
+                    } else {
+                        VStack(spacing: 6) {
+                            Image(systemName: "photo.on.rectangle.angled")
+                                .font(.system(size: 28))
+                                .foregroundStyle(.white.opacity(0.85))
+                            Text(themeShortName(settings.dockTheme))
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                            Text("Preview image coming soon (16:9)")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.8))
+                        }
+                    }
                 }
-            }
-        }
-        .aspectRatio(16.0 / 9.0, contentMode: .fit)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
-        .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
+            .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1))
     }
 
     private func themeShortName(_ name: String) -> String {
