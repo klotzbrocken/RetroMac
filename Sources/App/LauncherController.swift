@@ -226,6 +226,16 @@ struct LauncherView: View {
     }
 
     var body: some View {
+        Group {
+            if changingSlot != nil { themePicker } else { mainContent }
+        }
+        .frame(width: 320)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.15)))
+        .onAppear { prefillSlotsIfNeeded() }
+    }
+
+    private var mainContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
             quickAccess
@@ -235,19 +245,52 @@ struct LauncherView: View {
             powerRow
         }
         .padding(16)
-        .frame(width: 320)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.15)))
-        .onAppear { prefillSlotsIfNeeded() }
-        .confirmationDialog("Choose a theme",
-                            isPresented: Binding(get: { changingSlot != nil },
-                                                 set: { if !$0 { changingSlot = nil } }),
-                            titleVisibility: .visible) {
-            ForEach(model.allThemes) { t in
-                Button(t.name) { if let s = changingSlot { setSlot(s, t.name) }; changingSlot = nil }
+    }
+
+    /// In-panel theme picker (stays inside the panel so the dismiss monitors don't close
+    /// the flyout, and scrolls so the full theme list is reachable).
+    private var themePicker: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Button { changingSlot = nil } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 13, weight: .semibold))
+                }.buttonStyle(.plain)
+                Text("Choose a theme").font(.system(size: 13, weight: .bold))
+                Spacer()
             }
-            Button("Cancel", role: .cancel) { changingSlot = nil }
+            ScrollView {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 12) {
+                    ForEach(model.allThemes) { t in
+                        Button {
+                            if let s = changingSlot { setSlot(s, t.name) }
+                            changingSlot = nil
+                        } label: { pickerTile(t) }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .frame(height: 280)
         }
+        .padding(16)
+    }
+
+    private func pickerTile(_ t: LauncherModel.ThemeItem) -> some View {
+        VStack(spacing: 4) {
+            ZStack {
+                if let img = t.icon {
+                    Image(nsImage: img).resizable().scaledToFit().frame(width: 48, height: 36)
+                } else {
+                    Image(systemName: "square.dashed").font(.system(size: 18)).foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 56, height: 44).clipped()
+            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.15)))
+            Text(t.name).font(.system(size: 9)).lineLimit(2).multilineTextAlignment(.center)
+                .foregroundStyle(.secondary).frame(width: 64, height: 24)
+        }
+        .frame(width: 64, height: 74)
     }
 
     // MARK: - Slot helpers
