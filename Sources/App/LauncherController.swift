@@ -157,7 +157,10 @@ final class LauncherModel: ObservableObject {
 
     @Published var specialThemes: [ThemeItem] = []
     @Published var otherThemes: [ThemeItem] = []
+    @Published var allThemes: [ThemeItem] = []
     @Published var activeTheme: String = ""
+
+    func icon(for name: String) -> NSImage? { allThemes.first { $0.name == name }?.icon }
     @Published var shaderActive = false
     @Published var webcamRunning = false
     @Published var currentPreset: String = ""
@@ -192,6 +195,7 @@ final class LauncherModel: ObservableObject {
             let img = t.themeIconURL().flatMap { NSImage(contentsOf: $0) }
             return ThemeItem(name: t.config.name, icon: img)
         }
+        allThemes = all
         specialThemes = all.filter { Self.isSpecial($0.name) }
         otherThemes = all.filter { !Self.isSpecial($0.name) }
         activeTheme = mgr.activeTheme?.config.name ?? ""
@@ -205,128 +209,205 @@ final class LauncherModel: ObservableObject {
 
 struct LauncherView: View {
     @StateObject private var model = LauncherModel()
+    @ObservedObject private var settings = AppSettings.shared
+    @State private var editMode = false
+    @State private var wobble = false
     var onClose: () -> Void
+
+    private let accentBlue = Color(red: 0.039, green: 0.478, blue: 1.0)    // #0a7aff
+    private let destructive = Color(red: 1.0, green: 0.231, blue: 0.188)   // #ff3b30
+    private let switchGreen = Color(red: 0.204, green: 0.780, blue: 0.349) // #34c759
+
+    /// Exactly 8 slot entries ("" = empty).
+    private var slots: [String] {
+        var s = settings.quickAccessSlots
+        if s.count < 8 { s += Array(repeating: "", count: 8 - s.count) }
+        return Array(s.prefix(8))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
-            themeStrip
+            quickAccess
+            dockOnlyRow
             effects
             Divider()
             powerRow
         }
         .padding(16)
-        .frame(width: 380)
-        .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.12)))
+        .frame(width: 320)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.15)))
+        .onAppear { prefillSlotsIfNeeded() }
+    }
+
+    // MARK: - Slot helpers
+
+    private func prefillSlotsIfNeeded() {
+        guard settings.quickAccessSlots.allSatisfy({ $0.isEmpty }) else { return }
+        let starter = model.specialThemes.map { $0.name } + model.otherThemes.map { $0.name }
+        var s = Array(starter.prefix(8))
+        if s.count < 8 { s += Array(repeating: "", count: 8 - s.count) }
+        settings.quickAccessSlots = s
+    }
+
+    private func setSlot(_ index: Int, _ name: String) {
+        var s = slots
+        s[index] = name
+        settings.quickAccessSlots = s
+    }
+
+    /// Tap a slot: activate its theme, or deactivate if it's already active.
+    private func tapSlot(_ name: String) {
+        if name == model.activeTheme {
+            AppDelegate.shared?.launcherDisableTheme()
+        } else {
+            AppDelegate.shared?.launcherActivateTheme(name)
+        }
+        model.refresh()
     }
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "sparkles.tv")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: 1) {
+            Group {
+                if let icon = (NSApp.delegate as? AppDelegate)?.menuBarIconImage(size: NSSize(width: 18, height: 18)) {
+                    Image(nsImage: icon).renderingMode(.template).foregroundStyle(.secondary)
+                } else {
+                    Image(systemName: "sparkles.tv").font(.system(size: 16, weight: .semibold)).foregroundStyle(.secondary)
+                }
+            }
+            VStack(alignment: .leading, spacing: 2) {
                 Text("RetroMac").font(.system(size: 14, weight: .bold))
-                Text(model.activeTheme.isEmpty ? "No theme" : model.activeTheme)
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                HStack(spacing: 5) {
+                    Circle().fill(model.activeTheme.isEmpty ? Color.secondary : switchGreen)
+                        .frame(width: 6, height: 6)
+                    Text(model.activeTheme.isEmpty ? "No theme" : model.activeTheme)
+                        .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                }
             }
             Spacer()
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Close")
         }
     }
 
-    private var themeStrip: some View {
+    private var quickAccess: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("THEMES").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 5), spacing: 12) {
-                // "Off" — deactivate the theme (clean desktop). Active when no theme is on.
-                Button { AppDelegate.shared?.launcherDisableTheme(); model.refresh() } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: "power")
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundStyle(model.activeTheme.isEmpty ? Color.accentColor : .secondary)
-                            .frame(width: 48, height: 48)
-                            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
-                            .overlay(RoundedRectangle(cornerRadius: 10)
-                                .strokeBorder(model.activeTheme.isEmpty ? Color.accentColor : .white.opacity(0.15),
-                                              lineWidth: model.activeTheme.isEmpty ? 2 : 1))
-                        Text("Off").font(.system(size: 9))
-                            .foregroundStyle(model.activeTheme.isEmpty ? Color.accentColor : .secondary)
-                    }
-                }.buttonStyle(.plain)
-                ForEach(model.specialThemes) { t in
-                    Button { AppDelegate.shared?.launcherActivateTheme(t.name); model.refresh() } label: {
-                        VStack(spacing: 4) {
-                            ZStack {
-                                if let img = t.icon {
-                                    Image(nsImage: img).resizable().aspectRatio(contentMode: .fit).padding(4)
-                                } else {
-                                    Image(systemName: "square.dashed")
-                                        .font(.system(size: 20)).foregroundStyle(.secondary)
-                                }
-                            }
-                            .frame(width: 48, height: 48)
-                            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
-                            .overlay(RoundedRectangle(cornerRadius: 10)
-                                .strokeBorder(t.name == model.activeTheme ? Color.accentColor : .white.opacity(0.15),
-                                              lineWidth: t.name == model.activeTheme ? 2 : 1))
-                            Text(t.name).font(.system(size: 9)).lineLimit(1)
-                                .foregroundStyle(t.name == model.activeTheme ? Color.accentColor : .secondary)
-                        }
-                    }.buttonStyle(.plain)
+            HStack {
+                Text("QUICK ACCESS").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
+                Spacer()
+                Button(editMode ? "Done" : "Edit") {
+                    withAnimation(.easeInOut(duration: 0.15)) { editMode.toggle(); wobble = editMode }
                 }
-                // "More" — the non-special themes, as a dropdown next to the last grid icon.
-                if !model.otherThemes.isEmpty {
-                    let moreActive = model.otherThemes.contains { $0.name == model.activeTheme }
-                    Menu {
-                        ForEach(model.otherThemes) { t in
-                            Button(t.name) { AppDelegate.shared?.launcherActivateTheme(t.name); model.refresh() }
-                        }
-                    } label: {
-                        VStack(spacing: 4) {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundStyle(moreActive ? Color.accentColor : .secondary)
-                                .frame(width: 48, height: 48)
-                                .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
-                                .overlay(RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(moreActive ? Color.accentColor : .white.opacity(0.15),
-                                                  lineWidth: moreActive ? 2 : 1))
-                            Text(moreActive ? model.activeTheme : "More")
-                                .font(.system(size: 9)).lineLimit(1)
-                                .foregroundStyle(moreActive ? Color.accentColor : .secondary)
-                        }
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .buttonStyle(.plain)
-                }
+                .buttonStyle(.plain)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(accentBlue)
+            }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 12) {
+                ForEach(0..<8, id: \.self) { i in slotView(i) }
             }
         }
+    }
+
+    @ViewBuilder
+    private func slotView(_ i: Int) -> some View {
+        let name = slots[i]
+        if name.isEmpty {
+            Menu {
+                ForEach(model.allThemes) { t in Button(t.name) { setSlot(i, t.name) } }
+            } label: { emptyTile }
+            .menuStyle(.borderlessButton).menuIndicator(.hidden).buttonStyle(.plain)
+        } else {
+            let active = name == model.activeTheme
+            ZStack(alignment: .topLeading) {
+                if editMode {
+                    Menu {
+                        ForEach(model.allThemes) { t in Button(t.name) { setSlot(i, t.name) } }
+                    } label: { filledTile(name, active: active) }
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).buttonStyle(.plain)
+
+                    Button { setSlot(i, "") } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(size: 15)).foregroundStyle(destructive)
+                            .background(Circle().fill(.white).frame(width: 13, height: 13))
+                    }
+                    .buttonStyle(.plain).offset(x: -5, y: -5)
+                } else {
+                    Button { tapSlot(name) } label: { filledTile(name, active: active) }
+                        .buttonStyle(.plain)
+                }
+            }
+            .rotationEffect(.degrees(editMode ? (wobble ? 1.5 : -1.5) : 0))
+            .animation(editMode ? .easeInOut(duration: 0.13).repeatForever(autoreverses: true) : .default, value: wobble)
+        }
+    }
+
+    private func filledTile(_ name: String, active: Bool) -> some View {
+        VStack(spacing: 4) {
+            ZStack {
+                if let img = model.icon(for: name) {
+                    Image(nsImage: img).resizable().aspectRatio(contentMode: .fit).padding(4)
+                } else {
+                    Image(systemName: "square.dashed").font(.system(size: 18)).foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 56, height: 44)
+            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(active ? accentBlue : .white.opacity(0.15), lineWidth: active ? 2 : 1))
+            .overlay(alignment: .topTrailing) {
+                if active {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 13)).foregroundStyle(accentBlue)
+                        .background(Circle().fill(.white).frame(width: 11, height: 11))
+                        .offset(x: 5, y: -5)
+                }
+            }
+            Text(name).font(.system(size: 9)).lineLimit(2).multilineTextAlignment(.center)
+                .foregroundStyle(active ? accentBlue : .secondary)
+                .frame(height: 24)
+        }
+    }
+
+    private var emptyTile: some View {
+        VStack(spacing: 4) {
+            Image(systemName: "plus")
+                .font(.system(size: 18, weight: .medium)).foregroundStyle(.secondary)
+                .frame(width: 56, height: 44)
+                .overlay(RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .foregroundStyle(.secondary.opacity(0.5)))
+            Text("Add").font(.system(size: 9)).foregroundStyle(.secondary).frame(height: 24)
+        }
+    }
+
+    private var dockOnlyRow: some View {
+        Toggle(isOn: $settings.dockOnly) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Dock only").font(.system(size: 12))
+                Text("Restyle the Dock, not the whole system")
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+            }
+        }
+        .toggleStyle(.switch).tint(switchGreen)
     }
 
     private var effects: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("EFFECTS").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
-            HStack(spacing: 16) {
-                Toggle(isOn: Binding(get: { model.shaderActive },
-                                     set: { _ in AppDelegate.shared?.launcherToggleShader(); model.refresh() })) {
-                    Label("CRT Shader", systemImage: "tv")
-                }.frame(maxWidth: .infinity, alignment: .leading)
-                Toggle(isOn: Binding(get: { model.webcamRunning },
-                                     set: { _ in AppDelegate.shared?.launcherToggleWebcam(); model.refresh() })) {
-                    Label("Virtual Camera", systemImage: "camera")
-                }.frame(maxWidth: .infinity, alignment: .leading)
+            Toggle(isOn: Binding(get: { model.shaderActive },
+                                 set: { _ in AppDelegate.shared?.launcherToggleShader(); model.refresh() })) {
+                Label("CRT Shader", systemImage: "tv")
             }
-            .toggleStyle(.switch)
-            shaderPicker
+            .toggleStyle(.switch).tint(switchGreen)
+
+            if model.shaderActive {
+                shaderPicker.padding(.leading, 22)
+            }
+
+            Toggle(isOn: Binding(get: { model.webcamRunning },
+                                 set: { _ in AppDelegate.shared?.launcherToggleWebcam(); model.refresh() })) {
+                Label("Virtual Camera", systemImage: "camera")
+            }
+            .toggleStyle(.switch).tint(switchGreen)
         }
         .font(.system(size: 12))
     }

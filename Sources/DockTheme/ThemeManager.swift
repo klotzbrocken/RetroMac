@@ -77,11 +77,12 @@ final class ThemeManager {
         print("[Theme] Active theme: none (disabled)")
     }
 
-    func setActiveTheme(name: String) {
+    func setActiveTheme(name: String, applyWallpaper applyWP: Bool = true) {
         AppSettings.shared.dockTheme = name
         activeTheme = availableThemes.first(where: { $0.config.name == name })
         iconCache.removeAllObjects()
-        applyWallpaper()
+        // "Dock only" mode skips the desktop wallpaper change (theme affects the dock only).
+        if applyWP { applyWallpaper() } else { restoreWallpapers() }
         NotificationCenter.default.post(name: .dockThemeChanged, object: nil)
         print("[Theme] Active theme: \(name)")
 
