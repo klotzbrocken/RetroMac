@@ -132,7 +132,7 @@ struct SettingsSidebar: View {
             .frame(height: 44)
             .padding(.leading, 16)
             .padding(.trailing, 14)
-            .padding(.top, 12) // sit higher, closer to the prototype
+            .padding(.top, 24) // higher than before but clear of the traffic-light buttons
 
             // Nav items
             ScrollView {
