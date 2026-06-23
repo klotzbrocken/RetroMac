@@ -361,8 +361,9 @@ struct LauncherView: View {
             }
             Text(name).font(.system(size: 9)).lineLimit(2).multilineTextAlignment(.center)
                 .foregroundStyle(active ? accentBlue : .secondary)
-                .frame(height: 24)
+                .frame(width: 64, height: 24)
         }
+        .frame(width: 64, height: 74)
     }
 
     private var emptyTile: some View {
@@ -375,6 +376,7 @@ struct LauncherView: View {
                     .foregroundStyle(.secondary.opacity(0.5)))
             Text("Add").font(.system(size: 9)).foregroundStyle(.secondary).frame(height: 24)
         }
+        .frame(width: 64, height: 74)
     }
 
     private var dockOnlyRow: some View {
