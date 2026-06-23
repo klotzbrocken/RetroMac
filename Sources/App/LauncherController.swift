@@ -428,34 +428,40 @@ struct LauncherView: View {
     }
 
     private var dockOnlyRow: some View {
-        Toggle(isOn: $settings.dockOnly) {
+        HStack {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Dock only").font(.system(size: 12))
                 Text("Restyle the Dock, not the whole system")
                     .font(.system(size: 10)).foregroundStyle(.secondary)
             }
+            Spacer()
+            Toggle("", isOn: $settings.dockOnly)
+                .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
         }
-        .toggleStyle(.switch).tint(switchGreen)
     }
 
     private var effects: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("EFFECTS").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
-            Toggle(isOn: Binding(get: { model.shaderActive },
-                                 set: { _ in AppDelegate.shared?.launcherToggleShader(); model.refresh() })) {
+            HStack {
                 Label("CRT Shader", systemImage: "tv")
+                Spacer()
+                Toggle("", isOn: Binding(get: { model.shaderActive },
+                                         set: { _ in AppDelegate.shared?.launcherToggleShader(); model.refresh() }))
+                    .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }
-            .toggleStyle(.switch).tint(switchGreen)
 
             if model.shaderActive {
                 shaderPicker.padding(.leading, 22)
             }
 
-            Toggle(isOn: Binding(get: { model.webcamRunning },
-                                 set: { _ in AppDelegate.shared?.launcherToggleWebcam(); model.refresh() })) {
+            HStack {
                 Label("Virtual Camera", systemImage: "camera")
+                Spacer()
+                Toggle("", isOn: Binding(get: { model.webcamRunning },
+                                         set: { _ in AppDelegate.shared?.launcherToggleWebcam(); model.refresh() }))
+                    .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }
-            .toggleStyle(.switch).tint(switchGreen)
         }
         .font(.system(size: 12))
     }
