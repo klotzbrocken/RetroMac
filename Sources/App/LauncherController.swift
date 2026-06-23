@@ -341,12 +341,13 @@ struct LauncherView: View {
         VStack(spacing: 4) {
             ZStack {
                 if let img = model.icon(for: name) {
-                    Image(nsImage: img).resizable().aspectRatio(contentMode: .fit).padding(4)
+                    Image(nsImage: img).resizable().scaledToFit().frame(width: 48, height: 36)
                 } else {
                     Image(systemName: "square.dashed").font(.system(size: 18)).foregroundStyle(.secondary)
                 }
             }
             .frame(width: 56, height: 44)
+            .clipped()
             .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(active ? accentBlue : .white.opacity(0.15), lineWidth: active ? 2 : 1))
