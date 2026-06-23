@@ -182,6 +182,14 @@ final class AppSettings: ObservableObject {
             FloatingLauncherButton.shared.setEnabled(floatingLauncherEnabled)
         }
     }
+    /// Quick-access flyout: up to 8 ordered theme names ("" = empty slot).
+    @Published var quickAccessSlots: [String] {
+        didSet { defaults.set(quickAccessSlots, forKey: "quickAccessSlots") }
+    }
+    /// Quick-access flyout: when on, activating a theme restyles only the Dock (no wallpaper).
+    @Published var dockOnly: Bool {
+        didSet { defaults.set(dockOnly, forKey: "dockOnly") }
+    }
 
     // Retro Mode (one-click distraction-free favourite)
     @Published var retroModeTheme: String {
@@ -523,6 +531,8 @@ final class AppSettings: ObservableObject {
         themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? false
         setupWizardComplete = defaults.bool(forKey: "setupWizardComplete")
         floatingLauncherEnabled = defaults.object(forKey: "floatingLauncherEnabled") as? Bool ?? true
+        quickAccessSlots = defaults.stringArray(forKey: "quickAccessSlots") ?? []
+        dockOnly = defaults.bool(forKey: "dockOnly")
         retroModeTheme = defaults.string(forKey: "retroModeTheme") ?? "Maiks Favourite"
         retroModeShader = defaults.string(forKey: "retroModeShader") ?? ""
         retroModeHideDock = defaults.object(forKey: "retroModeHideDock") as? Bool ?? true

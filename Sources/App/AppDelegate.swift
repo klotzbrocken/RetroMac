@@ -2092,7 +2092,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func selectTheme(_ sender: NSMenuItem) {
         guard let name = sender.representedObject as? String else { return }
         let settings = AppSettings.shared
-        ThemeManager.shared.setActiveTheme(name: name)
+        ThemeManager.shared.setActiveTheme(name: name, applyWallpaper: !AppSettings.shared.dockOnly)
         if !settings.dockEnabled {
             settings.dockEnabled = true
             DockController.shared.start()
