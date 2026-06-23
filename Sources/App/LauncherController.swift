@@ -211,6 +211,7 @@ struct LauncherView: View {
     @StateObject private var model = LauncherModel()
     @ObservedObject private var settings = AppSettings.shared
     @State private var editMode = false
+    @State private var changingSlot: Int? = nil
     var onClose: () -> Void
 
     private let accentBlue = Color(red: 0.039, green: 0.478, blue: 1.0)    // #0a7aff
@@ -238,6 +239,15 @@ struct LauncherView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.15)))
         .onAppear { prefillSlotsIfNeeded() }
+        .confirmationDialog("Choose a theme",
+                            isPresented: Binding(get: { changingSlot != nil },
+                                                 set: { if !$0 { changingSlot = nil } }),
+                            titleVisibility: .visible) {
+            ForEach(model.allThemes) { t in
+                Button(t.name) { if let s = changingSlot { setSlot(s, t.name) }; changingSlot = nil }
+            }
+            Button("Cancel", role: .cancel) { changingSlot = nil }
+        }
     }
 
     // MARK: - Slot helpers
@@ -310,28 +320,23 @@ struct LauncherView: View {
     private func slotView(_ i: Int) -> some View {
         let name = slots[i]
         if name.isEmpty {
-            Menu {
-                ForEach(model.allThemes) { t in Button(t.name) { setSlot(i, t.name) } }
-            } label: { emptyTile }
-            .menuStyle(.borderlessButton).menuIndicator(.hidden).buttonStyle(.plain)
+            Button { changingSlot = i } label: { emptyTile }
+                .buttonStyle(.plain)
         } else {
             let active = name == model.activeTheme
             ZStack(alignment: .topLeading) {
-                if editMode {
-                    Menu {
-                        ForEach(model.allThemes) { t in Button(t.name) { setSlot(i, t.name) } }
-                    } label: { filledTile(name, active: active) }
-                    .menuStyle(.borderlessButton).menuIndicator(.hidden).buttonStyle(.plain)
+                Button {
+                    if editMode { changingSlot = i } else { tapSlot(name) }
+                } label: { filledTile(name, active: active) }
+                .buttonStyle(.plain)
 
+                if editMode {
                     Button { setSlot(i, "") } label: {
                         Image(systemName: "minus.circle.fill")
                             .font(.system(size: 15)).foregroundStyle(destructive)
                             .background(Circle().fill(.white).frame(width: 13, height: 13))
                     }
                     .buttonStyle(.plain).offset(x: -5, y: -5)
-                } else {
-                    Button { tapSlot(name) } label: { filledTile(name, active: active) }
-                        .buttonStyle(.plain)
                 }
             }
         }
