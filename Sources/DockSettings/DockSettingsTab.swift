@@ -101,35 +101,39 @@ struct DockSettingsTab: View {
 
     /// Large preview of the selected theme (dock + overall look). Shows the theme's bundled
     /// preview.png if present, otherwise a placeholder until screenshots are dropped in.
+    @ViewBuilder
     private var themePreview: some View {
         let bundle = themes.first(where: { $0.name == settings.dockTheme }) ?? ThemeManager.shared.activeTheme
-        let gradient = themeGradient(settings.dockTheme)
-        // Robust 16:9 box: Color.clear drives the ratio, content goes in the overlay.
-        return Color.clear
-            .aspectRatio(16.0 / 9.0, contentMode: .fit)
-            .frame(maxWidth: .infinity)
-            .overlay(
-                ZStack {
-                    LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
-                    if let url = bundle?.previewImageURL, let img = NSImage(contentsOf: url) {
-                        Image(nsImage: img).resizable().scaledToFill()
-                    } else {
+        if let url = bundle?.previewImageURL, let img = NSImage(contentsOf: url) {
+            // Match the screenshot's own aspect ratio — no cropping.
+            Image(nsImage: img)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
+                .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1))
+        } else {
+            // Placeholder until a screenshot exists — keep a sensible 16:9 box.
+            let gradient = themeGradient(settings.dockTheme)
+            Color.clear
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .overlay(
+                    ZStack {
+                        LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
                         VStack(spacing: 6) {
                             Image(systemName: "photo.on.rectangle.angled")
-                                .font(.system(size: 28))
-                                .foregroundStyle(.white.opacity(0.85))
+                                .font(.system(size: 28)).foregroundStyle(.white.opacity(0.85))
                             Text(themeShortName(settings.dockTheme))
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.white)
-                            Text("Preview image coming soon (16:9)")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.8))
+                                .font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                            Text("Preview image coming soon")
+                                .font(.caption).foregroundStyle(.white.opacity(0.8))
                         }
                     }
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
-            .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
+                .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1))
+        }
     }
 
     private func themeShortName(_ name: String) -> String {
