@@ -211,7 +211,6 @@ struct LauncherView: View {
     @StateObject private var model = LauncherModel()
     @ObservedObject private var settings = AppSettings.shared
     @State private var editMode = false
-    @State private var wobble = false
     var onClose: () -> Void
 
     private let accentBlue = Color(red: 0.039, green: 0.478, blue: 1.0)    // #0a7aff
@@ -295,7 +294,7 @@ struct LauncherView: View {
                 Text("QUICK ACCESS").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
                 Spacer()
                 Button(editMode ? "Done" : "Edit") {
-                    withAnimation(.easeInOut(duration: 0.15)) { editMode.toggle(); wobble = editMode }
+                    editMode.toggle()
                 }
                 .buttonStyle(.plain)
                 .font(.system(size: 11, weight: .medium))
@@ -335,8 +334,6 @@ struct LauncherView: View {
                         .buttonStyle(.plain)
                 }
             }
-            .rotationEffect(.degrees(editMode ? (wobble ? 1.5 : -1.5) : 0))
-            .animation(editMode ? .easeInOut(duration: 0.13).repeatForever(autoreverses: true) : .default, value: wobble)
         }
     }
 
