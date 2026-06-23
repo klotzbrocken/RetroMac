@@ -9,36 +9,41 @@ struct RetroModeTab: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Retro Mode applies a favourite look in one click and hides distractions, then restores everything when you turn it off. Toggle it from the ✨ icon at the top of the menu-bar popover.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: RMSpacing.section) {
+                Text("Retro Mode applies a favourite look in one click and hides distractions, then restores everything when you turn it off. Toggle it from the wand icon at the top of the menu-bar popover.")
+                    .font(.rmSecondary)
+                    .foregroundColor(.rmTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                GroupBox("Favourite") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Picker("Theme", selection: $settings.retroModeTheme) {
-                            ForEach(themeNames, id: \.self) { Text($0).tag($0) }
-                        }
-                        Picker("Shader", selection: $settings.retroModeShader) {
-                            Text("Theme default").tag("")
-                            ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
-                                Text(preset.displayName).tag(preset.id)
+                RMCard(title: "Favourite", bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Theme") {
+                            Picker("", selection: $settings.retroModeTheme) {
+                                ForEach(themeNames, id: \.self) { Text($0).tag($0) }
                             }
+                            .labelsHidden().frame(width: 180)
                         }
-                        Toggle("Activate shader on enter", isOn: $settings.retroModeActivateShader)
+                        RMRow(label: "Shader") {
+                            Picker("", selection: $settings.retroModeShader) {
+                                Text("Theme default").tag("")
+                                ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
+                                    Text(preset.displayName).tag(preset.id)
+                                }
+                            }
+                            .labelsHidden().frame(width: 180)
+                        }
+                        RMRow(label: "Activate shader on enter", isLast: true) {
+                            sw($settings.retroModeActivateShader)
+                        }
                     }
-                    .padding(8)
                 }
 
-                GroupBox("Hide while active") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Toggle("Dock", isOn: $settings.retroModeHideDock)
-                        Toggle("Menu bar", isOn: $settings.retroModeHideMenuBar)
-                        Toggle("Desktop icons", isOn: $settings.retroModeHideDesktopIcons)
+                RMCard(title: "Hide while active", bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Dock") { sw($settings.retroModeHideDock) }
+                        RMRow(label: "Menu bar") { sw($settings.retroModeHideMenuBar) }
+                        RMRow(label: "Desktop icons", isLast: true) { sw($settings.retroModeHideDesktopIcons) }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(8)
                 }
 
                 Button {
@@ -55,5 +60,9 @@ struct RetroModeTab: View {
         // The Settings panel is a fixed light theme (Color.rmBg) — pin this tab to the
         // light color scheme so text/controls stay readable in system Dark Mode.
         .environment(\.colorScheme, .light)
+    }
+
+    private func sw(_ binding: Binding<Bool>) -> some View {
+        Toggle("", isOn: binding).toggleStyle(.switch).tint(.rmAccent).labelsHidden()
     }
 }

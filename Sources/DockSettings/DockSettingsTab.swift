@@ -87,7 +87,7 @@ struct DockSettingsTab: View {
                     }
                 }
                 .labelsHidden()
-                .frame(maxWidth: 280)
+                .frame(width: 180)
 
                 Spacer()
 
@@ -109,25 +109,25 @@ struct DockSettingsTab: View {
                 .fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
 
             if let url = bundle?.previewImageURL, let img = NSImage(contentsOf: url) {
+                // Preview screenshots are 16:9 — fill the 16:9 box edge to edge.
                 Image(nsImage: img)
                     .resizable()
-                    .scaledToFit()
-                    .padding(8)
+                    .scaledToFill()
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "photo.on.rectangle.angled")
-                        .font(.system(size: 34))
+                        .font(.system(size: 30))
                         .foregroundStyle(.white.opacity(0.85))
                     Text(themeShortName(settings.dockTheme))
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
-                    Text("Preview image coming soon")
+                    Text("Preview image coming soon (16:9)")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.8))
                 }
             }
         }
-        .frame(height: 260)
+        .aspectRatio(16.0 / 9.0, contentMode: .fit)
         .frame(maxWidth: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
         .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1))

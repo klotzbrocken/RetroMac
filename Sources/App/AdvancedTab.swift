@@ -60,7 +60,7 @@ private struct PerformanceSection: View {
                                 ForEach(PerformanceProfile.allCases) { Text($0.displayName).tag($0) }
                             }
                             .labelsHidden()
-                            .frame(width: 160)
+                            .frame(width: 180)
                         }
                         RMRow(label: "Low-latency mode", hint: "Forces 60 fps. Less mouse lag, more GPU.", isLast: true) {
                             Toggle("", isOn: $settings.lowLatencyMode)
@@ -96,11 +96,11 @@ private struct EffectsSection: View {
                                 Text("Medium").tag("scanlines-medium")
                                 Text("Heavy").tag("scanlines-heavy")
                             }
-                            .labelsHidden().frame(width: 160)
+                            .labelsHidden().frame(width: 180)
                         }
                         RMRow(label: "Scanline intensity") {
                             Slider(value: $settings.scanlineOverlayIntensity, in: 0...1)
-                                .frame(width: 160)
+                                .frame(width: 180)
                                 .disabled(settings.scanlineOverlayName.isEmpty)
                         }
                         RMRow(label: "Glass reflection") {
@@ -109,11 +109,11 @@ private struct EffectsSection: View {
                                 Text("Subtle").tag("reflection-subtle")
                                 Text("Strong").tag("reflection-strong")
                             }
-                            .labelsHidden().frame(width: 160)
+                            .labelsHidden().frame(width: 180)
                         }
                         RMRow(label: "Reflection intensity", isLast: true) {
                             Slider(value: $settings.reflectionIntensity, in: 0...1)
-                                .frame(width: 160)
+                                .frame(width: 180)
                                 .disabled(settings.reflectionName.isEmpty)
                         }
                     }

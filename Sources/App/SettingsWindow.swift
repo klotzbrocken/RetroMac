@@ -83,7 +83,7 @@ struct SettingsView: View {
         HStack(spacing: 0) {
             // Sidebar
             SettingsSidebar(selectedTab: $selectedTab)
-                .frame(width: 220)
+                .frame(width: 190)
 
             // Vertical divider
             Rectangle()
@@ -94,8 +94,8 @@ struct SettingsView: View {
             SettingsDetailPane(selectedTab: $selectedTab, updater: updater)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 920, height: 640)
-        .background(Color.rmBg)
+        .frame(width: 644, height: 640)
+        .background(ZStack { Color.rmBg; RMScanline() })
         .onChange(of: selectedTab) { newTab in
             settings.lastSettingsTab = newTab.rawValue
         }
@@ -132,7 +132,7 @@ struct SettingsSidebar: View {
             .frame(height: 44)
             .padding(.leading, 16)
             .padding(.trailing, 14)
-            .padding(.top, 28) // below traffic lights
+            .padding(.top, 12) // sit higher, closer to the prototype
 
             // Nav items
             ScrollView {
@@ -444,59 +444,67 @@ struct CameraTab: View {
     @ObservedObject var settings = AppSettings.shared
 
     var body: some View {
-        Form {
-            Section("Virtual Camera") {
-                let vcam = VirtualCameraManager.shared
-                HStack {
-                    Circle()
-                        .fill(vcam.isRunning ? Color.green : Color.gray)
-                        .frame(width: 8, height: 8)
-                    Text(vcam.isRunning ? "Camera active" : "Camera inactive")
-                        .foregroundStyle(.secondary)
-                }
-
-                Picker("Shader", selection: Binding(
-                    get: { vcam.selectedShader },
-                    set: { vcam.changeShader($0) }
-                )) {
-                    ForEach(PresetRegistry.categorizedPresets, id: \.0) { category, presets in
-                        ForEach(presets, id: \.id) { preset in
-                            Text(preset.displayName).tag(preset.id)
+        let vcam = VirtualCameraManager.shared
+        return ScrollView {
+            VStack(alignment: .leading, spacing: RMSpacing.section) {
+                RMCard(title: "Virtual Camera", bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Status") {
+                            HStack(spacing: 6) {
+                                Circle().fill(vcam.isRunning ? Color.rmAccent : Color.rmTextTertiary)
+                                    .frame(width: 8, height: 8)
+                                Text(vcam.isRunning ? "Active" : "Inactive")
+                                    .font(.rmSecondary).foregroundColor(.rmTextSecondary)
+                            }
+                        }
+                        RMRow(label: "Shader") {
+                            Picker("", selection: Binding(get: { vcam.selectedShader }, set: { vcam.changeShader($0) })) {
+                                ForEach(PresetRegistry.categorizedPresets, id: \.0) { _, presets in
+                                    ForEach(presets, id: \.id) { Text($0.displayName).tag($0.id) }
+                                }
+                            }
+                            .labelsHidden().frame(width: 180)
+                        }
+                        RMRow(label: "Intensity", isLast: true) {
+                            Slider(value: Binding(get: { vcam.shaderIntensity }, set: { vcam.updateIntensity($0) }), in: 0...1)
+                                .frame(width: 180)
                         }
                     }
                 }
 
-                Slider(value: Binding(
-                    get: { vcam.shaderIntensity },
-                    set: { vcam.updateIntensity($0) }
-                ), in: 0...1) {
-                    Text("Intensity")
+                RMCard(title: "Lower Third",
+                       subtitle: "Available with Late Night CRT and Newsroom 1987 shaders.",
+                       bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Show lower third") { sw($settings.lowerThirdEnabled) }
+                        RMRow(label: "Name") {
+                            TextField("Your Name", text: $settings.lowerThirdName)
+                                .textFieldStyle(.roundedBorder).frame(width: 180)
+                        }
+                        RMRow(label: "Title") {
+                            TextField("Host / Reporter / Guest", text: $settings.lowerThirdTitle)
+                                .textFieldStyle(.roundedBorder).frame(width: 180)
+                        }
+                        RMRow(label: "Style",
+                              hint: "Auto-selected by the active shader; manual override applies to others.",
+                              isLast: true) {
+                            Picker("", selection: $settings.lowerThirdStyle) {
+                                Text("Late Night (Gold)").tag("latenight")
+                                Text("Newsroom (Red/Blue)").tag("newsroom")
+                            }
+                            .labelsHidden().pickerStyle(.menu).frame(width: 180)
+                        }
+                    }
                 }
             }
-
-            Section("Lower Third (Bauchbinde)") {
-                Text("Available with Late Night CRT and Newsroom 1987 shaders.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Toggle("Show Lower Third", isOn: $settings.lowerThirdEnabled)
-
-                TextField("Name", text: $settings.lowerThirdName, prompt: Text("Your Name"))
-                TextField("Title", text: $settings.lowerThirdTitle, prompt: Text("Host / Reporter / Guest"))
-
-                Picker("Style", selection: $settings.lowerThirdStyle) {
-                    Text("Late Night (Gold)").tag("latenight")
-                    Text("Newsroom (Red/Blue)").tag("newsroom")
-                }
-                .pickerStyle(.segmented)
-
-                Text("The style is auto-selected based on the active shader. Manual override applies when using other shaders.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .formStyle(.grouped)
-        .padding(.top, 8)
+        .environment(\.colorScheme, .light)
+    }
+
+    private func sw(_ binding: Binding<Bool>) -> some View {
+        Toggle("", isOn: binding).toggleStyle(.switch).tint(.rmAccent).labelsHidden()
     }
 }
 
@@ -887,7 +895,7 @@ final class SettingsWindowController {
 
         let hostingView = NSHostingView(rootView: SettingsView(updater: updater!))
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 920, height: 640),
+            contentRect: NSRect(x: 0, y: 0, width: 644, height: 640),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false

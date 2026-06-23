@@ -1,4 +1,25 @@
 import SwiftUI
+import AppKit
+
+// MARK: - CRT scanline (Retro skin) — static tiled image (safe; a live Canvas bg broke window rendering)
+
+private let rmScanlineTile: NSImage = {
+    let img = NSImage(size: NSSize(width: 2, height: 3))
+    img.lockFocus()
+    NSColor.black.withAlphaComponent(0.035).setFill()
+    NSRect(x: 0, y: 0, width: 2, height: 1).fill()   // 1 faint line every 3 pt
+    img.unlockFocus()
+    return img
+}()
+
+/// Very subtle, static CRT scanline overlay for the Settings window background.
+struct RMScanline: View {
+    var body: some View {
+        Image(nsImage: rmScanlineTile)
+            .resizable(resizingMode: .tile)
+            .allowsHitTesting(false)
+    }
+}
 
 // MARK: - Design Tokens for Settings Redesign
 
