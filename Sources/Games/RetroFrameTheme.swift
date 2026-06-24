@@ -7,6 +7,11 @@ enum RetroFrameTheme {
 
     /// Active RetroMac theme key handed to launched processes via RETROMAC_THEME.
     static func key() -> String {
+        // Only frame launched content (TV window chrome, game frames) when a theme
+        // is actually ON. After a clean launch ThemeManager still remembers the last
+        // theme, but dockEnabled == false means "no theme active" — TV/games must not
+        // inherit a stale theme's window chrome / menu bar.
+        guard AppSettings.shared.dockEnabled else { return "default" }
         let name = (ThemeManager.shared.activeTheme?.config.name ?? "").lowercased()
         if name.contains("beos") { return "beos" }
         if name.contains("mac os 9") { return "macos9" }

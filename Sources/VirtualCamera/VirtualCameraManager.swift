@@ -241,6 +241,39 @@ final class VirtualCameraManager: NSObject, ObservableObject {
         renderer?.intensity = value
     }
 
+    // MARK: - Camera Source Selection
+
+    /// All real capture devices RetroMac can use as a source, excluding our own
+    /// virtual camera (to avoid a feedback loop). Order is stable per session.
+    static func discoverCameras() -> [AVCaptureDevice] {
+        var types: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera, .external]
+        // iPhone Continuity Camera is a distinct device type on macOS 14+.
+        if #available(macOS 14.0, *) { types.append(.continuityCamera) }
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: types, mediaType: .video, position: .unspecified
+        )
+        return discovery.devices.filter { !$0.localizedName.contains("RetroMac") }
+    }
+
+    /// (uniqueID, displayName) pairs for the source picker.
+    static func availableCameras() -> [(id: String, name: String)] {
+        discoverCameras().map { ($0.uniqueID, $0.localizedName) }
+    }
+
+    /// Pin a capture source by uniqueID ("" = automatic) and restart capture
+    /// live if the camera is currently running.
+    func changeSource(_ id: String) {
+        AppSettings.shared.cameraSourceID = id
+        guard isRunning else { return }
+        dispatchPrecondition(condition: .onQueue(.main))
+        captureSession?.stopRunning()
+        captureSession = nil
+        videoOutput = nil
+        if !startWebcamCapture() {
+            logger.error("Failed to restart capture after source change")
+        }
+    }
+
     // MARK: - Metal Setup
 
     private func setupMetal() {
@@ -436,14 +469,19 @@ final class VirtualCameraManager: NSObject, ObservableObject {
         let session = AVCaptureSession()
         session.sessionPreset = .hd1280x720
 
-        // Find default webcam — skip virtual cameras to avoid feedback loop
-        let discovery = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera, .external],
-            mediaType: .video,
-            position: .unspecified
-        )
-        guard let camera = discovery.devices.first(where: { !$0.localizedName.contains("RetroMac") })
-                ?? AVCaptureDevice.default(for: .video) else {
+        // Find a webcam — skip virtual cameras to avoid a feedback loop.
+        // `.continuityCamera` is required so an iPhone used as a webcam (wired or
+        // wireless) shows up on macOS 14+; `.external` covers USB webcams.
+        let candidates = Self.discoverCameras()
+        let wantedID = AppSettings.shared.cameraSourceID
+        let camera: AVCaptureDevice
+        if !wantedID.isEmpty, let pinned = candidates.first(where: { $0.uniqueID == wantedID }) {
+            camera = pinned
+        } else if let firstReal = candidates.first {
+            camera = firstReal
+        } else if let fallback = AVCaptureDevice.default(for: .video) {
+            camera = fallback
+        } else {
             logger.error("No webcam found")
             return false
         }
