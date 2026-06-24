@@ -131,18 +131,59 @@ enum SystemUIHelper {
 
     // MARK: - Desktop Icons
 
+    private static let savedCreateDesktopKey = "systemUI_originalCreateDesktop"
+
     static func setDesktopIconsHidden(_ hidden: Bool) {
+        let defaults = UserDefaults.standard
+        if hidden {
+            // Remember the user's current Finder state once, before we override it,
+            // so a 3rd-party "hide desktop icons" choice survives our restore.
+            if defaults.object(forKey: savedCreateDesktopKey) == nil {
+                defaults.set(readFinderShowsIcons(), forKey: savedCreateDesktopKey)
+            }
+            writeFinderShowsIcons(false)   // icons hidden
+            restartFinder()
+        } else {
+            // Restore to whatever the user had BEFORE RetroMac hid them — not a hard
+            // "icons on". If we never hid them (no saved state), leave Finder alone so
+            // we don't undo a 3rd-party app that hid the desktop.
+            guard let original = defaults.object(forKey: savedCreateDesktopKey) as? Bool else { return }
+            writeFinderShowsIcons(original)
+            defaults.removeObject(forKey: savedCreateDesktopKey)
+            restartFinder()
+        }
+        print("[SystemUI] Desktop icons hidden: \(hidden)")
+    }
+
+    /// Reads com.apple.finder CreateDesktop. Unset → true (Finder default: icons shown).
+    private static func readFinderShowsIcons() -> Bool {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        task.arguments = ["write", "com.apple.finder", "CreateDesktop", "-bool", hidden ? "false" : "true"]
+        task.arguments = ["read", "com.apple.finder", "CreateDesktop"]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = Pipe()
         try? task.run()
         task.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let out = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if out.isEmpty { return true }       // key unset → Finder shows icons
+        return (out as NSString).boolValue   // "1"/"true" → shown, "0"/"false" → hidden
+    }
 
+    private static func writeFinderShowsIcons(_ shown: Bool) {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+        task.arguments = ["write", "com.apple.finder", "CreateDesktop", "-bool", shown ? "true" : "false"]
+        try? task.run()
+        task.waitUntilExit()
+    }
+
+    private static func restartFinder() {
         let killall = Process()
         killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
         killall.arguments = ["Finder"]
         try? killall.run()   // fire-and-forget: don't block on the Finder restart
-        print("[SystemUI] Desktop icons hidden: \(hidden)")
     }
 
     private static func readAppleScriptBool(_ source: String) -> Bool {

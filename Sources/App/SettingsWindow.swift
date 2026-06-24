@@ -423,6 +423,7 @@ struct DetailTitleBar: View {
 
 struct CameraTab: View {
     @ObservedObject var settings = AppSettings.shared
+    @State private var cameras: [(id: String, name: String)] = []
 
     var body: some View {
         let vcam = VirtualCameraManager.shared
@@ -437,6 +438,14 @@ struct CameraTab: View {
                                 Text(vcam.isRunning ? "Active" : "Inactive")
                                     .font(.rmSecondary).foregroundColor(.rmTextSecondary)
                             }
+                        }
+                        RMRow(label: "Source",
+                              hint: "Pick the webcam to apply the shader to. iPhone (Continuity Camera) appears here when connected.") {
+                            Picker("", selection: Binding(get: { settings.cameraSourceID }, set: { vcam.changeSource($0) })) {
+                                Text("Automatic").tag("")
+                                ForEach(cameras, id: \.id) { Text($0.name).tag($0.id) }
+                            }
+                            .labelsHidden().pickerStyle(.menu).frame(width: 180)
                         }
                         RMRow(label: "Shader") {
                             Picker("", selection: Binding(get: { vcam.selectedShader }, set: { vcam.changeShader($0) })) {
@@ -482,6 +491,7 @@ struct CameraTab: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .environment(\.colorScheme, .light)
+        .onAppear { cameras = VirtualCameraManager.availableCameras() }
     }
 
     private func sw(_ binding: Binding<Bool>) -> some View {

@@ -352,6 +352,13 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(applySystemIcons, forKey: "applySystemIcons") }
     }
 
+    // Virtual Camera — capture source. Empty = automatic (first physical camera).
+    // Holds an AVCaptureDevice.uniqueID so a specific camera (e.g. iPhone
+    // Continuity Camera) can be pinned even when other webcams are attached.
+    @Published var cameraSourceID: String {
+        didSet { defaults.set(cameraSourceID, forKey: "cameraSourceID") }
+    }
+
     // Virtual Camera — Lower Third
     @Published var lowerThirdEnabled: Bool {
         didSet { defaults.set(lowerThirdEnabled, forKey: "lowerThirdEnabled") }
@@ -530,6 +537,13 @@ final class AppSettings: ObservableObject {
         shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? true
         themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? false
         setupWizardComplete = defaults.bool(forKey: "setupWizardComplete")
+        // Floating launcher defaults ON. One-time migration flips legacy installs
+        // (earlier builds shipped it off / persisted false) so this update turns the
+        // floating quick-access button on for everyone, once.
+        if defaults.object(forKey: "floatingLauncherDefaultOnMigrated") == nil {
+            defaults.set(true, forKey: "floatingLauncherEnabled")
+            defaults.set(true, forKey: "floatingLauncherDefaultOnMigrated")
+        }
         floatingLauncherEnabled = defaults.object(forKey: "floatingLauncherEnabled") as? Bool ?? true
         quickAccessSlots = defaults.stringArray(forKey: "quickAccessSlots") ?? []
         dockOnly = defaults.bool(forKey: "dockOnly")
@@ -594,6 +608,9 @@ final class AppSettings: ObservableObject {
         dockAutoHide = defaults.bool(forKey: "dockAutoHide")
         dockFix = defaults.bool(forKey: "dockFix")
         applySystemIcons = defaults.bool(forKey: "applySystemIcons")
+
+        // Virtual Camera — capture source
+        cameraSourceID = defaults.string(forKey: "cameraSourceID") ?? ""
 
         // Virtual Camera — Lower Third
         lowerThirdEnabled = defaults.bool(forKey: "lowerThirdEnabled")

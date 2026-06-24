@@ -2105,11 +2105,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 retroViewport.switchPreset(preset)
             } else if isActive {
                 applyPreset(preset)
-            } else if settings.shaderOnThemeChange {
+            } else if settings.shaderOnThemeChange && !settings.dockOnly {
                 currentPresetName = preset
                 startOverlay(mode: .fullScreen)
             } else {
                 // Remember the theme's preset but don't auto-activate the shader.
+                // Dock-only deliberately skips the full-screen CRT overlay.
                 currentPresetName = preset
             }
         }
@@ -2120,7 +2121,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Show or hide the theme's desktop widgets based on the `themeIncludeWidgets`
     /// preference (set in the Setup Assistant). First version = the desktop Clock.
     private func applyThemeWidgets(for themeName: String) {
-        if AppSettings.shared.themeIncludeWidgets {
+        // Dock-only deliberately changes nothing but the dock — no desktop widgets.
+        if AppSettings.shared.themeIncludeWidgets && !AppSettings.shared.dockOnly {
             ClockWidgetController.shared.show()
         } else {
             ClockWidgetController.shared.destroy()   // fully release the WebView when widgets are off
@@ -2146,10 +2148,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 retroViewport.switchPreset(preset)
             } else if isActive {
                 applyPreset(preset)
-            } else if settings.shaderOnThemeChange {
+            } else if settings.shaderOnThemeChange && !settings.dockOnly {
                 currentPresetName = preset
                 startOverlay(mode: .fullScreen)
             } else {
+                // Dock-only deliberately skips the full-screen CRT overlay.
                 currentPresetName = preset
             }
         }
