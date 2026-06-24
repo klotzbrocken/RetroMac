@@ -4,7 +4,6 @@
   "author": "Maik",
   "wallpaper": "wallpaper.png",
   "dock": {
-    "appIcon": "Proz.icns",
     "height": 76,
     "iconSize": 56,
     "padding": 8,

@@ -252,7 +252,9 @@ final class VirtualCameraManager: NSObject, ObservableObject {
         let discovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: types, mediaType: .video, position: .unspecified
         )
-        return discovery.devices.filter { !$0.localizedName.contains("RetroMac") }
+        let found = discovery.devices.filter { !$0.localizedName.contains("RetroMac") }
+        logger.info("Camera discovery: \(found.map { "\($0.localizedName) [\($0.deviceType.rawValue)]" }.joined(separator: ", "))")
+        return found
     }
 
     /// (uniqueID, displayName) pairs for the source picker.

@@ -2,6 +2,7 @@ import SwiftUI
 import Carbon.HIToolbox
 import ScreenCaptureKit
 import Sparkle
+import AVFoundation
 
 // MARK: - App Info (used by per-app rules + old apps tab)
 
@@ -492,6 +493,14 @@ struct CameraTab: View {
         }
         .environment(\.colorScheme, .light)
         .onAppear { cameras = VirtualCameraManager.availableCameras() }
+        // Continuity Camera (iPhone) and USB webcams connect on-demand; refresh the
+        // source list live so a device that wakes while Settings is open shows up.
+        .onReceive(NotificationCenter.default.publisher(for: AVCaptureDevice.wasConnectedNotification)) { _ in
+            cameras = VirtualCameraManager.availableCameras()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AVCaptureDevice.wasDisconnectedNotification)) { _ in
+            cameras = VirtualCameraManager.availableCameras()
+        }
     }
 
     private func sw(_ binding: Binding<Bool>) -> some View {
