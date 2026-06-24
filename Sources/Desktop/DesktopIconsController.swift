@@ -34,6 +34,8 @@ final class DesktopIconsController {
 
     /// Show desktop icons for the active theme (call on theme change).
     func update() {
+        // Dock-only changes nothing but the dock — no themed desktop icons.
+        if AppSettings.shared.dockOnly { hide(); return }
         let entries = ThemeManager.shared.activeTheme?.config.desktopIcons ?? []
         if entries.isEmpty {
             hide()

@@ -15,6 +15,8 @@ final class BeOSDeskbarController {
     private init() {}
 
     func update() {
+        // Note: for BeOS the Deskbar IS the dock (dockStyle "deskbar" → no DockView),
+        // so it must show even in dock-only mode — do NOT gate it on dockOnly.
         guard let theme = ThemeManager.shared.activeTheme, theme.config.isDeskbar else {
             hide()
             return

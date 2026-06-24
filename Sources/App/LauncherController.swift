@@ -198,7 +198,10 @@ final class LauncherModel: ObservableObject {
         allThemes = all
         specialThemes = all.filter { Self.isSpecial($0.name) }
         otherThemes = all.filter { !Self.isSpecial($0.name) }
-        activeTheme = mgr.activeTheme?.config.name ?? ""
+        // Only mark a theme active when one is actually ON. ThemeManager keeps the
+        // last theme in memory even when dockEnabled is false, which would otherwise
+        // mark a tile active when nothing is applied.
+        activeTheme = AppSettings.shared.dockEnabled ? (mgr.activeTheme?.config.name ?? "") : ""
         shaderActive = AppDelegate.shared?.launcherShaderActive ?? false
         webcamRunning = VirtualCameraManager.shared.isRunning
         currentPreset = AppDelegate.shared?.launcherCurrentPreset ?? ""
@@ -328,15 +331,7 @@ struct LauncherView: View {
                     Image(systemName: "sparkles.tv").font(.system(size: 16, weight: .semibold)).foregroundStyle(.secondary)
                 }
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text("RetroMac").font(.system(size: 14, weight: .bold))
-                HStack(spacing: 5) {
-                    Circle().fill(model.activeTheme.isEmpty ? Color.secondary : switchGreen)
-                        .frame(width: 6, height: 6)
-                    Text(model.activeTheme.isEmpty ? "No theme" : model.activeTheme)
-                        .font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
+            Text("RetroMac").font(.system(size: 14, weight: .bold))
             Spacer()
         }
     }
@@ -437,6 +432,9 @@ struct LauncherView: View {
             Spacer()
             Toggle("", isOn: $settings.dockOnly)
                 .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
+                .onChange(of: settings.dockOnly) { _, _ in
+                    AppDelegate.shared?.refreshDockOnlyScope()
+                }
         }
     }
 
@@ -483,14 +481,18 @@ struct LauncherView: View {
     private var powerRow: some View {
         HStack(spacing: 10) {
             Button { AppDelegate.shared?.launcherOpenSettings(); onClose() } label: {
-                Label("Settings", systemImage: "gearshape")
+                Image(systemName: "gearshape").foregroundStyle(.secondary)
             }
+            .help("Settings")
+            .accessibilityLabel("Settings")
             Spacer()
             Button(role: .destructive) { NSApp.terminate(nil) } label: {
-                Label("Quit", systemImage: "power")
+                Image(systemName: "power").foregroundStyle(destructive)
             }
+            .help("Quit")
+            .accessibilityLabel("Quit")
         }
-        .font(.system(size: 12, weight: .medium))
+        .font(.system(size: 15, weight: .medium))
         .buttonStyle(.plain)
     }
 }
