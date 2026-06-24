@@ -50,6 +50,8 @@ final class SGIDesktopController {
     private init() {}
 
     func update() {
+        // Note: for SGI IRIX the desktop IS the dock (dockStyle "none" → no DockView),
+        // so it must show even in dock-only mode — not gated on dockOnly.
         guard let theme = ThemeManager.shared.activeTheme,
               let cfg = theme.config.sgiDesktop else { hide(); return }
         show(cfg: cfg, theme: theme)

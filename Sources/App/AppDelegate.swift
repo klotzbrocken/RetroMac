@@ -2129,6 +2129,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Re-apply the desktop scope when the "Dock only" toggle flips, so it takes
+    /// effect immediately on the active theme without a full re-select. Dock-only
+    /// keeps only the dock — wallpaper, full-screen shader, widgets and desktop
+    /// chrome are removed; turning it off restores them for the active theme.
+    func refreshDockOnlyScope() {
+        let dockOnly = AppSettings.shared.dockOnly
+        if dockOnly {
+            ThemeManager.shared.restoreWallpapers()
+            if isActive { disableAll() }   // no full-screen CRT overlay in dock-only
+        } else if AppSettings.shared.dockEnabled {
+            ThemeManager.shared.applyWallpaper()
+        }
+        DesktopIconsController.shared.update()
+        ProgramManagerController.shared.update()
+        SGIDesktopController.shared.update()
+        BeOSDeskbarController.shared.update()
+        applyThemeWidgets(for: AppSettings.shared.dockTheme)
+    }
+
     /// Apply the active theme's shader preset when theme changes (from Settings or menu).
     /// Priority: theme preset > global default. TV overlay state is preserved.
     private func applyThemePresetIfNeeded() {

@@ -17,6 +17,8 @@ final class ProgramManagerController {
 
     /// Show the Program Manager for the active theme, or hide if the theme has none.
     func update() {
+        // Note: for Windows 3.1 the Program Manager IS the dock (dockStyle "none" →
+        // no DockView), so it must show even in dock-only mode — not gated on dockOnly.
         guard let theme = ThemeManager.shared.activeTheme,
               let pmConfig = theme.config.programManager else {
             hide()
