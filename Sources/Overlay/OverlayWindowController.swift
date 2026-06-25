@@ -352,13 +352,17 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
             }
         }
         manager.onFirstFrame = { [weak self] in
-            guard let self = self else { return }
-            for view in self.metalViews { view.isPaused = false }
-            if hideSystemUI {
-                self.handleFirstFrame()
-            } else {
-                self.didReceiveFirstFrame = true
-                print("[Overlay] First frame → rendering")
+            // Hop to main: MTKView.isPaused and UI/state must be touched on the main
+            // thread — this callback fires on the capture queue.
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                for view in self.metalViews { view.isPaused = false }
+                if hideSystemUI {
+                    self.handleFirstFrame()
+                } else {
+                    self.didReceiveFirstFrame = true
+                    print("[Overlay] First frame → rendering")
+                }
             }
         }
         manager.setFrameRate(fps: captureFPS)

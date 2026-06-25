@@ -26,8 +26,10 @@ final class BeOSDeskbarController {
 
     func hide() {
         BeOSMenuController.shared.dismissAll()
-        CPUMonitorController.shared.close()
-        AppFolderController.shared.close()
+        // Leaving the BeOS theme: fully tear down its widgets (release WKWebView +
+        // JS context), not just orderOut — otherwise they stay warm in the background.
+        CPUMonitorController.shared.destroy()
+        AppFolderController.shared.destroy()
         view?.tearDown()
         window?.orderOut(nil)
         window = nil
