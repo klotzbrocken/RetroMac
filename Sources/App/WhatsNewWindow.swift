@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 1.9")
+                Text("What's New in RetroMac 1.9.1")
                     .font(.title2.bold())
-                Text("A Dock launcher, real taskbar tabs, and shaders on every screen")
+                Text("Use your iPhone as the camera, a tighter \u{201C}Dock only\u{201D}, and a batch of fixes")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,38 +21,38 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "menubar.dock.rectangle",
+                        icon: "iphone",
                         color: .blue,
-                        title: "Dock Mode & quick launcher",
-                        description: "Optionally show RetroMac in the Dock; click its icon for a slim launcher to switch themes and toggle the shader or virtual camera. Turn it on in Settings ▸ Dock."
+                        title: "iPhone as a camera source",
+                        description: "Pick your iPhone (Continuity Camera) or any webcam in Settings ▸ Camera & Streaming — the list now updates live as devices connect, and the CRT shader runs on the feed."
                     )
 
                     featureRow(
-                        icon: "rectangle.on.rectangle",
-                        color: .cyan,
-                        title: "Authentic Windows taskbar",
-                        description: "Windows 98 and XP now show one elongated taskbar button per open window — click to minimize or restore, just like the real thing."
-                    )
-
-                    featureRow(
-                        icon: "display.2",
+                        icon: "menubar.dock.rectangle",
                         color: .green,
-                        title: "Shaders on all your displays",
-                        description: "Fixed the CRT shader on secondary monitors — \"All Displays\" now lights up every screen, not just the main one."
+                        title: "\u{201C}Dock only\u{201D} really means dock only",
+                        description: "Switching a theme with Dock only on no longer touches your wallpaper, desktop icons, widgets or starts a full-screen shader — just the dock changes."
                     )
 
                     featureRow(
-                        icon: "tv.inset.filled",
+                        icon: "tv",
                         color: .orange,
-                        title: "New Retro Crisis shaders + fixes",
-                        description: "Two GDV-NTSC \"Retro Crisis\" looks (Composite & RGB), and the classic 98.js desktop apps (Notepad, Paint, Minesweeper…) work again."
+                        title: "TV windows behave",
+                        description: "The retro TV window no longer borrows the last used theme\u{2019}s menu bar / chrome when no theme is active."
+                    )
+
+                    featureRow(
+                        icon: "square.grid.2x2",
+                        color: .cyan,
+                        title: "Tidier quick-access flyout",
+                        description: "Active theme is highlighted correctly (only when one is really on), Settings and Quit are clean icons, and the floating launcher button is on by default."
                     )
 
                     featureRow(
                         icon: "wrench.and.screwdriver",
                         color: .gray,
-                        title: "Quick fix: menu buttons",
-                        description: "The Settings, Quit and Retro Mode icons in the menu could go missing on a dark desktop — they're back and reliable."
+                        title: "Icon & desktop fixes",
+                        description: "Correct flyout icons for Snow Leopard, Windows 3.1 and Maiks Favourite, the right app icon in Dock Mode, and desktop-icon visibility now respects other apps."
                     )
                 }
                 .padding(.horizontal, 24)
