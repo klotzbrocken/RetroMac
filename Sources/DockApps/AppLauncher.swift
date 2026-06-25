@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 
 enum AppLauncher {
 
@@ -10,7 +11,12 @@ enum AppLauncher {
         }
 
         if let running = ws.runningApplications.first(where: { $0.bundleIdentifier == bundleID }) {
-            running.activate(options: [.activateAllWindows])
+            // Raise the app's front window via AX first — on Sonoma/Sequoia
+            // NSRunningApplication.activate alone often fails to pull a background
+            // app's windows forward (this is why the Win98/XP taskbar, which uses AX,
+            // worked while plain Dock tiles didn't). Then activate, ignoring others.
+            raiseFrontWindow(pid: running.processIdentifier)
+            running.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
             if !hasVisibleWindows(pid: running.processIdentifier) {
                 let config = NSWorkspace.OpenConfiguration()
                 config.activates = true
@@ -28,6 +34,31 @@ enum AppLauncher {
                 }
             }
         }
+    }
+
+    /// Bring an already-running app's front window forward via Accessibility.
+    /// macOS's window list isn't guaranteed front-to-back, but the first non-minimized
+    /// window is the app's main window in practice; raising it + marking it main makes
+    /// the click behave like the real Dock. No-op without AX trust.
+    private static func raiseFrontWindow(pid: pid_t) {
+        guard AXIsProcessTrusted() else { print("[Dock] raise: AX not trusted"); return }
+        let axApp = AXUIElementCreateApplication(pid)
+        // Mark the whole app frontmost via AX — the reliable cross-app bring-to-front on
+        // modern macOS, where NSRunningApplication.activate often won't raise a background
+        // app's windows from a background (LSUIElement) agent.
+        AXUIElementSetAttributeValue(axApp, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        var winsRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &winsRef) == .success,
+              let wins = winsRef as? [AXUIElement] else { print("[Dock] raise: no AX windows for pid \(pid)"); return }
+        // Prefer the first non-minimized window; fall back to the first window.
+        let target = wins.first { w in
+            var minRef: CFTypeRef?
+            AXUIElementCopyAttributeValue(w, kAXMinimizedAttribute as CFString, &minRef)
+            return (minRef as? Bool) != true
+        } ?? wins.first
+        guard let window = target else { return }
+        AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+        AXUIElementPerformAction(window, kAXRaiseAction as CFString)
     }
 
     private static func hasVisibleWindows(pid: pid_t) -> Bool {
