@@ -6,29 +6,6 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
-      <title>Version 1.9.1</title>
-      <pubDate>Fri, 26 Jun 2026 06:41:39 +0000</pubDate>
-      <sparkle:version>1.9.1</sparkle:version>
-      <sparkle:shortVersionString>1.9.1</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>RetroMac 1.9.1 &mdash; iPhone camera, a true &ldquo;Dock only&rdquo; &amp; lots of fixes</h2>
-        <ul>
-          <li><b>iPhone as a camera source:</b> pick your iPhone (Continuity Camera) or any webcam in Settings &#9656; Camera &amp; Streaming &mdash; the list updates live as devices connect, and the CRT shader runs on the feed.</li>
-          <li><b>&ldquo;Dock only&rdquo; really means dock only:</b> switching a theme with Dock only on no longer touches your wallpaper, desktop icons, widgets or boot splash, and won&rsquo;t start a full-screen shader.</li>
-          <li><b>TV windows behave:</b> the retro TV window no longer borrows the last used theme&rsquo;s menu bar / chrome when no theme is active.</li>
-          <li><b>Tidier quick-access flyout:</b> the active theme is highlighted correctly, Settings and Quit are clean icons, and the floating launcher button is on by default.</li>
-          <li><b>Dock fixes:</b> clicking a Dock tile reliably brings a running app&rsquo;s window to the front; correct flyout &amp; Dock-Mode icons across themes; desktop-icon visibility now respects other apps.</li>
-        </ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.9.1/RetroMac.dmg"
-        type="application/octet-stream"
-        sparkle:edSignature="JrrVIh7v7JJlCdk78/Q3RBSXCGQPUqSwvm5T9Ii9TvORuQM45eCDzfjoU9wjVXc81jok4Z87O7K9xdJLuBVmBQ=="
-        length="158263572"
-      />
-    </item>
-    <item>
       <title>Version 1.9.0</title>
       <pubDate>Sat, 20 Jun 2026 13:38:59 +0000</pubDate>
       <sparkle:version>1.9.0</sparkle:version>
