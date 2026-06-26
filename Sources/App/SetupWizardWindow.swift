@@ -116,7 +116,7 @@ struct SetupWizardView: View {
                      subtitle: "How RetroMac runs on your Mac.") {
             toggleRow(icon: "dock.rectangle", tint: .cyan,
                       title: "Enable Dock Mode",
-                      subtitle: "Recommended — adds a Dock icon with a quick launcher for themes, shader & camera.",
+                      subtitle: "Adds a Dock icon with a quick launcher for themes, shader & camera.",
                       isOn: $settings.dockModeEnabled)
             Divider()
             toggleRow(icon: "power", tint: .pink,
@@ -126,7 +126,7 @@ struct SetupWizardView: View {
             Divider()
             toggleRow(icon: "circle.dashed", tint: .teal,
                       title: "Floating launcher button",
-                      subtitle: "A small, draggable button (bottom-right) that opens the launcher.",
+                      subtitle: "Recommended — a small, draggable button (bottom-right) that opens the launcher.",
                       isOn: $settings.floatingLauncherEnabled)
             Divider()
             HStack(alignment: .top, spacing: 12) {
