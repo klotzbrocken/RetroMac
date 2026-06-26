@@ -75,8 +75,16 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
 
         guard let device = device else { return }
 
-        // Cover the entire main screen (or all screens)
-        let frame = NSScreen.screens.reduce(NSRect.zero) { $0.union($1.frame) }
+        // Honor the chosen display (Display menu). 0 = all screens (union); otherwise
+        // cover just the selected screen. Without this, Lite always spanned the union,
+        // so it effectively only appeared on the main display — unlike the full overlay.
+        let tid = AppSettings.shared.targetDisplayID
+        let frame: NSRect
+        if tid != 0, let target = NSScreen.screens.first(where: { $0.displayID == tid }) {
+            frame = target.frame
+        } else {
+            frame = NSScreen.screens.reduce(NSRect.zero) { $0.union($1.frame) }
+        }
         createWindow(frame: frame, level: 28)
 
         renderer?.intensity = intensity
