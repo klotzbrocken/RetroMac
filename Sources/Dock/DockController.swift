@@ -39,7 +39,9 @@ final class DockController {
 
         ThemeManager.shared.reload()
         AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
-        if let theme = ThemeManager.shared.activeTheme {
+        // Dock-only changes nothing but the dock — no boot splash (matches the
+        // theme-switch path in the $dockTheme sink).
+        if !AppSettings.shared.dockOnly, let theme = ThemeManager.shared.activeTheme {
             SplashController.shared.showIfEnabled(for: theme)
         }
         let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false

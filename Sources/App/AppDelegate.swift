@@ -2129,6 +2129,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // MARK: - Dock-only policy
+    //
+    // "Dock only" means a theme restyles ONLY the dock — nothing else on the desktop.
+    // It SUPPRESSES: wallpaper, boot splash, the full-screen CRT shader, desktop widgets
+    // (e.g. the Clock), and themed desktop icons.
+    // EXCEPTION: themes that have no DockView (dockStyle "deskbar"/"none" → `hidesDock`:
+    // BeOS, Windows 3.1, SGI IRIX) render their dock AS a desktop overlay (BeOSDeskbar /
+    // ProgramManager / SGIDesktop). For those themes that overlay IS the dock, so it is
+    // intentionally shown even in dock-only mode (it is the dock, not extra chrome).
+    // The decision is enforced at each effect's site; the gates are kept consistent with
+    // this policy (selectTheme / applyThemePresetIfNeeded / applyThemeWidgets here,
+    // DockController.start + the $dockTheme sink for wallpaper/splash, and the dockOnly
+    // guard in DesktopIconsController).
+
     /// Re-apply the desktop scope when the "Dock only" toggle flips, so it takes
     /// effect immediately on the active theme without a full re-select. Dock-only
     /// keeps only the dock — wallpaper, full-screen shader, widgets and desktop
