@@ -535,7 +535,7 @@ final class AppSettings: ObservableObject {
         coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
         dockModeEnabled = defaults.object(forKey: "dockModeEnabled") as? Bool ?? false
         shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? true
-        themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? false
+        themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? true
         setupWizardComplete = defaults.bool(forKey: "setupWizardComplete")
         // Floating launcher defaults ON. One-time migration flips legacy installs
         // (earlier builds shipped it off / persisted false) so this update turns the
