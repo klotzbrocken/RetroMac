@@ -711,6 +711,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func rebuildMenu() {
+        // Overlay/preset state has settled by the time the menu is rebuilt (incl. the
+        // async full-overlay completion). Notify the flyout so its shader toggle and
+        // preset dropdown reflect the real state even after async activation.
+        NotificationCenter.default.post(name: .overlayStateChanged, object: nil)
         let menu = NSMenu()
         menu.autoenablesItems = false
         let settings = AppSettings.shared

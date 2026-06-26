@@ -185,6 +185,9 @@ final class LauncherModel: ObservableObject {
         let nc = NotificationCenter.default
         observers.append(nc.addObserver(forName: .dockThemeChanged, object: nil, queue: .main) { [weak self] _ in self?.refresh() })
         observers.append(nc.addObserver(forName: .virtualCameraStateChanged, object: nil, queue: .main) { [weak self] _ in self?.refresh() })
+        // Shader/preset state can settle asynchronously (full overlay starts on a Task);
+        // update the toggle + preset dropdown when it does, without a full theme reload.
+        observers.append(nc.addObserver(forName: .overlayStateChanged, object: nil, queue: .main) { [weak self] _ in self?.refreshState() })
     }
 
     deinit { observers.forEach { NotificationCenter.default.removeObserver($0) } }
@@ -202,6 +205,13 @@ final class LauncherModel: ObservableObject {
         // last theme in memory even when dockEnabled is false, which would otherwise
         // mark a tile active when nothing is applied.
         activeTheme = AppSettings.shared.dockEnabled ? (mgr.activeTheme?.config.name ?? "") : ""
+        refreshState()
+    }
+
+    /// Lightweight update of the transient shader/camera state (no theme/disk reload).
+    /// Driven by .overlayStateChanged so the toggle + preset dropdown reflect the real
+    /// state even after the full overlay finishes starting asynchronously.
+    func refreshState() {
         shaderActive = AppDelegate.shared?.launcherShaderActive ?? false
         webcamRunning = VirtualCameraManager.shared.isRunning
         currentPreset = AppDelegate.shared?.launcherCurrentPreset ?? ""
