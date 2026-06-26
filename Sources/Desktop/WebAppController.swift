@@ -33,11 +33,13 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         host == "bored-win98.pisaucer.com" || host == "bored-entertainment.github.io"
     }
 
-    /// True only for a trusted 98.js host (current dedicated domain, or the legacy github.io
-    /// path-scoped URL which redirects to it).
+    /// True only for a trusted 98.js APP URL — this gates the native Save/Print bridge,
+    /// so each host is path-scoped to where its apps actually live (pisaucer serves them
+    /// under /programs/, the legacy github.io mirror under /98.js/). Unrelated content
+    /// later hosted elsewhere on the same domain does NOT inherit the bridge.
     static func isTrusted98App(_ urlString: String) -> Bool {
         guard let c = URLComponents(string: urlString), c.scheme == "https" else { return false }
-        if c.host == "bored-win98.pisaucer.com" { return true }
+        if c.host == "bored-win98.pisaucer.com" && c.path.hasPrefix("/programs/") { return true }
         if c.host == "bored-entertainment.github.io" && c.path.hasPrefix("/98.js/") { return true }
         return false
     }

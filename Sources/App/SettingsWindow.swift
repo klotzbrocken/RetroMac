@@ -500,6 +500,13 @@ struct CameraTab: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: AVCaptureDevice.wasDisconnectedNotification)) { _ in
             cameras = VirtualCameraManager.availableCameras()
+            // If the selected source was just unplugged, fall back to Automatic so the
+            // picker and the actual capture source don't diverge (changeSource also
+            // restarts capture on the fallback device).
+            if !settings.cameraSourceID.isEmpty,
+               !cameras.contains(where: { $0.id == settings.cameraSourceID }) {
+                vcam.changeSource("")
+            }
         }
     }
 
@@ -882,6 +889,7 @@ final class HotkeyNSView: NSView {
 final class SettingsWindowController {
     private var window: NSWindow?
     private var savedMenu: NSMenu?
+    private var installedEditMenu = false
     private var windowDelegate: SettingsWindowDelegate?
     var updater: SPUUpdater?
 
@@ -917,7 +925,11 @@ final class SettingsWindowController {
 
     /// Install a standard Edit menu so Cmd+C/V/A work in TextFields
     func installEditMenu() {
-        if NSApp.mainMenu != nil { return }
+        // Don't clobber a menu someone else owns; only install (and later remove)
+        // our own. Remember the previous menu so removeEditMenu() can restore it.
+        guard NSApp.mainMenu == nil else { return }
+        savedMenu = NSApp.mainMenu
+        installedEditMenu = true
 
         let mainMenu = NSMenu()
 
@@ -941,7 +953,12 @@ final class SettingsWindowController {
     }
 
     func removeEditMenu() {
-        NSApp.mainMenu = nil
+        // Only tear down a menu we installed ourselves — never nil out a menu
+        // that already existed before Settings opened.
+        guard installedEditMenu else { return }
+        NSApp.mainMenu = savedMenu
+        savedMenu = nil
+        installedEditMenu = false
     }
 }
 
