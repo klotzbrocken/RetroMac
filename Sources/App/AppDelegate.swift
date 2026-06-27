@@ -2101,6 +2101,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let name = sender.representedObject as? String else { return }
         let settings = AppSettings.shared
         ThemeManager.shared.setActiveTheme(name: name, applyWallpaper: !AppSettings.shared.dockOnly)
+        // Apply this theme's default menu-bar Apple cover (user can still re-cycle it in the flyout).
+        if let appleStyle = ThemeManager.shared.activeTheme?.config.menuBarAppleStyleDefault {
+            settings.menuBarAppleStyle = appleStyle
+        }
         if !settings.dockEnabled {
             settings.dockEnabled = true
             DockController.shared.start()

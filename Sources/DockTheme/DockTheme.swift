@@ -16,6 +16,7 @@ struct DockThemeConfig: Codable {
     var desktopIconSize: CGFloat? = nil        // per-theme desktop icon size (e.g. Win98: 40)
     var programManager: ProgramManagerConfig? = nil
     var sgiDesktop: SGIDesktopConfig? = nil
+    var menuBarApple: String? = nil   // default menu-bar Apple cover for this theme: off|rainbow|aqua|aqua-classic
     var splashScreen: String? = nil   // boot splash image shown briefly on theme activation
     var splashFullscreen: Bool? = nil // true = fill the whole screen (e.g. Win 98 boot)
     var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present
@@ -185,6 +186,16 @@ extension DockThemeConfig {
     var hasMagnification: Bool { dock.magnification == true }
     var magnificationMaxScale: CGFloat { dock.magnificationScale ?? 2.0 }
     var has3DShelf: Bool { dock.shelfStyle == "3d" }
+    /// This theme's default menu-bar Apple style (0 off, 1 rainbow, 2 aqua, 3 aqua classic), or nil to leave as-is.
+    var menuBarAppleStyleDefault: Int? {
+        switch menuBarApple?.lowercased() {
+        case "off": return 0
+        case "rainbow": return 1
+        case "aqua": return 2
+        case "aqua-classic", "aquaclassic", "classic": return 3
+        default: return nil
+        }
+    }
     var dockAlignment: String { dock.alignment ?? "center" }
     var dockEdgeOffset: CGFloat { dock.edgeOffset ?? 8 }
     var hasTrash: Bool { dock.showTrash == true }

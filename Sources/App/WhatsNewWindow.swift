@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 1.9.1")
+                Text("What's New in RetroMac 1.9.2")
                     .font(.title2.bold())
-                Text("Use your iPhone as the camera, a tighter \u{201C}Dock only\u{201D}, and a batch of fixes")
+                Text("A retro menu-bar Apple, your iPhone as the camera, a tighter \u{201C}Dock only\u{201D} & fixes")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -20,6 +20,13 @@ struct WhatsNewView: View {
             // Feature list
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    featureRow(
+                        icon: "apple.logo",
+                        color: .pink,
+                        title: "Retro menu-bar Apple",
+                        description: "Cover the system Apple with the classic Rainbow, Aqua or Aqua Classic logo — cycle it from the flyout. Snow Leopard and Mac OS 9 pick fitting defaults."
+                    )
+
                     featureRow(
                         icon: "iphone",
                         color: .blue,

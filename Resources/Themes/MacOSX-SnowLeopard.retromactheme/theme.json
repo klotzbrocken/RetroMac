@@ -1,5 +1,6 @@
 {
   "name": "Snow Leopard",
+  "menuBarApple": "aqua-classic",
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
