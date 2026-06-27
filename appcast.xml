@@ -6,6 +6,30 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.9.2</title>
+      <pubDate>Sat, 27 Jun 2026 15:57:59 +0000</pubDate>
+      <sparkle:version>1.9.2</sparkle:version>
+      <sparkle:shortVersionString>1.9.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.9.2 &mdash; a retro menu-bar Apple, iPhone camera &amp; a smoother Dock</h2>
+        <ul>
+          <li><b>Retro menu-bar Apple:</b> cover the system Apple with the classic Rainbow, Aqua or Aqua Classic logo &mdash; cycle it from the flyout. Snow Leopard and Mac OS 9 pick fitting defaults.</li>
+          <li><b>iPhone as a camera:</b> use your iPhone (Continuity Camera) or any webcam as the CRT-shaded virtual camera &mdash; the source list updates live as devices connect.</li>
+          <li><b>Smoother Dock + Snow Leopard 3D:</b> fluid, real-Dock-style magnification, a corrected Snow Leopard 3D glass shelf, and no more background windows jumping to the front on a theme switch.</li>
+          <li><b>&ldquo;Dock only&rdquo; &amp; calmer themes:</b> Dock only restyles just the dock; the retro TV window and full-screen shader behave reliably, even across Spaces.</li>
+          <li><b>Dock Mode &amp; quick launcher:</b> show RetroMac in the Dock plus a floating button; one click switches themes and toggles the shader or camera.</li>
+          <li><b>More:</b> Windows 98/XP taskbar, shaders on every display, GDV-NTSC &ldquo;Retro Crisis&rdquo; shaders, softer phosphor masks, paste-able license field, and many fixes.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.9.2/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="VRsa+3rL83VUYutyxsrp7gtDDAKWc8yc75zBbGroCk523yH0Jv0W7Mc4KzW/spFB826wSFlBnH01iWEc3c40Bw=="
+        length="158729811"
+      />
+    </item>
+    <item>
       <title>Version 1.9.1.1</title>
       <pubDate>Fri, 26 Jun 2026 06:59:41 +0000</pubDate>
       <sparkle:version>1.9.1.1</sparkle:version>
