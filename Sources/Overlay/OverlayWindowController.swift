@@ -22,6 +22,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     private var trackingTimer: DispatchSourceTimer?
     private var trackedWindowID: CGWindowID = 0
     private var didReceiveFirstFrame = false
+    private var spaceObserver: NSObjectProtocol?   // re-assert overlay onto a new (fullscreen) Space
 
     private var viewTextures: [ObjectIdentifier: MTLTexture] = [:]
     private var viewDirtyFlags: [ObjectIdentifier: Bool] = [:]
@@ -194,6 +195,23 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
 
         await MainActor.run {
             for window in self.windows { window.orderFrontRegardless() }
+
+            // Full-screen overlay sometimes "falls off" when a window enters its own
+            // native fullscreen Space. Re-assert the overlay to the front whenever the
+            // active Space changes (mirrors the dock controller's space handling).
+            if isFullscreenMode, self.spaceObserver == nil {
+                self.spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+                    forName: NSWorkspace.activeSpaceDidChangeNotification,
+                    object: nil, queue: .main
+                ) { [weak self] _ in
+                    guard let self = self else { return }
+                    for window in self.windows { window.orderFrontRegardless() }
+                    // Entering fullscreen can drop us briefly; assert again once it settles.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                        self?.windows.forEach { $0.orderFrontRegardless() }
+                    }
+                }
+            }
         }
 
         try await Task.sleep(nanoseconds: 500_000_000)
@@ -375,6 +393,10 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
             self.trackingTimer = nil
             self.resizeDebounceTimer?.cancel()
             self.resizeDebounceTimer = nil
+            if let obs = self.spaceObserver {
+                NSWorkspace.shared.notificationCenter.removeObserver(obs)
+                self.spaceObserver = nil
+            }
             self.stopFPSTracking()
             for manager in self.captureManagers { manager.stop() }
             self.captureManagers.removeAll()
