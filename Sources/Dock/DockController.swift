@@ -16,6 +16,7 @@ final class DockController {
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var didHideSystemDock = false
+    private var hidViaCoreDock = false             // true → hidden live via CoreDock (no killall, no window restack)
     private var lastAppliedHidePosition: String?   // guards against re-running killall Dock per theme switch
     private var dockOpGeneration = 0               // supersedes stale async hide/restore completions
     private var originalDockAutoHide: Bool?
@@ -54,6 +55,7 @@ final class DockController {
         ProgramManagerController.shared.update()
         SGIDesktopController.shared.update()
         BeOSDeskbarController.shared.update()
+        RainbowAppleController.shared.update()
         if AppSettings.shared.hideMenuBar {
             SystemUIHelper.setMenuBarAutoHide(true)
         }
@@ -113,6 +115,7 @@ final class DockController {
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
         BeOSDeskbarController.shared.hide()
+        RainbowAppleController.shared.hide()
         // Restore menu bar and desktop icons
         if AppSettings.shared.hideMenuBar {
             SystemUIHelper.setMenuBarAutoHide(false)
@@ -289,8 +292,12 @@ final class DockController {
         }
 
         // ── Horizontal dock (bottom edge) ────────────────────────────────
-        // Horizontal magnification overflow: extra space on each side for dock bar expansion
-        let hMagOverflow: CGFloat = hasMag ? iconSize * (maxScale - 1.0) * 1.2 : 0
+        // Horizontal magnification overflow: extra space on EACH side so the bar can
+        // expand without the end icons (or the bar's rounded corners) clipping at the
+        // window edge. Hovering an end icon pushes the whole spread to one side, so this
+        // needs to cover the worst-case one-sided push — same generous factor (×2.5) the
+        // vertical branch uses. Too small (was ×1.2) clipped Mac OS X on magnify.
+        let hMagOverflow: CGFloat = hasMag ? iconSize * (maxScale - 1.0) * 2.5 : 0
 
         // Calculate dynamic scale to fit screen
         let maxWidth = screen.visibleFrame.width - 20  // 10px margin each side
@@ -817,6 +824,33 @@ final class DockController {
             // Use effectiveDockPosition so a user position override (context menu)
             // is honored, not just the theme's baked-in default.
             let themePos = ThemeManager.shared.activeTheme?.config.effectiveDockPosition ?? "bottom"
+
+            // Preferred: CoreDock toggles auto-hide + orientation LIVE, with no
+            // `killall Dock`, so the user's windows are never restacked. Move the system
+            // Dock to a non-conflicting edge (so it can't reveal over ours) and hide it.
+            if CoreDockBridge.isAvailable {
+                // Keep the system Dock on its ORIGINAL edge — don't move it. Changing the
+                // orientation makes minimize fly to the wrong edge and briefly flashes the
+                // real Dock. Just auto-hide it live: no killall, no window restack.
+                let sentinel = "coredock"
+                if didHideSystemDock && lastAppliedHidePosition == sentinel { return }
+                if CoreDockBridge.setAutoHide(true) {
+                    didHideSystemDock = true
+                    hidViaCoreDock = true
+                    lastAppliedHidePosition = sentinel
+                    persistDockRecoveryState()
+                    print("[Dock] System dock auto-hidden via CoreDock (no killall, original edge)")
+                    return
+                }
+                // CoreDock unexpectedly failed → fall through to the killall path.
+            }
+
+            // Move the real macOS Dock to a DIFFERENT screen edge than RetroMac's
+            // dock so the two never "double up" on the same edge. macOS only
+            // supports left/bottom/right for the Dock orientation (no top), so we
+            // map RetroMac's effective edge to a non-conflicting system edge.
+            // Use effectiveDockPosition so a user position override (context menu)
+            // is honored, not just the theme's baked-in default.
             let hidePosition = systemDockEdge(forThemeEdge: themePos)
             // Idempotent on INTENT: if we already intend the Dock hidden on this same edge,
             // do nothing — recreateWindow() calls this on every theme switch and re-running
@@ -826,6 +860,7 @@ final class DockController {
             // Set intent immediately; a generation token guards the async commit so a stale
             // in-flight restore can't flip the Dock back on after this hide.
             didHideSystemDock = true
+            hidViaCoreDock = false
             lastAppliedHidePosition = hidePosition
             persistDockRecoveryState()
             dockOpGeneration += 1
@@ -896,6 +931,20 @@ final class DockController {
         let delay = originalAutohideDelay
         let deleteDelay = originalAutohideDelay == nil
 
+        // CoreDock fast path: live restore (auto-hide + orientation), no killall, no
+        // window restacking. Only when we hid via CoreDock.
+        if hidViaCoreDock && CoreDockBridge.isAvailable {
+            CoreDockBridge.setAutoHide(restoreHide)   // orientation was never changed
+            didHideSystemDock = false
+            hidViaCoreDock = false
+            lastAppliedHidePosition = nil
+            originalDockAutoHide = nil; originalDockPosition = nil
+            originalMinimizeToApp = nil; originalMinEffect = nil; originalAutohideDelay = nil
+            clearPersistedDockState()
+            print("[Dock] System dock restored via CoreDock (autohide=\(restoreHide))")
+            return
+        }
+
         // Drop the hide INTENT immediately so a fast re-hide that arrives before this
         // completes won't be skipped by the idempotency guard.
         didHideSystemDock = false
@@ -957,6 +1006,20 @@ final class DockController {
         guard d.bool(forKey: "sysDockHidden") else { return }
         let restoreHide = d.bool(forKey: "sysDockOrigAutohide")
         let restorePos = d.string(forKey: "sysDockOrigPosition") ?? "bottom"
+
+        // CoreDock fast path: live restore without killall (works regardless of how the
+        // previous session hid the Dock).
+        if CoreDockBridge.isAvailable {
+            CoreDockBridge.setAutoHide(restoreHide)
+            didHideSystemDock = false
+            hidViaCoreDock = false
+            lastAppliedHidePosition = nil
+            originalDockAutoHide = nil
+            clearPersistedDockState()
+            print("[Dock] System dock recovered via CoreDock (autohide=\(restoreHide))")
+            return
+        }
+
         // Older persisted states may lack the minimize keys — only restore when saved.
         let isNewState = d.object(forKey: "sysDockOrigMinToApp") != nil
         let minToApp = isNewState ? d.bool(forKey: "sysDockOrigMinToApp") : nil

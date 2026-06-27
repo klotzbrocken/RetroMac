@@ -113,6 +113,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
             BeOSDeskbarController.shared.update()
+            RainbowAppleController.shared.update()
         }
 
         // Apply Dock Mode when the user toggles it in Settings
@@ -143,6 +144,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // dockEnabled is reset so the menu/settings consistently reflect the inactive state.
         settings.dockEnabled = false
         isActive = false
+
+        // Rainbow Apple is theme-independent — show it on launch if the user enabled it.
+        RainbowAppleController.shared.update()
 
         // First run: the Setup Assistant is the primary onboarding (incl. permissions).
         // After it finishes, fall through to the welcome flow for What's New / Coffee.
@@ -2163,6 +2167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ProgramManagerController.shared.update()
         SGIDesktopController.shared.update()
         BeOSDeskbarController.shared.update()
+        RainbowAppleController.shared.update()
         applyThemeWidgets(for: AppSettings.shared.dockTheme)
     }
 

@@ -231,6 +231,32 @@ struct LauncherView: View {
     private let destructive = Color(red: 1.0, green: 0.231, blue: 0.188)   // #ff3b30
     private let switchGreen = Color(red: 0.204, green: 0.780, blue: 0.349) // #34c759
 
+    /// Menu-bar Apple icons for the flyout cycle (colored = on, desaturated = off).
+    private static func bundledIcon(_ name: String) -> NSImage {
+        if let p = Bundle.main.path(forResource: name, ofType: "png"),
+           let img = NSImage(contentsOfFile: p) { return img }
+        return NSImage(systemSymbolName: "apple.logo", accessibilityDescription: nil) ?? NSImage()
+    }
+    private static let rainbowAppleIcon: NSImage = bundledIcon("rainbow_apple")
+    private static let aquaAppleIcon: NSImage = bundledIcon("aqua_apple")
+    private static let aquaClassicAppleIcon: NSImage = bundledIcon("aqua_classic_apple")
+
+    private static func appleIcon(forStyle style: Int) -> NSImage {
+        switch style {
+        case 2: return aquaAppleIcon
+        case 3: return aquaClassicAppleIcon
+        default: return rainbowAppleIcon
+        }
+    }
+    private static func appleStyleName(_ style: Int) -> String {
+        switch style {
+        case 1: return "Rainbow"
+        case 2: return "Aqua"
+        case 3: return "Aqua Classic"
+        default: return "Off"
+        }
+    }
+
     /// Exactly 8 slot entries ("" = empty).
     private var slots: [String] {
         var s = settings.quickAccessSlots
@@ -470,8 +496,27 @@ struct LauncherView: View {
                                          set: { _ in AppDelegate.shared?.launcherToggleWebcam(); model.refresh() }))
                     .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }
+
+            appleCycleRow
         }
         .font(.system(size: 12))
+    }
+
+    /// Menu-bar Apple cover — theme-independent. Each tap cycles Off → Rainbow → Aqua.
+    /// Icon shows the current style; grey = off.
+    private var appleCycleRow: some View {
+        let style = settings.menuBarAppleStyle
+        return HStack(spacing: 8) {
+            Image(nsImage: Self.appleIcon(forStyle: style))
+                .resizable().interpolation(.high).scaledToFit()
+                .frame(width: 16, height: 16)
+                .saturation(style == 0 ? 0 : 1)
+                .opacity(style == 0 ? 0.4 : 1)
+            Text("Apple logo: " + Self.appleStyleName(style))
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { settings.menuBarAppleStyle = (settings.menuBarAppleStyle + 1) % 4 }
     }
 
     private var shaderPicker: some View {

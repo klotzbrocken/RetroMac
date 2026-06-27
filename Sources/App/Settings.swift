@@ -289,6 +289,14 @@ final class AppSettings: ObservableObject {
         didSet {
             defaults.set(hideMenuBar, forKey: "hideMenuBar")
             SystemUIHelper.setMenuBarAutoHide(hideMenuBar)
+            RainbowAppleController.shared.update()   // apple cover depends on menu-bar visibility
+        }
+    }
+    /// Menu-bar Apple cover style: 0 = off, 1 = rainbow, 2 = aqua blue.
+    @Published var menuBarAppleStyle: Int {
+        didSet {
+            defaults.set(menuBarAppleStyle, forKey: "menuBarAppleStyle")
+            RainbowAppleController.shared.update()
         }
     }
     @Published var hideDesktopIcons: Bool {
@@ -592,6 +600,14 @@ final class AppSettings: ObservableObject {
         dockEnabled = defaults.bool(forKey: "dockEnabled")
         dockHideSystemDock = defaults.object(forKey: "dockHideSystemDock") as? Bool ?? true
         hideMenuBar = defaults.bool(forKey: "hideMenuBar")
+        // Menu-bar Apple style (migrate the legacy menuBarRainbowApple bool: true → rainbow).
+        if let style = defaults.object(forKey: "menuBarAppleStyle") as? Int {
+            menuBarAppleStyle = style
+        } else if let legacy = defaults.object(forKey: "menuBarRainbowApple") as? Bool {
+            menuBarAppleStyle = legacy ? 1 : 0
+        } else {
+            menuBarAppleStyle = 0
+        }
         hideDesktopIcons = defaults.bool(forKey: "hideDesktopIcons")
         dockHotkeyCode = defaults.object(forKey: "dockHotkeyCode") as? UInt32 ?? UInt32(kVK_ANSI_D)
         dockHotkeyModifiers = defaults.object(forKey: "dockHotkeyModifiers") as? UInt32 ?? UInt32(cmdKey | optionKey | controlKey)

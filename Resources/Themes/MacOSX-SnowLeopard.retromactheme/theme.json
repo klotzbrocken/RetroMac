@@ -5,7 +5,7 @@
   "dock": {
     "height": 72,
     "iconSize": 52,
-    "padding": 14,
+    "padding": 40,
     "spacing": 6,
     "edgeOffset": 0,
     "cornerRadius": 6,
