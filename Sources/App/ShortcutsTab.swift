@@ -145,11 +145,22 @@ struct ShortcutsTab: View {
                         .tint(.rmAccent)
                         .labelsHidden()
                 }
-                RMRow(label: "Hide desktop icons when overlay is on", isLast: true) {
+                RMRow(label: "Hide desktop icons when overlay is on") {
                     Toggle("", isOn: $settings.hideDesktopIcons)
                         .toggleStyle(.switch)
                         .tint(.rmAccent)
                         .labelsHidden()
+                }
+                RMRow(label: "Menu-bar Apple logo",
+                      hint: "Cover the system Apple with a retro logo. Also cycled from the flyout.",
+                      isLast: true) {
+                    Picker("", selection: $settings.menuBarAppleStyle) {
+                        Text("Off").tag(0)
+                        Text("Rainbow").tag(1)
+                        Text("Aqua").tag(2)
+                        Text("Aqua Classic").tag(3)
+                    }
+                    .labelsHidden().pickerStyle(.menu).frame(width: 140)
                 }
             }
         }

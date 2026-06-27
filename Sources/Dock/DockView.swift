@@ -45,6 +45,17 @@ final class DockView: NSView {
     var dynamicScale: CGFloat = 1.0
     /// Expanded dock bar rect during magnification (nil = use resting rect)
     private var magnifiedDockBarRect: NSRect?
+    // Continuous eased magnification: a phase 0→1 ramps in/out so the bar AND icons
+    // grow/shrink together (computed from the same phase each tick = always in sync).
+    private var magPhase: CGFloat = 0
+    private var magPhaseTarget: CGFloat = 0
+    private var magTargetPoint: NSPoint = .zero
+    private var magTimer: DispatchSourceTimer?
+    private var magRampStart: CFTimeInterval = 0
+    private var magRampFromPhase: CGFloat = 0
+    private var magRestFrames: [NSRect] = []   // icon frames at rest (captured when magnify engages)
+    private var magExitFrames: [NSRect] = []   // icon frames when the exit ramp began
+    private var magExitBar: NSRect = .zero     // bar rect when the exit ramp began
 
     // Pac-Man pellet border animation (theme borderStyle == "pacman") — layer-based
     private var pacmanTimer: Timer?
@@ -222,6 +233,7 @@ final class DockView: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     deinit {
+        magTimer?.cancel()
         clockTimer?.invalidate()
         pacmanTimer?.invalidate()
         trashPollTimer?.invalidate()
@@ -1919,17 +1931,27 @@ final class DockView: NSView {
         // other three, with the border drawn on those three sides only.
         var verticalBorderPath: NSBezierPath?
         let bgPath: NSBezierPath
+        // 3D shelf is drawn SHORT — only the lower part of the bar — so icons (placed
+        // with their centre on the shelf top) stick out halfway above it. Keep this
+        // fraction in sync with the 3D floorY in the layout code.
+        let shelfRect = theme.has3DShelf
+            ? NSRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height * 0.55)
+            : rect
         if theme.isVertical {
             let paths = verticalBarPaths(rect: rect, radius: cr)
             bgPath = paths.fill
             verticalBorderPath = paths.border
         } else if theme.has3DShelf {
-            let topInset = rect.height * 0.15
+            // Snow Leopard glass shelf: side walls converge toward the back (top).
+            // Target angles measured from the real dock (from vertical): left 26.7°,
+            // right 27.9°. inset = shelf height * tan(angle). Asymmetric on purpose.
+            let leftInset  = shelfRect.height * CGFloat(tan(26.7 * Double.pi / 180))
+            let rightInset = shelfRect.height * CGFloat(tan(27.9 * Double.pi / 180))
             bgPath = NSBezierPath()
-            bgPath.move(to: NSPoint(x: rect.minX, y: rect.minY))
-            bgPath.line(to: NSPoint(x: rect.maxX, y: rect.minY))
-            bgPath.line(to: NSPoint(x: rect.maxX - topInset, y: rect.maxY))
-            bgPath.line(to: NSPoint(x: rect.minX + topInset, y: rect.maxY))
+            bgPath.move(to: NSPoint(x: shelfRect.minX, y: shelfRect.minY))
+            bgPath.line(to: NSPoint(x: shelfRect.maxX, y: shelfRect.minY))
+            bgPath.line(to: NSPoint(x: shelfRect.maxX - rightInset, y: shelfRect.maxY))
+            bgPath.line(to: NSPoint(x: shelfRect.minX + leftInset, y: shelfRect.maxY))
             bgPath.close()
         } else {
             bgPath = NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
@@ -1989,10 +2011,10 @@ final class DockView: NSView {
 
         // 3D shelf: glass highlight on upper portion
         if theme.has3DShelf && !theme.isVertical {
-            let topInset = rect.height * 0.15
-            let glassHeight = rect.height * 0.4
-            let glassRect = NSRect(x: rect.minX + topInset * 0.6, y: rect.maxY - glassHeight,
-                                   width: rect.width - topInset * 1.2, height: glassHeight)
+            let topInset = shelfRect.height * 0.15
+            let glassHeight = shelfRect.height * 0.4
+            let glassRect = NSRect(x: shelfRect.minX + topInset * 0.6, y: shelfRect.maxY - glassHeight,
+                                   width: shelfRect.width - topInset * 1.2, height: glassHeight)
             ctx.saveGState()
             bgPath.addClip()
             let glass = NSGradient(colors: [
@@ -2007,9 +2029,9 @@ final class DockView: NSView {
         if let shelfColor = theme.parsedShelfLineColor, !theme.isVertical {
             shelfColor.withAlphaComponent(shelfColor.alphaComponent * bgAlpha).setStroke()
             let shelfLine = NSBezierPath()
-            let shelfY = rect.minY + rect.height * 0.38
-            shelfLine.move(to: NSPoint(x: rect.minX + cr, y: shelfY))
-            shelfLine.line(to: NSPoint(x: rect.maxX - cr, y: shelfY))
+            let shelfY = shelfRect.minY + shelfRect.height * 0.38
+            shelfLine.move(to: NSPoint(x: shelfRect.minX + cr, y: shelfY))
+            shelfLine.line(to: NSPoint(x: shelfRect.maxX - cr, y: shelfY))
             shelfLine.lineWidth = 1
             shelfLine.stroke()
         }
@@ -2104,7 +2126,9 @@ final class DockView: NSView {
             } else {
                 let sepColor = theme.parsedBorderColor.withAlphaComponent(0.4)
                 sepColor.setFill()
-                NSBezierPath(roundedRect: NSRect(x: sx - 0.5, y: rect.height * 0.15, width: 1, height: rect.height * 0.7),
+                // Span only the (possibly shortened 3D) shelf so it doesn't poke out the top.
+                NSBezierPath(roundedRect: NSRect(x: sx - 0.5, y: shelfRect.minY + shelfRect.height * 0.15,
+                                                 width: 1, height: shelfRect.height * 0.7),
                              xRadius: 0.5, yRadius: 0.5).fill()
             }
         }
@@ -3023,7 +3047,14 @@ final class DockView: NSView {
         }
 
         if hasMagnification {
-            applyMagnification(at: local)
+            magTargetPoint = local
+            if magPhase >= 1 {
+                applyMagnification(at: local)   // steady state: follow the pointer directly
+            } else {
+                if magPhase == 0 { magRestFrames = itemViews.map { $0.frame } }  // capture true rest
+                setMagTarget(1)
+                startMagTimer()                 // ramp the magnification in
+            }
         }
     }
 
@@ -3044,12 +3075,18 @@ final class DockView: NSView {
             let withinX = local.x >= 0 && local.x <= bounds.width
             let downwardExit = local.y <= dockBarRect.maxY
             if withinX && downwardExit {
-                let clampedX = min(max(local.x, 0), bounds.width)
-                applyMagnification(at: NSPoint(x: clampedX, y: dockBarRect.midY))
+                magTargetPoint = NSPoint(x: min(max(local.x, 0), bounds.width), y: dockBarRect.midY)
+                if magPhase >= 1 { applyMagnification(at: magTargetPoint) }
+                else { setMagTarget(1); startMagTimer() }
                 return
             }
         }
-        resetMagnification()
+        // Ease the magnification back out by interpolating the captured magnified frames
+        // toward the true rest frames, so it lands EXACTLY on the rest layout (no settle jump).
+        magExitFrames = itemViews.map { $0.frame }
+        magExitBar = magnifiedDockBarRect ?? dockBarRect
+        setMagTarget(0)
+        startMagTimer()
     }
 
     private func applyMagnification(at point: NSPoint) {
@@ -3085,6 +3122,8 @@ final class DockView: NSView {
                     scales.append(1.0)
                 }
             }
+            // Ease in/out: interpolate each icon from rest (1) toward its full scale by phase.
+            if magPhase < 1.0 { scales = scales.map { 1.0 + ($0 - 1.0) * magPhase } }
             // Magnified heights are based on the REST icon size (baseSize), not the
             // current (possibly already-magnified) frame height — avoids compounding.
             let magHeights = scales.map { $0 * baseSize }
@@ -3146,6 +3185,8 @@ final class DockView: NSView {
                 scales.append(1.0)
             }
         }
+        // Ease in/out: interpolate each icon from rest (1) toward its full scale by phase.
+        if magPhase < 1.0 { scales = scales.map { 1.0 + ($0 - 1.0) * magPhase } }
 
         // 2. Magnified widths from the REST icon size (baseSize), not live frames
         let magnifiedWidths = scales.map { baseSize * $0 }
@@ -3165,7 +3206,13 @@ final class DockView: NSView {
         var maxIdx = 0
         for i in 0..<scales.count where scales[i] > scales[maxIdx] { maxIdx = i }
         var labelX: CGFloat = 0, labelTopY: CGFloat = 0
-        let floorY = barRect.minY + (barRect.height - baseSize) / 2   // rest baseline; icons grow upward from here
+        // 3D shelf is drawn only in the lower 55% of the bar; place icons with their
+        // CENTRE on the shelf top so they stick out ~halfway above it (matches the real
+        // Snow Leopard dock). 0.55 must match the shelfRect fraction in the draw code.
+        let is3DShelf = ThemeManager.shared.activeTheme?.config.has3DShelf ?? false
+        let floorY = is3DShelf
+            ? barRect.minY + barRect.height * 0.55 - baseSize / 2
+            : barRect.minY + (barRect.height - baseSize) / 2   // rest baseline; icons grow upward from here
 
         // 4. Resize each icon's FRAME (reliable scaling — the icon image fills the frame).
         for (i, item) in itemViews.enumerated() {
@@ -3235,6 +3282,75 @@ final class DockView: NSView {
         lbl.frame = NSRect(x: cx - w / 2, y: y, width: w, height: h)
         if lbl.superview == nil { addSubview(lbl) } else { addSubview(lbl, positioned: .above, relativeTo: nil) }
         lbl.isHidden = false
+    }
+
+    // MARK: - Eased magnification driver
+
+    private func startMagTimer() {
+        guard magTimer == nil else { return }
+        let t = DispatchSource.makeTimerSource(queue: .main)
+        t.schedule(deadline: .now(), repeating: 1.0 / 120.0)
+        t.setEventHandler { [weak self] in self?.magTick() }
+        magTimer = t
+        t.resume()
+    }
+
+    private func stopMagTimer() {
+        magTimer?.cancel()
+        magTimer = nil
+    }
+
+    /// Set the magnification target; restart the timed ramp from the current phase so the
+    /// ease finishes cleanly (no exponential tail/creep).
+    private func setMagTarget(_ target: CGFloat) {
+        guard target != magPhaseTarget else { return }
+        magPhaseTarget = target
+        magRampStart = CACurrentMediaTime()
+        magRampFromPhase = magPhase
+    }
+
+    /// Duration-based ease-out so the phase REACHES the target in a fixed time and flattens
+    /// at the end (the icons settle without a late "nudge"). Bar + icons use the same phase.
+    private func magTick() {
+        let duration: CFTimeInterval = 0.18
+        let t = min(1.0, max(0.0, (CACurrentMediaTime() - magRampStart) / duration))
+        let u = 1.0 - t
+        let e = CGFloat(1.0 - u * u * u)   // cubic ease-out: very gentle finish, exact at t=1
+
+        // Ramp OUT: interpolate the captured magnified frames → the true rest frames (and the
+        // bar with them) so it lands EXACTLY on the rest layout — no settle wobble.
+        if magPhaseTarget < 0.5 {
+            magPhase = 1.0 - e
+            if magExitFrames.count == itemViews.count, magRestFrames.count == itemViews.count {
+                for (i, item) in itemViews.enumerated() {
+                    item.frame = Self.lerpRect(magExitFrames[i], magRestFrames[i], e)
+                }
+                magnifiedDockBarRect = Self.lerpRect(magExitBar, dockBarRect, e)
+                needsDisplay = true
+            }
+            if t >= 1.0 {
+                stopMagTimer()
+                resetMagnification()   // endpoint == the interpolation target, so no jump
+            }
+            return
+        }
+
+        // Ramp IN: phase-scaled magnification (bar + icons from the same phase).
+        magPhase = magRampFromPhase + (magPhaseTarget - magRampFromPhase) * e
+        if t >= 1.0 {
+            magPhase = 1.0
+            applyMagnification(at: magTargetPoint)   // steady; mouseMoved drives follow
+            stopMagTimer()
+            return
+        }
+        applyMagnification(at: magTargetPoint)
+    }
+
+    private static func lerpRect(_ a: NSRect, _ b: NSRect, _ f: CGFloat) -> NSRect {
+        NSRect(x: a.minX + (b.minX - a.minX) * f,
+               y: a.minY + (b.minY - a.minY) * f,
+               width: a.width + (b.width - a.width) * f,
+               height: a.height + (b.height - a.height) * f)
     }
 
     private func resetMagnification() {

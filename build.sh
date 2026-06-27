@@ -72,6 +72,9 @@ fi
 cp Resources/AppIcon.icns "$CONTENTS/Resources/AppIcon.icns"
 cp Resources/menubar_icon.png "$CONTENTS/Resources/menubar_icon.png"
 cp Resources/menubar_icon@2x.png "$CONTENTS/Resources/menubar_icon@2x.png"
+cp Resources/rainbow_apple.png "$CONTENTS/Resources/rainbow_apple.png"
+cp Resources/aqua_apple.png "$CONTENTS/Resources/aqua_apple.png"
+cp Resources/aqua_classic_apple.png "$CONTENTS/Resources/aqua_classic_apple.png"
 
 # Copy dock themes
 if [ -d "Resources/Themes" ]; then
