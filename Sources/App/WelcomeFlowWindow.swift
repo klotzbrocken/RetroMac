@@ -84,25 +84,25 @@ struct WelcomeFlowView: View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
-                Text("What's New in RetroMac 1.8").font(.title2.bold())
-                Text("New Special Themes, boot screens & screensavers").font(.subheadline).foregroundStyle(.secondary)
+                Text("What's New in RetroMac 1.9.2").font(.title2.bold())
+                Text("A Dock launcher, a retro menu-bar Apple, iPhone camera & a smoother Dock").font(.subheadline).foregroundStyle(.secondary)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("sparkles", .cyan, "New Special Themes — true to the originals",
-                            "Windows 98 (with classic games and sheep.exe!), Windows XP, and Mac OS X with its glossy Aqua look — plus classic apps like Internet Explorer, Notepad and Paint.")
-                    feature("play.tv", .blue, "Boot Screens",
-                            "Authentic startup videos play when you switch to Windows XP, Windows 98 or Mac OS 9 — click to skip to the desktop.")
-                    feature("display", .purple, "Classic Screensavers",
-                            "A per-theme screensaver: 3D Pipes, FlowerBox, Flying Toasters and Flurry — pick yours in Settings ▸ Screensaver.")
-                    feature("arrow.down.right.and.arrow.up.left.rectangle", .orange, "Smarter Minimize",
-                            "Windows now minimize into the themed dock instead of the system Dock.")
-                    feature("gauge.with.dots.needle.67percent", .green, "New Widgets & lots of fixes",
-                            "CPU Monitor and Desktop Clock widgets, plus widget, dock and stability fixes throughout.")
-                    feature("rectangle.badge.person.crop", .pink, "Webcam Lower-Third Fixes",
-                            "The on-screen name bar no longer flickers, the Late Night (Gold) / Newsroom style now follows your setting, and long names fit the bar.")
-                    feature("ladybug", .gray, "Built-in Diagnostics",
-                            "Settings ▸ About ▸ Diagnostics captures a log you can copy or save — making display, camera and dock issues much easier to track down.")
+                    feature("menubar.dock.rectangle", .blue, "Dock Mode & quick launcher",
+                            "Show RetroMac in the Dock plus a draggable floating button — one click switches themes and toggles the shader or virtual camera.")
+                    feature("apple.logo", .pink, "Retro menu-bar Apple",
+                            "Cover the system Apple with the classic Rainbow, Aqua or Aqua Classic logo — cycle it from the flyout. Snow Leopard and Mac OS 9 pick fitting defaults.")
+                    feature("iphone", .green, "iPhone as a camera",
+                            "Use your iPhone (Continuity Camera) or any webcam as the CRT-shaded virtual camera — the source list updates live as devices connect.")
+                    feature("wand.and.stars", .purple, "Smoother Dock + Snow Leopard 3D",
+                            "Fluid, real-Dock-style magnification, a corrected Snow Leopard 3D glass shelf, and no more background windows jumping to the front on a theme switch.")
+                    feature("macwindow", .cyan, "\u{201C}Dock only\u{201D} & calmer themes",
+                            "Dock only restyles just the Dock (no wallpaper or widgets); the retro TV window and full-screen shader behave reliably, even across Spaces.")
+                    feature("display.2", .orange, "Taskbar & all-display shaders",
+                            "Windows 98/XP get authentic per-window taskbar buttons, and the CRT shader now runs on every monitor, not just the main one.")
+                    feature("tv", .gray, "New shaders & lots of fixes",
+                            "Two GDV-NTSC \u{201C}Retro Crisis\u{201D} looks, softer and more authentic phosphor masks, plus camera, dock and stability fixes throughout.")
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
         }
@@ -306,6 +306,38 @@ private struct RMDefaultButtonStyleSafe: ButtonStyle {
 
 final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
+    private var savedMenu: NSMenu?
+    private var installedEditMenu = false
+
+    /// RetroMac is an agent app with no menu bar, so Cmd+C/V/A don't reach text fields
+    /// (e.g. the license-key field) unless a main menu with those key equivalents exists.
+    /// Install a minimal Edit menu while this window is open; restore on close.
+    private func installEditMenu() {
+        guard NSApp.mainMenu == nil else { return }
+        savedMenu = NSApp.mainMenu
+        installedEditMenu = true
+        let mainMenu = NSMenu()
+        let appItem = NSMenuItem(); appItem.submenu = NSMenu(); mainMenu.addItem(appItem)
+        let editItem = NSMenuItem()
+        let edit = NSMenu(title: "Edit")
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        edit.addItem(NSMenuItem.separator())
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editItem.submenu = edit
+        mainMenu.addItem(editItem)
+        NSApp.mainMenu = mainMenu
+    }
+
+    private func removeEditMenu() {
+        guard installedEditMenu else { return }
+        NSApp.mainMenu = savedMenu
+        savedMenu = nil
+        installedEditMenu = false
+    }
 
     private var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -368,6 +400,7 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
         win.delegate = self
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        installEditMenu()   // enable Cmd+V etc. in the license-key field
         self.window = win
     }
 
@@ -376,6 +409,7 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
         let s = AppSettings.shared
         s.onboardingComplete = true
         s.lastSeenVersion = currentVersion
+        removeEditMenu()
         window = nil
     }
 }

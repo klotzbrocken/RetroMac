@@ -1,5 +1,6 @@
 {
   "name": "Mac OS 9.2 Classic",
+  "menuBarApple": "rainbow",
   "version": "1.0",
   "author": "RetroMac",
   "splashScreen": "splash.png",
