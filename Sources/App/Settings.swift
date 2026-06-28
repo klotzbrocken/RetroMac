@@ -237,6 +237,32 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(classicMacModeActive, forKey: "classicMacModeActive") }
     }
 
+    // Doom Slayer (theme "Maiks Favourite II", dock.borderStyle == "doomslayer").
+    /// The one knob normally touched — slayer scale.
+    @Published var slayerScale: Double {
+        didSet { defaults.set(slayerScale, forKey: "slayerScale") }
+    }
+    @Published var slayerRunSpeed: Double {
+        didSet { defaults.set(slayerRunSpeed, forKey: "slayerRunSpeed") }
+    }
+    /// "Calm" | "Normal" | "Intense" — controls firing & frag frequency.
+    @Published var slayerCombat: String {
+        didSet { defaults.set(slayerCombat, forKey: "slayerCombat") }
+    }
+    /// "Auto-cycle" | "Shotgun" | "Chaingun" | "Rocket" | "Plasma".
+    @Published var slayerWeapon: String {
+        didSet { defaults.set(slayerWeapon, forKey: "slayerWeapon") }
+    }
+    /// "Right" | "Left" — travel + facing direction.
+    @Published var slayerDirection: String {
+        didSet { defaults.set(slayerDirection, forKey: "slayerDirection") }
+    }
+    /// Launch target for the DOOM logo dock tile: an app path (/Applications/…​.app) or a
+    /// bundle identifier. Empty = auto-detect an installed DOOM app.
+    @Published var doomLaunchTarget: String {
+        didSet { defaults.set(doomLaunchTarget, forKey: "doomLaunchTarget") }
+    }
+
     // Television Bookmarks
     @Published var tvBookmarks: [TVBookmark] {
         didSet {
@@ -543,7 +569,7 @@ final class AppSettings: ObservableObject {
         coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
         dockModeEnabled = defaults.object(forKey: "dockModeEnabled") as? Bool ?? false
         shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? true
-        themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? true
+        themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? false
         setupWizardComplete = defaults.bool(forKey: "setupWizardComplete")
         // Floating launcher defaults ON. One-time migration flips legacy installs
         // (earlier builds shipped it off / persisted false) so this update turns the
@@ -567,6 +593,12 @@ final class AppSettings: ObservableObject {
         desktopPetEnabled = false
         pacmanClockMode = defaults.object(forKey: "pacmanClockMode") as? Bool ?? false
         classicMacModeActive = defaults.bool(forKey: "classicMacModeActive")
+        slayerScale = defaults.object(forKey: "slayerScale") as? Double ?? 0.75
+        slayerRunSpeed = defaults.object(forKey: "slayerRunSpeed") as? Double ?? 40
+        slayerCombat = defaults.object(forKey: "slayerCombat") as? String ?? "Normal"
+        slayerWeapon = defaults.object(forKey: "slayerWeapon") as? String ?? "Auto-cycle"
+        slayerDirection = defaults.object(forKey: "slayerDirection") as? String ?? "Right"
+        doomLaunchTarget = defaults.object(forKey: "doomLaunchTarget") as? String ?? ""
 
         // Per-theme preset overrides
         themePresetOverrides = defaults.dictionary(forKey: "themePresetOverrides") as? [String: String] ?? [:]

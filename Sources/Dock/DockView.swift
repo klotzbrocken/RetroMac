@@ -86,6 +86,9 @@ final class DockView: NSView {
     private var barrierDists: [String: CGFloat] = [:]
     private var pacmanConfiguredClock: Bool?
     private var pacmanIsClock = false
+
+    // Doom Slayer — DOOM-themed counterpart to the Pac-Man border (borderStyle "doomslayer").
+    private let doomSlayer = DoomSlayerController()
     private var clockLabelLayers: [CATextLayer] = []
     private var clockTopStart: CGFloat = 0
     private var clockTopEnd: CGFloat = 0
@@ -140,6 +143,24 @@ final class DockView: NSView {
     private var hasUrlLauncher: Bool {
         ThemeManager.shared.activeTheme?.config.hasUrlLauncher ?? false
     }
+    /// DOOM logo launcher tile (Maiks Favourite II) — sits right of the trash, launches DOOM.
+    private var hasDoomLauncher: Bool {
+        ThemeManager.shared.activeTheme?.config.dock.borderStyle == "doomslayer"
+    }
+    /// Aspect ratio (w/h) of the DOOM logo, so its dock tile is as TALL as the icons (= trash)
+    /// while keeping the wide wordmark un-squashed. Cached from the theme bundle.
+    private var doomLogoAspectCache: CGFloat?
+    private var doomLogoAspect: CGFloat {
+        if let a = doomLogoAspectCache { return a }
+        var a: CGFloat = 1.14
+        if let url = ThemeManager.shared.activeTheme?.url.appendingPathComponent("doom-logo.png"),
+           let img = NSImage(contentsOf: url), img.size.height > 0 {
+            a = img.size.width / img.size.height
+        }
+        doomLogoAspectCache = a
+        return a
+    }
+    private func doomTileWidth(_ iconSize: CGFloat) -> CGFloat { iconSize * doomLogoAspect }
     /// Win98-style taskbar (classic start menu): etched groove separators + Show Desktop.
     private var isClassicTaskbar: Bool {
         ThemeManager.shared.activeTheme?.config.dock.startMenuStyle == "classic"
@@ -236,6 +257,7 @@ final class DockView: NSView {
         magTimer?.cancel()
         clockTimer?.invalidate()
         pacmanTimer?.invalidate()
+        doomSlayer.teardown()
         trashPollTimer?.invalidate()
         trashMonitorSource?.cancel()
         if trashDirectoryFD >= 0 { close(trashDirectoryFD) }
@@ -279,6 +301,7 @@ final class DockView: NSView {
         occlusionObserver = nc2.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: nil, queue: .main) { [weak self] note in
             guard let self = self, (note.object as AnyObject?) === self.window else { return }
             self.refreshPacmanAnimationState()
+            self.doomSlayer.refreshAnimationState(visible: self.window?.occlusionState.contains(.visible) ?? true)
         }
 
         let wsNC = NSWorkspace.shared.notificationCenter
@@ -387,7 +410,7 @@ final class DockView: NSView {
                     y -= iconSize + spacing
                 }
             }
-            if hasUrlLauncher || hasTrash {
+            if hasUrlLauncher || hasTrash || hasDoomLauncher {
                 y -= spacing
                 if hasUrlLauncher {
                     addURLLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
@@ -397,6 +420,11 @@ final class DockView: NSView {
                 if hasTrash {
                     addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                                  theme: theme, iconSize: iconSize)
+                    y -= iconSize + spacing
+                }
+                if hasDoomLauncher {
+                    addDoomLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                        theme: theme, iconSize: iconSize)
                 }
             }
         } else if isControlStrip {
@@ -667,7 +695,7 @@ final class DockView: NSView {
                     }
                 }
 
-                if hasUrlLauncher || hasTrash {
+                if hasUrlLauncher || hasTrash || hasDoomLauncher {
                     trashSeparatorX = x - spacing / 2
                     x += spacing
                     let y = (barRect.height - iconSize) / 2
@@ -679,6 +707,11 @@ final class DockView: NSView {
                     if hasTrash {
                         addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                                      theme: theme, iconSize: iconSize)
+                        x += iconSize + spacing
+                    }
+                    if hasDoomLauncher {
+                        addDoomLauncherItem(frame: NSRect(x: x, y: y, width: doomTileWidth(iconSize), height: iconSize),
+                                            theme: theme, iconSize: iconSize)
                     }
                 }
             }
@@ -698,6 +731,7 @@ final class DockView: NSView {
         currentIDs += transientApps
         if hasUrlLauncher && !isControlStrip { currentIDs.append("__urllauncher__") }
         if hasTrash && !isControlStrip { currentIDs.append("__trash__") }
+        if hasDoomLauncher && !isControlStrip { currentIDs.append("__doomlauncher__") }
         if currentIDs != lastItemBundleIDs {
             rebuildItems()
             return
@@ -750,6 +784,12 @@ final class DockView: NSView {
             if hasTrash, idx < itemViews.count {
                 y -= spacing
                 trashSeparatorX = nil
+                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                idx += 1
+                y -= iconSize
+            }
+            if hasDoomLauncher, idx < itemViews.count {
+                y -= spacing
                 itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                 idx += 1
             }
@@ -977,7 +1017,7 @@ final class DockView: NSView {
                     x += iconSize + spacing
                 }
             }
-            if (hasUrlLauncher || hasTrash) && idx < itemViews.count {
+            if (hasUrlLauncher || hasTrash || hasDoomLauncher) && idx < itemViews.count {
                 trashSeparatorX = x - spacing / 2
                 x += spacing
                 let y = (barRect.height - iconSize) / 2
@@ -988,6 +1028,11 @@ final class DockView: NSView {
                 }
                 if hasTrash, idx < itemViews.count {
                     itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                    idx += 1
+                    x += iconSize + spacing
+                }
+                if hasDoomLauncher, idx < itemViews.count {
+                    itemViews[idx].frame = NSRect(x: x, y: y, width: doomTileWidth(iconSize), height: iconSize)
                     idx += 1
                 }
             }
@@ -1177,6 +1222,50 @@ final class DockView: NSView {
         itemViews.append(item)
     }
 
+    /// DOOM logo launcher tile — sits right of the trash (Maiks Favourite II). Click launches
+    /// DOOM (auto-detected) or the program configured in Settings.
+    private func addDoomLauncherItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
+        let item = DockItemView(bundleID: "__doomlauncher__", frame: frame)
+        item.magnificationEnabled = theme.hasMagnification && AppSettings.shared.dockMagnification
+        if let url = ThemeManager.shared.activeTheme?.url.appendingPathComponent("doom-logo.png"),
+           let img = NSImage(contentsOf: url) {
+            item.updateIcon(img)
+        }
+        item.updateTheme(theme)
+        item.onLeftClick = { _ in DockView.launchDoom() }
+        item.onRightClick = { [weak self] bid, point in self?.onContextMenu?(bid, point) }
+        addSubview(item)
+        itemViews.append(item)
+    }
+
+    /// Launch DOOM for the dock tile: prefer an installed DOOM app, else the configured
+    /// program (Settings ▸ Dock), else a gentle beep.
+    static func launchDoom() {
+        let ws = NSWorkspace.shared
+        // 1) Auto-detect an installed DOOM app in the usual application folders.
+        let dirs = ["/Applications",
+                    NSHomeDirectory() + "/Applications",
+                    "/Applications/Utilities"]
+        for dir in dirs {
+            guard let names = try? FileManager.default.contentsOfDirectory(atPath: dir) else { continue }
+            for n in names where n.hasSuffix(".app") && n.lowercased().contains("doom") {
+                ws.open(URL(fileURLWithPath: dir).appendingPathComponent(n)); return
+            }
+        }
+        // 2) Configured fallback: an app path or a bundle identifier.
+        let target = AppSettings.shared.doomLaunchTarget.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !target.isEmpty {
+            if target.hasPrefix("/") {
+                ws.open(URL(fileURLWithPath: target)); return
+            }
+            if let u = ws.urlForApplication(withBundleIdentifier: target) {
+                ws.open(u); return
+            }
+        }
+        // 3) Nothing found.
+        NSSound.beep()
+    }
+
     /// Win98 Quick-Launch "Show Desktop": hides every regular app (toggle restores them).
     private static var showDesktopHidden: [NSRunningApplication] = []
 
@@ -1326,6 +1415,9 @@ final class DockView: NSView {
         }
         if hasTrash {
             width += spacing + iconSize + spacing
+        }
+        if hasDoomLauncher {
+            width += spacing + doomTileWidth(iconSize)
         }
 
         // For vertical docks with grip, add grip height
@@ -2082,8 +2174,13 @@ final class DockView: NSView {
         // not into this view's backing, so the animation never re-rasterizes the dock.
         if theme.dock.borderStyle == "pacman", !theme.isVertical {
             updatePacmanBorder(rect: rect, scale: scale)
+            doomSlayer.teardown()
+        } else if theme.dock.borderStyle == "doomslayer", !theme.isVertical, let host = layer {
+            doomSlayer.update(host: host, view: self, barRect: rect, scale: scale)
+            tearDownPacmanLayers()
         } else {
             tearDownPacmanLayers()
+            doomSlayer.teardown()
         }
 
         // Grip dots handle (BeOS deskbar style)

@@ -159,6 +159,7 @@ struct ShortcutsTab: View {
                         Text("Rainbow").tag(1)
                         Text("Aqua").tag(2)
                         Text("Aqua Classic").tag(3)
+                        Text("Apple Hell").tag(4)
                     }
                     .labelsHidden().pickerStyle(.menu).frame(width: 140)
                 }

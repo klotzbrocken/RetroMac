@@ -193,6 +193,7 @@ final class RainbowAppleController {
         switch AppSettings.shared.menuBarAppleStyle {
         case 2: name = "aqua_apple"
         case 3: name = "aqua_classic_apple"
+        case 4: name = "apple_hell"
         default: name = "rainbow_apple"
         }
         if let cached = imageCache[name] { return cached }
