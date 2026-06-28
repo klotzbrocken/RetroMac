@@ -237,6 +237,20 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("DOOM Theme Credits") {
+                    Text("DOOM® and DOOM® II are trademarks of id Software LLC, a ZeniMax Media company. The “Maiks Favourite II” theme uses DOOM character sprites (Doom Slayer, Lost Soul) and is a fan-made tribute, included for personal, non-commercial use. RetroMac is not affiliated with, sponsored by, or endorsed by id Software, Bethesda Softworks, or ZeniMax Media.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("Doom Slayer (8-Bit) custom sprite sheet via The Spriters Resource / DOOM Customs.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("Lost Soul sprites ripped by Dolphman. Original artwork © id Software / Bethesda.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Resources") {
                     Link("amanchokshi/retro-icons on GitHub",
                          destination: URL(string: "https://github.com/amanchokshi/retro-icons")!)

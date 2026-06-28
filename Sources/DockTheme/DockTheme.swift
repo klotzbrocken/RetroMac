@@ -104,7 +104,7 @@ struct DockThemeConfig: Codable {
         var shelfStyle: String?  // "flat" (default) or "3d" (Snow Leopard perspective)
         var alignment: String?   // "center" (default), "left", "right"
         var edgeOffset: CGFloat? // distance from screen edge in px (default 8)
-        var borderStyle: String? // nil = normal bevel/border; "pacman" = animated pellet border
+        var borderStyle: String? // nil = normal bevel/border; "pacman" = animated pellet border; "doomslayer" = Doom Slayer patrols the lower edge
         var showTrash: Bool?     // show trash icon at end of dock
         var showUrlLauncher: Bool?   // editable URL-launcher tile, placed left of the trash
         var pinstripe: Bool?         // fine horizontal Aqua pinstripe texture over the dock bg
@@ -193,6 +193,7 @@ extension DockThemeConfig {
         case "rainbow": return 1
         case "aqua": return 2
         case "aqua-classic", "aquaclassic", "classic": return 3
+        case "hell", "apple-hell", "doom": return 4
         default: return nil
         }
     }

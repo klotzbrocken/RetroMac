@@ -240,11 +240,13 @@ struct LauncherView: View {
     private static let rainbowAppleIcon: NSImage = bundledIcon("rainbow_apple")
     private static let aquaAppleIcon: NSImage = bundledIcon("aqua_apple")
     private static let aquaClassicAppleIcon: NSImage = bundledIcon("aqua_classic_apple")
+    private static let hellAppleIcon: NSImage = bundledIcon("apple_hell")
 
     private static func appleIcon(forStyle style: Int) -> NSImage {
         switch style {
         case 2: return aquaAppleIcon
         case 3: return aquaClassicAppleIcon
+        case 4: return hellAppleIcon
         default: return rainbowAppleIcon
         }
     }
@@ -253,6 +255,7 @@ struct LauncherView: View {
         case 1: return "Rainbow"
         case 2: return "Aqua"
         case 3: return "Aqua Classic"
+        case 4: return "Apple Hell"
         default: return "Off"
         }
     }
@@ -516,7 +519,7 @@ struct LauncherView: View {
             Spacer()
         }
         .contentShape(Rectangle())
-        .onTapGesture { settings.menuBarAppleStyle = (settings.menuBarAppleStyle + 1) % 4 }
+        .onTapGesture { settings.menuBarAppleStyle = (settings.menuBarAppleStyle + 1) % 5 }
     }
 
     private var shaderPicker: some View {

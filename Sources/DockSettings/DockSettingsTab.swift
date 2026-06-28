@@ -258,6 +258,70 @@ struct DockSettingsTab: View {
                         }
                     }
                 }
+                if selectedThemeConfig?.dock.borderStyle == "doomslayer" {
+                    RMRow(label: "Slayer size", hint: "Scale of the Doom Slayer patrolling below the dock. The one knob you usually touch.") {
+                        HStack(spacing: 8) {
+                            Slider(value: $settings.slayerScale, in: 0.4...2.0, step: 0.05)
+                                .frame(width: 150)
+                            Text(String(format: "%.2f×", settings.slayerScale))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .frame(width: 44, alignment: .trailing)
+                        }
+                    }
+                    RMRow(label: "Run speed", hint: "How fast the Slayer crosses the dock (px/s). Optional.") {
+                        HStack(spacing: 8) {
+                            Slider(value: $settings.slayerRunSpeed, in: 20...170, step: 2)
+                                .frame(width: 150)
+                            Text("\(Int(settings.slayerRunSpeed))")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .frame(width: 44, alignment: .trailing)
+                        }
+                    }
+                    RMRow(label: "Combat", hint: "Calm, Normal or Intense — controls how often the Slayer fires and gets fragged. Optional.") {
+                        Picker("", selection: $settings.slayerCombat) {
+                            Text("Calm").tag("Calm")
+                            Text("Normal").tag("Normal")
+                            Text("Intense").tag("Intense")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                    }
+                    RMRow(label: "Weapons", hint: "Auto-cycle picks a new weapon each lap, or lock one. Optional.") {
+                        Picker("", selection: $settings.slayerWeapon) {
+                            Text("Auto-cycle").tag("Auto-cycle")
+                            Text("Shotgun").tag("Shotgun")
+                            Text("Chaingun").tag("Chaingun")
+                            Text("Rocket").tag("Rocket")
+                            Text("Plasma").tag("Plasma")
+                            Text("Chainsaw").tag("Chainsaw")
+                        }
+                        .frame(width: 200)
+                    }
+                    RMRow(label: "Direction", hint: "Travel and facing direction. Optional.") {
+                        Picker("", selection: $settings.slayerDirection) {
+                            Text("Right").tag("Right")
+                            Text("Left").tag("Left")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                    }
+                    RMRow(label: "DOOM tile launches", hint: "What the DOOM logo tile (right of the trash) opens. Empty = auto-detect an installed DOOM app. You can also paste an app path or a bundle id.") {
+                        HStack(spacing: 6) {
+                            TextField("Auto-detect DOOM", text: $settings.doomLaunchTarget)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 150)
+                            Button("Choose…") {
+                                let p = NSOpenPanel()
+                                p.allowedContentTypes = [.application]
+                                p.canChooseDirectories = false
+                                p.directoryURL = URL(fileURLWithPath: "/Applications")
+                                if p.runModal() == .OK, let u = p.url { settings.doomLaunchTarget = u.path }
+                            }
+                        }
+                    }
+                }
                 if selectedThemeConfig?.hasFolderStacks == true {
                     RMRow(label: "Show Downloads folder", hint: "Pins your Downloads folder to the dock; click it to fan out the most recent files.") {
                         Toggle("", isOn: $settings.dockShowDownloads)
