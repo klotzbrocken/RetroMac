@@ -41,6 +41,7 @@ final class MinimizedWindowTracker {
             let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
             _ = AXIsProcessTrustedWithOptions(opts)
         }
+        SystemBridge.shared.ensureAccessibility()   // reconcile the cached capability for Health Check
         let t = Timer(timeInterval: 1.5, repeats: true) { [weak self] _ in self?.poll() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
