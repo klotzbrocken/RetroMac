@@ -153,6 +153,7 @@
 <script>
   const cv = document.getElementById('face'), ctx = cv.getContext('2d');
   let theme = 'beos';
+  let use24 = false;   // set by the host (Settings → 24-hour clock)
 
   // Per-theme clock face styling (authentic-ish to each OS).
   function style(){
@@ -191,10 +192,18 @@
     hand((mm+ss/60)*Math.PI/30, rad*0.74, 3, s.hand);
     hand(ss*Math.PI/30, rad*0.80, 1.5, s.sec);
     ctx.beginPath(); ctx.arc(cx,cy,3.5,0,7); ctx.fillStyle=s.hand; ctx.fill();
+    // Digital readout (lower face) — reflects the 24-hour setting.
+    const p2=n=>String(n).padStart(2,'0');
+    let digital;
+    if(use24){ digital = p2(now.getHours())+':'+p2(mm); }
+    else { const h12=now.getHours()%12||12, ap=now.getHours()<12?'AM':'PM'; digital = h12+':'+p2(mm)+' '+ap; }
+    ctx.font='bold 13px Tahoma,"Segoe UI",sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle=s.tick; ctx.fillText(digital, cx, cy+rad*0.52);
   }
   setInterval(draw, 1000); draw();
 
   window.setTheme=function(k){ theme=k||'beos'; document.body.className='theme-'+theme; draw(); };
+  window.set24=function(v){ use24=!!v; draw(); };
   window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
 
   function postClose(){ if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.clock) webkit.messageHandlers.clock.postMessage('close'); }

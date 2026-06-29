@@ -362,6 +362,12 @@ struct DockSettingsTab: View {
                         .tint(.rmAccent)
                         .labelsHidden()
                 }
+                RMRow(label: "24-hour clock", hint: "Show the dock / deskbar clock in 24-hour (military) time instead of 12-hour AM/PM.") {
+                    Toggle("", isOn: $settings.clockUse24Hour)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                }
                 RMRow(label: "Show splash screen", hint: "Briefly shows the theme's boot splash when activated.", isLast: true) {
                     Toggle("", isOn: $settings.showSplashScreen)
                         .toggleStyle(.switch)

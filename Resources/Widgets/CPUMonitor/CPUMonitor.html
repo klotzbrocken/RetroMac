@@ -430,7 +430,7 @@
             </div>
             <div class="legend">
               <span><i class="s"></i>1 &middot; System</span>
-              <span><i class="u"></i>2 &middot; Benutzer</span>
+              <span><i class="u"></i>2 &middot; User</span>
             </div>
           </div>
 
@@ -460,10 +460,10 @@
   const w2 = document.getElementById('led2');
   buildWell(w1); buildWell(w2);
 
-  // ---------- meters: 1 = System (amber), 2 = Benutzer (green) ----------
+  // ---------- meters: 1 = System (amber), 2 = User (green) ----------
   const meters = [
     { el:w1, cls:'sys',  val:0, tgt:0 },   // 1 = System %
-    { el:w2, cls:'user', val:0, tgt:0 },   // 2 = Benutzer %
+    { el:w2, cls:'user', val:0, tgt:0 },   // 2 = User %
   ];
   function approach(c,t){ return c < t ? c+1 : c > t ? c-1 : c; }
   function frame(){
@@ -474,7 +474,7 @@
 
   // ---------- live data from the native host ----------
   const segs = p => Math.round(Math.max(0, Math.min(100, p)) / 100 * SEGMENTS);
-  // 1 = System (amber), 2 = Benutzer (green)
+  // 1 = System (amber), 2 = User (green)
   window.setLoad = function(systemPct, userPct){
     meters[0].tgt = segs(systemPct);
     meters[1].tgt = segs(userPct);

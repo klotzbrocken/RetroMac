@@ -146,4 +146,5 @@ extension Notification.Name {
     static let pacmanAnimationChanged = Notification.Name("PacmanAnimationChanged")
     static let deskbarSettingsChanged = Notification.Name("DeskbarSettingsChanged")
     static let dockModeChanged = Notification.Name("DockModeChanged")
+    static let clockFormatChanged = Notification.Name("ClockFormatChanged")
 }

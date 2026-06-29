@@ -3824,7 +3824,8 @@ final class DockView: NSView {
 
     private func updateClockString() {
         let fmt = DateFormatter()
-        fmt.dateFormat = ThemeManager.shared.activeTheme?.config.dock.clockFormat ?? "h:mm a"
+        let base = ThemeManager.shared.activeTheme?.config.dock.clockFormat ?? "h:mm a"
+        fmt.dateFormat = AppSettings.applyClockFormat(base)
         clockString = fmt.string(from: Date())
     }
 

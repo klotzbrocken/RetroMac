@@ -231,6 +231,12 @@ struct AboutTab: View {
                         .font(.caption)
                 }
 
+                Section("Privacy & Offline") {
+                    Text("RetroMac works fully offline — every theme (dock, wallpaper, menu bar, icons, window chrome) is bundled and rendered locally; no constant internet connection is required. The network is only used for a few optional extras: the classic in-window web apps in the Windows themes (loaded on demand, nothing bundled), the retro TV browser, the desktop \u{201C}sheep\u{201D} pet sprites (fetched once, then cached), and checking for app updates. RetroMac does not track you or send personal data.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Theme Disclaimer") {
                     Text("Theme icons and wallpapers depicting macOS and Windows interfaces are trademarks and copyrighted material of Apple Inc. and Microsoft Corporation respectively. They are included for personal, non-commercial use to recreate the look and feel of classic operating systems. RetroMac is not affiliated with or endorsed by Apple or Microsoft.")
                         .font(.caption)
