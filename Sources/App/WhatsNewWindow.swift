@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 1.9.2")
+                Text("What's New in RetroMac 1.9.5")
                     .font(.title2.bold())
-                Text("A retro menu-bar Apple, your iPhone as the camera, a tighter \u{201C}Dock only\u{201D} & fixes")
+                Text("A new DOOM theme, a 24-hour clock, and a batch of fixes")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,50 +21,50 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
+                        icon: "flame.fill",
+                        color: .red,
+                        title: "New theme: Maiks Favourite II (DOOM)",
+                        description: "A pixel Doom Slayer patrols the dock — he runs, switches weapons and fires, gets fragged, and a Lost Soul flies in for him to blast. Hover him to frag him, click the DOOM logo tile (next to the trash) to launch DOOM, and top it off with the new \u{201C}Apple Hell\u{201D} menu-bar logo."
+                    )
+
+                    featureRow(
                         icon: "apple.logo",
                         color: .pink,
                         title: "Retro menu-bar Apple",
-                        description: "Cover the system Apple with the classic Rainbow, Aqua or Aqua Classic logo — cycle it from the flyout. Snow Leopard and Mac OS 9 pick fitting defaults."
+                        description: "Cover the system Apple with the classic Rainbow, Aqua, Aqua Classic or the new Apple Hell logo — cycle it from the flyout, with sensible per-theme defaults."
+                    )
+
+                    featureRow(
+                        icon: "clock",
+                        color: .indigo,
+                        title: "24-hour clock",
+                        description: "New option (Settings ▸ Dock) for the dock and deskbar clocks, plus a digital readout under the analog Clock widget that follows it."
                     )
 
                     featureRow(
                         icon: "iphone",
                         color: .blue,
                         title: "iPhone as a camera source",
-                        description: "Pick your iPhone (Continuity Camera) or any webcam in Settings ▸ Camera & Streaming — the list now updates live as devices connect, and the CRT shader runs on the feed."
-                    )
-
-                    featureRow(
-                        icon: "menubar.dock.rectangle",
-                        color: .green,
-                        title: "\u{201C}Dock only\u{201D} really means dock only",
-                        description: "Switching a theme with Dock only on no longer touches your wallpaper, desktop icons, widgets or starts a full-screen shader — just the dock changes."
-                    )
-
-                    featureRow(
-                        icon: "tv",
-                        color: .orange,
-                        title: "TV windows behave",
-                        description: "The retro TV window no longer borrows the last used theme\u{2019}s menu bar / chrome when no theme is active."
+                        description: "Pick your iPhone (Continuity Camera) or any webcam in Settings ▸ Camera & Streaming — the list updates live as devices connect, and the CRT shader runs on the feed."
                     )
 
                     featureRow(
                         icon: "square.grid.2x2",
                         color: .cyan,
-                        title: "Tidier quick-access flyout",
-                        description: "Active theme is highlighted correctly (only when one is really on), Settings and Quit are clean icons, and the floating launcher button is on by default."
+                        title: "Cleaner theming",
+                        description: "\u{201C}Dock only\u{201D} now changes only the dock (no wallpaper / widgets / full-screen shader), the retro TV window no longer borrows a stale theme\u{2019}s chrome, and the quick-access flyout is tidier."
                     )
 
                     featureRow(
                         icon: "wrench.and.screwdriver",
                         color: .gray,
-                        title: "Icon & desktop fixes",
-                        description: "Correct flyout icons for Snow Leopard, Windows 3.1 and Maiks Favourite, the right app icon in Dock Mode, and desktop-icon visibility now respects other apps."
+                        title: "Reliability & polish",
+                        description: "Your real Dock reliably returns after turning a theme off (and never peeks out beside the retro dock), Mac OS X / Snow Leopard magnification no longer reacts outside the dock, the floating launcher stays clickable beside a dock, and a clearer privacy/offline note lives in About."
                     )
                 }
                 .padding(.horizontal, 24)
             }
-            .frame(maxHeight: 280)
+            .frame(maxHeight: 300)
 
             Spacer()
 

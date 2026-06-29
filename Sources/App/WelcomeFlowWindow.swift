@@ -84,25 +84,23 @@ struct WelcomeFlowView: View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
-                Text("What's New in RetroMac 1.9.2").font(.title2.bold())
-                Text("A Dock launcher, a retro menu-bar Apple, iPhone camera & a smoother Dock").font(.subheadline).foregroundStyle(.secondary)
+                Text("What's New in RetroMac 1.9.5").font(.title2.bold())
+                Text("A new DOOM theme, a 24-hour clock & lots of fixes").font(.subheadline).foregroundStyle(.secondary)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("menubar.dock.rectangle", .blue, "Dock Mode & quick launcher",
-                            "Show RetroMac in the Dock plus a draggable floating button — one click switches themes and toggles the shader or virtual camera.")
+                    feature("flame.fill", .red, "New theme: Maiks Favourite II (DOOM)",
+                            "A pixel Doom Slayer patrols the dock — runs, fires, gets fragged, and blasts a Lost Soul that flies in. Hover to frag him, click the DOOM logo tile to launch DOOM, plus a new \u{201C}Apple Hell\u{201D} menu-bar logo.")
                     feature("apple.logo", .pink, "Retro menu-bar Apple",
-                            "Cover the system Apple with the classic Rainbow, Aqua or Aqua Classic logo — cycle it from the flyout. Snow Leopard and Mac OS 9 pick fitting defaults.")
+                            "Cover the system Apple with the Rainbow, Aqua, Aqua Classic or new Apple Hell logo — cycle it from the flyout, with per-theme defaults.")
+                    feature("clock", .indigo, "24-hour clock",
+                            "New option for the dock and deskbar clocks, plus a digital readout under the analog Clock widget that follows it.")
                     feature("iphone", .green, "iPhone as a camera",
                             "Use your iPhone (Continuity Camera) or any webcam as the CRT-shaded virtual camera — the source list updates live as devices connect.")
                     feature("wand.and.stars", .purple, "Smoother Dock + Snow Leopard 3D",
-                            "Fluid, real-Dock-style magnification, a corrected Snow Leopard 3D glass shelf, and no more background windows jumping to the front on a theme switch.")
-                    feature("macwindow", .cyan, "\u{201C}Dock only\u{201D} & calmer themes",
-                            "Dock only restyles just the Dock (no wallpaper or widgets); the retro TV window and full-screen shader behave reliably, even across Spaces.")
-                    feature("display.2", .orange, "Taskbar & all-display shaders",
-                            "Windows 98/XP get authentic per-window taskbar buttons, and the CRT shader now runs on every monitor, not just the main one.")
-                    feature("tv", .gray, "New shaders & lots of fixes",
-                            "Two GDV-NTSC \u{201C}Retro Crisis\u{201D} looks, softer and more authentic phosphor masks, plus camera, dock and stability fixes throughout.")
+                            "Fluid, real-Dock-style magnification (that no longer reacts beside the dock), a corrected Snow Leopard 3D glass shelf, and no background windows jumping to the front on a theme switch.")
+                    feature("wrench.and.screwdriver", .gray, "Reliability & polish",
+                            "Your real Dock reliably returns after turning a theme off (and never peeks out beside the retro dock), the floating launcher stays clickable beside a dock, \u{201C}Dock only\u{201D} behaves, and there's a clearer privacy/offline note in About.")
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
         }
