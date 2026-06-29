@@ -83,6 +83,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         currentIntensity = settings.defaultIntensity
         currentVignetteIntensity = settings.vignetteIntensity
 
+        // Probe OS capabilities once (async, off-main) so features can degrade gracefully.
+        SystemBridge.shared.probeAll()
+
         // Restore system UI if previous session crashed while UI was hidden
         SystemUIHelper.restoreIfNeeded()
         restoreRetroModeSystemUI()

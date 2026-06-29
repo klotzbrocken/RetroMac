@@ -25,16 +25,8 @@ enum SystemUIHelper {
         let ok2 = runAppleScript("tell application \"System Events\" to set the autohide of the dock preferences to true")
         if !ok1 { setMenuBarAutoHideViaDefaults(true) }
         if !ok2 {
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            task.arguments = ["write", "com.apple.dock", "autohide", "-bool", "true"]
-            try? task.run()
-            task.waitUntilExit()
-            let killDock = Process()
-            killDock.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-            killDock.arguments = ["Dock"]
-            try? killDock.run()
-            killDock.waitUntilExit()
+            SystemBridge.shared.runDefaults(["write", "com.apple.dock", "autohide", "-bool", "true"])
+            SystemBridge.shared.killall("Dock")
         }
     }
 
@@ -47,16 +39,8 @@ enum SystemUIHelper {
         let ok2 = runAppleScript("tell application \"System Events\" to set the autohide of the dock preferences to \(dockAutoHide)")
         if !ok1 { setMenuBarAutoHideViaDefaults(menuBarAutoHide) }
         if !ok2 {
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            task.arguments = ["write", "com.apple.dock", "autohide", "-bool", dockAutoHide ? "true" : "false"]
-            try? task.run()
-            task.waitUntilExit()
-            let killDock = Process()
-            killDock.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-            killDock.arguments = ["Dock"]
-            try? killDock.run()
-            killDock.waitUntilExit()
+            SystemBridge.shared.runDefaults(["write", "com.apple.dock", "autohide", "-bool", dockAutoHide ? "true" : "false"])
+            SystemBridge.shared.killall("Dock")
         }
 
         // Clear saved state
@@ -96,11 +80,7 @@ enum SystemUIHelper {
     }
 
     private static func setMenuBarAutoHideViaDefaults(_ hide: Bool) {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        task.arguments = ["write", "NSGlobalDomain", "_HIHideMenuBar", "-bool", hide ? "true" : "false"]
-        try? task.run()
-        task.waitUntilExit()
+        SystemBridge.shared.runDefaults(["write", "NSGlobalDomain", "_HIHideMenuBar", "-bool", hide ? "true" : "false"])
 
         // Post the notification that the Dock listens to for menu bar state changes
         DistributedNotificationCenter.default().postNotificationName(
@@ -116,15 +96,8 @@ enum SystemUIHelper {
     static func setDockAutoHide(_ hide: Bool) {
         let ok = runAppleScript("tell application \"System Events\" to set the autohide of the dock preferences to \(hide)")
         if !ok {
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            task.arguments = ["write", "com.apple.dock", "autohide", "-bool", hide ? "true" : "false"]
-            try? task.run()
-            task.waitUntilExit()
-            let kill = Process()
-            kill.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-            kill.arguments = ["Dock"]
-            try? kill.run()   // fire-and-forget: don't block on the Dock restart
+            SystemBridge.shared.runDefaults(["write", "com.apple.dock", "autohide", "-bool", hide ? "true" : "false"])
+            SystemBridge.shared.killall("Dock")
         }
         print("[SystemUI] Dock auto-hide: \(hide) (AppleScript: \(ok ? "ok" : "fallback"))")
     }
@@ -157,33 +130,17 @@ enum SystemUIHelper {
 
     /// Reads com.apple.finder CreateDesktop. Unset → true (Finder default: icons shown).
     private static func readFinderShowsIcons() -> Bool {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        task.arguments = ["read", "com.apple.finder", "CreateDesktop"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = Pipe()
-        try? task.run()
-        task.waitUntilExit()
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let out = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let out = SystemBridge.shared.readDefault("com.apple.finder", "CreateDesktop") ?? ""
         if out.isEmpty { return true }       // key unset → Finder shows icons
         return (out as NSString).boolValue   // "1"/"true" → shown, "0"/"false" → hidden
     }
 
     private static func writeFinderShowsIcons(_ shown: Bool) {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        task.arguments = ["write", "com.apple.finder", "CreateDesktop", "-bool", shown ? "true" : "false"]
-        try? task.run()
-        task.waitUntilExit()
+        SystemBridge.shared.runDefaults(["write", "com.apple.finder", "CreateDesktop", "-bool", shown ? "true" : "false"])
     }
 
     private static func restartFinder() {
-        let killall = Process()
-        killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-        killall.arguments = ["Finder"]
-        try? killall.run()   // fire-and-forget: don't block on the Finder restart
+        SystemBridge.shared.killall("Finder")
     }
 
     private static func readAppleScriptBool(_ source: String) -> Bool {

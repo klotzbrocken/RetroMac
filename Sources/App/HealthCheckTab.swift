@@ -6,9 +6,29 @@ struct HealthCheckTab: View {
     @State private var screenRecordingGranted: Bool?
     @State private var accessibilityGranted: Bool?
     @State private var automationGranted: Bool?
+    @State private var caps: [SystemCapability: CapabilityStatus] = [:]
+
+    private let capLabels: [SystemCapability: String] = [
+        .systemDockControl: "System Dock control",
+        .menuBarAutohide: "Menu-bar auto-hide",
+        .desktopIconsToggle: "Desktop icons toggle",
+        .accessibility: "Accessibility",
+        .screenCapture: "Screen Recording",
+        .virtualDisplay: "Virtual display (iPad)"
+    ]
 
     var body: some View {
         Form {
+            Section("System Capabilities") {
+                ForEach(SystemCapability.allCases, id: \.self) { cap in
+                    capabilityRow(capLabels[cap] ?? cap.rawValue, caps[cap])
+                }
+                Button("Refresh") {
+                    SystemBridge.shared.probeAll { loadCaps() }
+                }
+                .font(.caption)
+            }
+
             Section("Permissions") {
                 permissionRow("Screen Recording", status: screenRecordingGranted)
                 permissionRow("Accessibility", status: accessibilityGranted)
@@ -64,6 +84,43 @@ struct HealthCheckTab: View {
         .padding(.top, 8)
         .task {
             checkPermissions()
+            loadCaps()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .systemCapabilitiesChanged)) { _ in
+            loadCaps()
+        }
+    }
+
+    private func loadCaps() {
+        var snap: [SystemCapability: CapabilityStatus] = [:]
+        for c in SystemCapability.allCases { snap[c] = SystemBridge.shared.capability(c) }
+        caps = snap
+    }
+
+    @ViewBuilder
+    private func capabilityRow(_ name: String, _ status: CapabilityStatus?) -> some View {
+        HStack(alignment: .top) {
+            Text(name)
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                switch status {
+                case .some(let s) where s.available && !s.degraded:
+                    Label("Available", systemImage: "checkmark.circle.fill")
+                        .labelStyle(.titleAndIcon).foregroundStyle(.green)
+                case .some(let s) where s.available:
+                    Label("Degraded", systemImage: "exclamationmark.triangle.fill")
+                        .labelStyle(.titleAndIcon).foregroundStyle(.orange)
+                case .some:
+                    Label("Unavailable", systemImage: "xmark.circle.fill")
+                        .labelStyle(.titleAndIcon).foregroundStyle(.red)
+                case .none:
+                    ProgressView().controlSize(.small)
+                }
+                if let reason = status?.reason {
+                    Text(reason).font(.caption2).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing).frame(maxWidth: 280)
+                }
+            }
         }
     }
 
