@@ -147,4 +147,5 @@ extension Notification.Name {
     static let deskbarSettingsChanged = Notification.Name("DeskbarSettingsChanged")
     static let dockModeChanged = Notification.Name("DockModeChanged")
     static let clockFormatChanged = Notification.Name("ClockFormatChanged")
+    static let cameraSceneChanged = Notification.Name("CameraSceneChanged")
 }

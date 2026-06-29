@@ -41,6 +41,16 @@ struct CameraScene: Codable, Identifiable, Equatable {
         s.lowerThirdEnabled = lowerThird
         s.lowerThirdStyle = lowerThirdStyle
         s.activeCameraSceneID = id
+        NotificationCenter.default.post(name: .cameraSceneChanged, object: nil)
+    }
+
+    /// Cycle to the next scene (wraps). Used by the Quick-Switch pill arrows + hotkey.
+    static func cycle(by delta: Int) {
+        let scenes = all
+        guard !scenes.isEmpty else { return }
+        let current = scenes.firstIndex { $0.id == AppSettings.shared.activeCameraSceneID } ?? -1
+        let next = ((current + delta) % scenes.count + scenes.count) % scenes.count
+        scenes[next].apply()
     }
 
     /// Capture the current camera + lower-third settings as a new (unsaved) scene.
