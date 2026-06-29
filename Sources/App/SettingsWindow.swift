@@ -115,7 +115,7 @@ struct SettingsSidebar: View {
     // Group tabs by section in order
     private var mainTabs: [SettingsTab] { [.dock, .retroMode] }
     private var surfacesTabs: [SettingsTab] { [.camera, .games] }
-    private var systemTabs: [SettingsTab] { [.advanced, .about] }
+    private var systemTabs: [SettingsTab] { [.advanced, .health, .about] }
 
     var body: some View {
         VStack(spacing: 0) {
