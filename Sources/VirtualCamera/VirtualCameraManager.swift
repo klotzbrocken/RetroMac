@@ -679,7 +679,10 @@ extension VirtualCameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
                let ltTexture = ltRenderer.texture(
                    name: settings.lowerThirdName,
                    title: settings.lowerThirdTitle,
+                   handle: settings.lowerThirdHandle,
                    style: settings.lowerThirdStyle,   // honor the Settings "Style" picker
+                   accentHex: settings.lowerThirdAccentHex,
+                   logoPath: settings.lowerThirdLogoPath,
                    width: outputWidth, height: outputHeight
                ) {
                 ltPass = RetroRenderer.LowerThirdPass(

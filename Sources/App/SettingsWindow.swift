@@ -3,6 +3,7 @@ import Carbon.HIToolbox
 import ScreenCaptureKit
 import Sparkle
 import AVFoundation
+import UniformTypeIdentifiers
 
 // MARK: - App Info (used by per-app rules + old apps tab)
 
@@ -484,6 +485,32 @@ struct CameraTab: View {
                             TextField("Host / Reporter / Guest", text: $settings.lowerThirdTitle)
                                 .textFieldStyle(.roundedBorder).frame(width: 180)
                         }
+                        RMRow(label: "Handle", hint: "Optional social handle shown at the right, e.g. @maik.") {
+                            TextField("@handle", text: $settings.lowerThirdHandle)
+                                .textFieldStyle(.roundedBorder).frame(width: 180)
+                        }
+                        RMRow(label: "Accent color", hint: "Custom bar colour; reset falls back to the style default.") {
+                            HStack(spacing: 8) {
+                                ColorPicker("", selection: Binding(
+                                    get: { ltAccentColor },
+                                    set: { settings.lowerThirdAccentHex = hexFromColor($0) }
+                                )).labelsHidden()
+                                Button("Reset") { settings.lowerThirdAccentHex = "" }
+                                    .buttonStyle(RMDefaultButtonStyle())
+                                    .disabled(settings.lowerThirdAccentHex.isEmpty)
+                            }
+                        }
+                        RMRow(label: "Logo", hint: "Optional image at the right of the lower third.") {
+                            HStack(spacing: 8) {
+                                Text(ltLogoName).font(.rmSecondary).foregroundColor(.rmTextSecondary)
+                                    .lineLimit(1).frame(maxWidth: 90, alignment: .trailing)
+                                Button("Choose\u{2026}") { chooseLowerThirdLogo() }
+                                    .buttonStyle(RMDefaultButtonStyle())
+                                Button("Clear") { settings.lowerThirdLogoPath = "" }
+                                    .buttonStyle(RMDefaultButtonStyle())
+                                    .disabled(settings.lowerThirdLogoPath.isEmpty)
+                            }
+                        }
                         RMRow(label: "Style",
                               hint: "Auto-selected by the active shader; manual override applies to others.",
                               isLast: true) {
@@ -520,6 +547,35 @@ struct CameraTab: View {
 
     private func sw(_ binding: Binding<Bool>) -> some View {
         Toggle("", isOn: binding).toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+    }
+
+    // MARK: - Lower-third accent / logo helpers
+
+    private var ltAccentColor: Color {
+        if let ns = nsColorFromHex(settings.lowerThirdAccentHex) { return Color(nsColor: ns) }
+        return settings.lowerThirdStyle == "newsroom"
+            ? Color(red: 0.80, green: 0.10, blue: 0.10)
+            : Color(red: 0.85, green: 0.65, blue: 0.13)
+    }
+    private func nsColorFromHex(_ hex: String) -> NSColor? {
+        var s = hex.trimmingCharacters(in: .whitespaces); if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 6, let v = UInt32(s, radix: 16) else { return nil }
+        return NSColor(srgbRed: CGFloat((v >> 16) & 0xff) / 255, green: CGFloat((v >> 8) & 0xff) / 255,
+                       blue: CGFloat(v & 0xff) / 255, alpha: 1)
+    }
+    private func hexFromColor(_ c: Color) -> String {
+        let ns = NSColor(c).usingColorSpace(.sRGB) ?? .white
+        return String(format: "#%02X%02X%02X", Int(round(ns.redComponent * 255)),
+                      Int(round(ns.greenComponent * 255)), Int(round(ns.blueComponent * 255)))
+    }
+    private var ltLogoName: String {
+        settings.lowerThirdLogoPath.isEmpty ? "None" : (settings.lowerThirdLogoPath as NSString).lastPathComponent
+    }
+    private func chooseLowerThirdLogo() {
+        let p = NSOpenPanel()
+        p.allowedContentTypes = [.image]
+        p.canChooseDirectories = false
+        if p.runModal() == .OK, let u = p.url { settings.lowerThirdLogoPath = u.path }
     }
 
     // MARK: - Scenes (Creator wedge)
