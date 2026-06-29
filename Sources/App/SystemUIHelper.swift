@@ -113,6 +113,9 @@ enum SystemUIHelper {
             // so a 3rd-party "hide desktop icons" choice survives our restore.
             if defaults.object(forKey: savedCreateDesktopKey) == nil {
                 defaults.set(readFinderShowsIcons(), forKey: savedCreateDesktopKey)
+                // Flush immediately so a Force Quit / crash can't lose the saved original —
+                // restoreDesktopIconsIfNeeded() needs it to put the desktop back on next launch.
+                defaults.synchronize()
             }
             writeFinderShowsIcons(false)   // icons hidden
             restartFinder()
@@ -126,6 +129,20 @@ enum SystemUIHelper {
             restartFinder()
         }
         print("[SystemUI] Desktop icons hidden: \(hidden)")
+    }
+
+    /// Crash / force-quit / uninstall recovery: if a previous session hid the desktop icons
+    /// but never restored them, the saved original survives — put the desktop back on launch.
+    /// Keyed on the saved original, so a 3rd-party "hide desktop icons" choice is respected
+    /// (we only ever undo what RetroMac itself hid). Call once at launch.
+    static func restoreDesktopIconsIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard let original = defaults.object(forKey: savedCreateDesktopKey) as? Bool else { return }
+        writeFinderShowsIcons(original)
+        defaults.removeObject(forKey: savedCreateDesktopKey)
+        defaults.synchronize()
+        restartFinder()
+        print("[SystemUI] Recovered desktop icons from previous session (shown=\(original))")
     }
 
     /// Reads com.apple.finder CreateDesktop. Unset → true (Finder default: icons shown).
