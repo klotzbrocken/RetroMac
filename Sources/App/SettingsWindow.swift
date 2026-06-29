@@ -430,11 +430,14 @@ struct DetailTitleBar: View {
 struct CameraTab: View {
     @ObservedObject var settings = AppSettings.shared
     @State private var cameras: [(id: String, name: String)] = []
+    @State private var newSceneName = ""
 
     var body: some View {
         let vcam = VirtualCameraManager.shared
         return ScrollView {
             VStack(alignment: .leading, spacing: RMSpacing.section) {
+                scenesCard
+
                 RMCard(title: "Virtual Camera", bodyPadding: 0) {
                     VStack(spacing: 0) {
                         RMRow(label: "Status") {
@@ -517,6 +520,64 @@ struct CameraTab: View {
 
     private func sw(_ binding: Binding<Bool>) -> some View {
         Toggle("", isOn: binding).toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+    }
+
+    // MARK: - Scenes (Creator wedge)
+
+    private var scenesCard: some View {
+        RMCard(title: "Scenes",
+               subtitle: "One-click webcam looks — shader, intensity and lower-third in one tap.",
+               bodyPadding: RMSpacing.card) {
+            VStack(alignment: .leading, spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 8)], spacing: 8) {
+                    ForEach(CameraScene.all) { scene in sceneChip(scene) }
+                }
+                HStack(spacing: 6) {
+                    TextField("New scene name", text: $newSceneName)
+                        .textFieldStyle(.roundedBorder).frame(width: 170)
+                    Button("Save current look") {
+                        let n = newSceneName.trimmingCharacters(in: .whitespaces)
+                        guard !n.isEmpty else { return }
+                        let scene = CameraScene.fromCurrent(name: n)
+                        settings.cameraScenes.append(scene)
+                        settings.activeCameraSceneID = scene.id
+                        newSceneName = ""
+                    }
+                    .buttonStyle(RMDefaultButtonStyle())
+                    .disabled(newSceneName.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func sceneChip(_ scene: CameraScene) -> some View {
+        let active = settings.activeCameraSceneID == scene.id
+        let custom = scene.id.hasPrefix("user.")
+        return Button { scene.apply() } label: {
+            HStack(spacing: 6) {
+                Image(systemName: active ? "checkmark.circle.fill" : "camera.filters")
+                    .font(.system(size: 12))
+                    .foregroundColor(active ? .rmAccent : .rmTextSecondary)
+                Text(scene.name).font(.rmBody).foregroundColor(.rmTextPrimary).lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10).padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 8)
+                .fill(active ? Color.rmAccent.opacity(0.15) : Color.rmTextPrimary.opacity(0.05)))
+            .overlay(RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(active ? Color.rmAccent.opacity(0.5) : Color.clear))
+        }
+        .buttonStyle(.plain)
+        .help(scene.name)
+        .contextMenu {
+            if custom {
+                Button("Delete", role: .destructive) {
+                    settings.cameraScenes.removeAll { $0.id == scene.id }
+                    if settings.activeCameraSceneID == scene.id { settings.activeCameraSceneID = "" }
+                }
+            }
+        }
     }
 }
 

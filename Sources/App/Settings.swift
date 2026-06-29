@@ -422,6 +422,18 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(lowerThirdStyle, forKey: "lowerThirdStyle") }
     }
 
+    // Webcam scenes (Creator/Streamer wedge) — user-saved looks; built-ins live in code.
+    @Published var cameraScenes: [CameraScene] {
+        didSet {
+            if let data = try? JSONEncoder().encode(cameraScenes) {
+                defaults.set(data, forKey: "cameraScenes")
+            }
+        }
+    }
+    @Published var activeCameraSceneID: String {
+        didSet { defaults.set(activeCameraSceneID, forKey: "activeCameraSceneID") }
+    }
+
     // Games — Doom
     @Published var doomWadFolder: String {
         didSet { defaults.set(doomWadFolder, forKey: "doomWadFolder") }
@@ -679,6 +691,13 @@ final class AppSettings: ObservableObject {
         // Virtual Camera — Lower Third
         lowerThirdEnabled = defaults.bool(forKey: "lowerThirdEnabled")
         lowerThirdName = defaults.string(forKey: "lowerThirdName") ?? ""
+        if let data = defaults.data(forKey: "cameraScenes"),
+           let decoded = try? JSONDecoder().decode([CameraScene].self, from: data) {
+            cameraScenes = decoded
+        } else {
+            cameraScenes = []
+        }
+        activeCameraSceneID = defaults.string(forKey: "activeCameraSceneID") ?? ""
         lowerThirdTitle = defaults.string(forKey: "lowerThirdTitle") ?? ""
         lowerThirdStyle = defaults.string(forKey: "lowerThirdStyle") ?? "latenight"
 
