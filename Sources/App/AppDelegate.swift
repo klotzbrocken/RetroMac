@@ -96,6 +96,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         applyDockMode()   // .accessory (menu-bar only) or .regular (Dock icon) per setting
         if AppSettings.shared.floatingLauncherEnabled { FloatingLauncherButton.shared.show() }
+
+        // Re-apply the last webcam scene so the look persists across launches (the camera's
+        // shader/intensity aren't otherwise persisted).
+        if !AppSettings.shared.activeCameraSceneID.isEmpty,
+           let scene = CameraScene.all.first(where: { $0.id == AppSettings.shared.activeCameraSceneID }) {
+            scene.apply()
+        }
         setupMenuBar()
         registerHotkey()
         startAppLaunchObserver()
