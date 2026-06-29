@@ -533,18 +533,17 @@ struct CameraTab: View {
                     ForEach(CameraScene.all) { scene in sceneChip(scene) }
                 }
                 HStack(spacing: 6) {
-                    TextField("New scene name", text: $newSceneName)
+                    TextField("Scene name (optional)", text: $newSceneName)
                         .textFieldStyle(.roundedBorder).frame(width: 170)
                     Button("Save current look") {
-                        let n = newSceneName.trimmingCharacters(in: .whitespaces)
-                        guard !n.isEmpty else { return }
-                        let scene = CameraScene.fromCurrent(name: n)
+                        let typed = newSceneName.trimmingCharacters(in: .whitespaces)
+                        let name = typed.isEmpty ? "My Look \(settings.cameraScenes.count + 1)" : typed
+                        let scene = CameraScene.fromCurrent(name: name)
                         settings.cameraScenes.append(scene)
                         settings.activeCameraSceneID = scene.id
                         newSceneName = ""
                     }
                     .buttonStyle(RMDefaultButtonStyle())
-                    .disabled(newSceneName.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }
