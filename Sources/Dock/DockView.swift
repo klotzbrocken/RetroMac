@@ -3144,15 +3144,38 @@ final class DockView: NSView {
         }
 
         if hasMagnification {
-            magTargetPoint = local
-            if magPhase >= 1 {
-                applyMagnification(at: local)   // steady state: follow the pointer directly
-            } else {
-                if magPhase == 0 { magRestFrames = itemViews.map { $0.frame } }  // capture true rest
-                setMagTarget(1)
-                startMagTimer()                 // ramp the magnification in
+            if isWithinMagnificationRegion(local) {
+                magTargetPoint = local
+                if magPhase >= 1 {
+                    applyMagnification(at: local)   // steady state: follow the pointer directly
+                } else {
+                    if magPhase == 0 { magRestFrames = itemViews.map { $0.frame } }  // capture true rest
+                    setMagTarget(1)
+                    startMagTimer()                 // ramp the magnification in
+                }
+            } else if magPhase > 0 || magPhaseTarget > 0 {
+                // Cursor moved into the empty magnification-overflow margin (transparent, no
+                // icons there) — ease back to rest so the dock doesn't "react" far outside its
+                // visible bar and so anything sitting beside the dock stays clickable.
+                magExitFrames = itemViews.map { $0.frame }
+                magExitBar = magnifiedDockBarRect ?? dockBarRect
+                setMagTarget(0)
+                startMagTimer()
             }
         }
+    }
+
+    /// The hover zone that actually triggers magnification: the VISIBLE dock bar plus a
+    /// half-icon margin — NOT the full window (which is widened by `horizontalMagOverflow`
+    /// so magnified end-icons don't clip). Hovering the transparent overflow must not
+    /// magnify or capture clicks meant for windows beside the dock.
+    private func isWithinMagnificationRegion(_ p: NSPoint) -> Bool {
+        let eff = CGFloat(AppSettings.shared.dockIconScale) * dynamicScale
+        let icon = (ThemeManager.shared.activeTheme?.config.dock.iconSize ?? 64) * eff
+        let m = icon * 0.5
+        let bar = dockBarRect
+        return isVertical ? (p.y >= bar.minY - m && p.y <= bar.maxY + m)
+                          : (p.x >= bar.minX - m && p.x <= bar.maxX + m)
     }
 
     override func mouseExited(with event: NSEvent) {

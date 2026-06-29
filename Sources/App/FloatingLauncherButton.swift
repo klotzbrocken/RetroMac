@@ -38,7 +38,11 @@ final class FloatingLauncherButton {
         win.isOpaque = false
         win.backgroundColor = .clear
         win.hasShadow = false
-        win.level = .floating
+        // Above the retro dock (level 24) AND the auto-hidden system Dock (~20) so the
+        // button stays clickable even when placed right beside a dock (otherwise clicks
+        // in the dock's transparent magnification-overflow fall through to the dock /
+        // a revealing system Dock instead of the button).
+        win.level = NSWindow.Level(rawValue: 26)
         win.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         win.ignoresMouseEvents = false
         win.alphaValue = 0.5
