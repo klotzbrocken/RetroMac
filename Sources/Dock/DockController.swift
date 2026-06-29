@@ -110,7 +110,7 @@ final class DockController {
         // (Screensaver idle-watch keeps running while the app lives; it is not tied to the dock.)
         // Un-hide any apps the Win98 "Show Desktop" tile hid — the tile is gone now.
         DockView.restoreShowDesktop()
-        restoreSystemDock(synchronous: synchronous)
+        restoreSystemDock(synchronous: synchronous, forceReload: true)
         DesktopIconsController.shared.hide()
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
@@ -450,9 +450,10 @@ final class DockController {
         window?.orderOut(nil)
         isVisible = false
         autoHideVisible = false
-        if didHideSystemDock {
-            restoreSystemDock()
-        }
+        // NOTE: do NOT restore the system Dock here. hide() also fires for fullscreen and
+        // auto-hide while the theme is still active — the system Dock must stay hidden then
+        // (and restoring via defaults+killall on every fullscreen toggle would restack windows).
+        // The system Dock is restored only on a real teardown: stop() (disable / quit).
     }
 
     // MARK: - Control Strip Collapse Animation
@@ -825,25 +826,12 @@ final class DockController {
             // is honored, not just the theme's baked-in default.
             let themePos = ThemeManager.shared.activeTheme?.config.effectiveDockPosition ?? "bottom"
 
-            // Preferred: CoreDock toggles auto-hide + orientation LIVE, with no
-            // `killall Dock`, so the user's windows are never restacked. Move the system
-            // Dock to a non-conflicting edge (so it can't reveal over ours) and hide it.
-            if CoreDockBridge.isAvailable {
-                // Keep the system Dock on its ORIGINAL edge — don't move it. Changing the
-                // orientation makes minimize fly to the wrong edge and briefly flashes the
-                // real Dock. Just auto-hide it live: no killall, no window restack.
-                let sentinel = "coredock"
-                if didHideSystemDock && lastAppliedHidePosition == sentinel { return }
-                if CoreDockBridge.setAutoHide(true) {
-                    didHideSystemDock = true
-                    hidViaCoreDock = true
-                    lastAppliedHidePosition = sentinel
-                    persistDockRecoveryState()
-                    print("[Dock] System dock auto-hidden via CoreDock (no killall, original edge)")
-                    return
-                }
-                // CoreDock unexpectedly failed → fall through to the killall path.
-            }
+            // NOTE: CoreDock's live auto-hide (no killall, no restack) was tried, but plain
+            // auto-hide still REVEALS the real Dock on a screen-edge hover — it would pop up
+            // beside RetroMac's dock. To keep it fully hidden we use the `defaults` path with
+            // `autohide-delay ≈ ∞` (never reveals). This costs one Dock reload when a theme is
+            // first enabled, but theme switches stay reload-free (idempotency guard below) and
+            // it never restacks again. Restored cleanly on disable/quit.
 
             // Move the real macOS Dock to a DIFFERENT screen edge than RetroMac's
             // dock so the two never "double up" on the same edge. macOS only
@@ -922,7 +910,12 @@ final class DockController {
     /// hangs an interactive theme/dock switch); pass `synchronous: true` from the quit path,
     /// where the process must not exit before the `defaults` writes have completed.
     /// The recovery keys are only cleared on SUCCESS — a failed restore is retried next time.
-    private func restoreSystemDock(synchronous: Bool = false) {
+    /// `forceReload`: guarantee the Dock reappears via `defaults` + `killall Dock` instead of the
+    /// CoreDock live toggle. CoreDock's `setAutoHide(false)` reliably *hides* but on recent macOS
+    /// (26 / Darwin 25) does not always *reveal* the Dock — leaving it stuck hidden. Used by the
+    /// explicit disable / quit paths (a one-time Dock restart there is fine); fullscreen auto-hide
+    /// keeps the lightweight CoreDock path (no window restacking).
+    private func restoreSystemDock(synchronous: Bool = false, forceReload: Bool = false) {
         guard didHideSystemDock else { return }
         let restoreHide = originalDockAutoHide ?? false
         let restorePos = originalDockPosition ?? "bottom"
@@ -932,8 +925,8 @@ final class DockController {
         let deleteDelay = originalAutohideDelay == nil
 
         // CoreDock fast path: live restore (auto-hide + orientation), no killall, no
-        // window restacking. Only when we hid via CoreDock.
-        if hidViaCoreDock && CoreDockBridge.isAvailable {
+        // window restacking. Only when we hid via CoreDock AND a reliable reload isn't required.
+        if hidViaCoreDock && CoreDockBridge.isAvailable && !forceReload {
             CoreDockBridge.setAutoHide(restoreHide)   // orientation was never changed
             didHideSystemDock = false
             hidViaCoreDock = false
@@ -948,6 +941,7 @@ final class DockController {
         // Drop the hide INTENT immediately so a fast re-hide that arrives before this
         // completes won't be skipped by the idempotency guard.
         didHideSystemDock = false
+        hidViaCoreDock = false
         lastAppliedHidePosition = nil
         dockOpGeneration += 1
         let gen = dockOpGeneration
@@ -1007,19 +1001,9 @@ final class DockController {
         let restoreHide = d.bool(forKey: "sysDockOrigAutohide")
         let restorePos = d.string(forKey: "sysDockOrigPosition") ?? "bottom"
 
-        // CoreDock fast path: live restore without killall (works regardless of how the
-        // previous session hid the Dock).
-        if CoreDockBridge.isAvailable {
-            CoreDockBridge.setAutoHide(restoreHide)
-            didHideSystemDock = false
-            hidViaCoreDock = false
-            lastAppliedHidePosition = nil
-            originalDockAutoHide = nil
-            clearPersistedDockState()
-            print("[Dock] System dock recovered via CoreDock (autohide=\(restoreHide))")
-            return
-        }
-
+        // Reliable recovery: write the saved prefs + `killall Dock`. (CoreDock's live
+        // setAutoHide(false) hides reliably but does not always *reveal* on recent macOS,
+        // so a previously-stuck Dock self-heals on the next launch through this path.)
         // Older persisted states may lack the minimize keys — only restore when saved.
         let isNewState = d.object(forKey: "sysDockOrigMinToApp") != nil
         let minToApp = isNewState ? d.bool(forKey: "sysDockOrigMinToApp") : nil
