@@ -24,6 +24,7 @@ enum SettingsTab: String, CaseIterable {
     case camera = "camera"
     case games = "games"
     case advanced = "advanced"
+    case health = "health"
     case about = "about"
 
     var label: String {
@@ -33,6 +34,7 @@ enum SettingsTab: String, CaseIterable {
         case .camera: return "Camera & Streaming"
         case .games: return "Games"
         case .advanced: return "Advanced"
+        case .health: return "Health Check"
         case .about: return "About"
         }
     }
@@ -44,6 +46,7 @@ enum SettingsTab: String, CaseIterable {
         case .camera: return "camera.fill"
         case .games: return "gamecontroller"
         case .advanced: return "slider.horizontal.3"
+        case .health: return "stethoscope"
         case .about: return "info.circle"
         }
     }
@@ -53,7 +56,7 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         case .dock, .retroMode: return nil
         case .camera, .games: return "Surfaces"
-        case .advanced, .about: return "System"
+        case .advanced, .health, .about: return "System"
         }
     }
 
@@ -355,6 +358,8 @@ struct SettingsDetailPane: View {
                     GamesSettingsTab()
                 case .advanced:
                     AdvancedTab()
+                case .health:
+                    HealthCheckTab()
                 case .about:
                     AboutTab(updater: updater)
                 }

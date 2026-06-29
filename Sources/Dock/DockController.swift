@@ -897,6 +897,10 @@ final class DockController {
         d.set(originalMinEffect ?? "genie", forKey: "sysDockOrigMinEffect")
         if let v = originalAutohideDelay { d.set(v, forKey: "sysDockOrigAutohideDelay") }
         else { d.removeObject(forKey: "sysDockOrigAutohideDelay") }
+        // Force an immediate flush to disk: UserDefaults batches writes, so a Force Quit
+        // (SIGKILL) right after hiding could otherwise lose this recovery state and the
+        // system Dock would stay hidden with no way to recover on next launch.
+        d.synchronize()
     }
 
     /// The system Dock stays on the SAME edge as RetroMac's dock (it is auto-hidden
