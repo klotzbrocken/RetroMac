@@ -809,6 +809,13 @@ final class DockController {
 
     private func applySystemDockPolicy() {
         let shouldHide = AppSettings.shared.dockHideSystemDock
+        // Graceful degradation: if dock control isn't available (e.g. a future macOS changed
+        // the pref schema — the probe caught it), skin the floating dock but DON'T touch the
+        // system Dock. The reason is surfaced in Health Check ▸ System Capabilities.
+        guard SystemBridge.shared.isAvailable(.systemDockControl) else {
+            if shouldHide { print("[Dock] systemDockControl unavailable — leaving the system Dock as-is (graceful degrade)") }
+            return
+        }
         if shouldHide {
             if originalDockAutoHide == nil {
                 originalDockAutoHide = readSystemDockPref("autohide") == "1"
@@ -1026,17 +1033,7 @@ final class DockController {
     }
 
     private func readSystemDockPref(_ key: String) -> String? {
-        let task = Process()
-        let pipe = Pipe()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        task.arguments = ["read", "com.apple.dock", key]
-        task.standardOutput = pipe
-        task.standardError = FileHandle.nullDevice
-        try? task.run()
-        task.waitUntilExit()
-        guard task.terminationStatus == 0 else { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        SystemBridge.shared.readDefault("com.apple.dock", key)
     }
 
     /// Writes the given system-Dock prefs and restarts the Dock. Returns `true` only if every
@@ -1047,16 +1044,10 @@ final class DockController {
                                     minimizeToApp: Bool? = nil, minEffect: String? = nil,
                                     autohideDelay: String? = nil, deleteAutohideDelay: Bool = false) -> Bool {
         var ok = true
-        /// Run one `defaults` invocation; track failure unless it's an ignorable delete.
+        /// Run one `defaults` invocation through SystemBridge; track failure unless it's an
+        /// ignorable delete (the `autohide-delay` key may legitimately not exist).
         func defaultsWrite(_ args: [String], ignoreFailure: Bool = false) {
-            let w = Process()
-            w.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-            w.arguments = args
-            if ignoreFailure { w.standardError = FileHandle.nullDevice }
-            do {
-                try w.run(); w.waitUntilExit()
-                if !ignoreFailure && w.terminationStatus != 0 { ok = false }
-            } catch { if !ignoreFailure { ok = false } }
+            if case .failure = SystemBridge.shared.runDefaults(args), !ignoreFailure { ok = false }
         }
 
         if let delay = autohideDelay {
@@ -1076,13 +1067,7 @@ final class DockController {
 
         // Restart the Dock so the prefs take effect; a failed restart means the change
         // hasn't been applied yet, so don't report success (callers keep recovery state).
-        let killall = Process()
-        killall.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-        killall.arguments = ["Dock"]
-        do {
-            try killall.run(); killall.waitUntilExit()
-            if killall.terminationStatus != 0 { ok = false }
-        } catch { ok = false }
+        if case .failure = SystemBridge.shared.killall("Dock") { ok = false }
         return ok
     }
 
