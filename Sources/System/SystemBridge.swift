@@ -72,6 +72,23 @@ final class SystemBridge {
         lock.lock(); snapshot[c] = status; lock.unlock()
     }
 
+    /// Live Accessibility gate for AX hot paths (window raise / minimize tracking). AX trust
+    /// can change at runtime, so this checks `AXIsProcessTrusted()` live AND reconciles the
+    /// cached capability — keeping Health Check accurate without a manual refresh. Returns
+    /// whether AX is currently granted; callers degrade (skip the AX work) when false.
+    @discardableResult
+    func ensureAccessibility() -> Bool {
+        let ok = AXIsProcessTrusted()
+        let newStatus: CapabilityStatus = ok ? .assumedAvailable
+            : .unavailable("Accessibility not granted — window raise/minimize is disabled.")
+        let changed = capability(.accessibility).available != newStatus.available
+        set(.accessibility, newStatus)
+        if changed {
+            DispatchQueue.main.async { NotificationCenter.default.post(name: .systemCapabilitiesChanged, object: nil) }
+        }
+        return ok
+    }
+
     // MARK: - Centralized shell-outs (typed Result — replaces scattered Process boilerplate)
 
     /// Run an executable synchronously and capture trimmed stdout. Callers run this off the

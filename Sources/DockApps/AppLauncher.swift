@@ -41,7 +41,7 @@ enum AppLauncher {
     /// window is the app's main window in practice; raising it + marking it main makes
     /// the click behave like the real Dock. No-op without AX trust.
     private static func raiseFrontWindow(pid: pid_t) {
-        guard AXIsProcessTrusted() else { print("[Dock] raise: AX not trusted"); return }
+        guard SystemBridge.shared.ensureAccessibility() else { print("[Dock] raise: AX not trusted"); return }
         let axApp = AXUIElementCreateApplication(pid)
         // Mark the whole app frontmost via AX — the reliable cross-app bring-to-front on
         // modern macOS, where NSRunningApplication.activate often won't raise a background
