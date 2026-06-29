@@ -421,6 +421,18 @@ final class AppSettings: ObservableObject {
     @Published var lowerThirdStyle: String {
         didSet { defaults.set(lowerThirdStyle, forKey: "lowerThirdStyle") }
     }
+    /// Custom accent colour (hex "#RRGGBB"); empty = the style's default (gold / red).
+    @Published var lowerThirdAccentHex: String {
+        didSet { defaults.set(lowerThirdAccentHex, forKey: "lowerThirdAccentHex") }
+    }
+    /// Optional social handle line, e.g. "@maik".
+    @Published var lowerThirdHandle: String {
+        didSet { defaults.set(lowerThirdHandle, forKey: "lowerThirdHandle") }
+    }
+    /// Optional logo image path drawn at the right of the lower third.
+    @Published var lowerThirdLogoPath: String {
+        didSet { defaults.set(lowerThirdLogoPath, forKey: "lowerThirdLogoPath") }
+    }
 
     // Webcam scenes (Creator/Streamer wedge) — user-saved looks; built-ins live in code.
     @Published var cameraScenes: [CameraScene] {
@@ -698,6 +710,9 @@ final class AppSettings: ObservableObject {
         // Virtual Camera — Lower Third
         lowerThirdEnabled = defaults.bool(forKey: "lowerThirdEnabled")
         lowerThirdName = defaults.string(forKey: "lowerThirdName") ?? ""
+        lowerThirdAccentHex = defaults.string(forKey: "lowerThirdAccentHex") ?? ""
+        lowerThirdHandle = defaults.string(forKey: "lowerThirdHandle") ?? ""
+        lowerThirdLogoPath = defaults.string(forKey: "lowerThirdLogoPath") ?? ""
         if let data = defaults.data(forKey: "cameraScenes"),
            let decoded = try? JSONDecoder().decode([CameraScene].self, from: data) {
             cameraScenes = decoded

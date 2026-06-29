@@ -10,6 +10,9 @@ final class LowerThirdRenderer {
     private var cachedName: String = ""
     private var cachedTitle: String = ""
     private var cachedStyle: String = ""
+    private var cachedHandle: String = ""
+    private var cachedAccent: String = ""
+    private var cachedLogoPath: String = ""
     private var cachedWidth: Int = 0
     private var cachedHeight: Int = 0
     private var animationFrame: Int = 0
@@ -43,18 +46,24 @@ final class LowerThirdRenderer {
     var hasContent: Bool { isVisible }
 
     /// Get or regenerate the lower-third texture for compositing
-    func texture(name: String, title: String, style: String, width: Int, height: Int) -> MTLTexture? {
+    func texture(name: String, title: String, handle: String, style: String,
+                 accentHex: String, logoPath: String, width: Int, height: Int) -> MTLTexture? {
         // Regenerate if parameters changed
         if name != cachedName || title != cachedTitle || style != cachedStyle
+            || handle != cachedHandle || accentHex != cachedAccent || logoPath != cachedLogoPath
             || width != cachedWidth || height != cachedHeight {
             // Keep the last good texture if a render transiently fails — otherwise a single
             // failed frame would blank the bar and read as a flicker.
-            if let tex = renderTexture(name: name, title: title, style: style, width: width, height: height) {
+            if let tex = renderTexture(name: name, title: title, handle: handle, style: style,
+                                       accentHex: accentHex, logoPath: logoPath, width: width, height: height) {
                 cachedTexture = tex
             }
             cachedName = name
             cachedTitle = title
             cachedStyle = style
+            cachedHandle = handle
+            cachedAccent = accentHex
+            cachedLogoPath = logoPath
             cachedWidth = width
             cachedHeight = height
         }
@@ -71,8 +80,10 @@ final class LowerThirdRenderer {
 
     // MARK: - Texture Generation
 
-    private func renderTexture(name: String, title: String, style: String, width: Int, height: Int) -> MTLTexture? {
+    private func renderTexture(name: String, title: String, handle: String, style: String,
+                               accentHex: String, logoPath: String, width: Int, height: Int) -> MTLTexture? {
         guard !name.isEmpty else { return nil }
+        let accent = Self.resolveAccent(style: style, hex: accentHex)
 
         let scale: CGFloat = 2.0  // Retina
         let texW = width
@@ -104,10 +115,14 @@ final class LowerThirdRenderer {
         ctx.clear(CGRect(x: 0, y: 0, width: drawW, height: drawH))
 
         if style == "newsroom" {
-            drawNewsroomLowerThird(ctx: ctx, name: name, title: title, width: drawW, height: drawH, barHeight: barHeight, barY: barY)
+            drawNewsroomLowerThird(ctx: ctx, name: name, title: title, accent: accent, width: drawW, height: drawH, barHeight: barHeight, barY: barY)
         } else {
-            drawLateNightLowerThird(ctx: ctx, name: name, title: title, width: drawW, height: drawH, barHeight: barHeight, barY: barY)
+            drawLateNightLowerThird(ctx: ctx, name: name, title: title, accent: accent, width: drawW, height: drawH, barHeight: barHeight, barY: barY)
         }
+
+        // Shared extras: optional logo + social handle at the right of the lower third.
+        drawHandleAndLogo(ctx: ctx, handle: handle, logoPath: logoPath, accent: accent,
+                          width: drawW, height: drawH, barHeight: barHeight, barY: barY)
 
         guard let image = ctx.makeImage() else { return nil }
 
@@ -131,7 +146,7 @@ final class LowerThirdRenderer {
 
     // MARK: - Late Night Style (warm gold/amber, 90s talk show)
 
-    private func drawLateNightLowerThird(ctx: CGContext, name: String, title: String, width: CGFloat, height: CGFloat, barHeight: CGFloat, barY: CGFloat) {
+    private func drawLateNightLowerThird(ctx: CGContext, name: String, title: String, accent: NSColor, width: CGFloat, height: CGFloat, barHeight: CGFloat, barY: CGFloat) {
         let nameBarHeight = barHeight * 0.60
         let titleBarHeight = barHeight * 0.40
         let nameBarY = height - barY - barHeight
@@ -144,8 +159,8 @@ final class LowerThirdRenderer {
         ctx.saveGState()
         ctx.clip(to: nameRect)
         let goldColors = [
-            CGColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.92),
-            CGColor(red: 0.72, green: 0.52, blue: 0.04, alpha: 0.92),
+            accent.withAlphaComponent(0.92).cgColor,
+            Self.shade(accent, -0.18).withAlphaComponent(0.92).cgColor,
         ]
         let goldGrad = CGGradient(colorsSpace: colorSpace, colors: goldColors as CFArray, locations: [0, 1])!
         ctx.drawLinearGradient(goldGrad, start: CGPoint(x: barX, y: nameBarY), end: CGPoint(x: barX, y: nameBarY + nameBarHeight), options: [])
@@ -157,7 +172,7 @@ final class LowerThirdRenderer {
         ctx.fill(titleRect)
 
         // Thin gold accent line between bars
-        ctx.setStrokeColor(CGColor(red: 1.0, green: 0.85, blue: 0.30, alpha: 1.0))
+        ctx.setStrokeColor(Self.shade(accent, 0.28).cgColor)
         ctx.setLineWidth(1.5)
         ctx.move(to: CGPoint(x: barX, y: titleBarY))
         ctx.addLine(to: CGPoint(x: barX + barWidth, y: titleBarY))
@@ -165,7 +180,7 @@ final class LowerThirdRenderer {
 
         // Left accent stripe
         let stripeWidth: CGFloat = 4
-        ctx.setFillColor(CGColor(red: 1.0, green: 0.85, blue: 0.30, alpha: 1.0))
+        ctx.setFillColor(Self.shade(accent, 0.28).cgColor)
         ctx.fill(CGRect(x: barX, y: nameBarY, width: stripeWidth, height: barHeight))
 
         // Name + title text, auto-shrunk so a long name never runs off the bar / frame.
@@ -181,7 +196,7 @@ final class LowerThirdRenderer {
 
         if !title.isEmpty {
             let titleStr = Self.fittedAttr(title, fontName: "Helvetica", baseSize: titleBarHeight * 0.55,
-                                           color: NSColor(red: 1.0, green: 0.88, blue: 0.45, alpha: 1.0),
+                                           color: Self.shade(accent, 0.55),
                                            maxWidth: availW)
             let titleTextY = titleBarY + (titleBarHeight - titleStr.size().height) / 2
             titleStr.draw(at: NSPoint(x: nameX, y: titleTextY))
@@ -192,7 +207,7 @@ final class LowerThirdRenderer {
 
     // MARK: - Newsroom 1987 Style (broadcast news, red/blue/white)
 
-    private func drawNewsroomLowerThird(ctx: CGContext, name: String, title: String, width: CGFloat, height: CGFloat, barHeight: CGFloat, barY: CGFloat) {
+    private func drawNewsroomLowerThird(ctx: CGContext, name: String, title: String, accent: NSColor, width: CGFloat, height: CGFloat, barHeight: CGFloat, barY: CGFloat) {
         let nameBarHeight = barHeight * 0.58
         let titleBarHeight = barHeight * 0.42
         let nameBarY = height - barY - barHeight
@@ -205,8 +220,8 @@ final class LowerThirdRenderer {
         ctx.saveGState()
         ctx.clip(to: nameRect)
         let redColors = [
-            CGColor(red: 0.80, green: 0.10, blue: 0.10, alpha: 0.93),
-            CGColor(red: 0.60, green: 0.05, blue: 0.05, alpha: 0.93),
+            accent.withAlphaComponent(0.93).cgColor,
+            Self.shade(accent, -0.22).withAlphaComponent(0.93).cgColor,
         ]
         let redGrad = CGGradient(colorsSpace: colorSpace, colors: redColors as CFArray, locations: [0, 1])!
         ctx.drawLinearGradient(redGrad, start: CGPoint(x: barX, y: nameBarY), end: CGPoint(x: barX, y: nameBarY + nameBarHeight), options: [])
@@ -262,6 +277,64 @@ final class LowerThirdRenderer {
         let w = attr.size().width
         guard w > maxWidth, w > 0 else { return attr }
         return make(max(7, floor(baseSize * maxWidth / w)))
+    }
+
+    /// Optional logo + social handle, right-aligned in the lower-third band. Shared by both styles.
+    private func drawHandleAndLogo(ctx: CGContext, handle: String, logoPath: String, accent: NSColor,
+                                   width: CGFloat, height: CGFloat, barHeight: CGFloat, barY: CGFloat) {
+        guard !handle.isEmpty || !logoPath.isEmpty else { return }
+        let nameBarY = height - barY - barHeight
+        var rightX = width * 0.96
+        let nsctx = NSGraphicsContext(cgContext: ctx, flipped: true)
+        NSGraphicsContext.current = nsctx
+        defer { NSGraphicsContext.current = nil }
+
+        if !logoPath.isEmpty, let img = NSImage(contentsOfFile: logoPath), img.size.width > 0, img.size.height > 0 {
+            let side = barHeight * 0.92
+            let scale = min(side / img.size.width, side / img.size.height)
+            let w = img.size.width * scale, h = img.size.height * scale
+            let x = rightX - w, y = nameBarY + (barHeight - h) / 2
+            img.draw(in: NSRect(x: x, y: y, width: w, height: h))
+            rightX = x - 10
+        }
+
+        if !handle.isEmpty {
+            let para = NSMutableParagraphStyle(); para.alignment = .right; para.lineBreakMode = .byTruncatingTail
+            let f = NSFont.systemFont(ofSize: max(9, barHeight * 0.22), weight: .semibold)
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: f, .foregroundColor: NSColor.white.withAlphaComponent(0.92), .paragraphStyle: para
+            ]
+            let textH = (handle as NSString).size(withAttributes: attrs).height
+            let rect = NSRect(x: width * 0.5, y: nameBarY + (barHeight - textH) / 2, width: rightX - width * 0.5, height: textH)
+            (handle as NSString).draw(in: rect, withAttributes: attrs)
+        }
+    }
+
+    /// Resolve the accent colour: the user's hex, or the style's default (gold / red).
+    private static func resolveAccent(style: String, hex: String) -> NSColor {
+        if let c = hexColor(hex) { return c }
+        return style == "newsroom"
+            ? NSColor(red: 0.80, green: 0.10, blue: 0.10, alpha: 1)
+            : NSColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 1)
+    }
+
+    private static func hexColor(_ hex: String) -> NSColor? {
+        var s = hex.trimmingCharacters(in: .whitespaces)
+        if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 6, let v = UInt32(s, radix: 16) else { return nil }
+        return NSColor(red: CGFloat((v >> 16) & 0xff) / 255, green: CGFloat((v >> 8) & 0xff) / 255,
+                       blue: CGFloat(v & 0xff) / 255, alpha: 1)
+    }
+
+    /// Blend `color` toward white (amount > 0) or black (amount < 0) by |amount|.
+    private static func shade(_ color: NSColor, _ amount: CGFloat) -> NSColor {
+        let c = color.usingColorSpace(.deviceRGB) ?? color
+        let t = min(max(abs(amount), 0), 1)
+        let target: CGFloat = amount >= 0 ? 1 : 0
+        return NSColor(red: c.redComponent + (target - c.redComponent) * t,
+                       green: c.greenComponent + (target - c.greenComponent) * t,
+                       blue: c.blueComponent + (target - c.blueComponent) * t,
+                       alpha: c.alphaComponent)
     }
 
     private var colorSpace: CGColorSpace { CGColorSpaceCreateDeviceRGB() }
