@@ -231,7 +231,7 @@ final class BeOSDeskbarView: NSView {
         let s = statusRect
         sunkenFace.setFill(); s.fill()
         drawBevel(s, raised: false)
-        let fmt = DateFormatter(); fmt.dateFormat = "h:mm a"
+        let fmt = DateFormatter(); fmt.dateFormat = AppSettings.applyClockFormat("h:mm a")
         let str = fmt.string(from: Date())
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont(name: "Helvetica-Bold", size: 14) ?? .boldSystemFont(ofSize: 14),

@@ -262,6 +262,21 @@ final class AppSettings: ObservableObject {
     @Published var doomLaunchTarget: String {
         didSet { defaults.set(doomLaunchTarget, forKey: "doomLaunchTarget") }
     }
+    /// Show the dock / deskbar clock in 24-hour (military) time instead of 12-hour AM/PM.
+    @Published var clockUse24Hour: Bool {
+        didSet {
+            defaults.set(clockUse24Hour, forKey: "clockUse24Hour")
+            NotificationCenter.default.post(name: .clockFormatChanged, object: nil)
+        }
+    }
+    /// Convert a 12-hour DateFormatter pattern to 24-hour when `clockUse24Hour` is on.
+    /// e.g. "h:mm a" → "H:mm", "hh:mm:ss a" → "HH:mm:ss"; already-24h patterns are unchanged.
+    static func applyClockFormat(_ base: String) -> String {
+        guard shared.clockUse24Hour else { return base }
+        var f = base.replacingOccurrences(of: "a", with: "")
+        f = f.replacingOccurrences(of: "h", with: "H")
+        return f.trimmingCharacters(in: .whitespaces)
+    }
 
     // Television Bookmarks
     @Published var tvBookmarks: [TVBookmark] {
@@ -599,6 +614,7 @@ final class AppSettings: ObservableObject {
         slayerWeapon = defaults.object(forKey: "slayerWeapon") as? String ?? "Auto-cycle"
         slayerDirection = defaults.object(forKey: "slayerDirection") as? String ?? "Right"
         doomLaunchTarget = defaults.object(forKey: "doomLaunchTarget") as? String ?? ""
+        clockUse24Hour = defaults.object(forKey: "clockUse24Hour") as? Bool ?? false
 
         // Per-theme preset overrides
         themePresetOverrides = defaults.dictionary(forKey: "themePresetOverrides") as? [String: String] ?? [:]

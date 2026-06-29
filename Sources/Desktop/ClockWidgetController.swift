@@ -18,9 +18,15 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(themeChanged),
                                                name: .dockThemeChanged, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(clockFormatChanged),
+                                               name: .clockFormatChanged, object: nil)
     }
 
     @objc private func themeChanged() { destroy() }
+
+    @objc private func clockFormatChanged() {
+        webView?.evaluateJavaScript("window.set24 && window.set24(\(AppSettings.shared.clockUse24Hour))")
+    }
 
     func toggle() { if panel?.isVisible == true { close() } else { show() } }
 
@@ -106,6 +112,7 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript("window.set24 && window.set24(\(AppSettings.shared.clockUse24Hour))")
         // Size the panel to the themed widget, then place the drag/close overlay over the title.
         webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [200,224]") { [weak self] result, _ in
             guard let self = self, let panel = self.panel,
