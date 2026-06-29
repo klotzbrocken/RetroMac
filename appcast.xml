@@ -6,6 +6,29 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.9.5</title>
+      <pubDate>Mon, 29 Jun 2026 13:03:59 +0000</pubDate>
+      <sparkle:version>1.9.5</sparkle:version>
+      <sparkle:shortVersionString>1.9.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.9.5 &mdash; a new DOOM theme, a 24-hour clock &amp; lots of fixes</h2>
+        <ul>
+          <li><b>New theme &mdash; Maiks Favourite II (DOOM):</b> a pixel Doom Slayer patrols the dock (runs, switches weapons, fires, gets fragged) and blasts a Lost Soul that flies in. Hover him to frag him, click the DOOM logo tile to launch DOOM, plus a new &ldquo;Apple Hell&rdquo; menu-bar logo.</li>
+          <li><b>24-hour clock:</b> new option for the dock and deskbar clocks, plus a digital readout under the analog Clock widget that follows it.</li>
+          <li><b>Retro menu-bar Apple:</b> Rainbow, Aqua, Aqua Classic or the new Apple Hell logo &mdash; cycle it from the flyout, with per-theme defaults.</li>
+          <li><b>Reliability:</b> your real Dock reliably returns after turning a theme off and never peeks out beside the retro dock; Mac OS X / Snow Leopard magnification no longer reacts outside the dock; the floating launcher stays clickable beside a dock.</li>
+          <li><b>More:</b> corrected rocket / death sprites, CPU monitor wording fix, and a clearer privacy &amp; offline note in About.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.9.5/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="P0q/K6ucOj7tJFKu865t3DVYX5sSsm8nXmo/GmGlKUaAliLRXcUVSZVtnT+R7Z6QaBZDZ8fAoEDkowVebJptDQ=="
+        length="174247381"
+      />
+    </item>
+    <item>
       <title>Version 1.9.2</title>
       <pubDate>Sat, 27 Jun 2026 15:57:59 +0000</pubDate>
       <sparkle:version>1.9.2</sparkle:version>
