@@ -45,5 +45,10 @@ let package = Package(
                 .linkedFramework("Foundation"),
             ]
         ),
+        .testTarget(
+            name: "RetroMacTests",
+            dependencies: ["RetroMac"],
+            path: "Tests/RetroMacTests"
+        ),
     ]
 )
