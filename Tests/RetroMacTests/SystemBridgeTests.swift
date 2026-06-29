@@ -18,11 +18,11 @@ final class SystemBridgeTests: XCTestCase {
     }
 
     func testDockControlAvailableNormalizesBoolStrings() {
-        // Original is "true"; probe writes "1" — normalization must treat them as equal.
+        // Read-back returns the literal "true"/"false"; normalization must treat that as 1/0.
         var stored = "true"
         let status = SystemBridge.shared.probeSystemDockControl(
             read: { _ in stored },
-            write: { _, v in stored = (v == "1") ? "true" : "false"; return true }
+            write: { _, v in stored = v; return true }   // v is "true"/"false"
         )
         XCTAssertTrue(status.available)
     }
@@ -36,6 +36,20 @@ final class SystemBridgeTests: XCTestCase {
         XCTAssertFalse(status.available)
         XCTAssertTrue(status.degraded)
         XCTAssertNotNil(status.reason)
+    }
+
+    func testDockControlWritesBooleanLiteralsNotDigits() {
+        // Regression: `defaults write … -bool 0/1` is invalid (exit 255) — the probe must send
+        // "true"/"false". This writer rejects digits, so the probe only passes if it complies.
+        var stored = "false"
+        let status = SystemBridge.shared.probeSystemDockControl(
+            read: { _ in stored },
+            write: { _, v in
+                guard v == "true" || v == "false" else { return false }
+                stored = v; return true
+            }
+        )
+        XCTAssertTrue(status.available)
     }
 
     func testDockControlUnavailableWhenWriteFails() {

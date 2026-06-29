@@ -143,24 +143,25 @@ final class SystemBridge {
     /// schema changed (e.g. macOS 27) → unavailable, so the dock-hide feature self-disables.
     func probeSystemDockControl(
         read: (String) -> String? = { SystemBridge.shared.readDefault("com.apple.dock", $0) },
+        // `value` is a `defaults` boolean literal — "true"/"false" (NOT "0"/"1", which `-bool`
+        // rejects). The default writer shells out via SystemBridge.
         write: (String, String) -> Bool = {
             if case .success = SystemBridge.shared.runDefaults(["write", "com.apple.dock", $0, "-bool", $1]) { return true }
             return false
         }
     ) -> CapabilityStatus {
         let key = "autohide"
-        let original = read(key)                      // "0" / "1" / nil
-        let probeValue = (original == "1") ? "1" : "0" // write back the SAME value (no visible change)
-        guard write(key, probeValue) else {
+        let original = read(key)                              // "0" / "1" / "true" / "false" / nil
+        let wantOn = (original == "1" || original == "true")  // preserve the current value
+        guard write(key, wantOn ? "true" : "false") else {   // write back the SAME value (no visible change)
             return .unavailable("Dock preferences are not writable (control unavailable).")
         }
-        let readBack = read(key)
-        // Normalize "true"/"false" vs "1"/"0".
+        // Normalize "true"/"false" vs "1"/"0" for the read-back comparison.
         let norm: (String?) -> String? = { v in
             guard let v = v else { return nil }
             if v == "true" { return "1" }; if v == "false" { return "0" }; return v
         }
-        guard norm(readBack) == norm(probeValue) else {
+        guard norm(read(key)) == (wantOn ? "1" : "0") else {
             return .unavailable("Dock preference schema changed — Dock control disabled, themes apply without hiding the system Dock.")
         }
         return .assumedAvailable
