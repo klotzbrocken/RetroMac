@@ -974,6 +974,10 @@ final class SettingsWindowController {
             defer: false
         )
         window.title = "RetroMac Settings"
+        // The settings UI uses a fixed light palette (rm* colors). Pin the window to the light
+        // appearance so native controls (segmented switchers, pickers, text fields) match —
+        // otherwise in Dark Mode e.g. the "Streaming" segment becomes invisible.
+        window.appearance = NSAppearance(named: .aqua)
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.contentView = hostingView
