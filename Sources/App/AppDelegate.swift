@@ -103,6 +103,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
            let scene = CameraScene.all.first(where: { $0.id == AppSettings.shared.activeCameraSceneID }) {
             scene.apply()
         }
+        // Floating scene switcher — observes the camera state; only shows while it's running.
+        QuickSwitchController.shared.refreshVisibility()
         setupMenuBar()
         registerHotkey()
         startAppLaunchObserver()

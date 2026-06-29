@@ -545,6 +545,9 @@ struct CameraTab: View {
                     }
                     .buttonStyle(RMDefaultButtonStyle())
                 }
+                Toggle("Floating switcher while the camera is on", isOn: $settings.quickSwitchEnabled)
+                    .toggleStyle(.switch).tint(.rmAccent)
+                    .font(.rmSecondary).foregroundColor(.rmTextSecondary)
             }
         }
     }

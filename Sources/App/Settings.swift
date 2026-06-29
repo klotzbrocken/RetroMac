@@ -433,6 +433,13 @@ final class AppSettings: ObservableObject {
     @Published var activeCameraSceneID: String {
         didSet { defaults.set(activeCameraSceneID, forKey: "activeCameraSceneID") }
     }
+    /// Show the floating scene switcher while the virtual camera is running.
+    @Published var quickSwitchEnabled: Bool {
+        didSet {
+            defaults.set(quickSwitchEnabled, forKey: "quickSwitchEnabled")
+            QuickSwitchController.shared.refreshVisibility()
+        }
+    }
 
     // Games — Doom
     @Published var doomWadFolder: String {
@@ -698,6 +705,7 @@ final class AppSettings: ObservableObject {
             cameraScenes = []
         }
         activeCameraSceneID = defaults.string(forKey: "activeCameraSceneID") ?? ""
+        quickSwitchEnabled = defaults.object(forKey: "quickSwitchEnabled") as? Bool ?? true
         lowerThirdTitle = defaults.string(forKey: "lowerThirdTitle") ?? ""
         lowerThirdStyle = defaults.string(forKey: "lowerThirdStyle") ?? "latenight"
 
