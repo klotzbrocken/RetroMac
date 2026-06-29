@@ -1008,32 +1008,35 @@ final class DockController {
     /// always starts disabled, so the system dock should be in its original state.
     func restoreSystemDockIfNeeded() {
         let d = UserDefaults.standard
-        guard d.bool(forKey: "sysDockHidden") else { return }
-        let restoreHide = d.bool(forKey: "sysDockOrigAutohide")
-        let restorePos = d.string(forKey: "sysDockOrigPosition") ?? "bottom"
+        let persisted = d.bool(forKey: "sysDockHidden")
+        // Fingerprint fallback: our hide writes autohide-delay ≈ 1000000 (no human sets that).
+        // If it's still present at launch we hid the Dock last session and never restored it
+        // (crash / Force Quit before the recovery key flushed) — recover even WITHOUT the key.
+        let delayNow = Double(readSystemDockPref("autohide-delay") ?? "")
+        let fingerprint = (delayNow ?? 0) >= 100_000
+        guard persisted || fingerprint else { return }
 
-        // Reliable recovery: write the saved prefs + `killall Dock`. (CoreDock's live
-        // setAutoHide(false) hides reliably but does not always *reveal* on recent macOS,
-        // so a previously-stuck Dock self-heals on the next launch through this path.)
-        // Older persisted states may lack the minimize keys — only restore when saved.
+        // Reliable recovery: write the saved prefs + `killall Dock`, and always clear the
+        // autohide-delay fingerprint. Without a persisted original, fall back to a visible
+        // Dock (the safe default; the user can re-enable auto-hide).
+        let restoreHide = persisted ? d.bool(forKey: "sysDockOrigAutohide") : false
+        let restorePos = persisted ? (d.string(forKey: "sysDockOrigPosition") ?? "bottom") : "bottom"
         let isNewState = d.object(forKey: "sysDockOrigMinToApp") != nil
-        let minToApp = isNewState ? d.bool(forKey: "sysDockOrigMinToApp") : nil
-        let minEffect = d.string(forKey: "sysDockOrigMinEffect")
-        let delay = d.string(forKey: "sysDockOrigAutohideDelay")
+        let minToApp = (persisted && isNewState) ? d.bool(forKey: "sysDockOrigMinToApp") : nil
+        let minEffect = persisted ? d.string(forKey: "sysDockOrigMinEffect") : nil
         let ok = setSystemDockPrefs(autohide: restoreHide, position: restorePos,
                                     minimizeToApp: minToApp, minEffect: minEffect,
-                                    autohideDelay: delay,
-                                    deleteAutohideDelay: isNewState && delay == nil)
+                                    autohideDelay: nil, deleteAutohideDelay: true)
         guard ok else {
             print("[Dock] ⚠️ System dock recovery failed — keeping recovery keys for next launch")
             return
         }
+        print("[Dock] Recovered system dock (persisted=\(persisted), fingerprint=\(fingerprint), autohide=\(restoreHide))")
         didHideSystemDock = false
         lastAppliedHidePosition = nil
         originalDockAutoHide = nil
         originalDockPosition = nil
         clearPersistedDockState()
-        print("[Dock] Recovered system dock from previous session (autohide=\(restoreHide), position=\(restorePos))")
     }
 
     private func readSystemDockPref(_ key: String) -> String? {
