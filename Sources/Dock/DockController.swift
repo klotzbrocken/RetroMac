@@ -199,6 +199,10 @@ final class DockController {
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
             BeOSDeskbarController.shared.update()
+            // These themes replace the dock entirely (Win 3.1 Program Manager, BeOS Deskbar,
+            // SGI desktop) — hide the system Dock too, otherwise every running app + minimized
+            // window stays piled at the bottom of the screen.
+            if AppSettings.shared.dockHideSystemDock { applySystemDockPolicy() }
             return
         }
 
