@@ -14,6 +14,7 @@ struct HealthCheckTab: View {
         .desktopIconsToggle: "Desktop icons toggle",
         .accessibility: "Accessibility",
         .screenCapture: "Screen Recording",
+        .finderAutomation: "Finder automation (trash)",
         .virtualDisplay: "Virtual display (iPad)"
     ]
 

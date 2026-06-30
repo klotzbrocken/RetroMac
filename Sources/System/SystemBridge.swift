@@ -23,6 +23,7 @@ enum SystemCapability: String, CaseIterable {
     case desktopIconsToggle
     case accessibility
     case screenCapture
+    case finderAutomation   // Finder AppleScript (used for trash full/empty detection)
     case virtualDisplay     // stubbed now; filled for the iPad phase (#2)
 }
 
@@ -147,6 +148,7 @@ final class SystemBridge {
             self.set(.desktopIconsToggle, self.probeDesktopIconsToggle())
             self.set(.accessibility,     self.probeAccessibility())
             self.set(.screenCapture,     self.probeScreenCapture())
+            self.set(.finderAutomation,  self.probeFinderAutomation())
             self.set(.virtualDisplay,    self.probeVirtualDisplay())
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: .systemCapabilitiesChanged, object: nil)
@@ -217,6 +219,29 @@ final class SystemBridge {
     ) -> CapabilityStatus {
         preflight() ? .assumedAvailable
                     : .unavailable("Screen Recording not granted — the CRT shader can't read the screen.")
+    }
+
+    /// Whether RetroMac may drive Finder via AppleScript — needed to read trash full/empty on
+    /// modern macOS (~/.Trash is TCC-gated). Checked WITHOUT prompting via
+    /// AEDeterminePermissionToAutomateTarget(askUserIfNeeded: false).
+    func probeFinderAutomation(
+        status: () -> OSStatus = {
+            guard let desc = NSAppleEventDescriptor(bundleIdentifier: "com.apple.finder").aeDesc else {
+                return OSStatus(procNotFound)
+            }
+            return AEDeterminePermissionToAutomateTarget(desc, typeWildCard, typeWildCard, false)
+        }
+    ) -> CapabilityStatus {
+        switch status() {
+        case noErr:
+            return .assumedAvailable
+        case OSStatus(procNotFound):
+            return CapabilityStatus(available: true, degraded: true, reason: "Finder isn't running.")
+        case OSStatus(errAEEventNotPermitted):
+            return .unavailable("Finder automation is off — trash full/empty shows as empty. Allow it in System Settings ▸ Privacy & Security ▸ Automation.")
+        default:   // -1744 errAEEventWouldRequireUserConsent (not yet asked)
+            return .unavailable("Finder automation not allowed yet — needed for trash full/empty (allow when prompted, or in System Settings ▸ Privacy & Security ▸ Automation).")
+        }
     }
 
     func probeVirtualDisplay(

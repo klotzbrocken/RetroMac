@@ -75,6 +75,13 @@ final class SystemBridgeTests: XCTestCase {
         XCTAssertFalse(SystemBridge.shared.probeScreenCapture(preflight: { false }).available)
     }
 
+    func testFinderAutomationReflectsPermission() {
+        XCTAssertTrue(SystemBridge.shared.probeFinderAutomation(status: { OSStatus(0) }).available)   // noErr
+        let denied = SystemBridge.shared.probeFinderAutomation(status: { OSStatus(-1743) })           // errAEEventNotPermitted
+        XCTAssertFalse(denied.available)
+        XCTAssertNotNil(denied.reason)
+    }
+
     func testVirtualDisplayReflectsSymbol() {
         XCTAssertTrue(SystemBridge.shared.probeVirtualDisplay(symbolPresent: { true }).available)
         XCTAssertFalse(SystemBridge.shared.probeVirtualDisplay(symbolPresent: { false }).available)
