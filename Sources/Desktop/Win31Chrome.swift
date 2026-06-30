@@ -10,11 +10,12 @@ enum Win31Chrome {
     static let lightGray = NSColor(red: 0.875, green: 0.875, blue: 0.875, alpha: 1)   // #DFDFDF
     static let darkGray  = NSColor(red: 0.502, green: 0.502, blue: 0.502, alpha: 1)   // #808080 shadow
     static let black     = NSColor.black                                              // outer shadow
-    static let activeTitle   = NSColor(red: 0.0,  green: 0.0,  blue: 0.502, alpha: 1) // #000080 navy
+    static let activeTitle   = NSColor(red: 0.0,  green: 0.0,  blue: 0.659, alpha: 1) // #0000A8 authentic title blue
     static let inactiveTitle = NSColor(red: 0.502, green: 0.502, blue: 0.502, alpha: 1) // #808080
     static let titleText     = NSColor.white
     static let inactiveTitleText = NSColor(white: 0.86, alpha: 1)
-    static let workspace = NSColor(red: 0.502, green: 0.502, blue: 0.502, alpha: 1)   // PM workspace gray
+    static let selection = NSColor(red: 0.0, green: 0.0, blue: 0.502, alpha: 1)       // #000080 navy (icon/menu highlight)
+    static let workspace = NSColor(red: 0.753, green: 0.753, blue: 0.753, alpha: 1)   // #C0C0C0 PM workspace (gray, not dark)
 
     // MARK: - Font
 
