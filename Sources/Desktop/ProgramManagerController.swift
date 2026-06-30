@@ -9,6 +9,8 @@ final class ProgramManagerController {
 
     private var window: NSPanel?
     private var pmView: ProgramManagerView?
+    private var tasksView: Win31TaskIconsView?
+    private var wsObservers: [NSObjectProtocol] = []
     private var isVisible = false
 
     private init() {}
@@ -29,9 +31,12 @@ final class ProgramManagerController {
     }
 
     func hide() {
+        wsObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        wsObservers = []
         window?.orderOut(nil)
         window = nil
         pmView = nil
+        tasksView = nil
         isVisible = false
     }
 
@@ -96,6 +101,29 @@ final class ProgramManagerController {
         content.addSubview(view)
         view.performInitialLayout()
         self.pmView = view
+
+        // Running-apps row along the bottom of the desktop (Win 3.1 minimized-program icons),
+        // since this theme hides the macOS Dock. Click to bring an app to the front.
+        tasksView?.removeFromSuperview()
+        let tasks = Win31TaskIconsView(frame: NSRect(x: 8, y: 6, width: screenFrame.width - 16, height: 62))
+        content.addSubview(tasks)
+        tasks.reload()
+        self.tasksView = tasks
+
+        // Refresh the row as apps launch / quit / activate.
+        wsObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        wsObservers = []
+        let wsnc = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didLaunchApplicationNotification,
+                     NSWorkspace.didTerminateApplicationNotification,
+                     NSWorkspace.didActivateApplicationNotification,
+                     NSWorkspace.didDeactivateApplicationNotification,
+                     NSWorkspace.didHideApplicationNotification,
+                     NSWorkspace.didUnhideApplicationNotification] {
+            wsObservers.append(wsnc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.tasksView?.reload()
+            })
+        }
 
         window?.orderFront(nil)
         isVisible = true
