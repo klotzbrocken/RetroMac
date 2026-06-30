@@ -11,6 +11,26 @@ final class Win31TaskIconsView: NSView {
 
     override var isFlipped: Bool { false }   // bottom-up: icon on top, label at the bottom
 
+    /// Deliver the click even when RetroMac isn't the frontmost app (clicking a task icon
+    /// from another app would otherwise just activate the panel and swallow the first click).
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    /// Win 3.1 glyph for a running app: the mapped theme icon if the theme has one, else the
+    /// theme's default program icon (never the real macOS app icon, which breaks the look).
+    private static func win31Icon(for bundleID: String, size: CGFloat) -> NSImage? {
+        let theme = ThemeManager.shared.activeTheme
+        if theme?.config.iconMappings[bundleID] != nil {
+            return ThemeManager.shared.icon(for: bundleID, size: size)
+        }
+        let dir = theme?.iconsDirectory
+        for name in ["group.png", "progman.png", "groupicon.png"] {
+            if let url = dir?.appendingPathComponent(name), let img = NSImage(contentsOf: url) {
+                img.size = NSSize(width: size, height: size); return img
+            }
+        }
+        return nil
+    }
+
     /// Rebuild from the current set of regular (Dock-worthy) running apps, excluding RetroMac.
     func reload() {
         let own = Bundle.main.bundleIdentifier
@@ -30,8 +50,9 @@ final class Win31TaskIconsView: NSView {
 
             let iconRect = NSRect(x: cell.midX - iconSize / 2, y: cell.maxY - iconSize - 2,
                                   width: iconSize, height: iconSize)
-            app.icon?.draw(in: iconRect, from: .zero, operation: .sourceOver,
-                           fraction: 1.0, respectFlipped: true, hints: nil)
+            Self.win31Icon(for: app.bundleIdentifier ?? "", size: iconSize)?
+                .draw(in: iconRect, from: .zero, operation: .sourceOver,
+                      fraction: 1.0, respectFlipped: true, hints: nil)
 
             let name = app.localizedName ?? app.bundleIdentifier ?? "App"
             let labelRect = NSRect(x: cell.minX + 2, y: 2, width: cellW - 4, height: 26)

@@ -53,7 +53,27 @@
   },
   "fallbackIcon": "group.png",
   "defaultPreset": "lcd-sharp-lite",
-  "iconMappings": {},
+  "iconMappings": {
+    "com.apple.finder": "filemanager.png",
+    "com.apple.systempreferences": "controlpanel.png",
+    "com.apple.Terminal": "msdos.png",
+    "com.apple.TextEdit": "write.png",
+    "com.apple.Notes": "notepad.png",
+    "com.apple.Stickies": "notepad.png",
+    "com.apple.Preview": "paintbrush.png",
+    "com.apple.calculator": "calculator.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.AddressBook": "cardfile.png",
+    "com.apple.clock": "clock.png",
+    "com.apple.FontBook": "charmap.png",
+    "com.apple.Music": "mediaplayer.png",
+    "com.apple.VoiceMemos": "recorder.png",
+    "com.apple.Safari": "app1.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "app2.png",
+    "com.apple.MobileSMS": "app3.png",
+    "com.apple.Chess": "solitaire.png"
+  },
   "programManager": {
     "title": "Program Manager",
     "groups": [
