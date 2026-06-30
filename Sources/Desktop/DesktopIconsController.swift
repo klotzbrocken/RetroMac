@@ -188,17 +188,28 @@ final class DesktopIconsController {
     // MARK: - Trash State
 
     private func updateTrashState() {
-        let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first
-            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".Trash")
-        let hasItems: Bool
-        if let contents = try? FileManager.default.contentsOfDirectory(atPath: trashURL.path) {
-            hasItems = contents.contains(where: { !$0.hasPrefix(".") })
-        } else {
-            hasItems = false
+        // ~/.Trash is TCC-gated on modern macOS, so compute off-main (direct read with Full
+        // Disk Access, else Finder's item count via AppleScript) and update the icon on main.
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let hasItems = !DesktopIconsController.trashEmpty()
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                for view in self.iconViews where view.entry.type == "trash" {
+                    view.setTrashFull(hasItems)
+                }
+            }
         }
-        for view in iconViews where view.entry.type == "trash" {
-            view.setTrashFull(hasItems)
+    }
+
+    private static func trashEmpty() -> Bool {
+        if let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first,
+           let contents = try? FileManager.default.contentsOfDirectory(atPath: trashURL.path) {
+            return !contents.contains(where: { !$0.hasPrefix(".") })
         }
+        guard let script = NSAppleScript(source: "tell application \"Finder\" to return (count of items of trash)") else { return true }
+        var err: NSDictionary?
+        let r = script.executeAndReturnError(&err)
+        return err == nil ? (Int(r.int32Value) == 0) : true
     }
 
     /// Deselect all desktop icons (called when clicking on empty area).

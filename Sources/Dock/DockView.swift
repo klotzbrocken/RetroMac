@@ -38,6 +38,7 @@ final class DockView: NSView {
     private var trashMonitorSource: DispatchSourceFileSystemObject?
     private var trashDirectoryFD: Int32 = -1
     private var trashPollTimer: Timer?
+    private var trashEmptyCached = true   // updated off-main via refreshTrashState()
     var magnificationOverflow: CGFloat = 0
     /// Extra width on each side of the window for magnification expansion
     var horizontalMagOverflow: CGFloat = 0
@@ -322,10 +323,10 @@ final class DockView: NSView {
         // can fail (e.g. opening ~/.Trash is TCC-gated); previously a failed open()
         // returned early and skipped the poll entirely, so the icon never updated.
         trashPollTimer?.invalidate()
-        trashPollTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            self?.updateTrashIcon()
+        trashPollTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+            self?.refreshTrashState()
         }
-        updateTrashIcon()
+        refreshTrashState()
 
         guard let trashURL = try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else { return }
         let fd = Darwin.open(trashURL.path, O_EVTONLY)
@@ -338,7 +339,7 @@ final class DockView: NSView {
             queue: .main
         )
         source.setEventHandler { [weak self] in
-            self?.updateTrashIcon()
+            self?.refreshTrashState()
         }
         source.setCancelHandler {
             Darwin.close(fd)
@@ -347,11 +348,40 @@ final class DockView: NSView {
         trashMonitorSource = source
     }
 
-    private func isTrashEmpty() -> Bool {
-        guard let trashURL = try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else { return true }
-        let contents = (try? FileManager.default.contentsOfDirectory(at: trashURL, includingPropertiesForKeys: nil, options: [])) ?? []
-        // Ignore Finder bookkeeping files — any real item means the trash is full.
-        return contents.filter { $0.lastPathComponent != ".DS_Store" }.isEmpty
+    private func isTrashEmpty() -> Bool { trashEmptyCached }
+
+    /// Recompute trash full/empty off-main, then update the icon. ~/.Trash is TCC-gated on
+    /// modern macOS (enumerating it fails without Full Disk Access), so we ask Finder for the
+    /// item count via AppleScript (Automation) instead — with a direct-read fast path for
+    /// users who HAVE granted Full Disk Access.
+    private func refreshTrashState() {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let empty = DockView.computeTrashEmpty()
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.trashEmptyCached = empty
+                self.updateTrashIcon()
+            }
+        }
+    }
+
+    private static func computeTrashEmpty() -> Bool {
+        // Fast path: direct read (only succeeds with Full Disk Access).
+        if let trashURL = try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false),
+           let contents = try? FileManager.default.contentsOfDirectory(at: trashURL, includingPropertiesForKeys: nil, options: []) {
+            return contents.filter { $0.lastPathComponent != ".DS_Store" }.isEmpty
+        }
+        // TCC-gated → ask Finder.
+        if let n = trashCountViaFinder() { return n == 0 }
+        return true   // can't tell → assume empty (no false "full")
+    }
+
+    private static func trashCountViaFinder() -> Int? {
+        guard let script = NSAppleScript(source: "tell application \"Finder\" to return (count of items of trash)") else { return nil }
+        var err: NSDictionary?
+        let r = script.executeAndReturnError(&err)
+        if err != nil { return nil }
+        return Int(r.int32Value)
     }
 
     private func updateTrashIcon() {
