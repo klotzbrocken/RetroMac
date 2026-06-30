@@ -52,7 +52,7 @@ final class ProgramItemView: NSView {
                                    options: [.usesLineFragmentOrigin])
 
         if selected {
-            Win31Chrome.activeTitle.setFill()
+            Win31Chrome.selection.setFill()
             let w = min(tb.width + 6, bounds.width)
             NSRect(x: (bounds.width - w) / 2, y: labelTop,
                    width: w, height: min(tb.height + 2, labelRect.height)).integral.fill()

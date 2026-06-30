@@ -226,8 +226,9 @@ final class ProgramGroupView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         if isMinimized { drawMinimized(); return }
 
-        // White client area + thick raised sizing border with corner marks (Win 3.1).
-        NSColor.white.setFill()
+        // Gray (button-face) client area + thick raised sizing border with corner marks —
+        // Win 3.1 program-group windows are silver inside, not white.
+        Win31Chrome.face.setFill()
         bounds.fill()
         Win31Chrome.drawWindowFrame(bounds, border: borderWidth)
 
