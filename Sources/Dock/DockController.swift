@@ -301,7 +301,13 @@ final class DockController {
         // window edge. Hovering an end icon pushes the whole spread to one side, so this
         // needs to cover the worst-case one-sided push — same generous factor (×2.5) the
         // vertical branch uses. Too small (was ×1.2) clipped Mac OS X on magnify.
-        let hMagOverflow: CGFloat = hasMag ? iconSize * (maxScale - 1.0) * 2.5 : 0
+        // Hover-zoom themes (no magnification) still enlarge the icon under the cursor
+        // (icon.hoverScale) — give a small per-side margin so an end icon (e.g. the DOOM logo
+        // tile in Maiks Favourite II) doesn't clip at the dock's right/left edge.
+        let hoverScale = theme?.icon.hoverScale ?? 1.0
+        let hMagOverflow: CGFloat = hasMag
+            ? iconSize * (maxScale - 1.0) * 2.5
+            : iconSize * max(0, hoverScale - 1.0) * 0.6
 
         // Calculate dynamic scale to fit screen
         let maxWidth = screen.visibleFrame.width - 20  // 10px margin each side
@@ -315,10 +321,9 @@ final class DockController {
         // Top overflow above the bar: magnification themes need room for popped icons;
         // hover-zoom themes (no magnification) need room too so the enlarged icon — and a
         // pellet/Pac-Man border — aren't clipped at the dock's top edge.
-        let hoverScale = theme?.icon.hoverScale ?? 1.0
         let magOverflow: CGFloat = hasMag
             ? effectiveIconSize * (maxScale - 1.0)
-            : max(0, effectiveIconSize * (hoverScale - 1.0))
+            : max(0, effectiveIconSize * (hoverScale - 1.0) * 1.1)   // a touch more headroom up
         let effectiveHMagOverflow = hMagOverflow * dynScale
         let shortAxis = dockBarHeight * dynScale + magOverflow
 
