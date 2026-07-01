@@ -305,9 +305,12 @@ final class DockController {
         // (icon.hoverScale) — give a small per-side margin so an end icon (e.g. the DOOM logo
         // tile in Maiks Favourite II) doesn't clip at the dock's right/left edge.
         let hoverScale = theme?.icon.hoverScale ?? 1.0
+        // Hover-zoom per-side room. A wide end tile (the DOOM logo in Maiks Favourite II is
+        // ~1.2× an icon) grows by ~its own width × (hoverScale-1)/2, which the old 0.6 factor
+        // only just matched → it still clipped by a pixel. Use a full factor for real headroom.
         let hMagOverflow: CGFloat = hasMag
             ? iconSize * (maxScale - 1.0) * 2.5
-            : iconSize * max(0, hoverScale - 1.0) * 0.6
+            : iconSize * max(0, hoverScale - 1.0) * 1.0
 
         // Calculate dynamic scale to fit screen
         let maxWidth = screen.visibleFrame.width - 20  // 10px margin each side
@@ -323,7 +326,7 @@ final class DockController {
         // pellet/Pac-Man border — aren't clipped at the dock's top edge.
         let magOverflow: CGFloat = hasMag
             ? effectiveIconSize * (maxScale - 1.0)
-            : max(0, effectiveIconSize * (hoverScale - 1.0) * 1.1)   // a touch more headroom up
+            : max(0, effectiveIconSize * (hoverScale - 1.0) * 1.35)   // headroom up for the hover pop
         let effectiveHMagOverflow = hMagOverflow * dynScale
         let shortAxis = dockBarHeight * dynScale + magOverflow
 
