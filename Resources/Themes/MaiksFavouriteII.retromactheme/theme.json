@@ -39,7 +39,7 @@
     "renderStyle": "pixelated",
     "reflectionEnabled": false,
     "reflectionOpacity": 0,
-    "hoverScale": 1.35,
+    "hoverScale": 1.18,
     "hoverAnimationDuration": 0.12
   },
   "indicator": {

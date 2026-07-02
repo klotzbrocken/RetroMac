@@ -1447,7 +1447,7 @@ final class DockView: NSView {
             width += spacing + iconSize + spacing
         }
         if hasDoomLauncher {
-            width += spacing + doomTileWidth(iconSize)
+            width += spacing + doomTileWidth(iconSize)   // trailing padding is symmetric with the leading edge
         }
 
         // For vertical docks with grip, add grip height
