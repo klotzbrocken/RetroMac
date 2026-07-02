@@ -145,6 +145,24 @@ enum SystemUIHelper {
         print("[SystemUI] Recovered desktop icons from previous session (shown=\(original))")
     }
 
+    // MARK: - State readers (pre-flight: callers only hide what isn't already hidden,
+    // so restores never overwrite a deliberate user preference)
+
+    /// Whether the menu bar is already set to auto-hide (user preference).
+    static func isMenuBarAutoHidden() -> Bool {
+        let v = SystemBridge.shared.readDefault("NSGlobalDomain", "_HIHideMenuBar") ?? "0"
+        return (v as NSString).boolValue
+    }
+
+    /// Whether the system Dock is already set to auto-hide (user preference).
+    static func isDockAutoHidden() -> Bool {
+        let v = SystemBridge.shared.readDefault("com.apple.dock", "autohide") ?? "0"
+        return (v as NSString).boolValue
+    }
+
+    /// Whether Finder desktop icons are currently hidden.
+    static func areDesktopIconsHidden() -> Bool { !readFinderShowsIcons() }
+
     /// Reads com.apple.finder CreateDesktop. Unset → true (Finder default: icons shown).
     private static func readFinderShowsIcons() -> Bool {
         let out = SystemBridge.shared.readDefault("com.apple.finder", "CreateDesktop") ?? ""
