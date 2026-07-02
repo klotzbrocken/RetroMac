@@ -296,6 +296,7 @@ struct DockSettingsTab: View {
                             Text("Rocket").tag("Rocket")
                             Text("Plasma").tag("Plasma")
                             Text("Chainsaw").tag("Chainsaw")
+                            Text("BFG").tag("BFG")
                         }
                         .frame(width: 200)
                     }

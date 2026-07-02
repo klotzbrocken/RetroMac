@@ -249,7 +249,7 @@ final class AppSettings: ObservableObject {
     @Published var slayerCombat: String {
         didSet { defaults.set(slayerCombat, forKey: "slayerCombat") }
     }
-    /// "Auto-cycle" | "Shotgun" | "Chaingun" | "Rocket" | "Plasma".
+    /// "Auto-cycle" | "Shotgun" | "Chaingun" | "Rocket" | "Plasma" | "Chainsaw" | "BFG".
     @Published var slayerWeapon: String {
         didSet { defaults.set(slayerWeapon, forKey: "slayerWeapon") }
     }

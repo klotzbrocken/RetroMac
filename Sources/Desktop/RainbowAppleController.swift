@@ -55,10 +55,20 @@ final class RainbowAppleController {
     }
 
     /// The rect to overlay on a given screen: the exact AX Apple-item rect when it
-    /// lands on this screen, else fixed geometry at the screen's top-left.
+    /// lands on this screen; else the AX geometry transplanted onto this screen (same
+    /// left offset + width, but THIS screen's own menu-bar height — bar heights differ
+    /// between the notched internal panel and external monitors); else fixed geometry.
     private func itemRect(for screen: NSScreen, axFrame: NSRect?) -> NSRect {
         if let f = axFrame, screen.frame.intersects(f) { return f.integral }   // integral → pixel-aligned
-        let menuH = NSStatusBar.system.thickness
+        // This screen's real menu-bar height (visibleFrame excludes it at the top).
+        let ownBarH = screen.frame.maxY - screen.visibleFrame.maxY
+        let menuH = ownBarH > 1 ? ownBarH : NSStatusBar.system.thickness
+        if let f = axFrame,
+           let src = NSScreen.screens.first(where: { $0.frame.intersects(f) }) {
+            let relX = f.minX - src.frame.minX   // Apple item's offset from its screen's left edge
+            return NSRect(x: screen.frame.minX + relX, y: screen.frame.maxY - menuH,
+                          width: f.width, height: menuH).integral
+        }
         return NSRect(x: screen.frame.minX, y: screen.frame.maxY - menuH,
                       width: fallbackGlyphCenterX * 2, height: menuH).integral
     }
