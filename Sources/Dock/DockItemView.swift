@@ -7,6 +7,12 @@ final class DockItemView: NSView {
     private var trackingArea: NSTrackingArea?
     private var isHovered = false
     private var indicatorLayer: CALayer?
+    // Indicator layout params, kept so the dot can be re-centred whenever the item is
+    // resized (magnification grows the frame; a one-shot position drifts off-centre).
+    private var indicatorSize: CGFloat = 0
+    private var indicatorOffset: CGFloat = 0
+    private var indicatorVertical = false
+    private var indicatorOnRight = false
     private var previewTimer: Timer?
 
     var onLeftClick: ((String) -> Void)?
@@ -101,6 +107,10 @@ final class DockItemView: NSView {
         let dot = CALayer()
         let sz = theme.indicator.size
         let off = theme.indicator.offset
+        indicatorSize = sz
+        indicatorOffset = off
+        indicatorVertical = theme.isVertical
+        indicatorOnRight = theme.effectiveDockPosition == "right"
         if theme.isVertical {
             // Indicator sits on the SCREEN-EDGE side of the icon (left dock → left,
             // right dock → right), matching the real Dock.
@@ -150,6 +160,23 @@ final class DockItemView: NSView {
         }
         layer?.addSublayer(dot)
         indicatorLayer = dot
+    }
+
+    /// Keep the running dot centred when the item is resized (magnification effect) —
+    /// its frame was computed against the ORIGINAL bounds and would drift left otherwise.
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        guard let ind = indicatorLayer, indicatorSize > 0 else { return }
+        let sz = indicatorSize, off = indicatorOffset
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if indicatorVertical {
+            let x = indicatorOnRight ? (bounds.width + off - sz) : (-off)
+            ind.frame = CGRect(x: x, y: (bounds.height - sz) / 2, width: sz, height: sz)
+        } else {
+            ind.frame = CGRect(x: (bounds.width - sz) / 2, y: -off, width: sz, height: sz)
+        }
+        CATransaction.commit()
     }
 
     // MARK: - Tracking & Hover

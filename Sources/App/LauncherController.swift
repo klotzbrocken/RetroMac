@@ -176,6 +176,7 @@ final class LauncherModel: ObservableObject {
             || (tn.contains("mac os 9") && tn.contains("classic"))
             || (tn.contains("beos") && tn.contains("classic"))
             || tn.contains("maiks favourite") || tn == "mac os x"
+            || tn.contains("snow leopard")
     }
 
     private var observers: [NSObjectProtocol] = []
