@@ -310,7 +310,7 @@ final class DockController {
         // only just matched → it still clipped by a pixel. Use a full factor for real headroom.
         let hMagOverflow: CGFloat = hasMag
             ? iconSize * (maxScale - 1.0) * 2.5
-            : iconSize * max(0, hoverScale - 1.0) * 1.0
+            : iconSize * max(0, hoverScale - 1.0) * 1.0   // clip-safe; the DOOM tile also has an in-bar trailing margin
 
         // Calculate dynamic scale to fit screen
         let maxWidth = screen.visibleFrame.width - 20  // 10px margin each side
@@ -326,7 +326,7 @@ final class DockController {
         // pellet/Pac-Man border — aren't clipped at the dock's top edge.
         let magOverflow: CGFloat = hasMag
             ? effectiveIconSize * (maxScale - 1.0)
-            : max(0, effectiveIconSize * (hoverScale - 1.0) * 1.35)   // headroom up for the hover pop
+            : max(0, effectiveIconSize * (hoverScale - 1.0) * 1.5)   // headroom up for the hover pop
         let effectiveHMagOverflow = hMagOverflow * dynScale
         let shortAxis = dockBarHeight * dynScale + magOverflow
 
