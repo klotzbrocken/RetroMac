@@ -2258,10 +2258,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if isActive { applyPreset(preset) } else { currentPresetName = preset; startOverlay(mode: .fullScreen) }
             }
         }
-        // Hide system UI (remember exactly what we hid)
-        retroHidMenuBar = s.retroModeHideMenuBar
-        retroHidDock = s.retroModeHideDock
-        retroHidDesktop = s.retroModeHideDesktopIcons
+        // Hide system UI — but only what isn't ALREADY hidden by the user's own prefs.
+        // Otherwise the exit/crash restore would force menu bar / Dock / desktop icons
+        // visible and overwrite a deliberate autohide / hidden-icons choice.
+        retroHidMenuBar = s.retroModeHideMenuBar && !SystemUIHelper.isMenuBarAutoHidden()
+        retroHidDock = s.retroModeHideDock && !SystemUIHelper.isDockAutoHidden()
+        retroHidDesktop = s.retroModeHideDesktopIcons && !SystemUIHelper.areDesktopIconsHidden()
         if retroHidMenuBar { SystemUIHelper.setMenuBarAutoHide(true) }
         if retroHidDock { SystemUIHelper.setDockAutoHide(true) }
         if retroHidDesktop { SystemUIHelper.setDesktopIconsHidden(true) }

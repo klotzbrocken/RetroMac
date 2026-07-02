@@ -51,8 +51,10 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
         set { renderer?.bloomRadius = newValue }
     }
 
-    /// Tracking for single-window mode
+    /// Tracking for single-window mode. We lock onto a concrete CGWindowID once found —
+    /// tracking by bundle ID alone jumps between windows of multi-window apps.
     private var trackedBundleID: String?
+    private var trackedWindowID: CGWindowID = 0
     private var trackingTimer: Timer?
 
     // MARK: - Public API
@@ -149,6 +151,7 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
         trackingTimer?.invalidate()
         trackingTimer = nil
         trackedBundleID = nil
+        trackedWindowID = 0
 
         // Pause rendering and detach delegate BEFORE closing
         // This prevents draw(in:) from being called on a deallocating renderer
@@ -267,8 +270,9 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
                 return
             }
 
-            // Update window position to match app window
-            if let appFrame = self.findAppWindow(bundleID: bundleID) {
+            // Update overlay position: follow the LOCKED window; only if it closed or
+            // went off-screen, fall back to a bundle-wide search (which re-locks).
+            if let appFrame = self.frameForTrackedWindow() ?? self.findAppWindow(bundleID: bundleID) {
                 let nsFrame = self.cgRectToNS(appFrame)
                 if let win = self.window, win.frame != nsFrame {
                     win.setFrame(nsFrame, display: false)
@@ -302,11 +306,27 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
             guard CGRectMakeWithDictionaryRepresentation(boundsDict, &rect),
                   rect.width > 100, rect.height > 100 else { continue }
 
-            print("[CRTLite] Found window for \(bundleID): \(rect)")
+            // Lock onto this concrete window so multi-window apps don't make the
+            // overlay jump between windows on every tracking tick.
+            if let num = info[kCGWindowNumber as String] as? CGWindowID { trackedWindowID = num }
+            print("[CRTLite] Found window for \(bundleID): \(rect) (id \(trackedWindowID))")
             return rect
         }
         print("[CRTLite] No suitable window found for PID \(pid) (\(bundleID))")
         return nil
+    }
+
+    /// Frame of the locked window, or nil if it's gone/off-screen (→ re-search by bundle).
+    private func frameForTrackedWindow() -> CGRect? {
+        guard trackedWindowID != 0,
+              let list = CGWindowListCopyWindowInfo(.optionIncludingWindow, trackedWindowID) as? [[String: Any]],
+              let info = list.first,
+              info[kCGWindowIsOnscreen as String] as? Bool == true,
+              let boundsDict = info[kCGWindowBounds as String] as? NSDictionary else { return nil }
+        var rect = CGRect.zero
+        guard CGRectMakeWithDictionaryRepresentation(boundsDict, &rect),
+              rect.width > 100, rect.height > 100 else { return nil }
+        return rect
     }
 
     private func cgRectToNS(_ cgRect: CGRect) -> NSRect {
