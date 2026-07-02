@@ -7,9 +7,10 @@ import QuartzCore
 /// He runs, stops to fire (the weapon cycles each lap), occasionally gets fragged
 /// (gib burst → corpse → blood splatter), then loops. The DOOM logo sits in the
 /// bottom-right corner. Ported from the reference web component (Doom Dock.dc.html):
-/// sprite atlas is 13 cells of 68×56 (`slayer-atlas.png`, incl. Chainsaw + BFG), death is
-/// 2 cells of 68×56 (`slayer-death.png`), the fall sequence is 6 cells (`slayer-die.png`),
-/// plus `rocket-proj.png`, `bfg-proj.png` and `doom-logo.png`.
+/// sprite atlas is 19 cells of 68×56 (`slayer-atlas.png`: 6-frame run cycle, aim/fire pair
+/// per weapon incl. Chainsaw + BFG), death is 2 cells of 68×56 (`slayer-death.png`), the
+/// fall sequence is 6 cells (`slayer-die.png`), plus `rocket-proj.png`, `bfg-proj.png`,
+/// `plasma-proj.png`, `bfg-boom.png` and `doom-logo.png`.
 ///
 /// Like the Pac-Man border this animates exclusively via CALayers driven by a timer,
 /// so the dock's backing is never re-rasterized.
@@ -17,20 +18,25 @@ final class DoomSlayerController {
 
     // MARK: Atlas constants (from the reference component)
     private let CW: CGFloat = 68, CH: CGFloat = 56
-    private let atlasCols = 13   // 11 original + Chainsaw (cell 11) + BFG (cell 12)
+    // Cells: 0-3 walk cycle, 4/5 shotgun aim/fire, 15/6 chaingun, 16/9 rocket, 17/10 plasma,
+    // 11 chainsaw, 12/18 BFG aim/fire. (7/8 legacy pain frames + 13/14 = unused/blank —
+    // the sheet's extra "walk" frames turned out to be idle poses, not part of the cycle.)
+    private let atlasCols = 19
     private let walkCells = [0, 1, 2, 3]
     private let baseline: CGFloat = 52
-    private let cellBot: [CGFloat] = [52, 52, 52, 52, 50, 50, 43, 52, 52, 52, 43, 51, 52]
+    private let cellBot: [CGFloat] = [52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 52, 51, 52, 52, 52, 52, 52, 52, 52]
 
-    private struct Weapon { let label: String; let cell: Int; let blink: Double; let dur: Double; let recoil: CGFloat; let glow: NSColor }
+    // aimCell/cell are a matched pair from the sheet: ready pose ↔ firing frame with the
+    // real muzzle flash baked in; the blink alternates them (authentic staccato).
+    private struct Weapon { let label: String; let aimCell: Int; let cell: Int; let blink: Double; let dur: Double; let recoil: CGFloat; let glow: NSColor }
     private let weapons: [Weapon] = [
-        Weapon(label: "Shotgun",  cell: 5,  blink: 0.09, dur: 0.72, recoil: 1, glow: NSColor(red: 1.0,  green: 0.71, blue: 0.16, alpha: 0.95)),
-        Weapon(label: "Chaingun", cell: 6,  blink: 0.05, dur: 1.05, recoil: 1, glow: NSColor(red: 1.0,  green: 0.71, blue: 0.16, alpha: 0.95)),
-        Weapon(label: "Rocket",   cell: 9,  blink: 0.13, dur: 0.66, recoil: 2, glow: NSColor(red: 1.0,  green: 0.43, blue: 0.16, alpha: 0.98)),
-        Weapon(label: "Plasma",   cell: 10, blink: 0.05, dur: 0.92, recoil: 1, glow: NSColor(red: 0.37, green: 0.61, blue: 1.0,  alpha: 0.98)),
+        Weapon(label: "Shotgun",  aimCell: 4,  cell: 5,  blink: 0.09, dur: 0.72, recoil: 1, glow: NSColor(red: 1.0,  green: 0.71, blue: 0.16, alpha: 0.95)),
+        Weapon(label: "Chaingun", aimCell: 15, cell: 6,  blink: 0.05, dur: 1.05, recoil: 1, glow: NSColor(red: 1.0,  green: 0.71, blue: 0.16, alpha: 0.95)),
+        Weapon(label: "Rocket",   aimCell: 16, cell: 9,  blink: 0.13, dur: 0.66, recoil: 2, glow: NSColor(red: 1.0,  green: 0.43, blue: 0.16, alpha: 0.98)),
+        Weapon(label: "Plasma",   aimCell: 17, cell: 10, blink: 0.05, dur: 0.92, recoil: 1, glow: NSColor(red: 0.37, green: 0.61, blue: 1.0,  alpha: 0.98)),
         // Chainsaw: melee — no muzzle flash (clear glow); the blink drives a small revving jitter.
-        Weapon(label: "Chainsaw", cell: 11, blink: 0.05, dur: 0.95, recoil: 1, glow: NSColor.clear),
-        Weapon(label: "BFG",      cell: 12, blink: 0.12, dur: 0.95, recoil: 2, glow: NSColor(red: 0.42, green: 1.0, blue: 0.35, alpha: 0.98)),
+        Weapon(label: "Chainsaw", aimCell: 11, cell: 11, blink: 0.05, dur: 0.95, recoil: 1, glow: NSColor.clear),
+        Weapon(label: "BFG",      aimCell: 12, cell: 18, blink: 0.12, dur: 0.95, recoil: 2, glow: NSColor(red: 0.42, green: 1.0, blue: 0.35, alpha: 0.98)),
     ]
 
     // MARK: Sliced art (loaded once per theme)
@@ -39,6 +45,8 @@ final class DoomSlayerController {
     private var dieCells: [CGImage] = []       // 6 cells (fall sequence: hit → collapse → corpse)
     private var rocketImage: CGImage?
     private var bfgImage: CGImage?
+    private var plasmaImage: CGImage?
+    private var bfgBoom: [CGImage] = []    // 2 cells (green blast → streak); rocket reuses soulDeath
     private var splatImage: CGImage?
     private var loadedFromURL: URL?
 
@@ -49,6 +57,7 @@ final class DoomSlayerController {
     private let splatLayer = CALayer()
     private let rocketLayer = CALayer()
     private let soulLayer = CALayer()
+    private let boomLayer = CALayer()
     private var layersInstalled = false
 
     // MARK: Geometry (recomputed when the bar rect / scale changes)
@@ -78,7 +87,14 @@ final class DoomSlayerController {
     private var rocketX: CGFloat = -400
     private var rocketDir: CGFloat = 1
     private var rocketFired = false
-    private var projIsBFG = false   // in-flight projectile is the green BFG orb
+    private enum Projectile { case rocket, bfg, plasma }
+    private var projKind: Projectile = .rocket
+    private var projStartX: CGFloat = 0   // plasma bolts fizzle after a fixed range
+    // Impact explosion when a rocket/BFG orb reaches the track edge.
+    private var boomLive = false
+    private var boomT: Double = 0
+    private var boomX: CGFloat = 0
+    private var boomBFG = false
 
     // Lost Soul: a flying skull spawns ahead of the slayer, he fires, it explodes.
     private enum SoulMode { case gone, flying, dying }
@@ -127,6 +143,7 @@ final class DoomSlayerController {
         splatLayer.removeFromSuperlayer()
         rocketLayer.removeFromSuperlayer()
         soulLayer.removeFromSuperlayer()
+        boomLayer.removeFromSuperlayer()
         layersInstalled = false
         hostLayer = nil
         configuredRect = .zero
@@ -145,11 +162,13 @@ final class DoomSlayerController {
     private var optCombat: String { AppSettings.shared.slayerCombat }
     private var optWeapon: String { AppSettings.shared.slayerWeapon }
 
-    private func combatCfg() -> (gap: ClosedRange<Double>, pShoot: Double, pHit: Double, pFrag: Double) {
+    // Deaths are never random anymore — only the Lost Soul catching him or the mouse
+    // hover-frag kill the slayer. Random events are just "stop and shoot".
+    private func combatCfg() -> (gap: ClosedRange<Double>, pShoot: Double) {
         switch optCombat {
-        case "Calm":    return (3.0...3.6, 0.46, 0.07, 0.05)
-        case "Intense": return (0.7...1.1, 0.58, 0.16, 0.18)
-        default:        return (1.4...1.7, 0.54, 0.12, 0.10)
+        case "Calm":    return (3.0...3.6, 0.46)
+        case "Intense": return (0.7...1.1, 0.58)
+        default:        return (1.4...1.7, 0.54)
         }
     }
 
@@ -167,10 +186,12 @@ final class DoomSlayerController {
     // MARK: - Lost Soul (flies in, slayer shoots it, it explodes)
 
     private func soulNextCooldown() -> Double {
+        // Souls spawn noticeably more often — they're the only "natural" threat now
+        // that random deaths are gone.
         switch optCombat {
-        case "Calm":    return Double.random(in: 4.5...7, using: &rng)
-        case "Intense": return Double.random(in: 1.2...2.5, using: &rng)
-        default:        return Double.random(in: 2.5...4.5, using: &rng)
+        case "Calm":    return Double.random(in: 3.0...5.0, using: &rng)
+        case "Intense": return Double.random(in: 0.8...1.8, using: &rng)
+        default:        return Double.random(in: 1.6...3.0, using: &rng)
         }
     }
 
@@ -190,6 +211,16 @@ final class DoomSlayerController {
         case .flying:
             soulLife += dt; soulFlyT += dt
             if soulFlyT > 0.1 { soulFlyT = 0; soulFrame = (soulFrame + 1) % soulFly.count }
+            // Lost Souls charge: it darts toward the slayer. If the shot comes too late
+            // (slayer busy with another animation), it reaches him and frags him.
+            let slayerMid = x + spriteW / 2
+            let dx = slayerMid - soulX
+            soulX += (dx > 0 ? 1 : -1) * 65 * artScale * CGFloat(dt)
+            if abs(dx) < 14 * artScale, mode == .walk || mode == .shoot {
+                mode = .killed; killFrame = 0; killT = 0
+                soulMode = .gone; soulCooldown = soulNextCooldown()
+                return
+            }
             // The slayer opens fire shortly after the soul appears.
             if !soulShot, soulLife > 0.45, mode == .walk {
                 mode = .shoot; shootWeapon = selectWeapon()
@@ -242,7 +273,7 @@ final class DoomSlayerController {
 
     private func installLayers(in host: CALayer) {
         hostLayer = host
-        for (l, z) in [(splatLayer, 3.0), (soulLayer, 4.2), (rocketLayer, 4.5), (spriteLayer, 5.0)] {
+        for (l, z) in [(splatLayer, 3.0), (soulLayer, 4.2), (rocketLayer, 4.5), (boomLayer, 4.6), (spriteLayer, 5.0)] {
             l.removeFromSuperlayer()
             l.actions = ["contents": NSNull(), "position": NSNull(), "bounds": NSNull(),
                          "transform": NSNull(), "opacity": NSNull(), "hidden": NSNull(),
@@ -255,6 +286,7 @@ final class DoomSlayerController {
         }
         spriteLayer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         soulLayer.opacity = 0
+        boomLayer.opacity = 0
         splatLayer.contents = splatImage
         splatLayer.opacity = 0
         rocketLayer.contents = rocketImage
@@ -275,7 +307,8 @@ final class DoomSlayerController {
         // Reset the run so a fresh configure starts clean.
         mode = .walk; x = -CW * artScale - 30 * scale; walkPhase = 0; walkT = 0
         modeT = 0; blinkT = 0; blink = false; deathPhase = 0
-        rocketLive = false; rocketFired = false
+        killFrame = -1; killT = 0   // a reconfigure mid-fall must not leave the corpse frame stuck
+        rocketLive = false; rocketFired = false; boomLive = false
         soulMode = .gone; soulShot = false; soulCooldown = soulNextCooldown()
         newGap()
     }
@@ -319,7 +352,7 @@ final class DoomSlayerController {
         case .walk:
             x += dir * optSpeed * dscale * CGFloat(dt)   // runSpeed is px/s in the dock space
             walkT += dt
-            if walkT > 0.12 { walkT = 0; walkPhase = (walkPhase + 1) % 4 }
+            if walkT > 0.12 { walkT = 0; walkPhase = (walkPhase + 1) % walkCells.count }
             cell = walkCells[walkPhase]
             flip = faceRight
             if dir > 0 && x > track + m { x = -spriteW - m; nextLap() }
@@ -327,15 +360,9 @@ final class DoomSlayerController {
             untilEvent -= dt
             if untilEvent <= 0 {
                 let c = combatCfg(); let r = Double.random(in: 0...1, using: &rng)
-                let allowFrag = (x > track * 0.2 && x < track * 0.78)
                 if r < c.pShoot {
                     mode = .shoot; shootWeapon = selectWeapon()
                     modeT = shootWeapon.dur; blinkT = 0; blink = true; rocketFired = false
-                } else if r < c.pShoot + c.pHit {
-                    // Hit: the full DOOM fall sequence (same as hover-frag) — no tinted flinch.
-                    mode = .killed; killFrame = 0; killT = 0
-                } else if r < c.pShoot + c.pHit + c.pFrag && allowFrag {
-                    mode = .death; deathPhase = 0; modeT = 0.5; blinkT = 0; blink = true; splatX = x
                 } else { newGap() }
             }
 
@@ -344,13 +371,23 @@ final class DoomSlayerController {
             flip = faceRight
             modeT -= dt; blinkT += dt
             if blinkT > wpn.blink { blinkT = 0; blink.toggle() }
-            cell = wpn.cell
+            cell = blink ? wpn.cell : wpn.aimCell   // fire frame (real muzzle flash) ↔ aim pose
             dy = blink ? wpn.recoil * scale : 0
             glow = blink
-            if (wpn.label == "Rocket" || wpn.label == "BFG") && !rocketFired && modeT < wpn.dur - 0.12 {
-                rocketFired = true; rocketLive = true; rocketDir = dir
-                projIsBFG = wpn.label == "BFG"
-                rocketX = faceRight ? (x + spriteW * 0.90) : (x + spriteW * 0.10)
+            // Projectile weapons. Rocket/BFG fire once; Plasma re-fires a fresh bolt as soon
+            // as the previous one fizzles (short range), giving the signature rapid stream.
+            if modeT < wpn.dur - 0.12 {
+                let firstShot = !rocketFired
+                let plasmaRefire = wpn.label == "Plasma" && !rocketLive && modeT > 0.15
+                if (firstShot || plasmaRefire),
+                   let kind: Projectile = (wpn.label == "Rocket" ? .rocket
+                                          : wpn.label == "BFG" ? .bfg
+                                          : wpn.label == "Plasma" ? .plasma : nil) {
+                    rocketFired = true; rocketLive = true; rocketDir = dir
+                    projKind = kind
+                    rocketX = faceRight ? (x + spriteW * 0.90) : (x + spriteW * 0.10)
+                    projStartX = rocketX
+                }
             }
             if modeT <= 0 { mode = .walk; newGap() }
 
@@ -396,10 +433,24 @@ final class DoomSlayerController {
             }
         }
 
-        // Projectile (rocket / BFG orb) travels independently; the orb flies heavier & slower.
+        // Projectile travels independently. Speeds: plasma is a fast short bolt, the
+        // rocket cruises, the BFG orb flies heavy & slow. Rocket/BFG detonate at the
+        // track edge; plasma bolts just fizzle after a short range.
         if rocketLive {
-            rocketX += rocketDir * (projIsBFG ? 220 : 360) * dscale * CGFloat(dt)
-            if rocketX > track + 50 * dscale || rocketX < -50 * dscale { rocketLive = false }
+            let speed: CGFloat = projKind == .plasma ? 540 : projKind == .bfg ? 220 : 360
+            rocketX += rocketDir * speed * dscale * CGFloat(dt)
+            let edgeHit = rocketDir > 0 ? rocketX >= track - 6 * dscale : rocketX <= 6 * dscale
+            if projKind == .plasma {
+                if edgeHit || abs(rocketX - projStartX) > 300 * dscale { rocketLive = false }
+            } else if edgeHit {
+                rocketLive = false
+                boomLive = true; boomT = 0; boomBFG = projKind == .bfg
+                boomX = min(max(rocketX, 0), track)
+            }
+        }
+        if boomLive {
+            boomT += dt
+            if boomT > (boomBFG ? 0.34 : 0.3) { boomLive = false }
         }
 
         // Lost Soul (may command the slayer to shoot — run after the slayer's own state).
@@ -420,7 +471,13 @@ final class DoomSlayerController {
         let viewPt = v.convert(winPt, from: nil)
         // sprite frame is in host-layer == view coordinates; a little padding for easier hits.
         guard spriteLayer.frame.insetBy(dx: -3, dy: -3).contains(viewPt) else { return }
-        mode = .killed; killFrame = 0; killT = 0
+        // Mostly the fall sequence; occasionally the gib burst for variety (its only
+        // remaining trigger now that random deaths are gone).
+        if Double.random(in: 0...1, using: &rng) < 0.35 {
+            mode = .death; deathPhase = 0; modeT = 0.5; blinkT = 0; blink = true; splatX = x
+        } else {
+            mode = .killed; killFrame = 0; killT = 0
+        }
         soulMode = .gone; soulCooldown = soulNextCooldown()   // cancel any in-flight soul
     }
 
@@ -433,10 +490,12 @@ final class DoomSlayerController {
         CATransaction.setDisableActions(true)
 
         let spriteH = CH * scale
-        // Pick the frame image.
+        // Pick the frame image. The fall frames are gated on mode == .killed so a stale
+        // killFrame can never paint a corpse over a walking/shooting slayer.
         let img: CGImage?
-        let bottomAligned = useDeath || killFrame >= 0
-        if killFrame >= 0 {
+        let showFall = mode == .killed && killFrame >= 0
+        let bottomAligned = useDeath || showFall
+        if showFall {
             img = dieCells.indices.contains(killFrame) ? dieCells[killFrame] : nil
         } else if useDeath {
             img = deathCells.indices.contains(deathCell) ? deathCells[deathCell] : nil
@@ -481,9 +540,12 @@ final class DoomSlayerController {
             splatLayer.opacity = 0
         }
 
-        // Projectile (rocket or BFG orb).
-        if rocketLive, let r = (projIsBFG ? (bfgImage ?? rocketImage) : rocketImage) {
-            let pk: CGFloat = projIsBFG ? 0.72 : 1   // the orb art is chunky — trim it a bit
+        // Projectile (rocket, BFG orb or plasma bolt).
+        let projImg: CGImage? = projKind == .bfg ? (bfgImage ?? rocketImage)
+                              : projKind == .plasma ? (plasmaImage ?? rocketImage)
+                              : rocketImage
+        if rocketLive, let r = projImg {
+            let pk: CGFloat = projKind == .bfg ? 0.85 : 1   // the orb art is chunky — trim it a bit
             let pw = CGFloat(r.width) * scale * pk, ph = CGFloat(r.height) * scale * pk
             rocketLayer.contents = r
             rocketLayer.bounds = CGRect(x: 0, y: 0, width: pw, height: ph)
@@ -493,6 +555,23 @@ final class DoomSlayerController {
             rocketLayer.opacity = 1
         } else {
             rocketLayer.opacity = 0
+        }
+
+        // Impact explosion: BFG uses its own green 2-frame blast, the rocket reuses the
+        // red fireball frames from the Lost-Soul explosion (same 8-bit fireball look).
+        let boomFrames = boomBFG ? bfgBoom : soulDeath
+        if boomLive, !boomFrames.isEmpty {
+            let stepDur = boomBFG ? 0.17 : 0.10
+            let idx = min(boomFrames.count - 1, Int(boomT / stepDur))
+            let img = boomFrames[idx]
+            let h: CGFloat = boomBFG ? (idx == 0 ? 34 : 16) * scale : (20 + CGFloat(idx) * 8) * scale
+            let w = h * CGFloat(img.width) / CGFloat(max(1, img.height))
+            boomLayer.contents = img
+            boomLayer.bounds = CGRect(x: 0, y: 0, width: w, height: h)
+            boomLayer.position = CGPoint(x: deckLeft + boomX, y: feetBottomY + 25 * scale)
+            boomLayer.opacity = idx == boomFrames.count - 1 ? 0.85 : 1
+        } else {
+            boomLayer.opacity = 0
         }
 
         // (The DOOM logo is a clickable dock tile now — see DockView.addDoomLauncherItem.)
@@ -509,7 +588,7 @@ final class DoomSlayerController {
         if loadedFromURL == url, !mainCells.isEmpty { return }
         loadedFromURL = url
         mainCells = []; deathCells = []
-        rocketImage = nil; bfgImage = nil; splatImage = nil
+        rocketImage = nil; bfgImage = nil; plasmaImage = nil; splatImage = nil
 
         func cg(_ name: String) -> CGImage? {
             guard let img = NSImage(contentsOf: url.appendingPathComponent(name)) else { return nil }
@@ -545,29 +624,45 @@ final class DoomSlayerController {
         }
         rocketImage = cg("rocket-proj.png")
         bfgImage = cg("bfg-proj.png")
+        plasmaImage = cg("plasma-proj.png")
+        bfgBoom = []
+        if let boom = cg("bfg-boom.png") {
+            let cellW = boom.width / 2, cellH = boom.height
+            for i in 0..<2 {
+                if let c = boom.cropping(to: CGRect(x: i * cellW, y: 0, width: cellW, height: cellH)) {
+                    bfgBoom.append(c)
+                }
+            }
+        }
         splatImage = makeSplatImage()
         soulFly = ["lostsoul-fly0.png", "lostsoul-fly1.png"].compactMap(cg)
         soulDeath = ["lostsoul-death0.png", "lostsoul-death1.png", "lostsoul-death2.png"].compactMap(cg)
     }
 
-    /// Blood splatter drawn from concentric red dots (matches the reference radial-gradient decal).
+    /// Blood splatter as chunky 2px-raster pixel art (matches the 8-bit sprite look —
+    /// the old version used smooth anti-aliased ellipses that clashed with the sprites).
     private func makeSplatImage() -> CGImage? {
         let w = 54, h = 22
         guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: CGColorSpaceCreateDeviceRGB(),
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
-        func dot(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ c: NSColor) {
+        ctx.setShouldAntialias(false)
+        let dark  = NSColor(red: 0.42, green: 0.03, blue: 0.03, alpha: 1)
+        let mid   = NSColor(red: 0.60, green: 0.06, blue: 0.06, alpha: 1)
+        let light = NSColor(red: 0.78, green: 0.10, blue: 0.10, alpha: 1)
+        func px(_ gx: Int, _ gy: Int, _ c: NSColor) {   // one 2×2 "fat pixel" on the grid
             ctx.setFillColor(c.cgColor)
-            ctx.fillEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+            ctx.fill(CGRect(x: gx * 2, y: gy * 2, width: 2, height: 2))
         }
-        let W = CGFloat(w), H = CGFloat(h)
-        dot(W * 0.50, H * 0.06, 9, NSColor(red: 0.48, green: 0.05, blue: 0.05, alpha: 1))
-        dot(W * 0.27, H * 0.20, 3, NSColor(red: 0.60, green: 0.07, blue: 0.07, alpha: 1))
-        dot(W * 0.73, H * 0.22, 3, NSColor(red: 0.60, green: 0.07, blue: 0.07, alpha: 1))
-        dot(W * 0.13, H * 0.34, 2, NSColor(red: 0.77, green: 0.09, blue: 0.09, alpha: 1))
-        dot(W * 0.89, H * 0.38, 2, NSColor(red: 0.77, green: 0.09, blue: 0.09, alpha: 1))
-        dot(W * 0.62, H * 0.44, 2, NSColor(red: 0.72, green: 0.08, blue: 0.08, alpha: 1))
-        dot(W * 0.38, H * 0.50, 2, NSColor(red: 0.72, green: 0.08, blue: 0.08, alpha: 1))
+        // Main pool (bottom rows, y-up: row 0 is the bottom) with a ragged top edge.
+        for gx in 4...22 { px(gx, 0, dark) }
+        for gx in 6...20 { px(gx, 1, dark) }
+        for gx in [7, 9, 10, 12, 14, 15, 17, 19] { px(gx, 2, mid) }
+        for gx in [9, 12, 15] { px(gx, 3, mid) }
+        // Scattered droplets.
+        px(2, 1, mid); px(24, 1, mid); px(5, 3, light); px(21, 3, light)
+        px(3, 5, light); px(23, 4, light); px(12, 5, light); px(17, 6, mid)
+        px(8, 6, mid); px(20, 7, light); px(13, 8, light)
         return ctx.makeImage()
     }
 }
