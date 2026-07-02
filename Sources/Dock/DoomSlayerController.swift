@@ -7,8 +7,9 @@ import QuartzCore
 /// He runs, stops to fire (the weapon cycles each lap), occasionally gets fragged
 /// (gib burst → corpse → blood splatter), then loops. The DOOM logo sits in the
 /// bottom-right corner. Ported from the reference web component (Doom Dock.dc.html):
-/// sprite atlas is 11 cells of 68×56 (`slayer-atlas.png`), death is 2 cells of 68×56
-/// (`slayer-death.png`), plus `rocket-proj.png` and `doom-logo.png`.
+/// sprite atlas is 13 cells of 68×56 (`slayer-atlas.png`, incl. Chainsaw + BFG), death is
+/// 2 cells of 68×56 (`slayer-death.png`), the fall sequence is 6 cells (`slayer-die.png`),
+/// plus `rocket-proj.png`, `bfg-proj.png` and `doom-logo.png`.
 ///
 /// Like the Pac-Man border this animates exclusively via CALayers driven by a timer,
 /// so the dock's backing is never re-rasterized.
@@ -16,11 +17,10 @@ final class DoomSlayerController {
 
     // MARK: Atlas constants (from the reference component)
     private let CW: CGFloat = 68, CH: CGFloat = 56
-    private let atlasCols = 12   // 11 original + Chainsaw (cell 11)
+    private let atlasCols = 13   // 11 original + Chainsaw (cell 11) + BFG (cell 12)
     private let walkCells = [0, 1, 2, 3]
-    private let painCells = [7, 8]
     private let baseline: CGFloat = 52
-    private let cellBot: [CGFloat] = [52, 52, 52, 52, 50, 50, 43, 52, 52, 52, 43, 51]
+    private let cellBot: [CGFloat] = [52, 52, 52, 52, 50, 50, 43, 52, 52, 52, 43, 51, 52]
 
     private struct Weapon { let label: String; let cell: Int; let blink: Double; let dur: Double; let recoil: CGFloat; let glow: NSColor }
     private let weapons: [Weapon] = [
@@ -30,14 +30,15 @@ final class DoomSlayerController {
         Weapon(label: "Plasma",   cell: 10, blink: 0.05, dur: 0.92, recoil: 1, glow: NSColor(red: 0.37, green: 0.61, blue: 1.0,  alpha: 0.98)),
         // Chainsaw: melee — no muzzle flash (clear glow); the blink drives a small revving jitter.
         Weapon(label: "Chainsaw", cell: 11, blink: 0.05, dur: 0.95, recoil: 1, glow: NSColor.clear),
+        Weapon(label: "BFG",      cell: 12, blink: 0.12, dur: 0.95, recoil: 2, glow: NSColor(red: 0.42, green: 1.0, blue: 0.35, alpha: 0.98)),
     ]
 
     // MARK: Sliced art (loaded once per theme)
-    private var mainCells: [CGImage] = []      // 11 cells
-    private var painTinted: [Int: CGImage] = [:]   // red-tinted pain cells (7,8)
+    private var mainCells: [CGImage] = []      // 13 cells
     private var deathCells: [CGImage] = []     // 2 cells (random gib-frag)
-    private var dieCells: [CGImage] = []       // 4 cells (hover-kill fall → corpse)
+    private var dieCells: [CGImage] = []       // 6 cells (fall sequence: hit → collapse → corpse)
     private var rocketImage: CGImage?
+    private var bfgImage: CGImage?
     private var splatImage: CGImage?
     private var loadedFromURL: URL?
 
@@ -59,7 +60,7 @@ final class DoomSlayerController {
     private var artScale: CGFloat = 0.75
 
     // MARK: Animation state (ported from the reference tick())
-    private enum Mode { case walk, shoot, pain, death, killed }
+    private enum Mode { case walk, shoot, death, killed }
     private var mode: Mode = .walk
     private var x: CGFloat = -60
     private var walkPhase = 0
@@ -77,6 +78,7 @@ final class DoomSlayerController {
     private var rocketX: CGFloat = -400
     private var rocketDir: CGFloat = 1
     private var rocketFired = false
+    private var projIsBFG = false   // in-flight projectile is the green BFG orb
 
     // Lost Soul: a flying skull spawns ahead of the slayer, he fires, it explodes.
     private enum SoulMode { case gone, flying, dying }
@@ -304,7 +306,6 @@ final class DoomSlayerController {
         var flip = false
         var dy: CGFloat = 0
         var glow = false
-        var hurt = false
         var opacity: CGFloat = 1
         var useDeath = false
         var deathCell = 0
@@ -331,7 +332,8 @@ final class DoomSlayerController {
                     mode = .shoot; shootWeapon = selectWeapon()
                     modeT = shootWeapon.dur; blinkT = 0; blink = true; rocketFired = false
                 } else if r < c.pShoot + c.pHit {
-                    mode = .pain; modeT = 0.5; blinkT = 0; blink = false
+                    // Hit: the full DOOM fall sequence (same as hover-frag) — no tinted flinch.
+                    mode = .killed; killFrame = 0; killT = 0
                 } else if r < c.pShoot + c.pHit + c.pFrag && allowFrag {
                     mode = .death; deathPhase = 0; modeT = 0.5; blinkT = 0; blink = true; splatX = x
                 } else { newGap() }
@@ -345,17 +347,11 @@ final class DoomSlayerController {
             cell = wpn.cell
             dy = blink ? wpn.recoil * scale : 0
             glow = blink
-            if wpn.label == "Rocket" && !rocketFired && modeT < wpn.dur - 0.12 {
+            if (wpn.label == "Rocket" || wpn.label == "BFG") && !rocketFired && modeT < wpn.dur - 0.12 {
                 rocketFired = true; rocketLive = true; rocketDir = dir
+                projIsBFG = wpn.label == "BFG"
                 rocketX = faceRight ? (x + spriteW * 0.90) : (x + spriteW * 0.10)
             }
-            if modeT <= 0 { mode = .walk; newGap() }
-
-        case .pain:
-            flip = false; hurt = true
-            modeT -= dt; blinkT += dt
-            if blinkT > 0.07 { blinkT = 0; blink.toggle() }
-            cell = blink ? painCells[1] : painCells[0]
             if modeT <= 0 { mode = .walk; newGap() }
 
         case .death:
@@ -377,13 +373,15 @@ final class DoomSlayerController {
             }
 
         case .killed:
-            // Hover-frag: the proper DOOM fall sequence (hit → bend → collapse → corpse), then respawn.
-            flip = false
-            if dieCells.count >= 4 {
-                if killFrame < 3 {
+            // The full DOOM fall sequence (hit → bend → kneel → collapse → corpse), then respawn.
+            // Used for both the hover-frag and the random "hit" event; faces the travel direction.
+            flip = faceRight
+            let lastFrame = dieCells.count - 1
+            if dieCells.count >= 2 {
+                if killFrame < lastFrame {
                     killT += dt
-                    killFrame = min(3, Int(killT / 0.11))   // step through the fall frames
-                    if killFrame >= 3 { modeT = 1.8 }       // corpse landed → start the hold
+                    killFrame = min(lastFrame, Int(killT / 0.11))   // step through the fall frames
+                    if killFrame >= lastFrame { modeT = 1.8 }       // corpse landed → start the hold
                 } else {
                     modeT -= dt                              // corpse holds, then fades out
                     if modeT < 0.6 { opacity = max(0, CGFloat(modeT / 0.6)) }
@@ -398,9 +396,9 @@ final class DoomSlayerController {
             }
         }
 
-        // Rocket travels independently.
+        // Projectile (rocket / BFG orb) travels independently; the orb flies heavier & slower.
         if rocketLive {
-            rocketX += rocketDir * 360 * dscale * CGFloat(dt)
+            rocketX += rocketDir * (projIsBFG ? 220 : 360) * dscale * CGFloat(dt)
             if rocketX > track + 50 * dscale || rocketX < -50 * dscale { rocketLive = false }
         }
 
@@ -408,14 +406,14 @@ final class DoomSlayerController {
         tickSoul(dt: dt, faceRight: faceRight, spriteW: spriteW)
 
         render(cell: cell, useDeath: useDeath, deathCell: deathCell, flip: flip,
-               dy: dy, glow: glow, hurt: hurt, opacity: opacity, scale: scale, spriteW: spriteW)
+               dy: dy, glow: glow, opacity: opacity, scale: scale, spriteW: spriteW)
     }
 
     // MARK: - Hover-to-kill
 
     /// If the mouse is currently over the (alive) slayer, frag him: a short hit, then a corpse.
     private func pollMouseForKill() {
-        guard mode == .walk || mode == .shoot || mode == .pain,
+        guard mode == .walk || mode == .shoot,
               let v = hostView, let win = v.window else { return }
         let screenPt = NSEvent.mouseLocation
         let winPt = win.convertPoint(fromScreen: screenPt)
@@ -429,7 +427,7 @@ final class DoomSlayerController {
     // MARK: - Render
 
     private func render(cell: Int, useDeath: Bool, deathCell: Int, flip: Bool,
-                        dy: CGFloat, glow: Bool, hurt: Bool, opacity: CGFloat,
+                        dy: CGFloat, glow: Bool, opacity: CGFloat,
                         scale: CGFloat, spriteW: CGFloat) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -442,8 +440,6 @@ final class DoomSlayerController {
             img = dieCells.indices.contains(killFrame) ? dieCells[killFrame] : nil
         } else if useDeath {
             img = deathCells.indices.contains(deathCell) ? deathCells[deathCell] : nil
-        } else if hurt {
-            img = painTinted[cell] ?? (mainCells.indices.contains(cell) ? mainCells[cell] : nil)
         } else {
             img = mainCells.indices.contains(cell) ? mainCells[cell] : nil
         }
@@ -485,9 +481,11 @@ final class DoomSlayerController {
             splatLayer.opacity = 0
         }
 
-        // Rocket projectile.
-        if rocketLive, let r = rocketImage {
-            let pw = CGFloat(r.width) * scale, ph = CGFloat(r.height) * scale
+        // Projectile (rocket or BFG orb).
+        if rocketLive, let r = (projIsBFG ? (bfgImage ?? rocketImage) : rocketImage) {
+            let pk: CGFloat = projIsBFG ? 0.72 : 1   // the orb art is chunky — trim it a bit
+            let pw = CGFloat(r.width) * scale * pk, ph = CGFloat(r.height) * scale * pk
+            rocketLayer.contents = r
             rocketLayer.bounds = CGRect(x: 0, y: 0, width: pw, height: ph)
             let by = feetBottomY + (25 * scale + 1)
             rocketLayer.position = CGPoint(x: deckLeft + rocketX + pw / 2, y: by + ph / 2)
@@ -510,8 +508,8 @@ final class DoomSlayerController {
         guard let url = ThemeManager.shared.activeTheme?.url else { return }
         if loadedFromURL == url, !mainCells.isEmpty { return }
         loadedFromURL = url
-        mainCells = []; deathCells = []; painTinted = [:]
-        rocketImage = nil; splatImage = nil
+        mainCells = []; deathCells = []
+        rocketImage = nil; bfgImage = nil; splatImage = nil
 
         func cg(_ name: String) -> CGImage? {
             guard let img = NSImage(contentsOf: url.appendingPathComponent(name)) else { return nil }
@@ -525,9 +523,6 @@ final class DoomSlayerController {
                 if let c = atlas.cropping(to: CGRect(x: i * cellW, y: 0, width: cellW, height: cellH)) {
                     mainCells.append(c)
                 }
-            }
-            for i in painCells where mainCells.indices.contains(i) {
-                painTinted[i] = tintRed(mainCells[i])
             }
         }
         if let death = cg("slayer-death.png") {
@@ -549,23 +544,10 @@ final class DoomSlayerController {
             }
         }
         rocketImage = cg("rocket-proj.png")
+        bfgImage = cg("bfg-proj.png")
         splatImage = makeSplatImage()
         soulFly = ["lostsoul-fly0.png", "lostsoul-fly1.png"].compactMap(cg)
         soulDeath = ["lostsoul-death0.png", "lostsoul-death1.png", "lostsoul-death2.png"].compactMap(cg)
-    }
-
-    /// Reddish "pain" tint of a frame (approximates the web brightness+sepia+hue filter).
-    private func tintRed(_ src: CGImage) -> CGImage? {
-        let w = src.width, h = src.height
-        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
-                                  space: CGColorSpaceCreateDeviceRGB(),
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
-        let rect = CGRect(x: 0, y: 0, width: w, height: h)
-        ctx.draw(src, in: rect)
-        ctx.setBlendMode(.sourceAtop)
-        ctx.setFillColor(NSColor(red: 1.0, green: 0.18, blue: 0.0, alpha: 0.55).cgColor)
-        ctx.fill(rect)
-        return ctx.makeImage()
     }
 
     /// Blood splatter drawn from concentric red dots (matches the reference radial-gradient decal).
