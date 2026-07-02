@@ -166,4 +166,11 @@ private final class BootDismissView: NSView {
     override func mouseDown(with event: NSEvent) { onDismiss?() }
     override func rightMouseDown(with event: NSEvent) { onDismiss?() }
     override func keyDown(with event: NSEvent) { onDismiss?() }
+    /// Claim every click for ourselves: AVPlayerView (video splash) swallows mouse
+    /// events even with controlsStyle == .none, so without this the skip-click never
+    /// reached us on the WinXP / Win98 / Mac boot videos.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let p = superview.map { convert(point, from: $0) } ?? point
+        return bounds.contains(p) ? self : nil
+    }
 }
