@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 1.9.5")
+                Text("What's New in RetroMac 1.9.6")
                     .font(.title2.bold())
-                Text("A new DOOM theme, a 24-hour clock, and a batch of fixes")
+                Text("A meaner DOOM dock, a 60% smaller download, and fixes")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -23,43 +23,43 @@ struct WhatsNewView: View {
                     featureRow(
                         icon: "flame.fill",
                         color: .red,
-                        title: "New theme: Maiks Favourite II (DOOM)",
-                        description: "A pixel Doom Slayer patrols the dock — he runs, switches weapons and fires, gets fragged, and a Lost Soul flies in for him to blast. Hover him to frag him, click the DOOM logo tile (next to the trash) to launch DOOM, and top it off with the new \u{201C}Apple Hell\u{201D} menu-bar logo."
+                        title: "DOOM theme: real firefights",
+                        description: "Every weapon now fires with its authentic muzzle-flash animation, the Plasma gun spits a stream of blue bolts, rockets and the new BFG detonate in proper explosions, and Lost Souls charge the Slayer — if he's too slow, they get him. He only goes down to demons or your mouse now, with the full 6-frame fall."
                     )
 
                     featureRow(
-                        icon: "apple.logo",
-                        color: .pink,
-                        title: "Retro menu-bar Apple",
-                        description: "Cover the system Apple with the classic Rainbow, Aqua, Aqua Classic or the new Apple Hell logo — cycle it from the flyout, with sensible per-theme defaults."
+                        icon: "arrow.down.circle.fill",
+                        color: .green,
+                        title: "60% smaller download",
+                        description: "A full asset diet shrank the app from ~151 MB to ~61 MB — same themes, same quality where it counts, much faster downloads and updates."
                     )
 
                     featureRow(
-                        icon: "clock",
-                        color: .indigo,
-                        title: "24-hour clock",
-                        description: "New option (Settings ▸ Dock) for the dock and deskbar clocks, plus a digital readout under the analog Clock widget that follows it."
+                        icon: "play.circle",
+                        color: .orange,
+                        title: "Boot videos are skippable",
+                        description: "A click (or any key) now skips the Windows XP / 98 / Mac boot sequences straight to the desktop — the video player used to swallow the click."
                     )
 
                     featureRow(
-                        icon: "iphone",
+                        icon: "display.2",
                         color: .blue,
-                        title: "iPhone as a camera source",
-                        description: "Pick your iPhone (Continuity Camera) or any webcam in Settings ▸ Camera & Streaming — the list updates live as devices connect, and the CRT shader runs on the feed."
+                        title: "External-display fixes",
+                        description: "The retro menu-bar Apple logo now sits correctly on external monitors (it used to drift on extended 1080p displays)."
                     )
 
                     featureRow(
-                        icon: "square.grid.2x2",
+                        icon: "magnifyingglass",
                         color: .cyan,
-                        title: "Cleaner theming",
-                        description: "\u{201C}Dock only\u{201D} now changes only the dock (no wallpaper / widgets / full-screen shader), the retro TV window no longer borrows a stale theme\u{2019}s chrome, and the quick-access flyout is tidier."
+                        title: "Magnification polish",
+                        description: "The running-app dot stays centred under its icon while the Mac OS X / Snow Leopard docks magnify, and Snow Leopard joins the special themes in the flyout."
                     )
 
                     featureRow(
                         icon: "wrench.and.screwdriver",
                         color: .gray,
-                        title: "Reliability & polish",
-                        description: "Your real Dock reliably returns after turning a theme off (and never peeks out beside the retro dock), Mac OS X / Snow Leopard magnification no longer reacts outside the dock, the floating launcher stays clickable beside a dock, and a clearer privacy/offline note lives in About."
+                        title: "Respects your settings",
+                        description: "Turning Retro Mode off restores only what RetroMac itself hid — your own Dock auto-hide or hidden desktop icons stay untouched. The CRT Lite app overlay also sticks to one window instead of jumping between windows of the same app."
                     )
                 }
                 .padding(.horizontal, 24)
