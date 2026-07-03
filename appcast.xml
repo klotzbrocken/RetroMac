@@ -6,6 +6,30 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.9.6</title>
+      <pubDate>Fri, 03 Jul 2026 09:16:55 +0000</pubDate>
+      <sparkle:version>1.9.6</sparkle:version>
+      <sparkle:shortVersionString>1.9.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.9.6 &mdash; a meaner DOOM dock, a 60% smaller download &amp; fixes</h2>
+        <ul>
+          <li><b>DOOM theme, real firefights:</b> authentic muzzle-flash animations for every weapon, a Plasma bolt stream, rocket &amp; new BFG explosions, and charging Lost Souls that frag the Slayer if he shoots too late &mdash; he now only dies to demons or your mouse, with the full 6-frame fall.</li>
+          <li><b>60% smaller download:</b> an asset diet shrank the app from ~151 MB to ~61 MB &mdash; same themes, faster downloads and updates.</li>
+          <li><b>Skippable boot videos:</b> a click or key now skips the Windows XP / 98 / Mac boot sequences straight to the desktop.</li>
+          <li><b>External displays:</b> the retro menu-bar Apple logo sits correctly on extended monitors.</li>
+          <li><b>Magnification polish:</b> the running-app dot stays centred under its icon on the Mac OS X / Snow Leopard docks; Snow Leopard joins the special themes.</li>
+          <li><b>Respects your settings:</b> Retro Mode restores only what it hid (your own Dock auto-hide / hidden desktop icons stay), and the CRT Lite overlay sticks to one window per app.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.9.6/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="AzEyfc4/NIJTkFSFBnvwCo8exPxjA2JTc0ErtAzUQZ43utYI8hqv/l0m+g5ajQCb7YznNuZ6gan774pdb/NuDA=="
+        length="63039309"
+      />
+    </item>
+    <item>
       <title>Version 1.9.5</title>
       <pubDate>Mon, 29 Jun 2026 13:03:59 +0000</pubDate>
       <sparkle:version>1.9.5</sparkle:version>
