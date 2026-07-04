@@ -29,13 +29,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let setupWizard = SetupWizardWindowController()
     private let fpsOverlay = FPSOverlayController()
     private let windowPicker = WindowPicker()
-    private let tvBrowser = TVBrowserWindow()
+    let tvBrowser = TVBrowserWindow()   // internal: Tube Mode's "Classic Themed Window" hands channels over
     private var appLaunchObserver: NSObjectProtocol?
     private var appTerminateObserver: NSObjectProtocol?
     private var sleepObserver: NSObjectProtocol?
     private var lockObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
     private var tvBookmarkObserver: NSObjectProtocol?
+    private var tvTubeObserver: NSObjectProtocol?
+    private var tubeStateObserver: NSObjectProtocol?
     private var dockThemeObserver: NSObjectProtocol?
     private var dockModeObserver: NSObjectProtocol?
     private var cameraStateObserver: NSObjectProtocol?
@@ -118,6 +120,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                   let bookmark = AppSettings.shared.tvBookmarks.first(where: { $0.id == uuid }) else { return }
             AppSettings.shared.tvLastBookmarkURL = bookmark.url   // Tube Mode starts on this channel
             self?.tvBrowser.open(bookmark: bookmark)
+        }
+        // Keep the menu pill in sync when the Tube exits on its own (ESC / Turn Off /
+        // hand-off to the classic window) — stop() posts, but nothing rebuilt the menu.
+        tubeStateObserver = NotificationCenter.default.addObserver(forName: .tubeModeChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.rebuildMenu()
+        }
+        // Start-menu / deskbar streams open the immersive Tube Mode instead of the
+        // small windowed TV (that one stays reachable via the TV desktop widget).
+        tvTubeObserver = NotificationCenter.default.addObserver(forName: .init("openTVBookmarkTube"), object: nil, queue: .main) { note in
+            guard let idString = note.object as? String,
+                  let uuid = UUID(uuidString: idString),
+                  let bookmark = AppSettings.shared.tvBookmarks.first(where: { $0.id == uuid }) else { return }
+            TubeModeController.shared.startOnBookmark(url: bookmark.url)
         }
 
         // Apply theme shader and update desktop overlays when theme changes via Settings
@@ -1078,27 +1093,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         themesItem.submenu = themesMenu
         menu.addItem(themesItem)
 
-        // Television submenu with value chip
-        let tvBookmarks = AppSettings.shared.tvBookmarks
-        let tvItem = NSMenuItem(title: "Television", action: nil, keyEquivalent: "")
-        tvItem.image = sfIcon("tv")
-        tvItem.attributedTitle = menuTitle("Television", value: "Off")
-        let tvMenu = NSMenu()
-        if !tvBookmarks.isEmpty {
-            for bookmark in tvBookmarks {
-                let item = NSMenuItem(title: bookmark.name, action: #selector(openTVBookmark(_:)), keyEquivalent: "")
-                item.target = self
-                item.representedObject = bookmark.id.uuidString
-                item.image = sfIcon("antenna.radiowaves.left.and.right")
-                tvMenu.addItem(item)
-            }
-        } else {
-            let emptyItem = NSMenuItem(title: "No bookmarks", action: nil, keyEquivalent: "")
-            emptyItem.isEnabled = false
-            tvMenu.addItem(emptyItem)
-        }
-        tvItem.submenu = tvMenu
-        menu.addItem(tvItem)
+        // (Television submenu removed — channels live in the TV Tube toggle + its
+        // right-click menu; the dock/start-menu entries start the Tube directly.)
 
         // Games submenu with value chip
         let gamesItem = NSMenuItem(title: "Games", action: nil, keyEquivalent: "")
@@ -1833,8 +1829,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let idString = sender.representedObject as? String,
               let uuid = UUID(uuidString: idString),
               let bookmark = AppSettings.shared.tvBookmarks.first(where: { $0.id == uuid }) else { return }
-        AppSettings.shared.tvLastBookmarkURL = bookmark.url   // Tube Mode starts on this channel
-        tvBrowser.open(bookmark: bookmark)
+        // Context-menu streams open the immersive Tube Mode directly on that channel
+        // (the small windowed TV stays reachable via the TV desktop widget).
+        TubeModeController.shared.startOnBookmark(url: bookmark.url)
     }
 
     /// Flyout / menu "TV Tube" toggle: the one-click retro TV (bezel + streams + shader).
@@ -4096,7 +4093,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for obs in [appLaunchObserver, appTerminateObserver, sleepObserver, lockObserver, wakeObserver].compactMap({ $0 }) {
             nc.removeObserver(obs)
         }
-        for obs in [tvBookmarkObserver, dockThemeObserver, dockModeObserver, cameraStateObserver, viewportCloseObserver].compactMap({ $0 }) {
+        for obs in [tvBookmarkObserver, tvTubeObserver, tubeStateObserver, dockThemeObserver, dockModeObserver, cameraStateObserver, viewportCloseObserver].compactMap({ $0 }) {
             NotificationCenter.default.removeObserver(obs)
         }
         disableAll()

@@ -29,6 +29,20 @@ final class TubeModeController: NSObject, MTKViewDelegate {
 
     func toggle() { isActive ? stop() : start() }
 
+    /// Start (or re-tune) the Tube on a specific stream — used by the dock context
+    /// menu / start menu / deskbar "TV Streams" entries.
+    func startOnBookmark(url: String) {
+        AppSettings.shared.tvLastBookmarkURL = url
+        if isActive {
+            if let idx = AppSettings.shared.tvBookmarks.firstIndex(where: { $0.url == url }) {
+                startChannel(idx)
+            }
+            window?.makeKeyAndOrderFront(nil)
+        } else {
+            start()
+        }
+    }
+
     func start() {
         guard !isActive else { return }
         let screen = targetScreen()
@@ -40,7 +54,7 @@ final class TubeModeController: NSObject, MTKViewDelegate {
                                 width: startW, height: startW * 0.84)
         let win = TubeWindow(contentRect: startFrame, styleMask: [.borderless, .resizable],
                              backing: .buffered, defer: false)
-        win.level = .normal
+        win.level = AppSettings.shared.tvTubeOnTop ? .floating : .normal
         win.isOpaque = false
         win.backgroundColor = .clear
         win.hasShadow = true
@@ -226,6 +240,122 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         print("[Tube] CH \(channelIndex + 1): \(bookmark.name)")
     }
 
+    // MARK: - Context menu (right-click on the tube)
+
+    fileprivate func showContextMenu(with event: NSEvent, in view: NSView) {
+        let menu = NSMenu()
+
+        let chMenu = NSMenu()
+        for (i, b) in AppSettings.shared.tvBookmarks.enumerated() {
+            let it = NSMenuItem(title: b.name, action: #selector(menuPickChannel(_:)), keyEquivalent: "")
+            it.target = self
+            it.tag = i
+            it.state = i == channelIndex ? .on : .off
+            chMenu.addItem(it)
+        }
+        let chItem = NSMenuItem(title: "Channel", action: nil, keyEquivalent: "")
+        menu.addItem(chItem)
+        menu.setSubmenu(chMenu, for: chItem)
+
+        let shMenu = NSMenu()
+        for (category, presets) in PresetRegistry.categorizedPresets where category != .lite {
+            for p in presets {
+                let it = NSMenuItem(title: p.displayName, action: #selector(menuPickShader(_:)), keyEquivalent: "")
+                it.target = self
+                it.representedObject = p.id
+                it.state = p.id == AppSettings.shared.tvTubePreset ? .on : .off
+                shMenu.addItem(it)
+            }
+            shMenu.addItem(.separator())
+        }
+        let shItem = NSMenuItem(title: "Shader", action: nil, keyEquivalent: "")
+        menu.addItem(shItem)
+        menu.setSubmenu(shMenu, for: shItem)
+
+        let bzMenu = NSMenu()
+        let builtin = NSMenuItem(title: "Simple frame (built-in)", action: #selector(menuPickBezel(_:)), keyEquivalent: "")
+        builtin.target = self
+        builtin.representedObject = ""
+        builtin.state = AppSettings.shared.tvTubeBezel.isEmpty ? .on : .off
+        bzMenu.addItem(builtin)
+        for b in BezelStore.shared.available {
+            let title = BezelStore.shared.isDownloaded(b) ? b.name : "\(b.name)  (download)"
+            let it = NSMenuItem(title: title, action: #selector(menuPickBezel(_:)), keyEquivalent: "")
+            it.target = self
+            it.representedObject = b.file
+            it.state = b.file == AppSettings.shared.tvTubeBezel ? .on : .off
+            bzMenu.addItem(it)
+        }
+        let bzItem = NSMenuItem(title: "TV Bezel", action: nil, keyEquivalent: "")
+        menu.addItem(bzItem)
+        menu.setSubmenu(bzMenu, for: bzItem)
+
+        menu.addItem(.separator())
+        let onTop = NSMenuItem(title: "Always on Top", action: #selector(menuToggleOnTop), keyEquivalent: "")
+        onTop.target = self
+        onTop.state = AppSettings.shared.tvTubeOnTop ? .on : .off
+        menu.addItem(onTop)
+        let classic = NSMenuItem(title: "Classic Themed Window", action: #selector(menuClassicWindow), keyEquivalent: "")
+        classic.target = self
+        menu.addItem(classic)
+        let fs = NSMenuItem(title: isFullscreen ? "Exit Fullscreen" : "Fullscreen",
+                            action: #selector(menuToggleFullscreen), keyEquivalent: "")
+        fs.target = self
+        menu.addItem(fs)
+        let off = NSMenuItem(title: "Turn Off", action: #selector(menuTurnOff), keyEquivalent: "")
+        off.target = self
+        menu.addItem(off)
+
+        NSMenu.popUpContextMenu(menu, with: event, for: view)
+    }
+
+    @objc private func menuPickChannel(_ sender: NSMenuItem) { startChannel(sender.tag) }
+
+    @objc private func menuPickShader(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        AppSettings.shared.tvTubePreset = id
+        refreshAppearance()
+    }
+
+    @objc private func menuPickBezel(_ sender: NSMenuItem) {
+        guard let file = sender.representedObject as? String else { return }
+        if let bezel = BezelStore.shared.bezel(named: file), !BezelStore.shared.isDownloaded(bezel) {
+            AppSettings.shared.tvTubeBezel = file
+            BezelStore.shared.download(bezel) { [weak self] result in
+                if case .failure = result { AppSettings.shared.tvTubeBezel = "" }
+                self?.refreshAppearance()
+                self?.enterFullscreenForBezel()
+            }
+            return
+        }
+        AppSettings.shared.tvTubeBezel = file
+        refreshAppearance()
+        enterFullscreenForBezel()
+    }
+
+    /// Scene bezels only show in fullscreen (the windowed mode is Maik's own TV set) —
+    /// picking one while windowed switches to fullscreen so the choice is visible.
+    private func enterFullscreenForBezel() {
+        if isActive, !isFullscreen { toggleFullscreen() }
+    }
+
+    @objc private func menuToggleFullscreen() { toggleFullscreen() }
+    @objc private func menuTurnOff() { stop() }
+
+    @objc private func menuToggleOnTop() {
+        AppSettings.shared.tvTubeOnTop.toggle()
+        window?.level = AppSettings.shared.tvTubeOnTop ? .floating : .normal
+    }
+
+    /// "TV Bezel off": hand the current channel to the classic THEMED window
+    /// (BeOS Lasche / Platinum / Luna chrome — the existing TVBrowserWindow).
+    @objc private func menuClassicWindow() {
+        let books = AppSettings.shared.tvBookmarks
+        let bookmark = books.indices.contains(channelIndex) ? books[channelIndex] : books.first
+        stop()
+        if let bm = bookmark { AppDelegate.shared?.tvBrowser.open(bookmark: bm) }
+    }
+
     // MARK: - MTKViewDelegate
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
@@ -293,6 +423,9 @@ private final class TubeContentView: NSView {
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
     override var mouseDownCanMoveWindow: Bool { true }
     override var acceptsFirstResponder: Bool { true }
+    override func rightMouseDown(with event: NSEvent) {
+        TubeModeController.shared.showContextMenu(with: event, in: self)
+    }
 
     func installVideoView(_ mv: MTKView) {
         videoView?.removeFromSuperview()

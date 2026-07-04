@@ -3733,7 +3733,9 @@ final class DockView: NSView {
             let idString = bookmark.id.uuidString
             let icon = startMenuIcon("menu-internet.png")
             favItems.append(MI(title: bookmark.name, icon: icon, action: {
-                NotificationCenter.default.post(name: .init("openTVBookmark"), object: idString)
+                // Start-menu streams open the immersive Tube Mode (the windowed TV
+                // stays reachable via the TV desktop widget).
+                NotificationCenter.default.post(name: .init("openTVBookmarkTube"), object: idString)
             }))
         }
         if favItems.isEmpty {

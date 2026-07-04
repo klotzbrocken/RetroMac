@@ -80,9 +80,12 @@ final class TVBrowserWindow: NSObject {
             win.addTitlebarAccessoryViewController(accessory)
         }
 
-        // Determine effective preset: bookmark-specific > active global preset > app default.
+        // Determine effective preset: user's in-window pick > bookmark-specific >
+        // active global preset > app default.
         let effectivePresetID: String?
-        if let bookmarkPreset = bookmark.presetID {
+        if let override = windowPresetOverride {
+            effectivePresetID = override.isEmpty ? nil : override   // "" = None
+        } else if let bookmarkPreset = bookmark.presetID {
             effectivePresetID = bookmarkPreset.isEmpty ? nil : bookmarkPreset
         } else if let appDel = NSApp.delegate as? AppDelegate, appDel.isActive,
                   let globalPreset = appDel.currentPresetName {
@@ -127,8 +130,98 @@ final class TVBrowserWindow: NSObject {
             cv.addGestureRecognizer(dbl)
         }
 
+        // Right-click: channel switching + hand-off back to Tube Mode.
+        currentBookmark = bookmark
+        installContextMenu(on: win)
+
         win.makeKeyAndOrderFront(nil)
         self.window = win
+    }
+
+    // MARK: - Context menu (channels + back to Tube)
+
+    private var currentBookmark: TVBookmark?
+
+    private func installContextMenu(on win: NSWindow) {
+        let menu = NSMenu()
+        let chMenu = NSMenu()
+        for b in AppSettings.shared.tvBookmarks {
+            let it = NSMenuItem(title: b.name, action: #selector(ctxPickChannel(_:)), keyEquivalent: "")
+            it.target = self
+            it.representedObject = b.id.uuidString
+            it.state = b.url == currentBookmark?.url ? .on : .off
+            chMenu.addItem(it)
+        }
+        let chItem = NSMenuItem(title: "Channel", action: nil, keyEquivalent: "")
+        menu.addItem(chItem)
+        menu.setSubmenu(chMenu, for: chItem)
+
+        let shMenu = NSMenu()
+        let noneItem = NSMenuItem(title: "None", action: #selector(ctxPickShader(_:)), keyEquivalent: "")
+        noneItem.target = self
+        noneItem.representedObject = ""
+        noneItem.state = activePresetID == nil ? .on : .off
+        shMenu.addItem(noneItem)
+        shMenu.addItem(.separator())
+        for (category, presets) in PresetRegistry.categorizedPresets where category != .lite {
+            for p in presets {
+                let it = NSMenuItem(title: p.displayName, action: #selector(ctxPickShader(_:)), keyEquivalent: "")
+                it.target = self
+                it.representedObject = p.id
+                it.state = p.id == activePresetID ? .on : .off
+                shMenu.addItem(it)
+            }
+            shMenu.addItem(.separator())
+        }
+        let shItem = NSMenuItem(title: "Shader", action: nil, keyEquivalent: "")
+        menu.addItem(shItem)
+        menu.setSubmenu(shMenu, for: shItem)
+        menu.addItem(.separator())
+        let tube = NSMenuItem(title: "Open in Tube Mode", action: #selector(ctxOpenTube), keyEquivalent: "")
+        tube.target = self
+        menu.addItem(tube)
+        let closeItem = NSMenuItem(title: "Close", action: #selector(ctxClose), keyEquivalent: "")
+        closeItem.target = self
+        menu.addItem(closeItem)
+        // Attach to the content view AND its direct subviews (chrome wrappers / MTKView
+        // would otherwise swallow the right-click).
+        win.contentView?.menu = menu
+        win.contentView?.subviews.forEach { $0.menu = menu }
+    }
+
+    @objc private func ctxPickChannel(_ sender: NSMenuItem) {
+        guard let idString = sender.representedObject as? String,
+              let uuid = UUID(uuidString: idString),
+              let bm = AppSettings.shared.tvBookmarks.first(where: { $0.id == uuid }) else { return }
+        AppSettings.shared.tvLastBookmarkURL = bm.url
+        open(bookmark: bm)
+    }
+
+    @objc private func ctxOpenTube() {
+        let url = currentBookmark?.url ?? AppSettings.shared.tvLastBookmarkURL
+        close()
+        TubeModeController.shared.startOnBookmark(url: url)
+    }
+
+    @objc private func ctxClose() { close() }
+
+    /// Session-scoped shader choice for this window (wins over bookmark/global preset).
+    private var windowPresetOverride: String?
+
+    @objc private func ctxPickShader(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        windowPresetOverride = id   // "" = None
+        if !id.isEmpty, contentMode == .streamDirect, let r = renderer {
+            // Live switch on the running Metal pipeline.
+            do {
+                try r.loadShader(named: id)
+                activePresetID = id
+                if let win = window { installContextMenu(on: win) }   // refresh checkmarks
+                return
+            } catch { print("[TV] Shader switch failed: \(error)") }
+        }
+        // No shader running (basic mode) or switching to None → reopen the stream.
+        if let bm = currentBookmark { open(bookmark: bm) }
     }
 
     /// BeOS theme: convert the TV window to a borderless window with a protruding yellow
