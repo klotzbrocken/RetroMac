@@ -5,8 +5,8 @@
   "wallpaper": "wallpaper.jpg",
   "menuBarApple": "hell",
   "dock": {
-    "height": 76,
-    "iconSize": 56,
+    "height": 71,
+    "iconSize": 52,
     "padding": 8,
     "spacing": 4,
     "cornerRadius": 10,

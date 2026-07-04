@@ -47,14 +47,20 @@ final class ThemeManager {
         availableThemes = themes
         print("[Theme] Found \(themes.count) themes: \(themes.map { $0.name }.joined(separator: ", "))")
 
-        let activeID = selectTheme ?? AppSettings.shared.dockTheme
+        var activeID = selectTheme ?? AppSettings.shared.dockTheme
+        if activeID == "Mac OS 9.2" {
+            // Former standalone Platinum theme — merged into Classic as a dock variant.
+            activeID = "Mac OS 9.2 Classic"
+            AppSettings.shared.dockTheme = activeID
+            AppSettings.shared.macos9UseDock = true
+        }
         activeTheme = themes.first(where: { $0.config.name == activeID })
             ?? themes.first(where: { $0.config.name == "Maiks Favourite" })
             ?? themes.first(where: { $0.config.name == "Mountain Lion" })
             ?? themes.first
         // reload() recreates every ThemeBundle from disk, which drops runtime config
         // overrides — re-apply them here (the dockTheme sink reloads on EVERY switch).
-        applyMacOS6DockVariant()
+        applyDockVariants()
         registerThemeFonts()
         print("[Theme] Active: \(activeTheme?.name ?? "nil")")
     }
@@ -88,7 +94,7 @@ final class ThemeManager {
         activeTheme = availableThemes.first(where: { $0.config.name == name })
         iconCache.removeAllObjects()
         registerThemeFonts()   // e.g. Chicago/Geneva for Mac OS 6 (process-scoped, idempotent)
-        applyMacOS6DockVariant()
+        applyDockVariants()
         // "Dock only" mode skips the desktop wallpaper change (theme affects the dock only).
         if applyWP { applyWallpaper() } else { restoreWallpapers() }
         NotificationCenter.default.post(name: .dockThemeChanged, object: nil)
@@ -102,10 +108,54 @@ final class ThemeManager {
         }
     }
 
+    /// Per-theme dock variants ("Dock instead of Control Strip" options).
+    func applyDockVariants() {
+        guard let t = activeTheme else { return }
+        switch t.baseConfig.name {
+        case "Mac OS 6 classic":      applyMacOS6DockVariant()
+        case "Mac OS 9.2 Classic":    applyMacOS9DockVariant()
+        default: break
+        }
+    }
+
+    /// Mac OS 9 Classic option: the Platinum dock of the former "Mac OS 9.2" theme
+    /// (merged in) instead of the Control Strip.
+    private func applyMacOS9DockVariant() {
+        guard let t = activeTheme, t.baseConfig.name == "Mac OS 9.2 Classic" else { return }
+        guard AppSettings.shared.macos9UseDock else { t.setConfigOverride(nil); return }
+        var c = t.baseConfig
+        c.dock.dockStyle = nil               // real dock, not the Control Strip
+        c.dock.height = 52
+        c.dock.iconSize = 32
+        c.dock.padding = 10
+        c.dock.spacing = 6
+        c.dock.cornerRadius = 0
+        c.dock.alignment = "left"
+        c.dock.backgroundColor = "#CCCCCCFF"
+        c.dock.backgroundGradientTop = nil
+        c.dock.backgroundGradientBottom = nil
+        c.dock.borderColor = "#000000FF"
+        c.dock.borderWidth = 1
+        c.dock.bevelTopColor = "#FFFFFFFF"
+        c.dock.bevelBottomColor = "#888888FF"
+        c.dock.bevelWidth = 2
+        c.dock.shadowEnabled = false
+        c.dock.shadowColor = "#00000000"
+        c.dock.shadowRadius = 0
+        c.dock.shelfStyle = nil
+        c.dock.magnification = false
+        c.icon.hoverScale = 1.08
+        c.indicator.style = "square"
+        c.indicator.color = "#000000"
+        c.indicator.size = 4
+        c.indicator.offset = 6
+        t.setConfigOverride(c)
+    }
+
     /// Mac OS 6 option: replace the Control Strip with a Mountain-Lion-style dock —
     /// same 3D glass shelf as Snow Leopard, but in desaturated grays; the theme's
     /// monochrome icon pipeline keeps every icon B/W.
-    func applyMacOS6DockVariant() {
+    private func applyMacOS6DockVariant() {
         guard let t = activeTheme, t.baseConfig.name == "Mac OS 6 classic" else { return }
         guard AppSettings.shared.macos6UseDock else { t.setConfigOverride(nil); return }
         var c = t.baseConfig
@@ -113,7 +163,7 @@ final class ThemeManager {
         // 2D Mountain-Lion dock layout, styled lo-fi System 6: solid light gray, hard
         // square corners, plain black border — no transparency, no gloss.
         c.dock.height = 68
-        c.dock.iconSize = 50
+        c.dock.iconSize = 52                 // unified base across all real-dock themes
         c.dock.padding = 14
         c.dock.spacing = 6
         c.dock.cornerRadius = 0

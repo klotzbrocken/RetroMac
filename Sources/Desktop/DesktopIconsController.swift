@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import UniformTypeIdentifiers
 
 /// Manages a transparent overlay window that displays theme-defined desktop icons
@@ -31,8 +32,20 @@ final class DesktopIconsController {
     private var cellHeight: CGFloat { iconSize + 52 }     // … and between rows
     private var marginX: CGFloat { 16 }
     private var marginY: CGFloat { 8 }
+    private var scaleObserver: AnyCancellable?
 
-    private init() {}
+    private init() {
+        // Desktop icons follow the dock icon slider — rebuild the grid live (the dock
+        // rebuilds via its own observer; without this the desktop only updated on the
+        // next theme switch).
+        scaleObserver = AppSettings.shared.$dockIconScale
+            .dropFirst()
+            .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self = self, self.isVisible else { return }
+                self.update()
+            }
+    }
 
     // MARK: - Public API
 

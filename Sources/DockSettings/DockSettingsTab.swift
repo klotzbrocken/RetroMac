@@ -138,15 +138,7 @@ struct DockSettingsTab: View {
 
     private func themeShortName(_ name: String) -> String {
         switch name {
-        case "Mountain Lion": return "Aqua"
-        case "Snow Leopard": return "Snow Leopard"
-        case "Mac OS 9.2": return "Mac OS 9.2"
         case "Mac OS 9.2 Classic": return "Mac OS 9 Classic"
-        case "Windows 98": return "Windows 98"
-        case "Windows XP": return "Windows XP"
-        case "OS/2 Warp 4": return "OS/2 Warp 4"
-        case "BeOS": return "BeOS"
-        case "Sleek Retro": return "Sleek Retro"
         default: return name
         }
     }
@@ -155,13 +147,11 @@ struct DockSettingsTab: View {
         switch name {
         case "Mountain Lion": return [Color(red: 0.3, green: 0.5, blue: 0.8), Color(red: 0.2, green: 0.4, blue: 0.7)]
         case "Snow Leopard": return [Color(red: 0.45, green: 0.5, blue: 0.58), Color(red: 0.3, green: 0.35, blue: 0.45)]
-        case "Mac OS 9.2": return [Color(red: 0.75, green: 0.75, blue: 0.78), Color(red: 0.6, green: 0.6, blue: 0.65)]
         case "Mac OS 9.2 Classic": return [Color(red: 0.78, green: 0.78, blue: 0.8), Color(red: 0.62, green: 0.62, blue: 0.68)]
         case "Windows 98": return [Color(red: 0.0, green: 0.5, blue: 0.5), Color(red: 0.0, green: 0.35, blue: 0.35)]
         case "Windows XP": return [Color(red: 0.0, green: 0.35, blue: 0.75), Color(red: 0.0, green: 0.25, blue: 0.55)]
         case "OS/2 Warp 4": return [Color(red: 0.15, green: 0.15, blue: 0.5), Color(red: 0.1, green: 0.1, blue: 0.35)]
         case "BeOS": return [Color(red: 0.85, green: 0.85, blue: 0.5), Color(red: 0.7, green: 0.7, blue: 0.35)]
-        case "Sleek Retro": return [Color(red: 0.2, green: 0.2, blue: 0.25), Color(red: 0.12, green: 0.12, blue: 0.15)]
         default: return [Color(red: 0.3, green: 0.3, blue: 0.4), Color(red: 0.2, green: 0.2, blue: 0.3)]
         }
     }
@@ -259,7 +249,7 @@ struct DockSettingsTab: View {
                     }
                 }
                 if selectedThemeConfig?.name == "Mac OS 6 classic" {
-                    RMRow(label: "Dock style", hint: "Replace the Control Strip with a Mountain-Lion-style dock — 3D glass shelf in grayscale, icons stay black & white.") {
+                    RMRow(label: "Dock style", hint: "Replace the Control Strip with a Mountain-Lion-style dock — flat 2D panel, icons stay black & white.") {
                         Picker("", selection: $settings.macos6UseDock) {
                             Text("Control Strip").tag(false)
                             Text("Dock (B/W)").tag(true)
@@ -270,6 +260,22 @@ struct DockSettingsTab: View {
                             guard settings.dockEnabled,
                                   ThemeManager.shared.activeTheme?.baseConfig.name == "Mac OS 6 classic" else { return }
                             ThemeManager.shared.setActiveTheme(name: "Mac OS 6 classic",
+                                                               applyWallpaper: !AppSettings.shared.dockOnly)
+                        }
+                    }
+                }
+                if selectedThemeConfig?.name == "Mac OS 9.2 Classic" {
+                    RMRow(label: "Dock style", hint: "Replace the Control Strip with the Platinum dock (the former standalone \u{201C}Mac OS 9.2\u{201D} theme).") {
+                        Picker("", selection: $settings.macos9UseDock) {
+                            Text("Control Strip").tag(false)
+                            Text("Platinum Dock").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                        .onChange(of: settings.macos9UseDock) { _, _ in
+                            guard settings.dockEnabled,
+                                  ThemeManager.shared.activeTheme?.baseConfig.name == "Mac OS 9.2 Classic" else { return }
+                            ThemeManager.shared.setActiveTheme(name: "Mac OS 9.2 Classic",
                                                                applyWallpaper: !AppSettings.shared.dockOnly)
                         }
                     }
