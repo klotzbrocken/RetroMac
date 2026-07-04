@@ -49,19 +49,24 @@ final class BezelStore {
         }
         let dest = localURL(for: bezel)
         URLSession.shared.downloadTask(with: url) { tmp, response, error in
-            DispatchQueue.main.async {
-                if let error = error { completion(.failure(error)); return }
-                guard let tmp = tmp, (response as? HTTPURLResponse)?.statusCode == 200 else {
-                    completion(.failure(NSError(domain: "Bezel", code: 2,
-                        userInfo: [NSLocalizedDescriptionKey: "Download failed (HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1))"])))
-                    return
-                }
+            // The temp file dies the moment this handler returns — move it HERE,
+            // synchronously; only the result hops to main. (Deferring the move to
+            // the main queue made downloads fail depending on pure timing luck.)
+            let result: Result<URL, Error>
+            if let error = error {
+                result = .failure(error)
+            } else if let tmp = tmp, (response as? HTTPURLResponse)?.statusCode == 200 {
                 try? FileManager.default.removeItem(at: dest)
                 do {
                     try FileManager.default.moveItem(at: tmp, to: dest)
-                    completion(.success(dest))
-                } catch { completion(.failure(error)) }
+                    result = .success(dest)
+                } catch { result = .failure(error) }
+            } else {
+                result = .failure(NSError(domain: "Bezel", code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Download failed (HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1))"]))
             }
+            if case .failure(let e) = result { print("[Bezel] Download \(bezel.file) failed: \(e.localizedDescription)") }
+            DispatchQueue.main.async { completion(result) }
         }.resume()
     }
 }

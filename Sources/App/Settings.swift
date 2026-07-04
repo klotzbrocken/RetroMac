@@ -281,6 +281,15 @@ final class AppSettings: ObservableObject {
     @Published var macos6UseDock: Bool {
         didSet { defaults.set(macos6UseDock, forKey: "macos6UseDock") }
     }
+    /// Mac OS 9 Classic: replace the Control Strip with the Platinum dock (merged-in
+    /// former "Mac OS 9.2" theme).
+    @Published var macos9UseDock: Bool {
+        didSet { defaults.set(macos9UseDock, forKey: "macos9UseDock") }
+    }
+    /// Tube Mode window floats above everything.
+    @Published var tvTubeOnTop: Bool {
+        didSet { defaults.set(tvTubeOnTop, forKey: "tvTubeOnTop") }
+    }
     /// Convert a 12-hour DateFormatter pattern to 24-hour when `clockUse24Hour` is on.
     /// e.g. "h:mm a" → "H:mm", "hh:mm:ss a" → "HH:mm:ss"; already-24h patterns are unchanged.
     static func applyClockFormat(_ base: String) -> String {
@@ -644,6 +653,8 @@ final class AppSettings: ObservableObject {
         themeAdaptAppearance = defaults.object(forKey: "themeAdaptAppearance") as? Bool ?? false
         themeTerminalProfile = defaults.object(forKey: "themeTerminalProfile") as? Bool ?? true
         macos6UseDock = defaults.object(forKey: "macos6UseDock") as? Bool ?? false
+        macos9UseDock = defaults.object(forKey: "macos9UseDock") as? Bool ?? false
+        tvTubeOnTop = defaults.object(forKey: "tvTubeOnTop") as? Bool ?? false
         themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? false
         setupWizardComplete = defaults.bool(forKey: "setupWizardComplete")
         // Floating launcher defaults ON. One-time migration flips legacy installs

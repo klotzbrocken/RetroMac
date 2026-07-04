@@ -324,7 +324,7 @@ final class BeOSDeskbarView: NSView {
         let icon = cachedDimg("folder-app.png")
         let items = AppSettings.shared.tvBookmarks.map { bm in
             BeOSMenuItem.action(bm.name, icon: icon) {
-                NotificationCenter.default.post(name: .init("openTVBookmark"), object: bm.id.uuidString)
+                NotificationCenter.default.post(name: .init("openTVBookmarkTube"), object: bm.id.uuidString)
             }
         }
         return items.isEmpty ? [.action("No streams") {}] : items
