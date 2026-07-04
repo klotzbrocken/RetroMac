@@ -108,6 +108,9 @@ final class DoomSlayerController {
     private var soulDeathPhase = 0
     private var soulDeathT: Double = 0
     private var soulCooldown: Double = 4.0
+    private var soulSeenThisLap = false     // → nextLap forces a spawn if a lap stayed quiet
+    private var diedThisLap = false         // every lap ends with one death (lethal soul)
+    private var lethalSoul = false          // this soul gets him: the slayer holds his fire
     private var soulFly: [CGImage] = []     // 2 flicker frames
     private var soulDeath: [CGImage] = []   // 3 explosion frames
     private var killFrame: Int = -1         // >=0 → drawing a hover-kill frame (slayer-die.png)
@@ -174,24 +177,29 @@ final class DoomSlayerController {
 
     private func selectWeapon() -> Weapon {
         if optWeapon == "Auto-cycle" {
-            let w = weapons[weaponIdx % weapons.count]
-            weaponIdx += 1            // advance per shot so Auto-cycle visibly rotates weapons
-            return w
+            return weapons[weaponIdx % weapons.count]   // rotates per LAP (nextLap), not per shot
         }
         return weapons.first { $0.label == optWeapon } ?? weapons[0]
     }
-    private func nextLap() { /* weapon rotation now driven per-shot in selectWeapon() */ }
+    private func nextLap() {
+        weaponIdx += 1   // Auto-cycle: a fresh weapon each lap
+        // Guarantee at least one demon encounter per lap: if none spawned last lap,
+        // send one in right away.
+        if !soulSeenThisLap, soulMode == .gone { soulCooldown = min(soulCooldown, 0.3) }
+        soulSeenThisLap = false
+        diedThisLap = false
+    }
     private func newGap() { let c = combatCfg(); untilEvent = Double.random(in: c.gap, using: &rng) }
 
     // MARK: - Lost Soul (flies in, slayer shoots it, it explodes)
 
     private func soulNextCooldown() -> Double {
-        // Souls spawn noticeably more often — they're the only "natural" threat now
-        // that random deaths are gone.
+        // Demons ARE the action now (the slayer only fires at them), so the combat
+        // setting directly scales how often they come.
         switch optCombat {
-        case "Calm":    return Double.random(in: 3.0...5.0, using: &rng)
-        case "Intense": return Double.random(in: 0.8...1.8, using: &rng)
-        default:        return Double.random(in: 1.6...3.0, using: &rng)
+        case "Calm":    return Double.random(in: 2.2...4.0, using: &rng)
+        case "Intense": return Double.random(in: 0.5...1.2, using: &rng)
+        default:        return Double.random(in: 1.2...2.2, using: &rng)
         }
     }
 
@@ -200,13 +208,21 @@ final class DoomSlayerController {
         switch soulMode {
         case .gone:
             soulCooldown -= dt
-            // Spawn mid-track while walking, with room ahead in the facing direction.
+            // Every lap ends with one death: past ~60% of the lap without dying,
+            // force a spawn — and that soul is lethal (he won't fire at it).
+            let pastLapMiddle = faceRight ? x > trackWidth * 0.6 : x < trackWidth * 0.4
+            if !diedThisLap, pastLapMiddle { soulCooldown = min(soulCooldown, 0.05) }
+            // Spawn mid-track while walking — from the front OR from behind (50/50).
             if soulCooldown <= 0, mode == .walk, x > trackWidth * 0.12, x < trackWidth * 0.88 {
-                let dir: CGFloat = faceRight ? 1 : -1
-                soulX = x + spriteW / 2 + dir * spriteW * 1.4
+                lethalSoul = !diedThisLap && pastLapMiddle
+                let ahead: CGFloat = faceRight ? 1 : -1
+                // The lethal soul always comes head-on (he can't outwalk it); others 50/50.
+                let side = lethalSoul ? ahead : (Bool.random() ? ahead : -ahead)
+                soulX = min(max(x + spriteW / 2 + side * spriteW * 1.4, 20), trackWidth - 20)
                 soulYOff = 34 * artScale          // up near the slayer's head
                 soulLife = 0; soulFlyT = 0; soulFrame = 0; soulShot = false
                 soulMode = .flying
+                soulSeenThisLap = true
             }
         case .flying:
             soulLife += dt; soulFlyT += dt
@@ -218,13 +234,20 @@ final class DoomSlayerController {
             soulX += (dx > 0 ? 1 : -1) * 65 * artScale * CGFloat(dt)
             if abs(dx) < 14 * artScale, mode == .walk || mode == .shoot {
                 mode = .killed; killFrame = 0; killT = 0
+                diedThisLap = true; lethalSoul = false
                 soulMode = .gone; soulCooldown = soulNextCooldown()
                 return
             }
-            // The slayer opens fire shortly after the soul appears.
-            if !soulShot, soulLife > 0.45, mode == .walk {
+            // The slayer opens fire shortly after the soul appears — unless this is the
+            // lap's lethal soul (he holds his fire and it gets him).
+            if !soulShot, !lethalSoul, soulLife > 0.45, mode == .walk {
                 mode = .shoot; shootWeapon = selectWeapon()
-                modeT = max(0.5, shootWeapon.dur); blinkT = 0; blink = true; rocketFired = false
+                modeT = max(0.5, shootWeapon.dur); rocketFired = false
+                // Demon behind him: he turns first, THEN opens fire a beat later.
+                let behind = (soulX > slayerMid) != faceRight
+                blink = false
+                blinkT = behind ? -0.22 : 0
+                if !behind { blink = true }
                 soulShot = true
             }
             // Muzzle flash connects → the soul bursts.
@@ -357,18 +380,14 @@ final class DoomSlayerController {
             flip = faceRight
             if dir > 0 && x > track + m { x = -spriteW - m; nextLap() }
             else if dir < 0 && x < -spriteW - m { x = track + m; nextLap() }
-            untilEvent -= dt
-            if untilEvent <= 0 {
-                let c = combatCfg(); let r = Double.random(in: 0...1, using: &rng)
-                if r < c.pShoot {
-                    mode = .shoot; shootWeapon = selectWeapon()
-                    modeT = shootWeapon.dur; blinkT = 0; blink = true; rocketFired = false
-                } else { newGap() }
-            }
+            // He only ever fires at an incoming Lost Soul (tickSoul triggers the shot) —
+            // no random shooting into the void. The combat setting scales demon frequency.
 
         case .shoot:
             let wpn = shootWeapon
             flip = faceRight
+            // Face the demon — souls can come from behind now.
+            if soulMode != .gone { flip = soulX > x + spriteW / 2 }
             modeT -= dt; blinkT += dt
             if blinkT > wpn.blink { blinkT = 0; blink.toggle() }
             cell = blink ? wpn.cell : wpn.aimCell   // fire frame (real muzzle flash) ↔ aim pose
@@ -383,9 +402,10 @@ final class DoomSlayerController {
                    let kind: Projectile = (wpn.label == "Rocket" ? .rocket
                                           : wpn.label == "BFG" ? .bfg
                                           : wpn.label == "Plasma" ? .plasma : nil) {
-                    rocketFired = true; rocketLive = true; rocketDir = dir
+                    rocketFired = true; rocketLive = true
+                    rocketDir = flip ? 1 : -1          // projectile follows the facing (may aim backwards at a soul)
                     projKind = kind
-                    rocketX = faceRight ? (x + spriteW * 0.90) : (x + spriteW * 0.10)
+                    rocketX = flip ? (x + spriteW * 0.90) : (x + spriteW * 0.10)
                     projStartX = rocketX
                 }
             }
