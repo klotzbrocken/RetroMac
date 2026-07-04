@@ -89,6 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Restore system UI if previous session crashed while UI was hidden
         SystemUIHelper.restoreIfNeeded()
         SystemUIHelper.restoreDesktopIconsIfNeeded()   // crash/force-quit-safe desktop-icon restore
+        AppearanceAdapter.restoreIfNeeded()            // ditto for matched appearance/accent
         restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
         _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98
@@ -115,6 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let idString = note.object as? String,
                   let uuid = UUID(uuidString: idString),
                   let bookmark = AppSettings.shared.tvBookmarks.first(where: { $0.id == uuid }) else { return }
+            AppSettings.shared.tvLastBookmarkURL = bookmark.url   // Tube Mode starts on this channel
             self?.tvBrowser.open(bookmark: bookmark)
         }
 
@@ -804,6 +806,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let viewportToggleItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         viewportToggleItem.view = viewportRow
         menu.addItem(viewportToggleItem)
+
+        // ── TV Tube toggle ──
+        let tubePill = PillToggleView(isOn: TubeModeController.shared.isActive)
+        let tubeRow = MenuToggleRowView(
+            icon: "tv",
+            label: "TV Tube",
+            hotkeyHint: nil,
+            pill: tubePill
+        ) { [weak self] in
+            self?.toggleTubeMode()
+            self?.updateMenuLive()
+        }
+        let tubeToggleItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        tubeToggleItem.view = tubeRow
+        menu.addItem(tubeToggleItem)
 
         // ── PRESETS section ──
         menu.addItem(sectionLabel("PRESETS"))
@@ -1816,7 +1833,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let idString = sender.representedObject as? String,
               let uuid = UUID(uuidString: idString),
               let bookmark = AppSettings.shared.tvBookmarks.first(where: { $0.id == uuid }) else { return }
+        AppSettings.shared.tvLastBookmarkURL = bookmark.url   // Tube Mode starts on this channel
         tvBrowser.open(bookmark: bookmark)
+    }
+
+    /// Flyout / menu "TV Tube" toggle: the one-click retro TV (bezel + streams + shader).
+    @objc func toggleTubeMode() {
+        TubeModeController.shared.toggle()
+        rebuildMenu()
     }
 
     func showOnboarding() {

@@ -4,6 +4,8 @@ struct TVSettingsTab: View {
     @ObservedObject var settings = AppSettings.shared
     @State private var newName: String = ""
     @State private var newURL: String = ""
+    @State private var bezelStatus: String = ""
+    @State private var downloadingBezel: String? = nil
 
     private var allPresets: [(String, String)] {
         var list: [(String, String)] = [("", "None")]
@@ -31,6 +33,71 @@ struct TVSettingsTab: View {
                             }
                         }
                         .padding(.vertical, 4)
+                    }
+                }
+
+                RMCard(title: "Tube Mode",
+                       subtitle: "The flyout's one-click retro TV: streams inside a real TV bezel with a CRT shader. Arrow keys zap channels, ESC turns it off, double-click toggles fullscreen.",
+                       bodyPadding: RMSpacing.card) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("TV bezel").frame(width: 90, alignment: .leading)
+                            Picker("", selection: $settings.tvTubeBezel) {
+                                Text("Simple frame (built-in)").tag("")
+                                ForEach(BezelStore.shared.available) { b in
+                                    Text(BezelStore.shared.isDownloaded(b) ? b.name : "\(b.name)  (download)")
+                                        .tag(b.file)
+                                }
+                            }
+                            .labelsHidden().frame(width: 260)
+                            .onChange(of: settings.tvTubeBezel) { _, file in
+                                guard let bezel = BezelStore.shared.bezel(named: file),
+                                      !BezelStore.shared.isDownloaded(bezel) else {
+                                    TubeModeController.shared.refreshAppearance(); return
+                                }
+                                downloadingBezel = file
+                                bezelStatus = "Downloading \(bezel.name)…"
+                                BezelStore.shared.download(bezel) { result in
+                                    downloadingBezel = nil
+                                    switch result {
+                                    case .success:
+                                        bezelStatus = "\(bezel.name) ready."
+                                        TubeModeController.shared.refreshAppearance()
+                                    case .failure(let e):
+                                        bezelStatus = "Download failed: \(e.localizedDescription)"
+                                        settings.tvTubeBezel = ""
+                                    }
+                                }
+                            }
+                            if downloadingBezel != nil { ProgressView().controlSize(.small) }
+                        }
+                        HStack {
+                            Text("Shader").frame(width: 90, alignment: .leading)
+                            Picker("", selection: $settings.tvTubePreset) {
+                                ForEach(allPresets.filter { !$0.0.isEmpty }, id: \.0) { id, name in
+                                    Text(name).tag(id)
+                                }
+                            }
+                            .labelsHidden().frame(width: 260)
+                            .onChange(of: settings.tvTubePreset) { _, _ in
+                                TubeModeController.shared.refreshAppearance()
+                            }
+                        }
+                        HStack {
+                            Text("Display").frame(width: 90, alignment: .leading)
+                            Picker("", selection: $settings.tvTubeDisplayID) {
+                                Text("Auto (external if connected)").tag(CGDirectDisplayID(0))
+                                ForEach(NSScreen.screens, id: \.displayID) { s in
+                                    Text(s.localizedName).tag(s.displayID)
+                                }
+                            }
+                            .labelsHidden().frame(width: 260)
+                        }
+                        if !bezelStatus.isEmpty {
+                            Text(bezelStatus).font(.rmSecondary).foregroundColor(.rmTextSecondary)
+                        }
+                        Text("Bezel artwork: Soqueroeu Mega Bezel TV Backgrounds — downloaded on demand from the author's GitHub.")
+                            .font(.rmSecondary).foregroundColor(.rmTextSecondary)
                     }
                 }
 
