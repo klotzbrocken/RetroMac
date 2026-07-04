@@ -163,6 +163,7 @@ final class LauncherModel: ObservableObject {
     func icon(for name: String) -> NSImage? { allThemes.first { $0.name == name }?.icon }
     @Published var shaderActive = false
     @Published var webcamRunning = false
+    @Published var tubeActive = false
     @Published var currentPreset: String = ""
 
     let presetGroups: [PresetGroup] = PresetRegistry.categorizedPresets.map { cat, infos in
@@ -189,6 +190,7 @@ final class LauncherModel: ObservableObject {
         // Shader/preset state can settle asynchronously (full overlay starts on a Task);
         // update the toggle + preset dropdown when it does, without a full theme reload.
         observers.append(nc.addObserver(forName: .overlayStateChanged, object: nil, queue: .main) { [weak self] _ in self?.refreshState() })
+        observers.append(nc.addObserver(forName: .tubeModeChanged, object: nil, queue: .main) { [weak self] _ in self?.refreshState() })
     }
 
     deinit { observers.forEach { NotificationCenter.default.removeObserver($0) } }
@@ -215,6 +217,7 @@ final class LauncherModel: ObservableObject {
     func refreshState() {
         shaderActive = AppDelegate.shared?.launcherShaderActive ?? false
         webcamRunning = VirtualCameraManager.shared.isRunning
+        tubeActive = TubeModeController.shared.isActive
         currentPreset = AppDelegate.shared?.launcherCurrentPreset ?? ""
     }
 }
@@ -498,6 +501,14 @@ struct LauncherView: View {
                 Spacer()
                 Toggle("", isOn: Binding(get: { model.webcamRunning },
                                          set: { _ in AppDelegate.shared?.launcherToggleWebcam(); model.refresh() }))
+                    .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
+            }
+
+            HStack {
+                Label("TV Tube", systemImage: "sparkles.tv")
+                Spacer()
+                Toggle("", isOn: Binding(get: { model.tubeActive },
+                                         set: { _ in AppDelegate.shared?.toggleTubeMode(); model.refreshState() }))
                     .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }
 

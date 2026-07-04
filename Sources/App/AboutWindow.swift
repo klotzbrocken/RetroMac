@@ -258,6 +258,20 @@ struct AboutTab: View {
                 }
 
                 Section("Resources") {
+                    Link("soqueroeu/Soqueroeu-TV-Backgrounds_V2.0 on GitHub",
+                         destination: URL(string: "https://github.com/soqueroeu/Soqueroeu-TV-Backgrounds_V2.0")!)
+                        .font(.caption)
+                    Text("Tube Mode TV bezel artwork by Soqueroeu (Mega Bezel TV Backgrounds), downloaded on demand from the author's repository — not redistributed with RetroMac.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("paulsmith/classic-mac-patterns · thomasareed/Classic-Mac-icons · danmorgandesigns/classic-mac-elements",
+                         destination: URL(string: "https://github.com/thomasareed/Classic-Mac-icons")!)
+                        .font(.caption)
+                    Text("Mac OS 6 theme: desktop patterns, 1-bit icons and classic fonts from these open GitHub collections.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("amanchokshi/retro-icons on GitHub",
                          destination: URL(string: "https://github.com/amanchokshi/retro-icons")!)
                         .font(.caption)
