@@ -3,8 +3,8 @@
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
-    "height": 80,
-    "iconSize": 66,
+    "height": 63,
+    "iconSize": 52,
     "padding": 7,
     "spacing": 5,
     "cornerRadius": 6,

@@ -272,13 +272,6 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Link("amanchokshi/retro-icons on GitHub",
-                         destination: URL(string: "https://github.com/amanchokshi/retro-icons")!)
-                        .font(.caption)
-                    Text("Sleek Retro theme icons by Aman Chokshi.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
                     Link("jcherven/BeOS-r5-Icons on GitHub",
                          destination: URL(string: "https://github.com/jcherven/BeOS-r5-Icons")!)
                         .font(.caption)
