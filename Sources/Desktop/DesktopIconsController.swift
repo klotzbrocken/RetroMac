@@ -18,7 +18,11 @@ final class DesktopIconsController {
 
     // Computed grid layout — scales with screen resolution
     private var iconSize: CGFloat {
-        if let s = ThemeManager.shared.activeTheme?.config.desktopIconSize, s > 8 { return s }
+        // The dock leads: a per-theme size follows the user's dock icon scale so desktop
+        // and dock icons stay visually identical.
+        if let s = ThemeManager.shared.activeTheme?.config.desktopIconSize, s > 8 {
+            return s * CGFloat(AppSettings.shared.dockIconScale)
+        }
         let scale = NSScreen.main?.backingScaleFactor ?? 2.0
         // At 2x (Retina): 64pt icon, at 1x: 48pt
         return scale >= 2.0 ? 64 : 48

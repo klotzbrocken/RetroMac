@@ -1093,10 +1093,11 @@ final class DockView: NSView {
             }
         } else {
             let icon: NSImage
-            if isTransient && ThemeManager.shared.customIconPath(for: bundleID) == nil && !theme.isPixelated {
+            if isTransient && ThemeManager.shared.customIconPath(for: bundleID) == nil
+                && !theme.isPixelated && theme.icon.monochrome != true {
                 // Transient (running) apps show their real system icon unless user set a
-                // custom one — except in pixel themes, where icon(for:) pixelates the
-                // real icon so the whole dock stays consistent.
+                // custom one — except in pixel/monochrome themes, where icon(for:)
+                // pixelates/desaturates the real icon so the whole dock stays consistent.
                 icon = ThemeManager.shared.systemIcon(for: bundleID, size: iconSize)
             } else {
                 icon = ThemeManager.shared.icon(for: bundleID, size: iconSize)

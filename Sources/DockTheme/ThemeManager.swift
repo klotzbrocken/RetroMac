@@ -1,4 +1,6 @@
 import AppKit
+import CoreImage
+import CoreText
 
 final class ThemeManager {
     static let shared = ThemeManager()
@@ -50,6 +52,10 @@ final class ThemeManager {
             ?? themes.first(where: { $0.config.name == "Maiks Favourite" })
             ?? themes.first(where: { $0.config.name == "Mountain Lion" })
             ?? themes.first
+        // reload() recreates every ThemeBundle from disk, which drops runtime config
+        // overrides — re-apply them here (the dockTheme sink reloads on EVERY switch).
+        applyMacOS6DockVariant()
+        registerThemeFonts()
         print("[Theme] Active: \(activeTheme?.name ?? "nil")")
     }
 
@@ -81,6 +87,8 @@ final class ThemeManager {
         AppSettings.shared.dockTheme = name
         activeTheme = availableThemes.first(where: { $0.config.name == name })
         iconCache.removeAllObjects()
+        registerThemeFonts()   // e.g. Chicago/Geneva for Mac OS 6 (process-scoped, idempotent)
+        applyMacOS6DockVariant()
         // "Dock only" mode skips the desktop wallpaper change (theme affects the dock only).
         if applyWP { applyWallpaper() } else { restoreWallpapers() }
         NotificationCenter.default.post(name: .dockThemeChanged, object: nil)
@@ -91,6 +99,57 @@ final class ThemeManager {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 self?.applyIconsToSystem()
             }
+        }
+    }
+
+    /// Mac OS 6 option: replace the Control Strip with a Mountain-Lion-style dock —
+    /// same 3D glass shelf as Snow Leopard, but in desaturated grays; the theme's
+    /// monochrome icon pipeline keeps every icon B/W.
+    func applyMacOS6DockVariant() {
+        guard let t = activeTheme, t.baseConfig.name == "Mac OS 6 classic" else { return }
+        guard AppSettings.shared.macos6UseDock else { t.setConfigOverride(nil); return }
+        var c = t.baseConfig
+        c.dock.dockStyle = nil               // normal dock, not the Control Strip
+        // 2D Mountain-Lion dock layout, styled lo-fi System 6: solid light gray, hard
+        // square corners, plain black border — no transparency, no gloss.
+        c.dock.height = 68
+        c.dock.iconSize = 50
+        c.dock.padding = 14
+        c.dock.spacing = 6
+        c.dock.cornerRadius = 0
+        c.dock.alignment = "center"
+        c.dock.backgroundColor = "#DDDDDDFF"
+        c.dock.backgroundGradientTop = nil
+        c.dock.backgroundGradientBottom = nil
+        c.dock.shelfLineColor = nil
+        c.dock.borderColor = "#000000FF"
+        c.dock.borderWidth = 1
+        c.dock.shadowEnabled = false
+        c.dock.shadowColor = "#00000000"
+        c.dock.shadowRadius = 0
+        c.dock.bevelTopColor = "#FFFFFFFF"
+        c.dock.bevelBottomColor = "#888888FF"
+        c.dock.bevelWidth = 1
+        c.dock.shelfStyle = nil              // flat 2D panel
+        c.dock.magnification = true
+        c.dock.magnificationScale = 1.8
+        c.dock.showTrash = true
+        c.icon.renderStyle = "smooth"
+        c.indicator.style = "dot"
+        c.indicator.color = "#000000DD"      // black dot on the light panel
+        c.indicator.size = 5
+        c.indicator.offset = 4
+        t.setConfigOverride(c)
+    }
+
+    /// Register any fonts bundled in the theme's `fonts/` folder (process scope, so the
+    /// theme's widgets/labels can use e.g. "Chicago" without installing system-wide).
+    private func registerThemeFonts() {
+        guard let theme = activeTheme else { return }
+        let dir = theme.url.appendingPathComponent("fonts")
+        guard let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { return }
+        for f in files where ["ttf", "otf"].contains(f.pathExtension.lowercased()) {
+            CTFontManagerRegisterFontsForURL(f as CFURL, .process, nil)   // already-registered → harmless error
         }
     }
 
@@ -122,25 +181,74 @@ final class ThemeManager {
         }
         let ws = NSWorkspace.shared
         for screen in NSScreen.screens {
+            // Pattern-tile wallpapers (e.g. System 6 8×8): setDesktopImageURL has no tiling
+            // mode, so pre-render the tile to this screen's exact pixel size. Only for
+            // theme-bundled files — a custom "Browse…" wallpaper is never tiled.
+            var finalURL = wpURL
+            if theme.config.wallpaperTiled == true, wpURL.path.hasPrefix(theme.url.path),
+               let tiled = tiledWallpaperURL(tile: wpURL, for: screen, themeName: theme.name) {
+                finalURL = tiled
+            }
             let screenKey = "\(screen.displayID)"
             // Only capture the ORIGINAL once, and never capture our own theme wallpaper
             // as the "original" (guards against re-entrant applyWallpaper calls that would
             // otherwise overwrite the backup with the theme image → default on restore).
             if savedWallpapers[screenKey] == nil {
-                if let current = ws.desktopImageURL(for: screen), current != wpURL {
+                if let current = ws.desktopImageURL(for: screen), current != wpURL, current != finalURL {
                     savedWallpapers[screenKey] = current
                     print("[Theme] Saved original wallpaper for screen \(screenKey) (\(screen.localizedName)): \(current.path)")
                 } else {
                     print("[Theme] WARNING: no original wallpaper captured for screen \(screenKey) (\(screen.localizedName)) — desktopImageURL=\(ws.desktopImageURL(for: screen)?.path ?? "nil")")
                 }
             }
-            try? ws.setDesktopImageURL(wpURL, for: screen, options: [:])
+            try? ws.setDesktopImageURL(finalURL, for: screen, options: [:])
         }
         persistWallpaperBackup()
         print("[Theme] Wallpaper set on \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent)")
+        AppearanceAdapter.apply(for: theme.config)
+        TerminalThemer.apply(forThemeNamed: theme.config.name)
+    }
+
+    /// Renders a small pattern tile edge-to-edge at the screen's pixel size (1 tile pixel
+    /// = 1 point, crisp nearest-neighbour) and caches the PNG in Application Support.
+    private func tiledWallpaperURL(tile: URL, for screen: NSScreen, themeName: String) -> URL? {
+        guard let tileImg = NSImage(contentsOf: tile) else { return nil }
+        let scale = screen.backingScaleFactor
+        let pxW = Int(screen.frame.width * scale), pxH = Int(screen.frame.height * scale)
+        guard pxW > 0, pxH > 0 else { return nil }
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("RetroMac/TiledWallpapers", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let safe = themeName.replacingOccurrences(of: " ", with: "-")
+        let out = dir.appendingPathComponent("\(safe)-\(tile.deletingPathExtension().lastPathComponent)-\(pxW)x\(pxH).png")
+        if FileManager.default.fileExists(atPath: out.path) { return out }
+
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pxW, pixelsHigh: pxH,
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+              let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
+        // Build one pattern cell at device scale (nearest-neighbour keeps the pixels square).
+        let cellW = tileImg.size.width * scale, cellH = tileImg.size.height * scale
+        let cell = NSImage(size: NSSize(width: cellW, height: cellH))
+        cell.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .none
+        tileImg.draw(in: NSRect(x: 0, y: 0, width: cellW, height: cellH))
+        cell.unlockFocus()
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = ctx
+        NSColor(patternImage: cell).setFill()
+        NSRect(x: 0, y: 0, width: pxW, height: pxH).fill()
+        NSGraphicsContext.restoreGraphicsState()
+
+        guard let png = rep.representation(using: .png, properties: [:]) else { return nil }
+        do { try png.write(to: out) } catch { return nil }
+        return out
     }
 
     func restoreWallpapers() {
+        AppearanceAdapter.restore()   // matched appearance/accent returns with the wallpaper
+        TerminalThemer.restore()      // and so does the user's Terminal profile
         guard !savedWallpapers.isEmpty else { return }
         let ws = NSWorkspace.shared
         for screen in NSScreen.screens {
@@ -212,12 +320,17 @@ final class ThemeManager {
         }
 
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
-            let icon = NSWorkspace.shared.icon(forFile: url.path)
+            var icon = NSWorkspace.shared.icon(forFile: url.path)
             icon.size = NSSize(width: size, height: size)
             // Pixel themes: auto-pixelate un-mapped apps' real icons so the whole dock
             // reads as one consistent pixel-art set without needing per-app artwork.
             if activeTheme?.config.isPixelated == true {
-                return pixelated(icon, to: size)
+                icon = pixelated(icon, to: size)
+            }
+            // B/W themes (e.g. Mac OS 6): desaturate un-mapped system icons so every
+            // running app blends into the monochrome look.
+            if activeTheme?.config.icon.monochrome == true {
+                icon = grayscaled(icon, size: size)
             }
             return icon
         }
@@ -231,8 +344,33 @@ final class ThemeManager {
     /// Pixelate `image` only when the active theme is pixelated. For icons loaded
     /// outside `loadIcon` (e.g. the trash icon) so they match the rest of the dock.
     func pixelatedIfNeeded(_ image: NSImage, size: CGFloat) -> NSImage {
-        guard activeTheme?.config.isPixelated == true else { return image }
-        return pixelated(image, to: size)
+        var img = image
+        if activeTheme?.config.isPixelated == true { img = pixelated(img, to: size) }
+        if activeTheme?.config.icon.monochrome == true { img = grayscaled(img, size: size) }
+        return img
+    }
+
+    /// Desaturate an icon to grayscale (B/W themes like Mac OS 6). Pure AppKit draw at the
+    /// TARGET size with a saturation blend — the earlier CoreImage version ran the filter
+    /// over the icon's largest rep (often 1024px TIFF) per app and beachballed the
+    /// Applications widget.
+    private func grayscaled(_ image: NSImage, size: CGFloat) -> NSImage {
+        let px = Int(size * 2)   // retina
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px,
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return image }
+        rep.size = NSSize(width: size, height: size)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        let r = NSRect(x: 0, y: 0, width: size, height: size)
+        image.draw(in: r, from: .zero, operation: .sourceOver, fraction: 1.0)
+        NSColor(calibratedWhite: 0.5, alpha: 1).setFill()
+        r.fill(using: .saturation)                                            // drop the chroma
+        image.draw(in: r, from: .zero, operation: .destinationIn, fraction: 1.0)   // restore alpha
+        NSGraphicsContext.restoreGraphicsState()
+        let out = NSImage(size: NSSize(width: size, height: size))
+        out.addRepresentation(rep)
+        return out
     }
 
     /// Downsample an icon to a small grid, then nearest-neighbour upscale → chunky
