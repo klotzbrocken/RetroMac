@@ -202,5 +202,7 @@
   },
   "desktopIconSize": 48,
   "splashVideo": "boot.mp4",
-  "screensaver": "pipes"
+  "screensaver": "pipes",
+  "appearance": "light",
+  "accentColor": "blue"
 }

@@ -36,8 +36,16 @@ final class RainbowAppleController {
     /// and a menu bar is visible. Driven by `menuBarAppleStyle` (flyout cycle + Settings).
     func update() {
         let s = AppSettings.shared
-        let show = s.menuBarAppleStyle != 0 && !s.hideMenuBar
-        if show { rebuild() } else { hide() }
+        let wantShow = s.menuBarAppleStyle != 0 && !s.hideMenuBar
+        guard wantShow else { hide(); return }
+        // A hidden/auto-hiding system menu bar means there is no Apple glyph to cover —
+        // the overlay would float over a bare desktop. Checked off-main (shells out).
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let barHidden = SystemUIHelper.isMenuBarAutoHidden()
+            DispatchQueue.main.async {
+                if barHidden { self?.hide() } else { self?.rebuild() }
+            }
+        }
     }
 
     func hide() {

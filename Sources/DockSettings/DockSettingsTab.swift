@@ -258,6 +258,22 @@ struct DockSettingsTab: View {
                         }
                     }
                 }
+                if selectedThemeConfig?.name == "Mac OS 6 classic" {
+                    RMRow(label: "Dock style", hint: "Replace the Control Strip with a Mountain-Lion-style dock — 3D glass shelf in grayscale, icons stay black & white.") {
+                        Picker("", selection: $settings.macos6UseDock) {
+                            Text("Control Strip").tag(false)
+                            Text("Dock (B/W)").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                        .onChange(of: settings.macos6UseDock) { _, _ in
+                            guard settings.dockEnabled,
+                                  ThemeManager.shared.activeTheme?.baseConfig.name == "Mac OS 6 classic" else { return }
+                            ThemeManager.shared.setActiveTheme(name: "Mac OS 6 classic",
+                                                               applyWallpaper: !AppSettings.shared.dockOnly)
+                        }
+                    }
+                }
                 if selectedThemeConfig?.dock.borderStyle == "doomslayer" {
                     RMRow(label: "Slayer size", hint: "Scale of the Doom Slayer patrolling below the dock. The one knob you usually touch.") {
                         HStack(spacing: 8) {
@@ -368,6 +384,32 @@ struct DockSettingsTab: View {
                         .toggleStyle(.switch)
                         .tint(.rmAccent)
                         .labelsHidden()
+                }
+                RMRow(label: "Terminal profile", hint: "Install and select a Terminal profile matching the theme (DOS green, BeOS, Classic Mac, DOOM …). Your previous profile returns when the theme goes off.") {
+                    Toggle("", isOn: $settings.themeTerminalProfile)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                        .onChange(of: settings.themeTerminalProfile) { _, on in
+                            if on, settings.dockEnabled, let cfg = ThemeManager.shared.activeTheme?.config {
+                                TerminalThemer.apply(forThemeNamed: cfg.name)
+                            } else if !on {
+                                TerminalThemer.restore()
+                            }
+                        }
+                }
+                RMRow(label: "Match appearance", hint: "Set the macOS appearance and accent colour to fit the active theme (e.g. Graphite for Mac OS 6). Your own settings are remembered and restored.") {
+                    Toggle("", isOn: $settings.themeAdaptAppearance)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                        .onChange(of: settings.themeAdaptAppearance) { _, on in
+                            if on, settings.dockEnabled, let cfg = ThemeManager.shared.activeTheme?.config {
+                                AppearanceAdapter.apply(for: cfg)
+                            } else if !on {
+                                AppearanceAdapter.restore()
+                            }
+                        }
                 }
                 RMRow(label: "Show splash screen", hint: "Briefly shows the theme's boot splash when activated.", isLast: true) {
                     Toggle("", isOn: $settings.showSplashScreen)

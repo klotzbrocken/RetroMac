@@ -269,6 +269,18 @@ final class AppSettings: ObservableObject {
             NotificationCenter.default.post(name: .clockFormatChanged, object: nil)
         }
     }
+    /// Match the macOS appearance (light/dark) + accent colour to the active theme.
+    @Published var themeAdaptAppearance: Bool {
+        didSet { defaults.set(themeAdaptAppearance, forKey: "themeAdaptAppearance") }
+    }
+    /// Install + select a Terminal profile matching the active theme (DOS, BeOS, …).
+    @Published var themeTerminalProfile: Bool {
+        didSet { defaults.set(themeTerminalProfile, forKey: "themeTerminalProfile") }
+    }
+    /// Mac OS 6: replace the Control Strip with a Mountain-Lion-style dock (B/W).
+    @Published var macos6UseDock: Bool {
+        didSet { defaults.set(macos6UseDock, forKey: "macos6UseDock") }
+    }
     /// Convert a 12-hour DateFormatter pattern to 24-hour when `clockUse24Hour` is on.
     /// e.g. "h:mm a" → "H:mm", "hh:mm:ss a" → "HH:mm:ss"; already-24h patterns are unchanged.
     static func applyClockFormat(_ base: String) -> String {
@@ -285,6 +297,20 @@ final class AppSettings: ObservableObject {
                 defaults.set(data, forKey: "tvBookmarks")
             }
         }
+    }
+
+    // ── Tube Mode (flyout retro TV with bezel) ──
+    @Published var tvTubePreset: String {
+        didSet { defaults.set(tvTubePreset, forKey: "tvTubePreset") }
+    }
+    @Published var tvTubeBezel: String {   // bezel file name, "" = drawn fallback frame
+        didSet { defaults.set(tvTubeBezel, forKey: "tvTubeBezel") }
+    }
+    @Published var tvTubeDisplayID: CGDirectDisplayID {   // 0 = auto (first external, else main)
+        didSet { defaults.set(Int(tvTubeDisplayID), forKey: "tvTubeDisplayID") }
+    }
+    @Published var tvLastBookmarkURL: String {
+        didSet { defaults.set(tvLastBookmarkURL, forKey: "tvLastBookmarkURL") }
     }
 
     // Per-theme preset overrides (theme name → preset ID, empty = "None")
@@ -615,6 +641,9 @@ final class AppSettings: ObservableObject {
         coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
         dockModeEnabled = defaults.object(forKey: "dockModeEnabled") as? Bool ?? false
         shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? true
+        themeAdaptAppearance = defaults.object(forKey: "themeAdaptAppearance") as? Bool ?? false
+        themeTerminalProfile = defaults.object(forKey: "themeTerminalProfile") as? Bool ?? true
+        macos6UseDock = defaults.object(forKey: "macos6UseDock") as? Bool ?? false
         themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? false
         setupWizardComplete = defaults.bool(forKey: "setupWizardComplete")
         // Floating launcher defaults ON. One-time migration flips legacy installs
@@ -674,6 +703,10 @@ final class AppSettings: ObservableObject {
                 TVBookmark(name: "Baywatch", url: "https://amg00145-fremantlemedian-baywatch-samsungau-gtsd6.amagi.tv/playlist/amg00145-fremantlemedian-baywatch-samsungau/playlist.m3u8"),
             ]
         }
+        tvTubePreset = defaults.string(forKey: "tvTubePreset") ?? "joel-gdv-ntsc"
+        tvTubeBezel = defaults.string(forKey: "tvTubeBezel") ?? ""
+        tvTubeDisplayID = CGDirectDisplayID(defaults.integer(forKey: "tvTubeDisplayID"))
+        tvLastBookmarkURL = defaults.string(forKey: "tvLastBookmarkURL") ?? ""
 
         // Dock
         dockEnabled = defaults.bool(forKey: "dockEnabled")

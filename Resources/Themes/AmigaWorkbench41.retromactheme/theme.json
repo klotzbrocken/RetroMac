@@ -4,8 +4,14 @@
   "author": "RetroMac",
   "wallpaper": "wallpaper.png",
   "wallpapers": [
-    { "name": "Workbench Gray (Gradient)", "file": "wallpaper.png" },
-    { "name": "Workbench Gray (Flat)", "file": "wallpaper-flat.png" }
+    {
+      "name": "Workbench Gray (Gradient)",
+      "file": "wallpaper.png"
+    },
+    {
+      "name": "Workbench Gray (Flat)",
+      "file": "wallpaper-flat.png"
+    }
   ],
   "dock": {
     "height": 26,
@@ -49,11 +55,34 @@
     "offset": 0
   },
   "desktopIcons": [
-    { "name": "System", "icon": "harddrive.png", "type": "folder", "path": "/", "gridX": 0, "gridY": 0 },
-    { "name": "Work", "icon": "drawer.png", "type": "folder", "path": "~", "gridX": 0, "gridY": 1 },
-    { "name": "RAM Disk", "icon": "ramdisk.png", "type": "folder", "path": "/tmp", "gridX": 0, "gridY": 2 }
+    {
+      "name": "System",
+      "icon": "harddrive.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Work",
+      "icon": "drawer.png",
+      "type": "folder",
+      "path": "~",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "RAM Disk",
+      "icon": "ramdisk.png",
+      "type": "folder",
+      "path": "/tmp",
+      "gridX": 0,
+      "gridY": 2
+    }
   ],
   "fallbackIcon": "drawer.png",
   "defaultPreset": "lcd-sharp-lite",
-  "iconMappings": {}
+  "iconMappings": {},
+  "appearance": "light",
+  "accentColor": "orange"
 }

@@ -99,5 +99,7 @@
     "com.apple.Terminal": "terminal.png",
     "__trash__": "trash.png",
     "__trash_full__": "trash_full.png"
-  }
+  },
+  "appearance": "light",
+  "accentColor": "yellow"
 }

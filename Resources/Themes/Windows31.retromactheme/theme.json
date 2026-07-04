@@ -5,17 +5,50 @@
   "wallpaper": "wallpaper-teal.png",
   "splashScreen": "splash.png",
   "wallpapers": [
-    { "name": "Teal (Default)", "file": "wallpaper-teal.png" },
-    { "name": "50% Gray", "file": "wallpaper-gray50.png" },
-    { "name": "Boxes", "file": "wallpaper-boxes.png" },
-    { "name": "Diamonds", "file": "wallpaper-diamonds.png" },
-    { "name": "Paisley", "file": "wallpaper-paisley.png" },
-    { "name": "Quilt", "file": "wallpaper-quilt.png" },
-    { "name": "Scottie", "file": "wallpaper-scottie.png" },
-    { "name": "Thatch", "file": "wallpaper-thatch.png" },
-    { "name": "Tulip", "file": "wallpaper-tulip.png" },
-    { "name": "Waffle", "file": "wallpaper-waffle.png" },
-    { "name": "Weave", "file": "wallpaper-weave.png" }
+    {
+      "name": "Teal (Default)",
+      "file": "wallpaper-teal.png"
+    },
+    {
+      "name": "50% Gray",
+      "file": "wallpaper-gray50.png"
+    },
+    {
+      "name": "Boxes",
+      "file": "wallpaper-boxes.png"
+    },
+    {
+      "name": "Diamonds",
+      "file": "wallpaper-diamonds.png"
+    },
+    {
+      "name": "Paisley",
+      "file": "wallpaper-paisley.png"
+    },
+    {
+      "name": "Quilt",
+      "file": "wallpaper-quilt.png"
+    },
+    {
+      "name": "Scottie",
+      "file": "wallpaper-scottie.png"
+    },
+    {
+      "name": "Thatch",
+      "file": "wallpaper-thatch.png"
+    },
+    {
+      "name": "Tulip",
+      "file": "wallpaper-tulip.png"
+    },
+    {
+      "name": "Waffle",
+      "file": "wallpaper-waffle.png"
+    },
+    {
+      "name": "Weave",
+      "file": "wallpaper-weave.png"
+    }
   ],
   "dock": {
     "height": 40,
@@ -79,54 +112,202 @@
     "groups": [
       {
         "name": "Main",
-        "x": 16, "y": 12, "width": 300, "height": 200,
+        "x": 16,
+        "y": 12,
+        "width": 300,
+        "height": 200,
         "items": [
-          { "name": "File Manager", "icon": "filemanager.png", "type": "folder", "path": "/" },
-          { "name": "Control Panel", "icon": "controlpanel.png", "type": "app", "bundleID": "com.apple.systempreferences" },
-          { "name": "Print Manager", "icon": "printmanager.png", "type": "app", "bundleID": "com.apple.systempreferences" },
-          { "name": "MS-DOS Prompt", "icon": "msdos.png", "type": "app", "bundleID": "com.apple.Terminal" },
-          { "name": "Clipboard Viewer", "icon": "clipboard.png", "type": "app", "bundleID": "com.apple.Notes" },
-          { "name": "Read Me", "icon": "write.png", "type": "app", "bundleID": "com.apple.TextEdit" }
+          {
+            "name": "File Manager",
+            "icon": "filemanager.png",
+            "type": "folder",
+            "path": "/"
+          },
+          {
+            "name": "Control Panel",
+            "icon": "controlpanel.png",
+            "type": "app",
+            "bundleID": "com.apple.systempreferences"
+          },
+          {
+            "name": "Print Manager",
+            "icon": "printmanager.png",
+            "type": "app",
+            "bundleID": "com.apple.systempreferences"
+          },
+          {
+            "name": "MS-DOS Prompt",
+            "icon": "msdos.png",
+            "type": "app",
+            "bundleID": "com.apple.Terminal"
+          },
+          {
+            "name": "Clipboard Viewer",
+            "icon": "clipboard.png",
+            "type": "app",
+            "bundleID": "com.apple.Notes"
+          },
+          {
+            "name": "Read Me",
+            "icon": "write.png",
+            "type": "app",
+            "bundleID": "com.apple.TextEdit"
+          }
         ]
       },
       {
         "name": "Accessories",
-        "x": 332, "y": 12, "width": 320, "height": 240,
+        "x": 332,
+        "y": 12,
+        "width": 320,
+        "height": 240,
         "items": [
-          { "name": "Write", "icon": "write.png", "type": "app", "bundleID": "com.apple.TextEdit" },
-          { "name": "Paintbrush", "icon": "paintbrush.png", "type": "app", "bundleID": "com.apple.Preview" },
-          { "name": "Notepad", "icon": "notepad.png", "type": "app", "bundleID": "com.apple.Notes" },
-          { "name": "Calculator", "icon": "calculator.png", "type": "app", "bundleID": "com.apple.calculator" },
-          { "name": "Calendar", "icon": "calendar.png", "type": "app", "bundleID": "com.apple.iCal" },
-          { "name": "Cardfile", "icon": "cardfile.png", "type": "app", "bundleID": "com.apple.AddressBook" },
-          { "name": "Clock", "icon": "clock.png", "type": "app", "bundleID": "com.apple.clock" },
-          { "name": "Character Map", "icon": "charmap.png", "type": "app", "bundleID": "com.apple.FontBook" },
-          { "name": "Media Player", "icon": "mediaplayer.png", "type": "app", "bundleID": "com.apple.Music" },
-          { "name": "Sound Recorder", "icon": "recorder.png", "type": "app", "bundleID": "com.apple.VoiceMemos" }
+          {
+            "name": "Write",
+            "icon": "write.png",
+            "type": "app",
+            "bundleID": "com.apple.TextEdit"
+          },
+          {
+            "name": "Paintbrush",
+            "icon": "paintbrush.png",
+            "type": "app",
+            "bundleID": "com.apple.Preview"
+          },
+          {
+            "name": "Notepad",
+            "icon": "notepad.png",
+            "type": "app",
+            "bundleID": "com.apple.Notes"
+          },
+          {
+            "name": "Calculator",
+            "icon": "calculator.png",
+            "type": "app",
+            "bundleID": "com.apple.calculator"
+          },
+          {
+            "name": "Calendar",
+            "icon": "calendar.png",
+            "type": "app",
+            "bundleID": "com.apple.iCal"
+          },
+          {
+            "name": "Cardfile",
+            "icon": "cardfile.png",
+            "type": "app",
+            "bundleID": "com.apple.AddressBook"
+          },
+          {
+            "name": "Clock",
+            "icon": "clock.png",
+            "type": "app",
+            "bundleID": "com.apple.clock"
+          },
+          {
+            "name": "Character Map",
+            "icon": "charmap.png",
+            "type": "app",
+            "bundleID": "com.apple.FontBook"
+          },
+          {
+            "name": "Media Player",
+            "icon": "mediaplayer.png",
+            "type": "app",
+            "bundleID": "com.apple.Music"
+          },
+          {
+            "name": "Sound Recorder",
+            "icon": "recorder.png",
+            "type": "app",
+            "bundleID": "com.apple.VoiceMemos"
+          }
         ]
       },
       {
         "name": "Games",
-        "x": 80, "y": 232, "width": 280, "height": 170,
+        "x": 80,
+        "y": 232,
+        "width": 280,
+        "height": 170,
         "items": [
-          { "name": "Solitaire", "icon": "solitaire.png", "type": "app", "bundleID": "com.apple.Chess" },
-          { "name": "Minesweeper", "icon": "minesweeper.png", "type": "app", "bundleID": "com.apple.Chess" },
-          { "name": "Chess", "icon": "app4.png", "type": "app", "bundleID": "com.apple.Chess" },
-          { "name": "Quake", "icon": "app5.png", "type": "app", "bundleID": "com.macsourceports.vkQuake", "args": ["-basedir", "~/Library/Application Support/RetroMac/Games/Quake"] },
-          { "name": "Quake III", "icon": "app6.png", "type": "app", "bundleID": "com.macsourceports.ioquake3" }
+          {
+            "name": "Solitaire",
+            "icon": "solitaire.png",
+            "type": "app",
+            "bundleID": "com.apple.Chess"
+          },
+          {
+            "name": "Minesweeper",
+            "icon": "minesweeper.png",
+            "type": "app",
+            "bundleID": "com.apple.Chess"
+          },
+          {
+            "name": "Chess",
+            "icon": "app4.png",
+            "type": "app",
+            "bundleID": "com.apple.Chess"
+          },
+          {
+            "name": "Quake",
+            "icon": "app5.png",
+            "type": "app",
+            "bundleID": "com.macsourceports.vkQuake",
+            "args": [
+              "-basedir",
+              "~/Library/Application Support/RetroMac/Games/Quake"
+            ]
+          },
+          {
+            "name": "Quake III",
+            "icon": "app6.png",
+            "type": "app",
+            "bundleID": "com.macsourceports.ioquake3"
+          }
         ]
       },
       {
         "name": "Applications",
-        "x": 372, "y": 268, "width": 280, "height": 150,
+        "x": 372,
+        "y": 268,
+        "width": 280,
+        "height": 150,
         "items": [
-          { "name": "Safari", "icon": "app1.png", "type": "app", "bundleID": "com.apple.Safari" },
-          { "name": "Mail", "icon": "mail.png", "type": "app", "bundleID": "com.apple.mail" },
-          { "name": "Photos", "icon": "app2.png", "type": "app", "bundleID": "com.apple.Photos" },
-          { "name": "Messages", "icon": "app3.png", "type": "app", "bundleID": "com.apple.MobileSMS" },
-          { "name": "Music", "icon": "sound.png", "type": "app", "bundleID": "com.apple.Music" }
+          {
+            "name": "Safari",
+            "icon": "app1.png",
+            "type": "app",
+            "bundleID": "com.apple.Safari"
+          },
+          {
+            "name": "Mail",
+            "icon": "mail.png",
+            "type": "app",
+            "bundleID": "com.apple.mail"
+          },
+          {
+            "name": "Photos",
+            "icon": "app2.png",
+            "type": "app",
+            "bundleID": "com.apple.Photos"
+          },
+          {
+            "name": "Messages",
+            "icon": "app3.png",
+            "type": "app",
+            "bundleID": "com.apple.MobileSMS"
+          },
+          {
+            "name": "Music",
+            "icon": "sound.png",
+            "type": "app",
+            "bundleID": "com.apple.Music"
+          }
         ]
       }
     ]
-  }
+  },
+  "appearance": "light",
+  "accentColor": "blue"
 }

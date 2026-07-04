@@ -43,15 +43,37 @@
     "offset": 4
   },
   "desktopIcons": [
-    { "name": "Macintosh HD", "icon": "", "type": "folder", "path": "/", "gridX": 0, "gridY": 0 }
+    {
+      "name": "Macintosh HD",
+      "icon": "",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 0
+    }
   ],
   "wallpaper": "wallpaper.jpg",
   "wallpapers": [
-    { "name": "Aurora", "file": "wallpaper.jpg" },
-    { "name": "Snow Leopard Alt", "file": "wallpaper-alt.jpg" },
-    { "name": "Aurora Server", "file": "wallpaper-aurora.jpg" },
-    { "name": "Clown Fish", "file": "wallpaper-clownfish.jpg" },
-    { "name": "Horizon", "file": "wallpaper-horizon.jpg" }
+    {
+      "name": "Aurora",
+      "file": "wallpaper.jpg"
+    },
+    {
+      "name": "Snow Leopard Alt",
+      "file": "wallpaper-alt.jpg"
+    },
+    {
+      "name": "Aurora Server",
+      "file": "wallpaper-aurora.jpg"
+    },
+    {
+      "name": "Clown Fish",
+      "file": "wallpaper-clownfish.jpg"
+    },
+    {
+      "name": "Horizon",
+      "file": "wallpaper-horizon.jpg"
+    }
   ],
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-sharp-lite",
@@ -111,5 +133,8 @@
     "com.apple.notificationcenterui": "notifications.png",
     "com.apple.clock": "clock.png",
     "com.apple.BluetoothFileExchange": "bluetooth.png"
-  }
+  },
+  "appearance": "light",
+  "accentColor": "blue",
+  "desktopIconSize": 52
 }

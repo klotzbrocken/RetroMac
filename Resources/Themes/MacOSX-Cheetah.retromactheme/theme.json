@@ -140,5 +140,7 @@
     "com.apple.keychainaccess": "keychain.png",
     "com.apple.clock": "clock.png"
   },
-  "screensaver": "flurry"
+  "screensaver": "flurry",
+  "appearance": "light",
+  "accentColor": "blue"
 }

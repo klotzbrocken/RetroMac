@@ -62,5 +62,7 @@
     "com.apple.systempreferences": "settings.png",
     "com.apple.Music": "music.png",
     "com.apple.Terminal": "terminal.png"
-  }
+  },
+  "appearance": "light",
+  "accentColor": "blue"
 }

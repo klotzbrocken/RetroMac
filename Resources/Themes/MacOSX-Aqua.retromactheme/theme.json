@@ -92,5 +92,8 @@
     "com.apple.notificationcenterui": "notifications.png",
     "com.apple.clock": "clock.png",
     "com.apple.BluetoothFileExchange": "bluetooth.png"
-  }
+  },
+  "appearance": "light",
+  "accentColor": "blue",
+  "desktopIconSize": 48
 }
