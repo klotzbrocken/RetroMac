@@ -9,6 +9,7 @@ struct DockThemeConfig: Codable {
     var indicator: IndicatorStyle
     var fallbackIcon: String? = nil
     var wallpaper: String? = nil
+    var wallpaperTiled: Bool? = nil   // true = wallpaper is a small pattern tile (e.g. System 6 8×8) — pre-rendered per screen
     var wallpapers: [WallpaperOption]? = nil
     var defaultPreset: String? = nil
     var iconMappings: [String: String]
@@ -17,6 +18,8 @@ struct DockThemeConfig: Codable {
     var programManager: ProgramManagerConfig? = nil
     var sgiDesktop: SGIDesktopConfig? = nil
     var menuBarApple: String? = nil   // default menu-bar Apple cover for this theme: off|rainbow|aqua|aqua-classic
+    var appearance: String? = nil     // system appearance to match when "Match appearance" is on: light|dark
+    var accentColor: String? = nil    // system accent to match: graphite|blue|red|orange|yellow|green|purple|pink
     var splashScreen: String? = nil   // boot splash image shown briefly on theme activation
     var splashFullscreen: Bool? = nil // true = fill the whole screen (e.g. Win 98 boot)
     var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present
@@ -131,6 +134,7 @@ struct DockThemeConfig: Codable {
         var reflectionOpacity: Float = 0.3
         var hoverScale: CGFloat = 1.15
         var hoverAnimationDuration: Double = 0.15
+        var monochrome: Bool? = nil   // true = un-mapped (system) app icons are desaturated to B/W
     }
 
     struct IndicatorStyle: Codable {

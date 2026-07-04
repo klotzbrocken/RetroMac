@@ -123,9 +123,10 @@ final class Mac9TVChromeView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        if closeRect.contains(p) { onClose?(); return }
-        if collapseRect.contains(p) { onCollapse?(); return }
-        if zoomRect.contains(p) { onZoom?(); return }
+        // Generous hit areas — the 13px Platinum boxes were fiddly to click.
+        if closeRect.insetBy(dx: -6, dy: -6).contains(p) { onClose?(); return }
+        if collapseRect.insetBy(dx: -4, dy: -6).contains(p) { onCollapse?(); return }
+        if zoomRect.insetBy(dx: -4, dy: -6).contains(p) { onZoom?(); return }
         if barRect.contains(p) { window?.performDrag(with: event); return }
     }
 }

@@ -2,8 +2,14 @@ import AppKit
 
 final class ThemeBundle {
     let url: URL
-    let config: DockThemeConfig
+    let baseConfig: DockThemeConfig
     let isBuiltIn: Bool
+    /// Optional runtime variant of the config (e.g. Mac OS 6's "real dock instead of
+    /// Control Strip" option). Set by ThemeManager on activation; nil = as authored.
+    private var configOverride: DockThemeConfig?
+
+    var config: DockThemeConfig { configOverride ?? baseConfig }
+    func setConfigOverride(_ cfg: DockThemeConfig?) { configOverride = cfg }
 
     init(url: URL, isBuiltIn: Bool = false) throws {
         self.url = url
@@ -11,7 +17,7 @@ final class ThemeBundle {
 
         let jsonURL = url.appendingPathComponent("theme.json")
         let data = try Data(contentsOf: jsonURL)
-        self.config = try JSONDecoder().decode(DockThemeConfig.self, from: data)
+        self.baseConfig = try JSONDecoder().decode(DockThemeConfig.self, from: data)
     }
 
     var name: String { config.name }

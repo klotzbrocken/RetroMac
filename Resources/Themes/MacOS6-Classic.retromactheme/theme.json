@@ -1,0 +1,209 @@
+{
+  "name": "Mac OS 6 classic",
+  "version": "1.0",
+  "author": "RetroMac",
+  "splashScreen": "splash.png",
+  "splashFullscreen": true,
+  "dock": {
+    "height": 52,
+    "iconSize": 28,
+    "padding": 6,
+    "spacing": 0,
+    "cornerRadius": 0,
+    "backgroundColor": "#CCCCCCFF",
+    "borderColor": "#000000FF",
+    "borderWidth": 0,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "backgroundImageMode": "tile",
+    "bevelTopColor": "#FFFFFFFF",
+    "bevelBottomColor": "#888888FF",
+    "bevelWidth": 1,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "alignment": "left",
+    "fullWidth": false,
+    "dockStyle": "controlStrip",
+    "showClock": false,
+    "showDiskFree": false,
+    "showTrash": false,
+    "showGrip": false,
+    "magnification": false,
+    "edgeOffset": 0
+  },
+  "icon": {
+    "renderStyle": "pixelated",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.05,
+    "monochrome": true
+  },
+  "indicator": {
+    "style": "none",
+    "color": "#000000",
+    "size": 0,
+    "offset": 0
+  },
+  "wallpaper": "wallpaper-tile.png",
+  "wallpaperTiled": true,
+  "wallpapers": [
+    {
+      "name": "System 6 Pattern",
+      "file": "wallpaper-tile.png"
+    },
+    {
+      "name": "Fine Dots",
+      "file": "wallpaper-pattern-01.png"
+    },
+    {
+      "name": "Diagonal Weave",
+      "file": "wallpaper-pattern-02.png"
+    },
+    {
+      "name": "Pinstripes",
+      "file": "wallpaper-pattern-03.png"
+    },
+    {
+      "name": "Basket",
+      "file": "wallpaper-pattern-04.png"
+    },
+    {
+      "name": "Crosshatch",
+      "file": "wallpaper-pattern-05.png"
+    },
+    {
+      "name": "Bricks",
+      "file": "wallpaper-pattern-06.png"
+    },
+    {
+      "name": "Waves",
+      "file": "wallpaper-pattern-07.png"
+    },
+    {
+      "name": "Checker Sparse",
+      "file": "wallpaper-pattern-08.png"
+    },
+    {
+      "name": "Herringbone",
+      "file": "wallpaper-pattern-09.png"
+    },
+    {
+      "name": "Dense Dots",
+      "file": "wallpaper-pattern-10.png"
+    },
+    {
+      "name": "Heavy Weave",
+      "file": "wallpaper-pattern-11.png"
+    }
+  ],
+  "desktopIcons": [
+    {
+      "name": "Macintosh HD",
+      "icon": "harddrive.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Applications",
+      "icon": "folder.png",
+      "type": "appfolder",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "CPU",
+      "icon": "computer.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Pac-Man",
+      "icon": "pac.png",
+      "type": "pacman",
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "TV",
+      "icon": "folder.png",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 5
+    },
+    {
+      "name": "Clock",
+      "icon": "clock.png",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 6
+    },
+    {
+      "name": "Trash",
+      "icon": "trash_empty.png",
+      "iconFull": "trash_full.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": 7
+    },
+    {
+      "name": "Notepad",
+      "icon": "notes.png",
+      "type": "notepad",
+      "gridX": 0,
+      "gridY": 8
+    }
+  ],
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "bw-noir",
+  "iconMappings": {
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "safari.png",
+    "com.google.Chrome": "chrome.png",
+    "org.mozilla.firefox": "firefox.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.Notes": "notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.systempreferences": "settings.png",
+    "com.apple.Music": "music.png",
+    "com.apple.Terminal": "terminal.png",
+    "com.apple.TextEdit": "textedit.png",
+    "com.apple.QuickTimePlayerX": "quicktime.png",
+    "com.apple.DiskUtility": "diskutility.png",
+    "com.apple.garageband": "garageband.png",
+    "com.apple.iMovieApp": "imovie.png",
+    "com.apple.Dictionary": "dictionary.png",
+    "com.apple.reminders": "reminders.png",
+    "com.apple.calculator": "calculator.png",
+    "com.apple.Preview": "preview.png",
+    "com.apple.ActivityMonitor": "activitymonitor.png",
+    "com.apple.dt.Xcode": "xcode.png",
+    "com.microsoft.Excel": "excel.png",
+    "com.microsoft.Word": "word.png",
+    "com.microsoft.Powerpoint": "powerpoint.png",
+    "com.skype.skype": "skype.png",
+    "com.evernote.Evernote": "evernote.png",
+    "org.gnu.Emacs": "emacs.png",
+    "org.eclipse.platform.ide": "eclipse.png",
+    "com.google.android.studio": "androidstudio.png",
+    "com.google.android.mtpviewer": "androidfiletransfer.png",
+    "com.adobe.Acrobat.Pro": "acrobat.png",
+    "com.adobe.Photoshop": "photoshop.png",
+    "com.adobe.illustrator": "illustrator.png",
+    "com.adobe.InDesign": "indesign.png",
+    "com.adobe.AfterEffects": "aftereffects.png",
+    "__trash__": "trash.png",
+    "__trash_full__": "trash_full.png"
+  },
+  "screensaver": "flying-toasters",
+  "menuBarApple": "off",
+  "appearance": "light",
+  "accentColor": "graphite",
+  "desktopIconSize": 50
+}
