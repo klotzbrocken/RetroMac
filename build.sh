@@ -95,6 +95,18 @@ if [ -d "Resources/Widgets" ]; then
     rsync -a --delete Resources/Widgets/ "$CONTENTS/Resources/Widgets/"
 fi
 
+# Tube Mode bezel catalog
+if [ -d "Resources/TV" ]; then
+    mkdir -p "$CONTENTS/Resources/TV"
+    rsync -a --delete Resources/TV/ "$CONTENTS/Resources/TV/"
+fi
+
+# Real .saver screensaver modules (built by scripts/build-savers.sh)
+if [ -d "Resources/Savers" ]; then
+    mkdir -p "$CONTENTS/Resources/Savers"
+    rsync -a --delete Resources/Savers/ "$CONTENTS/Resources/Savers/"
+fi
+
 # Copy Doom CRT shader PK3
 if [ -f "Resources/RetroMac-CRT.pk3" ]; then
     cp Resources/RetroMac-CRT.pk3 "$CONTENTS/Resources/RetroMac-CRT.pk3"
