@@ -110,5 +110,7 @@
     "com.apple.systempreferences": "settings.png",
     "__trash__": "trash.png",
     "__trash_full__": "trash_full.png"
-  }
+  },
+  "appearance": "dark",
+  "accentColor": "red"
 }

@@ -458,8 +458,11 @@ struct CameraTab: View {
                             .labelsHidden().pickerStyle(.menu).frame(width: 180)
                         }
                         RMRow(label: "Shader") {
+                            // Lite presets are excluded: they tint the DISPLAY via the system
+                            // color filter and never affect the camera stream (B&W Lite would
+                            // silently do nothing here — use B&W Noir / B&W Film instead).
                             Picker("", selection: Binding(get: { vcam.selectedShader }, set: { vcam.changeShader($0) })) {
-                                ForEach(PresetRegistry.categorizedPresets, id: \.0) { _, presets in
+                                ForEach(PresetRegistry.categorizedPresets.filter { $0.0 != .lite }, id: \.0) { _, presets in
                                     ForEach(presets, id: \.id) { Text($0.displayName).tag($0.id) }
                                 }
                             }

@@ -212,5 +212,7 @@
   ],
   "desktopIconSize": 40,
   "splashVideo": "boot.mp4",
-  "screensaver": "flowerbox"
+  "screensaver": "flowerbox",
+  "appearance": "light",
+  "accentColor": "blue"
 }

@@ -87,5 +87,7 @@
     "com.tinyspeck.slackmacgap": "slack.png",
     "com.spotify.client": "spotify.png",
     "com.hnc.Discord": "discord.png"
-  }
+  },
+  "appearance": "dark",
+  "accentColor": "graphite"
 }

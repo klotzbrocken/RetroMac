@@ -150,5 +150,7 @@
   },
   "screensaver": "flying-toasters",
   "splashVideo": "boot.mp4",
-  "splashFullscreen": true
+  "splashFullscreen": true,
+  "appearance": "light",
+  "accentColor": "graphite"
 }
