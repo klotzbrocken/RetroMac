@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 1.9.6")
+                Text("What's New in RetroMac 1.9.7")
                     .font(.title2.bold())
-                Text("A meaner DOOM dock, a 60% smaller download, and fixes")
+                Text("Two new Mac themes, a retro TV, and matching system looks")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,45 +21,45 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "flame.fill",
-                        color: .red,
-                        title: "DOOM theme: real firefights",
-                        description: "Every weapon now fires with its authentic muzzle-flash animation, the Plasma gun spits a stream of blue bolts, rockets and the new BFG detonate in proper explosions, and Lost Souls charge the Slayer — if he's too slow, they get him. He only goes down to demons or your mouse now, with the full 6-frame fall."
+                        icon: "sparkles",
+                        color: .indigo,
+                        title: "New theme: Mac OS 6 classic",
+                        description: "A full black-and-white System 6 desktop — 1-bit icons, selectable 8×8 desktop patterns, Chicago/Geneva fonts, and a Control Strip that can switch to a 2D Platinum-style dock. Every running app's icon is shown in monochrome to match."
                     )
 
                     featureRow(
-                        icon: "arrow.down.circle.fill",
-                        color: .green,
-                        title: "60% smaller download",
-                        description: "A full asset diet shrank the app from ~151 MB to ~61 MB — same themes, same quality where it counts, much faster downloads and updates."
+                        icon: "macwindow",
+                        color: .gray,
+                        title: "Mac OS 9 merged + Platinum widgets",
+                        description: "The old “Mac OS 9.2” theme is now a Platinum-dock option inside Mac OS 9 Classic. Every Mac OS 9 / 6 desktop widget (Clock, CPU, Applications, TV, Notepad) has a pixel-faithful Platinum title bar with pinstripes and working close/collapse/zoom boxes."
                     )
 
                     featureRow(
-                        icon: "play.circle",
-                        color: .orange,
-                        title: "Boot videos are skippable",
-                        description: "A click (or any key) now skips the Windows XP / 98 / Mac boot sequences straight to the desktop — the video player used to swallow the click."
-                    )
-
-                    featureRow(
-                        icon: "display.2",
+                        icon: "tv",
                         color: .blue,
-                        title: "External-display fixes",
-                        description: "The retro menu-bar Apple logo now sits correctly on external monitors (it used to drift on extended 1080p displays)."
+                        title: "TV Tube mode",
+                        description: "One click in the flyout turns your streams into a floating retro TV — a free-standing TV set in a window (resize it), or fullscreen on an external display with a downloadable TV bezel and the Joel GDV-NTSC CRT shader. Right-click to change channel, shader, bezel or TV set."
                     )
 
                     featureRow(
-                        icon: "magnifyingglass",
-                        color: .cyan,
-                        title: "Magnification polish",
-                        description: "The running-app dot stays centred under its icon while the Mac OS X / Snow Leopard docks magnify, and Snow Leopard joins the special themes in the flyout."
+                        icon: "paintpalette",
+                        color: .purple,
+                        title: "Themes match your Mac",
+                        description: "Optional per-theme matching of the macOS appearance + accent colour (Graphite for Mac OS, and more), a Terminal profile that fits the theme (DOS green, BeOS, Classic Mac…), and a crown marks the special themes. Your originals are remembered and restored."
+                    )
+
+                    featureRow(
+                        icon: "moon.stars",
+                        color: .teal,
+                        title: "Real screensavers",
+                        description: "Install Pipes, FlowerBox, Flying Toasters and Flurry as genuine macOS .saver modules from Settings ▸ Screensaver."
                     )
 
                     featureRow(
                         icon: "wrench.and.screwdriver",
                         color: .gray,
-                        title: "Respects your settings",
-                        description: "Turning Retro Mode off restores only what RetroMac itself hid — your own Dock auto-hide or hidden desktop icons stay untouched. The CRT Lite app overlay also sticks to one window instead of jumping between windows of the same app."
+                        title: "Consistency & fixes",
+                        description: "Unified dock icon sizes across the Mac docks (and desktop icons follow the size slider), Snow Leopard / Mountain Lion shown as “Mac OS …”, sturdier crash-recovery for the matched appearance/Terminal, and many smaller fixes."
                     )
                 }
                 .padding(.horizontal, 24)
