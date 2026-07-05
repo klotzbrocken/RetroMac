@@ -17,16 +17,17 @@ final class DesktopIconsController {
     private var custom = DesktopStore.ThemeCustom()
     private var themeName: String { ThemeManager.shared.activeTheme?.config.name ?? "?" }
 
-    // Computed grid layout — scales with screen resolution
+    // Computed grid layout — the dock leads.
     private var iconSize: CGFloat {
-        // The dock leads: a per-theme size follows the user's dock icon scale so desktop
-        // and dock icons stay visually identical.
-        if let s = ThemeManager.shared.activeTheme?.config.desktopIconSize, s > 8 {
-            return s * CGFloat(AppSettings.shared.dockIconScale)
-        }
-        let scale = NSScreen.main?.backingScaleFactor ?? 2.0
-        // At 2x (Retina): 64pt icon, at 1x: 48pt
-        return scale >= 2.0 ? 64 : 48
+        let scale = CGFloat(AppSettings.shared.dockIconScale)
+        let cfg = ThemeManager.shared.activeTheme?.config
+        // An explicit per-theme desktop size wins (e.g. Win98's 40); otherwise desktop
+        // icons match the theme's DOCK icon size so they're identical. Either way the
+        // icon-size slider (dockIconScale) applies — the old fixed 64/48 ignored it.
+        if let s = cfg?.desktopIconSize, s > 8 { return s * scale }
+        if let dockSize = cfg?.dock.iconSize, dockSize > 8 { return dockSize * scale }
+        let bs = NSScreen.main?.backingScaleFactor ?? 2.0
+        return (bs >= 2.0 ? 64 : 48) * scale
     }
     private var cellWidth: CGFloat { iconSize + 32 }      // breathing room between columns
     private var cellHeight: CGFloat { iconSize + 52 }     // … and between rows

@@ -137,10 +137,7 @@ struct DockSettingsTab: View {
     }
 
     private func themeShortName(_ name: String) -> String {
-        switch name {
-        case "Mac OS 9.2 Classic": return "Mac OS 9 Classic"
-        default: return name
-        }
+        ThemeManager.displayName(for: name)
     }
 
     private func themeGradient(_ name: String) -> [Color] {

@@ -94,6 +94,5 @@
     "com.apple.BluetoothFileExchange": "bluetooth.png"
   },
   "appearance": "light",
-  "accentColor": "blue",
-  "desktopIconSize": 48
+  "accentColor": "blue"
 }
