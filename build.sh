@@ -105,6 +105,13 @@ fi
 if [ -d "Resources/Savers" ]; then
     mkdir -p "$CONTENTS/Resources/Savers"
     rsync -a --delete Resources/Savers/ "$CONTENTS/Resources/Savers/"
+    # The .saver bundles ship ad-hoc signed (from build-savers.sh); re-sign their
+    # Mach-O + bundle with the release identity so notarization accepts them.
+    for saver in "$CONTENTS/Resources/Savers/"*.saver; do
+        [ -d "$saver" ] || continue
+        codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$saver/Contents/MacOS/"* 2>/dev/null
+        codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$saver" 2>/dev/null
+    done
 fi
 
 # Copy Doom CRT shader PK3
