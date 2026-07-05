@@ -45,11 +45,11 @@
     "size": 0,
     "offset": 0
   },
-  "wallpaper": "wallpaper.jpg",
+  "wallpaper": "wallpaper-finder.jpg",
   "wallpapers": [
     {
       "name": "Mac OS 9 Default",
-      "file": "wallpaper.jpg"
+      "file": "wallpaper-finder.jpg"
     },
     {
       "name": "Blue Dalmatian",

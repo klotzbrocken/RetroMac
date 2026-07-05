@@ -91,15 +91,17 @@ enum TerminalThemer {
         guard d.bool(forKey: snapKey) else { return }
         let origDefault = d.string(forKey: origDefaultKey)
         let origStartup = d.string(forKey: origStartupKey)
-        d.removeObject(forKey: snapKey)
-        d.removeObject(forKey: origDefaultKey)
-        d.removeObject(forKey: origStartupKey)
         DispatchQueue.global(qos: .utility).async {
             guard let term = UserDefaults(suiteName: "com.apple.Terminal") else { return }
             if let v = origDefault, !v.isEmpty { term.set(v, forKey: "Default Window Settings") }
             else { term.removeObject(forKey: "Default Window Settings") }
             if let v = origStartup, !v.isEmpty { term.set(v, forKey: "Startup Window Settings") }
             else { term.removeObject(forKey: "Startup Window Settings") }
+            // Clear recovery keys only AFTER the restore ran, so a quit/crash mid-restore
+            // still leaves the snapshot for the next launch to retry.
+            d.removeObject(forKey: snapKey)
+            d.removeObject(forKey: origDefaultKey)
+            d.removeObject(forKey: origStartupKey)
             print("[TerminalThemer] Restored the user's Terminal profile")
         }
     }

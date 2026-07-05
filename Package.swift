@@ -17,7 +17,10 @@ let package = Package(
             exclude: ["CameraExtension", "DALPlugin"],
             resources: [
                 .copy("../Resources/Shaders"),
-                .copy("../Resources/Themes")
+                .copy("../Resources/Themes"),
+                .copy("../Resources/TV"),
+                .copy("../Resources/Widgets"),
+                .copy("../Resources/Savers")
             ],
             linkerSettings: [
                 .linkedFramework("Metal"),

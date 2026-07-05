@@ -24,6 +24,7 @@ final class TubeModeController: NSObject, MTKViewDelegate {
     private var channelIndex = 0
     private var savedWindowFrame: NSRect?      // last non-fullscreen frame
     private var isFullscreen = false
+    private var loadedShader = ""              // the shader actually running (for safe reverts)
 
     // MARK: - Public
 
@@ -45,6 +46,7 @@ final class TubeModeController: NSObject, MTKViewDelegate {
 
     func start() {
         guard !isActive else { return }
+        AppDelegate.shared?.stopOverlaysForTube()   // no global overlay/lite/viewport/camera on top
         let screen = targetScreen()
         // Start WINDOWED: a floating TV set (scene cropped to the device); double-click
         // goes fullscreen with the whole scene.
@@ -191,11 +193,21 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         }
     }
 
-    /// Re-apply bezel + shader while running (Settings changes).
+    /// Re-apply bezel + shader while running (Settings changes). A failed shader load
+    /// keeps the currently-running one AND reverts the stored preset, so the UI never
+    /// shows a shader that isn't actually rendering.
     func refreshAppearance() {
         guard isActive else { return }
         loadBezel()
-        try? renderer?.loadShader(named: AppSettings.shared.tvTubePreset)
+        let want = AppSettings.shared.tvTubePreset
+        guard want != loadedShader else { return }
+        do {
+            try renderer?.loadShader(named: want)
+            loadedShader = want
+        } catch {
+            print("[Tube] Shader '\(want)' failed to load (\(error)) — keeping '\(loadedShader)'")
+            AppSettings.shared.tvTubePreset = loadedShader
+        }
     }
 
     // MARK: - Player + shader pipeline (same pattern as TVBrowserWindow.streamDirect)
@@ -219,6 +231,7 @@ final class TubeModeController: NSObject, MTKViewDelegate {
             r.intensity = AppSettings.shared.defaultIntensity
             r.vignetteIntensity = AppSettings.shared.vignetteIntensity
             renderer = r
+            loadedShader = AppSettings.shared.tvTubePreset
         } catch {
             print("[Tube] Shader load failed: \(error)")
             return false

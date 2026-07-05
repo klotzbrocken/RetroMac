@@ -65,8 +65,6 @@ enum AppearanceAdapter {
             (origStyleKey, "AppleInterfaceStyle", false),
         ]
         let values = orig.map { (spec: $0, value: d.string(forKey: $0.key)) }
-        d.removeObject(forKey: snapKey)
-        orig.forEach { d.removeObject(forKey: $0.key) }
         DispatchQueue.global(qos: .utility).async {
             let sb = SystemBridge.shared
             for (spec, value) in values where spec.global != "AppleInterfaceStyle" {
@@ -81,6 +79,10 @@ enum AppearanceAdapter {
             let origStyle = values.first { $0.spec.global == "AppleInterfaceStyle" }?.value ?? ""
             setDarkMode(!(origStyle ?? "").isEmpty)
             notifyChanged()
+            // Clear recovery keys only AFTER the restore actually ran — a quit/crash
+            // mid-restore then still leaves the snapshot for the next launch to retry.
+            d.removeObject(forKey: snapKey)
+            orig.forEach { d.removeObject(forKey: $0.key) }
             print("[Appearance] Restored user's original appearance/accent")
         }
     }
