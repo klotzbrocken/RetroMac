@@ -6,6 +6,30 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 1.9.7</title>
+      <pubDate>Sat, 05 Jul 2026 00:00:00 +0000</pubDate>
+      <sparkle:version>1.9.7</sparkle:version>
+      <sparkle:shortVersionString>1.9.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 1.9.7 &mdash; two new Mac themes, a retro TV &amp; matching system looks</h2>
+        <ul>
+          <li><b>New theme &mdash; Mac OS 6 classic:</b> a black-and-white System 6 desktop with 1-bit icons, selectable 8&times;8 desktop patterns, Chicago/Geneva fonts, a Control Strip that can switch to a 2D Platinum dock, and monochrome app icons.</li>
+          <li><b>Mac OS 9 merged + Platinum widgets:</b> the old &ldquo;Mac OS 9.2&rdquo; is now a Platinum-dock option inside Mac OS 9 Classic; every Mac OS 9/6 desktop widget got a pixel-faithful Platinum title bar with working close/collapse/zoom.</li>
+          <li><b>TV Tube mode:</b> one click turns your streams into a floating retro TV &mdash; a free-standing TV in a window, or fullscreen on an external display with a downloadable bezel and the Joel GDV-NTSC shader; right-click to change channel, shader, bezel or TV set.</li>
+          <li><b>Themes match your Mac:</b> optional per-theme macOS appearance + accent (Graphite for Mac OS &hellip;) and a matching Terminal profile (DOS green, BeOS, Classic Mac); your originals are remembered and restored. A crown marks the special themes.</li>
+          <li><b>Real screensavers:</b> install Pipes, FlowerBox, Flying Toasters and Flurry as genuine macOS .saver modules.</li>
+          <li><b>More:</b> unified Mac dock icon sizes (desktop icons follow the size slider), Snow Leopard / Mountain Lion shown as &ldquo;Mac OS &hellip;&rdquo;, sturdier crash recovery, and many smaller fixes.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v1.9.7/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="PENDING"
+        length="0"
+      />
+    </item>
+    <item>
       <title>Version 1.9.6</title>
       <pubDate>Fri, 03 Jul 2026 09:16:55 +0000</pubDate>
       <sparkle:version>1.9.6</sparkle:version>

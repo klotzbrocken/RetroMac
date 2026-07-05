@@ -272,6 +272,10 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Text("Mac OS 6 / 9 widget title bars reference the community “Mac OS 9 UI Kit” (Figma).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("jcherven/BeOS-r5-Icons on GitHub",
                          destination: URL(string: "https://github.com/jcherven/BeOS-r5-Icons")!)
                         .font(.caption)
