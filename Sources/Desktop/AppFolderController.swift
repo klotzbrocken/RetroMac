@@ -54,16 +54,14 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
             let container = NSView(frame: initial)
             container.addSubview(wv)
-            container.addSubview(overlay)
 
-            // Resize gadgets on all four corners (Aqua only had bottom-right, but the user
-            // wants every corner). Each anchors the OPPOSITE corner.
+            // Resize gadgets — bottom corners only. (The top corners would sit right on the
+            // Mac OS 9 title-bar close/zoom boxes and steal their clicks; the title bar's
+            // drag overlay is added AFTER these so it stays on top for the boxes.)
             let g: CGFloat = 16
             let corners: [(ResizeCorner, NSRect, NSView.AutoresizingMask)] = [
                 (.br, NSRect(x: initial.width - g, y: 0, width: g, height: g), [.minXMargin]),
                 (.bl, NSRect(x: 0, y: 0, width: g, height: g), [.maxXMargin]),
-                (.tr, NSRect(x: initial.width - g, y: initial.height - g, width: g, height: g), [.minXMargin, .minYMargin]),
-                (.tl, NSRect(x: 0, y: initial.height - g, width: g, height: g), [.maxXMargin, .minYMargin]),
             ]
             for (corner, frame, mask) in corners {
                 let r = ResizeOverlayView(frame: frame)
@@ -71,6 +69,8 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
                 r.onResize = { [weak self] p in self?.resizeBy(corner: corner, to: p) }
                 container.addSubview(r)
             }
+
+            container.addSubview(overlay)   // topmost: title-bar boxes + drag win over resize grips
 
             let p = NSPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
@@ -132,13 +132,15 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             guard let self = self, let wv = self.webView, let overlay = self.dragOverlay,
                   let a = (result as? [NSNumber]).map({ $0.map { CGFloat(truncating: $0) } }),
                   a.count >= 8 else { return }
-            let tabX = a[0], tabY = a[1], tabW = a[2], tabH = a[3]
+            let tabY = a[1], tabH = a[3]
             let H = wv.bounds.height
-            overlay.frame = CGRect(x: tabX, y: H - (tabY + tabH), width: tabW, height: tabH)
+            // Overlay spans from x=0 to the title bar's right edge (a[0]+a[2], from the
+            // DOM — always valid even before the webview reaches its final width, which
+            // wv.bounds.width isn't at this point in didFinish). Box rects in absolute x.
+            overlay.frame = CGRect(x: 0, y: H - (tabY + tabH), width: a[0] + a[2], height: tabH)
             self.titleStripHeight = tabH   // for WindowShade collapse
-            // Map an absolute web rect into overlay-local (flipped) coordinates.
             func local(_ i: Int) -> CGRect {
-                CGRect(x: a[i] - tabX, y: tabH - ((a[i+1] - tabY) + a[i+3]), width: a[i+2], height: a[i+3])
+                CGRect(x: a[i], y: tabH - ((a[i+1] - tabY) + a[i+3]), width: a[i+2], height: a[i+3])
             }
             overlay.closeRect = local(4)
             if a.count >= 16 {   // Mac OS 9: collapse (WindowShade) + zoom boxes
@@ -172,7 +174,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             var f = panel.frame; f.origin.y = top - f.height; panel.setFrame(f, display: true)
             collapsed = true
         }
-        repositionOverlay()
+        scheduleReposition()
     }
 
     /// Zoom: toggle between the current size and a standard full-content size.
@@ -189,7 +191,18 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             panel.setContentSize(NSSize(width: w, height: h))
             var f = panel.frame; f.origin.y = top - f.height; panel.setFrame(f, display: true)
         }
-        repositionOverlay()
+        scheduleReposition()
+    }
+
+    /// Debounced re-capture: coalesces rapid resize events and waits a beat so the
+    /// WKWebView has reflowed (regions() read immediately after setFrame returns the
+    /// OLD box positions — that's why clicks broke after a resize).
+    private var repositionWork: DispatchWorkItem?
+    private func scheduleReposition() {
+        repositionWork?.cancel()
+        let w = DispatchWorkItem { [weak self] in self?.repositionOverlay() }
+        repositionWork = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: w)
     }
 
     /// Re-run regions() so the overlay tracks the title bar after a resize.
@@ -198,11 +211,11 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             guard let self = self, let wv = self.webView, let overlay = self.dragOverlay,
                   let a = (result as? [NSNumber]).map({ $0.map { CGFloat(truncating: $0) } }),
                   a.count >= 8 else { return }
-            let tabX = a[0], tabY = a[1], tabW = a[2], tabH = a[3]
+            let tabY = a[1], tabH = a[3]
             let H = wv.bounds.height
-            overlay.frame = CGRect(x: tabX, y: H - (tabY + tabH), width: tabW, height: tabH)
+            overlay.frame = CGRect(x: 0, y: H - (tabY + tabH), width: a[0] + a[2], height: tabH)
             func local(_ i: Int) -> CGRect {
-                CGRect(x: a[i] - tabX, y: tabH - ((a[i+1] - tabY) + a[i+3]), width: a[i+2], height: a[i+3])
+                CGRect(x: a[i], y: tabH - ((a[i+1] - tabY) + a[i+3]), width: a[i+2], height: a[i+3])
             }
             overlay.closeRect = local(4)
             if a.count >= 16 { overlay.collapseRect = local(8); overlay.zoomRect = local(12) }
@@ -229,7 +242,10 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         case "zoom":    toggleZoom()
         case "openparent": NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications"))
         case "resizefit":
-            if let w = (d["w"] as? NSNumber)?.doubleValue, let h = (d["h"] as? NSNumber)?.doubleValue { resizeTo(CGFloat(w), CGFloat(h)) }
+            if let w = (d["w"] as? NSNumber)?.doubleValue, let h = (d["h"] as? NSNumber)?.doubleValue {
+                resizeTo(CGFloat(w), CGFloat(h))
+                scheduleReposition()   // re-capture the title/box regions at the final size
+            }
         case "find":    NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications"))
         case "newfolder": makeNewFolderOnDesktop()
         case "getinfo": if let p = path { getInfo(p) }
@@ -342,6 +358,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         case .tl:  w = max(minW, f.maxX - mouse.x); h = max(minH, mouse.y - f.minY); x = f.maxX - w;    y = f.minY
         }
         panel.setFrame(NSRect(x: x, y: y, width: w, height: h), display: true)
+        scheduleReposition()   // keep the title-bar box hit areas aligned after resizing
     }
 
     private func pickOwnIcon(bundleID: String?) {

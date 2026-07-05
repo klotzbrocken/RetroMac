@@ -164,11 +164,13 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
             guard let self = self, let wv = self.webView, let overlay = self.dragOverlay,
                   let a = (result as? [NSNumber])?.map({ CGFloat(truncating: $0) }), a.count >= 8 else { return }
             // [title.x,y,w,h, close.x,y,w,h, (collapse…, zoom…)] — top-left CSS px.
-            let tabX = a[0], tabY = a[1], tabW = a[2], tabH = a[3]
+            let tabY = a[1], tabH = a[3]
             let H = wv.bounds.height
-            overlay.frame = CGRect(x: tabX, y: H - (tabY + tabH), width: tabW, height: tabH)
+            // Full-width overlay (like the Clock widget) so box hit-testing is robust
+            // regardless of the title bar's left offset; box rects in absolute x.
+            overlay.frame = CGRect(x: 0, y: H - (tabY + tabH), width: wv.bounds.width, height: tabH)
             func local(_ i: Int) -> CGRect {
-                CGRect(x: a[i] - tabX, y: tabH - ((a[i+1] - tabY) + a[i+3]), width: a[i+2], height: a[i+3])
+                CGRect(x: a[i], y: tabH - ((a[i+1] - tabY) + a[i+3]), width: a[i+2], height: a[i+3])
             }
             overlay.closeRect = local(4)
             if a.count >= 16 {   // Mac OS 9: collapse (WindowShade) + zoom boxes
@@ -301,9 +303,19 @@ final class DragOverlayView: NSView {
     override func mouseExited(with event: NSEvent) { onHover?(false) }
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        if closeRect.contains(p) { onClose?(); return }
-        if !collapseRect.isEmpty, collapseRect.contains(p) { onCollapse?(); return }
-        if !zoomRect.isEmpty, zoomRect.contains(p) { onZoom?(); return }
+        // Generous hit slop — the Platinum boxes are only ~11px. Close sits alone on the
+        // left; collapse+zoom are an adjacent pair on the right, so a click near either
+        // routes to whichever box centre is closer (padding overlaps otherwise).
+        let pad: CGFloat = 11
+        if closeRect.insetBy(dx: -pad, dy: -pad).contains(p) { onClose?(); return }
+        let cHit = !collapseRect.isEmpty && collapseRect.insetBy(dx: -pad, dy: -pad).contains(p)
+        let zHit = !zoomRect.isEmpty && zoomRect.insetBy(dx: -pad, dy: -pad).contains(p)
+        if cHit || zHit {
+            if cHit && zHit {
+                (abs(p.x - collapseRect.midX) <= abs(p.x - zoomRect.midX) ? onCollapse : onZoom)?()
+            } else if cHit { onCollapse?() } else { onZoom?() }
+            return
+        }
         window?.performDrag(with: event)
     }
 }

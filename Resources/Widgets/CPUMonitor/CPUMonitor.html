@@ -218,24 +218,24 @@
   body.theme-macos9 .window{border:1.6px solid #000;background:#d8d8d8;
     box-shadow:2px 2px 0 rgba(0,0,0,.30);}
   body.theme-macos9 .body{border:none;box-shadow:none;margin-top:0;}
-  body.theme-macos9 .m9-title{display:flex;position:relative;align-items:center;
-    height:20px;border-bottom:1.6px solid #808080;background:#d8d8d8;}
-  .m9-stripes{position:absolute;inset:1px 0;
-    background:repeating-linear-gradient(to bottom,#ededed 0 2px,#bdbdbd 2px 4px);}
+  /* Faithful to the Mac OS 9 UI Kit (Figma); all values counter-scaled 1/0.6 so that
+     after the widget's SCALE(0.6) they render at the same physical size as the Clock. */
+  body.theme-macos9 .m9-title{display:flex;position:relative;align-items:center;height:33px;
+    border-top:2px solid #f3f3f3;border-bottom:2px solid #b3b3da;
+    background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAECAIAAADAusJtAAAAGElEQVR4nGMoLy9nYmBgYPj8+TMTAwMDACTMBEMaH6sVAAAAAElFTkSuQmCC) repeat;
+    image-rendering:pixelated;image-rendering:crisp-edges;}
+  .m9-stripes{display:none;}
   .m9-title>*{position:relative;z-index:2;}
-  .m9-ctl{width:22px;height:22px;flex:0 0 22px;background:#d8d8d8;border:1px solid #555;
-    border-top-color:#fff;border-left-color:#fff;
-    box-shadow:inset -1px -1px 0 #808080, inset 1px 1px 0 #fff;}
+  .m9-ctl{position:relative;box-sizing:border-box;width:18px;height:18px;flex:0 0 18px;
+    background:#c0c0c0;border:2px solid #545487;box-shadow:inset 0 0 0 2px #dadaff;}
   .m9-close{margin-left:12px;cursor:pointer;}
-  .m9-collapse,.m9-zoom{position:relative;cursor:pointer;}
+  .m9-collapse,.m9-zoom{cursor:pointer;}
   .m9-plaque{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-    background:#d8d8d8;padding:0 12px;height:26px;display:flex;align-items:center;gap:8px;
-    font-size:22px;font-weight:700;color:#000;font-family:"Charcoal","ChicagoFLF","Helvetica Neue",Helvetica,sans-serif;}
-  .m9-disk{width:26px;height:18px;background:linear-gradient(#e9e9e9,#c9c9c9);border:1px solid #555;border-radius:1px;}
+    background:#f3f3f3;padding:0 13px;height:25px;display:flex;align-items:center;gap:8px;
+    font-size:21px;font-weight:700;color:#000;font-family:"Charcoal","ChicagoFLF","Helvetica Neue",Helvetica,sans-serif;}
   .m9-right{margin-left:auto;display:flex;gap:8px;padding-right:12px;}
-  .m9-zoom::after{content:"";position:absolute;inset:3px;border:1px solid #555;}
-  .m9-zoom::before{content:"";position:absolute;left:3px;top:3px;width:8px;height:8px;border:1px solid #555;}
-  .m9-collapse::before{content:"";position:absolute;left:5px;right:5px;top:5px;height:5px;border:1px solid #555;border-bottom:none;}
+  .m9-zoom::before{content:"";position:absolute;left:2px;top:2px;width:7px;height:7px;border:2px solid #545487;background:#c0c0c0;}
+  .m9-collapse::before{content:"";position:absolute;left:3px;right:3px;top:8px;height:0;border-top:2px solid #545487;}
 
   /* ===== Windows XP (Luna Blue) chrome — counter-scaled 1/0.6 like the BeOS tab. ===== */
   .xp-title{display:none;}
@@ -367,7 +367,7 @@
         <div class="m9-title" id="m9title">
           <div class="m9-stripes"></div>
           <span class="m9-ctl m9-close" id="m9close" title="Schließen"></span>
-          <div class="m9-plaque"><span class="m9-disk"></span><span>CPU Monitor</span></div>
+          <div class="m9-plaque"><span>CPU Monitor</span></div>
           <div class="m9-right"><span class="m9-ctl m9-zoom" id="m9zoom"></span><span class="m9-ctl m9-collapse" id="m9collapse"></span></div>
         </div>
         <!-- Windows XP Luna title bar (theme-winxp only) -->
