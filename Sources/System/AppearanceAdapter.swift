@@ -85,11 +85,12 @@ enum AppearanceAdapter {
         }
     }
 
-    /// Crash / force-quit recovery: a leftover snapshot with no active theming means we
-    /// never restored — put the user's values back. Call once at launch.
+    /// Crash / force-quit recovery: ANY leftover snapshot at launch means the previous
+    /// session never restored — put the user's values back unconditionally. If the theme
+    /// is still active, applyWallpaper() → apply() re-matches (and re-snapshots) right
+    /// after launch, so this can't fight an active theme.
     static func restoreIfNeeded() {
-        guard d.bool(forKey: snapKey),
-              !AppSettings.shared.themeAdaptAppearance || !AppSettings.shared.dockEnabled else { return }
+        guard d.bool(forKey: snapKey) else { return }
         restore()
     }
 

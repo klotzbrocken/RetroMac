@@ -92,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemUIHelper.restoreIfNeeded()
         SystemUIHelper.restoreDesktopIconsIfNeeded()   // crash/force-quit-safe desktop-icon restore
         AppearanceAdapter.restoreIfNeeded()            // ditto for matched appearance/accent
+        TerminalThemer.restoreIfNeeded()               // ditto for the matched Terminal profile
         restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
         _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98

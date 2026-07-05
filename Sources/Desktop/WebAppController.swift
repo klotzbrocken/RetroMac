@@ -165,13 +165,14 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if navigationAction.shouldPerformDownload { decisionHandler(.download); return }
-        // Bridge-equipped (trusted 98.js) windows must STAY on the trusted host — a redirect
-        // or link to another domain must not inherit the native Save/Print bridge.
+        // Bridge-equipped (trusted 98.js) windows must STAY on the trusted PATH — the
+        // bridge grant is path-scoped (/98.js/), so a same-host navigation to another
+        // path must not inherit the native Save/Print bridge either.
         if bridgeActive,
            navigationAction.targetFrame?.isMainFrame == true,
            let url = navigationAction.request.url,
            let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
-           !Self.isTrusted98Host(url.host) {
+           !Self.isTrusted98App(url.absoluteString) {
             decisionHandler(.cancel); return
         }
         decisionHandler(.allow)

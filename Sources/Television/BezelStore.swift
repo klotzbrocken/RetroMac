@@ -29,6 +29,16 @@ final class BezelStore {
 
     func bezel(named file: String) -> TVBezel? { available.first { $0.file == file } }
 
+    /// Bundled free-standing TV cutouts for the WINDOWED tube (Maik's own artwork).
+    private(set) lazy var windowTVs: [TVBezel] = {
+        guard let url = Bundle.main.resourceURL?.appendingPathComponent("TV/window-tvs.json"),
+              let data = try? Data(contentsOf: url),
+              let list = try? JSONDecoder().decode([TVBezel].self, from: data) else { return [] }
+        return list
+    }()
+
+    func windowTV(named file: String) -> TVBezel? { windowTVs.first { $0.file == file } }
+
     var cacheDir: URL {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("RetroMac/TVBezels", isDirectory: true)
@@ -56,11 +66,15 @@ final class BezelStore {
             if let error = error {
                 result = .failure(error)
             } else if let tmp = tmp, (response as? HTTPURLResponse)?.statusCode == 200 {
-                try? FileManager.default.removeItem(at: dest)
-                do {
-                    try FileManager.default.moveItem(at: tmp, to: dest)
-                    result = .success(dest)
-                } catch { result = .failure(error) }
+                if let validationError = Self.validate(pngAt: tmp) {
+                    result = .failure(validationError)
+                } else {
+                    try? FileManager.default.removeItem(at: dest)
+                    do {
+                        try FileManager.default.moveItem(at: tmp, to: dest)
+                        result = .success(dest)
+                    } catch { result = .failure(error) }
+                }
             } else {
                 result = .failure(NSError(domain: "Bezel", code: 2,
                     userInfo: [NSLocalizedDescriptionKey: "Download failed (HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1))"]))
@@ -68,5 +82,27 @@ final class BezelStore {
             if case .failure(let e) = result { print("[Bezel] Download \(bezel.file) failed: \(e.localizedDescription)") }
             DispatchQueue.main.async { completion(result) }
         }.resume()
+    }
+
+    /// Sanity checks before a downloaded file enters the cache: size cap, PNG magic
+    /// bytes, decodable image with plausible dimensions (guards against a broken or
+    /// compromised source burning memory at render time).
+    private static func validate(pngAt url: URL) -> Error? {
+        func err(_ msg: String) -> Error {
+            NSError(domain: "Bezel", code: 3, userInfo: [NSLocalizedDescriptionKey: msg])
+        }
+        let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+        guard let size = size as Int?, size > 0, size <= 30_000_000 else {
+            return err("Unexpected file size (\(size) bytes).")
+        }
+        guard let fh = try? FileHandle(forReadingFrom: url),
+              let magic = try? fh.read(upToCount: 8), magic.starts(with: [0x89, 0x50, 0x4E, 0x47]) else {
+            return err("Not a PNG file.")
+        }
+        try? fh.close()
+        guard let img = NSImage(contentsOf: url), img.size.width >= 1000, img.size.width <= 8000 else {
+            return err("Image failed to decode or has implausible dimensions.")
+        }
+        return nil
     }
 }
