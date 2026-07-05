@@ -65,14 +65,18 @@ final class Mac9TVChromeView: NSView {
     var onCollapse: (() -> Void)?
     var onZoom: (() -> Void)?
 
-    private let face   = NSColor(calibratedWhite: 0.847, alpha: 1)
+    // Colors measured from the Mac OS 9 UI Kit (Figma) title bar.
+    private let face   = NSColor(calibratedWhite: 0.953, alpha: 1)          // #F3F3F3 light plate
     private let dark   = NSColor(calibratedWhite: 0.502, alpha: 1)
-    private let darker = NSColor(calibratedWhite: 0.333, alpha: 1)
-    private let strLt  = NSColor(calibratedWhite: 0.929, alpha: 1)
-    private let strDk  = NSColor(calibratedWhite: 0.741, alpha: 1)
+    private let boxBP  = NSColor(calibratedRed: 0.329, green: 0.329, blue: 0.529, alpha: 1) // #545487 bevel
+    private let boxHi  = NSColor(calibratedRed: 0.855, green: 0.855, blue: 1.0, alpha: 1)   // #DADAFF highlight
+    private let boxFace = NSColor(calibratedWhite: 0.753, alpha: 1)         // #C0C0C0 box face
+    private let botShadow = NSColor(calibratedRed: 0.702, green: 0.702, blue: 0.855, alpha: 1) // #B3B3DA
+    private let strLt  = NSColor(calibratedWhite: 0.953, alpha: 1)          // #F3F3F3
+    private let strDk  = NSColor(calibratedWhite: 0.467, alpha: 1)          // #777777
     private let titleFont = NSFont(name: "Charcoal", size: 12)
         ?? NSFont(name: "ChicagoFLF", size: 12) ?? .boldSystemFont(ofSize: 12)
-    private let boxS: CGFloat = 13
+    private let boxS: CGFloat = 11
 
     private var barRect: NSRect { NSRect(x: 0, y: bounds.height - Self.barH, width: bounds.width, height: Self.barH) }
     private var boxY: CGFloat { bounds.height - Self.barH + (Self.barH - boxS) / 2 }
@@ -83,12 +87,12 @@ final class Mac9TVChromeView: NSView {
     override var isOpaque: Bool { false }
 
     private func fill(_ r: NSRect, _ c: NSColor) { c.setFill(); NSBezierPath(rect: r).fill() }
+    /// Platinum control box: gray face, 1px blue-purple border, 1px lavender highlight
+    /// just inside — matching the Figma UI kit.
     private func bevelBox(_ r: NSRect) {
-        fill(r, face)
-        fill(NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1), .white)     // top
-        fill(NSRect(x: r.minX, y: r.minY, width: 1, height: r.height), .white)         // left
-        fill(NSRect(x: r.minX, y: r.minY, width: r.width, height: 1), dark)            // bottom
-        fill(NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height), dark)       // right
+        fill(r, boxFace)
+        boxHi.setStroke(); NSBezierPath(rect: r.insetBy(dx: 1.5, dy: 1.5)).stroke()   // inner highlight
+        boxBP.setStroke(); NSBezierPath(rect: r.insetBy(dx: 0.5, dy: 0.5)).stroke()   // outer bevel
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -98,19 +102,21 @@ final class Mac9TVChromeView: NSView {
         var y = bar.minY + 1
         while y < bar.maxY - 1 { fill(NSRect(x: 1, y: y, width: bounds.width - 2, height: 1), strLt)
                                  fill(NSRect(x: 1, y: y + 1, width: bounds.width - 2, height: 1), strDk); y += 2 }
-        // 1px black window frame + separator under the bar
+        // 1px black window frame + light-purple shadow line under the bar
         NSColor.black.setStroke(); NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5)).stroke()
-        fill(NSRect(x: 0, y: bar.minY, width: bounds.width, height: 1), dark)
+        fill(NSRect(x: 0, y: bar.minY, width: bounds.width, height: 1), botShadow)
         // control boxes
         bevelBox(closeRect); bevelBox(collapseRect); bevelBox(zoomRect)
-        let z = zoomRect.insetBy(dx: 2, dy: 2)
-        darker.setStroke(); NSBezierPath(rect: z.insetBy(dx: 0.5, dy: 0.5)).stroke()
-        fill(NSRect(x: collapseRect.minX + 3, y: collapseRect.midY, width: boxS - 6, height: 1), darker)
-        // centered title plaque
+        // zoom: small nested square in the upper-left of the box face
+        let zsq = NSRect(x: zoomRect.minX + 2, y: zoomRect.maxY - 2 - 4, width: 4, height: 4)
+        fill(zsq, boxFace); boxBP.setStroke(); NSBezierPath(rect: zsq.insetBy(dx: 0.5, dy: 0.5)).stroke()
+        // collapse: single WindowShade bar
+        fill(NSRect(x: collapseRect.minX + 2, y: collapseRect.midY, width: boxS - 4, height: 1), boxBP)
+        // centered title plaque (light, interrupts the stripes)
         let attrs: [NSAttributedString.Key: Any] = [.font: titleFont, .foregroundColor: NSColor.black]
         let s = title.size(withAttributes: attrs)
         let px = (bounds.width - s.width) / 2
-        fill(NSRect(x: px - 8, y: bar.minY, width: s.width + 16, height: Self.barH), face)
+        fill(NSRect(x: px - 8, y: bar.minY, width: s.width + 16, height: Self.barH), strLt)
         title.draw(at: NSPoint(x: px, y: bar.midY - s.height / 2), withAttributes: attrs)
     }
 
@@ -123,10 +129,18 @@ final class Mac9TVChromeView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        // Generous hit areas — the 13px Platinum boxes were fiddly to click.
-        if closeRect.insetBy(dx: -6, dy: -6).contains(p) { onClose?(); return }
-        if collapseRect.insetBy(dx: -4, dy: -6).contains(p) { onCollapse?(); return }
-        if zoomRect.insetBy(dx: -4, dy: -6).contains(p) { onZoom?(); return }
+        // Generous hit areas — the 11px Platinum boxes are fiddly. Close sits alone left;
+        // the collapse+zoom pair on the right routes to the nearer box centre on overlap.
+        let pad: CGFloat = 11
+        if closeRect.insetBy(dx: -pad, dy: -pad).contains(p) { onClose?(); return }
+        let cHit = collapseRect.insetBy(dx: -pad, dy: -pad).contains(p)
+        let zHit = zoomRect.insetBy(dx: -pad, dy: -pad).contains(p)
+        if cHit || zHit {
+            if cHit && zHit {
+                (abs(p.x - collapseRect.midX) <= abs(p.x - zoomRect.midX) ? onCollapse : onZoom)?()
+            } else if cHit { onCollapse?() } else { onZoom?() }
+            return
+        }
         if barRect.contains(p) { window?.performDrag(with: event); return }
     }
 }

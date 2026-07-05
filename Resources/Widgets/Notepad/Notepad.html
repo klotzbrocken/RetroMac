@@ -55,12 +55,16 @@
   body.theme-macos9 .tab{display:none;}
   body.theme-macos9 #win{border:1px solid #000;background:#d8d8d8;box-shadow:2px 2px 8px rgba(0,0,0,.3);}
   body.theme-macos9 .body{border:none;background:#d8d8d8;box-shadow:none;margin:0;padding:0;}
+  /* Mac OS 9 Platinum title bar — faithful to the Mac OS 9 UI Kit (Figma) */
   body.theme-macos9 .m9-title{display:flex;align-items:center;position:relative;height:20px;flex:0 0 auto;
-    border-bottom:1px solid #808080;background:repeating-linear-gradient(to bottom,#ededed 0 1px,#bdbdbd 1px 2px);}
-  .m9-close{width:13px;height:13px;margin-left:7px;background:#d8d8d8;border:1px solid #555;
-    border-top-color:#fff;border-left-color:#fff;box-shadow:inset -1px -1px 0 #808080,inset 1px 1px 0 #fff;cursor:pointer;z-index:2;}
-  .m9-plaque{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#d8d8d8;
-    padding:0 8px;font-size:12px;font-weight:700;color:#000;}
+    border-top:1px solid #f3f3f3;border-bottom:1px solid #b3b3da;
+    background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAAEElEQVR4nGMoLy9n+Pz5MwAOGAQ/am3VkwAAAABJRU5ErkJggg==) repeat;
+    image-rendering:pixelated;image-rendering:crisp-edges;}
+  .m9-close{position:relative;z-index:2;box-sizing:border-box;width:11px;height:11px;margin-left:7px;
+    background:#c0c0c0;border:1px solid #545487;box-shadow:inset 0 0 0 1px #dadaff;cursor:pointer;}
+  .m9-plaque{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;background:#f3f3f3;
+    padding:0 8px;font-size:12px;font-weight:700;color:#000;
+    font-family:"Charcoal","ChicagoFLF","Helvetica Neue",Helvetica,sans-serif;}
 
   /* ===== Windows XP (Luna) ===== */
   body.theme-winxp .tab{display:none;}
