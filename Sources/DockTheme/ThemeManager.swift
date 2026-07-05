@@ -108,6 +108,35 @@ final class ThemeManager {
         }
     }
 
+    /// Apple-OS family themes — shown as "Mac OS …".
+    static func isMacOSTheme(_ name: String) -> Bool {
+        let n = name.lowercased()
+        return n.hasPrefix("mac os") || n == "mountain lion" || n == "snow leopard"
+    }
+
+    /// "Special" full-chrome themes that carry the crown marker — one consistent 👑
+    /// across every OS family (Mac OS, Windows, BeOS Classic, Maiks Favourite).
+    static func isCrowned(_ name: String) -> Bool {
+        let n = name.lowercased()
+        return isMacOSTheme(name)
+            || n.contains("windows xp") || n.contains("windows 98")
+            || (n.contains("beos") && n.contains("classic"))
+            || n.contains("maiks favourite")
+    }
+
+    /// User-facing theme name: crowned themes get a 👑 prefix; the Mac OS family also
+    /// gets a full "Mac OS …" name. Internal names are unchanged (display only).
+    static func displayName(for name: String) -> String {
+        var s = name
+        switch name {
+        case "Mountain Lion":      s = "Mac OS Mountain Lion"
+        case "Snow Leopard":       s = "Mac OS Snow Leopard"
+        case "Mac OS 9.2 Classic": s = "Mac OS 9 Classic"
+        default: break
+        }
+        return isCrowned(name) ? "👑 " + s : s
+    }
+
     /// Per-theme dock variants ("Dock instead of Control Strip" options).
     func applyDockVariants() {
         guard let t = activeTheme else { return }

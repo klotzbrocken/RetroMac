@@ -1072,20 +1072,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let catItem = NSMenuItem(title: category, action: nil, keyEquivalent: "")
             let catMenu = NSMenu()
             for theme in inCategory.sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }) {
-                let item = NSMenuItem(title: theme.name, action: #selector(selectTheme(_:)), keyEquivalent: "")
+                let item = NSMenuItem(title: ThemeManager.displayName(for: theme.name), action: #selector(selectTheme(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = theme.name
                 if dockOn && theme.name == currentTheme { item.state = .on }
-                // Crown marks the "Special" themes with full retro window chrome / widgets —
-                // only the Classic variants (not plain "BeOS" / "Mac OS 9.2").
-                let tn = theme.name.lowercased()
-                let special = tn.contains("windows xp")
-                    || tn.contains("windows 98")
-                    || (tn.contains("mac os 9") && tn.contains("classic"))
-                    || (tn.contains("beos") && tn.contains("classic"))
-                    || tn.contains("maiks favourite")
-                    || tn == "mac os x"
-                if special { item.image = sfIcon("crown.fill") }
+                // The crown (👑) is carried by displayName across all crowned themes —
+                // one consistent marker, no separate SF-Symbol image.
                 catMenu.addItem(item)
             }
             catItem.submenu = catMenu
@@ -1839,6 +1831,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func toggleTubeMode() {
         TubeModeController.shared.toggle()
         rebuildMenu()
+    }
+
+    /// Stop anything that would visually collide with Tube Mode — it renders its own
+    /// shader at window level, so a global overlay/lite (level 28) or the viewport/camera
+    /// must not run at the same time. Called from TubeModeController.start().
+    func stopOverlaysForTube() {
+        if isActive { disableAll() }
+        if retroViewport.isActive { retroViewport.hide() }
+        if VirtualCameraManager.shared.isRunning { VirtualCameraManager.shared.stop() }
     }
 
     func showOnboarding() {

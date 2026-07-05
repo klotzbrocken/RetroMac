@@ -333,7 +333,7 @@ struct LauncherView: View {
             .frame(width: 56, height: 44).clipped()
             .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.15)))
-            Text(t.name).font(.system(size: 9)).lineLimit(2).multilineTextAlignment(.center)
+            Text(ThemeManager.displayName(for: t.name)).font(.system(size: 9)).lineLimit(2).multilineTextAlignment(.center)
                 .foregroundStyle(.secondary).frame(width: 64, height: 24)
         }
         .frame(width: 64, height: 74)
