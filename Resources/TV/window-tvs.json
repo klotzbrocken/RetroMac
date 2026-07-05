@@ -1,0 +1,7 @@
+[
+  { "file": "window-tv.png",    "name": "Trinitron",    "dir": "", "rect": [0.2409, 0.0903, 0.5182, 0.6644], "device": [0.2240, 0.0255, 0.5521, 0.9005] },
+  { "file": "window-gray.png",  "name": "Studio Gray",  "dir": "", "rect": [0.2513, 0.0926, 0.4987, 0.6690], "device": [0.1419, 0.0255, 0.7161, 0.9028] },
+  { "file": "window-white.png", "name": "Studio White", "dir": "", "rect": [0.2539, 0.0949, 0.4922, 0.6644], "device": [0.1419, 0.0255, 0.7161, 0.9051] },
+  { "file": "window-g03.png",   "name": "Wood Cabinet", "dir": "", "rect": [0.2420, 0.0860, 0.5130, 0.7000], "device": [0.2266, 0.0394, 0.5469, 0.8935] },
+  { "file": "window-g04.png",   "name": "Big Screen",   "dir": "", "rect": [0.2487, 0.1019, 0.5026, 0.6759], "device": [0.1719, 0.0347, 0.6562, 0.9051] }
+]

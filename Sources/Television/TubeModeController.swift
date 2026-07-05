@@ -52,12 +52,17 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         let startFrame = NSRect(x: screen.visibleFrame.midX - startW / 2,
                                 y: screen.visibleFrame.midY - startW * 0.42,
                                 width: startW, height: startW * 0.84)
-        let win = TubeWindow(contentRect: startFrame, styleMask: [.borderless, .resizable],
+        // No .resizable: macOS 26 decorates resizable borderless windows with a system
+        // "liquid glass" edge (the stripe Maik saw bottom/right). Resizing is manual via
+        // the corner handle in TubeContentView instead.
+        let win = TubeWindow(contentRect: startFrame, styleMask: [.borderless],
                              backing: .buffered, defer: false)
         win.level = AppSettings.shared.tvTubeOnTop ? .floating : .normal
         win.isOpaque = false
         win.backgroundColor = .clear
-        win.hasShadow = true
+        // No window shadow: on a transparent borderless window macOS renders it as a
+        // soft rim on the bottom/right that reads as a "glass" edge.
+        win.hasShadow = false
         win.collectionBehavior = [.fullScreenAuxiliary, .managed]
         win.isMovableByWindowBackground = true
         win.onKey = { [weak self] event in self?.handleKey(event) ?? false }
@@ -71,7 +76,19 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         isFullscreen = false
 
         loadBezel()
-        setupPlayerPipeline(in: content)
+        guard setupPlayerPipeline(in: content) else {
+            // No Metal / no shader → never pretend to be on: tear the window down,
+            // keep the pill off, tell the user.
+            window = nil
+            contentView = nil
+            NotificationCenter.default.post(name: .tubeModeChanged, object: nil)
+            let alert = NSAlert()
+            alert.messageText = "TV Tube unavailable"
+            alert.informativeText = "TV Tube needs a working Metal device and shader pipeline, which this system doesn't provide right now."
+            alert.alertStyle = .warning
+            alert.runModal()
+            return
+        }
         startChannel(resolveStartIndex())
 
         NSApp.activate(ignoringOtherApps: true)
@@ -150,21 +167,24 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         } else {
             content.setScene(image: nil, tubeRect: [0.09, 0.10, 0.82, 0.72])
         }
-        // Windowed mode: Maik's own free-standing TV set (bundled), measured rects.
-        if let url = Bundle.main.resourceURL?.appendingPathComponent("TV/window-tv.png"),
+        // Windowed mode: the selected free-standing TV cutout (bundled). The device
+        // crop (measured TV-silhouette bbox) makes the window hug the TV so there's no
+        // transparent margin — no stray "glass"/shadow rim.
+        let tvs = store.windowTVs
+        let selected = store.windowTV(named: AppSettings.shared.tvTubeWindowTV) ?? tvs.first
+        if let sel = selected,
+           let url = Bundle.main.resourceURL?.appendingPathComponent("TV/\(sel.file)"),
            let tv = NSImage(contentsOf: url) {
-            content.setWindowTV(image: tv,
-                                tubeRect: [0.2409, 0.0903, 0.5182, 0.6644],
-                                deviceRect: [0.2227, 0.0255, 0.5612, 0.9352])
+            content.setWindowTV(image: tv, tubeRect: sel.rect, deviceRect: sel.device ?? [0, 0, 1, 1])
         } else {
             content.setWindowTV(image: nil,
                                 tubeRect: [0.09, 0.10, 0.82, 0.72],
                                 deviceRect: [0, 0, 1, 1])
         }
-        // Windowed: the window keeps the TV set's own aspect while resizing.
+        // Windowed: snap the frame to the TV set's aspect (resizing itself is manual
+        // via the corner handle, which enforces aspect + min size).
         if !isFullscreen, let win = window {
             let aspect = content.windowAspect
-            win.contentAspectRatio = NSSize(width: aspect, height: 1)
             var f = win.frame
             f.size.height = f.width / aspect
             win.setFrame(f, display: true)
@@ -180,17 +200,28 @@ final class TubeModeController: NSObject, MTKViewDelegate {
 
     // MARK: - Player + shader pipeline (same pattern as TVBrowserWindow.streamDirect)
 
-    private func setupPlayerPipeline(in content: TubeContentView) {
-        guard let device = MTLCreateSystemDefaultDevice() else { return }
+    @discardableResult
+    private func setupPlayerPipeline(in content: TubeContentView) -> Bool {
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            print("[Tube] No Metal device")
+            return false
+        }
         do {
             let r = try RetroRenderer(device: device)
-            try r.loadShader(named: AppSettings.shared.tvTubePreset)
+            do {
+                try r.loadShader(named: AppSettings.shared.tvTubePreset)
+            } catch {
+                // Broken/unknown preset id — one fallback attempt before giving up.
+                print("[Tube] Shader '\(AppSettings.shared.tvTubePreset)' failed (\(error)) — falling back to trinitron-tv")
+                try r.loadShader(named: "trinitron-tv")
+                AppSettings.shared.tvTubePreset = "trinitron-tv"
+            }
             r.intensity = AppSettings.shared.defaultIntensity
             r.vignetteIntensity = AppSettings.shared.vignetteIntensity
             renderer = r
         } catch {
             print("[Tube] Shader load failed: \(error)")
-            return
+            return false
         }
         CVMetalTextureCacheCreate(nil, nil, device, nil, &textureCache)
         let mv = MTKView(frame: .zero, device: device)
@@ -202,6 +233,7 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         mv.delegate = self
         content.installVideoView(mv)
         metalView = mv
+        return true
     }
 
     private func resolveStartIndex() -> Int {
@@ -272,23 +304,40 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         menu.addItem(shItem)
         menu.setSubmenu(shMenu, for: shItem)
 
-        let bzMenu = NSMenu()
-        let builtin = NSMenuItem(title: "Simple frame (built-in)", action: #selector(menuPickBezel(_:)), keyEquivalent: "")
-        builtin.target = self
-        builtin.representedObject = ""
-        builtin.state = AppSettings.shared.tvTubeBezel.isEmpty ? .on : .off
-        bzMenu.addItem(builtin)
-        for b in BezelStore.shared.available {
-            let title = BezelStore.shared.isDownloaded(b) ? b.name : "\(b.name)  (download)"
-            let it = NSMenuItem(title: title, action: #selector(menuPickBezel(_:)), keyEquivalent: "")
-            it.target = self
-            it.representedObject = b.file
-            it.state = b.file == AppSettings.shared.tvTubeBezel ? .on : .off
-            bzMenu.addItem(it)
+        // Show only the picker that applies to the CURRENT mode — windowed uses the
+        // free-standing TV cutouts, fullscreen uses the full scene bezels. (Showing both
+        // made picks look ignored: a scene bezel does nothing while windowed.)
+        if isFullscreen {
+            let bzMenu = NSMenu()
+            let builtin = NSMenuItem(title: "Simple frame (built-in)", action: #selector(menuPickBezel(_:)), keyEquivalent: "")
+            builtin.target = self
+            builtin.representedObject = ""
+            builtin.state = AppSettings.shared.tvTubeBezel.isEmpty ? .on : .off
+            bzMenu.addItem(builtin)
+            for b in BezelStore.shared.available {
+                let title = BezelStore.shared.isDownloaded(b) ? b.name : "\(b.name)  (download)"
+                let it = NSMenuItem(title: title, action: #selector(menuPickBezel(_:)), keyEquivalent: "")
+                it.target = self
+                it.representedObject = b.file
+                it.state = b.file == AppSettings.shared.tvTubeBezel ? .on : .off
+                bzMenu.addItem(it)
+            }
+            let bzItem = NSMenuItem(title: "Scene Bezel", action: nil, keyEquivalent: "")
+            menu.addItem(bzItem)
+            menu.setSubmenu(bzMenu, for: bzItem)
+        } else {
+            let wtMenu = NSMenu()
+            for tv in BezelStore.shared.windowTVs {
+                let it = NSMenuItem(title: tv.name, action: #selector(menuPickWindowTV(_:)), keyEquivalent: "")
+                it.target = self
+                it.representedObject = tv.file
+                it.state = tv.file == AppSettings.shared.tvTubeWindowTV ? .on : .off
+                wtMenu.addItem(it)
+            }
+            let wtItem = NSMenuItem(title: "TV Set", action: nil, keyEquivalent: "")
+            menu.addItem(wtItem)
+            menu.setSubmenu(wtMenu, for: wtItem)
         }
-        let bzItem = NSMenuItem(title: "TV Bezel", action: nil, keyEquivalent: "")
-        menu.addItem(bzItem)
-        menu.setSubmenu(bzMenu, for: bzItem)
 
         menu.addItem(.separator())
         let onTop = NSMenuItem(title: "Always on Top", action: #selector(menuToggleOnTop), keyEquivalent: "")
@@ -341,6 +390,14 @@ final class TubeModeController: NSObject, MTKViewDelegate {
 
     @objc private func menuToggleFullscreen() { toggleFullscreen() }
     @objc private func menuTurnOff() { stop() }
+
+    @objc private func menuPickWindowTV(_ sender: NSMenuItem) {
+        guard let file = sender.representedObject as? String else { return }
+        AppSettings.shared.tvTubeWindowTV = file
+        refreshAppearance()
+        // Window TVs only show in windowed mode — leave fullscreen so the pick is visible.
+        if isFullscreen { toggleFullscreen() }
+    }
 
     @objc private func menuToggleOnTop() {
         AppSettings.shared.tvTubeOnTop.toggle()
@@ -412,6 +469,8 @@ private final class TubeContentView: NSView {
     /// Aspect the window should keep while resizing (TV-set bbox of the window image).
     var windowAspect: CGFloat { CGFloat((tvDevice[2] * 16.0) / (tvDevice[3] * 9.0)) }
 
+    private let resizeHandle = TubeResizeHandle()
+
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
@@ -419,6 +478,7 @@ private final class TubeContentView: NSView {
         bezelLayer.contentsGravity = .resize
         bezelLayer.zPosition = 1                      // bezel BELOW the video: the PNGs are
         layer?.addSublayer(bezelLayer)                // opaque, the video sits in the tube region
+        addSubview(resizeHandle)
     }
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
     override var mouseDownCanMoveWindow: Bool { true }
@@ -472,6 +532,9 @@ private final class TubeContentView: NSView {
     override func layout() {
         super.layout()
         let W = bounds.width, H = bounds.height
+        // Windowed: fully transparent around the TV cutout (an opaque black backing
+        // showed as a black stripe wherever frame and crop aspect differed by a pixel).
+        layer?.backgroundColor = (windowed ? NSColor.clear : NSColor.black).cgColor
         // Pick per mode: contents + its tube rect + the crop applied to the image.
         let contents = windowed ? tvContents : sceneContents
         let tube = windowed ? tvTube : sceneTube
@@ -506,6 +569,15 @@ private final class TubeContentView: NSView {
             mv.layer?.cornerRadius = bw * 0.008
             mv.layer?.masksToBounds = true
         }
+        // Manual resize grip on the TV's bottom-right corner (windowed only). Kept
+        // frontmost so the video layer never swallows its clicks.
+        resizeHandle.isHidden = !windowed
+        resizeHandle.frame = NSRect(x: bezelFrame.maxX - 46, y: bezelFrame.minY, width: 46, height: 46)
+        resizeHandle.tvAspect = CGFloat(crop.w * 16.0) / CGFloat(crop.h * 9.0)
+        if resizeHandle.superview != nil {
+            resizeHandle.removeFromSuperview()
+            addSubview(resizeHandle)   // re-add → above the video view
+        }
     }
 
     /// Simple dark TV frame used before any bezel is downloaded.
@@ -528,6 +600,54 @@ private final class TubeContentView: NSView {
         inner.stroke()
         img.unlockFocus()
         return img
+    }
+}
+
+/// Invisible drag grip on the TV's bottom-right corner: resizes the borderless tube
+/// window proportionally (top-left anchored). Replaces the system .resizable behaviour,
+/// which paints a "liquid glass" edge on macOS 26 borderless windows.
+private final class TubeResizeHandle: NSView {
+    var tvAspect: CGFloat = 16.0 / 9.0
+
+    override var mouseDownCanMoveWindow: Bool { false }
+    override var wantsUpdateLayer: Bool { true }
+
+    override func resetCursorRects() {
+        if #available(macOS 15.0, *) {
+            addCursorRect(bounds, cursor: .frameResize(position: .bottomRight, directions: .all))
+        } else {
+            addCursorRect(bounds, cursor: .crosshair)
+        }
+    }
+
+    /// Small visible grip (three diagonal ticks) so the resize corner is discoverable.
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor(white: 1, alpha: 0.55).setStroke()
+        let p = NSBezierPath()
+        p.lineWidth = 1.5
+        let w = bounds.width, inset: CGFloat = 8
+        for d in stride(from: 0 as CGFloat, through: 12, by: 5) {
+            p.move(to: NSPoint(x: w - inset - d, y: inset))
+            p.line(to: NSPoint(x: w - inset, y: inset + d))
+        }
+        p.stroke()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let win = window else { return }
+        let startFrame = win.frame
+        let startLoc = NSEvent.mouseLocation
+        while true {
+            guard let ev = win.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) else { break }
+            if ev.type == .leftMouseUp { break }
+            let loc = NSEvent.mouseLocation
+            var w = startFrame.width + (loc.x - startLoc.x)
+            let maxW = win.screen?.visibleFrame.width ?? 4000
+            w = min(max(w, 200), maxW)               // can shrink to a small floating TV
+            let h = w / tvAspect
+            win.setFrame(NSRect(x: startFrame.minX, y: startFrame.maxY - h, width: w, height: h),
+                         display: true)
+        }
     }
 }
 

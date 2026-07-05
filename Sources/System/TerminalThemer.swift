@@ -78,6 +78,14 @@ enum TerminalThemer {
         }
     }
 
+    /// Crash / force-quit recovery: a leftover snapshot at launch means the previous
+    /// session never restored Terminal — undo it. An active theme re-applies its
+    /// profile right after via the applyWallpaper hook. Call once at launch.
+    static func restoreIfNeeded() {
+        guard d.bool(forKey: snapKey) else { return }
+        restore()
+    }
+
     /// Restore the user's original default/startup profile.
     static func restore() {
         guard d.bool(forKey: snapKey) else { return }

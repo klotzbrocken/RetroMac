@@ -38,3 +38,12 @@ larger-effort or design-gated work.
   graceful degradation for future macOS) — partially done (CoreDockBridge).
 - Dock-behavior hardening (watchdog helper to restore the system Dock if
   RetroMac crashes while it's hidden; window-space reservation).
+
+## TV / Audit R3 (2026-07-04)
+- **TVPlaybackSession / TVPresetPolicy**: Stream-Auswahl, Preset-Auflösung
+  (Fenster-Override > Bookmark > Global > Default) und Last-Channel stecken
+  heute 3× in Tube Mode, Classic TV Window und TV Settings — in ein kleines
+  gemeinsames Modell ziehen.
+- **Automatisierte Regressions-Checks** (SystemBridgeTests-Stil): Tube-Start
+  ohne Metal/Shader, Appearance-/Terminal-Crash-Recovery, WebApp-Path-Escape,
+  TV Web- vs. Stream-Preset.

@@ -111,8 +111,8 @@ final class TVBrowserWindow: NSObject {
                 setupStreamBasic(url: url, size: size, window: win)
             }
         } else {
-            // Web URL — render with WKWebView
-            setupWebView(url: url, size: size, window: win)
+            // Web URL — render with WKWebView (overlay driven by the resolved preset)
+            setupWebView(url: url, size: size, window: win, presetID: effectivePresetID)
         }
 
         // BeOS theme: wrap the content in a borderless window with a protruding yellow Lasche.
@@ -402,26 +402,31 @@ final class TVBrowserWindow: NSObject {
 
     // MARK: - Web Content (WKWebView)
 
-    private func setupWebView(url: URL, size: NSSize, window: NSWindow) {
+    private func setupWebView(url: URL, size: NSSize, window: NSWindow, presetID: String?) {
         let config = WKWebViewConfiguration()
         config.allowsAirPlayForMediaPlayback = true
         let wv = WKWebView(frame: NSRect(origin: .zero, size: size), configuration: config)
         wv.autoresizingMask = [.width, .height]
         wv.load(URLRequest(url: url))
 
-        // Web bookmarks can't run the real Metal CRT shader (no pixel-buffer stream like
-        // AVPlayer), so give them a lightweight scanline + vignette OVERLAY for a retro look.
         let container = NSView(frame: NSRect(origin: .zero, size: size))
         container.autoresizingMask = [.width, .height]
         container.addSubview(wv)
-        let overlay = CRTWebOverlay(frame: NSRect(origin: .zero, size: size))
-        overlay.autoresizingMask = [.width, .height]
-        container.addSubview(overlay)
+        // Web bookmarks can't run the real Metal CRT shader (no pixel-buffer stream like
+        // AVPlayer). The lightweight scanline + vignette OVERLAY stands in for it — but
+        // only when the resolved preset actually wants an effect ("None" = clean page).
+        if let presetID = presetID, presetID != "none" {
+            let overlay = CRTWebOverlay(frame: NSRect(origin: .zero, size: size))
+            overlay.autoresizingMask = [.width, .height]
+            overlay.alphaValue = CGFloat(max(0.2, min(1.0, AppSettings.shared.defaultIntensity)))
+            container.addSubview(overlay)
+            activePresetID = presetID
+        }
         window.contentView = container
 
         self.webView = wv
         self.contentMode = .webContent
-        print("[TV] Web content (CRT overlay): \(url.absoluteString)")
+        print("[TV] Web content (overlay preset: \(presetID ?? "none")): \(url.absoluteString)")
     }
 
     // MARK: - Aspect Ratio
