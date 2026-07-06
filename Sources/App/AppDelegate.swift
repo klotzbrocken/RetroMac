@@ -2353,6 +2353,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func disableTheme() {
         AppSettings.shared.dockEnabled = false
+        AppSettings.shared.menuBarAppleStyle = 0   // menu-bar Apple logo returns to the system one
         DockController.shared.stop()
         DesktopIconsController.shared.hide()
         ProgramManagerController.shared.hide()
