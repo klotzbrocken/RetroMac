@@ -8,8 +8,8 @@ final class ProgramItemView: NSView {
     private let image: NSImage?
     private var selected = false
 
-    /// Icon size scales with the Settings "icon size" slider (dockIconScale).
-    static var scale: CGFloat { max(0.5, min(2.5, CGFloat(AppSettings.shared.dockIconScale))) }
+    /// Icon size scales with the Settings desktop-icon slider (dock slider while linked).
+    static var scale: CGFloat { max(0.5, min(2.5, CGFloat(AppSettings.shared.effectiveDesktopIconScale))) }
     static var iconSize: CGFloat { (32 * scale).rounded() }
     static var cellWidth: CGFloat { max(72, iconSize + 44).rounded() }
     static var cellHeight: CGFloat { (iconSize + 32).rounded() }

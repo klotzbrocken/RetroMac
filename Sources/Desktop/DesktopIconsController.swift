@@ -17,9 +17,9 @@ final class DesktopIconsController {
     private var custom = DesktopStore.ThemeCustom()
     private var themeName: String { ThemeManager.shared.activeTheme?.config.name ?? "?" }
 
-    // Computed grid layout — the dock leads.
+    // Computed grid layout — the dock leads (unless the desktop slider is unlocked).
     private var iconSize: CGFloat {
-        let scale = CGFloat(AppSettings.shared.dockIconScale)
+        let scale = CGFloat(AppSettings.shared.effectiveDesktopIconScale)
         let cfg = ThemeManager.shared.activeTheme?.config
         // An explicit per-theme desktop size wins (e.g. Win98's 40); otherwise desktop
         // icons match the theme's DOCK icon size so they're identical. Either way the
@@ -36,16 +36,20 @@ final class DesktopIconsController {
     private var scaleObserver: AnyCancellable?
 
     private init() {
-        // Desktop icons follow the dock icon slider — rebuild the grid live (the dock
-        // rebuilds via its own observer; without this the desktop only updated on the
-        // next theme switch).
-        scaleObserver = AppSettings.shared.$dockIconScale
-            .dropFirst()
-            .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self = self, self.isVisible else { return }
-                self.update()
-            }
+        // Desktop icons rebuild live when either the dock slider (while linked), the
+        // independent desktop slider, or the link toggle changes.
+        let s = AppSettings.shared
+        scaleObserver = Publishers.MergeMany(
+            s.$dockIconScale.map { _ in () }.eraseToAnyPublisher(),
+            s.$desktopIconScale.map { _ in () }.eraseToAnyPublisher(),
+            s.$desktopIconScaleLinked.map { _ in () }.eraseToAnyPublisher()
+        )
+        .dropFirst()
+        .debounce(for: .milliseconds(200), scheduler: DispatchQueue.main)
+        .sink { [weak self] _ in
+            guard let self = self, self.isVisible else { return }
+            self.update()
+        }
     }
 
     // MARK: - Public API

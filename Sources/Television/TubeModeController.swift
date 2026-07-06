@@ -93,11 +93,23 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         }
         startChannel(resolveStartIndex())
 
+        // On an EXTERNAL display a TV is meant to fill the screen — present fullscreen
+        // straight away (windowed only makes sense on the main desktop). Double-click /
+        // menu still toggles back to a floating window.
+        let external = screen != NSScreen.main
+        if external {
+            savedWindowFrame = startFrame
+            isFullscreen = true
+            content.windowed = false
+            win.isOpaque = true; win.backgroundColor = .black
+            win.setFrame(screen.frame, display: true)
+        }
+
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
         isActive = true
         NotificationCenter.default.post(name: .tubeModeChanged, object: nil)
-        print("[Tube] ON — screen \(screen.localizedName), windowed")
+        print("[Tube] ON — screen \(screen.localizedName), \(external ? "fullscreen" : "windowed")")
     }
 
     func stop() {

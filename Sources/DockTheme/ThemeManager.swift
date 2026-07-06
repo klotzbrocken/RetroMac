@@ -131,7 +131,8 @@ final class ThemeManager {
         switch name {
         case "Mountain Lion":      s = "Mac OS Mountain Lion"
         case "Snow Leopard":       s = "Mac OS Snow Leopard"
-        case "Mac OS 9.2 Classic": s = "Mac OS 9 Classic"
+        case "Mac OS 9.2 Classic": s = "Apple System 9"
+        case "Mac OS 6 classic":   s = "Apple System 6"
         default: break
         }
         return isCrowned(name) ? "👑 " + s : s
@@ -285,6 +286,7 @@ final class ThemeManager {
         persistWallpaperBackup()
         print("[Theme] Wallpaper set on \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent)")
         AppearanceAdapter.apply(for: theme.config)
+        CursorThemeManager.shared.apply(for: theme.config)
         TerminalThemer.apply(forThemeNamed: theme.config.name)
     }
 
@@ -327,6 +329,7 @@ final class ThemeManager {
 
     func restoreWallpapers() {
         AppearanceAdapter.restore()   // matched appearance/accent returns with the wallpaper
+        CursorThemeManager.shared.restore()   // and so does the user's cursor
         TerminalThemer.restore()      // and so does the user's Terminal profile
         guard !savedWallpapers.isEmpty else { return }
         let ws = NSWorkspace.shared

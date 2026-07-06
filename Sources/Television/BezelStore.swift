@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 
 /// A curated Soqueroeu TV background: 4K PNG in the author's GitHub repo plus the
 /// measured tube region (relative, TOP-LEFT origin: x, y, w, h) where the video goes.
@@ -100,7 +101,12 @@ final class BezelStore {
             return err("Not a PNG file.")
         }
         try? fh.close()
-        guard let img = NSImage(contentsOf: url), img.size.width >= 1000, img.size.width <= 8000 else {
+        // Use the PIXEL width from image metadata, not NSImage.size — the latter is in
+        // points and shrinks with the PNG's DPI (these V2.0 bezels ship at 300 DPI, so a
+        // 3840px image reported ~921 points and wrongly failed the plausibility check).
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any],
+              let px = props[kCGImagePropertyPixelWidth] as? Int, px >= 1000, px <= 8000 else {
             return err("Image failed to decode or has implausible dimensions.")
         }
         return nil
