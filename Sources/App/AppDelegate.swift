@@ -92,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemUIHelper.restoreIfNeeded()
         SystemUIHelper.restoreDesktopIconsIfNeeded()   // crash/force-quit-safe desktop-icon restore
         AppearanceAdapter.restoreIfNeeded()            // ditto for matched appearance/accent
+        CursorThemeManager.shared.restoreIfNeeded()    // ditto for the themed system cursor
         TerminalThemer.restoreIfNeeded()               // ditto for the matched Terminal profile
         restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
@@ -2463,13 +2464,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Doom Launcher
 
     @objc private func launchDoom() {
-        // Check GZDoom is installed
+        // Auto-install GZDoom on demand (same as Raze for Duke Nukem), then retry.
         guard FileManager.default.fileExists(atPath: "/Applications/GZDoom.app") else {
-            let alert = NSAlert()
-            alert.messageText = "GZDoom Not Found"
-            alert.informativeText = "Install GZDoom to play Doom with RetroMac.\n\nDownload from https://zdoom.org"
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
+            ensureGZDoom(gameName: "Doom") { [weak self] in self?.launchDoom() }
             return
         }
 
@@ -2634,13 +2631,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         process.executableURL = URL(fileURLWithPath: "/Applications/Raze.app/Contents/MacOS/raze")
         var args = ["-iwad", grpPath]
 
-        // Load native CRT shader PK3 if enabled (Raze supports -file like GZDoom)
-        let crtEnabled = settings.gamesCRTEnabled
-        if crtEnabled,
-           let crtPath = Bundle.main.path(forResource: "RetroMac-CRT", ofType: "pk3") {
-            args.append(contentsOf: ["-file", crtPath])
-            args.append(contentsOf: ["+SH_CRTEnable", "true", "+SH_VHSEnable", "false", "+SH_WarpEnable", "false"])
-            print("[\(gameName)] Loading internal CRT shader: \(crtPath)")
+        // NOTE: The RetroMac-CRT.pk3 is deliberately NOT loaded here. It drives its
+        // post-process shader from a GZDoom StaticEventHandler/RenderOverlay(RenderEvent)
+        // that sets the uniforms each frame — a rendering API Raze's (Build-engine)
+        // ZScript VM doesn't implement. Injecting it made Raze abort at script-compile
+        // time ("unknown base class StaticEventHandler", "RenderEvent as a type", …), so
+        // Duke Nukem 3D / Shadow Warrior wouldn't launch at all. The CRT toggle only
+        // applies to the GZDoom-based games (Doom/Freedoom).
+        if settings.gamesCRTEnabled {
+            print("[\(gameName)] CRT shader skipped — not supported by Raze's Build engine")
         }
 
         process.arguments = args
@@ -2713,11 +2712,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func launchHeretic() {
         guard FileManager.default.fileExists(atPath: "/Applications/GZDoom.app") else {
-            let alert = NSAlert()
-            alert.messageText = "GZDoom Not Found"
-            alert.informativeText = "Install GZDoom to play Heretic with RetroMac.\n\nDownload from https://zdoom.org"
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
+            ensureGZDoom(gameName: "Heretic") { [weak self] in self?.launchHeretic() }
             return
         }
 
@@ -2966,13 +2961,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func launchFreedoom() {
         let fm = FileManager.default
 
-        // Check GZDoom installed
+        // Auto-install GZDoom on demand, then retry.
         guard fm.fileExists(atPath: "/Applications/GZDoom.app") else {
-            let alert = NSAlert()
-            alert.messageText = "GZDoom Not Found"
-            alert.informativeText = "Install GZDoom to play Freedoom.\n\nDownload from https://zdoom.org"
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
+            ensureGZDoom(gameName: "Freedoom") { [weak self] in self?.launchFreedoom() }
             return
         }
         ensureFreedoomAndLaunch()
@@ -3569,13 +3560,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Raze Auto-Install
 
-    /// Download and install Raze.app from GitHub releases
+    /// Download and install Raze.app (Duke Nukem 3D / Shadow Warrior) from GitHub.
     private func installRaze(completion: @escaping (Bool) -> Void) {
+        installZDoomApp(repo: "ZDoom/Raze", appName: "Raze", label: "Duke3D", completion: completion)
+    }
+
+    /// Download and install GZDoom.app from GitHub — same publisher and macOS packaging
+    /// as Raze; Doom, Heretic and Freedoom all run on it.
+    private func installGZDoom(completion: @escaping (Bool) -> Void) {
+        installZDoomApp(repo: "ZDoom/gzdoom", appName: "GZDoom", label: "Doom", completion: completion)
+    }
+
+    /// Generic installer for a ZDoom-family macOS app (Raze / GZDoom): fetch the latest
+    /// GitHub release, pick the macOS .dmg/.zip asset, and install <appName>.app to
+    /// /Applications. `label` is only a log prefix.
+    private func installZDoomApp(repo: String, appName: String, label: String,
+                                 completion: @escaping (Bool) -> Void) {
         // Show progress window
-        let progressWindow = createProgressWindow(title: "Installing Raze…", detail: "Fetching latest release from GitHub…")
+        let progressWindow = createProgressWindow(title: "Installing \(appName)…", detail: "Fetching latest release from GitHub…")
 
         // Query GitHub API for latest release
-        guard let apiURL = URL(string: "https://api.github.com/repos/ZDoom/Raze/releases/latest") else {
+        guard let apiURL = URL(string: "https://api.github.com/repos/\(repo)/releases/latest") else {
             progressWindow.close()
             completion(false)
             return
@@ -3592,7 +3597,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     progressWindow.close()
                     let alert = NSAlert()
                     alert.messageText = "Download Failed"
-                    alert.informativeText = "Could not fetch Raze release info from GitHub.\n\(error?.localizedDescription ?? "")"
+                    alert.informativeText = "Could not fetch \(appName) release info from GitHub.\n\(error?.localizedDescription ?? "")"
                     alert.addButton(withTitle: "OK")
                     alert.runModal()
                     completion(false)
@@ -3602,7 +3607,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             let version = json["tag_name"] as? String ?? "latest"
 
-            // Find macOS asset — prefer .dmg, then .zip (Raze ships macOS as DMG)
+            // Find macOS asset — prefer .dmg, then .zip (Raze ships DMG, GZDoom ships ZIP)
             let macAsset = assets.first(where: { asset in
                 let name = (asset["name"] as? String ?? "").lowercased()
                 return name.contains("macos") && (name.hasSuffix(".dmg") || name.hasSuffix(".zip"))
@@ -3615,11 +3620,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     progressWindow.close()
                     let alert = NSAlert()
                     alert.messageText = "No macOS Build Found"
-                    alert.informativeText = "The latest Raze release (\(version)) does not include a macOS build.\nPlease install Raze manually from:\nhttps://github.com/ZDoom/Raze/releases"
+                    alert.informativeText = "The latest \(appName) release (\(version)) does not include a macOS build.\nPlease install \(appName) manually from:\nhttps://github.com/\(repo)/releases"
                     alert.addButton(withTitle: "Open GitHub")
                     alert.addButton(withTitle: "Cancel")
                     if alert.runModal() == .alertFirstButtonReturn {
-                        if let url = URL(string: "https://github.com/ZDoom/Raze/releases") {
+                        if let url = URL(string: "https://github.com/\(repo)/releases") {
                             NSWorkspace.shared.open(url)
                         }
                     }
@@ -3628,12 +3633,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            let assetName = asset["name"] as? String ?? "Raze"
+            let assetName = asset["name"] as? String ?? appName
             let isDMG = assetName.lowercased().hasSuffix(".dmg")
-            print("[Duke3D] Downloading Raze \(version): \(assetName)")
+            print("[\(label)] Downloading \(appName) \(version): \(assetName)")
 
             DispatchQueue.main.async {
-                self?.updateProgressWindow(progressWindow, detail: "Downloading Raze \(version) (\(assetName))…")
+                self?.updateProgressWindow(progressWindow, detail: "Downloading \(appName) \(version) (\(assetName))…")
             }
 
             // Download the asset
@@ -3643,7 +3648,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         progressWindow.close()
                         let alert = NSAlert()
                         alert.messageText = "Download Failed"
-                        alert.informativeText = dlError?.localizedDescription ?? "Raze download failed."
+                        alert.informativeText = dlError?.localizedDescription ?? "\(appName) download failed."
                         alert.addButton(withTitle: "OK")
                         alert.runModal()
                         completion(false)
@@ -3652,41 +3657,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
 
                 DispatchQueue.main.async {
-                    self?.updateProgressWindow(progressWindow, detail: "Installing Raze to /Applications…")
+                    self?.updateProgressWindow(progressWindow, detail: "Installing \(appName) to /Applications…")
                 }
 
                 let fm = FileManager.default
-                let tempDir = NSTemporaryDirectory() + "raze_install_\(ProcessInfo.processInfo.processIdentifier)"
+                let tempDir = NSTemporaryDirectory() + "\(appName.lowercased())_install_\(ProcessInfo.processInfo.processIdentifier)"
                 try? fm.removeItem(atPath: tempDir)
                 try? fm.createDirectory(atPath: tempDir, withIntermediateDirectories: true, attributes: nil)
 
+                let finish: (Bool) -> Void = { success in
+                    try? fm.removeItem(atPath: tempDir)
+                    DispatchQueue.main.async {
+                        progressWindow.close()
+                        completion(success)
+                    }
+                }
+
                 if isDMG {
-                    // Mount DMG, copy .app, unmount
-                    self?.installRazeFromDMG(dmgPath: tempURL.path, tempDir: tempDir) { success in
-                        try? fm.removeItem(atPath: tempDir)
-                        DispatchQueue.main.async {
-                            progressWindow.close()
-                            completion(success)
-                        }
-                    }
+                    self?.installAppFromDMG(dmgPath: tempURL.path, tempDir: tempDir, appName: appName, label: label, completion: finish)
                 } else {
-                    // Unzip
-                    self?.installRazeFromZip(zipPath: tempURL.path, tempDir: tempDir) { success in
-                        try? fm.removeItem(atPath: tempDir)
-                        DispatchQueue.main.async {
-                            progressWindow.close()
-                            completion(success)
-                        }
-                    }
+                    self?.installAppFromZip(zipPath: tempURL.path, tempDir: tempDir, appName: appName, label: label, completion: finish)
                 }
             }.resume()
         }.resume()
     }
 
-    /// Extract Raze.app from a ZIP and install to /Applications
-    private func installRazeFromZip(zipPath: String, tempDir: String, completion: @escaping (Bool) -> Void) {
-        let fm = FileManager.default
+    /// Ensure GZDoom is installed, offering a one-click auto-download (like Raze) if not,
+    /// then run `launch`. Used by every GZDoom-based game so none require a manual install.
+    private func ensureGZDoom(gameName: String, launch: @escaping () -> Void) {
+        if FileManager.default.fileExists(atPath: "/Applications/GZDoom.app") {
+            launch()
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = "GZDoom Required"
+        alert.informativeText = "\(gameName) runs on GZDoom, which isn't installed yet.\n\nDownload and install the latest GZDoom now? (~40 MB from github.com/ZDoom/gzdoom)"
+        alert.addButton(withTitle: "Install GZDoom")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        installGZDoom { success in
+            if success { launch() }
+        }
+    }
 
+    /// Extract <appName>.app from a ZIP and install to /Applications
+    private func installAppFromZip(zipPath: String, tempDir: String, appName: String, label: String, completion: @escaping (Bool) -> Void) {
         let unzip = Process()
         unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
         unzip.arguments = ["-o", zipPath, "-d", tempDir]
@@ -3696,18 +3711,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try unzip.run()
             unzip.waitUntilExit()
         } catch {
-            print("[Duke3D] Unzip failed: \(error)")
+            print("[\(label)] Unzip failed: \(error)")
             completion(false)
             return
         }
 
-        // Find Raze.app recursively
-        guard let appPath = findAppBundle(named: "Raze", in: tempDir) else {
-            print("[Duke3D] Raze.app not found in ZIP")
+        // Find <appName>.app recursively
+        guard let appPath = findAppBundle(named: appName, in: tempDir) else {
+            print("[\(label)] \(appName).app not found in ZIP")
             DispatchQueue.main.async {
                 let alert = NSAlert()
                 alert.messageText = "Installation Failed"
-                alert.informativeText = "Raze.app was not found in the downloaded archive."
+                alert.informativeText = "\(appName).app was not found in the downloaded archive."
                 alert.addButton(withTitle: "OK")
                 alert.runModal()
             }
@@ -3715,11 +3730,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        copyAppToApplications(appPath: appPath, targetName: "Raze.app", completion: completion)
+        copyAppToApplications(appPath: appPath, targetName: "\(appName).app", completion: completion)
     }
 
-    /// Mount a DMG, find Raze.app, copy to /Applications
-    private func installRazeFromDMG(dmgPath: String, tempDir: String, completion: @escaping (Bool) -> Void) {
+    /// Mount a DMG, find <appName>.app, copy to /Applications
+    private func installAppFromDMG(dmgPath: String, tempDir: String, appName: String, label: String, completion: @escaping (Bool) -> Void) {
         let mountPoint = tempDir + "/dmg_mount"
         let fm = FileManager.default
         try? fm.createDirectory(atPath: mountPoint, withIntermediateDirectories: true, attributes: nil)
@@ -3734,22 +3749,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try mount.run()
             mount.waitUntilExit()
         } catch {
-            print("[Duke3D] DMG mount failed: \(error)")
+            print("[\(label)] DMG mount failed: \(error)")
             completion(false)
             return
         }
 
         guard mount.terminationStatus == 0 else {
-            print("[Duke3D] DMG mount returned status \(mount.terminationStatus)")
+            print("[\(label)] DMG mount returned status \(mount.terminationStatus)")
             completion(false)
             return
         }
 
-        // Find Raze.app in mounted volume
-        let appPath = findAppBundle(named: "Raze", in: mountPoint)
+        // Find <appName>.app in mounted volume
+        let appPath = findAppBundle(named: appName, in: mountPoint)
 
         if let appPath = appPath {
-            copyAppToApplications(appPath: appPath, targetName: "Raze.app") { success in
+            copyAppToApplications(appPath: appPath, targetName: "\(appName).app") { success in
                 // Unmount DMG
                 let detach = Process()
                 detach.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
@@ -3770,11 +3785,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try? detach.run()
             detach.waitUntilExit()
 
-            print("[Duke3D] Raze.app not found in DMG")
+            print("[\(label)] \(appName).app not found in DMG")
             DispatchQueue.main.async {
                 let alert = NSAlert()
                 alert.messageText = "Installation Failed"
-                alert.informativeText = "Raze.app was not found in the downloaded DMG."
+                alert.informativeText = "\(appName).app was not found in the downloaded DMG."
                 alert.addButton(withTitle: "OK")
                 alert.runModal()
             }

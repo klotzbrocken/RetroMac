@@ -414,6 +414,19 @@ struct DockSettingsTab: View {
                             }
                         }
                 }
+                RMRow(label: "Match cursor", hint: "Replace the system-wide mouse cursor with the theme's set (classic Mac pointer + ticking wristwatch for Apple System 6/9). Your normal cursor returns when the theme goes off.") {
+                    Toggle("", isOn: $settings.themeAdaptCursor)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                        .onChange(of: settings.themeAdaptCursor) { _, on in
+                            if on, settings.dockEnabled, let cfg = ThemeManager.shared.activeTheme?.config {
+                                CursorThemeManager.shared.apply(for: cfg)
+                            } else if !on {
+                                CursorThemeManager.shared.restore()
+                            }
+                        }
+                }
                 RMRow(label: "Show splash screen", hint: "Briefly shows the theme's boot splash when activated.", isLast: true) {
                     Toggle("", isOn: $settings.showSplashScreen)
                         .toggleStyle(.switch)
@@ -446,6 +459,44 @@ struct DockSettingsTab: View {
                             .tint(.rmAccent)
                             .frame(width: 110)
                         Text("\(Int(settings.dockIconScale * 100))%")
+                            .font(.rmMono(size: 11))
+                            .foregroundColor(.rmTextSecondary)
+                            .frame(width: 32, alignment: .trailing)
+                    }
+                }
+                RMRow(label: "Desktop icons") {
+                    HStack(spacing: 8) {
+                        // Link toggle: while locked the desktop icons track the dock slider.
+                        Button {
+                            if settings.desktopIconScaleLinked {
+                                // Unlocking: start where the dock currently is.
+                                settings.desktopIconScale = settings.dockIconScale
+                                settings.desktopIconScaleLinked = false
+                            } else {
+                                settings.desktopIconScaleLinked = true
+                            }
+                        } label: {
+                            Image(systemName: settings.desktopIconScaleLinked ? "lock.fill" : "lock.open")
+                                .font(.system(size: 11))
+                                .foregroundColor(settings.desktopIconScaleLinked ? .rmTextSecondary : .rmAccent)
+                        }
+                        .buttonStyle(.plain)
+                        .help(settings.desktopIconScaleLinked
+                              ? "Linked to the dock icon scale — click to size desktop icons independently"
+                              : "Independent from the dock — click to link back to the dock icon scale")
+
+                        Slider(
+                            value: Binding(
+                                get: { settings.desktopIconScaleLinked ? settings.dockIconScale : settings.desktopIconScale },
+                                set: { settings.desktopIconScale = $0 }
+                            ),
+                            in: 0.5...2.0, step: 0.1
+                        )
+                        .tint(.rmAccent)
+                        .frame(width: 110)
+                        .disabled(settings.desktopIconScaleLinked)
+
+                        Text("\(Int((settings.desktopIconScaleLinked ? settings.dockIconScale : settings.desktopIconScale) * 100))%")
                             .font(.rmMono(size: 11))
                             .foregroundColor(.rmTextSecondary)
                             .frame(width: 32, alignment: .trailing)

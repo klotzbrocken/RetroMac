@@ -277,6 +277,11 @@ final class AppSettings: ObservableObject {
     @Published var themeTerminalProfile: Bool {
         didSet { defaults.set(themeTerminalProfile, forKey: "themeTerminalProfile") }
     }
+    /// Replace the system-wide cursor with the theme's set (classic Mac pointer +
+    /// wristwatch for Apple System 6/9). On by default so those themes ship with it.
+    @Published var themeAdaptCursor: Bool {
+        didSet { defaults.set(themeAdaptCursor, forKey: "themeAdaptCursor") }
+    }
     /// Mac OS 6: replace the Control Strip with a Mountain-Lion-style dock (B/W).
     @Published var macos6UseDock: Bool {
         didSet { defaults.set(macos6UseDock, forKey: "macos6UseDock") }
@@ -424,6 +429,17 @@ final class AppSettings: ObservableObject {
     @Published var dockIconScale: Float {
         didSet { defaults.set(dockIconScale, forKey: "dockIconScale") }
     }
+    /// Independent desktop-icon/widget size. Ignored while linked (then desktop icons
+    /// follow dockIconScale); used once the user unlocks the second slider.
+    @Published var desktopIconScale: Float {
+        didSet { defaults.set(desktopIconScale, forKey: "desktopIconScale") }
+    }
+    /// When true (default) the desktop-icon slider tracks the dock slider.
+    @Published var desktopIconScaleLinked: Bool {
+        didSet { defaults.set(desktopIconScaleLinked, forKey: "desktopIconScaleLinked") }
+    }
+    /// Effective desktop-icon multiplier: the dock slider while linked, else its own.
+    var effectiveDesktopIconScale: Float { desktopIconScaleLinked ? dockIconScale : desktopIconScale }
     @Published var dockTargetDisplayID: CGDirectDisplayID {
         didSet { defaults.set(dockTargetDisplayID, forKey: "dockTargetDisplayID") }
     }
@@ -656,6 +672,7 @@ final class AppSettings: ObservableObject {
         shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? true
         themeAdaptAppearance = defaults.object(forKey: "themeAdaptAppearance") as? Bool ?? false
         themeTerminalProfile = defaults.object(forKey: "themeTerminalProfile") as? Bool ?? true
+        themeAdaptCursor = defaults.object(forKey: "themeAdaptCursor") as? Bool ?? true
         macos6UseDock = defaults.object(forKey: "macos6UseDock") as? Bool ?? false
         macos9UseDock = defaults.object(forKey: "macos9UseDock") as? Bool ?? false
         tvTubeOnTop = defaults.object(forKey: "tvTubeOnTop") as? Bool ?? false
@@ -747,6 +764,8 @@ final class AppSettings: ObservableObject {
             ?? ["com.apple.finder", "com.apple.Safari", "com.apple.mail", "com.apple.MobileSMS", "com.apple.iCal", "com.apple.reminders", "com.apple.Notes"]
         dockTheme = defaults.string(forKey: "dockTheme") ?? "Maiks Favourite"
         dockIconScale = defaults.object(forKey: "dockIconScale") as? Float ?? 1.0
+        desktopIconScale = defaults.object(forKey: "desktopIconScale") as? Float ?? 1.0
+        desktopIconScaleLinked = defaults.object(forKey: "desktopIconScaleLinked") as? Bool ?? true
         dockTargetDisplayID = defaults.object(forKey: "dockTargetDisplayID") as? CGDirectDisplayID ?? 0
         dockMagnification = defaults.object(forKey: "dockMagnification") as? Bool ?? true
         dockAutoHide = defaults.bool(forKey: "dockAutoHide")
