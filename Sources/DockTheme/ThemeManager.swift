@@ -91,6 +91,7 @@ final class ThemeManager {
 
     func setActiveTheme(name: String, applyWallpaper applyWP: Bool = true) {
         AppSettings.shared.dockTheme = name
+        AppSettings.shared.loadIconScales(forTheme: name)   // each theme remembers its icon sizes
         activeTheme = availableThemes.first(where: { $0.config.name == name })
         iconCache.removeAllObjects()
         registerThemeFonts()   // e.g. Chicago/Geneva for Mac OS 6 (process-scoped, idempotent)
@@ -144,8 +145,40 @@ final class ThemeManager {
         switch t.baseConfig.name {
         case "Mac OS 6 classic":      applyMacOS6DockVariant()
         case "Mac OS 9.2 Classic":    applyMacOS9DockVariant()
+        case "BeOS":                  applyBeOSDockVariant()
         default: break
         }
+    }
+
+    /// BeOS option: use the regular RetroMac dock instead of the classic Deskbar panel
+    /// (the merged-in former "BeOS Classic"). Off (default) keeps the Deskbar (base config).
+    private func applyBeOSDockVariant() {
+        guard let t = activeTheme, t.baseConfig.name == "BeOS" else { return }
+        guard AppSettings.shared.beosUseDock else { t.setConfigOverride(nil); return }   // Deskbar (base)
+        var c = t.baseConfig
+        c.dock.dockStyle = nil               // regular bottom dock, not the Deskbar
+        c.dock.height = 56
+        c.dock.iconSize = 40
+        c.dock.padding = 6
+        c.dock.spacing = 6
+        c.dock.cornerRadius = 0
+        c.dock.orientation = "horizontal"
+        c.dock.position = "bottom"
+        c.dock.alignment = "left"
+        c.dock.edgeOffset = 4
+        c.dock.backgroundColor = "#D8D8D8FF"
+        c.dock.backgroundGradientTop = nil
+        c.dock.backgroundGradientBottom = nil
+        c.dock.borderColor = "#404040FF"
+        c.dock.borderWidth = 1
+        c.dock.bevelTopColor = "#FFFFFFFF"
+        c.dock.bevelBottomColor = "#808080FF"
+        c.dock.bevelWidth = 1
+        c.dock.shadowEnabled = false
+        c.dock.magnification = false
+        c.dock.showTrash = true
+        c.dock.showGrip = true
+        t.setConfigOverride(c)
     }
 
     /// Mac OS 9 Classic option: the Platinum dock of the former "Mac OS 9.2" theme
@@ -331,6 +364,7 @@ final class ThemeManager {
         AppearanceAdapter.restore()   // matched appearance/accent returns with the wallpaper
         CursorThemeManager.shared.restore()   // and so does the user's cursor
         TerminalThemer.restore()      // and so does the user's Terminal profile
+        AppSettings.shared.menuBarAppleStyle = 0   // and the menu-bar Apple logo returns to the system one
         guard !savedWallpapers.isEmpty else { return }
         let ws = NSWorkspace.shared
         for screen in NSScreen.screens {

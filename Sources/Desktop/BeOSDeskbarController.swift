@@ -481,7 +481,7 @@ final class BeOSDeskbarView: NSView {
 
     private func beAbout() {
         let a = NSAlert(); a.messageText = "About BeOS"
-        a.informativeText = "BeOS Classic theme for RetroMac.\n\nThe Media OS — Be Incorporated, 1991–2001.\nRunning on macOS \(ProcessInfo.processInfo.operatingSystemVersionString)."
+        a.informativeText = "BeOS theme for RetroMac.\n\nThe Media OS — Be Incorporated, 1991–2001.\nRunning on macOS \(ProcessInfo.processInfo.operatingSystemVersionString)."
         if let logo = beLogo { a.icon = logo }
         a.addButton(withTitle: "OK"); a.runModal()
     }
