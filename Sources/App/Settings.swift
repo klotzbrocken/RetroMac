@@ -282,6 +282,13 @@ final class AppSettings: ObservableObject {
     @Published var themeAdaptCursor: Bool {
         didSet { defaults.set(themeAdaptCursor, forKey: "themeAdaptCursor") }
     }
+    /// Windows XP cursor size the user picks in Settings (0 = Normal, 1 = Large, 2 = XL).
+    /// modernXP is designed to scale, so this just changes the registered point size.
+    @Published var xpCursorSize: Int {
+        didSet { defaults.set(xpCursorSize, forKey: "xpCursorSize") }
+    }
+    /// Point-size multiplier for the Windows XP cursor set.
+    var xpCursorScale: CGFloat { [1.0, 1.4, 1.9][max(0, min(2, xpCursorSize))] }
     /// Mac OS 6: replace the Control Strip with a Mountain-Lion-style dock (B/W).
     @Published var macos6UseDock: Bool {
         didSet { defaults.set(macos6UseDock, forKey: "macos6UseDock") }
@@ -673,6 +680,7 @@ final class AppSettings: ObservableObject {
         themeAdaptAppearance = defaults.object(forKey: "themeAdaptAppearance") as? Bool ?? false
         themeTerminalProfile = defaults.object(forKey: "themeTerminalProfile") as? Bool ?? true
         themeAdaptCursor = defaults.object(forKey: "themeAdaptCursor") as? Bool ?? true
+        xpCursorSize = defaults.object(forKey: "xpCursorSize") as? Int ?? 0
         macos6UseDock = defaults.object(forKey: "macos6UseDock") as? Bool ?? false
         macos9UseDock = defaults.object(forKey: "macos9UseDock") as? Bool ?? false
         tvTubeOnTop = defaults.object(forKey: "tvTubeOnTop") as? Bool ?? false

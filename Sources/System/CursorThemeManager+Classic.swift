@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 
 /// Procedural cursors — authored as 1-bit pixel art (no licensing constraints). Cursors
 /// are drawn as a BLACK silhouette with an automatic 1px WHITE halo (the macOS/classic-Mac
@@ -10,37 +11,47 @@ extension CursorThemeManager {
     /// added later (from the converted Soqueroeu/blueslime pack).
     static func cursorSet(for name: String) -> [CursorSlot: CursorFrames]? {
         switch name {
-        case "Mac OS 6 classic", "Mac OS 9.2 Classic": return classicMacSet()
-        default: return nil
+        case "Mac OS 6 classic":                        return loadBundledSet("Cursors/AppleSystem6")
+        case "Mac OS 9.2 Classic":                      return loadBundledSet("Cursors/AppleSystem9")
+        case "Mac OS X":                                return loadBundledSet("Cursors/MacOSX")
+        case "Windows 3.1":                             return loadBundledSet("Cursors/Retrosmart")
+        case "Windows XP":                              return loadBundledSet("Cursors/WindowsXP", scale: AppSettings.shared.xpCursorScale)
+        default:                                        return nil
         }
     }
 
-    /// A standard black pointer used to "restore" — turning the override off doesn't reveal
-    /// the built-in cursors on Tahoe (the slot goes blank/white), and NSCursor.arrow.image
-    /// is empty outside a full app context, so we draw the macOS default-look arrow.
-    static func standardCursorSet() -> [CursorSlot: CursorFrames] {
-        [.arrow: CursorFrames(frames: [vectorArrow(fill: .black, outline: .white, lineWidth: 1.6)],
-                              size: CGSize(width: 16, height: 16),
-                              hotspot: CGPoint(x: 1, y: 1), frameDuration: 0),
-         .ibeam: CursorFrames(frames: [image(silhouette: iBeam)],
-                              size: CGSize(width: 8, height: 16),
-                              hotspot: CGPoint(x: 4, y: 8), frameDuration: 0)]
+    /// A drawn black default-look pointer — the last-resort restore if no originals were
+    /// captured (e.g. capture failed). Normally restore uses the captured originals.
+    static func fallbackArrow() -> CursorFrames? {
+        CursorFrames(images: [vectorArrow(fill: .black, outline: .white, lineWidth: 1.6)], frameCount: 1,
+                     size: CGSize(width: 16, height: 16),
+                     hotspot: CGPoint(x: 1, y: 1), frameDuration: 0)
     }
 
-    // MARK: - Classic Mac set
+    // MARK: - Bundled cursor sets (converted packs → sprite sheet PNG + manifest)
 
-    private static func classicMacSet() -> [CursorSlot: CursorFrames] {
-        // The classic Mac pointer is WHITE-filled with a black outline (vs the black macOS
-        // default) — that's the visible retro difference from the restored cursor.
-        [.arrow: CursorFrames(frames: [vectorArrow(fill: .white, outline: .black, lineWidth: 1.2)],
-                              size: CGSize(width: 16, height: 16),
-                              hotspot: CGPoint(x: 1, y: 1), frameDuration: 0),
-         .ibeam: CursorFrames(frames: [image(silhouette: iBeam)],
-                              size: CGSize(width: 8, height: 16),
-                              hotspot: CGPoint(x: 4, y: 8), frameDuration: 0),
-         .wait:  CursorFrames(frames: [image(faced: watchFrame1), image(faced: watchFrame2)],
-                              size: CGSize(width: 16, height: 16),
-                              hotspot: CGPoint(x: 8, y: 8), frameDuration: 0.4)]
+    /// Load a bundled cursor set from `Resources/<subdir>` (a `manifest.json` keyed by
+    /// CursorSlot rawValue + one `<slot>.png` sprite sheet per entry). Used for the Mac OS X
+    /// (.cur/.ani) and retrosmart (X11/XPM) packs — same on-disk schema.
+    static func loadBundledSet(_ subdir: String, scale: CGFloat = 1.0) -> [CursorSlot: CursorFrames]? {
+        guard let dir = Bundle.main.resourceURL?.appendingPathComponent(subdir, isDirectory: true),
+              let data = try? Data(contentsOf: dir.appendingPathComponent("manifest.json")),
+              let manifest = try? JSONSerialization.jsonObject(with: data) as? [String: [String: Any]] else { return nil }
+        var set: [CursorSlot: CursorFrames] = [:]
+        for (key, meta) in manifest {
+            guard let slot = CursorSlot(rawValue: key),
+                  let fc = meta["frameCount"] as? Int, fc >= 1,
+                  let size = meta["size"] as? [Double], size.count == 2,
+                  let hot = meta["hotspot"] as? [Double], hot.count == 2 else { continue }
+            let dur = (meta["dur"] as? Double) ?? 0
+            let url = dir.appendingPathComponent("\(key).png")   // one (possibly stacked) sprite sheet
+            guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+                  let img = CGImageSourceCreateImageAtIndex(src, 0, nil) else { continue }
+            set[slot] = CursorFrames(images: [normalized(img)], frameCount: fc,
+                                     size: CGSize(width: size[0] * scale, height: size[1] * scale),
+                                     hotspot: CGPoint(x: hot[0] * scale, y: hot[1] * scale), frameDuration: CGFloat(dur))
+        }
+        return set.isEmpty ? nil : set
     }
 
     /// A pointer drawn as a filled polygon with an outline. Vector, AA off, Retina-doubled.
@@ -67,105 +78,17 @@ extension CursorThemeManager {
         return rep.cgImage!
     }
 
-    // MARK: - Renderers
-
-    /// Render a BLACK silhouette (`X`) with an auto 1px WHITE halo on adjacent transparent
-    /// cells. Retina-doubled, hard pixels.
-    private static func image(silhouette rows: [String], scale: Int = 2) -> CGImage {
-        let h = rows.count
-        let w = rows.map { $0.count }.max() ?? h
-        var black = Array(repeating: Array(repeating: false, count: w), count: h)
-        for (r, row) in rows.enumerated() {
-            for (c, ch) in row.enumerated() where ch == "X" || ch == "#" { black[r][c] = true }
-        }
-        func isBlack(_ r: Int, _ c: Int) -> Bool { r >= 0 && r < h && c >= 0 && c < w && black[r][c] }
-        return draw(w: w, h: h, scale: scale) { r, c in
-            if black[r][c] { return .black }
-            for dr in -1...1 { for dc in -1...1 where isBlack(r + dr, c + dc) { return .white } }
-            return nil
-        }
+    /// Re-draw a loaded image into the exact bitmap format the CGS cursor API accepts
+    /// (calibrated RGB, premultiplied, hard pixels). Loading a PNG straight from ImageIO
+    /// yields a colour-managed image the private API silently refuses to display — MaCursor
+    /// hits the same and rebuilds each rep; this is that normalisation.
+    private static func normalized(_ img: CGImage) -> CGImage {
+        let w = img.width, h = img.height
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return img }
+        ctx.interpolationQuality = .none
+        ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: h))
+        return ctx.makeImage() ?? img
     }
-
-    /// Render a grid with explicit `X` = black, `.` = white, space = transparent (used for
-    /// the watch face, which needs its own white interior — no auto-halo).
-    private static func image(faced rows: [String], scale: Int = 2) -> CGImage {
-        let h = rows.count
-        let w = rows.map { $0.count }.max() ?? h
-        let arr = rows.map { Array($0) }
-        return draw(w: w, h: h, scale: scale) { r, c in
-            let ch = c < arr[r].count ? arr[r][c] : " "
-            switch ch { case "X", "#": return .black; case ".", "o": return .white; default: return nil }
-        }
-    }
-
-    private static func draw(w: Int, h: Int, scale: Int, color: (Int, Int) -> NSColor?) -> CGImage {
-        let pw = w * scale, ph = h * scale
-        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pw, pixelsHigh: ph,
-                                   bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-                                   colorSpaceName: .calibratedRGB, bytesPerRow: 4 * pw, bitsPerPixel: 32)!
-        let ctx = NSGraphicsContext(bitmapImageRep: rep)!
-        NSGraphicsContext.saveGraphicsState(); NSGraphicsContext.current = ctx
-        let cg = ctx.cgContext
-        cg.setShouldAntialias(false)
-        for r in 0..<h {
-            for c in 0..<w {
-                guard let col = color(r, c) else { continue }
-                col.setFill()
-                cg.fill(CGRect(x: c * scale, y: (h - 1 - r) * scale, width: scale, height: scale))
-            }
-        }
-        NSGraphicsContext.restoreGraphicsState()
-        return rep.cgImage!
-    }
-
-    // MARK: - Silhouettes (X = filled; white outline is added automatically)
-
-    private static let iBeam: [String] = [
-        "XXXXX",
-        "  X  ",
-        "  X  ",
-        "  X  ",
-        "  X  ",
-        "  X  ",
-        "  X  ",
-        "  X  ",
-        "  X  ",
-        "  X  ",
-        "  X  ",
-        "XXXXX",
-    ]
-
-    // Wristwatch (black outline, white face, black hands) — replaces the beach ball.
-    private static let watchFrame1: [String] = [
-        "     XXX     ",
-        "     X.X     ",
-        "   XXXXXXX   ",
-        "  X.......X  ",
-        " X....X....X ",
-        " X....X....X ",
-        "X.....X.....X",
-        "X.....XXXX..X",
-        " X.........X ",
-        " X.........X ",
-        "  X.......X  ",
-        "   XXXXXXX   ",
-        "     X.X     ",
-        "     XXX     ",
-    ]
-    private static let watchFrame2: [String] = [
-        "     XXX     ",
-        "     X.X     ",
-        "   XXXXXXX   ",
-        "  X.......X  ",
-        " X.........X ",
-        " X....X....X ",
-        "X.....X.....X",
-        "X.....X.....X",
-        " X....XXX..X ",
-        " X.........X ",
-        "  X.......X  ",
-        "   XXXXXXX   ",
-        "     X.X     ",
-        "     XXX     ",
-    ]
 }

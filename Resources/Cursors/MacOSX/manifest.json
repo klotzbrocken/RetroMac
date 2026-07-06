@@ -1,0 +1,146 @@
+{
+  "arrow" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      1,
+      0
+    ],
+    "size" : [
+      12,
+      18
+    ]
+  },
+  "crosshair" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      10,
+      9
+    ],
+    "size" : [
+      21,
+      21
+    ]
+  },
+  "help" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      1,
+      0
+    ],
+    "size" : [
+      24,
+      19
+    ]
+  },
+  "ibeam" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      5,
+      9
+    ],
+    "size" : [
+      11,
+      21
+    ]
+  },
+  "move" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      12,
+      12
+    ],
+    "size" : [
+      25,
+      26
+    ]
+  },
+  "notAllowed" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      10,
+      9
+    ],
+    "size" : [
+      22,
+      22
+    ]
+  },
+  "pointingHand" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      5,
+      0
+    ],
+    "size" : [
+      16,
+      18
+    ]
+  },
+  "resizeEW" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      12,
+      4
+    ],
+    "size" : [
+      24,
+      10
+    ]
+  },
+  "resizeNESW" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      9,
+      8
+    ],
+    "size" : [
+      19,
+      19
+    ]
+  },
+  "resizeNS" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      4,
+      11
+    ],
+    "size" : [
+      9,
+      24
+    ]
+  },
+  "resizeNWSE" : {
+    "dur" : 0,
+    "frameCount" : 1,
+    "hotspot" : [
+      9,
+      8
+    ],
+    "size" : [
+      19,
+      19
+    ]
+  },
+  "wait" : {
+    "dur" : 0.066666666666666666,
+    "frameCount" : 6,
+    "hotspot" : [
+      3,
+      2
+    ],
+    "size" : [
+      20,
+      22
+    ]
+  }
+}
