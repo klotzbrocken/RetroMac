@@ -427,6 +427,22 @@ struct DockSettingsTab: View {
                             }
                         }
                 }
+                if ThemeManager.shared.activeTheme?.config.name == "Windows XP" {
+                    RMRow(label: "XP cursor size", hint: "Windows XP cursors (modernXP, GPL-3.0) come in three sizes — the theme is drawn to scale crisply.") {
+                        Picker("", selection: $settings.xpCursorSize) {
+                            Text("Normal").tag(0); Text("Large").tag(1); Text("XL").tag(2)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .frame(width: 180)
+                        .onChange(of: settings.xpCursorSize) { _, _ in
+                            if settings.themeAdaptCursor, settings.dockEnabled,
+                               let cfg = ThemeManager.shared.activeTheme?.config, cfg.name == "Windows XP" {
+                                CursorThemeManager.shared.apply(for: cfg)
+                            }
+                        }
+                    }
+                }
                 RMRow(label: "Show splash screen", hint: "Briefly shows the theme's boot splash when activated.", isLast: true) {
                     Toggle("", isOn: $settings.showSplashScreen)
                         .toggleStyle(.switch)

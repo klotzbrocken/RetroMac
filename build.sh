@@ -101,6 +101,11 @@ if [ -d "Resources/TV" ]; then
     rsync -a --delete Resources/TV/ "$CONTENTS/Resources/TV/"
 fi
 
+if [ -d "Resources/Cursors" ]; then
+    mkdir -p "$CONTENTS/Resources/Cursors"
+    rsync -a --delete Resources/Cursors/ "$CONTENTS/Resources/Cursors/"
+fi
+
 # Real .saver screensaver modules (built by scripts/build-savers.sh)
 if [ -d "Resources/Savers" ]; then
     mkdir -p "$CONTENTS/Resources/Savers"

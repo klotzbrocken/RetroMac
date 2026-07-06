@@ -304,6 +304,24 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Link("mdomlop/retrosmart-x11-cursors on GitHub",
+                         destination: URL(string: "https://github.com/mdomlop/retrosmart-x11-cursors")!)
+                        .font(.caption)
+                    Text("Windows 3.1 theme cursors: “retrosmart” X11 cursor theme by Manuel Domínguez López (mdomlop), GPL-3.0 — converted to the macOS cursor format. Full licence bundled in the app.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("Apple System 6 & 9 theme cursors reconstructed from the classic Mac OS System 7.0.1 and Mac OS 9.2.1 CURS resources (arrow, I-beam, crosshair, wristwatch, the animated Mac OS 9 spinner, HyperCard finger). Original cursor artwork © Apple Computer, Inc.; used here for a non-commercial retro tribute. RetroMac is not affiliated with or endorsed by Apple.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("na0miluv/modernXP-cursor-theme on GitHub",
+                         destination: URL(string: "https://github.com/na0miluv/modernXP-cursor-theme")!)
+                        .font(.caption)
+                    Text("Windows XP theme cursors: “modernXP” — a GPL-3.0 pixel-perfect recreation of the Windows XP cursor set by na0miluv, converted to the macOS cursor format (size selectable in Settings). Full licence bundled in the app.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("rann01/IRIX-tiles on GitHub",
                          destination: URL(string: "https://github.com/rann01/IRIX-tiles")!)
                         .font(.caption)
