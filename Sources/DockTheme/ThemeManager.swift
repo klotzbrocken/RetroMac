@@ -364,7 +364,6 @@ final class ThemeManager {
         AppearanceAdapter.restore()   // matched appearance/accent returns with the wallpaper
         CursorThemeManager.shared.restore()   // and so does the user's cursor
         TerminalThemer.restore()      // and so does the user's Terminal profile
-        AppSettings.shared.menuBarAppleStyle = 0   // and the menu-bar Apple logo returns to the system one
         guard !savedWallpapers.isEmpty else { return }
         let ws = NSWorkspace.shared
         for screen in NSScreen.screens {
