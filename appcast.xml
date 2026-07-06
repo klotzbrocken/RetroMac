@@ -6,6 +6,30 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
+      <title>Version 2.0</title>
+      <pubDate>Mon, 06 Jul 2026 14:49:55 +0000</pubDate>
+      <sparkle:version>2.0</sparkle:version>
+      <sparkle:shortVersionString>2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.0 &mdash; themed mouse cursors for every OS</h2>
+        <ul>
+          <li><b>Themed mouse cursors:</b> each theme can replace your whole system cursor &mdash; the classic Mac pointer with its ticking wristwatch (System 6) or rotating spinner (System 9), the Mac OS X Aqua set with the spinning beach ball, Windows XP, and the retro Windows 3.1 pointers. Toggle it under Settings &#9656; Dock &#9656; &ldquo;Match cursor&rdquo;; your own cursor is captured and restored exactly when the theme goes off.</li>
+          <li><b>Windows XP cursor sizes:</b> pick Normal, Large or XL while the XP theme is active.</li>
+          <li><b>BeOS, unified:</b> &ldquo;BeOS&rdquo; and &ldquo;BeOS Classic&rdquo; are now one theme, with a Dock-style switch between the corner Deskbar and a regular dock.</li>
+          <li><b>Per-theme icon sizes:</b> the dock and desktop icon-size sliders are remembered per theme.</li>
+          <li><b>Setup Assistant:</b> opt in (on by default) to matching the macOS colour scheme and the themed cursor.</li>
+          <li><b>Fixes:</b> the menu-bar Apple logo resets when a theme (or the app) turns off, the System 6 Control Strip is fully opaque with a new boot splash, plus TV-Tube and Duke Nukem / GZDoom launch fixes.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.0/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="1pHPpRgSrtFyXEAv2luRZEcLuSh2cfUl0zpnocEQADkVyE8hdLLcs3JfmOxLw3XkH1XEOZTahVVqFc9LTtqLDA=="
+        length="71022091"
+      />
+    </item>
+    <item>
       <title>Version 1.9.7</title>
       <pubDate>Sat, 05 Jul 2026 00:00:00 +0000</pubDate>
       <sparkle:version>1.9.7</sparkle:version>
