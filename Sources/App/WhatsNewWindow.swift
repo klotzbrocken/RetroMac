@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 1.9.7")
+                Text("What's New in RetroMac 2.0")
                     .font(.title2.bold())
-                Text("Two new Mac themes, a retro TV, and matching system looks")
+                Text("Themed mouse cursors for every OS — and more")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,45 +21,45 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "sparkles",
+                        icon: "cursorarrow.rays",
                         color: .indigo,
-                        title: "New theme: Mac OS 6 classic",
-                        description: "A full black-and-white System 6 desktop — 1-bit icons, selectable 8×8 desktop patterns, Chicago/Geneva fonts, and a Control Strip that can switch to a 2D Platinum-style dock. Every running app's icon is shown in monochrome to match."
+                        title: "Themed mouse cursors",
+                        description: "Each theme can replace your whole system cursor — the classic Mac pointer with its ticking wristwatch (System 6) or rotating spinner (System 9), the Mac OS X Aqua set with the spinning beach ball, Windows XP, and the retro Windows 3.1 pointers. Toggle it under Settings ▸ Dock ▸ “Match cursor”; your own cursor is captured and restored exactly when the theme goes off."
                     )
 
                     featureRow(
-                        icon: "macwindow",
-                        color: .gray,
-                        title: "Mac OS 9 merged + Platinum widgets",
-                        description: "The old “Mac OS 9.2” theme is now a Platinum-dock option inside Mac OS 9 Classic. Every Mac OS 9 / 6 desktop widget (Clock, CPU, Applications, TV, Notepad) has a pixel-faithful Platinum title bar with pinstripes and working close/collapse/zoom boxes."
-                    )
-
-                    featureRow(
-                        icon: "tv",
+                        icon: "arrow.up.left.and.arrow.down.right",
                         color: .blue,
-                        title: "TV Tube mode",
-                        description: "One click in the flyout turns your streams into a floating retro TV — a free-standing TV set in a window (resize it), or fullscreen on an external display with a downloadable TV bezel and the Joel GDV-NTSC CRT shader. Right-click to change channel, shader, bezel or TV set."
+                        title: "Windows XP cursor sizes",
+                        description: "The Windows XP theme’s cursors come in Normal, Large and XL — pick your size in Settings ▸ Dock while the theme is active."
                     )
 
                     featureRow(
-                        icon: "paintpalette",
+                        icon: "square.stack.3d.up",
+                        color: .green,
+                        title: "BeOS, unified",
+                        description: "“BeOS” and “BeOS Classic” are now one theme. A Dock-style switch chooses between the classic corner Deskbar and a regular bottom dock."
+                    )
+
+                    featureRow(
+                        icon: "slider.horizontal.3",
+                        color: .orange,
+                        title: "Per-theme icon sizes",
+                        description: "The dock and desktop icon-size sliders are now remembered per theme, so each look keeps its own sizing."
+                    )
+
+                    featureRow(
+                        icon: "checklist",
                         color: .purple,
-                        title: "Themes match your Mac",
-                        description: "Optional per-theme matching of the macOS appearance + accent colour (Graphite for Mac OS, and more), a Terminal profile that fits the theme (DOS green, BeOS, Classic Mac…), and a crown marks the special themes. Your originals are remembered and restored."
-                    )
-
-                    featureRow(
-                        icon: "moon.stars",
-                        color: .teal,
-                        title: "Real screensavers",
-                        description: "Install Pipes, FlowerBox, Flying Toasters and Flurry as genuine macOS .saver modules from Settings ▸ Screensaver."
+                        title: "Setup Assistant options",
+                        description: "The first-run assistant now lets you opt in (on by default) to matching the macOS colour scheme and the themed cursor when a theme is active."
                     )
 
                     featureRow(
                         icon: "wrench.and.screwdriver",
                         color: .gray,
-                        title: "Consistency & fixes",
-                        description: "Unified dock icon sizes across the Mac docks (and desktop icons follow the size slider), Snow Leopard / Mountain Lion shown as “Mac OS …”, sturdier crash-recovery for the matched appearance/Terminal, and many smaller fixes."
+                        title: "Fixes & polish",
+                        description: "The menu-bar Apple logo now resets when a theme (or the app) turns off, the System 6 Control Strip is fully opaque, a new System 6 boot splash, plus TV-Tube and Duke Nukem / GZDoom launch fixes."
                     )
                 }
                 .padding(.horizontal, 24)

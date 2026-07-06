@@ -2032,8 +2032,9 @@ final class DockView: NSView {
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         let ctx = NSGraphicsContext.current!.cgContext
         let scale = CGFloat(AppSettings.shared.dockIconScale)
-        // The real Windows XP Luna start bar is fully opaque — never apply the transparency slider.
-        let bgAlpha = theme.isXPStartMenu ? 1.0 : CGFloat(AppSettings.shared.dockTransparency)
+        // The real Windows XP Luna start bar and the classic Mac Control Strip are fully
+        // opaque — never apply the transparency slider to them.
+        let bgAlpha = (theme.isXPStartMenu || theme.isControlStrip) ? 1.0 : CGFloat(AppSettings.shared.dockTransparency)
 
         let rect = currentBarRect  // Draw background — expands during magnification
         let cr = theme.dock.cornerRadius * scale

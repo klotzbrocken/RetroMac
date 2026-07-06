@@ -277,6 +277,22 @@ struct DockSettingsTab: View {
                         }
                     }
                 }
+                if selectedThemeConfig?.name == "BeOS" {
+                    RMRow(label: "Dock style", hint: "The classic BeOS Deskbar (corner panel) or a regular bottom dock.") {
+                        Picker("", selection: $settings.beosUseDock) {
+                            Text("Deskbar").tag(false)
+                            Text("Dock").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                        .onChange(of: settings.beosUseDock) { _, _ in
+                            guard settings.dockEnabled,
+                                  ThemeManager.shared.activeTheme?.baseConfig.name == "BeOS" else { return }
+                            ThemeManager.shared.setActiveTheme(name: "BeOS",
+                                                               applyWallpaper: !AppSettings.shared.dockOnly)
+                        }
+                    }
+                }
                 if selectedThemeConfig?.dock.borderStyle == "doomslayer" {
                     RMRow(label: "Slayer size", hint: "Scale of the Doom Slayer patrolling below the dock. The one knob you usually touch.") {
                         HStack(spacing: 8) {

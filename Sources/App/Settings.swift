@@ -298,6 +298,11 @@ final class AppSettings: ObservableObject {
     @Published var macos9UseDock: Bool {
         didSet { defaults.set(macos9UseDock, forKey: "macos9UseDock") }
     }
+    /// BeOS: use the regular RetroMac dock instead of the classic Deskbar panel
+    /// (merged-in former "BeOS Classic" theme). Off (default) = the Deskbar.
+    @Published var beosUseDock: Bool {
+        didSet { defaults.set(beosUseDock, forKey: "beosUseDock") }
+    }
     /// Tube Mode window floats above everything.
     @Published var tvTubeOnTop: Bool {
         didSet { defaults.set(tvTubeOnTop, forKey: "tvTubeOnTop") }
@@ -433,20 +438,40 @@ final class AppSettings: ObservableObject {
             NotificationCenter.default.post(name: .deskbarSettingsChanged, object: nil)
         }
     }
+    /// Icon scales are stored PER THEME (`loadIconScales(forTheme:)` is called on every
+    /// theme switch), so each theme remembers its own dock/desktop sizes.
+    private var iconScaleTheme = ""
+    private var suppressIconScaleSave = false
+    private func iconScaleKey(_ kind: String) -> String {
+        "iconScale_\(kind)_\(iconScaleTheme.isEmpty ? "default" : iconScaleTheme)"
+    }
     @Published var dockIconScale: Float {
-        didSet { defaults.set(dockIconScale, forKey: "dockIconScale") }
+        didSet { if !suppressIconScaleSave { defaults.set(dockIconScale, forKey: iconScaleKey("dock")) } }
     }
     /// Independent desktop-icon/widget size. Ignored while linked (then desktop icons
     /// follow dockIconScale); used once the user unlocks the second slider.
     @Published var desktopIconScale: Float {
-        didSet { defaults.set(desktopIconScale, forKey: "desktopIconScale") }
+        didSet { if !suppressIconScaleSave { defaults.set(desktopIconScale, forKey: iconScaleKey("desktop")) } }
     }
     /// When true (default) the desktop-icon slider tracks the dock slider.
     @Published var desktopIconScaleLinked: Bool {
-        didSet { defaults.set(desktopIconScaleLinked, forKey: "desktopIconScaleLinked") }
+        didSet { if !suppressIconScaleSave { defaults.set(desktopIconScaleLinked, forKey: iconScaleKey("linked")) } }
     }
     /// Effective desktop-icon multiplier: the dock slider while linked, else its own.
     var effectiveDesktopIconScale: Float { desktopIconScaleLinked ? dockIconScale : desktopIconScale }
+
+    /// Load the icon scales saved for `name` (falling back to the legacy global value, then
+    /// 1.0). Suppresses the per-theme save while loading so it doesn't echo back.
+    func loadIconScales(forTheme name: String) {
+        iconScaleTheme = name
+        suppressIconScaleSave = true
+        let gDock = defaults.object(forKey: "dockIconScale") as? Float ?? 1.0
+        let gDesk = defaults.object(forKey: "desktopIconScale") as? Float ?? 1.0
+        dockIconScale = defaults.object(forKey: iconScaleKey("dock")) as? Float ?? gDock
+        desktopIconScale = defaults.object(forKey: iconScaleKey("desktop")) as? Float ?? gDesk
+        desktopIconScaleLinked = defaults.object(forKey: iconScaleKey("linked")) as? Bool ?? true
+        suppressIconScaleSave = false
+    }
     @Published var dockTargetDisplayID: CGDirectDisplayID {
         didSet { defaults.set(dockTargetDisplayID, forKey: "dockTargetDisplayID") }
     }
@@ -677,12 +702,13 @@ final class AppSettings: ObservableObject {
         coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
         dockModeEnabled = defaults.object(forKey: "dockModeEnabled") as? Bool ?? false
         shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? true
-        themeAdaptAppearance = defaults.object(forKey: "themeAdaptAppearance") as? Bool ?? false
+        themeAdaptAppearance = defaults.object(forKey: "themeAdaptAppearance") as? Bool ?? true
         themeTerminalProfile = defaults.object(forKey: "themeTerminalProfile") as? Bool ?? true
         themeAdaptCursor = defaults.object(forKey: "themeAdaptCursor") as? Bool ?? true
         xpCursorSize = defaults.object(forKey: "xpCursorSize") as? Int ?? 0
         macos6UseDock = defaults.object(forKey: "macos6UseDock") as? Bool ?? false
         macos9UseDock = defaults.object(forKey: "macos9UseDock") as? Bool ?? false
+        beosUseDock = defaults.object(forKey: "beosUseDock") as? Bool ?? false
         tvTubeOnTop = defaults.object(forKey: "tvTubeOnTop") as? Bool ?? false
         tvTubeWindowTV = defaults.string(forKey: "tvTubeWindowTV") ?? "window-tv.png"
         themeIncludeWidgets = defaults.object(forKey: "themeIncludeWidgets") as? Bool ?? false

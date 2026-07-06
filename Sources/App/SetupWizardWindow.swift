@@ -108,6 +108,16 @@ struct SetupWizardView: View {
                       title: "Also apply theme widgets",
                       subtitle: "On = Dock, Wallpaper & widgets (desktop Clock). Off = Dock & Wallpaper only.",
                       isOn: $settings.themeIncludeWidgets)
+            Divider()
+            toggleRow(icon: "paintpalette.fill", tint: .pink,
+                      title: "Match colour scheme",
+                      subtitle: "Set the macOS appearance & accent colour to fit the theme (e.g. Graphite). Your own settings are restored when the theme goes off.",
+                      isOn: $settings.themeAdaptAppearance)
+            Divider()
+            toggleRow(icon: "cursorarrow.rays", tint: .indigo,
+                      title: "Match cursor",
+                      subtitle: "Replace the system-wide mouse cursor with the theme's set (classic Mac, XP, …). Your normal cursor returns afterwards.",
+                      isOn: $settings.themeAdaptCursor)
         }
     }
 
