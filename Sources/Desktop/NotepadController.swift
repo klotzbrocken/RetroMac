@@ -86,6 +86,10 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
 
             let overlay = DragOverlayView(frame: .zero)
             overlay.onClose = { [weak self] in self?.close() }
+            // WindowShade + Zoom: identical mechanism to the CPU/Applications widgets —
+            // a JS control returns the new widget size and the panel resizes to match.
+            overlay.onCollapse = { [weak self] in self?.resizeToWidget("window.toggleCollapse ? window.toggleCollapse() : [0,0]") }
+            overlay.onZoom = { [weak self] in self?.resizeToWidget("window.toggleZoom ? window.toggleZoom() : [0,0]") }
             overlay.onHover = { [weak self] h in
                 self?.webView?.evaluateJavaScript("window.setHover && window.setHover(\(h))")
             }
@@ -132,6 +136,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
         guard let dict = message.body as? [String: Any], let action = dict["action"] as? String else { return }
         switch action {
         case "save": UserDefaults.standard.set(dict["text"] as? String ?? "", forKey: textKey)
+        case "menuOpen": dragOverlay?.passthrough = (dict["open"] as? Bool ?? false)
         case "close": close()
         case "open": openFile()
         case "saveFile": saveFile(plain: dict["plain"] as? String ?? "", forceDialog: false)
@@ -179,8 +184,19 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
         webView?.evaluateJavaScript("window.setFile && window.setFile(\(jsString(url.lastPathComponent)))")
     }
 
+    /// The classic Mac themes turn the Notepad into their era's text editor: SimpleText for
+    /// Mac OS 9, TeachText for Mac OS 6. Empty for every other theme (normal Notepad).
+    private func editorAppFlavor() -> String {
+        guard AppSettings.shared.dockEnabled else { return "" }
+        let n = (ThemeManager.shared.activeTheme?.config.name ?? "").lowercased()
+        if n.contains("mac os 9") { return "simpletext" }
+        if n.contains("mac os 6") { return "teachtext" }
+        return ""
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript("window.setEditorApp && window.setEditorApp('\(editorAppFlavor())')")
         let saved = UserDefaults.standard.string(forKey: textKey) ?? ""
         if let data = try? JSONSerialization.data(withJSONObject: [saved]),
            let json = String(data: data, encoding: .utf8) {
@@ -226,7 +242,31 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
             let H = wv.bounds.height
             overlay.frame = CGRect(x: 0, y: H - (tabY + tabH), width: wv.bounds.width, height: tabH)
             overlay.closeRect = CGRect(x: a[4], y: tabH - ((a[5] - tabY) + a[7]), width: a[6], height: a[7])
-            overlay.collapseRect = .zero; overlay.zoomRect = .zero
+            // Classic Mac editors add a WindowShade (collapse) + Zoom box on the right.
+            if a.count >= 16 {
+                overlay.collapseRect = CGRect(x: a[8],  y: tabH - ((a[9]  - tabY) + a[11]), width: a[10], height: a[11])
+                overlay.zoomRect     = CGRect(x: a[12], y: tabH - ((a[13] - tabY) + a[15]), width: a[14], height: a[15])
+            } else {
+                overlay.collapseRect = .zero; overlay.zoomRect = .zero
+            }
+        }
+    }
+
+    // MARK: - Classic window gadgets (SimpleText / TeachText)
+
+    /// Run a JS title-control that returns the new widget size; resize the panel
+    /// (top-left anchored) and re-capture the title regions. Mirrors the CPU widget.
+    private func resizeToWidget(_ js: String) {
+        webView?.evaluateJavaScript(js) { [weak self] result, _ in
+            guard let self = self, let panel = self.panel,
+                  let arr = result as? [NSNumber], arr.count == 2 else { return }
+            let w = CGFloat(truncating: arr[0]), h = CGFloat(truncating: arr[1])
+            guard w > 20, h > 20 else { return }
+            let top = panel.frame.maxY
+            panel.setContentSize(NSSize(width: w, height: h))
+            self.webView?.frame = NSRect(origin: .zero, size: NSSize(width: w, height: h))
+            var f = panel.frame; f.origin.y = top - f.height; panel.setFrame(f, display: true)
+            self.captureRegions()
         }
     }
 }

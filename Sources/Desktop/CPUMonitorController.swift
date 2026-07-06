@@ -290,7 +290,11 @@ final class DragOverlayView: NSView {
     var closeRect: CGRect = .zero
     var collapseRect: CGRect = .zero
     var zoomRect: CGRect = .zero
+    /// While a WebView menu is open (SimpleText's classic menu bar), let clicks fall through
+    /// to the WebView so dropdown items over the title bar aren't swallowed as a window drag.
+    var passthrough = false
     private var hoverTracking: NSTrackingArea?
+    override func hitTest(_ point: NSPoint) -> NSView? { passthrough ? nil : super.hitTest(point) }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override func updateTrackingAreas() {
         super.updateTrackingAreas()

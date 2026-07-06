@@ -184,6 +184,64 @@
   body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:22px;margin:3px 3px 2px;padding:0 2px 0 6px;
     background:linear-gradient(90deg,#00007b,#1085d2);}
   body.theme-win98 .np-toolbar,body.theme-win98 .np-status{background:#c4c4c4;}
+
+  /* ===== SimpleText (Mac OS 9) / TeachText (Mac OS 6) — window only ===== */
+  @font-face{font-family:"GenevaRM";src:url("fonts/Geneva12-Medium.ttf");}
+  @font-face{font-family:"ChicagoRM";src:url("fonts/Chicago-12.ttf");}
+  #ctxmenu{display:none;} .m9-collapse,.m9-zoom{display:none;} #stgrip{display:none;}
+  body.np-collapsed .body{display:none;}   /* WindowShade: roll up to the title bar */
+  /* taller title bar → bigger click targets (matches the CPU/Applications widget) */
+  body.app-simpletext .m9-title,body.app-teachtext .m9-title{height:23px;}
+  body.app-simpletext .m9-close,body.app-teachtext .m9-close{width:14px;height:14px;cursor:default;}
+  /* title-bar boxes: close (left), WindowShade (collapse) + zoom (right pair) */
+  body.app-simpletext .m9-right,body.app-teachtext .m9-right{margin-left:auto;display:flex;gap:8px;
+    padding-right:9px;align-items:center;z-index:2;}
+  body.app-simpletext .m9-collapse,body.app-teachtext .m9-collapse,
+  body.app-simpletext .m9-zoom,body.app-teachtext .m9-zoom{display:block;position:relative;box-sizing:border-box;
+    width:14px;height:14px;background:#c0c0c0;border:1px solid #545487;box-shadow:inset 0 0 0 1px #dadaff;cursor:default;}
+  /* zoom = box-in-box glyph; collapse = single horizontal line (WindowShade) */
+  body.app-simpletext .m9-zoom::before,body.app-teachtext .m9-zoom::before{content:"";position:absolute;
+    left:2px;top:2px;width:6px;height:6px;border:1px solid #545487;background:#c0c0c0;}
+  body.app-simpletext .m9-collapse::before,body.app-teachtext .m9-collapse::before{content:"";position:absolute;
+    left:2px;right:2px;top:5px;height:0;border-top:2px solid #545487;}
+  /* no toolbar / line numbers / status bar; proportional Geneva; white paper */
+  body.app-simpletext #nptoolbar,body.app-teachtext #nptoolbar{display:none;}
+  body.app-simpletext #npgutter,body.app-teachtext #npgutter{display:none;}
+  body.app-simpletext #npfind,body.app-teachtext #npfind{font-family:"GenevaRM","Geneva",sans-serif;}
+  body.app-simpletext .np-status,body.app-teachtext .np-status{display:none;}
+  body.app-simpletext #npedit,body.app-teachtext #npedit{background:#fff;}
+  body.app-simpletext #pad,body.app-teachtext #pad{
+    font-family:"GenevaRM","Geneva","Helvetica Neue",sans-serif;font-size:15px;line-height:1.25;padding:8px 10px;background:#fff;color:#000;}
+  body.app-teachtext #pad{font-family:"ChicagoRM","Chicago","GenevaRM",sans-serif;}
+  body.app-simpletext .m9-plaque,body.app-teachtext .m9-plaque{font-family:"ChicagoRM","Charcoal","ChicagoFLF",sans-serif;}
+  /* classic Mac scroll bar */
+  body.app-simpletext #pad::-webkit-scrollbar,body.app-teachtext #pad::-webkit-scrollbar{width:16px;}
+  body.app-simpletext #pad::-webkit-scrollbar-track,body.app-teachtext #pad::-webkit-scrollbar-track{background:#e8e8e8;border-left:1px solid #000;}
+  body.app-simpletext #pad::-webkit-scrollbar-thumb,body.app-teachtext #pad::-webkit-scrollbar-thumb{
+    background:#c0c0c0;border:1px solid #000;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #808080;}
+  body.app-simpletext #pad::-webkit-scrollbar-button,body.app-teachtext #pad::-webkit-scrollbar-button{
+    display:block;height:16px;background:#c0c0c0;border:1px solid #000;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #808080;}
+  /* resize grip (bottom-right — native corners do the resizing) */
+  body.app-simpletext #stgrip,body.app-teachtext #stgrip{display:block;position:absolute;right:0;bottom:0;width:15px;height:15px;z-index:3;
+    background:#fff;border-left:1px solid #000;border-top:1px solid #000;
+    background-image:linear-gradient(135deg,transparent 42%,#000 42% 48%,transparent 48% 62%,#000 62% 68%,transparent 68%);}
+  /* right-click context menu (classic popup) */
+  #ctxmenu{position:fixed;z-index:200;background:#fff;border:1px solid #000;box-shadow:2px 2px 0 rgba(0,0,0,.35);padding:2px 0;
+    font:13px/1 "ChicagoRM","Charcoal","Helvetica Neue",sans-serif;color:#000;min-width:158px;}
+  #ctxmenu .ci{padding:4px 24px 4px 16px;white-space:nowrap;position:relative;cursor:default;}
+  #ctxmenu .ci:hover{background:#000;color:#fff;}
+  #ctxmenu .ci.sep{padding:0;margin:3px 0;border-top:1px solid #b0b0b0;pointer-events:none;}
+  #ctxmenu .ci.sub::after{content:"\25B8";position:absolute;right:7px;}
+  #ctxmenu .csub{display:none;position:absolute;left:100%;top:-3px;background:#fff;border:1px solid #000;
+    box-shadow:2px 2px 0 rgba(0,0,0,.35);padding:2px 0;min-width:118px;}
+  #ctxmenu .ci.sub:hover>.csub{display:block;}
+  /* TeachText = System 6 black & white */
+  body.app-teachtext #win{background:#fff;border:1px solid #000;box-shadow:2px 2px 0 rgba(0,0,0,.4);}
+  body.app-teachtext .m9-title{background:#fff;border-bottom:1px solid #000;color:#000;}
+  body.app-teachtext .m9-plaque{color:#000;background:#fff;}
+  body.app-teachtext .m9-close,body.app-teachtext .m9-collapse,body.app-teachtext .m9-zoom{background:#fff;box-shadow:none;border:1px solid #000;}
+  body.app-teachtext .m9-zoom::before{border-color:#000;background:#fff;}
+  body.app-teachtext .m9-collapse::before{border-top-color:#000;}
 </style>
 </head>
 <body>
@@ -191,7 +249,7 @@
     <!-- BeOS tab (default) -->
     <div class="tab" id="tab"><span class="closebox" id="bxclose" title="Close"></span><b>Notepad</b></div>
     <!-- Mac OS 9 -->
-    <div class="m9-title" id="m9title"><span class="m9-close" id="m9close"></span><div class="m9-plaque">Notepad</div></div>
+    <div class="m9-title" id="m9title"><span class="m9-close" id="m9close"></span><div class="m9-plaque">Notepad</div><span class="m9-right"><span class="m9-collapse" id="m9collapse"></span><span class="m9-zoom" id="m9zoom"></span></span></div>
     <!-- Windows XP -->
     <div class="xp-title" id="xptitle"><span class="xp-cap">Notepad</span><span class="xp-close" id="xpclose"></span></div>
     <!-- Maiks Favourite -->
@@ -252,7 +310,35 @@
         <div id="pad" contenteditable="true" spellcheck="false" data-ph="Type a note…"></div>
       </div>
       <div class="np-status"><span id="npfile">Untitled</span><span id="npcount">0 words · 0 chars</span></div>
+      <div id="stgrip" title="Größe ändern"></div>
     </div>
+  </div>
+  <!-- Right-click context menu (SimpleText / TeachText — menus live here, not in a bar) -->
+  <div id="ctxmenu">
+    <div class="ci" data-cmd="cut">Ausschneiden</div>
+    <div class="ci" data-cmd="copy">Kopieren</div>
+    <div class="ci" data-cmd="paste">Einsetzen</div>
+    <div class="ci" data-cmd="selectall">Alles auswählen</div>
+    <div class="ci sep"></div>
+    <div class="ci sub">Schrift<div class="csub">
+      <div class="ci" data-font='"GenevaRM","Geneva",sans-serif'>Geneva</div>
+      <div class="ci" data-font='"ChicagoRM","Chicago",sans-serif'>Chicago</div>
+      <div class="ci" data-font='"Courier New",Courier,monospace'>Courier</div>
+      <div class="ci" data-font='Monaco,Menlo,monospace'>Monaco</div>
+      <div class="ci" data-font='"Helvetica Neue",Helvetica,sans-serif'>Helvetica</div>
+    </div></div>
+    <div class="ci sub">Größe<div class="csub">
+      <div class="ci" data-size="9">9</div><div class="ci" data-size="10">10</div><div class="ci" data-size="12">12</div>
+      <div class="ci" data-size="14">14</div><div class="ci" data-size="18">18</div><div class="ci" data-size="24">24</div>
+    </div></div>
+    <div class="ci sub">Stil<div class="csub">
+      <div class="ci" data-cmd="bold">Fett</div><div class="ci" data-cmd="italic">Kursiv</div>
+      <div class="ci" data-cmd="underline">Unterstrichen</div><div class="ci" data-cmd="plain">Normal</div>
+    </div></div>
+    <div class="ci sep"></div>
+    <div class="ci" data-cmd="find">Suchen…</div>
+    <div class="ci" data-cmd="open">Öffnen…</div>
+    <div class="ci" data-cmd="save">Sichern</div>
   </div>
 <script>
   const pad      = document.getElementById('pad');
@@ -503,10 +589,69 @@
   });
 
   /* ---- Native-callable API ---- */
-  window.setTheme=function(k){ theme=k||'beos'; document.body.className='theme-'+theme; };
+  /* ---- Classic Mac editors: SimpleText (Mac OS 9) / TeachText (Mac OS 6) — window only ---- */
+  let editorApp='';
+  /* Classic Mac windows show the DOCUMENT name in the title bar (not the app name). */
+  function syncTitle(){
+    const plq=document.querySelector('.m9-plaque'); if(!plq) return;
+    if(!editorApp){ plq.textContent='Notepad'; return; }
+    const f=document.getElementById('npfile');
+    plq.textContent=(f&&f.textContent)||'Ohne Titel';
+  }
+  function applyEditorApp(){
+    document.body.classList.remove('app-simpletext','app-teachtext');
+    if(!editorApp){ syncTitle(); pad.style.fontFamily=document.getElementById('npfont').value; pad.style.fontSize=fontPx+'px'; return; }
+    document.body.classList.add('app-'+editorApp);
+    syncTitle();
+    applyEditorTheme('light');   // classic Mac editors are always white paper / black ink
+    pad.style.fontFamily = editorApp==='teachtext'
+      ? '"ChicagoRM","Chicago","GenevaRM",sans-serif'
+      : '"GenevaRM","Geneva","Helvetica Neue",sans-serif';
+    pad.style.fontSize='15px';   // Geneva reads a touch larger, like the original
+  }
+  window.setEditorApp=function(a){ editorApp=a||''; applyEditorApp(); };
+
+  /* Right-click context menu — the classic menus (Schrift/Größe/Stil/Bearbeiten) live here. */
+  const ctx=document.getElementById('ctxmenu');
+  function runMenuCmd(d){
+    if(d.font!==undefined){ setFontFamily(d.font); return; }
+    if(d.size!==undefined){ setFont(parseInt(d.size,10)); return; }
+    switch(d.cmd){
+      case 'new': newDoc(); break;
+      case 'open': post({action:'open'}); break;
+      case 'save': doSave(false); break;
+      case 'saveAs': doSave(true); break;
+      case 'undo': document.execCommand('undo'); break;
+      case 'cut': document.execCommand('cut'); break;
+      case 'copy': document.execCommand('copy'); break;
+      case 'paste': document.execCommand('paste'); break;
+      case 'selectall': document.execCommand('selectAll'); break;
+      case 'find': openFind(); break;
+      case 'plain': document.execCommand('removeFormat'); pad.focus(); break;
+      case 'bold': exec('bold'); break;
+      case 'italic': exec('italic'); break;
+      case 'underline': exec('underline'); break;
+    }
+    refresh(); autosave();
+  }
+  function hideCtx(){ ctx.style.display='none'; }
+  pad.addEventListener('contextmenu',ev=>{
+    if(!editorApp) return;   // normal Notepad keeps the system context menu
+    ev.preventDefault(); ctx.style.display='block';
+    const r=ctx.getBoundingClientRect();
+    ctx.style.left=Math.max(2,Math.min(ev.clientX, innerWidth-r.width-4))+'px';
+    ctx.style.top=Math.max(2,Math.min(ev.clientY, innerHeight-r.height-4))+'px';
+  });
+  ctx.addEventListener('mousedown',ev=>ev.preventDefault());   // keep the selection
+  ctx.addEventListener('click',ev=>{ const ci=ev.target.closest('.ci');
+    if(ci && !ci.classList.contains('sub')){ runMenuCmd(ci.dataset); hideCtx(); } });
+  document.addEventListener('mousedown',ev=>{ if(!ev.target.closest('#ctxmenu')) hideCtx(); });
+  document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') hideCtx(); });
+
+  window.setTheme=function(k){ theme=k||'beos'; document.body.className='theme-'+theme; if(editorApp) applyEditorApp(); };
   window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
   window.setText=function(t){ pad.innerHTML=t||''; refresh(); };
-  window.setFile=function(name){ const el=document.getElementById('npfile'); if(el) el.textContent=name||'Untitled'; };
+  window.setFile=function(name){ const el=document.getElementById('npfile'); if(el) el.textContent=name||'Untitled'; syncTitle(); };
   window.loadFile=function(name,content,isHTML){ pad.innerHTML = content||''; window.setFile(name); refresh(); };
 
   /* ---- Close handlers ---- */
@@ -521,10 +666,43 @@
     if(cl.contains('theme-macosx'))  return [...R('mxtitle'),...R('mxclose')];
     if(cl.contains('theme-maiksfav'))return [...R('mftitle'),...R('mfclose')];
     if(cl.contains('theme-winxp'))   return [...R('xptitle'),...R('xpclose')];
-    if(cl.contains('theme-macos9'))  return [...R('m9title'),...R('m9close')];
+    if(cl.contains('theme-macos9')){
+      if(cl.contains('app-simpletext')||cl.contains('app-teachtext'))
+        return [...R('m9title'),...R('m9close'),...R('m9collapse'),...R('m9zoom')];
+      return [...R('m9title'),...R('m9close')];
+    }
     return [...R('tab'),...R('bxclose')];
   };
   window.widgetSize=function(){ const w=document.getElementById('win'); return [w.offsetWidth, w.offsetHeight]; };
+
+  /* ---- WindowShade (collapse) + Zoom — same mechanism as the CPU/Applications widgets:
+         mutate the DOM, return the new [w,h]; the native side resizes the panel to match. ---- */
+  let npCollapsed=false, npSavedH=0, npZoomed=false, npZoomSaved=null;
+  window.toggleCollapse=function(){
+    const win=document.getElementById('win');
+    if(!npCollapsed){
+      npSavedH = win.offsetHeight;
+      const barh = Math.round(window.regions()[3] || 22);   // visible title-bar height
+      document.body.classList.add('np-collapsed');           // hides .body → only the title bar shows
+      npCollapsed=true;
+      return [win.offsetWidth, barh];
+    } else {
+      document.body.classList.remove('np-collapsed');
+      npCollapsed=false;
+      return [win.offsetWidth, npSavedH || 420];
+    }
+  };
+  window.toggleZoom=function(){
+    const win=document.getElementById('win');
+    if(!npZoomed){
+      npZoomSaved=[win.offsetWidth, win.offsetHeight];
+      npZoomed=true;
+      return [520, 640];   // classic "ideal" document size
+    } else {
+      npZoomed=false;
+      return npZoomSaved || [win.offsetWidth, win.offsetHeight];
+    }
+  };
 
   /* ---- Restore persisted prefs ---- */
   (function init(){
