@@ -1,5 +1,6 @@
 {
   "name": "Mountain Lion",
+  "menuBarApple": "aqua-classic",
   "version": "1.0",
   "author": "RetroMac",
   "dock": {

@@ -151,7 +151,7 @@
       "gridY": 7
     },
     {
-      "name": "Notepad",
+      "name": "SimpleText",
       "icon": "notes.png",
       "type": "notepad",
       "gridX": 0,

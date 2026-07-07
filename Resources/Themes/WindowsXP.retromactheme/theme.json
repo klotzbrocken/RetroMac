@@ -113,13 +113,8 @@
     },
     {
       "name": "Notepad",
-      "icon": "notepad98.png",
-      "type": "webapp",
-      "url": "https://bored-win98.pisaucer.com/programs/notepad/index.html",
-      "args": [
-        "660",
-        "500"
-      ],
+      "icon": "notepadclassic.png",
+      "type": "notepad",
       "gridX": 0,
       "gridY": 5
     },

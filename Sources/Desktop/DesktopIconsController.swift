@@ -302,9 +302,21 @@ final class DesktopIconsController {
         persist()
     }
 
-    /// Snap all icons to the grid (clears free positions).
+    /// Align each icon to the NEAREST grid cell of its current position (Clean Up).
+    /// (Previously this cleared all free positions, snapping every icon back to its
+    /// default column/row — i.e. the origin — instead of tidying it in place.)
     func snapToGrid() {
-        custom.positions.removeAll()
+        guard let screen = NSScreen.main else { return }
+        let visibleFrame = screen.visibleFrame
+        let screenFrame = screen.frame
+        let cw = cellWidth, ch = cellHeight
+        let baseX = visibleFrame.maxX - marginX - cw - screenFrame.origin.x   // x of column 0
+        let baseY = visibleFrame.maxY - marginY - ch - screenFrame.origin.y   // y of row 0
+        for v in iconViews {
+            let col = max(0, ((baseX - v.frame.minX) / cw).rounded())
+            let row = max(0, ((baseY - v.frame.minY) / ch).rounded())
+            custom.positions[v.entry.name] = [baseX - col * cw, baseY - row * ch]
+        }
         persist()
         update()
     }

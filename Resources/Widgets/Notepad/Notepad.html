@@ -99,11 +99,16 @@
   body.theme-winxp .body{border:none;background:#ECE9D8;margin:0 4px 4px;padding:0;}
   body.theme-winxp .xp-title{display:flex;align-items:center;height:26px;gap:6px;padding:0 4px 0 8px;flex:0 0 auto;
     border-radius:8px 8px 0 0;background:linear-gradient(180deg,#0997FF,#0053EE 45%,#0066FF 52%,#003DD2);}
-  .xp-cap{color:#fff;font:700 12px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,40,.5);}
-  .xp-close{margin-left:auto;width:21px;height:19px;border-radius:3px;position:relative;cursor:pointer;
-    border:1px solid rgba(255,255,255,.55);background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
+  .xp-cap{color:#fff;font:700 14px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,40,.5);
+    flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .xp-min,.xp-max,.xp-close{width:21px;height:19px;border-radius:3px;position:relative;cursor:pointer;flex:0 0 auto;
+    border:1px solid rgba(255,255,255,.55);}
+  .xp-min,.xp-max{background:linear-gradient(180deg,#5b9df4,#2f6fdd 55%,#1a52c4);}
+  .xp-close{background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
   .xp-close::before,.xp-close::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#fff;}
   .xp-close::before{transform:translate(-50%,-50%) rotate(45deg);} .xp-close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  .xp-min::before{content:"";position:absolute;left:5px;bottom:4px;width:9px;height:2px;background:#fff;}
+  .xp-max::before{content:"";position:absolute;left:5px;top:4px;width:10px;height:8px;border:1px solid #fff;border-top-width:2px;}
 
   /* ===== Maiks Favourite (pixel macOS) ===== */
   body.theme-maiksfav .tab{display:none;}
@@ -164,7 +169,7 @@
   /* ===== Windows 98 — SPEC-Farben/-Bevels, leicht skaliert für Lesbarkeit ===== */
   .w98-cap{color:#fff;font:700 12px Tahoma,"Microsoft Sans Serif",sans-serif;
     flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .w98-btn{width:20px;height:18px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
+  .w98-btn{width:20px;height:18px;background:#c0c0c0;cursor:pointer;flex:0 0 auto;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;
     font:700 13px Tahoma,Verdana,sans-serif;color:#000;display:flex;align-items:center;justify-content:center;line-height:1;}
   .w98-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #dbdbdb,inset 2px 2px 0 #808080,inset -2px -2px 0 #fff;}
@@ -178,32 +183,33 @@
   #w98min::before{content:"";position:absolute;left:4px;bottom:4px;width:8px;height:2px;background:#808080;box-shadow:1px 1px 0 #fff;}
   #w98max::before{content:"";position:absolute;left:4px;top:3px;width:10px;height:9px;border:1px solid #808080;border-top-width:2px;box-shadow:1px 1px 0 #fff;}
   body.theme-win98 .tab{display:none;}
-  body.theme-win98 #win{background:#c4c4c4;
+  body.theme-win98 #win{background:#c0c0c0;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;}
-  body.theme-win98 .body{border:none;background:#c4c4c4;box-shadow:none;margin:0 3px 3px;padding:0;}
-  body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:22px;margin:3px 3px 2px;padding:0 2px 0 6px;
+  body.theme-win98 .body{border:none;background:#c0c0c0;box-shadow:none;margin:0 3px 3px;padding:0;}
+  body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:24px;margin:3px 3px 1px;padding:0 3px 0 4px;
     background:linear-gradient(90deg,#00007b,#1085d2);}
-  body.theme-win98 .np-toolbar,body.theme-win98 .np-status{background:#c4c4c4;}
+  body.theme-win98 .np-toolbar,body.theme-win98 .np-status{background:#c0c0c0;}
 
   /* ===== SimpleText (Mac OS 9) / TeachText (Mac OS 6) — window only ===== */
   @font-face{font-family:"GenevaRM";src:url("fonts/Geneva12-Medium.ttf");}
   @font-face{font-family:"ChicagoRM";src:url("fonts/Chicago-12.ttf");}
   #ctxmenu{display:none;} .m9-collapse,.m9-zoom{display:none;} #stgrip{display:none;}
   body.np-collapsed .body{display:none;}   /* WindowShade: roll up to the title bar */
-  /* taller title bar → bigger click targets (matches the CPU/Applications widget) */
-  body.app-simpletext .m9-title,body.app-teachtext .m9-title{height:23px;}
-  body.app-simpletext .m9-close,body.app-teachtext .m9-close{width:14px;height:14px;cursor:default;}
-  /* title-bar boxes: close (left), WindowShade (collapse) + zoom (right pair) */
-  body.app-simpletext .m9-right,body.app-teachtext .m9-right{margin-left:auto;display:flex;gap:8px;
-    padding-right:9px;align-items:center;z-index:2;}
+  /* Title bar harmonised with the CPU/Applications widgets: same Platinum size the CPU
+     renders after its 0.6 scale (≈20px bar, 11px boxes). The fine 1×2 pinstripe from the
+     base theme-macos9 rule matches the CPU widget's rendered stripe density. */
+  body.app-simpletext .m9-close,body.app-teachtext .m9-close{cursor:default;}
+  /* title-bar boxes: close (left), WindowShade (collapse) + zoom (right pair) — 11px Platinum boxes like CPU */
+  body.app-simpletext .m9-right,body.app-teachtext .m9-right{margin-left:auto;display:flex;gap:5px;
+    padding-right:7px;align-items:center;z-index:2;}
   body.app-simpletext .m9-collapse,body.app-teachtext .m9-collapse,
   body.app-simpletext .m9-zoom,body.app-teachtext .m9-zoom{display:block;position:relative;box-sizing:border-box;
-    width:14px;height:14px;background:#c0c0c0;border:1px solid #545487;box-shadow:inset 0 0 0 1px #dadaff;cursor:default;}
+    width:11px;height:11px;background:#c0c0c0;border:1px solid #545487;box-shadow:inset 0 0 0 1px #dadaff;cursor:default;}
   /* zoom = box-in-box glyph; collapse = single horizontal line (WindowShade) */
   body.app-simpletext .m9-zoom::before,body.app-teachtext .m9-zoom::before{content:"";position:absolute;
-    left:2px;top:2px;width:6px;height:6px;border:1px solid #545487;background:#c0c0c0;}
+    left:1px;top:1px;width:4px;height:4px;border:1px solid #545487;background:#c0c0c0;}
   body.app-simpletext .m9-collapse::before,body.app-teachtext .m9-collapse::before{content:"";position:absolute;
-    left:2px;right:2px;top:5px;height:0;border-top:2px solid #545487;}
+    left:2px;right:2px;top:4px;height:0;border-top:1px solid #545487;}
   /* no toolbar / line numbers / status bar; proportional Geneva; white paper */
   body.app-simpletext #nptoolbar,body.app-teachtext #nptoolbar{display:none;}
   body.app-simpletext #npgutter,body.app-teachtext #npgutter{display:none;}
@@ -233,15 +239,84 @@
   #ctxmenu .ci.sep{padding:0;margin:3px 0;border-top:1px solid #b0b0b0;pointer-events:none;}
   #ctxmenu .ci.sub::after{content:"\25B8";position:absolute;right:7px;}
   #ctxmenu .csub{display:none;position:absolute;left:100%;top:-3px;background:#fff;border:1px solid #000;
-    box-shadow:2px 2px 0 rgba(0,0,0,.35);padding:2px 0;min-width:118px;}
+    box-shadow:2px 2px 0 rgba(0,0,0,.35);padding:2px 0;min-width:118px;color:#000;}
+  /* the parent .ci.sub turns white on hover — pin submenu items back to black so they're not white-on-white */
+  #ctxmenu .csub .ci{color:#000;}
+  #ctxmenu .csub .ci:hover{color:#fff;}
   #ctxmenu .ci.sub:hover>.csub{display:block;}
-  /* TeachText = System 6 black & white */
-  body.app-teachtext #win{background:#fff;border:1px solid #000;box-shadow:2px 2px 0 rgba(0,0,0,.4);}
-  body.app-teachtext .m9-title{background:#fff;border-bottom:1px solid #000;color:#000;}
-  body.app-teachtext .m9-plaque{color:#000;background:#fff;}
-  body.app-teachtext .m9-close,body.app-teachtext .m9-collapse,body.app-teachtext .m9-zoom{background:#fff;box-shadow:none;border:1px solid #000;}
-  body.app-teachtext .m9-zoom::before{border-color:#000;background:#fff;}
-  body.app-teachtext .m9-collapse::before{border-top-color:#000;}
+  /* TeachText (System 6) shares the same Platinum window chrome as the CPU/Applications
+     widgets; only the paper keeps the Chicago font (set above). */
+
+  /* ===== Windows Notepad — authentic (shared by Windows 98 + XP) ===== */
+  @font-face{font-family:"W95FA";src:url("fonts/W95FA.woff") format("woff");}
+  /* title-bar document icon + minimise/maximise (win98) */
+  .w98-ico{display:none;}
+  body.theme-win98 .w98-ico,body.theme-winxp .w98-ico{display:block;width:16px;height:16px;flex:0 0 16px;margin-right:4px;
+    background:url("notepad-icon.png") center/contain no-repeat;}
+  #w98min,#w98max{display:none;}
+  body.theme-win98 #w98min,body.theme-win98 #w98max{display:flex;}
+  body.theme-win98 .w98-title{font-family:"W95FA","MS Sans Serif",Tahoma,sans-serif;-webkit-font-smoothing:none;}
+  body.theme-win98 .w98-cap{font-family:inherit;font-size:15px;}
+  /* menu bar (File / Edit / Search / Help) */
+  .w98-menubar{display:none;}
+  body.theme-win98 .w98-menubar,body.theme-winxp .w98-menubar{display:flex;align-items:stretch;height:23px;flex:0 0 auto;
+    padding:0 2px;background:#c0c0c0;font:15px "W95FA","MS Sans Serif",Tahoma,sans-serif;-webkit-font-smoothing:none;
+    color:#000;user-select:none;position:relative;z-index:40;}
+  body.theme-winxp .w98-menubar{background:#ECE9D8;font:13px Tahoma,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;}
+  .w98-m{position:relative;display:flex;align-items:center;padding:0 7px;cursor:default;}
+  .w98-m.open{box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
+  .w98-m u{text-decoration:underline;}
+  .w98-drop{display:none;position:absolute;top:100%;left:0;min-width:214px;background:#c0c0c0;padding:2px;z-index:60;
+    box-shadow:inset 1px 1px #dfdfdf,inset -1px -1px #000,inset 2px 2px #fff,inset -2px -2px #808080,2px 2px 3px rgba(0,0,0,.35);}
+  .w98-m.open .w98-drop{display:block;}
+  body.theme-winxp .w98-drop{background:#ECE9D8;}   /* dropdown matches the XP menu-bar colour */
+  .w98-mi{display:flex;justify-content:space-between;gap:24px;white-space:nowrap;padding:3px 20px 3px 22px;
+    color:#000;cursor:default;position:relative;}
+  .w98-mi:hover{background:#000080;color:#fff;}
+  .w98-mi u{text-decoration:underline;}
+  .w98-mi.w98-dis,.w98-mi.w98-dis:hover{color:#808080;text-shadow:1px 1px #fff;background:transparent;}
+  .w98-sep{height:0;margin:3px 1px;border-top:1px solid #808080;border-bottom:1px solid #fff;}
+  .w98-check{position:absolute;left:8px;top:3px;}
+  /* editor body: drop the generic toolbar/status/gutter; sunken client; monospace paper */
+  body.theme-win98 #nptoolbar,body.theme-winxp #nptoolbar,
+  body.theme-win98 .np-status,body.theme-winxp .np-status,
+  body.theme-win98 #npgutter,body.theme-winxp #npgutter{display:none;}
+  body.theme-win98 #npedit{background:#c0c0c0;padding:2px;margin:0 3px 3px;
+    box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #404040,inset -2px -2px #dfdfdf;}
+  body.theme-winxp #npedit{background:#ECE9D8;padding:0;margin:0 4px 4px;
+    box-shadow:inset 1px 1px #7f9db9,inset -1px -1px #fff;}
+  body.theme-win98 #pad,body.theme-winxp #pad{background:#fff;color:#000;
+    font-family:"Lucida Console","Courier New",monospace;font-size:14px;line-height:1.2;padding:1px 3px;}
+  /* Notepad is plain text — neutralise any rich formatting persisted from other themes */
+  body.theme-win98 #pad *,body.theme-winxp #pad *{
+    text-decoration:none!important;font-weight:normal!important;font-style:normal!important;
+    background:transparent!important;color:#000!important;font-size:14px!important;font-family:inherit!important;}
+  /* Notepad opens with Word Wrap OFF → long lines scroll horizontally; bars show only when needed */
+  body.theme-win98 #pad:not(.w98-wrap),body.theme-winxp #pad:not(.w98-wrap){white-space:pre;word-wrap:normal;overflow:auto;}
+  body.theme-win98 #pad.w98-wrap,body.theme-winxp #pad.w98-wrap{white-space:pre-wrap;word-wrap:break-word;overflow-x:hidden;overflow-y:auto;}
+  /* classic Win98 scroll bars (dithered track, beveled arrow buttons) */
+  body.theme-win98 #pad::-webkit-scrollbar{width:16px;height:16px;}
+  body.theme-win98 #pad::-webkit-scrollbar-track{background-color:#fff;
+    background-image:conic-gradient(#c0c0c0 90deg,#fff 90deg 180deg,#c0c0c0 180deg 270deg,#fff 270deg);background-size:2px 2px;}
+  body.theme-win98 #pad::-webkit-scrollbar-thumb{background:#c0c0c0;
+    box-shadow:inset 1px 1px #fff,inset -1px -1px #000,inset 2px 2px #dfdfdf,inset -2px -2px #808080;}
+  body.theme-win98 #pad::-webkit-scrollbar-button{display:block;width:16px;height:16px;background:#c0c0c0;
+    box-shadow:inset 1px 1px #fff,inset -1px -1px #000,inset 2px 2px #dfdfdf,inset -2px -2px #808080;}
+  body.theme-win98 #pad::-webkit-scrollbar-corner{background:#c0c0c0;}
+  /* About dialog (98 style) */
+  #w98about{display:none;position:fixed;inset:0;z-index:300;align-items:center;justify-content:center;background:rgba(0,0,0,.15);}
+  #w98about.show{display:flex;}
+  .w98-dlg{width:300px;background:#c0c0c0;font:12px "W95FA","MS Sans Serif",Tahoma,sans-serif;-webkit-font-smoothing:none;color:#000;
+    box-shadow:inset 1px 1px #dfdfdf,inset -1px -1px #000,inset 2px 2px #fff,inset -2px -2px #808080;padding:3px;}
+  .w98-dlg-tb{height:20px;display:flex;align-items:center;padding:0 3px;color:#fff;font-weight:bold;font-size:11px;
+    background:linear-gradient(90deg,#00007b,#1085d2);}
+  .w98-dlg-bd{padding:16px 14px;display:flex;gap:14px;align-items:flex-start;}
+  .w98-dlg-bd .w98-ico2{width:32px;height:32px;flex:0 0 32px;
+    background:url("notepad-icon.png") center/contain no-repeat;}
+  .w98-dlg-btn{display:flex;justify-content:center;padding:6px 0 12px;}
+  .w98-dlg-btn button{font:12px "W95FA","MS Sans Serif",Tahoma,sans-serif;padding:3px 18px;min-width:75px;background:#c0c0c0;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;cursor:default;}
+  .w98-dlg-btn button:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #dbdbdb,inset 2px 2px 0 #808080,inset -2px -2px 0 #fff;}
 </style>
 </head>
 <body>
@@ -251,7 +326,7 @@
     <!-- Mac OS 9 -->
     <div class="m9-title" id="m9title"><span class="m9-close" id="m9close"></span><div class="m9-plaque">Notepad</div><span class="m9-right"><span class="m9-collapse" id="m9collapse"></span><span class="m9-zoom" id="m9zoom"></span></span></div>
     <!-- Windows XP -->
-    <div class="xp-title" id="xptitle"><span class="xp-cap">Notepad</span><span class="xp-close" id="xpclose"></span></div>
+    <div class="xp-title" id="xptitle"><span class="w98-ico"></span><span class="xp-cap">Untitled - Notepad</span><span class="xp-min" id="xpmin" title="Minimieren"></span><span class="xp-max" id="xpmax" title="Maximieren"></span><span class="xp-close" id="xpclose" title="Schließen"></span></div>
     <!-- Maiks Favourite -->
     <div class="mf-title" id="mftitle"><span class="mf-close" id="mfclose"></span><span class="mf-cap">Notepad</span></div>
     <!-- Mac OS X Aqua -->
@@ -260,8 +335,44 @@
       <span class="mx-cap">Notepad</span>
     </div>
     <!-- Windows 98 -->
-    <div class="w98-title" id="w98title"><span class="w98-cap">Notepad</span><span class="w98-btn" id="w98close">×</span></div>
+    <div class="w98-title" id="w98title"><span class="w98-ico"></span><span class="w98-cap">Untitled - Notepad</span><span class="w98-btn" id="w98min" title="Minimieren"></span><span class="w98-btn" id="w98max" title="Maximieren"></span><span class="w98-btn w98-close" id="w98close" title="Schließen"></span></div>
     <div class="body">
+      <!-- Windows Notepad menu bar (win98 + winxp) -->
+      <div class="w98-menubar" id="w98menu">
+        <div class="w98-m" data-menu="file"><u>F</u>ile<div class="w98-drop">
+          <div class="w98-mi" data-cmd="new"><span><u>N</u>ew</span><span>Ctrl+N</span></div>
+          <div class="w98-mi" data-cmd="open"><span><u>O</u>pen...</span><span>Ctrl+O</span></div>
+          <div class="w98-mi" data-cmd="save"><span><u>S</u>ave</span><span>Ctrl+S</span></div>
+          <div class="w98-mi" data-cmd="saveAs"><span>Save <u>A</u>s...</span><span>Ctrl+Shift+S</span></div>
+          <div class="w98-sep"></div>
+          <div class="w98-mi w98-dis"><span>Page Set<u>u</u>p...</span><span></span></div>
+          <div class="w98-mi w98-dis"><span><u>P</u>rint...</span><span>Ctrl+P</span></div>
+          <div class="w98-sep"></div>
+          <div class="w98-mi" data-cmd="close"><span>E<u>x</u>it</span><span></span></div>
+        </div></div>
+        <div class="w98-m" data-menu="edit"><u>E</u>dit<div class="w98-drop">
+          <div class="w98-mi" data-cmd="undo"><span><u>U</u>ndo</span><span>Ctrl+Z</span></div>
+          <div class="w98-sep"></div>
+          <div class="w98-mi" data-cmd="cut"><span>Cu<u>t</u></span><span>Ctrl+X</span></div>
+          <div class="w98-mi" data-cmd="copy"><span><u>C</u>opy</span><span>Ctrl+C</span></div>
+          <div class="w98-mi" data-cmd="paste"><span><u>P</u>aste</span><span>Ctrl+V</span></div>
+          <div class="w98-mi" data-cmd="delete"><span>Del<u>e</u>te</span><span>Del</span></div>
+          <div class="w98-sep"></div>
+          <div class="w98-mi" data-cmd="selectall"><span>Select <u>A</u>ll</span><span>Ctrl+A</span></div>
+          <div class="w98-mi" data-cmd="timedate"><span>Time/<u>D</u>ate</span><span>F5</span></div>
+          <div class="w98-sep"></div>
+          <div class="w98-mi" data-cmd="wordwrap"><span class="w98-check" id="w98wrapck"></span><span><u>W</u>ord Wrap</span><span></span></div>
+        </div></div>
+        <div class="w98-m" data-menu="search"><u>S</u>earch<div class="w98-drop">
+          <div class="w98-mi" data-cmd="find"><span><u>F</u>ind...</span><span>Ctrl+F</span></div>
+          <div class="w98-mi" data-cmd="findnext"><span>Find <u>N</u>ext</span><span>F3</span></div>
+        </div></div>
+        <div class="w98-m" data-menu="help"><u>H</u>elp<div class="w98-drop">
+          <div class="w98-mi" data-cmd="helptopics"><span><u>H</u>elp Topics</span></div>
+          <div class="w98-sep"></div>
+          <div class="w98-mi" data-cmd="about"><span><u>A</u>bout Notepad</span></div>
+        </div></div>
+      </div>
       <div class="np-toolbar" id="nptoolbar">
         <button data-act="new" title="New (⌘N)">New</button>
         <button data-act="open" title="Open (⌘O)">Open…</button>
@@ -339,6 +450,17 @@
     <div class="ci" data-cmd="find">Suchen…</div>
     <div class="ci" data-cmd="open">Öffnen…</div>
     <div class="ci" data-cmd="save">Sichern</div>
+  </div>
+  <!-- Windows Notepad "About" dialog -->
+  <div id="w98about">
+    <div class="w98-dlg">
+      <div class="w98-dlg-tb">Notepad</div>
+      <div class="w98-dlg-bd">
+        <div class="w98-ico2"></div>
+        <div><b>Notepad</b><br>RetroMac Edition<br><br>A faithful recreation of the classic<br>Windows text editor.</div>
+      </div>
+      <div class="w98-dlg-btn"><button id="w98aok">OK</button></div>
+    </div>
   </div>
 <script>
   const pad      = document.getElementById('pad');
@@ -600,7 +722,13 @@
   }
   function applyEditorApp(){
     document.body.classList.remove('app-simpletext','app-teachtext');
-    if(!editorApp){ syncTitle(); pad.style.fontFamily=document.getElementById('npfont').value; pad.style.fontSize=fontPx+'px'; return; }
+    if(!editorApp){
+      syncTitle();
+      const cl=document.body.classList;
+      if(cl.contains('theme-win98')||cl.contains('theme-winxp')){ pad.style.fontFamily=''; pad.style.fontSize=''; }  // Win98 CSS styles the paper
+      else { pad.style.fontFamily=document.getElementById('npfont').value; pad.style.fontSize=fontPx+'px'; }
+      return;
+    }
     document.body.classList.add('app-'+editorApp);
     syncTitle();
     applyEditorTheme('light');   // classic Mac editors are always white paper / black ink
@@ -627,6 +755,12 @@
       case 'paste': document.execCommand('paste'); break;
       case 'selectall': document.execCommand('selectAll'); break;
       case 'find': openFind(); break;
+      case 'findnext': openFind(); break;
+      case 'delete': document.execCommand('delete'); break;
+      case 'timedate': insertTimeDate(); break;
+      case 'wordwrap': toggleWordWrap(); break;
+      case 'about': case 'helptopics': showW98About(true); break;
+      case 'close': post({action:'save',text:cleanHTML()}); post({action:'close'}); break;
       case 'plain': document.execCommand('removeFormat'); pad.focus(); break;
       case 'bold': exec('bold'); break;
       case 'italic': exec('italic'); break;
@@ -634,6 +768,61 @@
     }
     refresh(); autosave();
   }
+  /* ---- Windows Notepad: menu bar + Word Wrap + Time/Date + About ---- */
+  const w98menu=document.getElementById('w98menu');
+  function closeW98Menus(){ if(w98menu) w98menu.querySelectorAll('.w98-m.open').forEach(m=>m.classList.remove('open')); }
+  function toggleWordWrap(){ const on=pad.classList.toggle('w98-wrap');
+    const ck=document.getElementById('w98wrapck'); if(ck) ck.textContent=on?'✓':''; }
+  function insertTimeDate(){ const d=new Date();
+    const t=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' '+d.toLocaleDateString();
+    document.execCommand('insertText',false,t); }
+  const w98about=document.getElementById('w98about');
+  function showW98About(v){ if(w98about) w98about.classList.toggle('show', !!v); }
+  if(w98menu){
+    w98menu.querySelectorAll('.w98-m').forEach(m=>{
+      m.addEventListener('mousedown',ev=>{
+        if(ev.target.closest('.w98-mi')) return;   // item clicks handled below
+        ev.preventDefault();
+        const was=m.classList.contains('open'); closeW98Menus(); if(!was) m.classList.add('open');
+      });
+      m.addEventListener('mouseenter',()=>{ if(w98menu.querySelector('.w98-m.open')){ closeW98Menus(); m.classList.add('open'); } });
+    });
+    w98menu.addEventListener('click',ev=>{ const mi=ev.target.closest('.w98-mi');
+      if(mi && !mi.classList.contains('w98-dis')){ runMenuCmd(mi.dataset); closeW98Menus(); } });
+    document.addEventListener('mousedown',ev=>{ if(!ev.target.closest('#w98menu')) closeW98Menus(); });
+  }
+  const w98aok=document.getElementById('w98aok');
+  if(w98aok) w98aok.addEventListener('click',()=>showW98About(false));
+  if(w98about) w98about.addEventListener('mousedown',ev=>{ if(ev.target===w98about) showW98About(false); });
+  document.addEventListener('keydown',ev=>{
+    if(ev.key==='Escape'){ closeW98Menus(); showW98About(false); }
+    const win=document.body.classList.contains('theme-win98')||document.body.classList.contains('theme-winxp');
+    if(!win) return;
+    if(ev.key==='F5'){ ev.preventDefault(); insertTimeDate(); refresh(); autosave(); return; }
+    if((ev.ctrlKey||ev.metaKey)){
+      const k=ev.key.toLowerCase();
+      if(ev.shiftKey && k==='s'){ ev.preventDefault(); doSave(true); }
+      else if(k==='n'){ ev.preventDefault(); newDoc(); }
+      else if(k==='o'){ ev.preventDefault(); post({action:'open'}); }
+      else if(k==='s'){ ev.preventDefault(); doSave(false); }
+      else if(k==='f'){ ev.preventDefault(); openFind(); }
+    }
+  });
+  /* Universal edit shortcuts (all themes) — the host app has no Edit menu, so the standard
+     ⌘A/⌘C/⌘X/⌘V/⌘Z would not reach the editable region. Wire them here. */
+  document.addEventListener('keydown',ev=>{
+    if(!(ev.metaKey||ev.ctrlKey) || ev.altKey) return;
+    const ae=document.activeElement;
+    if(ae && (ae.tagName==='INPUT'||ae.tagName==='SELECT'||ae.tagName==='TEXTAREA')) return; // find/replace fields keep native behaviour
+    const k=ev.key.toLowerCase();
+    switch(k){
+      case 'a': ev.preventDefault(); pad.focus(); document.execCommand('selectAll'); break;
+      case 'c': ev.preventDefault(); document.execCommand('copy'); break;
+      case 'x': ev.preventDefault(); document.execCommand('cut'); refresh(); autosave(); break;
+      case 'v': ev.preventDefault(); document.execCommand('paste'); refresh(); autosave(); break;
+      case 'z': ev.preventDefault(); document.execCommand(ev.shiftKey?'redo':'undo'); refresh(); autosave(); break;
+    }
+  });
   function hideCtx(){ ctx.style.display='none'; }
   pad.addEventListener('contextmenu',ev=>{
     if(!editorApp) return;   // normal Notepad keeps the system context menu
@@ -651,7 +840,9 @@
   window.setTheme=function(k){ theme=k||'beos'; document.body.className='theme-'+theme; if(editorApp) applyEditorApp(); };
   window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
   window.setText=function(t){ pad.innerHTML=t||''; refresh(); };
-  window.setFile=function(name){ const el=document.getElementById('npfile'); if(el) el.textContent=name||'Untitled'; syncTitle(); };
+  function updateWinCaps(name){ const cap=(name||'Untitled')+' - Notepad';
+    document.querySelectorAll('.w98-cap,.xp-cap').forEach(el=>el.textContent=cap); }
+  window.setFile=function(name){ const el=document.getElementById('npfile'); if(el) el.textContent=name||'Untitled'; syncTitle(); updateWinCaps(name); };
   window.loadFile=function(name,content,isHTML){ pad.innerHTML = content||''; window.setFile(name); refresh(); };
 
   /* ---- Close handlers ---- */
@@ -662,10 +853,10 @@
   window.regions=function(){
     const cl=document.body.classList;
     const R=id=>{const e=document.getElementById(id);if(!e)return[0,0,0,0];const b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
-    if(cl.contains('theme-win98'))   return [...R('w98title'),...R('w98close')];
+    if(cl.contains('theme-win98'))   return [...R('w98title'),...R('w98close'),...R('w98min'),...R('w98max')];
     if(cl.contains('theme-macosx'))  return [...R('mxtitle'),...R('mxclose')];
     if(cl.contains('theme-maiksfav'))return [...R('mftitle'),...R('mfclose')];
-    if(cl.contains('theme-winxp'))   return [...R('xptitle'),...R('xpclose')];
+    if(cl.contains('theme-winxp'))   return [...R('xptitle'),...R('xpclose'),...R('xpmin'),...R('xpmax')];
     if(cl.contains('theme-macos9')){
       if(cl.contains('app-simpletext')||cl.contains('app-teachtext'))
         return [...R('m9title'),...R('m9close'),...R('m9collapse'),...R('m9zoom')];
@@ -680,9 +871,18 @@
   let npCollapsed=false, npSavedH=0, npZoomed=false, npZoomSaved=null;
   window.toggleCollapse=function(){
     const win=document.getElementById('win');
+    const cl=document.body.classList;
+    if(cl.contains('theme-win98')||cl.contains('theme-winxp')){
+      // Windows has no WindowShade — "minimise" removes the window from the screen
+      // (text is autosaved; reopen from the desktop icon).
+      post({action:'save',text:cleanHTML()}); post({action:'close'});
+      return [win.offsetWidth, win.offsetHeight];
+    }
     if(!npCollapsed){
       npSavedH = win.offsetHeight;
-      const barh = Math.round(window.regions()[3] || 22);   // visible title-bar height
+      // collapsed height = title-bar bottom relative to the window top (accounts for frame/margins)
+      const reg=window.regions(), winr=win.getBoundingClientRect();
+      const barh = Math.max(16, Math.round(reg[1] + reg[3] - winr.top) + 4);
       document.body.classList.add('np-collapsed');           // hides .body → only the title bar shows
       npCollapsed=true;
       return [win.offsetWidth, barh];

@@ -95,7 +95,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
             }
 
             let container = NSView(frame: initial)
-            container.addSubview(wv); container.addSubview(overlay)
+            container.addSubview(wv)
 
             // Resize gadgets on all four corners (anchor the opposite corner).
             let g: CGFloat = 16
@@ -111,6 +111,10 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
                 r.onResize = { [weak self] p in self?.resizeBy(corner: corner, to: p) }
                 container.addSubview(r)
             }
+            // Drag/close overlay LAST → it sits on top of the corner gadgets in the title-bar
+            // region, so the close/collapse/zoom boxes are always clickable (the top corners
+            // would otherwise steal those clicks). Bottom corners stay free for resizing.
+            container.addSubview(overlay)
 
             let p = NotepadPanel(contentRect: initial, styleMask: [.borderless],
                                  backing: .buffered, defer: false)
