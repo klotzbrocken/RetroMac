@@ -3400,6 +3400,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Download a RetroArch core from the libretro buildbot
+    /// Run /usr/bin/unzip and return true only on a clean (exit status 0) extraction.
+    /// Callers must still validate that the expected files landed.
+    @discardableResult
+    private func runUnzip(_ zipPath: String, into dir: String) -> Bool {
+        let unzip = Process()
+        unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        unzip.arguments = ["-o", zipPath, "-d", dir]
+        unzip.standardOutput = FileHandle.nullDevice
+        unzip.standardError = FileHandle.nullDevice
+        do { try unzip.run() } catch { return false }
+        unzip.waitUntilExit()
+        return unzip.terminationStatus == 0
+    }
+
     private func ensureRetroArchCore(coreName: String, completion: @escaping (Bool) -> Void) {
         let coresDir = NSHomeDirectory() + "/Library/Application Support/RetroArch/cores"
         let corePath = coresDir + "/\(coreName).dylib"
@@ -3433,16 +3447,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            let unzip = Process()
-            unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-            unzip.arguments = ["-o", zipPath, "-d", coresDir]
-            unzip.standardOutput = FileHandle.nullDevice
-            unzip.standardError = FileHandle.nullDevice
-            try? unzip.run()
-            unzip.waitUntilExit()
+            let unzipOK = self?.runUnzip(zipPath, into: coresDir) ?? false
 
             try? fm.removeItem(atPath: tempDir)
-            let success = fm.fileExists(atPath: corePath)
+            let success = unzipOK && fm.fileExists(atPath: corePath)
             print("[RetroArch] Core \(coreName): \(success ? "installed" : "failed")")
             DispatchQueue.main.async { progressWindow.close(); completion(success) }
         }
@@ -3478,16 +3486,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            let unzip = Process()
-            unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-            unzip.arguments = ["-o", zipPath, "-d", baseShaderDir]
-            unzip.standardOutput = FileHandle.nullDevice
-            unzip.standardError = FileHandle.nullDevice
-            try? unzip.run()
-            unzip.waitUntilExit()
+            let unzipOK = self.runUnzip(zipPath, into: baseShaderDir)
 
             try? fm.removeItem(atPath: tempDir)
-            print("[RetroArch] Slang shaders installed")
+            // Only claim success when the extraction was clean AND the expected shader landed.
+            let installed = unzipOK && fm.fileExists(atPath: shadersDir + "/crt-geom.slangp")
+            print("[RetroArch] Slang shaders \(installed ? "installed" : "install FAILED")")
         }
     }
 
@@ -3704,16 +3708,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Extract <appName>.app from a ZIP and install to /Applications
     private func installAppFromZip(zipPath: String, tempDir: String, appName: String, label: String, completion: @escaping (Bool) -> Void) {
-        let unzip = Process()
-        unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-        unzip.arguments = ["-o", zipPath, "-d", tempDir]
-        unzip.standardOutput = FileHandle.nullDevice
-        unzip.standardError = FileHandle.nullDevice
-        do {
-            try unzip.run()
-            unzip.waitUntilExit()
-        } catch {
-            print("[\(label)] Unzip failed: \(error)")
+        guard runUnzip(zipPath, into: tempDir) else {
+            print("[\(label)] Unzip failed (non-zero exit)")
             completion(false)
             return
         }
@@ -3822,27 +3818,59 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Copy an .app bundle to /Applications
     private func copyAppToApplications(appPath: String, targetName: String, completion: @escaping (Bool) -> Void) {
         let fm = FileManager.default
-        let targetPath = "/Applications/" + targetName
+        let targetURL = URL(fileURLWithPath: "/Applications/" + targetName)
 
-        do {
-            if fm.fileExists(atPath: targetPath) {
-                try fm.removeItem(atPath: targetPath)
+        // P1 SECURITY: the bundle was just downloaded over the network — verify its code
+        // signature + notarization before trusting it. If verification fails, warn and let the
+        // user decide (warn-but-allow) instead of silently defeating Gatekeeper.
+        let verified = AppSignatureVerifier.verifyAppSignature(at: appPath)
+        if !verified {
+            var proceed = false
+            let ask = {
+                let alert = NSAlert()
+                alert.messageText = "Could not verify “\(targetName)”"
+                alert.informativeText = "The downloaded app's code signature or notarization could not be verified. Installing it anyway bypasses macOS Gatekeeper — do this only if you trust the source."
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "Install Anyway")
+                alert.addButton(withTitle: "Cancel")
+                proceed = (alert.runModal() == .alertFirstButtonReturn)
             }
-            try fm.copyItem(atPath: appPath, toPath: targetPath)
+            if Thread.isMainThread { ask() } else { DispatchQueue.main.sync(execute: ask) }
+            if !proceed { completion(false); return }
+        }
 
-            // Remove quarantine so it launches without Gatekeeper prompt
-            let xattr = Process()
-            xattr.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
-            xattr.arguments = ["-rd", "com.apple.quarantine", targetPath]
-            xattr.standardOutput = FileHandle.nullDevice
-            xattr.standardError = FileHandle.nullDevice
-            try? xattr.run()
-            xattr.waitUntilExit()
+        // P2: install atomically. Copy to a same-volume staging path first, then atomically
+        // swap it in — so a failed copy (no space, permissions, corrupt archive) never leaves
+        // the user with the old app already deleted.
+        let stagingURL = URL(fileURLWithPath: "/Applications/." + targetName + ".new-\(UUID().uuidString)")
+        do {
+            if fm.fileExists(atPath: stagingURL.path) { try fm.removeItem(at: stagingURL) }
+            try fm.copyItem(at: URL(fileURLWithPath: appPath), to: stagingURL)
 
-            print("[Duke3D] Installed \(targetName) to /Applications")
+            if fm.fileExists(atPath: targetURL.path) {
+                _ = try fm.replaceItemAt(targetURL, withItemAt: stagingURL)   // atomic; original retained if it throws
+            } else {
+                try fm.moveItem(at: stagingURL, to: targetURL)
+            }
+
+            // Quarantine is intentionally PRESERVED for verified apps so Gatekeeper approves a
+            // notarized app silently on first launch. Only strip it when the user explicitly
+            // chose to install an unverified app above (informed consent) so it stays launchable.
+            if !verified {
+                let xattr = Process()
+                xattr.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
+                xattr.arguments = ["-rd", "com.apple.quarantine", targetURL.path]
+                xattr.standardOutput = FileHandle.nullDevice
+                xattr.standardError = FileHandle.nullDevice
+                try? xattr.run()
+                xattr.waitUntilExit()
+            }
+
+            print("[Install] Installed \(targetName) to /Applications")
             completion(true)
         } catch {
-            print("[Duke3D] Failed to install \(targetName): \(error)")
+            try? fm.removeItem(at: stagingURL)   // clean up staging; the existing app is untouched
+            print("[Install] Failed to install \(targetName): \(error)")
             DispatchQueue.main.async {
                 let alert = NSAlert()
                 alert.messageText = "Installation Failed"
