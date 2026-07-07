@@ -193,13 +193,16 @@ final class WinXPTVChromeView: NSView {
         // system icon
         let sysi = NSRect(x: 6, y: bar.midY - 8, width: 16, height: 16)
         fill(sysi, NSColor(calibratedRed: 0.81, green: 0.88, blue: 1.0, alpha: 1))
-        // caption buttons (minimise omitted: the floating TV window has no taskbar entry)
-        captionBtn(maxRect, red: false); captionBtn(closeRect, red: true)
+        // caption buttons: minimise / maximise / close (Luna blue, close red)
+        captionBtn(minRect, red: false); captionBtn(maxRect, red: false); captionBtn(closeRect, red: true)
         let white = NSColor.white
         white.setStroke()                                                                            // maximise
         let mr = maxRect.insetBy(dx: 5, dy: 5)
         let mp = NSBezierPath(rect: mr); mp.lineWidth = 1; mp.stroke()
         fill(NSRect(x: mr.minX, y: mr.maxY - 3, width: mr.width, height: 3), white)
+        // minimise: a short bar along the bottom of the button (rolls the window up, WindowShade)
+        let nr = minRect.insetBy(dx: 5, dy: 5)
+        fill(NSRect(x: nr.minX, y: nr.minY, width: nr.width, height: 2), white)
         let cp = NSBezierPath(); cp.lineWidth = 2; let c = NSPoint(x: closeRect.midX, y: closeRect.midY); let d: CGFloat = 5
         cp.move(to: NSPoint(x: c.x - d, y: c.y - d)); cp.line(to: NSPoint(x: c.x + d, y: c.y + d))
         cp.move(to: NSPoint(x: c.x - d, y: c.y + d)); cp.line(to: NSPoint(x: c.x + d, y: c.y - d))
@@ -221,6 +224,7 @@ final class WinXPTVChromeView: NSView {
         let p = convert(event.locationInWindow, from: nil)
         if closeRect.contains(p) { onClose?(); return }
         if maxRect.contains(p) { onMax?(); return }
+        if minRect.contains(p) { onMin?(); return }
         if barRect.contains(p) { window?.performDrag(with: event); return }
     }
 }

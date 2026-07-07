@@ -152,7 +152,7 @@
     },
     {
       "name": "SimpleText",
-      "icon": "notes.png",
+      "icon": "new-text.png",
       "type": "notepad",
       "gridX": 0,
       "gridY": 8

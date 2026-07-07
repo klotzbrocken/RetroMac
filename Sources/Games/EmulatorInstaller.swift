@@ -137,25 +137,10 @@ final class EmulatorInstaller {
 
     // MARK: - Security
 
-    /// Verify a downloaded .app before installing: (1) intact, unmodified code signature
-    /// (`codesign --verify --deep --strict`), and (2) Gatekeeper acceptance
-    /// (`spctl --assess --type execute` → Developer ID + notarized). Both must pass.
-    /// Runs on the install background queue (no main-thread blocking).
+    /// Verify a downloaded .app before installing — codesign integrity + Gatekeeper/notarization.
+    /// Shared with the AppDelegate installers via `AppSignatureVerifier`.
     private func verifyAppSignature(at path: String) -> Bool {
-        func run(_ tool: String, _ args: [String]) -> Bool {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: tool)
-            p.arguments = args
-            p.standardOutput = FileHandle.nullDevice
-            p.standardError = FileHandle.nullDevice
-            do { try p.run() } catch { return false }
-            p.waitUntilExit()
-            return p.terminationStatus == 0
-        }
-        let codesignOK = run("/usr/bin/codesign", ["--verify", "--deep", "--strict", path])
-        guard codesignOK else { return false }
-        let gatekeeperOK = run("/usr/sbin/spctl", ["--assess", "--type", "execute", path])
-        return gatekeeperOK
+        AppSignatureVerifier.verifyAppSignature(at: path)
     }
 
     // MARK: - Helpers

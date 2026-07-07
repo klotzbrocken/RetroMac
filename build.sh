@@ -80,7 +80,9 @@ cp Resources/apple_hell.png "$CONTENTS/Resources/apple_hell.png"
 # Copy dock themes
 if [ -d "Resources/Themes" ]; then
     mkdir -p "$CONTENTS/Resources/Themes"
-    rsync -a --delete Resources/Themes/ "$CONTENTS/Resources/Themes/"
+    # 'icons-library/' holds source/staging art (e.g. the extracted System 6 icon set) that is
+    # kept in the repo but must never ship in the bundle.
+    rsync -a --delete --delete-excluded --exclude 'icons-library' Resources/Themes/ "$CONTENTS/Resources/Themes/"
 fi
 
 # Copy sounds
