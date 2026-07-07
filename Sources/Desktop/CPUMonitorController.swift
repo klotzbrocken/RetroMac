@@ -296,6 +296,9 @@ final class DragOverlayView: NSView {
     private var hoverTracking: NSTrackingArea?
     override func hitTest(_ point: NSPoint) -> NSView? { passthrough ? nil : super.hitTest(point) }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    // Keep the normal arrow over the title bar — the resize-corner overlays underneath set a
+    // crosshair cursor, which would otherwise show through in the title-bar region.
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .arrow) }
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let t = hoverTracking { removeTrackingArea(t) }
@@ -307,7 +310,12 @@ final class DragOverlayView: NSView {
     override func mouseExited(with event: NSEvent) { onHover?(false) }
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        // Generous hit slop — the Platinum boxes are only ~11px. Close sits alone on the
+        // Exact hits first — decisive when the boxes are large and adjacent (Win98's
+        // 20px minimise/maximise/close trio would otherwise collide under the slop).
+        if closeRect.contains(p) { onClose?(); return }
+        if !collapseRect.isEmpty && collapseRect.contains(p) { onCollapse?(); return }
+        if !zoomRect.isEmpty && zoomRect.contains(p) { onZoom?(); return }
+        // Then generous hit slop — the Platinum boxes are only ~11px. Close sits alone on the
         // left; collapse+zoom are an adjacent pair on the right, so a click near either
         // routes to whichever box centre is closer (padding overlaps otherwise).
         let pad: CGFloat = 11

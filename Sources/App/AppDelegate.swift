@@ -145,6 +145,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
             BeOSDeskbarController.shared.update()
+            // The active theme drives the menu-bar Apple logo (Mac OS 9 → rainbow, Mac OS X →
+            // aqua-classic, Maiks Favourite II → hell); every other theme turns it off.
+            // Setting the style triggers RainbowAppleController.update() via its didSet.
+            AppSettings.shared.menuBarAppleStyle = ThemeManager.shared.activeTheme?.config.menuBarAppleStyleDefault ?? 0
             RainbowAppleController.shared.update()
         }
 
@@ -2138,10 +2142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let name = sender.representedObject as? String else { return }
         let settings = AppSettings.shared
         ThemeManager.shared.setActiveTheme(name: name, applyWallpaper: !AppSettings.shared.dockOnly)
-        // Apply this theme's default menu-bar Apple cover (user can still re-cycle it in the flyout).
-        if let appleStyle = ThemeManager.shared.activeTheme?.config.menuBarAppleStyleDefault {
-            settings.menuBarAppleStyle = appleStyle
-        }
+        // Menu-bar Apple logo is driven by the theme in the .dockThemeChanged handler.
         if !settings.dockEnabled {
             settings.dockEnabled = true
             DockController.shared.start()

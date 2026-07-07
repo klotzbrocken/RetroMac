@@ -1,5 +1,6 @@
 {
   "name": "Mac OS X",
+  "menuBarApple": "aqua-classic",
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
