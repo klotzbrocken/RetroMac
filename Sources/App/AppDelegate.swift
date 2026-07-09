@@ -3400,18 +3400,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Download a RetroArch core from the libretro buildbot
-    /// Run /usr/bin/unzip and return true only on a clean (exit status 0) extraction.
-    /// Callers must still validate that the expected files landed.
     @discardableResult
     private func runUnzip(_ zipPath: String, into dir: String) -> Bool {
-        let unzip = Process()
-        unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-        unzip.arguments = ["-o", zipPath, "-d", dir]
-        unzip.standardOutput = FileHandle.nullDevice
-        unzip.standardError = FileHandle.nullDevice
-        do { try unzip.run() } catch { return false }
-        unzip.waitUntilExit()
-        return unzip.terminationStatus == 0
+        TrustedDownloadInstaller.unzip(URL(fileURLWithPath: zipPath), into: URL(fileURLWithPath: dir))
     }
 
     private func ensureRetroArchCore(coreName: String, completion: @escaping (Bool) -> Void) {
@@ -3582,46 +3573,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// /Applications. `label` is only a log prefix.
     private func installZDoomApp(repo: String, appName: String, label: String,
                                  completion: @escaping (Bool) -> Void) {
-        // Show progress window
         let progressWindow = createProgressWindow(title: "Installing \(appName)…", detail: "Fetching latest release from GitHub…")
 
-        // Query GitHub API for latest release
-        guard let apiURL = URL(string: "https://api.github.com/repos/\(repo)/releases/latest") else {
-            progressWindow.close()
-            completion(false)
-            return
-        }
-
-        var request = URLRequest(url: apiURL)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let assets = json["assets"] as? [[String: Any]] else {
+        // Prefer .dmg, then .zip (Raze ships DMG, GZDoom ships ZIP).
+        TrustedDownloadInstaller.latestReleaseAsset(repo: repo, matches: { name in
+            name.contains("macos") && (name.hasSuffix(".dmg") || name.hasSuffix(".zip"))
+        }) { [weak self] result in
+            switch result {
+            case .failure(.fetchFailed(let message)):
                 DispatchQueue.main.async {
                     progressWindow.close()
                     let alert = NSAlert()
                     alert.messageText = "Download Failed"
-                    alert.informativeText = "Could not fetch \(appName) release info from GitHub.\n\(error?.localizedDescription ?? "")"
+                    alert.informativeText = "Could not fetch \(appName) release info from GitHub.\n\(message ?? "")"
                     alert.addButton(withTitle: "OK")
                     alert.runModal()
                     completion(false)
                 }
-                return
-            }
-
-            let version = json["tag_name"] as? String ?? "latest"
-
-            // Find macOS asset — prefer .dmg, then .zip (Raze ships DMG, GZDoom ships ZIP)
-            let macAsset = assets.first(where: { asset in
-                let name = (asset["name"] as? String ?? "").lowercased()
-                return name.contains("macos") && (name.hasSuffix(".dmg") || name.hasSuffix(".zip"))
-            })
-
-            guard let asset = macAsset,
-                  let downloadURLString = asset["browser_download_url"] as? String,
-                  let downloadURL = URL(string: downloadURLString) else {
+            case .failure(.noMatchingAsset(let version)):
                 DispatchQueue.main.async {
                     progressWindow.close()
                     let alert = NSAlert()
@@ -3629,63 +3598,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     alert.informativeText = "The latest \(appName) release (\(version)) does not include a macOS build.\nPlease install \(appName) manually from:\nhttps://github.com/\(repo)/releases"
                     alert.addButton(withTitle: "Open GitHub")
                     alert.addButton(withTitle: "Cancel")
-                    if alert.runModal() == .alertFirstButtonReturn {
-                        if let url = URL(string: "https://github.com/\(repo)/releases") {
-                            NSWorkspace.shared.open(url)
-                        }
+                    if alert.runModal() == .alertFirstButtonReturn, let url = URL(string: "https://github.com/\(repo)/releases") {
+                        NSWorkspace.shared.open(url)
                     }
                     completion(false)
                 }
-                return
-            }
-
-            let assetName = asset["name"] as? String ?? appName
-            let isDMG = assetName.lowercased().hasSuffix(".dmg")
-            print("[\(label)] Downloading \(appName) \(version): \(assetName)")
-
-            DispatchQueue.main.async {
-                self?.updateProgressWindow(progressWindow, detail: "Downloading \(appName) \(version) (\(assetName))…")
-            }
-
-            // Download the asset
-            URLSession.shared.downloadTask(with: downloadURL) { tempURL, _, dlError in
-                guard let tempURL = tempURL, dlError == nil else {
-                    DispatchQueue.main.async {
-                        progressWindow.close()
-                        let alert = NSAlert()
-                        alert.messageText = "Download Failed"
-                        alert.informativeText = dlError?.localizedDescription ?? "\(appName) download failed."
-                        alert.addButton(withTitle: "OK")
-                        alert.runModal()
-                        completion(false)
-                    }
-                    return
-                }
-
+            case .success(let asset):
+                let isDMG = asset.name.lowercased().hasSuffix(".dmg")
+                print("[\(label)] Downloading \(appName) \(asset.version): \(asset.name)")
                 DispatchQueue.main.async {
-                    self?.updateProgressWindow(progressWindow, detail: "Installing \(appName) to /Applications…")
+                    self?.updateProgressWindow(progressWindow, detail: "Downloading \(appName) \(asset.version) (\(asset.name))…")
                 }
-
-                let fm = FileManager.default
-                let tempDir = NSTemporaryDirectory() + "\(appName.lowercased())_install_\(ProcessInfo.processInfo.processIdentifier)"
-                try? fm.removeItem(atPath: tempDir)
-                try? fm.createDirectory(atPath: tempDir, withIntermediateDirectories: true, attributes: nil)
-
-                let finish: (Bool) -> Void = { success in
-                    try? fm.removeItem(atPath: tempDir)
-                    DispatchQueue.main.async {
-                        progressWindow.close()
-                        completion(success)
+                URLSession.shared.downloadTask(with: asset.url) { tempURL, _, dlError in
+                    guard let tempURL = tempURL, dlError == nil else {
+                        DispatchQueue.main.async {
+                            progressWindow.close()
+                            let alert = NSAlert()
+                            alert.messageText = "Download Failed"
+                            alert.informativeText = dlError?.localizedDescription ?? "\(appName) download failed."
+                            alert.addButton(withTitle: "OK")
+                            alert.runModal()
+                            completion(false)
+                        }
+                        return
                     }
-                }
-
-                if isDMG {
-                    self?.installAppFromDMG(dmgPath: tempURL.path, tempDir: tempDir, appName: appName, label: label, completion: finish)
-                } else {
-                    self?.installAppFromZip(zipPath: tempURL.path, tempDir: tempDir, appName: appName, label: label, completion: finish)
-                }
-            }.resume()
-        }.resume()
+                    DispatchQueue.main.async {
+                        self?.updateProgressWindow(progressWindow, detail: "Installing \(appName) to /Applications…")
+                    }
+                    let fm = FileManager.default
+                    let tempDir = NSTemporaryDirectory() + "\(appName.lowercased())_install_\(ProcessInfo.processInfo.processIdentifier)"
+                    try? fm.removeItem(atPath: tempDir)
+                    try? fm.createDirectory(atPath: tempDir, withIntermediateDirectories: true, attributes: nil)
+                    let finish: (Bool) -> Void = { success in
+                        try? fm.removeItem(atPath: tempDir)
+                        DispatchQueue.main.async { progressWindow.close(); completion(success) }
+                    }
+                    if isDMG {
+                        self?.installAppFromDMG(dmgPath: tempURL.path, tempDir: tempDir, appName: appName, label: label, completion: finish)
+                    } else {
+                        self?.installAppFromZip(zipPath: tempURL.path, tempDir: tempDir, appName: appName, label: label, completion: finish)
+                    }
+                }.resume()
+            }
+        }
     }
 
     /// Ensure GZDoom is installed, offering a one-click auto-download (like Raze) if not,
@@ -3731,59 +3686,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         copyAppToApplications(appPath: appPath, targetName: "\(appName).app", completion: completion)
     }
 
-    /// Mount a DMG, find <appName>.app, copy to /Applications
+    /// Mount a DMG, find <appName>.app, copy it out, install to /Applications.
     private func installAppFromDMG(dmgPath: String, tempDir: String, appName: String, label: String, completion: @escaping (Bool) -> Void) {
-        let mountPoint = tempDir + "/dmg_mount"
-        let fm = FileManager.default
-        try? fm.createDirectory(atPath: mountPoint, withIntermediateDirectories: true, attributes: nil)
+        // Copy the app OUT of the read-only volume before it is detached.
+        let localApp: URL? = TrustedDownloadInstaller.withMountedDMG(URL(fileURLWithPath: dmgPath)) { mount in
+            guard let app = TrustedDownloadInstaller.findAppBundle(named: appName, in: mount) else { return nil }
+            let localCopy = URL(fileURLWithPath: tempDir).appendingPathComponent("\(appName).app")
+            try? FileManager.default.removeItem(at: localCopy)
+            try? FileManager.default.copyItem(at: app, to: localCopy)
+            return localCopy
+        } ?? nil
 
-        // Mount DMG
-        let mount = Process()
-        mount.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-        mount.arguments = ["attach", "-nobrowse", "-readonly", "-mountpoint", mountPoint, dmgPath]
-        mount.standardOutput = FileHandle.nullDevice
-        mount.standardError = FileHandle.nullDevice
-        do {
-            try mount.run()
-            mount.waitUntilExit()
-        } catch {
-            print("[\(label)] DMG mount failed: \(error)")
-            completion(false)
-            return
-        }
-
-        guard mount.terminationStatus == 0 else {
-            print("[\(label)] DMG mount returned status \(mount.terminationStatus)")
-            completion(false)
-            return
-        }
-
-        // Find <appName>.app in mounted volume
-        let appPath = findAppBundle(named: appName, in: mountPoint)
-
-        if let appPath = appPath {
-            copyAppToApplications(appPath: appPath, targetName: "\(appName).app") { success in
-                // Unmount DMG
-                let detach = Process()
-                detach.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-                detach.arguments = ["detach", mountPoint, "-quiet"]
-                detach.standardOutput = FileHandle.nullDevice
-                detach.standardError = FileHandle.nullDevice
-                try? detach.run()
-                detach.waitUntilExit()
-                completion(success)
-            }
-        } else {
-            // Unmount and fail
-            let detach = Process()
-            detach.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-            detach.arguments = ["detach", mountPoint, "-quiet"]
-            detach.standardOutput = FileHandle.nullDevice
-            detach.standardError = FileHandle.nullDevice
-            try? detach.run()
-            detach.waitUntilExit()
-
-            print("[\(label)] \(appName).app not found in DMG")
+        guard let app = localApp else {
+            print("[\(label)] \(appName).app not found in DMG (or mount failed)")
             DispatchQueue.main.async {
                 let alert = NSAlert()
                 alert.messageText = "Installation Failed"
@@ -3792,89 +3707,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 alert.runModal()
             }
             completion(false)
+            return
         }
+        copyAppToApplications(appPath: app.path, targetName: "\(appName).app", completion: completion)
     }
 
-    /// Find an .app bundle containing the given name in a directory tree
     private func findAppBundle(named name: String, in directory: String) -> String? {
-        let fm = FileManager.default
-        // Check top level first
-        if let contents = try? fm.contentsOfDirectory(atPath: directory) {
-            if let app = contents.first(where: { $0.lowercased().contains(name.lowercased()) && $0.hasSuffix(".app") }) {
-                return directory + "/" + app
-            }
-        }
-        // Search recursively
-        if let enumerator = fm.enumerator(atPath: directory) {
-            while let file = enumerator.nextObject() as? String {
-                if file.hasSuffix(".app") && file.lowercased().contains(name.lowercased()) {
-                    return directory + "/" + file
-                }
-            }
-        }
-        return nil
+        TrustedDownloadInstaller.findAppBundle(named: name, in: URL(fileURLWithPath: directory))?.path
     }
 
-    /// Copy an .app bundle to /Applications
+    /// Verify + install a downloaded .app to /Applications via the shared TrustedDownloadInstaller.
+    /// The warn-but-allow prompt and failure alert (UI) live here; the security policy lives in the layer.
     private func copyAppToApplications(appPath: String, targetName: String, completion: @escaping (Bool) -> Void) {
-        let fm = FileManager.default
-        let targetURL = URL(fileURLWithPath: "/Applications/" + targetName)
-
-        // P1 SECURITY: the bundle was just downloaded over the network — verify its code
-        // signature + notarization before trusting it. If verification fails, warn and let the
-        // user decide (warn-but-allow) instead of silently defeating Gatekeeper.
-        let verified = AppSignatureVerifier.verifyAppSignature(at: appPath)
-        if !verified {
-            var proceed = false
-            let ask = {
-                let alert = NSAlert()
-                alert.messageText = "Could not verify “\(targetName)”"
-                alert.informativeText = "The downloaded app's code signature or notarization could not be verified. Installing it anyway bypasses macOS Gatekeeper — do this only if you trust the source."
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Install Anyway")
-                alert.addButton(withTitle: "Cancel")
-                proceed = (alert.runModal() == .alertFirstButtonReturn)
-            }
-            if Thread.isMainThread { ask() } else { DispatchQueue.main.sync(execute: ask) }
-            if !proceed { completion(false); return }
-        }
-
-        // P2: install atomically. Copy to a same-volume staging path first, then atomically
-        // swap it in — so a failed copy (no space, permissions, corrupt archive) never leaves
-        // the user with the old app already deleted.
-        let stagingURL = URL(fileURLWithPath: "/Applications/." + targetName + ".new-\(UUID().uuidString)")
-        do {
-            if fm.fileExists(atPath: stagingURL.path) { try fm.removeItem(at: stagingURL) }
-            try fm.copyItem(at: URL(fileURLWithPath: appPath), to: stagingURL)
-
-            if fm.fileExists(atPath: targetURL.path) {
-                _ = try fm.replaceItemAt(targetURL, withItemAt: stagingURL)   // atomic; original retained if it throws
-            } else {
-                try fm.moveItem(at: stagingURL, to: targetURL)
-            }
-
-            // Quarantine is intentionally PRESERVED for verified apps so Gatekeeper approves a
-            // notarized app silently on first launch. Only strip it when the user explicitly
-            // chose to install an unverified app above (informed consent) so it stays launchable.
-            if !verified {
-                let xattr = Process()
-                xattr.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
-                xattr.arguments = ["-rd", "com.apple.quarantine", targetURL.path]
-                xattr.standardOutput = FileHandle.nullDevice
-                xattr.standardError = FileHandle.nullDevice
-                try? xattr.run()
-                xattr.waitUntilExit()
-            }
-
-            print("[Install] Installed \(targetName) to /Applications")
-            completion(true)
-        } catch {
-            try? fm.removeItem(at: stagingURL)   // clean up staging; the existing app is untouched
-            print("[Install] Failed to install \(targetName): \(error)")
+        let result = TrustedDownloadInstaller.installVerifiedApp(
+            bundleAt: URL(fileURLWithPath: appPath),
+            to: URL(fileURLWithPath: "/Applications/" + targetName),
+            confirmUnverified: { InstallProgressWindow.confirmUnverified(name: targetName) })
+        switch result {
+        case .installed: completion(true)
+        case .cancelled: completion(false)
+        case .failed(let message):
             DispatchQueue.main.async {
                 let alert = NSAlert()
                 alert.messageText = "Installation Failed"
-                alert.informativeText = "Could not install \(targetName): \(error.localizedDescription)"
+                alert.informativeText = "Could not install \(targetName): \(message)"
                 alert.addButton(withTitle: "OK")
                 alert.runModal()
             }
@@ -4043,44 +3899,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Progress Window Helper
 
     private func createProgressWindow(title: String, detail: String) -> NSWindow {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 120),
-            styleMask: [.titled],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = title
-        window.isReleasedWhenClosed = false
-        window.level = .floating
-        window.center()
-
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 380, height: 120))
-
-        let spinner = NSProgressIndicator(frame: NSRect(x: 170, y: 75, width: 40, height: 40))
-        spinner.style = .spinning
-        spinner.startAnimation(nil)
-        container.addSubview(spinner)
-
-        let label = NSTextField(labelWithString: detail)
-        label.frame = NSRect(x: 20, y: 30, width: 340, height: 36)
-        label.alignment = .center
-        label.font = .systemFont(ofSize: 13)
-        label.textColor = .secondaryLabelColor
-        label.lineBreakMode = .byWordWrapping
-        label.maximumNumberOfLines = 2
-        label.tag = 100  // for updateProgressWindow
-        container.addSubview(label)
-
-        window.contentView = container
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        return window
+        InstallProgressWindow.make(title: title, detail: detail)
     }
 
     private func updateProgressWindow(_ window: NSWindow, detail: String) {
-        if let label = window.contentView?.viewWithTag(100) as? NSTextField {
-            label.stringValue = detail
-        }
+        InstallProgressWindow.update(window, detail: detail)
     }
 
 
