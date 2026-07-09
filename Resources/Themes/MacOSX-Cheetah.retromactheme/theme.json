@@ -50,6 +50,24 @@
     "offset": 9
   },
   "wallpaper": "wallpaper.jpg",
+  "wallpapers": [
+    {
+      "name": "Aqua Blue",
+      "file": "wallpaper.jpg"
+    },
+    {
+      "name": "Jaguar",
+      "file": "wallpaper-jaguar.jpg"
+    },
+    {
+      "name": "Panther",
+      "file": "wallpaper-panther.jpg"
+    },
+    {
+      "name": "Tiger",
+      "file": "wallpaper-tiger.jpg"
+    }
+  ],
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-retro-lite",
   "desktopIcons": [
