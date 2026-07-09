@@ -96,7 +96,7 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         // On an EXTERNAL display a TV is meant to fill the screen — present fullscreen
         // straight away (windowed only makes sense on the main desktop). Double-click /
         // menu still toggles back to a floating window.
-        let external = screen != NSScreen.main
+        let external = screen != NSScreen.primaryDisplay
         if external {
             savedWindowFrame = startFrame
             isFullscreen = true
@@ -132,20 +132,31 @@ final class TubeModeController: NSObject, MTKViewDelegate {
 
     // MARK: - Screen / fullscreen
 
-    /// First external screen (≠ main), the configured one if set, else the main screen.
+    /// First external screen (≠ the hardware primary), the configured one if set, else primary.
+    /// Uses `primaryDisplay` (stable) rather than `NSScreen.main`, which flips to the external
+    /// once the Tube is key there — otherwise "the external" would invert to the built-in.
     private func targetScreen() -> NSScreen {
         let configured = AppSettings.shared.tvTubeDisplayID
         if configured != 0, let s = NSScreen.screens.first(where: { $0.displayID == configured }) { return s }
-        if let external = NSScreen.screens.first(where: { $0 != NSScreen.main }) { return external }
-        return NSScreen.main ?? NSScreen.screens[0]
+        let primary = NSScreen.primaryDisplay
+        if let external = NSScreen.screens.first(where: { $0 != primary }) { return external }
+        return primary ?? NSScreen.screens[0]
     }
 
     private func toggleFullscreen() {
         guard let win = window, let content = contentView else { return }
-        let screen = win.screen ?? targetScreen()
+        let screen = win.screen ?? targetScreen()   // the display the Tube is currently on
         if isFullscreen {
-            let saved = savedWindowFrame ?? NSRect(x: screen.frame.midX - 460, y: screen.frame.midY - 386,
+            var saved = savedWindowFrame ?? NSRect(x: screen.frame.midX - 460, y: screen.frame.midY - 386,
                                                    width: 920, height: 772)
+            // Keep the windowed TV on the SAME display it was fullscreen on — a stale saved
+            // frame (or one captured while NSScreen.main pointed elsewhere) would otherwise
+            // fling it onto the primary.
+            if !screen.frame.contains(CGPoint(x: saved.midX, y: saved.midY)) {
+                saved = NSRect(x: screen.frame.midX - saved.width / 2,
+                               y: screen.frame.midY - saved.height / 2,
+                               width: saved.width, height: saved.height)
+            }
             isFullscreen = false
             content.windowed = true                     // TV-only crop, transparent around it
             win.isOpaque = false; win.backgroundColor = .clear

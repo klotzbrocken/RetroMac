@@ -391,7 +391,10 @@ final class DockController {
            let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) {
             return screen
         }
-        return NSScreen.main ?? NSScreen.screens.first!
+        // The stable hardware primary — NOT NSScreen.main, which flips to whichever screen
+        // holds the key window (e.g. a TV Tube fullscreen on an external display would otherwise
+        // drag the dock off the primary and behind the Tube).
+        return NSScreen.primaryDisplay ?? NSScreen.screens.first!
     }
 
     // MARK: - Visibility
