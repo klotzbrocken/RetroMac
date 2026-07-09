@@ -73,6 +73,14 @@
     {
       "name": "Horizon",
       "file": "wallpaper-horizon.jpg"
+    },
+    {
+      "name": "Leopard",
+      "file": "wallpaper-leopard.jpg"
+    },
+    {
+      "name": "Lion",
+      "file": "wallpaper-lion.jpg"
     }
   ],
   "fallbackIcon": "generic.png",

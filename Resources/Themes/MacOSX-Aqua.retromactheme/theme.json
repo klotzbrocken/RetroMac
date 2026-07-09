@@ -35,6 +35,20 @@
     "offset": 6
   },
   "wallpaper": "wallpaper.jpg",
+  "wallpapers": [
+    {
+      "name": "Galaxy",
+      "file": "wallpaper.jpg"
+    },
+    {
+      "name": "Leopard",
+      "file": "wallpaper-leopard.jpg"
+    },
+    {
+      "name": "Lion",
+      "file": "wallpaper-lion.jpg"
+    }
+  ],
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-lite",
   "iconMappings": {
