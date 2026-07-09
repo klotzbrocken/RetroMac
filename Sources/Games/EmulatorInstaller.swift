@@ -22,125 +22,66 @@ final class EmulatorInstaller {
         }
 
         isInstalling = true
-        let progressWindow = createProgressWindow(
-            title: "Installing \(emulator.displayName)…",
-            detail: "Downloading \(emulator.displayName)…"
-        )
+        let progressWindow = InstallProgressWindow.make(
+            title: "Installing \(emulator.displayName)…", detail: "Downloading \(emulator.displayName)…")
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
             let fm = FileManager.default
             let tempDir = NSTemporaryDirectory() + "emulator_install_\(emulator.rawValue)"
             try? fm.removeItem(atPath: tempDir)
             try? fm.createDirectory(atPath: tempDir, withIntermediateDirectories: true)
+            let tempDirURL = URL(fileURLWithPath: tempDir)
+            let archive = tempDirURL.appendingPathComponent(emulator.archiveType == .zip ? "emulator.zip" : "emulator.dmg")
 
-            let archivePath: String
-            switch emulator.archiveType {
-            case .zip: archivePath = tempDir + "/emulator.zip"
-            case .dmg: archivePath = tempDir + "/emulator.dmg"
-            }
-
-            // Download
-            let download = Process()
-            download.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
-            download.arguments = ["-L", "-s", "-o", archivePath,
-                                  "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-                                  url.absoluteString]
-            try? download.run()
-            download.waitUntilExit()
-
-            guard download.terminationStatus == 0,
-                  fm.fileExists(atPath: archivePath),
-                  (try? fm.attributesOfItem(atPath: archivePath)[.size] as? Int) ?? 0 > 500_000 else {
+            // Download (exit-code + ≥500 KB sanity check).
+            guard TrustedDownloadInstaller.download(url, to: archive, minBytes: 500_000) else {
                 print("[Installer] Download failed for \(emulator.displayName)")
-                self?.finishInstall(success: false, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
+                self.finishInstall(success: false, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
                 return
             }
 
-            DispatchQueue.main.async {
-                self?.updateProgressWindow(progressWindow, detail: "Installing \(emulator.displayName)…")
-            }
+            DispatchQueue.main.async { InstallProgressWindow.update(progressWindow, detail: "Installing \(emulator.displayName)…") }
 
-            // Extract
-            var appBundlePath: String?
-
+            // Extract → a local .app copy.
+            let foundApp: URL?
             switch emulator.archiveType {
             case .zip:
-                let extractDir = tempDir + "/extracted"
-                try? fm.createDirectory(atPath: extractDir, withIntermediateDirectories: true)
-                let unzip = Process()
-                unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-                unzip.arguments = ["-o", archivePath, "-d", extractDir]
-                unzip.standardOutput = FileHandle.nullDevice
-                unzip.standardError = FileHandle.nullDevice
-                try? unzip.run()
-                unzip.waitUntilExit()
-                appBundlePath = self?.findAppBundle(named: emulator.appBundleName, in: extractDir)
-
+                let extractDir = tempDirURL.appendingPathComponent("extracted")
+                try? fm.createDirectory(at: extractDir, withIntermediateDirectories: true)
+                foundApp = TrustedDownloadInstaller.unzip(archive, into: extractDir)
+                    ? TrustedDownloadInstaller.findAppBundle(named: emulator.appBundleName, in: extractDir)
+                    : nil
             case .dmg:
-                let mountPoint = tempDir + "/mount"
-                try? fm.createDirectory(atPath: mountPoint, withIntermediateDirectories: true)
-                let mount = Process()
-                mount.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-                mount.arguments = ["attach", archivePath, "-mountpoint", mountPoint, "-nobrowse", "-quiet"]
-                try? mount.run()
-                mount.waitUntilExit()
-                appBundlePath = self?.findAppBundle(named: emulator.appBundleName, in: mountPoint)
-
-                // Copy first, then detach
-                if let path = appBundlePath {
-                    let localCopy = tempDir + "/\(emulator.appBundleName).app"
-                    try? fm.copyItem(atPath: path, toPath: localCopy)
-                    appBundlePath = localCopy
-                }
-
-                let detach = Process()
-                detach.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-                detach.arguments = ["detach", mountPoint, "-quiet"]
-                try? detach.run()
-                detach.waitUntilExit()
+                foundApp = TrustedDownloadInstaller.withMountedDMG(archive) { mount -> URL? in
+                    guard let app = TrustedDownloadInstaller.findAppBundle(named: emulator.appBundleName, in: mount) else { return nil }
+                    let localCopy = tempDirURL.appendingPathComponent("\(emulator.appBundleName).app")
+                    try? fm.removeItem(at: localCopy)
+                    try? fm.copyItem(at: app, to: localCopy)
+                    return localCopy
+                } ?? nil
             }
 
-            guard let foundPath = appBundlePath else {
+            guard let appURL = foundApp else {
                 print("[Installer] App bundle not found for \(emulator.displayName)")
-                self?.finishInstall(success: false, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
+                self.finishInstall(success: false, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
                 return
             }
 
-            // SECURITY: verify the downloaded bundle before trusting it. The download
-            // is over the network (curl) — a MITM/CDN/DNS compromise could serve a
-            // malicious binary. Require an intact code signature AND Gatekeeper approval
-            // (Developer ID + notarized). Reject otherwise instead of copying to /Applications.
-            guard self?.verifyAppSignature(at: foundPath) == true else {
-                print("[Installer] SECURITY: signature/notarization check FAILED for \(emulator.displayName) — aborting")
-                self?.finishInstall(success: false, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
-                return
-            }
-
-            // Copy to /Applications
-            let targetPath = emulator.appPath
-            do {
-                if fm.fileExists(atPath: targetPath) {
-                    try fm.removeItem(atPath: targetPath)
-                }
-                try fm.copyItem(atPath: foundPath, toPath: targetPath)
-
-                // Quarantine attribute is intentionally preserved so macOS
-                // Gatekeeper can verify the app on first launch.
-                print("[Installer] Installed \(emulator.displayName) to \(targetPath)")
-                self?.finishInstall(success: true, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
-            } catch {
-                print("[Installer] Copy failed: \(error.localizedDescription)")
-                self?.finishInstall(success: false, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
+            // Verify + install (quarantine preserved for verified apps; warn-but-allow otherwise).
+            let result = TrustedDownloadInstaller.installVerifiedApp(
+                bundleAt: appURL, to: URL(fileURLWithPath: emulator.appPath),
+                confirmUnverified: { InstallProgressWindow.confirmUnverified(name: emulator.displayName) })
+            switch result {
+            case .installed:
+                self.finishInstall(success: true, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
+            case .cancelled:
+                try? fm.removeItem(atPath: tempDir)
+                DispatchQueue.main.async { self.isInstalling = false; progressWindow.close(); completion(false) }
+            case .failed:
+                self.finishInstall(success: false, emulator: emulator, progressWindow: progressWindow, tempDir: tempDir, completion: completion)
             }
         }
-    }
-
-    // MARK: - Security
-
-    /// Verify a downloaded .app before installing — codesign integrity + Gatekeeper/notarization.
-    /// Shared with the AppDelegate installers via `AppSignatureVerifier`.
-    private func verifyAppSignature(at path: String) -> Bool {
-        AppSignatureVerifier.verifyAppSignature(at: path)
     }
 
     // MARK: - Helpers
@@ -167,62 +108,6 @@ final class EmulatorInstaller {
     private func openWebsite(_ emulator: EmulatorType) {
         if let url = URL(string: emulator.websiteURL) {
             NSWorkspace.shared.open(url)
-        }
-    }
-
-    private func findAppBundle(named name: String, in directory: String) -> String? {
-        let fm = FileManager.default
-        if let contents = try? fm.contentsOfDirectory(atPath: directory) {
-            if let app = contents.first(where: { $0.lowercased().contains(name.lowercased()) && $0.hasSuffix(".app") }) {
-                return directory + "/" + app
-            }
-        }
-        if let enumerator = fm.enumerator(atPath: directory) {
-            while let file = enumerator.nextObject() as? String {
-                if file.hasSuffix(".app") && file.lowercased().contains(name.lowercased()) {
-                    return directory + "/" + file
-                }
-            }
-        }
-        return nil
-    }
-
-    private func createProgressWindow(title: String, detail: String) -> NSWindow {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 120),
-            styleMask: [.titled], backing: .buffered, defer: false
-        )
-        window.title = title
-        window.isReleasedWhenClosed = false
-        window.level = .floating
-        window.center()
-
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 380, height: 120))
-
-        let spinner = NSProgressIndicator(frame: NSRect(x: 170, y: 75, width: 40, height: 40))
-        spinner.style = .spinning
-        spinner.startAnimation(nil)
-        container.addSubview(spinner)
-
-        let label = NSTextField(labelWithString: detail)
-        label.frame = NSRect(x: 20, y: 30, width: 340, height: 36)
-        label.alignment = .center
-        label.font = .systemFont(ofSize: 13)
-        label.textColor = .secondaryLabelColor
-        label.lineBreakMode = .byWordWrapping
-        label.maximumNumberOfLines = 2
-        label.tag = 100
-        container.addSubview(label)
-
-        window.contentView = container
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        return window
-    }
-
-    private func updateProgressWindow(_ window: NSWindow, detail: String) {
-        if let label = window.contentView?.viewWithTag(100) as? NSTextField {
-            label.stringValue = detail
         }
     }
 }
