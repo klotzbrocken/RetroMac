@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 2.0")
+                Text("What's New in RetroMac 2.1")
                     .font(.title2.bold())
-                Text("Themed mouse cursors for every OS — and more")
+                Text("A living wallpaper — bring your desktop to life")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,45 +21,31 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "cursorarrow.rays",
+                        icon: "photo.on.rectangle.angled",
+                        color: .pink,
+                        title: "Living wallpaper",
+                        description: "A new effect scope applies the CRT/VHS shader to your wallpaper only — it wobbles and scans behind your icons and windows, which stay perfectly crisp. Because it renders the wallpaper instead of capturing the screen, it needs no Screen Recording permission. Set it under Settings ▸ Advanced ▸ Effects ▸ “Apply to: Wallpaper only.”"
+                    )
+
+                    featureRow(
+                        icon: "book",
                         color: .indigo,
-                        title: "Themed mouse cursors",
-                        description: "Each theme can replace your whole system cursor — the classic Mac pointer with its ticking wristwatch (System 6) or rotating spinner (System 9), the Mac OS X Aqua set with the spinning beach ball, Windows XP, and the retro Windows 3.1 pointers. Toggle it under Settings ▸ Dock ▸ “Match cursor”; your own cursor is captured and restored exactly when the theme goes off."
-                    )
-
-                    featureRow(
-                        icon: "arrow.up.left.and.arrow.down.right",
-                        color: .blue,
-                        title: "Windows XP cursor sizes",
-                        description: "The Windows XP theme’s cursors come in Normal, Large and XL — pick your size in Settings ▸ Dock while the theme is active."
-                    )
-
-                    featureRow(
-                        icon: "square.stack.3d.up",
-                        color: .green,
-                        title: "BeOS, unified",
-                        description: "“BeOS” and “BeOS Classic” are now one theme. A Dock-style switch chooses between the classic corner Deskbar and a regular bottom dock."
+                        title: "Build your own shaders",
+                        description: "Advanced ▸ Presets now has an in-app guide with an “Open guide” button for writing and importing your own .metal CRT shaders — they show up right in the Shader Presets menu."
                     )
 
                     featureRow(
                         icon: "slider.horizontal.3",
                         color: .orange,
-                        title: "Per-theme icon sizes",
-                        description: "The dock and desktop icon-size sliders are now remembered per theme, so each look keeps its own sizing."
-                    )
-
-                    featureRow(
-                        icon: "checklist",
-                        color: .purple,
-                        title: "Setup Assistant options",
-                        description: "The first-run assistant now lets you opt in (on by default) to matching the macOS colour scheme and the themed cursor when a theme is active."
+                        title: "Settings, refined",
+                        description: "A tidier Settings window — a narrower layout, cleaner Advanced controls, 16:9 theme previews, and unified control sizing throughout."
                     )
 
                     featureRow(
                         icon: "wrench.and.screwdriver",
                         color: .gray,
                         title: "Fixes & polish",
-                        description: "The menu-bar Apple logo now resets when a theme (or the app) turns off, the System 6 Control Strip is fully opaque, a new System 6 boot splash, plus TV-Tube and Duke Nukem / GZDoom launch fixes."
+                        description: "Multi-monitor Tube/dock fixes, a hardened trusted-download installer for retro apps, slimmer app download, plus the System 6 Control Strip and boot-splash refinements."
                     )
                 }
                 .padding(.horizontal, 24)
