@@ -597,6 +597,15 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(viewportPreset, forKey: "viewportPreset") }
     }
 
+    /// When true, the desktop effect renders ONLY on the wallpaper (animated, beneath icons and
+    /// windows, no screen recording) instead of over the whole screen. Default false = whole screen.
+    @Published var shaderWallpaperOnly: Bool {
+        didSet {
+            defaults.set(shaderWallpaperOnly, forKey: "shaderWallpaperOnly")
+            NotificationCenter.default.post(name: .shaderScopeChanged, object: nil)
+        }
+    }
+
     // Settings Redesign — tab persistence
     @Published var lastSettingsTab: String {
         didSet { defaults.set(lastSettingsTab, forKey: "lastSettingsTab") }
@@ -854,6 +863,7 @@ final class AppSettings: ObservableObject {
 
         // Viewport
         viewportPreset = defaults.string(forKey: "viewportPreset") ?? "crt-royale-lite"
+        shaderWallpaperOnly = defaults.bool(forKey: "shaderWallpaperOnly")
 
         // Settings Redesign
         lastSettingsTab = defaults.string(forKey: "lastSettingsTab") ?? "overview"
