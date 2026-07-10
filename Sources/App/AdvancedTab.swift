@@ -88,6 +88,20 @@ private struct EffectsSection: View {
     var body: some View {
         ScrollView {
             VStack(spacing: RMSpacing.section) {
+                RMCard(title: "Effect scope",
+                       subtitle: "Draw the effect over everything, or only on the wallpaper — animated, behind your icons and windows.",
+                       bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Apply to", isLast: true) {
+                            Picker("", selection: $settings.shaderWallpaperOnly) {
+                                Text("Whole screen").tag(false)
+                                Text("Wallpaper only").tag(true)
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden().frame(width: 240)
+                        }
+                    }
+                }
                 RMCard(title: "Overlay effects",
                        subtitle: "Extra layers drawn on top of the shader.",
                        bodyPadding: 0) {

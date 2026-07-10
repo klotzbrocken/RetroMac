@@ -15,6 +15,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let updaterController = SPUStandardUpdaterController(startingUpdater: AppDelegate.sparkleEnabled, updaterDelegate: nil, userDriverDelegate: nil)
     private(set) var overlayController: OverlayWindowController?
     private(set) var crtLiteOverlay: CRTLiteOverlay?
+    /// Wallpaper-only desktop effect (renders below icons/windows; no screen capture).
+    private(set) var wallpaperShaderController: WallpaperShaderController?
+    private var shaderScopeObserver: NSObjectProtocol?
     private(set) var isActive = false
     var currentPresetName: String!
     private var hotKeyRef: EventHotKeyRef?
@@ -150,6 +153,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Setting the style triggers RainbowAppleController.update() via its didSet.
             AppSettings.shared.menuBarAppleStyle = ThemeManager.shared.activeTheme?.config.menuBarAppleStyleDefault ?? 0
             RainbowAppleController.shared.update()
+            // The wallpaper-only shader samples the desktop image — refresh its texture when
+            // the theme swaps the wallpaper. Slight delay so setDesktopImageURL has landed.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+                self?.wallpaperShaderController?.reloadWallpaper()
+            }
+        }
+
+        // Switching "Apply to: Whole screen / Wallpaper only" restarts the running effect in the
+        // newly-chosen scope so the change is visible immediately.
+        shaderScopeObserver = NotificationCenter.default.addObserver(forName: .shaderScopeChanged, object: nil, queue: .main) { [weak self] _ in
+            guard let self = self, self.isActive else { return }
+            let preset = self.currentPresetName ?? AppSettings.shared.defaultPreset
+            self.disableAll()
+            if self.isWallpaperOnlyScope {
+                self.startWallpaperShader(presetID: preset)
+            } else if Self.isLitePreset(preset) {
+                self.startCRTLite(mode: .fullScreen, presetName: preset)
+            } else {
+                self.startOverlay(mode: .fullScreen)
+            }
         }
 
         // Apply Dock Mode when the user toggles it in Settings
@@ -1449,6 +1472,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlayController = nil
         crtLiteOverlay?.stop()
         crtLiteOverlay = nil
+        wallpaperShaderController?.stop()
+        wallpaperShaderController = nil
         DisplayFilterHelper.restoreFilter()  // Safety net for B&W / Amber Lite
         isActive = false
         perAppBundleID = nil
@@ -1476,6 +1501,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return litePresetIDs.contains(id)
     }
 
+    /// Wallpaper-only mode renders through the full Metal shader (it never captures the screen,
+    /// so the "Lite / no-recording" distinction is moot). Map Lite ids to a full-shader
+    /// equivalent so picking e.g. "VHS Lite" still gives an animated VHS wallpaper.
+    private static let liteToFullPreset: [String: String] = [
+        "crt-lite": "zfast-crt", "lcd-lite": "lcd-grid", "lcd-retro-lite": "zfast-lcd",
+        "lcd-sharp-lite": "lcd3x", "lcd-broken-lite": "zfast-lcd", "bw-lite": "bw-film",
+        "amber-lite": "amber-monitor", "vhs-lite": "vhs", "scanlines-lite": "zfast-crt",
+        "grain-lite": "cinema-film"
+    ]
+
+    private static func fullPreset(for presetID: String) -> String {
+        isLitePreset(presetID) ? (liteToFullPreset[presetID] ?? "zfast-crt") : presetID
+    }
+
+    /// Whether the desktop effect should render on the wallpaper only (vs the whole screen).
+    private var isWallpaperOnlyScope: Bool { AppSettings.shared.shaderWallpaperOnly }
+
+    /// Start (or restart) the wallpaper-only desktop effect. Tears down any whole-screen /
+    /// Lite overlay first — the two scopes are mutually exclusive.
+    private func startWallpaperShader(presetID: String) {
+        overlayStartTask?.cancel()
+        overlayStartTask = nil
+        overlayController?.stop()
+        overlayController = nil
+        crtLiteOverlay?.stop()
+        crtLiteOverlay = nil
+        wallpaperShaderController?.stop()
+        wallpaperShaderController = nil
+
+        let effective = Self.fullPreset(for: presetID)
+        do {
+            let controller = try WallpaperShaderController.create(presetName: effective)
+            controller.intensity = currentIntensity
+            controller.vignetteIntensity = currentVignetteIntensity
+            let settings = AppSettings.shared
+            controller.renderer.bloomEnabled = settings.bloomEnabled
+            controller.renderer.bloomIntensity = settings.bloomIntensity
+            controller.renderer.bloomRadius = settings.bloomRadius
+            controller.start()
+            wallpaperShaderController = controller
+            currentPresetName = presetID
+            isActive = true
+            updateMenuBarIcon()
+            rebuildMenu()
+            NotificationCenter.default.post(name: .overlayStateChanged, object: nil)
+            print("[RetroMac] Wallpaper-only shader started: \(presetID) → \(effective)")
+        } catch {
+            print("[RetroMac] Wallpaper shader ERROR: \(error)")
+            let alert = NSAlert()
+            alert.messageText = "RetroMac Error"
+            alert.informativeText = "\(error.localizedDescription)"
+            alert.runModal()
+        }
+    }
+
     @objc func toggleOverlay() {
         if isActive {
             disableAll()
@@ -1484,8 +1564,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if VirtualCameraManager.shared.isRunning { VirtualCameraManager.shared.stop() }
             if retroViewport.isActive { retroViewport.hide() }
 
-            // Lite presets use transparent overlay — no screen recording needed
-            if Self.isLitePreset(currentPresetName) {
+            if isWallpaperOnlyScope {
+                startWallpaperShader(presetID: currentPresetName ?? AppSettings.shared.defaultPreset)
+            } else if Self.isLitePreset(currentPresetName) {
+                // Lite presets use transparent overlay — no screen recording needed
                 startCRTLite(mode: .fullScreen)
             } else {
                 startOverlay(mode: .fullScreen)
@@ -1496,6 +1578,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startOverlay(mode: CaptureMode, presetOverride: String? = nil, parentWindow: NSWindow? = nil) {
         // Redirect to Lite overlay if that's the selected preset
         let effectivePreset = presetOverride ?? currentPresetName ?? ""
+
+        // Wallpaper-only scope supersedes both full-capture and Lite for the DESKTOP modes
+        // (full screen / single display). Per-window & TV overlays still capture as before.
+        if isWallpaperOnlyScope {
+            switch mode {
+            case .fullScreen, .singleDisplay:
+                startWallpaperShader(presetID: effectivePreset.isEmpty ? AppSettings.shared.defaultPreset : effectivePreset)
+                return
+            case .singleWindow:
+                break
+            }
+        }
         if Self.isLitePreset(effectivePreset) {
             if case .singleWindow(let scWindow) = mode,
                let bundleID = scWindow.owningApplication?.bundleIdentifier {
@@ -1714,6 +1808,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        // Wallpaper-only scope: route every preset change to the wallpaper effect (no capture,
+        // no Lite/full split — the wallpaper controller handles any preset).
+        if isWallpaperOnlyScope {
+            currentPresetName = presetId
+            AppSettings.shared.defaultPreset = presetId
+            if isActive, wallpaperShaderController != nil {
+                applyPreset(presetId)
+            } else {
+                startWallpaperShader(presetID: presetId)
+            }
+            rebuildMenu()
+            return
+        }
+
         // Lite presets: switch overlay type if changing to/from lite
         if Self.isLitePreset(presetId) {
             // Stop full overlay if running, start Lite
@@ -1757,6 +1865,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         overlayController?.intensity = currentIntensity
         crtLiteOverlay?.intensity = currentIntensity
+        wallpaperShaderController?.intensity = currentIntensity
         rebuildMenu()
     }
 
@@ -1767,6 +1876,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         overlayController?.vignetteIntensity = currentVignetteIntensity
         crtLiteOverlay?.vignetteIntensity = currentVignetteIntensity
+        wallpaperShaderController?.vignetteIntensity = currentVignetteIntensity
         rebuildMenu()
     }
 
@@ -1774,6 +1884,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let name = sender.representedObject as? String ?? ""
         AppSettings.shared.scanlineOverlayName = name
         overlayController?.loadOverlays()
+        wallpaperShaderController?.loadOverlays()
         rebuildMenu()
     }
 
@@ -1781,6 +1892,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let name = sender.representedObject as? String ?? ""
         AppSettings.shared.reflectionName = name
         overlayController?.loadOverlays()
+        wallpaperShaderController?.loadOverlays()
         rebuildMenu()
     }
 
@@ -1943,6 +2055,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applyPreset(_ presetID: String) {
         currentPresetName = presetID
+
+        // Wallpaper-only scope: switch the shader in place on the wallpaper controller.
+        if isWallpaperOnlyScope {
+            if let wp = wallpaperShaderController, wp.isActive {
+                wp.switchPreset(Self.fullPreset(for: presetID))
+                wp.loadOverlays()
+                let settings = AppSettings.shared
+                currentVignetteIntensity = settings.vignetteIntensity
+                wp.vignetteIntensity = currentVignetteIntensity
+            } else {
+                startWallpaperShader(presetID: presetID)
+            }
+            rebuildMenu()
+            return
+        }
 
         // Switching to a Lite preset: need to tear down full overlay and start lite
         if Self.isLitePreset(presetID) {
