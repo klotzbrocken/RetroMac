@@ -2,7 +2,7 @@
   "name": "Mac OS 6 classic",
   "version": "1.0",
   "author": "RetroMac",
-  "splashScreen": "splash.png",
+  "splashScreen": "splash.jpg",
   "splashFullscreen": true,
   "dock": {
     "height": 52,

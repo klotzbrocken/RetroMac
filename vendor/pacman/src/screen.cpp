@@ -1,6 +1,24 @@
 #include "screen.h"
 #include <cstdlib>
 #include <cstring>
+#include "stb_image.h"
+
+// Load an image via stb_image (PNG/JPG/BMP/GIF, no external codec libs) into an RGBA SDL_Surface.
+// Replaces SDL2_image's IMG_Load, which dragged in the whole libavif/jxl/aom/tiff/webp chain.
+static SDL_Surface *stbLoadSurface(const char *path) {
+	int w, h, comp;
+	unsigned char *data = stbi_load(path, &w, &h, &comp, 4);   // force 4-channel RGBA
+	if (!data) return NULL;
+	SDL_Surface *surf = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
+	if (surf) {
+		SDL_LockSurface(surf);
+		for (int y = 0; y < h; y++)
+			memcpy((unsigned char *)surf->pixels + y * surf->pitch, data + (size_t)y * w * 4, (size_t)w * 4);
+		SDL_UnlockSurface(surf);
+	}
+	stbi_image_free(data);
+	return surf;
+}
 
 // ---- BeOS window-chrome geometry (borderless theming) ----
 static const int BEOS_BORDER  = 4;       // side/bottom frame
@@ -259,9 +277,9 @@ SDL_Surface *Screen::loadImage(const char *filename, int transparentColor) {
 	char filePath[256];
 	getFilePath(filePath, filename);
 	SDL_Surface *surface, *temp;
-	temp = IMG_Load(filePath);
+	temp = stbLoadSurface(filePath);
 	if (!temp) {
-		std::cout << "Unable to load image: " << IMG_GetError() << std::endl;
+		std::cout << "Unable to load image: " << (stbi_failure_reason() ? stbi_failure_reason() : "unknown") << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	surface = SDL_ConvertSurface(temp,  Screen::getInstance()->getSurface()->format, 0);
@@ -269,6 +287,10 @@ SDL_Surface *Screen::loadImage(const char *filename, int transparentColor) {
 		std::cout << "Unable to convert image to display format: " << SDL_GetError() << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	// stb_image gives every surface an alpha channel (→ SDL_BLENDMODE_BLEND), which makes the
+	// colour-key blit ignore the key and draw an opaque box. Force NONE so keying works exactly
+	// like the old SDL_image (RGB) path.
+	SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
 	if (transparentColor != -1) {
 		if (SDL_SetColorKey(surface, SDL_TRUE, (Uint32)SDL_MapRGB(surface->format, (uint8_t)transparentColor, (uint8_t)transparentColor, (uint8_t)transparentColor))) {
 			std::cout << "Unable to set transparent color: " << SDL_GetError() << std::endl;
