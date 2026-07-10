@@ -1,5 +1,22 @@
 {
   "name": "Mac OS 9.2 Classic",
+  "systemTweaks": [
+    { "domain": "com.apple.universalaccess", "key": "reduceTransparency", "type": "bool", "value": "true", "refresh": "Dock" },
+    { "domain": "-g", "key": "AppleReduceDesktopTinting", "type": "bool", "value": "true" },
+    { "domain": "-g", "key": "NSSplitViewItemSidebarDefaultsToFloatingAppearance", "type": "bool", "value": "false" },
+    { "domain": "-g", "key": "AppleShowScrollBars", "type": "string", "value": "Always" },
+    { "domain": "com.apple.finder", "key": "FXPreferredViewStyle", "type": "string", "value": "Nlsv", "refresh": "Finder" },
+    { "domain": "com.apple.finder", "key": "ShowStatusBar", "type": "bool", "value": "true", "refresh": "Finder" },
+    { "domain": "com.apple.finder", "key": "ShowPathbar", "type": "bool", "value": "true", "refresh": "Finder" },
+    { "domain": "com.apple.finder", "key": "_FXShowPosixPathInTitle", "type": "bool", "value": "true", "refresh": "Finder" },
+    { "domain": "-g", "key": "AppleShowAllExtensions", "type": "bool", "value": "true", "refresh": "Finder" },
+    { "domain": "com.apple.finder", "key": "DisableAllAnimations", "type": "bool", "value": "true", "refresh": "Finder" },
+    { "domain": "-g", "key": "NSAutomaticWindowAnimationsEnabled", "type": "bool", "value": "false" },
+    { "domain": "-g", "key": "NSUseAnimatedFocusRing", "type": "bool", "value": "false" },
+    { "domain": "-g", "key": "NSTableViewDefaultSizeMode", "type": "int", "value": "1", "refresh": "Finder" },
+    { "domain": "com.apple.dock", "key": "mineffect", "type": "string", "value": "scale", "refresh": "Dock" },
+    { "domain": "com.apple.dock", "key": "launchanim", "type": "bool", "value": "false", "refresh": "Dock" }
+  ],
   "menuBarApple": "rainbow",
   "version": "1.0",
   "author": "RetroMac",

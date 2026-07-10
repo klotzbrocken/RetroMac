@@ -321,6 +321,7 @@ final class ThemeManager {
         AppearanceAdapter.apply(for: theme.config)
         CursorThemeManager.shared.apply(for: theme.config)
         TerminalThemer.apply(forThemeNamed: theme.config.name)
+        SystemTweaksAdapter.apply(for: theme.config)   // "Classic Finder" defaults tweaks (opt-in)
     }
 
     /// Renders a small pattern tile edge-to-edge at the screen's pixel size (1 tile pixel
@@ -364,6 +365,7 @@ final class ThemeManager {
         AppearanceAdapter.restore()   // matched appearance/accent returns with the wallpaper
         CursorThemeManager.shared.restore()   // and so does the user's cursor
         TerminalThemer.restore()      // and so does the user's Terminal profile
+        SystemTweaksAdapter.restore() // and the real Finder/system look reverts too
         guard !savedWallpapers.isEmpty else { return }
         let ws = NSWorkspace.shared
         for screen in NSScreen.screens {

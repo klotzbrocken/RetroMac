@@ -84,18 +84,29 @@ private struct PerformanceSection: View {
 /// reflection (restored from the former Effect tab; selection lives only here now).
 private struct EffectsSection: View {
     @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var license = LicenseManager.shared
 
     var body: some View {
         ScrollView {
             VStack(spacing: RMSpacing.section) {
                 RMCard(title: "Effect scope",
-                       subtitle: "Draw the effect over everything, or only on the wallpaper — animated, behind your icons and windows.",
+                       subtitle: license.isLicensed
+                            ? "Draw the effect over everything, or only on the wallpaper — animated, behind your icons and windows."
+                            : "Draw the effect over everything, or only on the wallpaper (Pro) — animated, behind your icons and windows.",
                        bodyPadding: 0) {
                     VStack(spacing: 0) {
                         RMRow(label: "Apply to", isLast: true) {
-                            Picker("", selection: $settings.shaderWallpaperOnly) {
+                            Picker("", selection: Binding(
+                                get: { settings.shaderWallpaperOnly && license.isLicensed },
+                                set: { on in
+                                    if on && !license.isLicensed {
+                                        (NSApp.delegate as? AppDelegate)?.presentUnlockScreen()
+                                    } else {
+                                        settings.shaderWallpaperOnly = on
+                                    }
+                                })) {
                                 Text("Whole screen").tag(false)
-                                Text("Wallpaper only").tag(true)
+                                Text(license.isLicensed ? "Wallpaper only" : "Wallpaper only 🔒").tag(true)
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden().frame(width: 240)

@@ -273,6 +273,12 @@ final class AppSettings: ObservableObject {
     @Published var themeAdaptAppearance: Bool {
         didSet { defaults.set(themeAdaptAppearance, forKey: "themeAdaptAppearance") }
     }
+    /// "Classic Finder": apply the active theme's cosmetic system `defaults` tweaks (opaque
+    /// windows, classic scrollbars, list view…) to the REAL Finder. Off by default — it changes
+    /// system-wide look; SystemTweaksAdapter snapshots + reverts on theme-off/quit.
+    @Published var themeApplySystemTweaks: Bool {
+        didSet { defaults.set(themeApplySystemTweaks, forKey: "themeApplySystemTweaks") }
+    }
     /// Install + select a Terminal profile matching the active theme (DOS, BeOS, …).
     @Published var themeTerminalProfile: Bool {
         didSet { defaults.set(themeTerminalProfile, forKey: "themeTerminalProfile") }
@@ -712,6 +718,7 @@ final class AppSettings: ObservableObject {
         dockModeEnabled = defaults.object(forKey: "dockModeEnabled") as? Bool ?? false
         shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? true
         themeAdaptAppearance = defaults.object(forKey: "themeAdaptAppearance") as? Bool ?? true
+        themeApplySystemTweaks = defaults.bool(forKey: "themeApplySystemTweaks")   // default false (opt-in)
         themeTerminalProfile = defaults.object(forKey: "themeTerminalProfile") as? Bool ?? true
         themeAdaptCursor = defaults.object(forKey: "themeAdaptCursor") as? Bool ?? true
         xpCursorSize = defaults.object(forKey: "xpCursorSize") as? Int ?? 0
