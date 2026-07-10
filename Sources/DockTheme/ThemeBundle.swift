@@ -23,10 +23,13 @@ final class ThemeBundle {
     var name: String { config.name }
     var iconsDirectory: URL { url.appendingPathComponent("icons") }
 
-    /// URL to the theme's preview image (preview.png), if it exists.
+    /// URL to the theme's preview image — prefers the compact preview.jpg, falls back to preview.png.
     var previewImageURL: URL? {
-        let previewURL = url.appendingPathComponent("preview.png")
-        return FileManager.default.fileExists(atPath: previewURL.path) ? previewURL : nil
+        for name in ["preview.jpg", "preview.png"] {
+            let u = url.appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: u.path) { return u }
+        }
+        return nil
     }
 
     /// Icon for the app's Dock icon in Dock Mode. Only an explicit per-theme `dock.appIcon`
@@ -133,7 +136,7 @@ final class ThemeBundle {
     }
 
     func previewImage() -> NSImage? {
-        let previewURL = url.appendingPathComponent("preview.png")
+        guard let previewURL = previewImageURL else { return nil }
         return NSImage(contentsOf: previewURL)
     }
 

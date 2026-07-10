@@ -82,7 +82,7 @@ if [ -d "Resources/Themes" ]; then
     mkdir -p "$CONTENTS/Resources/Themes"
     # 'icons-library/' holds source/staging art (e.g. the extracted System 6 icon set) that is
     # kept in the repo but must never ship in the bundle.
-    rsync -a --delete --delete-excluded --exclude 'icons-library' Resources/Themes/ "$CONTENTS/Resources/Themes/"
+    rsync -a --delete --delete-excluded --exclude 'icons-library' --exclude '*.md' Resources/Themes/ "$CONTENTS/Resources/Themes/"
 fi
 
 # Copy sounds
@@ -167,7 +167,7 @@ if [ -d "vendor/pacman/src" ] && [ -d "/opt/homebrew/include/SDL2" ]; then
     rm -rf "$PAC_APP"; mkdir -p "$PAC_C/MacOS" "$PAC_C/Resources" "$PAC_C/Frameworks"
     if clang++ -std=c++14 -O2 -I/opt/homebrew/include -Ivendor/pacman/src \
          -DPACKAGE_DATA_DIR='"/unused"' \
-         vendor/pacman/src/*.cpp -L/opt/homebrew/lib -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer \
+         vendor/pacman/src/*.cpp -L/opt/homebrew/lib -lSDL2main -lSDL2 -lSDL2_ttf -lSDL2_mixer \
          -o "$PAC_C/MacOS/pacman" 2>/tmp/pacman_build.log; then
         cp -R vendor/pacman/data "$PAC_C/Resources/data"
         cat > "$PAC_C/Info.plist" <<'PLIST'
