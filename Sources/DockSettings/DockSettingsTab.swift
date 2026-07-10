@@ -293,6 +293,19 @@ struct DockSettingsTab: View {
                         }
                     }
                 }
+                if selectedThemeConfig?.systemTweaks != nil {
+                    RMRow(label: "Classic Finder", hint: "Make the real Finder match this era — opaque windows, classic scrollbars, list view, fewer animations. Changes your system Finder while the theme is on; restored when you switch it off.") {
+                        Toggle("", isOn: $settings.themeApplySystemTweaks)
+                            .toggleStyle(.switch)
+                            .tint(.rmAccent)
+                            .labelsHidden()
+                            .onChange(of: settings.themeApplySystemTweaks) { _, on in
+                                guard let cfg = ThemeManager.shared.activeTheme?.config else { return }
+                                if on { SystemTweaksAdapter.apply(for: cfg) }
+                                else { SystemTweaksAdapter.restore() }
+                            }
+                    }
+                }
                 if selectedThemeConfig?.dock.borderStyle == "doomslayer" {
                     RMRow(label: "Slayer size", hint: "Scale of the Doom Slayer patrolling below the dock. The one knob you usually touch.") {
                         HStack(spacing: 8) {

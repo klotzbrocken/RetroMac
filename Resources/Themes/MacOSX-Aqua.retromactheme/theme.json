@@ -1,5 +1,10 @@
 {
   "name": "Mountain Lion",
+  "systemTweaks": [
+    { "domain": "com.apple.finder", "key": "ShowPathbar", "type": "bool", "value": "true", "refresh": "Finder" },
+    { "domain": "com.apple.finder", "key": "ShowStatusBar", "type": "bool", "value": "true", "refresh": "Finder" },
+    { "domain": "com.apple.dock", "key": "mineffect", "type": "string", "value": "genie", "refresh": "Dock" }
+  ],
   "menuBarApple": "aqua-classic",
   "version": "1.0",
   "author": "RetroMac",

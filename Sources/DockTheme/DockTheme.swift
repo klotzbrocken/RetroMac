@@ -24,10 +24,22 @@ struct DockThemeConfig: Codable {
     var splashFullscreen: Bool? = nil // true = fill the whole screen (e.g. Win 98 boot)
     var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present
     var screensaver: String? = nil    // default screensaver id for this theme (pipes/flowerbox/flying-toasters/flurry/none)
+    var systemTweaks: [SystemTweak]? = nil   // optional "Classic Finder" defaults writes (see SystemTweaksAdapter)
 
     struct WallpaperOption: Codable {
         var name: String
         var file: String
+    }
+
+    /// A single cosmetic `defaults write` that makes the real Finder/system look like this
+    /// theme's era. Applied only when the user opts in (Settings ▸ Dock ▸ "Classic Finder");
+    /// snapshotted + fully reverted by SystemTweaksAdapter. STRICTLY cosmetic — never security.
+    struct SystemTweak: Codable {
+        var domain: String        // "-g" (NSGlobalDomain) | "com.apple.finder" | "com.apple.dock" | "com.apple.universalaccess"
+        var key: String
+        var type: String          // "bool" | "int" | "float" | "string"
+        var value: String         // literal, e.g. "true" | "36" | "0.001" | "Nlsv"
+        var refresh: String? = nil // app to killall so the change shows: "Finder" | "Dock" | nil
     }
 
     /// Windows 3.1 Program Manager — outer MDI frame containing group windows.

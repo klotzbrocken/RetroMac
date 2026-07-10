@@ -97,6 +97,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppearanceAdapter.restoreIfNeeded()            // ditto for matched appearance/accent
         CursorThemeManager.shared.restoreIfNeeded()    // ditto for the themed system cursor
         TerminalThemer.restoreIfNeeded()               // ditto for the matched Terminal profile
+        SystemTweaksAdapter.restoreIfNeeded()          // ditto for the "Classic Finder" defaults tweaks
         restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
         _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98
@@ -1516,7 +1517,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Whether the desktop effect should render on the wallpaper only (vs the whole screen).
-    private var isWallpaperOnlyScope: Bool { AppSettings.shared.shaderWallpaperOnly }
+    /// Wallpaper mode is a Pro feature — gate on the license so a stale/expired key (or a lapsed
+    /// license with the pref still set true) cleanly falls back to the free whole-screen effect.
+    private var isWallpaperOnlyScope: Bool {
+        AppSettings.shared.shaderWallpaperOnly && LicenseManager.shared.isLicensed
+    }
+
+    /// Present the unlock / coffee screen (inline key entry) for a locked Pro feature. Called
+    /// from Settings when an unlicensed user tries to turn on a Pro-only control.
+    func presentUnlockScreen() { welcomeFlow.showCoffee() }
 
     /// Start (or restart) the wallpaper-only desktop effect. Tears down any whole-screen /
     /// Lite overlay first — the two scopes are mutually exclusive.
