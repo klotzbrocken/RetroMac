@@ -301,8 +301,12 @@ struct DockSettingsTab: View {
                             .labelsHidden()
                             .onChange(of: settings.themeApplySystemTweaks) { _, on in
                                 guard let cfg = ThemeManager.shared.activeTheme?.config else { return }
-                                if on { SystemTweaksAdapter.apply(for: cfg) }
-                                else { SystemTweaksAdapter.restore() }
+                                if on {
+                                    SystemTweaksAdapter.apply(for: cfg)
+                                    SystemTweaksAdapter.showCornerHintIfNeeded(for: cfg)
+                                } else {
+                                    SystemTweaksAdapter.restore()
+                                }
                             }
                     }
                 }
