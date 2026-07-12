@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 /// Optionally makes the REAL Finder/system look like the active theme's era by applying a
 /// curated set of cosmetic `defaults write` tweaks (Settings ▸ Dock ▸ "Classic Finder").
@@ -30,6 +30,26 @@ enum SystemTweaksAdapter {
     /// Put every tracked key back to the user's original value.
     static func restore() {
         DispatchQueue.global(qos: .utility).async { reconcile(to: []) }
+    }
+
+    /// One-time heads-up (shown when the user first enables "Classic Finder" on a theme that
+    /// declares window-corner tweaks): the corner radius is a global default each AppKit app reads
+    /// only at launch, so it applies to the Finder immediately but to other apps only when they
+    /// relaunch — for everything at once the user must log out. Honest, no forced logout.
+    static func showCornerHintIfNeeded(for config: DockThemeConfig) {
+        let key = "classicCornerHintShown"
+        guard !d.bool(forKey: key) else { return }
+        let hasCorner = (config.systemTweaks ?? []).contains {
+            $0.key == "NSConvolutionOverride1" || $0.key == "NSSplitViewItemGlassMinimumCornerRadius"
+        }
+        guard hasCorner else { return }
+        d.set(true, forKey: key)
+        let alert = NSAlert()
+        alert.messageText = "Classic window corners"
+        alert.informativeText = "The Finder now uses this era's squarer window corners. Other apps pick them up the next time you open them — to apply the corners everywhere at once, log out and back in."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     /// Crash / force-quit recovery: a leftover snapshot at launch means the previous session

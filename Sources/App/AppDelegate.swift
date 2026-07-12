@@ -320,7 +320,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         selectTheme(item)
     }
     func launcherDisableTheme() { disableTheme() }
-    func launcherToggleShader() { toggleOverlay() }
+    /// Flyout/menu "CRT Shader" = the whole-screen effect. Forces the scope to whole-screen so it
+    /// can't get stuck on wallpaper after "Live Wallpaper" set `shaderWallpaperOnly = true`.
+    func launcherToggleShader() {
+        if isActive && !isWallpaperOnlyScope { disableAll(); return }   // already whole-screen → off
+        let wasActive = isActive
+        AppSettings.shared.shaderWallpaperOnly = false   // posts .shaderScopeChanged
+        // If wallpaper/Lite was running, the .shaderScopeChanged observer restarts it whole-screen;
+        // otherwise nothing is running yet, so start it here.
+        if !wasActive { startOverlay(mode: .fullScreen) }
+    }
     func launcherToggleWebcam() { toggleVirtualCamera() }
     func launcherOpenSettings() { openSettings() }
     func launcherSelectPreset(_ id: String) {
@@ -836,8 +845,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(headerItem)
         menu.addItem(NSMenuItem.separator())
 
-        // ── Shader toggle ──
-        let shaderPill = PillToggleView(isOn: isActive)
+        // ── Shader toggle (whole screen) ──
+        let shaderPill = PillToggleView(isOn: isActive && !launcherLiveWallpaperActive)
         shaderPillToggle = shaderPill
         let shaderRow = MenuToggleRowView(
             icon: "power.circle",
@@ -845,7 +854,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             hotkeyHint: "\u{21E7}\u{2318}R",
             pill: shaderPill
         ) { [weak self] in
-            self?.toggleOverlay()
+            self?.launcherToggleShader()   // whole-screen (not scope-stuck on wallpaper)
             self?.updateMenuLive()
         }
         let shaderItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
@@ -1297,7 +1306,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let statusText = "\(overlayStatus) · \(displayName)"
 
         menuHeaderView?.update(shaderOn: isActive, presetName: presetName, statusText: statusText, retroActive: retroModeActive)
-        shaderPillToggle?.isOn = isActive
+        shaderPillToggle?.isOn = isActive && !launcherLiveWallpaperActive
         liveWallpaperPillToggle?.isOn = launcherLiveWallpaperActive
         cameraPillToggle?.isOn = VirtualCameraManager.shared.isRunning || VirtualCameraManager.shared.activationPending
         viewportPillToggle?.isOn = retroViewport.isActive
