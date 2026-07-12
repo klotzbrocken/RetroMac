@@ -572,7 +572,10 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .userInitiated))
         timer.schedule(deadline: .now() + .milliseconds(150))
         timer.setEventHandler { [weak self] in
-            let scale = AppSettings.shared.halfResolution ? 1 : 2
+            // Reuse the scale the capture actually started with (the window display's
+            // backingScaleFactor, or 1 in halfResolution) — not a hardcoded 2×, which stretched
+            // or mis-cropped the stream on 1×/scaled displays after a resize.
+            let scale = self?.captureManagers.first?.captureScale ?? (AppSettings.shared.halfResolution ? 1 : 2)
             let pw = max(Int(cgFrame.width) * scale, 200)
             let ph = max(Int(cgFrame.height) * scale, 200)
             self?.captureManagers.first?.updateStreamSize(width: pw, height: ph)

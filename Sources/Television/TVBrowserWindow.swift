@@ -291,7 +291,9 @@ final class TVBrowserWindow: NSObject {
     /// Mac OS 9 WindowShade: roll the TV window up to just the title bar, or restore.
     private func toggleMac9Collapse() {
         guard let win = window else { return }
-        let bar = Mac9TVChromeView.barH
+        // Collapse to the ACTIVE chrome's title-bar height — XP's bar is taller than Mac 9's,
+        // so always using Mac9TVChromeView.barH would clip the XP title bar on roll-up.
+        let bar = RetroFrameTheme.key() == "winxp" ? WinXPTVChromeView.barH : Mac9TVChromeView.barH
         if let h = mac9PreCollapseHeight {
             var f = win.frame; let top = f.maxY; f.size.height = h; f.origin.y = top - h
             win.setFrame(f, display: true, animate: true)

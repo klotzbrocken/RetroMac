@@ -1,6 +1,8 @@
 {
   "name": "Mountain Lion",
   "systemTweaks": [
+    { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "6", "refresh": "Finder" },
+    { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "6", "refresh": "Finder" },
     { "domain": "com.apple.finder", "key": "ShowPathbar", "type": "bool", "value": "true", "refresh": "Finder" },
     { "domain": "com.apple.finder", "key": "ShowStatusBar", "type": "bool", "value": "true", "refresh": "Finder" },
     { "domain": "com.apple.dock", "key": "mineffect", "type": "string", "value": "genie", "refresh": "Dock" }

@@ -144,11 +144,27 @@ enum TrustedDownloadInstaller {
     /// notarized app silently); it is stripped only when the user consents to an unverified one.
     /// A failed copy never destroys the previously installed app (staging + `replaceItemAt`).
     static func installVerifiedApp(bundleAt src: URL, to targetURL: URL,
+                                   expectedTeamID: String? = nil, expectedBundleID: String? = nil,
                                    confirmUnverified: () -> Bool) -> InstallResult {
         let fm = FileManager.default
         let name = targetURL.lastPathComponent
 
         let verified = AppSignatureVerifier.verifyAppSignature(at: src.path)
+
+        // Identity allowlist: a validly-notarized bundle must ALSO be the app we expected — else a
+        // compromised endpoint could serve a different (but legitimately notarized) app and pass
+        // Gatekeeper. Hard fail, no user override (a wrong identity is the attack, not a warning).
+        // Only enforced for verified apps; the unverified path below stays an explicit user choice.
+        if verified, expectedBundleID != nil || expectedTeamID != nil {
+            let id = AppSignatureVerifier.readIdentity(at: src.path)
+            if let want = expectedBundleID, id.bundleID != want {
+                return .failed("identity mismatch: bundle ID \(id.bundleID ?? "nil") ≠ expected \(want)")
+            }
+            if let want = expectedTeamID, id.teamID != want {
+                return .failed("identity mismatch: team ID \(id.teamID ?? "nil") ≠ expected \(want)")
+            }
+        }
+
         if !verified && !confirmUnverified() { return .cancelled }
 
         // Stage on the SAME volume as the target (its own directory) for an atomic replace.
