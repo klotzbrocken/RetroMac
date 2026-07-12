@@ -63,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Live-updating menu views (updated in-place when toggle state changes)
     private var menuHeaderView: MenuHeaderView?
     private var shaderPillToggle: PillToggleView?
+    private var liveWallpaperPillToggle: PillToggleView?
     private var cameraPillToggle: PillToggleView?
     private var viewportPillToggle: PillToggleView?
 
@@ -218,6 +219,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 self.welcomeFlow.showIfNeeded()
             }
+
+            // Honor "Turn the shader on when RetroMac launches" (Settings ▸ System). The clean-start
+            // above leaves the shader off; this opts back in for users who asked for it. Only
+            // auto-start when it won't pop the Screen-Recording dialog on every launch — i.e. Lite
+            // presets / wallpaper scope / already-granted capture. First-time grant stays manual.
+            if AppSettings.shared.enableOnLaunch && !self.isActive {
+                let preset = self.currentPresetName ?? AppSettings.shared.defaultPreset
+                let needsCapture = !Self.isLitePreset(preset) && !self.isWallpaperOnlyScope
+                if !needsCapture || CGPreflightScreenCaptureAccess() {
+                    self.toggleOverlay()
+                }
+            }
         }
 
         // Sparkle auto-updates (checks automatically on launch)
@@ -316,6 +329,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     var launcherShaderActive: Bool { isActive }
     var launcherCurrentPreset: String { currentPresetName ?? AppSettings.shared.defaultPreset }
+
+    /// The wallpaper-only ("Live Wallpaper") effect is currently running. Pro-gated.
+    var launcherLiveWallpaperActive: Bool {
+        isActive && AppSettings.shared.shaderWallpaperOnly && LicenseManager.shared.isLicensed
+    }
+
+    /// Flyout "Live Wallpaper" switch: run the shader on the wallpaper only (Pro). Toggling on
+    /// sets the scope + starts it; toggling off stops the effect.
+    func launcherToggleLiveWallpaper() {
+        if launcherLiveWallpaperActive { disableAll(); return }
+        guard LicenseManager.shared.isLicensed else { presentUnlockScreen(); return }
+        let wasActive = isActive
+        AppSettings.shared.shaderWallpaperOnly = true   // posts .shaderScopeChanged
+        // If a whole-screen/Lite effect was running, the .shaderScopeChanged observer restarts
+        // it in wallpaper scope; otherwise nothing is running yet, so start it here.
+        if !wasActive {
+            startWallpaperShader(presetID: currentPresetName ?? AppSettings.shared.defaultPreset)
+        }
+    }
 
     /// The menu-bar glyph as a template image (used by the floating launcher button).
     func menuBarIconImage(size: NSSize) -> NSImage {
@@ -820,6 +852,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         shaderItem.view = shaderRow
         menu.addItem(shaderItem)
 
+        // ── Live Wallpaper toggle (Pro) — run the filter on the wallpaper only ──
+        let livePill = PillToggleView(isOn: launcherLiveWallpaperActive)
+        liveWallpaperPillToggle = livePill
+        let liveRow = MenuToggleRowView(
+            icon: "photo.on.rectangle.angled",
+            label: LicenseManager.shared.isLicensed ? "Live Wallpaper" : "Live Wallpaper \u{1F512}",
+            hotkeyHint: nil,
+            pill: livePill
+        ) { [weak self] in
+            self?.launcherToggleLiveWallpaper()
+            self?.updateMenuLive()
+        }
+        let liveItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        liveItem.view = liveRow
+        menu.addItem(liveItem)
+
         // ── Virtual Camera toggle ──
         let cameraPill = PillToggleView(isOn: vcam.isRunning || vcam.activationPending)
         cameraPillToggle = cameraPill
@@ -1250,6 +1298,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menuHeaderView?.update(shaderOn: isActive, presetName: presetName, statusText: statusText, retroActive: retroModeActive)
         shaderPillToggle?.isOn = isActive
+        liveWallpaperPillToggle?.isOn = launcherLiveWallpaperActive
         cameraPillToggle?.isOn = VirtualCameraManager.shared.isRunning || VirtualCameraManager.shared.activationPending
         viewportPillToggle?.isOn = retroViewport.isActive
     }
@@ -1469,6 +1518,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         overlayStartTask?.cancel()
         overlayStartTask = nil
+        permissionPollTimer?.invalidate()   // stop waiting for Screen Recording if we're turning off
+        permissionPollTimer = nil
         overlayController?.stop()
         overlayController = nil
         crtLiteOverlay?.stop()
@@ -1661,11 +1712,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let capturePreset = presetName
             let captureParent = parentWindow
             permissionPollTimer?.invalidate()
+            var pollTicks = 0
             permissionPollTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
                 if CGPreflightScreenCaptureAccess() {
                     timer.invalidate()
                     self?.permissionPollTimer = nil
                     self?.startOverlay(mode: captureMode, presetOverride: capturePreset, parentWindow: captureParent)
+                    return
+                }
+                // Give up after ~2 min so a never-granted (or denied) permission doesn't spin the
+                // timer forever. The user can retry by toggling the shader again.
+                pollTicks += 1
+                if pollTicks >= 120 {
+                    timer.invalidate()
+                    self?.permissionPollTimer = nil
+                    print("[RetroMac] Screen Recording not granted within 2 min — stopping permission poll.")
                 }
             }
             return
@@ -3854,10 +3915,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Verify + install a downloaded .app to /Applications via the shared TrustedDownloadInstaller.
     /// The warn-but-allow prompt and failure alert (UI) live here; the security policy lives in the layer.
-    private func copyAppToApplications(appPath: String, targetName: String, completion: @escaping (Bool) -> Void) {
+    /// Install a downloaded `.app` to /Applications. `expectedBundleID` enforces a per-download
+    /// identity allowlist (rejects a different notarized app from a compromised endpoint). It is
+    /// nil for RetroArch / Raze / GZDoom until their real bundle IDs are captured from the signed
+    /// binaries (`codesign -dv --verbose=4`) — a wrong guess would hard-fail a legit install. The
+    /// emulator path already enforces this (bundle IDs live in EmulatorInfo).
+    private func copyAppToApplications(appPath: String, targetName: String,
+                                       expectedBundleID: String? = nil,
+                                       completion: @escaping (Bool) -> Void) {
         let result = TrustedDownloadInstaller.installVerifiedApp(
             bundleAt: URL(fileURLWithPath: appPath),
             to: URL(fileURLWithPath: "/Applications/" + targetName),
+            expectedBundleID: expectedBundleID,
             confirmUnverified: { InstallProgressWindow.confirmUnverified(name: targetName) })
         switch result {
         case .installed: completion(true)

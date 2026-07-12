@@ -1,6 +1,8 @@
 {
   "name": "Mac OS 9.2 Classic",
   "systemTweaks": [
+    { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "4", "refresh": "Finder" },
+    { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "4", "refresh": "Finder" },
     { "domain": "com.apple.universalaccess", "key": "reduceTransparency", "type": "bool", "value": "true", "refresh": "Dock" },
     { "domain": "-g", "key": "AppleReduceDesktopTinting", "type": "bool", "value": "true" },
     { "domain": "-g", "key": "NSSplitViewItemSidebarDefaultsToFloatingAppearance", "type": "bool", "value": "false" },

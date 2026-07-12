@@ -1,6 +1,8 @@
 {
   "name": "Mac OS X",
   "systemTweaks": [
+    { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "6", "refresh": "Finder" },
+    { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "6", "refresh": "Finder" },
     { "domain": "-g", "key": "AppleShowScrollBars", "type": "string", "value": "Always" },
     { "domain": "com.apple.finder", "key": "FXPreferredViewStyle", "type": "string", "value": "icnv", "refresh": "Finder" },
     { "domain": "com.apple.finder", "key": "ShowPathbar", "type": "bool", "value": "true", "refresh": "Finder" },

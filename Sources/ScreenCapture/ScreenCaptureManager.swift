@@ -13,6 +13,10 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
     private var hasReceivedFirstFrame = false
     var onFirstFrame: (() -> Void)?
     private var targetFPS: Int = 30
+    /// Pixel scale used for this capture (backingScaleFactor of the window's display, or 1 in
+    /// halfResolution). Persisted so a later window resize reuses the SAME scale instead of
+    /// guessing a constant 2×. Defaults to 2 until a stream starts.
+    private(set) var captureScale: Int = 2
 
     init(device: MTLDevice) {
         self.device = device
@@ -131,6 +135,7 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
             }
             return Int(NSScreen.main?.backingScaleFactor ?? 2)
         }
+        captureScale = max(scale, 1)   // reused by OverlayWindowController.scheduleStreamResize
         let w = max(Int(freshWindow.frame.width) * scale, 200)
         let h = max(Int(freshWindow.frame.height) * scale, 200)
 

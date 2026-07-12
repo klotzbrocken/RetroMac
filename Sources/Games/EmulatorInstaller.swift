@@ -71,6 +71,7 @@ final class EmulatorInstaller {
             // Verify + install (quarantine preserved for verified apps; warn-but-allow otherwise).
             let result = TrustedDownloadInstaller.installVerifiedApp(
                 bundleAt: appURL, to: URL(fileURLWithPath: emulator.appPath),
+                expectedBundleID: emulator.bundleIdentifier,
                 confirmUnverified: { InstallProgressWindow.confirmUnverified(name: emulator.displayName) })
             switch result {
             case .installed:

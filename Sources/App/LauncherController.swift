@@ -162,6 +162,7 @@ final class LauncherModel: ObservableObject {
 
     func icon(for name: String) -> NSImage? { allThemes.first { $0.name == name }?.icon }
     @Published var shaderActive = false
+    @Published var wallpaperOnlyActive = false
     @Published var webcamRunning = false
     @Published var tubeActive = false
     @Published var currentPreset: String = ""
@@ -216,6 +217,7 @@ final class LauncherModel: ObservableObject {
     /// state even after the full overlay finishes starting asynchronously.
     func refreshState() {
         shaderActive = AppDelegate.shared?.launcherShaderActive ?? false
+        wallpaperOnlyActive = AppDelegate.shared?.launcherLiveWallpaperActive ?? false
         webcamRunning = VirtualCameraManager.shared.isRunning
         tubeActive = TubeModeController.shared.isActive
         currentPreset = AppDelegate.shared?.launcherCurrentPreset ?? ""
@@ -487,7 +489,7 @@ struct LauncherView: View {
             HStack {
                 Label("CRT Shader", systemImage: "tv")
                 Spacer()
-                Toggle("", isOn: Binding(get: { model.shaderActive },
+                Toggle("", isOn: Binding(get: { model.shaderActive && !model.wallpaperOnlyActive },
                                          set: { _ in AppDelegate.shared?.launcherToggleShader(); model.refresh() }))
                     .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }
@@ -496,11 +498,16 @@ struct LauncherView: View {
                 shaderPicker.padding(.leading, 22)
             }
 
+            // Live Wallpaper: run the filter on the wallpaper only (Pro). Replaces the former
+            // Virtual Camera row here — the Virtual Camera entry stays in the menu-bar menu.
             HStack {
-                Label("Virtual Camera", systemImage: "camera")
+                Label("Live Wallpaper", systemImage: "photo.on.rectangle.angled")
+                if !LicenseManager.shared.isLicensed {
+                    Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary)
+                }
                 Spacer()
-                Toggle("", isOn: Binding(get: { model.webcamRunning },
-                                         set: { _ in AppDelegate.shared?.launcherToggleWebcam(); model.refresh() }))
+                Toggle("", isOn: Binding(get: { model.wallpaperOnlyActive },
+                                         set: { _ in AppDelegate.shared?.launcherToggleLiveWallpaper(); model.refresh() }))
                     .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }
 
