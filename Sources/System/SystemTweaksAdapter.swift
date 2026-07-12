@@ -27,9 +27,12 @@ enum SystemTweaksAdapter {
         DispatchQueue.global(qos: .utility).async { reconcile(to: target) }
     }
 
-    /// Put every tracked key back to the user's original value.
-    static func restore() {
-        DispatchQueue.global(qos: .utility).async { reconcile(to: []) }
+    /// Put every tracked key back to the user's original value. Pass `sync: true` on the quit
+    /// path — the app process exits right after `applicationWillTerminate`, so an async restore
+    /// would be killed mid-flight and leave the Finder tweaks (font size, corners…) stuck.
+    static func restore(sync: Bool = false) {
+        if sync { reconcile(to: []) }
+        else { DispatchQueue.global(qos: .utility).async { reconcile(to: []) } }
     }
 
     /// One-time heads-up (shown when the user first enables "Classic Finder" on a theme that

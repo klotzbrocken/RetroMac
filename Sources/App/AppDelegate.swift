@@ -4183,6 +4183,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         disableAll()
         ScreensaverController.shared.endIdleWatch()
         DockController.shared.stop(synchronous: true)   // must finish before the process exits
+        SystemTweaksAdapter.restore(sync: true)         // ditto — revert Classic Finder tweaks before exit
         ThemeManager.shared.restoreWallpapers()
         restoreRetroModeSystemUI()
     }
