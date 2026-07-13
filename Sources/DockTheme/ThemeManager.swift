@@ -367,6 +367,26 @@ final class ThemeManager {
         TerminalThemer.restore()      // and so does the user's Terminal profile
         SystemTweaksAdapter.restore() // and the real Finder/system look reverts too
         guard !savedWallpapers.isEmpty else { return }
+        applyOriginalWallpapers()
+        savedWallpapers.removeAll()
+        persistWallpaperBackup()
+        print("[Theme] Wallpaper restore pass complete")
+    }
+
+    /// Launch recovery for the WALLPAPER ONLY. A previous session set a theme wallpaper but was
+    /// killed (crash / Mac restart) before restoring it, so the OS still shows the theme wallpaper
+    /// while RetroMac starts clean — every other themed change resets via its own restoreIfNeeded,
+    /// but the wallpaper had none, so it stuck until the user toggled a theme on+off. `savedWallpapers`
+    /// is loaded from the persisted backup in init, so this puts the user's original back at launch.
+    func restoreWallpapersIfNeeded() {
+        guard !savedWallpapers.isEmpty else { return }
+        applyOriginalWallpapers()
+        savedWallpapers.removeAll()
+        persistWallpaperBackup()
+        print("[Theme] Launch wallpaper recovery complete")
+    }
+
+    private func applyOriginalWallpapers() {
         let ws = NSWorkspace.shared
         for screen in NSScreen.screens {
             let screenKey = "\(screen.displayID)"
@@ -382,9 +402,6 @@ final class ThemeManager {
                 print("[Theme] No saved wallpaper for screen \(screenKey) (\(screen.localizedName)) — leaving as-is")
             }
         }
-        savedWallpapers.removeAll()
-        persistWallpaperBackup()
-        print("[Theme] Wallpaper restore pass complete")
     }
 
     private func persistWallpaperBackup() {
