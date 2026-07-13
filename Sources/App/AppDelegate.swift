@@ -99,6 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CursorThemeManager.shared.restoreIfNeeded()    // ditto for the themed system cursor
         TerminalThemer.restoreIfNeeded()               // ditto for the matched Terminal profile
         SystemTweaksAdapter.restoreIfNeeded()          // ditto for the "Classic Finder" defaults tweaks
+        ThemeManager.shared.restoreWallpapersIfNeeded() // ditto for the wallpaper (else it stuck on the theme's after a Mac restart)
         restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
         _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98
