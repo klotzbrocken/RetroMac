@@ -15,13 +15,13 @@
   "dock": {
     "height": 72,
     "iconSize": 52,
-    "padding": 40,
-    "spacing": 6,
+    "padding": 24,
+    "spacing": 4,
     "edgeOffset": 0,
     "cornerRadius": 6,
     "backgroundColor": "#9A9AA280",
-    "backgroundGradientTop": "#AAAAB28C",
-    "backgroundGradientBottom": "#C8C8CE8C",
+    "backgroundGradientTop": "#9C9CA48C",
+    "backgroundGradientBottom": "#B8B8BE8C",
     "shelfLineColor": "#FFFFFF00",
     "backgroundImage": null,
     "backgroundImageMode": "tile",
@@ -46,10 +46,10 @@
     "hoverAnimationDuration": 0.12
   },
   "indicator": {
-    "style": "dot",
-    "color": "#FFFFFFDD",
-    "size": 5,
-    "offset": 4
+    "style": "glow",
+    "color": "#BFE3FFCC",
+    "size": 6,
+    "offset": 2
   },
   "desktopIcons": [
     {

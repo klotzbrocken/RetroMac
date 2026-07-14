@@ -2256,12 +2256,17 @@ final class DockView: NSView {
                 NSColor.white.setFill()
                 NSBezierPath(rect: NSRect(x: sx, y: rect.minY + 3, width: 1, height: rect.height - 6)).fill()
             } else {
-                let sepColor = theme.parsedBorderColor.withAlphaComponent(0.4)
-                sepColor.setFill()
-                // Span only the (possibly shortened 3D) shelf so it doesn't poke out the top.
-                NSBezierPath(roundedRect: NSRect(x: sx - 0.5, y: shelfRect.minY + shelfRect.height * 0.15,
-                                                 width: 1, height: shelfRect.height * 0.7),
-                             xRadius: 0.5, yRadius: 0.5).fill()
+                // Snow Leopard dock separator: a single thin vertical "zebra" of short light
+                // dashes (not a solid line), matching the real dock's dotted divider.
+                NSColor(white: 0.9, alpha: 0.5).setFill()
+                let top = shelfRect.minY + shelfRect.height * 0.20
+                let bottom = shelfRect.minY + shelfRect.height * 0.88
+                let dashW: CGFloat = 3, dashH: CGFloat = 1.5, gap: CGFloat = 2.5
+                var yy = top
+                while yy < bottom {
+                    NSBezierPath(rect: NSRect(x: sx - dashW / 2, y: yy, width: dashW, height: dashH)).fill()
+                    yy += dashH + gap
+                }
             }
         }
         if let startSepX = startSeparatorX { drawTaskbarSeparator(atX: startSepX) }

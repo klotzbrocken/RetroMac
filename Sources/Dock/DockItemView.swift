@@ -13,6 +13,11 @@ final class DockItemView: NSView {
     private var indicatorOffset: CGFloat = 0
     private var indicatorVertical = false
     private var indicatorOnRight = false
+    // Actual layer dimensions (differ from indicatorSize for the oval "glow" style), so
+    // magnification re-centering keeps any indicator shape correct.
+    private var indicatorW: CGFloat = 0
+    private var indicatorH: CGFloat = 0
+    private var indicatorYOrigin: CGFloat = 0
     private var previewTimer: Timer?
 
     var onLeftClick: ((String) -> Void)?
@@ -131,7 +136,32 @@ final class DockItemView: NSView {
             )
         }
 
+        indicatorW = dot.frame.width; indicatorH = dot.frame.height; indicatorYOrigin = dot.frame.origin.y
+
         let color = NSColor.fromHex(theme.indicator.color)
+        if theme.indicator.style == "glow" {
+            // Snow Leopard running indicator: a soft, oval light-blue bloom at the icon's base
+            // (radial gradient → transparent edge = washed-out glow).
+            let glow = CAGradientLayer()
+            glow.type = .radial
+            glow.colors = [color.cgColor, color.withAlphaComponent(0).cgColor]
+            glow.locations = [0, 1]
+            glow.startPoint = CGPoint(x: 0.5, y: 0.5)
+            glow.endPoint = CGPoint(x: 1, y: 1)
+            let gw = sz * 3.4, gh = sz * 1.7   // oval: wider than tall
+            let frame: CGRect
+            if theme.isVertical {
+                let x = indicatorOnRight ? (bounds.width + off - gw) : (-off - gw + sz)
+                frame = CGRect(x: x, y: (bounds.height - gh) / 2, width: gw, height: gh)
+            } else {
+                frame = CGRect(x: (bounds.width - gw) / 2, y: -off - gh * 0.25, width: gw, height: gh)
+            }
+            glow.frame = frame
+            indicatorW = gw; indicatorH = gh; indicatorYOrigin = frame.origin.y
+            layer?.addSublayer(glow)
+            indicatorLayer = glow
+            return
+        }
         if theme.indicator.style == "triangle" {
             // Classic Mac OS X running indicator: a small solid triangle pointing
             // toward the icon (up for bottom docks, sideways for vertical docks).
@@ -166,15 +196,14 @@ final class DockItemView: NSView {
     /// its frame was computed against the ORIGINAL bounds and would drift left otherwise.
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
-        guard let ind = indicatorLayer, indicatorSize > 0 else { return }
-        let sz = indicatorSize, off = indicatorOffset
+        guard let ind = indicatorLayer, indicatorW > 0 else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         if indicatorVertical {
-            let x = indicatorOnRight ? (bounds.width + off - sz) : (-off)
-            ind.frame = CGRect(x: x, y: (bounds.height - sz) / 2, width: sz, height: sz)
+            let x = indicatorOnRight ? (bounds.width + indicatorOffset - indicatorW) : (-indicatorOffset)
+            ind.frame = CGRect(x: x, y: (bounds.height - indicatorH) / 2, width: indicatorW, height: indicatorH)
         } else {
-            ind.frame = CGRect(x: (bounds.width - sz) / 2, y: -off, width: sz, height: sz)
+            ind.frame = CGRect(x: (bounds.width - indicatorW) / 2, y: indicatorYOrigin, width: indicatorW, height: indicatorH)
         }
         CATransaction.commit()
     }
