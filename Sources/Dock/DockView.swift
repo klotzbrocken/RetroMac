@@ -538,11 +538,11 @@ final class DockView: NSView {
                         let sliceH = imgs.normal.size.height
                         btnWidth = btnHeight * (sliceW / sliceH)
                     } else {
-                        // Classic style: text-based sizing
+                        // Classic style: text-based sizing (bigger icon + label — Win95 taskbar)
                         let label = theme.dock.startButtonLabel ?? "Start"
-                        let fontSize = max(11, iconSize * 0.45)
+                        let fontSize = max(13, iconSize * 0.55)
                         let font = NSFont.boldSystemFont(ofSize: fontSize)
-                        let iconSz = max(14, iconSize * 0.55)
+                        let iconSz = max(18, iconSize * 0.78)
                         if label.isEmpty {
                             btnWidth = 4 + iconSz + 4
                         } else {
@@ -697,7 +697,7 @@ final class DockView: NSView {
                 // reserve that half-width; a small gap keeps Win98 off the divider too.
                 var taskRightEdge = rightEdge - 2
                 if theme.isXPStartMenu { taskRightEdge -= max(14, iconSize * 0.55) * 0.9 + 4 }
-                addTaskButtonStrip(startX: x, rightEdge: taskRightEdge, barRect: barRect, theme: theme)
+                addTaskButtonStrip(startX: x, rightEdge: taskRightEdge, barRect: barRect, theme: theme, iconSize: iconSize)
             } else {
                 for app in apps {
                     let y = (barRect.height - iconSize) / 2
@@ -1162,7 +1162,7 @@ final class DockView: NSView {
 
     /// One elongated taskbar button per open window (Win98/XP), plus a launch button for each
     /// pinned app that isn't running. Fills the bar from `startX` up to the right-side trays.
-    private func addTaskButtonStrip(startX: CGFloat, rightEdge: CGFloat, barRect: NSRect, theme: DockThemeConfig) {
+    private func addTaskButtonStrip(startX: CGFloat, rightEdge: CGFloat, barRect: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
         let style: TaskButtonView.Style = theme.isXPStartMenu ? .winxp : .win98
         let models = buildTaskModels()
         guard !models.isEmpty else { return }
@@ -1177,7 +1177,10 @@ final class DockView: NSView {
         for m in models {
             if x + bw > rightEdge { break }   // don't draw under the trays
             let btn = TaskButtonView(frame: NSRect(x: x, y: y, width: bw, height: h),
-                                     title: m.label, icon: m.icon, style: style, isActive: m.active)
+                                     title: m.label, icon: m.icon, style: style, isActive: m.active,
+                                     // Quick Launch icons render inset by 2px (DockItemView) → their
+                                     // visible size is iconSize-4; cap tab icons to that, never larger.
+                                     maxIconSize: max(0, iconSize - 4))
             let wasActive = m.active
             btn.onClick = { [weak self, weak btn] in
                 m.action()
@@ -2529,7 +2532,7 @@ final class DockView: NSView {
                 // Only draw procedural icon+label when NOT using bitmap sprite sheet
                 if !(btnStyle == "sunken" && startButtonImages != nil) {
                     let isSunkenBtn = btnStyle == "sunken"
-                    let iconSz = max(14, iconSize * (isSunkenBtn ? 0.60 : 0.65))
+                    let iconSz = max(18, iconSize * (isSunkenBtn ? 0.60 : 0.78))
                     let iconPad: CGFloat = isSunkenBtn ? 3 : 5
                     let iconGap: CGFloat = isSunkenBtn ? 2 : 3
                     if let icon = startButtonIcon {
@@ -2549,7 +2552,7 @@ final class DockView: NSView {
 
                     let label = theme.dock.startButtonLabel ?? "Start"
                     if !label.isEmpty {
-                        let font = NSFont.boldSystemFont(ofSize: max(11, iconSize * 0.45))
+                        let font = NSFont.boldSystemFont(ofSize: max(13, iconSize * 0.55))
                         let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
                         let labelSize = (label as NSString).size(withAttributes: attrs)
                         let labelX = startButtonFrame.minX + iconPad + iconSz + iconGap + pressOffset
