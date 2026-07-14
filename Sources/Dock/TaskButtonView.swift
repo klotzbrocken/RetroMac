@@ -11,16 +11,20 @@ final class TaskButtonView: NSView {
     private let icon: NSImage?
     private let style: Style
     private var isActive: Bool
+    /// Upper bound for the tab icon — the Quick Launch icon size, so a tab icon is never LARGER
+    /// than the pinned Quick Launch icons.
+    private let maxIconSize: CGFloat
     var onClick: (() -> Void)?
     private var pressed = false
     private var hovered = false
     private var trackingArea: NSTrackingArea?
 
-    init(frame: NSRect, title: String, icon: NSImage?, style: Style, isActive: Bool) {
+    init(frame: NSRect, title: String, icon: NSImage?, style: Style, isActive: Bool, maxIconSize: CGFloat) {
         self.title = title
         self.icon = icon
         self.style = style
         self.isActive = isActive
+        self.maxIconSize = maxIconSize
         super.init(frame: frame)
         wantsLayer = true
     }
@@ -125,8 +129,10 @@ final class TaskButtonView: NSView {
     private func drawContent(sunken: Bool) {
         let b = bounds
         let off: CGFloat = (sunken ? 1 : 0)
-        // Win98 = small classic icon (~16px); XP = larger icon per the UI-kit tab.
-        let iconSz: CGFloat = (style == .win98) ? min(18, b.height - 6) : min(26, b.height - 2)
+        // Win98 icon fills nearly the full button height; XP = larger icon per the UI-kit tab.
+        // Capped at the Quick Launch icon size so a tab icon is never larger than those.
+        let base: CGFloat = (style == .win98) ? (b.height - 4) : min(26, b.height - 2)
+        let iconSz = min(base, maxIconSize)
         let iconX = (style == .win98 ? 4 : 6) + off
         let iconY = (b.height - iconSz) / 2 - off
         var textX = iconX
@@ -137,7 +143,7 @@ final class TaskButtonView: NSView {
         }
         let isWin98 = (style == .win98)
         let color: NSColor = isWin98 ? .black : .white
-        let fsize: CGFloat = isWin98 ? 11 : 12
+        let fsize: CGFloat = isWin98 ? 13 : 12
         let font = NSFont(name: "Tahoma", size: fsize)   // XP & Win98 both use Tahoma
             ?? NSFont.systemFont(ofSize: fsize, weight: isWin98 ? .regular : .semibold)
         let p = NSMutableParagraphStyle(); p.lineBreakMode = .byTruncatingTail

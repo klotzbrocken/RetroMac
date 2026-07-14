@@ -156,6 +156,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Setting the style triggers RainbowAppleController.update() via its didSet.
             AppSettings.shared.menuBarAppleStyle = ThemeManager.shared.activeTheme?.config.menuBarAppleStyleDefault ?? 0
             RainbowAppleController.shared.update()
+            // Menu-bar hiding is tied to the theme: only themes that declare it (Windows 95/98, XP)
+            // hide the macOS menu bar; every Mac OS theme AND theme-off (activeTheme == nil) force it
+            // back visible. Forced on each change (like menuBarAppleStyle) so it never stays hidden.
+            AppSettings.shared.hideMenuBar = ThemeManager.shared.activeTheme?.config.hideMenuBarDefault ?? false
             // The wallpaper-only shader samples the desktop image — refresh its texture when
             // the theme swaps the wallpaper. Slight delay so setDesktopImageURL has landed.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in

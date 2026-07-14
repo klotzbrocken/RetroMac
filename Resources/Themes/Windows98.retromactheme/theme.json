@@ -1,5 +1,6 @@
 {
   "name": "Windows 98",
+  "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",
   "splashScreen": "splash.png",
