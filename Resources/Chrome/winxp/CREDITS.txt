@@ -1,0 +1,8 @@
+Windows XP (Luna) caption-button artwork in this folder is derived from XP.css
+  https://github.com/botoxparty/XP.css   (themes/XP/icon/*.svg)
+Licensed under the MIT License, Copyright 2020 Adam Hammad, Jordan Scales.
+
+The .svg sources were rasterized to PNG (@1x = 21×21, @2x = 42×42) with
+nearest-neighbour scaling to preserve the crisp pixel art. States:
+  <name>.png (normal), <name>-hover.png, <name>-active.png (pressed)
+  names: close, min (minimize), max (maximize), restore
