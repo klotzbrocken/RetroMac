@@ -110,12 +110,26 @@ final class DockController {
         // (Screensaver idle-watch keeps running while the app lives; it is not tied to the dock.)
         // Un-hide any apps the Win98 "Show Desktop" tile hid — the tile is gone now.
         DockView.restoreShowDesktop()
-        restoreSystemDock(synchronous: synchronous, forceReload: true)
+
+        // Tear down ALL of RetroMac's own screen-edge windows BEFORE restoring the system Dock.
+        // restoreSystemDock() does `killall Dock`; if RetroMac's themed dock (or another
+        // bottom-edge overlay) still occupies the primary display's bottom edge at that moment,
+        // the freshly-relaunched Dock avoids that edge and lands on a *secondary* display — and
+        // nothing re-triggers it after we quit, so it stays there. Clearing the edge first lets
+        // the Dock reclaim the primary. (Manually running `killall Dock` later fixes it precisely
+        // because RetroMac's windows are gone by then.)
+        window?.orderOut(nil)
+        window = nil
+        dockView = nil
+        isVisible = false
         DesktopIconsController.shared.hide()
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
         BeOSDeskbarController.shared.hide()
         RainbowAppleController.shared.hide()
+
+        restoreSystemDock(synchronous: synchronous, forceReload: true)
+
         // Restore menu bar and desktop icons
         if AppSettings.shared.hideMenuBar {
             SystemUIHelper.setMenuBarAutoHide(false)
@@ -133,10 +147,6 @@ final class DockController {
             fullscreenObserver = nil
         }
         settingsObservers.removeAll()
-        window?.orderOut(nil)
-        window = nil
-        dockView = nil
-        isVisible = false
         manualToggle = nil
         isStarted = false
     }
@@ -932,6 +942,23 @@ final class DockController {
         }
     }
 
+    /// A "bottom" Dock lands on whichever display sits lowest in the arrangement — with a
+    /// secondary screen positioned *below* the primary, `killall Dock` puts the Dock on that
+    /// secondary and the user can't get it back. The reliable, cursor-independent fix: momentarily
+    /// orient the Dock to "left" (which always resolves to the primary) and reload, so the primary
+    /// becomes the Dock's home display; the caller then restores "bottom" and it stays on the
+    /// primary. No-op unless a screen really sits below the primary (single-display / side-by-side
+    /// setups are unaffected) and the target orientation is "bottom" (left/right already work).
+    private func reanchorBottomDockToPrimaryIfNeeded(orientation: String) {
+        guard orientation == "bottom", NSScreen.screens.count > 1,
+              let primary = NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main,
+              NSScreen.screens.contains(where: { $0 !== primary && $0.frame.minY < primary.frame.minY })
+        else { return }
+        _ = SystemBridge.shared.runDefaults(["write", "com.apple.dock", "orientation", "-string", "left"])
+        _ = SystemBridge.shared.killall("Dock")
+        Thread.sleep(forTimeInterval: 0.6)   // let the Dock relaunch on the primary before we flip to bottom
+    }
+
     /// Restore the system Dock to its saved state. Runs off-main by default (so it never
     /// hangs an interactive theme/dock switch); pass `synchronous: true` from the quit path,
     /// where the process must not exit before the `defaults` writes have completed.
@@ -973,9 +1000,10 @@ final class DockController {
         let gen = dockOpGeneration
 
         let apply: () -> Bool = { [weak self] in
-            self?.setSystemDockPrefs(autohide: restoreHide, position: restorePos,
-                                     minimizeToApp: minToApp, minEffect: minEffect,
-                                     autohideDelay: delay, deleteAutohideDelay: deleteDelay) ?? false
+            self?.reanchorBottomDockToPrimaryIfNeeded(orientation: restorePos)
+            return self?.setSystemDockPrefs(autohide: restoreHide, position: restorePos,
+                                            minimizeToApp: minToApp, minEffect: minEffect,
+                                            autohideDelay: delay, deleteAutohideDelay: deleteDelay) ?? false
         }
         let onDone: (Bool) -> Void = { [weak self] ok in
             guard let self = self, gen == self.dockOpGeneration else { return }  // superseded by a newer op
@@ -1039,6 +1067,7 @@ final class DockController {
         let isNewState = d.object(forKey: "sysDockOrigMinToApp") != nil
         let minToApp = (persisted && isNewState) ? d.bool(forKey: "sysDockOrigMinToApp") : nil
         let minEffect = persisted ? d.string(forKey: "sysDockOrigMinEffect") : nil
+        reanchorBottomDockToPrimaryIfNeeded(orientation: restorePos)
         let ok = setSystemDockPrefs(autohide: restoreHide, position: restorePos,
                                     minimizeToApp: minToApp, minEffect: minEffect,
                                     autohideDelay: nil, deleteAutohideDelay: true)
