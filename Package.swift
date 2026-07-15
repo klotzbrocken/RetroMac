@@ -20,7 +20,8 @@ let package = Package(
                 .copy("../Resources/Themes"),
                 .copy("../Resources/TV"),
                 .copy("../Resources/Widgets"),
-                .copy("../Resources/Savers")
+                .copy("../Resources/Savers"),
+                .copy("../Resources/Chrome")
             ],
             linkerSettings: [
                 .linkedFramework("Metal"),

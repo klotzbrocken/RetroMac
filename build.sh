@@ -108,6 +108,12 @@ if [ -d "Resources/Cursors" ]; then
     rsync -a --delete Resources/Cursors/ "$CONTENTS/Resources/Cursors/"
 fi
 
+# Window-chrome glyph assets (XP.css caption buttons etc.)
+if [ -d "Resources/Chrome" ]; then
+    mkdir -p "$CONTENTS/Resources/Chrome"
+    rsync -a --delete Resources/Chrome/ "$CONTENTS/Resources/Chrome/"
+fi
+
 # Real .saver screensaver modules (built by scripts/build-savers.sh)
 if [ -d "Resources/Savers" ]; then
     mkdir -p "$CONTENTS/Resources/Savers"

@@ -77,6 +77,7 @@ final class Mac9TVChromeView: NSView {
     private let titleFont = NSFont(name: "Charcoal", size: 12)
         ?? NSFont(name: "ChicagoFLF", size: 12) ?? .boldSystemFont(ofSize: 12)
     private let boxS: CGFloat = 11
+    private var tracker = ChromeButtonTracker()
 
     private var barRect: NSRect { NSRect(x: 0, y: bounds.height - Self.barH, width: bounds.width, height: Self.barH) }
     private var boxY: CGFloat { bounds.height - Self.barH + (Self.barH - boxS) / 2 }
@@ -87,12 +88,9 @@ final class Mac9TVChromeView: NSView {
     override var isOpaque: Bool { false }
 
     private func fill(_ r: NSRect, _ c: NSColor) { c.setFill(); NSBezierPath(rect: r).fill() }
-    /// Platinum control box: gray face, 1px blue-purple border, 1px lavender highlight
-    /// just inside — matching the Figma UI kit.
-    private func bevelBox(_ r: NSRect) {
-        fill(r, boxFace)
-        boxHi.setStroke(); NSBezierPath(rect: r.insetBy(dx: 1.5, dy: 1.5)).stroke()   // inner highlight
-        boxBP.setStroke(); NSBezierPath(rect: r.insetBy(dx: 0.5, dy: 0.5)).stroke()   // outer bevel
+    /// Platinum control box — shared with the WebApp Mac window via `ClassicMacChrome`.
+    private func bevelBox(_ r: NSRect, state: ChromeButtonState = .normal) {
+        ClassicMacChrome.bevelBox(r, state: state)
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -105,8 +103,14 @@ final class Mac9TVChromeView: NSView {
         // 1px black window frame + light-purple shadow line under the bar
         NSColor.black.setStroke(); NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5)).stroke()
         fill(NSRect(x: 0, y: bar.minY, width: bounds.width, height: 1), botShadow)
-        // control boxes
-        bevelBox(closeRect); bevelBox(collapseRect); bevelBox(zoomRect)
+        // control boxes (interactive: close left, collapse + zoom right) with hover/press
+        tracker.reset()
+        tracker.add(.close, closeRect.insetBy(dx: -4, dy: -4), interactive: true)
+        tracker.add(.collapse, collapseRect.insetBy(dx: -2, dy: -3), interactive: true)
+        tracker.add(.zoom, zoomRect.insetBy(dx: -2, dy: -3), interactive: true)
+        bevelBox(closeRect, state: tracker.state(for: .close))
+        bevelBox(collapseRect, state: tracker.state(for: .collapse))
+        bevelBox(zoomRect, state: tracker.state(for: .zoom))
         // zoom: small nested square in the upper-left of the box face
         let zsq = NSRect(x: zoomRect.minX + 2, y: zoomRect.maxY - 2 - 4, width: 4, height: 4)
         fill(zsq, boxFace); boxBP.setStroke(); NSBezierPath(rect: zsq.insetBy(dx: 0.5, dy: 0.5)).stroke()
@@ -127,21 +131,44 @@ final class Mac9TVChromeView: NSView {
         return super.hitTest(point)
     }
 
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
+            owner: self, userInfo: nil))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        if tracker.mouseMoved(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+    override func mouseExited(with event: NSEvent) {
+        if tracker.mouseExited() { needsDisplay = true }
+    }
+
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        // Generous hit areas — the 11px Platinum boxes are fiddly. Close sits alone left;
-        // the collapse+zoom pair on the right routes to the nearer box centre on overlap.
-        let pad: CGFloat = 11
-        if closeRect.insetBy(dx: -pad, dy: -pad).contains(p) { onClose?(); return }
-        let cHit = collapseRect.insetBy(dx: -pad, dy: -pad).contains(p)
-        let zHit = zoomRect.insetBy(dx: -pad, dy: -pad).contains(p)
-        if cHit || zHit {
-            if cHit && zHit {
-                (abs(p.x - collapseRect.midX) <= abs(p.x - zoomRect.midX) ? onCollapse : onZoom)?()
-            } else if cHit { onCollapse?() } else { onZoom?() }
+        if tracker.hitTest(p) != nil {          // press a control box (fires on mouse-up-inside)
+            if tracker.mouseDown(at: p) { needsDisplay = true }
             return
         }
         if barRect.contains(p) { window?.performDrag(with: event); return }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        if tracker.mouseDragged(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        let r = tracker.mouseUp(at: convert(event.locationInWindow, from: nil))
+        if r.needsRedraw { needsDisplay = true }
+        switch r.fire {
+        case .close: onClose?()
+        case .collapse: onCollapse?()
+        case .zoom: onZoom?()
+        default: break
+        }
     }
 }
 
@@ -160,6 +187,7 @@ final class WinXPTVChromeView: NSView {
         ?? NSFont(name: "Segoe UI Bold", size: 13) ?? .boldSystemFont(ofSize: 13)
     private let btnS: CGFloat = 21
     private let frameBlue = NSColor(calibratedRed: 0.031, green: 0.192, blue: 0.851, alpha: 1)
+    private var tracker = ChromeButtonTracker()
 
     private var barRect: NSRect { NSRect(x: 0, y: bounds.height - Self.barH, width: bounds.width, height: Self.barH) }
     private var btnY: CGFloat { bounds.height - Self.barH + (Self.barH - btnS) / 2 }
@@ -174,14 +202,28 @@ final class WinXPTVChromeView: NSView {
         let g = NSGradient(colors: [top, mid, bot], atLocations: [0, 0.5, 1], colorSpace: .deviceRGB)
         g?.draw(in: NSBezierPath(rect: r), angle: -90)
     }
-    private func captionBtn(_ r: NSRect, red: Bool) {
-        if red { vgrad(r, NSColor(calibratedRed: 0.969, green: 0.702, blue: 0.620, alpha: 1),
-                       NSColor(calibratedRed: 0.890, green: 0.373, blue: 0.267, alpha: 1),
-                       NSColor(calibratedRed: 0.769, green: 0.220, blue: 0.165, alpha: 1)) }
-        else { vgrad(r, NSColor(calibratedRed: 0.361, green: 0.690, blue: 1.0, alpha: 1),
-                     NSColor(calibratedRed: 0.114, green: 0.388, blue: 0.941, alpha: 1),
-                     NSColor(calibratedRed: 0.043, green: 0.275, blue: 0.812, alpha: 1)) }
-        NSColor(white: 1, alpha: 0.6).setStroke(); NSBezierPath(rect: r.insetBy(dx: 0.5, dy: 0.5)).stroke()
+    private func captionBtn(_ r: NSRect, red: Bool, state: ChromeButtonState = .normal) {
+        var top: NSColor, mid: NSColor, bot: NSColor
+        if red { top = NSColor(calibratedRed: 0.969, green: 0.702, blue: 0.620, alpha: 1)
+                 mid = NSColor(calibratedRed: 0.890, green: 0.373, blue: 0.267, alpha: 1)
+                 bot = NSColor(calibratedRed: 0.769, green: 0.220, blue: 0.165, alpha: 1) }
+        else   { top = NSColor(calibratedRed: 0.361, green: 0.690, blue: 1.0, alpha: 1)
+                 mid = NSColor(calibratedRed: 0.114, green: 0.388, blue: 0.941, alpha: 1)
+                 bot = NSColor(calibratedRed: 0.043, green: 0.275, blue: 0.812, alpha: 1) }
+        let W = NSColor(calibratedWhite: 1, alpha: 1), K = NSColor(calibratedWhite: 0, alpha: 1)
+        switch state {
+        case .hovered:  top = top.blended(withFraction: 0.20, of: W) ?? top
+                        mid = mid.blended(withFraction: 0.14, of: W) ?? mid
+                        bot = bot.blended(withFraction: 0.10, of: W) ?? bot
+        case .pressed:  top = top.blended(withFraction: 0.28, of: K) ?? top
+                        mid = mid.blended(withFraction: 0.24, of: K) ?? mid
+                        bot = bot.blended(withFraction: 0.20, of: K) ?? bot
+        default:        break
+        }
+        vgrad(r, top, mid, bot)
+        // Subtle dark-blue outline (a white rim reads as a stuck-on border).
+        NSColor(calibratedRed: 0.03, green: 0.13, blue: 0.42, alpha: 0.55).setStroke()
+        NSBezierPath(rect: r.insetBy(dx: 0.5, dy: 0.5)).stroke()
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -193,8 +235,14 @@ final class WinXPTVChromeView: NSView {
         // system icon
         let sysi = NSRect(x: 6, y: bar.midY - 8, width: 16, height: 16)
         fill(sysi, NSColor(calibratedRed: 0.81, green: 0.88, blue: 1.0, alpha: 1))
-        // caption buttons: minimise / maximise / close (Luna blue, close red)
-        captionBtn(minRect, red: false); captionBtn(maxRect, red: false); captionBtn(closeRect, red: true)
+        // caption buttons: minimise / maximise / close (Luna blue, close red) — all interactive
+        tracker.reset()
+        tracker.add(.minimize, minRect, interactive: true)
+        tracker.add(.maximize, maxRect, interactive: true)
+        tracker.add(.close, closeRect, interactive: true)
+        captionBtn(minRect, red: false, state: tracker.state(for: .minimize))
+        captionBtn(maxRect, red: false, state: tracker.state(for: .maximize))
+        captionBtn(closeRect, red: true, state: tracker.state(for: .close))
         let white = NSColor.white
         white.setStroke()                                                                            // maximise
         let mr = maxRect.insetBy(dx: 5, dy: 5)
@@ -220,11 +268,43 @@ final class WinXPTVChromeView: NSView {
         return super.hitTest(point)
     }
 
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
+            owner: self, userInfo: nil))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        if tracker.mouseMoved(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+    override func mouseExited(with event: NSEvent) {
+        if tracker.mouseExited() { needsDisplay = true }
+    }
+
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        if closeRect.contains(p) { onClose?(); return }
-        if maxRect.contains(p) { onMax?(); return }
-        if minRect.contains(p) { onMin?(); return }
+        if tracker.hitTest(p) != nil {          // press a caption button (fires on mouse-up-inside)
+            if tracker.mouseDown(at: p) { needsDisplay = true }
+            return
+        }
         if barRect.contains(p) { window?.performDrag(with: event); return }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        if tracker.mouseDragged(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        let r = tracker.mouseUp(at: convert(event.locationInWindow, from: nil))
+        if r.needsRedraw { needsDisplay = true }
+        switch r.fire {
+        case .close: onClose?()
+        case .maximize: onMax?()
+        case .minimize: onMin?()
+        default: break
+        }
     }
 }

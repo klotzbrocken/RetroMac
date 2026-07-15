@@ -328,7 +328,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
 final class WebAppChromeView: NSView {
 
-    enum Style { case win98, winxp, plain }
+    enum Style { case win98, winxp, macClassic, plain }
 
     var onClose: (() -> Void)?
     var onBack: (() -> Void)?
@@ -342,13 +342,19 @@ final class WebAppChromeView: NSView {
     private weak var hosted: NSView?
     private var grip: ResizeGripView?
 
+    /// Shared chrome model + interaction tracker. Non-nil only for styles migrated to the
+    /// model (currently XP); other styles keep the legacy `closeHit` path.
+    private let chromeStyle: ChromeStyle?
+    private var tracker = ChromeButtonTracker()
+
     init(frame: NSRect, title: String, showNav: Bool = false) {
         self.title = title
         self.showNav = showNav
         switch RetroFrameTheme.key() {
-        case "win98": style = .win98
-        case "winxp": style = .winxp
-        default:      style = .plain
+        case "win98":  style = .win98;      chromeStyle = ChromeStyleFactory.win98()
+        case "winxp":  style = .winxp;      chromeStyle = ChromeStyleFactory.xp()
+        case "macos9": style = .macClassic; chromeStyle = ChromeStyleFactory.macClassic()
+        default:       style = .plain;      chromeStyle = nil
         }
         super.init(frame: frame)
         wantsLayer = true
@@ -359,7 +365,7 @@ final class WebAppChromeView: NSView {
 
     override var isFlipped: Bool { true }
 
-    private var titleH: CGFloat { style == .winxp ? 30 : 22 }
+    private var titleH: CGFloat { style == .winxp ? 30 : 22 }   // Win98/macClassic/plain: 22
     private var pad: CGFloat { 4 }
 
     /// Frame for the hosted webview (below the title bar, inside the window border).
@@ -396,10 +402,41 @@ final class WebAppChromeView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let b = bounds
         switch style {
-        case .win98: drawWin98(ctx, b)
-        case .winxp: drawXP(ctx, b)
-        case .plain: drawPlain(ctx, b)
+        case .win98:      drawWin98(ctx, b)
+        case .winxp:      drawXP(ctx, b)
+        case .macClassic: drawMacClassic(ctx, b)
+        case .plain:      drawPlain(ctx, b)
         }
+    }
+
+    // ---- Classic Mac (System 6 / Platinum) — shared look with the TV window via ClassicMacChrome ----
+    private func drawMacClassic(_ ctx: CGContext, _ b: NSRect) {
+        let cs = chromeStyle ?? ChromeStyleFactory.macClassic()
+        NSColor.white.setFill(); ctx.fill(b)                       // window body
+        let bar = NSRect(x: 0, y: 0, width: b.width, height: titleH)   // flipped: title bar at top
+        ClassicMacChrome.face.setFill(); ctx.fill(bar)
+        ClassicMacChrome.pinstripes(in: bar)
+        NSColor.black.setStroke(); NSBezierPath(rect: b.insetBy(dx: 0.5, dy: 0.5)).stroke()  // 1px frame
+        // light-purple shadow line on the content-facing edge of the bar
+        ClassicMacChrome.botShadow.setFill(); ctx.fill(NSRect(x: 0, y: bar.maxY, width: b.width, height: 1))
+
+        // control boxes: close LEFT (functional), collapse + zoom RIGHT (decorative on a web window)
+        let boxS = ClassicMacChrome.boxSize
+        let boxY = (titleH - boxS) / 2
+        let closeR    = NSRect(x: cs.buttonInset, y: boxY, width: boxS, height: boxS)
+        let zoomR     = NSRect(x: b.width - 7 - boxS, y: boxY, width: boxS, height: boxS)
+        let collapseR = NSRect(x: zoomR.minX - cs.buttonSpacing - boxS, y: boxY, width: boxS, height: boxS)
+        tracker.reset()
+        tracker.add(.close, closeR.insetBy(dx: -4, dy: -4), interactive: true)
+        tracker.add(.collapse, collapseR, interactive: false)
+        tracker.add(.zoom, zoomR, interactive: false)
+        ClassicMacChrome.bevelBox(closeR, state: tracker.state(for: .close))
+        ClassicMacChrome.bevelBox(collapseR, state: .normal)
+        ClassicMacChrome.bevelBox(zoomR, state: .normal)
+        ClassicMacChrome.zoomGlyph(in: zoomR)
+        ClassicMacChrome.collapseGlyph(in: collapseR)
+        ClassicMacChrome.titlePlaque(title, bar: bar, font: cs.titleFont)
+        closeHit = .zero   // close is tracked via `tracker`
     }
 
     // ---- Windows 98 (SPEC: #C4C4C4 surface, 4-step bevel, #00007B→#1085D2 caption) ----
@@ -425,31 +462,26 @@ final class WebAppChromeView: NSView {
                               ending: NSColor(srgbRed: 0.063, green: 0.522, blue: 0.824, alpha: 1))
         grad?.draw(in: cap, angle: 0)
 
-        // buttons right: [ _ ][ ▢ ] gap [ × ]  — 20×18, SPEC bevels, crisp glyphs
+        // Caption button: only Close — a fixed web-app window has no working min/max, so no
+        // dead grey placeholders (98.css likewise only styles real controls).
         let bw: CGFloat = 20, bh: CGFloat = 18
         let by = cap.minY + (titleH - bh) / 2
         let closeR = NSRect(x: cap.maxX - 2 - bw, y: by, width: bw, height: bh)
-        let maxR   = NSRect(x: closeR.minX - 3 - bw, y: by, width: bw, height: bh)
-        let minR   = NSRect(x: maxR.minX - bw, y: by, width: bw, height: bh)
-        for r in [minR, maxR, closeR] { drawW98Button(ctx, r) }
-        let dis = shade
-        // min glyph (disabled grey)
-        line(NSRect(x: minR.minX + 5, y: minR.maxY - 7, width: 8, height: 2), dis)
-        // max glyph (disabled grey): box with thick top
-        dis.setStroke()
-        let mb = NSRect(x: maxR.minX + 5, y: maxR.minY + 4, width: 10, height: 9)
-        NSBezierPath(rect: mb).stroke()
-        line(NSRect(x: mb.minX, y: mb.minY, width: mb.width, height: 2), dis)
-        // close glyph (black ×)
+        tracker.reset()
+        tracker.add(.close, closeR, interactive: true)
+        let sClose = tracker.state(for: .close)
+        drawW98Button(ctx, closeR, state: sClose)
+        // close glyph (black ×) — nudged 1px down-right while pressed
+        let o: CGFloat = (sClose == .pressed) ? 1 : 0
         NSColor.black.setStroke()
         let x = NSBezierPath()
         x.lineWidth = 1.6
-        x.move(to: NSPoint(x: closeR.minX + 6, y: closeR.minY + 5))
-        x.line(to: NSPoint(x: closeR.maxX - 6, y: closeR.maxY - 5))
-        x.move(to: NSPoint(x: closeR.maxX - 6, y: closeR.minY + 5))
-        x.line(to: NSPoint(x: closeR.minX + 6, y: closeR.maxY - 5))
+        x.move(to: NSPoint(x: closeR.minX + 6 + o, y: closeR.minY + 5 + o))
+        x.line(to: NSPoint(x: closeR.maxX - 6 + o, y: closeR.maxY - 5 + o))
+        x.move(to: NSPoint(x: closeR.maxX - 6 + o, y: closeR.minY + 5 + o))
+        x.line(to: NSPoint(x: closeR.minX + 6 + o, y: closeR.maxY - 5 + o))
         x.stroke()
-        closeHit = closeR.insetBy(dx: -3, dy: -3)
+        closeHit = .zero   // Win98 close is tracked via `tracker`, not the legacy hit rect
 
         // optional navigation (browser windows): ◀ ▶ raised buttons left in the caption
         var titleX = cap.minX + 6
@@ -483,81 +515,112 @@ final class WebAppChromeView: NSView {
                                  withAttributes: [.font: font, .foregroundColor: NSColor.white])
     }
 
-    private func drawW98Button(_ ctx: CGContext, _ r: NSRect) {
-        NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1).setFill(); ctx.fill(r)
+    private func drawW98Button(_ ctx: CGContext, _ r: NSRect, state: ChromeButtonState = .normal) {
+        var faceCol = NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1)   // #C4C4C4
+        if state == .hovered { faceCol = NSColor(srgbRed: 0.83, green: 0.83, blue: 0.83, alpha: 1) }
+        faceCol.setFill(); ctx.fill(r)
         func line(_ rr: NSRect, _ c: NSColor) { c.setFill(); ctx.fill(rr) }
         let light = NSColor(srgbRed: 0.859, green: 0.859, blue: 0.859, alpha: 1)
         let shade = NSColor(srgbRed: 0.502, green: 0.502, blue: 0.502, alpha: 1)
-        line(NSRect(x: r.minX, y: r.minY, width: r.width, height: 1), light)
-        line(NSRect(x: r.minX, y: r.minY, width: 1, height: r.height), light)
-        line(NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1), .black)
-        line(NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height), .black)
-        line(NSRect(x: r.minX + 1, y: r.minY + 1, width: r.width - 2, height: 1), .white)
-        line(NSRect(x: r.minX + 1, y: r.minY + 1, width: 1, height: r.height - 2), .white)
-        line(NSRect(x: r.minX + 1, y: r.maxY - 2, width: r.width - 2, height: 1), shade)
-        line(NSRect(x: r.maxX - 2, y: r.minY + 1, width: 1, height: r.height - 2), shade)
+        if state == .pressed {
+            // Sunken bevel (inverted): dark top-left, light bottom-right.
+            line(NSRect(x: r.minX, y: r.minY, width: r.width, height: 1), shade)
+            line(NSRect(x: r.minX, y: r.minY, width: 1, height: r.height), shade)
+            line(NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1), .white)
+            line(NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height), .white)
+            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: r.width - 2, height: 1), .black)
+            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: 1, height: r.height - 2), .black)
+        } else {
+            // Raised bevel (outer white/black, inner light/shade).
+            line(NSRect(x: r.minX, y: r.minY, width: r.width, height: 1), light)
+            line(NSRect(x: r.minX, y: r.minY, width: 1, height: r.height), light)
+            line(NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1), .black)
+            line(NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height), .black)
+            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: r.width - 2, height: 1), .white)
+            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: 1, height: r.height - 2), .white)
+            line(NSRect(x: r.minX + 1, y: r.maxY - 2, width: r.width - 2, height: 1), shade)
+            line(NSRect(x: r.maxX - 2, y: r.minY + 1, width: 1, height: r.height - 2), shade)
+        }
     }
 
     // ---- Windows XP (Luna) ----
     private func drawXP(_ ctx: CGContext, _ b: NSRect) {
-        // Outer Luna frame — blue, rounded; the white content sits inside a thin border.
-        NSColor(srgbRed: 0.012, green: 0.31, blue: 0.78, alpha: 1).setFill()      // #0250C7
+        // Outer Luna frame — blue, rounded. Matches the title-bar's bottom gradient stop so the
+        // border flows out of the title bar with no visible seam ("aus einem Guss").
+        NSColor(srgbRed: 0.10, green: 0.33, blue: 0.88, alpha: 1).setFill()
         NSBezierPath(roundedRect: b, xRadius: 8, yRadius: 8).fill()
 
-        // Title bar: authentic Luna blue — bright glossy top, dip, slight lift at the bottom.
+        // Title bar: authentic Luna blue, CLIPPED to the window's rounded shape so its top
+        // corners round with the frame but its bottom edge stays FLAT — a seamless transition
+        // into the content (like the Notepad widget), with no domed "stuck-on" bulge.
         let cap = NSRect(x: 0, y: 0, width: b.width, height: titleH)
-        let capPath = NSBezierPath(roundedRect: cap, xRadius: 8, yRadius: 8)
+        NSGraphicsContext.saveGraphicsState()
+        NSBezierPath(roundedRect: b, xRadius: 8, yRadius: 8).addClip()
         let grad = NSGradient(colorsAndLocations:
             (NSColor(srgbRed: 0.27, green: 0.60, blue: 0.99, alpha: 1), 0.0),     // #459AFD bright top
             (NSColor(srgbRed: 0.11, green: 0.47, blue: 0.96, alpha: 1), 0.08),    // gloss
             (NSColor(srgbRed: 0.04, green: 0.38, blue: 0.93, alpha: 1), 0.42),
             (NSColor(srgbRed: 0.02, green: 0.31, blue: 0.86, alpha: 1), 0.50),    // dip
             (NSColor(srgbRed: 0.06, green: 0.27, blue: 0.83, alpha: 1), 0.55),
-            (NSColor(srgbRed: 0.10, green: 0.33, blue: 0.88, alpha: 1), 1.0))     // bottom lift
-        grad?.draw(in: capPath, angle: -90)
-        // 1px white top highlight + soft gloss over the upper ~40%
-        NSColor.white.withAlphaComponent(0.5).setFill()
+            (NSColor(srgbRed: 0.10, green: 0.33, blue: 0.88, alpha: 1), 1.0))     // flows into the frame blue
+        grad?.draw(in: cap, angle: -90)
+        // Subtle 1px top highlight only — no heavy gloss dome.
+        NSColor.white.withAlphaComponent(0.45).setFill()
         ctx.fill(NSRect(x: 8, y: 0, width: b.width - 16, height: 1))
-        NSColor.white.withAlphaComponent(0.12).setFill()
-        ctx.fill(NSRect(x: 1, y: 1, width: b.width - 2, height: titleH * 0.40))
+        NSColor.white.withAlphaComponent(0.08).setFill()
+        ctx.fill(NSRect(x: 1, y: 1, width: b.width - 2, height: titleH * 0.32))
+        NSGraphicsContext.restoreGraphicsState()
 
-        // Caption buttons: min/max full blue gel, close red gel — each with a glossy top.
-        let bw: CGFloat = 21, bh: CGFloat = 19
+        // Caption buttons via ChromeStyle + tracker. Close is interactive (hover/press);
+        // min/max are decorative on a fixed-size window → drawn muted, no hit region, so they
+        // no longer read as clickable.
+        let cs = chromeStyle ?? ChromeStyleFactory.xp()
+        let bw = cs.buttonSize.width, bh = cs.buttonSize.height
         let by = (titleH - bh) / 2
-        let closeR = NSRect(x: b.width - 6 - bw, y: by, width: bw, height: bh)
-        let maxR   = NSRect(x: closeR.minX - 2 - bw, y: by, width: bw, height: bh)
-        let minR   = NSRect(x: maxR.minX - 2 - bw, y: by, width: bw, height: bh)
-        func gel(_ r: NSRect, top: NSColor, bottom: NSColor, alpha: CGFloat = 1.0) {
+        let closeR = NSRect(x: b.width - cs.buttonInset - bw, y: by, width: bw, height: bh)
+        tracker.reset()
+        tracker.add(.close, closeR, interactive: true)
+        let sClose = tracker.state(for: .close)
+
+        // Neutral srgb tints (same colorspace as the button colors → blend never fails).
+        let W = NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+        let K = NSColor(srgbRed: 0, green: 0, blue: 0, alpha: 1)
+        let Gy = NSColor(srgbRed: 0.5, green: 0.5, blue: 0.5, alpha: 1)
+        func gel(_ r: NSRect, top: NSColor, bottom: NSColor, state: ChromeButtonState) {
+            var t = top, bot = bottom, gloss: CGFloat = 0.45, edge: CGFloat = 0.55
+            switch state {
+            case .hovered:  t = top.blended(withFraction: 0.20, of: W) ?? top
+                            bot = bottom.blended(withFraction: 0.12, of: W) ?? bottom; gloss = 0.60
+            case .pressed:  t = top.blended(withFraction: 0.30, of: K) ?? top
+                            bot = bottom.blended(withFraction: 0.24, of: K) ?? bottom
+                            gloss = 0.12; edge = 0.35
+            case .disabled: t = top.blended(withFraction: 0.55, of: Gy) ?? top
+                            bot = bottom.blended(withFraction: 0.55, of: Gy) ?? bottom
+                            gloss = 0.22; edge = 0.35
+            case .normal:   break
+            }
             let p = NSBezierPath(roundedRect: r, xRadius: 3, yRadius: 3)
-            NSGradient(starting: top.withAlphaComponent(alpha), ending: bottom.withAlphaComponent(alpha))?
-                .draw(in: p, angle: -90)
-            // glossy highlight over the top ~42%
+            NSGradient(starting: t, ending: bot)?.draw(in: p, angle: -90)
             let hl = NSBezierPath(roundedRect: NSRect(x: r.minX + 1.5, y: r.minY + 1.5,
                                                       width: r.width - 3, height: r.height * 0.42),
                                   xRadius: 2, yRadius: 2)
-            NSColor.white.withAlphaComponent(0.45 * alpha).setFill(); hl.fill()
-            NSColor.white.withAlphaComponent(0.55 * alpha).setStroke(); p.stroke()
+            NSColor.white.withAlphaComponent(gloss).setFill(); hl.fill()
+            // Subtle dark-blue outline (not white) — a white rim reads as a stuck-on border.
+            NSColor(srgbRed: 0.03, green: 0.13, blue: 0.42, alpha: 0.55).setStroke(); p.stroke()
+            _ = edge
         }
-        let blueTop = NSColor(srgbRed: 0.42, green: 0.66, blue: 0.98, alpha: 1)
-        let blueBot = NSColor(srgbRed: 0.07, green: 0.28, blue: 0.74, alpha: 1)
-        gel(minR, top: blueTop, bottom: blueBot)
-        gel(maxR, top: blueTop, bottom: blueBot)
-        gel(closeR, top: NSColor(srgbRed: 0.96, green: 0.55, blue: 0.45, alpha: 1),
-                    bottom: NSColor(srgbRed: 0.72, green: 0.13, blue: 0.09, alpha: 1))
-        // glyphs (white): min underscore, max square, close ×
-        NSColor.white.setFill()
-        ctx.fill(NSRect(x: minR.minX + 5, y: minR.maxY - 6, width: bw - 11, height: 2))
-        let mb = NSRect(x: maxR.minX + 5, y: maxR.minY + 4, width: bw - 11, height: bh - 9)
+        let redTop  = NSColor(srgbRed: 0.96, green: 0.55, blue: 0.45, alpha: 1)
+        let redBot  = NSColor(srgbRed: 0.72, green: 0.13, blue: 0.09, alpha: 1)
+        // Smooth red gel Close button (matches the TV XP chrome; no min/max on a web-app window).
+        gel(closeR, top: redTop, bottom: redBot, state: sClose)
         NSColor.white.setStroke()
-        let mp = NSBezierPath(rect: mb); mp.lineWidth = 1.5; mp.stroke()
-        ctx.fill(NSRect(x: mb.minX, y: mb.minY, width: mb.width, height: 2))
         let x = NSBezierPath(); x.lineWidth = 2
         x.move(to: NSPoint(x: closeR.minX + 6, y: closeR.minY + 5))
         x.line(to: NSPoint(x: closeR.maxX - 6, y: closeR.maxY - 5))
         x.move(to: NSPoint(x: closeR.maxX - 6, y: closeR.minY + 5))
         x.line(to: NSPoint(x: closeR.minX + 6, y: closeR.maxY - 5))
         x.stroke()
-        closeHit = closeR.insetBy(dx: -3, dy: -3)
+        closeHit = .zero   // XP close is tracked via `tracker`, not the legacy hit rect
 
         var titleX: CGFloat = 9
         backHit = .zero; fwdHit = .zero
@@ -566,7 +629,7 @@ final class WebAppChromeView: NSView {
             let fwdR  = NSRect(x: backR.maxX + 2, y: by, width: bw, height: bh)
             for r in [backR, fwdR] {
                 gel(r, top: NSColor(srgbRed: 0.61, green: 0.85, blue: 0.55, alpha: 1),
-                       bottom: NSColor(srgbRed: 0.13, green: 0.55, blue: 0.18, alpha: 1), alpha: 1.0)
+                       bottom: NSColor(srgbRed: 0.13, green: 0.55, blue: 0.18, alpha: 1), state: .normal)
             }
             NSColor.white.setFill()
             func tri(_ r: NSRect, left: Bool) {
@@ -609,15 +672,54 @@ final class WebAppChromeView: NSView {
                                                   .foregroundColor: NSColor.black])
     }
 
-    // ---- Interaction: close button or drag ----
+    // ---- Interaction: caption buttons (tracked, fire on mouse-up-inside) or window drag ----
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        guard chromeStyle != nil else { return }
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
+            owner: self, userInfo: nil))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        guard chromeStyle != nil else { return }
+        if tracker.mouseMoved(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        if tracker.mouseExited() { needsDisplay = true }
+    }
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        if closeHit.contains(p) { onClose?(); return }
+        if chromeStyle != nil {
+            // A tracked caption button: press it (visual only); it fires on mouse-up-inside.
+            if tracker.hitTest(p) != nil {
+                if tracker.mouseDown(at: p) { needsDisplay = true }
+                return
+            }
+        } else if closeHit.contains(p) {
+            onClose?(); return
+        }
         if backHit.contains(p) { onBack?(); return }
         if fwdHit.contains(p) { onForward?(); return }
         if p.y <= pad + titleH + 2 { window?.performDrag(with: event) }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard chromeStyle != nil else { return }
+        if tracker.mouseDragged(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard chromeStyle != nil else { return }
+        let r = tracker.mouseUp(at: convert(event.locationInWindow, from: nil))
+        if r.needsRedraw { needsDisplay = true }
+        if r.fire == .close { onClose?() }
     }
 }
 
