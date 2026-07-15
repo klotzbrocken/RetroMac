@@ -53,6 +53,9 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
             overlay.onHover = { [weak self] h in
                 self?.webView?.evaluateJavaScript("window.setHover && window.setHover(\(h))")
             }
+            overlay.onButtonState = { [weak self] slot, state in
+                self?.webView?.evaluateJavaScript("window.setBtnState && window.setBtnState('\(slot)','\(state)')")
+            }
 
             let container = NSView(frame: initial)
             container.addSubview(wv)
@@ -287,6 +290,10 @@ final class DragOverlayView: NSView {
     var onCollapse: (() -> Void)?       // Mac OS 9 WindowShade (collapse box)
     var onZoom: (() -> Void)?           // Mac OS 9 zoom box
     var onHover: ((Bool) -> Void)?      // title-bar hover (Aqua reveals traffic-light glyphs)
+    /// Per-button interaction feedback: (slot, state) where slot ∈ "close"/"collapse"/"zoom"
+    /// and state ∈ "hover"/"press"/"normal". The widget's JS toggles a class on the button so
+    /// its title-bar controls light up like the native chrome. See `window.setBtnState`.
+    var onButtonState: ((String, String) -> Void)?
     var closeRect: CGRect = .zero
     var collapseRect: CGRect = .zero
     var zoomRect: CGRect = .zero
@@ -294,6 +301,8 @@ final class DragOverlayView: NSView {
     /// to the WebView so dropdown items over the title bar aren't swallowed as a window drag.
     var passthrough = false
     private var hoverTracking: NSTrackingArea?
+    private var hovered: String?
+    private var pressed: String?
     override func hitTest(_ point: NSPoint) -> NSView? { passthrough ? nil : super.hitTest(point) }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     // Keep the normal arrow over the title bar — the resize-corner overlays underneath set a
@@ -302,32 +311,71 @@ final class DragOverlayView: NSView {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let t = hoverTracking { removeTrackingArea(t) }
-        let t = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+        let t = NSTrackingArea(rect: .zero,
+                               options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
                                owner: self, userInfo: nil)
         addTrackingArea(t); hoverTracking = t
     }
-    override func mouseEntered(with event: NSEvent) { onHover?(true) }
-    override func mouseExited(with event: NSEvent) { onHover?(false) }
-    override func mouseDown(with event: NSEvent) {
-        let p = convert(event.locationInWindow, from: nil)
-        // Exact hits first — decisive when the boxes are large and adjacent (Win98's
-        // 20px minimise/maximise/close trio would otherwise collide under the slop).
-        if closeRect.contains(p) { onClose?(); return }
-        if !collapseRect.isEmpty && collapseRect.contains(p) { onCollapse?(); return }
-        if !zoomRect.isEmpty && zoomRect.contains(p) { onZoom?(); return }
-        // Then generous hit slop — the Platinum boxes are only ~11px. Close sits alone on the
-        // left; collapse+zoom are an adjacent pair on the right, so a click near either
-        // routes to whichever box centre is closer (padding overlaps otherwise).
+
+    /// The button slot under `p`, matching the exact-then-generous-slop hit-testing used for
+    /// clicks (so hover/press light up exactly what a click would trigger).
+    private func regionAt(_ p: CGPoint) -> String? {
+        // Exact hits first — decisive when boxes are large and adjacent (Win98's trio).
+        if closeRect.contains(p) { return "close" }
+        if !collapseRect.isEmpty && collapseRect.contains(p) { return "collapse" }
+        if !zoomRect.isEmpty && zoomRect.contains(p) { return "zoom" }
+        // Then generous slop — Platinum boxes are only ~11px; collapse+zoom route to the
+        // nearer box centre where the padded rects overlap.
         let pad: CGFloat = 11
-        if closeRect.insetBy(dx: -pad, dy: -pad).contains(p) { onClose?(); return }
+        if closeRect.insetBy(dx: -pad, dy: -pad).contains(p) { return "close" }
         let cHit = !collapseRect.isEmpty && collapseRect.insetBy(dx: -pad, dy: -pad).contains(p)
         let zHit = !zoomRect.isEmpty && zoomRect.insetBy(dx: -pad, dy: -pad).contains(p)
         if cHit || zHit {
-            if cHit && zHit {
-                (abs(p.x - collapseRect.midX) <= abs(p.x - zoomRect.midX) ? onCollapse : onZoom)?()
-            } else if cHit { onCollapse?() } else { onZoom?() }
+            if cHit && zHit { return abs(p.x - collapseRect.midX) <= abs(p.x - zoomRect.midX) ? "collapse" : "zoom" }
+            return cHit ? "collapse" : "zoom"
+        }
+        return nil
+    }
+
+    private func fire(_ slot: String) {
+        switch slot { case "close": onClose?(); case "collapse": onCollapse?(); case "zoom": onZoom?(); default: break }
+    }
+
+    override func mouseEntered(with event: NSEvent) { guard !passthrough else { return }; onHover?(true) }
+    override func mouseExited(with event: NSEvent) {
+        onHover?(false)
+        if let old = hovered { onButtonState?(old, "normal"); hovered = nil }
+    }
+    override func mouseMoved(with event: NSEvent) {
+        guard !passthrough, pressed == nil else { return }
+        let r = regionAt(convert(event.locationInWindow, from: nil))
+        if r != hovered {
+            if let old = hovered { onButtonState?(old, "normal") }
+            if let new = r { onButtonState?(new, "hover") }
+            hovered = r
+        }
+    }
+    override func mouseDown(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        if let r = regionAt(p) {
+            // Press the button (visual only); it fires on mouse-up-inside, like the native chrome.
+            pressed = r; hovered = r
+            onButtonState?(r, "press")
             return
         }
         window?.performDrag(with: event)
+    }
+    override func mouseDragged(with event: NSEvent) {
+        guard let pr = pressed else { return }
+        let inside = regionAt(convert(event.locationInWindow, from: nil)) == pr
+        onButtonState?(pr, inside ? "press" : "normal")
+    }
+    override func mouseUp(with event: NSEvent) {
+        guard let pr = pressed else { return }
+        let hit = regionAt(convert(event.locationInWindow, from: nil)) == pr
+        onButtonState?(pr, "normal")
+        pressed = nil
+        hovered = hit ? pr : nil
+        if hit { fire(pr) }
     }
 }

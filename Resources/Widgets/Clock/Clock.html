@@ -132,6 +132,16 @@
   body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:22px;margin:3px 3px 0;padding:0 2px 0 6px;
     background:linear-gradient(90deg,#00007b,#1085d2);}
 </style>
+<style>
+/* Live title-bar button feedback (native DragOverlayView → window.setBtnState); the overlay
+   intercepts mouse events, so these classes stand in for :hover/:active. */
+.xp-close.is-hover,.mf-close.is-hover,.mx-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
+.xp-close.is-press,.mf-close.is-press,.mx-close.is-press,.closebox.is-press{filter:brightness(.82);}
+.w98-btn.is-hover{filter:brightness(1.06);}
+.w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
+.m9-ctl.is-hover{background:#d0d0dc;}
+.m9-ctl.is-press{background:#9c9cb0;box-shadow:inset 0 0 0 2px #545487;}
+</style>
 </head>
 <body>
   <div id="win">
@@ -225,6 +235,23 @@
     return [...R('tab'),...R('bxclose')];
   };
   window.widgetSize=function(){ const w=document.getElementById('win'); return [w.offsetWidth, w.offsetHeight]; };
+</script>
+<script>
+window.setBtnState = function(slot, state){
+  const cl = document.body.classList;
+  let ids;
+  if (cl.contains('theme-win98'))         ids = {close:'w98close', collapse:'w98min', zoom:'w98max'};
+  else if (cl.contains('theme-macosx'))   ids = {close:'mxclose', collapse:'mxmin', zoom:'mxzoom'};
+  else if (cl.contains('theme-maiksfav')) ids = {close:'mfclose', collapse:'mfmin', zoom:'mfzoom'};
+  else if (cl.contains('theme-winxp'))    ids = {close:'xpclose', collapse:'xpmin', zoom:'xpmax'};
+  else if (cl.contains('theme-macos9'))   ids = {close:'m9close', collapse:'m9collapse', zoom:'m9zoom'};
+  else ids = {close:'closebox'};
+  const el = ids[slot] && document.getElementById(ids[slot]);
+  if (!el) return;
+  el.classList.remove('is-hover','is-press');
+  if (state === 'hover') el.classList.add('is-hover');
+  else if (state === 'press') el.classList.add('is-press');
+};
 </script>
 </body>
 </html>

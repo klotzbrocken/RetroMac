@@ -50,6 +50,9 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             overlay.onHover = { [weak self] h in
                 self?.webView?.evaluateJavaScript("window.setHover && window.setHover(\(h))")
             }
+            overlay.onButtonState = { [weak self] slot, state in
+                self?.webView?.evaluateJavaScript("window.setBtnState && window.setBtnState('\(slot)','\(state)')")
+            }
             overlay.autoresizingMask = [.minYMargin]   // stay pinned to the top tab on resize
 
             let container = NSView(frame: initial)

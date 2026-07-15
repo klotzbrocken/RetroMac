@@ -195,6 +195,14 @@
     font:11px Tahoma,"Segoe UI",sans-serif;}
   body.theme-winxp .be-mid{margin:0 4px;background:#fff;}
   body.theme-winxp .be-status{margin:0 4px 4px;background:#ECE9D8;color:#000;border:none;}
+  /* XP Luna custom scrollbar (the .sb-* elements) — no BeOS dot grips; Luna gel thumb. */
+  body.theme-winxp .vsb,body.theme-winxp .hsb{background:#d6e5f5;border-color:#aac3e0;}
+  body.theme-winxp .sb-btn{background:linear-gradient(180deg,#eaf2fc,#bcd4ef);border:1px solid #6a93c8;border-radius:0;}
+  body.theme-winxp .sb-trough{background:#d6e5f5;}
+  body.theme-winxp .sb-thumb{border:1px solid #245edb;border-radius:3px;}
+  body.theme-winxp .vsb .sb-thumb{background:linear-gradient(90deg,#aecbfa,#5b8def 50%,#3f78e0);}
+  body.theme-winxp .hsb .sb-thumb{background:linear-gradient(180deg,#aecbfa,#5b8def 50%,#3f78e0);}
+  body.theme-winxp .sb-thumb .grip{display:none;}
   body.theme-winxp .be-content{background:#fff;}
   body.theme-winxp .be-item .lbl{border-bottom:none;}
   body.theme-winxp .be-grid.list .be-item.sel,body.theme-winxp .be-item.sel .lbl{background:#316AC5;color:#fff;}
@@ -314,6 +322,16 @@
   body.theme-win98 .sb-thumb .grip{display:none;}
   body.theme-win98 .be-item .lbl{border-bottom:none;font:12px Tahoma,"Microsoft Sans Serif",sans-serif;}
   body.theme-win98 .be-grid.list .be-item.sel,body.theme-win98 .be-item.sel .lbl{background:#000080;color:#fff;}
+</style>
+<style>
+/* Live title-bar button feedback (native DragOverlayView → window.setBtnState); the overlay
+   intercepts mouse events, so these classes stand in for :hover/:active. */
+.xp-close.is-hover,.mf-close.is-hover,.mx-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
+.xp-close.is-press,.mf-close.is-press,.mx-close.is-press,.closebox.is-press{filter:brightness(.82);}
+.w98-btn.is-hover{filter:brightness(1.06);}
+.w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
+.m9-ctl.is-hover{background:#d0d0dc;}
+.m9-ctl.is-press{background:#9c9cb0;box-shadow:inset 0 0 0 2px #545487;}
 </style>
 </head>
 <body>
@@ -637,6 +655,23 @@
 
   window.addEventListener('resize',buildGrid);
   buildGrid();
+</script>
+<script>
+window.setBtnState = function(slot, state){
+  const cl = document.body.classList;
+  let ids;
+  if (cl.contains('theme-win98'))         ids = {close:'w98close', collapse:'w98min', zoom:'w98max'};
+  else if (cl.contains('theme-macosx'))   ids = {close:'mxclose', collapse:'mxmin', zoom:'mxzoom'};
+  else if (cl.contains('theme-maiksfav')) ids = {close:'mfclose', collapse:'mfmin', zoom:'mfzoom'};
+  else if (cl.contains('theme-winxp'))    ids = {close:'xpclose', collapse:'xpmin', zoom:'xpmax'};
+  else if (cl.contains('theme-macos9'))   ids = {close:'m9close', collapse:'m9collapse', zoom:'m9zoom'};
+  else ids = {close:'closebox'};
+  const el = ids[slot] && document.getElementById(ids[slot]);
+  if (!el) return;
+  el.classList.remove('is-hover','is-press');
+  if (state === 'hover') el.classList.add('is-hover');
+  else if (state === 'press') el.classList.add('is-press');
+};
 </script>
 </body>
 </html>
