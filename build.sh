@@ -214,18 +214,6 @@ if [ ! -x "$WC_BUILD/stratagus" ] && command -v cmake >/dev/null 2>&1; then
         git submodule update --init --depth 1 vendor/peonpad vendor/war1gus >/dev/null 2>&1 || true
     fi
     if [ -f "vendor/peonpad/CMakeLists.txt" ]; then
-        # Stratagus compiles its GLSL shader support out on Apple platforms
-        # (#ifndef __APPLE__ around shaders.cpp/.h) — apparently a leftover from macOS
-        # deprecating OpenGL. The code builds and the shaders compile fine here, and this
-        # is what gives Warcraft its in-engine CRT look, so re-enable it. Applied to the
-        # submodule's working tree; harmless to re-run (checked with --reverse first).
-        for patch in vendor/patches/*.patch; do
-            [ -f "$patch" ] || continue
-            if ! git -C vendor/peonpad apply --reverse --check "../../$patch" >/dev/null 2>&1; then
-                git -C vendor/peonpad apply "../../$patch" 2>/dev/null \
-                    && echo "  ✓ Applied $(basename "$patch")"
-            fi
-        done
         echo "  ⏳ Building Stratagus engine (one-time, a few minutes)…"
         cmake -S vendor/peonpad -B "$WC_BUILD" -G "Unix Makefiles" \
             -DPEONPAD_ENABLE_ENGINE=ON -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release \

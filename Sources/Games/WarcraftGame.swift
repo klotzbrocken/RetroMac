@@ -1,4 +1,5 @@
 import AppKit
+import ScreenCaptureKit
 
 /// Warcraft: Orcs & Humans and Warcraft II on the bundled Stratagus engine (GPL-2), launched
 /// as a separate process — never linked, so its GPL-2 stays clear of RetroMac's GPL-3.
@@ -190,29 +191,58 @@ enum WarcraftGame {
 
     // MARK: - CRT
 
-    /// Point the game's own `VideoShader` preference at Stratagus' built-in CRT shader, so the
-    /// retro look runs INSIDE the engine (`SetShader`) — no screen capture, no Screen Recording
-    /// permission, no overlay window. Mirrors how Doom gets its CRT via the GZDoom PK3.
-    /// Re-applied on every launch so it tracks the global "Apply CRT effect to games" switch.
-    private static func applyShaderPreference(_ title: Title) {
-        let fm = FileManager.default
-        let prefsDir = userStateDir(title).appendingPathComponent(title.namespace)
-        try? fm.createDirectory(at: prefsDir, withIntermediateDirectories: true)
-        let prefs = prefsDir.appendingPathComponent("preferences.lua")
-        let ns = title.namespace
-        let shader = AppSettings.shared.gamesCRTEnabled ? "CRT" : "none"
-        let setting = "\(ns).preferences.VideoShader = \"\(shader)\""
+    private static var overlayPollTimer: Timer?
 
-        var lines: [String]
-        if let existing = try? String(contentsOf: prefs, encoding: .utf8), !existing.isEmpty {
-            lines = existing.components(separatedBy: "\n")
-                .filter { !$0.contains("\(ns).preferences.VideoShader") }
-        } else {
-            lines = ["if (\(ns) == nil) then \(ns) = {} end",
-                     "if (\(ns).preferences == nil) then \(ns).preferences = {} end"]
+    /// Lay RetroMac's CRT shader over the game window, the same ScreenCaptureKit path the ROM
+    /// emulators use (see ROMLauncher).
+    ///
+    /// Stratagus has its own GLSL shaders and even a built-in "CRT", but it compiles the whole
+    /// shader layer out on Apple (`#ifndef __APPLE__`). That guard is not cosmetic: force the
+    /// code back in and the shaders do compile, yet the render path — libretro-style shaders
+    /// driven through OpenGL immediate mode — draws a black screen after the intro. So the
+    /// overlay it is.
+    ///
+    /// The game is a bare binary rather than an app bundle, so its window is matched by the
+    /// PID we launched rather than a bundle identifier.
+    private static func startShaderOverlay(pid: pid_t) {
+        guard AppSettings.shared.gamesCRTEnabled,
+              let appDel = NSApp.delegate as? AppDelegate else { return }
+        let preset = appDel.launcherCurrentPreset
+        guard !preset.isEmpty else { return }
+
+        var attempts = 0
+        overlayPollTimer?.invalidate()
+        overlayPollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+            attempts += 1
+            if attempts > 20 {   // 10s — the engine loads its data before showing a window
+                timer.invalidate(); overlayPollTimer = nil
+                print("[Warcraft] Timed out waiting for the game window — no CRT overlay")
+                return
+            }
+            Task {
+                guard let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true),
+                      let scWindow = content.windows.first(where: {
+                          $0.owningApplication?.processID == pid
+                              && $0.frame.width > 100 && $0.frame.height > 100
+                      })
+                else { return }
+
+                await MainActor.run {
+                    timer.invalidate(); overlayPollTimer = nil
+                    appDel.saveOverlayState()
+                    if appDel.isActive { appDel.disableAll() }
+                    // Let the game paint a frame before capturing it.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        appDel.startWindowOverlay(window: scWindow, presetID: preset)
+                        print("[Warcraft] CRT overlay attached (preset: \(preset))")
+                        // The overlay must not hold focus — the game needs the keyboard.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            NSRunningApplication(processIdentifier: pid)?.activate()
+                        }
+                    }
+                }
+            }
         }
-        lines.append(setting)
-        try? lines.joined(separator: "\n").write(to: prefs, atomically: true, encoding: .utf8)
     }
 
     // MARK: - Launch
@@ -235,7 +265,6 @@ enum WarcraftGame {
         }
         let user = userStateDir(title)
         try? FileManager.default.createDirectory(at: user, withIntermediateDirectories: true)
-        applyShaderPreference(title)
 
         let p = Process()
         p.executableURL = engine
@@ -248,6 +277,7 @@ enum WarcraftGame {
         do {
             try p.run()
             print("[Warcraft] Launched \(title.displayName) (data: \(run.path))")
+            startShaderOverlay(pid: p.processIdentifier)
         } catch {
             print("[Warcraft] Launch failed: \(error)")
             alert("Could not launch \(title.displayName)", "\(error.localizedDescription)")
