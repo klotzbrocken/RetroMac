@@ -58,18 +58,6 @@ enum DesktopLauncher {
                 WebAppController.open(name: entry.name, url: urlString, width: w, height: h)
             }
 
-        case "game":
-            // Browser game (external URL) in a clean themed window with pointer-lock/fullscreen.
-            // args = [width, height]; entry.presetID (or the matching library preset) adds CRT.
-            if let urlString = entry.url {
-                let a = entry.args ?? []
-                let w = CGFloat(Int(a.count > 0 ? a[0] : "") ?? 960)
-                let h = CGFloat(Int(a.count > 1 ? a[1] : "") ?? 640)
-                let preset = AppSettings.shared.gameBookmarks.first { $0.url == urlString }?.presetID
-                WebAppController.open(name: entry.name, url: urlString, width: w, height: h,
-                                     gameMode: true, presetID: preset)
-            }
-
         case "screensaver":
             ScreensaverController.shared.start()
 

@@ -8,16 +8,6 @@ struct GamesSettingsTab: View {
     @State private var razeInstalled = false
     @State private var vkQuakeInstalled = false
     @State private var yamagiQ2Installed = false
-    @State private var newGameName: String = ""
-    @State private var newGameURL: String = ""
-
-    private var allPresets: [(String, String)] {
-        var list: [(String, String)] = [("", "None")]
-        for (_, presets) in PresetRegistry.categorizedPresets {
-            for p in presets { list.append((p.id, p.displayName)) }
-        }
-        return list
-    }
 
     var body: some View {
         Form {
@@ -29,9 +19,6 @@ struct GamesSettingsTab: View {
                 Text("Adds the bundled CRT shader to Doom, Raze, Heretic, Shadow Warrior and Freedoom.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-
-            // Browser games — user-editable library of external game URLs.
-            browserGamesSection
 
             // Retro Console ROMs (drop zone + library)
             Section("Retro Games") {
@@ -64,74 +51,6 @@ struct GamesSettingsTab: View {
                 || FileManager.default.fileExists(atPath: "/Applications/Yamagi Quake II.app")
             refreshWadFiles()
             refreshGrpFiles()
-        }
-    }
-
-    // MARK: - Browser Games (user library)
-
-    private var browserGamesSection: some View {
-        Section("Browser Games") {
-            if settings.gameBookmarks.isEmpty {
-                Text("No browser games yet. Add a game URL below.")
-                    .font(.caption).foregroundStyle(.secondary)
-            } else {
-                ForEach(Array(settings.gameBookmarks.enumerated()), id: \.element.id) { index, game in
-                    gameRow(index: index, game: game)
-                }
-            }
-            HStack(spacing: 8) {
-                TextField("Name", text: $newGameName).frame(width: 130)
-                TextField("URL (e.g. silentspacemarine.com)", text: $newGameURL)
-                Button("Add") { addGame() }
-                    .disabled(newGameName.isEmpty || newGameURL.isEmpty)
-            }
-            Text("Opens external games in a themed window with element-fullscreen and pointer-lock. Pick a CRT preset per game to layer the shader.")
-                .font(.caption).foregroundStyle(.secondary)
-        }
-    }
-
-    private func addGame() {
-        guard !newGameName.isEmpty, !newGameURL.isEmpty else { return }
-        var url = newGameURL
-        if !url.hasPrefix("http://") && !url.hasPrefix("https://") { url = "https://" + url }
-        settings.gameBookmarks.append(GameBookmark(name: newGameName, url: url))
-        newGameName = ""; newGameURL = ""
-    }
-
-    @ViewBuilder
-    private func gameRow(index: Int, game: GameBookmark) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(game.name)
-                    Text(game.url).font(.caption).foregroundStyle(.secondary)
-                        .lineLimit(1).truncationMode(.middle)
-                }
-                Spacer()
-                Button {
-                    WebAppController.open(name: game.name, url: game.url,
-                                          width: CGFloat(game.width), height: CGFloat(game.height),
-                                          gameMode: true, presetID: game.presetID)
-                } label: { Image(systemName: "play.circle.fill").foregroundStyle(Color.rmAccent) }
-                    .buttonStyle(.plain).help("Play")
-                Button { settings.gameBookmarks.remove(at: index) } label: {
-                    Image(systemName: "minus.circle.fill").foregroundStyle(.red)
-                }.buttonStyle(.plain).help("Remove")
-            }
-            HStack {
-                Text("CRT preset").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Picker("", selection: Binding(
-                    get: { game.presetID ?? "" },
-                    set: { newVal in
-                        var updated = settings.gameBookmarks
-                        updated[index].presetID = newVal.isEmpty ? nil : newVal
-                        settings.gameBookmarks = updated
-                    }
-                )) {
-                    ForEach(allPresets, id: \.0) { Text($0.1).tag($0.0) }
-                }.labelsHidden().pickerStyle(.menu).frame(width: 180)
-            }
         }
     }
 
