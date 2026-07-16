@@ -9,19 +9,6 @@ struct TVBookmark: Codable, Identifiable, Equatable {
     var presetID: String?  // nil = no preset ("None")
 }
 
-/// A user-editable browser game: an external URL opened in a themed WebApp window in "game
-/// mode" (clean chrome, no 98.js bridge, pointer-lock + element fullscreen). Mirrors
-/// `TVBookmark` — the user adds/edits/removes entries in Settings ▸ Games, and each can
-/// auto-apply a CRT preset just like a TV bookmark.
-struct GameBookmark: Codable, Identifiable, Equatable {
-    var id: UUID = UUID()
-    var name: String
-    var url: String
-    var width: Int = 960
-    var height: Int = 640
-    var presetID: String?  // nil = no preset ("None"); "" is normalised to nil on decode
-}
-
 /// Performance profile presets that bundle resolution, fps, and overlay settings
 enum PerformanceProfile: String, CaseIterable, Identifiable {
     case high = "high"
@@ -344,15 +331,6 @@ final class AppSettings: ObservableObject {
         didSet {
             if let data = try? JSONEncoder().encode(tvBookmarks) {
                 defaults.set(data, forKey: "tvBookmarks")
-            }
-        }
-    }
-
-    // Browser Game library (user-editable, like tvBookmarks)
-    @Published var gameBookmarks: [GameBookmark] {
-        didSet {
-            if let data = try? JSONEncoder().encode(gameBookmarks) {
-                defaults.set(data, forKey: "gameBookmarks")
             }
         }
     }
@@ -806,30 +784,6 @@ final class AppSettings: ObservableObject {
                 TVBookmark(name: "Classic Movies", url: "https://rpn.bozztv.com/gusa/gusa-tvsclassicmovies/index.m3u8"),
                 TVBookmark(name: "Quiz Show", url: "https://rpn.bozztv.com/gusa/gusa-tvsgameshow/index.m3u8"),
                 TVBookmark(name: "Baywatch", url: "https://amg00145-fremantlemedian-baywatch-samsungau-gtsd6.amagi.tv/playlist/amg00145-fremantlemedian-baywatch-samsungau/playlist.m3u8"),
-            ]
-        }
-        // Browser games (user-editable). Every default was reachability-checked; the Quake
-        // ports run free shareware/demo data, the dos.zone entries stream the game data from
-        // the host. The user edits/adds/removes them in Settings ▸ Games.
-        // Bump gameBookmarksVersion when the curated default list changes: a stored library from
-        // an older version is replaced once (dead hosts pruned, new titles added), after which
-        // the user's own edits are respected again.
-        let gamesLibraryVersion = 2
-        if defaults.integer(forKey: "gameBookmarksVersion") >= gamesLibraryVersion,
-           let data = defaults.data(forKey: "gameBookmarks"),
-           let games = try? JSONDecoder().decode([GameBookmark].self, from: data) {
-            gameBookmarks = games
-        } else {
-            defaults.set(gamesLibraryVersion, forKey: "gameBookmarksVersion")
-            gameBookmarks = [
-                GameBookmark(name: "Doom", url: "https://silentspacemarine.com/", width: 960, height: 640),
-                GameBookmark(name: "Doom II", url: "https://dos.zone/doom-ii-oct-10-1994/", width: 1024, height: 700),
-                GameBookmark(name: "Quake", url: "https://qwasm.m-h.org.uk/", width: 1024, height: 700),
-                GameBookmark(name: "Quake II", url: "https://qwasm2.m-h.org.uk/", width: 1024, height: 700),
-                GameBookmark(name: "Quake III Arena", url: "https://thelongestyard.link/", width: 1024, height: 700),
-                GameBookmark(name: "Unreal Tournament 99", url: "https://dos.zone/ut99/", width: 1024, height: 700),
-                GameBookmark(name: "WarCraft: Orcs & Humans", url: "https://dos.zone/warcraft-orcs-humans/", width: 1024, height: 700),
-                GameBookmark(name: "WarCraft II: Tides of Darkness", url: "https://dos.zone/warcraft-ii-tides-of-darkness/", width: 1024, height: 700),
             ]
         }
         tvTubePreset = defaults.string(forKey: "tvTubePreset") ?? "joel-gdv-ntsc"

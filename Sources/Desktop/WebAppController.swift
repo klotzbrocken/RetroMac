@@ -15,22 +15,12 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     private static var openWindows: [String: WebAppController] = [:]
 
     static func open(name: String, url: String, width: CGFloat, height: CGFloat) {
-        open(name: name, url: url, width: width, height: height, gameMode: false, presetID: nil)
-    }
-
-    /// Open a URL in a themed WebApp window. `gameMode` loads an arbitrary game URL with clean
-    /// chrome (no nav bar), no 98.js Save/Print bridge, and element-fullscreen enabled; an
-    /// optional `presetID` layers the CRT shader over that window (nil / "" = no shader).
-    static func open(name: String, url: String, width: CGFloat, height: CGFloat,
-                     gameMode: Bool, presetID: String?) {
         if let existing = openWindows[url], existing.panel?.isVisible == true {
             existing.panel?.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
         let c = WebAppController(name: name, url: url, size: NSSize(width: width, height: height))
-        c.isGame = gameMode
-        c.gamePresetID = (presetID?.isEmpty == false) ? presetID : nil
         openWindows[url] = c
         c.show()
     }
@@ -64,8 +54,6 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     private let size: NSSize
     private var panel: WebAppPanel?
     private var preZoomFrame: NSRect?
-    fileprivate var isGame = false            // browser-game window: clean chrome, no bridge, fullscreen
-    fileprivate var gamePresetID: String?     // CRT preset to layer over the game window (nil = none)
 
     /// System 6 zoom box: toggle the window between its size and (near-)full screen.
     private func toggleZoom() {
@@ -90,29 +78,19 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     @objc private func themeChanged() { close() }
 
     private func show() {
-        var frame = NSRect(origin: .zero, size: size)
+        let frame = NSRect(origin: .zero, size: size)
         // A window is a trusted self-contained 98.js app ONLY if it is served from the exact
         // 98.js host + path — not any URL that merely contains "github.io" somewhere (e.g.
         // github.io.evil.com or example.com/?github.io). Trusted apps get the native
         // Save/Print bridge and no nav chrome; everything else is a plain browser window.
-        // Game windows: never trusted (arbitrary URL), clean chrome (no nav bar), no bridge.
-        let isTrusted98 = isGame ? false : Self.isTrusted98App(appURL)
-        let showNav = isGame ? false : !isTrusted98
+        let isTrusted98 = Self.isTrusted98App(appURL)
+        let showNav = !isTrusted98
         bridgeActive = isTrusted98
         let chrome = WebAppChromeView(frame: frame, title: appName, showNav: showNav)
-        // Games size by their canvas: grow the panel so the web content gets exactly the
-        // requested width/height (otherwise the chrome clips the bottom of the game).
-        if isGame {
-            frame = NSRect(origin: .zero, size: chrome.outerSize(forContent: size))
-            chrome.frame = frame
-        }
         chrome.onClose = { [weak self] in self?.close() }
 
         let cfg = WKWebViewConfiguration()
         cfg.preferences.javaScriptCanOpenWindowsAutomatically = true
-        // Games need the browser fullscreen API (canvas → element fullscreen) and, where the
-        // WebKit build supports it, Pointer Lock for FPS mouse-look.
-        if isGame { cfg.preferences.isElementFullscreenEnabled = true }
         // Bridge the hosted apps' File/Print menus to native macOS: window.print() and
         // <a download> clicks (how Notepad/Paint "Save"/"Save As" fall back when the
         // File System Access API is unavailable, as it is in WKWebView) are routed to Swift.
@@ -146,10 +124,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         chrome.onForward = { [weak wv] in if wv?.canGoForward == true { wv?.goForward() } }
         chrome.onZoom = { [weak self] in self?.toggleZoom() }
 
-        // Games activate normally so they take keyboard focus and can capture the pointer;
-        // the 98.js/browser windows stay non-activating as before.
-        let mask: NSWindow.StyleMask = isGame ? [.borderless] : [.borderless, .nonactivatingPanel]
-        let p = WebAppPanel(contentRect: frame, styleMask: mask,
+        let p = WebAppPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
         p.level = .normal
         p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
@@ -160,22 +135,10 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         self.panel = p
         if let screen = NSScreen.main {
             let vf = screen.visibleFrame
-            p.setFrameOrigin(NSPoint(x: vf.midX - frame.width / 2, y: vf.midY - frame.height / 2))
+            p.setFrameOrigin(NSPoint(x: vf.midX - size.width / 2, y: vf.midY - size.height / 2))
         }
         NSApp.activate(ignoringOtherApps: true)
         p.makeKeyAndOrderFront(nil)
-
-        // Layer the CRT shader over this game window (per-game preset), the same window-capture
-        // path native games use. Deferred so the panel is on-screen and has a window number.
-        if isGame, let preset = gamePresetID {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self, weak p] in
-                guard let p = p, p.windowNumber > 0 else { return }
-                (NSApp.delegate as? AppDelegate)?
-                    .applyOverlayToWindowID(CGWindowID(p.windowNumber), presetName: preset,
-                                            parentWindow: p, saveState: false)
-                _ = self
-            }
-        }
     }
 
     private func close() {
@@ -204,27 +167,6 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         NSApp.activate(ignoringOtherApps: true)
         p.begin { resp in completionHandler(resp == .OK ? p.urls : nil) }
     }
-
-    // MARK: - Pointer Lock (FPS mouse-look)
-    //
-    // WebKit asks the embedding app before it locks the pointer, but WKWebView only exposes
-    // that through WKUIDelegatePrivate — there is no public opt-in. Without answering these,
-    // every requestPointerLock() from a game is silently denied, so the cursor never gets
-    // captured and simply escapes the window (Quake/UT mouse-look does nothing). Declared by
-    // explicit selector: WebKit builds that don't call them just leave these unused, and we
-    // only ever grant for game windows.
-
-    @objc(_webView:requestPointerLockWithCompletionHandler:)
-    func _webView(_ webView: WKWebView, requestPointerLockWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
-        completionHandler(isGame)
-    }
-
-    /// Older WebKit variant (no completion handler — implementing it grants the lock).
-    @objc(_webViewRequestPointerLock:)
-    func _webViewRequestPointerLock(_ webView: WKWebView) { }
-
-    @objc(_webViewDidLosePointerLock:)
-    func _webViewDidLosePointerLock(_ webView: WKWebView) { }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
@@ -449,14 +391,6 @@ final class WebAppChromeView: NSView {
         return NSRect(x: pad, y: topOffset,
                       width: bounds.width - pad * 2,
                       height: bounds.height - topOffset - pad)
-    }
-
-    /// Outer panel size whose `contentRect()` is exactly `content`. Game windows size by their
-    /// canvas: without this the title bar + padding eat into the requested height and the
-    /// bottom of the game is clipped.
-    func outerSize(forContent content: NSSize) -> NSSize {
-        NSSize(width: content.width + pad * 2,
-               height: content.height + pad * 2 + titleH + 2)
     }
 
     /// Host the webview and add a bottom-right resize grip on top of it.
