@@ -56,17 +56,84 @@ enum WarcraftGame {
         title == .warcraft2 ? AppSettings.shared.warcraft2DataFolder : AppSettings.shared.warcraft1DataFolder
     }
 
-    /// True when the configured folder looks like already-extracted game data: it carries the
-    /// media folders plus the extractor's config. (A raw game installation does not — that
-    /// needs `wartool` first.)
-    static func hasExtractedData(_ title: Title) -> Bool {
-        let path = dataFolder(title)
-        guard !path.isEmpty else { return false }
-        let dir = URL(fileURLWithPath: path)
+    /// True when `dir` holds already-extracted game data: the media folders plus the
+    /// extractor's config. (A raw game installation does not — that needs `wartool` first.)
+    static func hasExtractedData(at dir: URL, _ title: Title) -> Bool {
         let fm = FileManager.default
         guard fm.fileExists(atPath: dir.appendingPathComponent("scripts/\(title.configFile)").path) else { return false }
         // "graphics" alone is enough to tell extracted data from an installer folder.
         return fm.fileExists(atPath: dir.appendingPathComponent("graphics").path)
+    }
+
+    static func hasExtractedData(_ title: Title) -> Bool {
+        let path = dataFolder(title)
+        guard !path.isEmpty else { return false }
+        return hasExtractedData(at: URL(fileURLWithPath: path), title)
+    }
+
+    /// True when `dir` is a raw game installation — i.e. it holds the archives the extractor
+    /// reads (maindat.war and friends), rather than data someone already extracted.
+    static func looksLikeInstallation(at dir: URL, _ title: Title) -> Bool {
+        // Only Warcraft II for now: extracting Warcraft I needs war1tool, which this build
+        // does not produce (war1gus is vendored for its game logic only).
+        guard title == .warcraft2, canExtract(title) else { return false }
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return false }
+        return items.contains { $0.lowercased() == "maindat.war" }
+    }
+
+    /// Whether RetroMac can extract this title itself (i.e. the matching tool is bundled).
+    static func canExtract(_ title: Title) -> Bool {
+        guard title == .warcraft2, let tool = wartoolURL else { return false }
+        return FileManager.default.isExecutableFile(atPath: tool.path)
+    }
+
+    /// Where RetroMac puts data it extracted itself.
+    private static func extractedDataDir(_ title: Title) -> URL {
+        supportDir.appendingPathComponent("\(title.namespace)-extracted")
+    }
+
+    /// Why an extraction failed, in words we can show the user directly.
+    struct ExtractionFailure: Error { let message: String }
+
+    /// Run the bundled extractor over a raw game installation, into our own support folder.
+    /// Off the main thread; `completion` lands back on the main queue.
+    static func extract(_ title: Title, from source: URL,
+                        completion: @escaping (Result<URL, ExtractionFailure>) -> Void) {
+        guard let tool = wartoolURL, FileManager.default.isExecutableFile(atPath: tool.path) else {
+            completion(.failure(ExtractionFailure(message: "The extraction tool is not bundled with this build.")))
+            return
+        }
+        let dest = extractedDataDir(title)
+        DispatchQueue.global(qos: .userInitiated).async {
+            let fm = FileManager.default
+            try? fm.removeItem(at: dest)
+            try? fm.createDirectory(at: dest, withIntermediateDirectories: true)
+
+            let p = Process()
+            p.executableURL = tool
+            p.arguments = [source.path, dest.path]
+            let pipe = Pipe()
+            p.standardOutput = pipe; p.standardError = pipe
+            do { try p.run() } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(ExtractionFailure(message: error.localizedDescription)))
+                }
+                return
+            }
+            let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            p.waitUntilExit()
+
+            DispatchQueue.main.async {
+                if p.terminationStatus == 0, hasExtractedData(at: dest, title) {
+                    completion(.success(dest))
+                } else {
+                    let tail = output.split(separator: "\n").suffix(2).joined(separator: " — ")
+                    completion(.failure(ExtractionFailure(message: tail.isEmpty
+                        ? "The extractor exited with status \(p.terminationStatus)."
+                        : String(tail))))
+                }
+            }
+        }
     }
 
     static func isPlayable(_ title: Title) -> Bool {
