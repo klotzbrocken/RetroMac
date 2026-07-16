@@ -1,0 +1,6 @@
+[submodule "vendor/peonpad"]
+	path = vendor/peonpad
+	url = https://github.com/chrissotraidis/peonpad.git
+[submodule "vendor/war1gus"]
+	path = vendor/war1gus
+	url = https://github.com/Wargus/war1gus.git

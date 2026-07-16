@@ -29,6 +29,10 @@ struct GamesSettingsTab: View {
             // Bundled arcade demo
             pacmanSection
 
+            // Warcraft I + II on the bundled Stratagus engine (user supplies game data)
+            warcraftSection(.warcraft2)
+            warcraftSection(.warcraft1)
+
             // PC Games (existing — each is its own collapsible section)
             doomSection
             razeSection
@@ -51,6 +55,90 @@ struct GamesSettingsTab: View {
                 || FileManager.default.fileExists(atPath: "/Applications/Yamagi Quake II.app")
             refreshWadFiles()
             refreshGrpFiles()
+        }
+    }
+
+    // MARK: - Warcraft I + II (bundled Stratagus engine)
+
+    /// Engine ships with RetroMac; the media comes from the user's own copy of the game.
+    /// Mirrors the Doom WAD-folder section: pick a folder, see whether it was recognised.
+    @ViewBuilder
+    private func warcraftSection(_ title: WarcraftGame.Title) -> some View {
+        let engineOK = WarcraftGame.isEngineAvailable(title)
+        let dataOK = WarcraftGame.hasExtractedData(title)
+        let folder = WarcraftGame.dataFolder(title)
+
+        Section {
+            DisclosureGroup(title.displayName) {
+                HStack {
+                    Image(systemName: engineOK ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(engineOK ? .green : .red)
+                    Text("Stratagus engine")
+                    Spacer()
+                    Text(engineOK ? "Bundled" : "Not bundled").foregroundStyle(.secondary)
+                }
+                if !engineOK {
+                    Text("The engine is built from the vendored submodules on first build. Requires cmake and pkg-config (brew install cmake pkg-config), then rebuild RetroMac.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("Game data folder")
+                        Spacer()
+                        Button("Choose…") { chooseWarcraftFolder(title) }
+                        if !folder.isEmpty {
+                            Button("Clear") { setWarcraftFolder(title, "") }
+                        }
+                    }
+                    Text(folder.isEmpty ? "Not set" : abbreviatePath(folder))
+                        .font(.caption).foregroundStyle(.secondary)
+                        .lineLimit(1).truncationMode(.middle)
+
+                    if folder.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "info.circle").font(.caption2).foregroundStyle(.secondary)
+                            Text("Point this at your extracted \(title.displayName) data — the folder containing graphics, sounds and scripts.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    } else if dataOK {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill").font(.caption2).foregroundStyle(.green)
+                            Text("Game data recognised").font(.caption).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption2).foregroundStyle(.orange)
+                            Text("No extracted data here — expected \(title.configFile) plus a graphics folder.")
+                                .font(.caption).foregroundStyle(.orange)
+                        }
+                    }
+
+                    if WarcraftGame.isPlayable(title) {
+                        Button("Play \(title.displayName)") { WarcraftGame.launch(title) }
+                            .font(.caption)
+                    }
+                    Text("RetroMac ships the open-source engine and game logic only. The game media must come from your own copy — it is never bundled.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func setWarcraftFolder(_ title: WarcraftGame.Title, _ path: String) {
+        if title == .warcraft2 { settings.warcraft2DataFolder = path }
+        else { settings.warcraft1DataFolder = path }
+    }
+
+    private func chooseWarcraftFolder(_ title: WarcraftGame.Title) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose your extracted \(title.displayName) data folder"
+        if panel.runModal() == .OK, let url = panel.url {
+            setWarcraftFolder(title, url.path)
         }
     }
 

@@ -202,6 +202,51 @@ else
     echo "  ⚠ SDL2/vendor sources missing — Pac-Man demo not bundled"
 fi
 
+# --- Warcraft I + II via Stratagus (GPL-2 engine, vendored as submodules) ---
+# Compiling the engine takes minutes, so it is CACHED: it only builds when the binaries
+# are missing. The submodules are fetched on demand — a plain clone of RetroMac never
+# downloads them. Unlike Pac-Man, the result needs no Homebrew at all: SDL and friends
+# are statically linked from the engine's own third-party tree.
+WC_BUILD="vendor/peonpad/build/macos"
+if [ ! -x "$WC_BUILD/stratagus" ] && command -v cmake >/dev/null 2>&1; then
+    if [ ! -f "vendor/peonpad/CMakeLists.txt" ]; then
+        echo "  ⏳ Fetching Warcraft engine submodules (one-time)…"
+        git submodule update --init --depth 1 vendor/peonpad vendor/war1gus >/dev/null 2>&1 || true
+    fi
+    if [ -f "vendor/peonpad/CMakeLists.txt" ]; then
+        echo "  ⏳ Building Stratagus engine (one-time, a few minutes)…"
+        cmake -S vendor/peonpad -B "$WC_BUILD" -G "Unix Makefiles" \
+            -DPEONPAD_ENABLE_ENGINE=ON -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release \
+            -DPEONPAD_MACOS_ARCHITECTURE=arm64 -DPEONPAD_MACOS_DEPLOYMENT_TARGET=13.0 \
+            >/tmp/wargus_build.log 2>&1 \
+          && cmake --build "$WC_BUILD" --target peonpad_macos -j 8 >>/tmp/wargus_build.log 2>&1 \
+          || echo "  ⚠ Stratagus build failed (see /tmp/wargus_build.log)"
+    fi
+fi
+
+if [ -x "$WC_BUILD/stratagus" ]; then
+    WC_DIR="$CONTENTS/Resources/Games/Warcraft"
+    rm -rf "$WC_DIR"; mkdir -p "$WC_DIR"
+    cp "$WC_BUILD/stratagus" "$WC_DIR/stratagus"
+    [ -x "$WC_BUILD/wargus/wartool" ] && cp "$WC_BUILD/wargus/wartool" "$WC_DIR/wartool"
+    # Ship the GPL game logic only; the media half always comes from the user's own copy
+    # of the game. The engine's OWN scripts must be used — some distributions (e.g. the
+    # PS Vita release) ship scripts patched for engine functions this build doesn't have.
+    for pair in "wc2:vendor/peonpad/game/wargus" "wc1:vendor/war1gus"; do
+        key="${pair%%:*}"; src="${pair#*:}"
+        [ -d "$src/scripts" ] || continue
+        mkdir -p "$WC_DIR/$key-base"
+        for d in scripts campaigns maps contrib shaders; do
+            [ -d "$src/$d" ] && cp -R "$src/$d" "$WC_DIR/$key-base/$d"
+        done
+    done
+    codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$WC_DIR/stratagus"
+    [ -f "$WC_DIR/wartool" ] && codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$WC_DIR/wartool"
+    echo "  ✓ Warcraft engine (Stratagus) + WC1/WC2 game logic embedded"
+else
+    echo "  ⚠ Stratagus not built — Warcraft I/II not bundled (needs: brew install cmake pkg-config)"
+fi
+
 cat > "$CONTENTS/PkgInfo" <<'PKG'
 APPL????
 PKG
