@@ -189,6 +189,43 @@ enum WarcraftGame {
         return run
     }
 
+    // MARK: - Presentation
+
+    /// Patch one `<ns>.preferences.<key>` line in the engine's own preferences.lua. The engine
+    /// loads that file at startup and rewrites it on exit, so this is re-applied every launch
+    /// and never fights the user's in-game choices for other settings.
+    private static func setPreference(_ title: Title, _ key: String, _ value: String) {
+        let fm = FileManager.default
+        let ns = title.namespace
+        let prefsDir = userStateDir(title).appendingPathComponent(ns)
+        try? fm.createDirectory(at: prefsDir, withIntermediateDirectories: true)
+        let prefs = prefsDir.appendingPathComponent("preferences.lua")
+
+        var lines: [String]
+        if let existing = try? String(contentsOf: prefs, encoding: .utf8), !existing.isEmpty {
+            lines = existing.components(separatedBy: "\n")
+                .filter { !$0.contains("\(ns).preferences.\(key)") }
+        } else {
+            lines = ["if (\(ns) == nil) then \(ns) = {} end",
+                     "if (\(ns).preferences == nil) then \(ns).preferences = {} end"]
+        }
+        lines.append("\(ns).preferences.\(key) = \(value)")
+        try? lines.joined(separator: "\n").write(to: prefs, atomically: true, encoding: .utf8)
+    }
+
+    /// Go fullscreen while a RetroMac theme is active, stay an ordinary window otherwise.
+    ///
+    /// This is what keeps the CRT off the title bar. We can't give the game themed chrome the
+    /// way the TV window gets it — that window belongs to RetroMac, this one belongs to the
+    /// engine — so instead we remove the title bar from the equation: fullscreen leaves nothing
+    /// but the picture for the shader to sit on. SDL uses FULLSCREEN_DESKTOP here, i.e. a
+    /// borderless window rather than an exclusive mode, so it gets no Space of its own and the
+    /// overlay can still cover it.
+    private static func applyDisplayPreference(_ title: Title) {
+        let themed = RetroFrameTheme.key() != "default"
+        setPreference(title, "VideoFullScreen", themed ? "true" : "false")
+    }
+
     // MARK: - CRT
 
     private static var overlayPollTimer: Timer?
@@ -265,6 +302,7 @@ enum WarcraftGame {
         }
         let user = userStateDir(title)
         try? FileManager.default.createDirectory(at: user, withIntermediateDirectories: true)
+        applyDisplayPreference(title)
 
         let p = Process()
         p.executableURL = engine
