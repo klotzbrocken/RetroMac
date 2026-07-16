@@ -1230,6 +1230,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quake2Item.image = sfIcon("bolt.horizontal.fill")
         gamesMenu.addItem(quake2Item)
 
+        // Browser Games — user-editable library (Settings ▸ Games). Each opens in a themed
+        // WebApp window in game mode; a per-game preset layers the CRT shader.
+        let browserGames = AppSettings.shared.gameBookmarks
+        if !browserGames.isEmpty {
+            gamesMenu.addItem(NSMenuItem.separator())
+            let bgHeader = NSMenuItem(title: "Browser Games", action: nil, keyEquivalent: "")
+            bgHeader.isEnabled = false
+            gamesMenu.addItem(bgHeader)
+            for game in browserGames {
+                let gi = NSMenuItem(title: game.name, action: #selector(launchGameBookmark(_:)), keyEquivalent: "")
+                gi.target = self
+                gi.image = sfIcon("gamecontroller.fill")
+                gi.representedObject = game.url
+                gamesMenu.addItem(gi)
+            }
+        }
+
         // Retro Games from ROM library
         let romEntries = ROMLibrary.shared.entries
         if !romEntries.isEmpty {
@@ -2699,6 +2716,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
             flashWindow.orderOut(nil)
         }
+    }
+
+    // MARK: - Browser Game Launcher
+
+    /// Open a browser game from the user's library (menu item's representedObject = its URL)
+    /// in a themed WebApp window in game mode, applying its per-game CRT preset.
+    @objc private func launchGameBookmark(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? String,
+              let game = AppSettings.shared.gameBookmarks.first(where: { $0.url == url }) else { return }
+        WebAppController.open(name: game.name, url: game.url,
+                              width: CGFloat(game.width), height: CGFloat(game.height),
+                              gameMode: true, presetID: game.presetID)
     }
 
     // MARK: - Doom Launcher
