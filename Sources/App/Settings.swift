@@ -562,6 +562,16 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(doomWindowHeight, forKey: "doomWindowHeight") }
     }
 
+    // Games — Warcraft I + II (bundled Stratagus engine, user-supplied game data)
+    /// Folder holding the user's own Warcraft data. Either a raw game installation (which
+    /// `wartool` extracts) or an already-extracted data folder — see `WarcraftGame`.
+    @Published var warcraft2DataFolder: String {
+        didSet { defaults.set(warcraft2DataFolder, forKey: "warcraft2DataFolder") }
+    }
+    @Published var warcraft1DataFolder: String {
+        didSet { defaults.set(warcraft1DataFolder, forKey: "warcraft1DataFolder") }
+    }
+
     // Games — Duke Nukem 3D (Raze)
     @Published var razeGrpFolder: String {
         didSet { defaults.set(razeGrpFolder, forKey: "razeGrpFolder") }
@@ -848,6 +858,11 @@ final class AppSettings: ObservableObject {
         gamesCRTEnabled = defaults.object(forKey: "gamesCRTEnabled") as? Bool ?? true
         doomWindowWidth = defaults.object(forKey: "doomWindowWidth") as? Int ?? 640
         doomWindowHeight = defaults.object(forKey: "doomWindowHeight") as? Int ?? 480
+
+        // Games — Warcraft I + II (empty = not configured; the user points these at their
+        // own game data, so there is no sensible default location to guess).
+        warcraft2DataFolder = defaults.string(forKey: "warcraft2DataFolder") ?? ""
+        warcraft1DataFolder = defaults.string(forKey: "warcraft1DataFolder") ?? ""
 
         // Games — Duke Nukem 3D (Raze)
         let defaultGrpDir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games"

@@ -1230,6 +1230,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         quake2Item.image = sfIcon("bolt.horizontal.fill")
         gamesMenu.addItem(quake2Item)
 
+        // Warcraft I + II (bundled Stratagus engine) — only listed once the user has
+        // pointed RetroMac at their own game data.
+        let warcraftTitles: [WarcraftGame.Title] = [.warcraft1, .warcraft2]
+            .filter { WarcraftGame.isPlayable($0) }
+        if !warcraftTitles.isEmpty {
+            gamesMenu.addItem(NSMenuItem.separator())
+            for title in warcraftTitles {
+                let item = NSMenuItem(title: "Play \(title.displayName)",
+                                      action: #selector(launchWarcraft(_:)), keyEquivalent: "")
+                item.target = self
+                item.image = sfIcon("shield.lefthalf.filled")
+                item.representedObject = title.rawValue
+                gamesMenu.addItem(item)
+            }
+        }
+
         // Retro Games from ROM library
         let romEntries = ROMLibrary.shared.entries
         if !romEntries.isEmpty {
@@ -2699,6 +2715,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
             flashWindow.orderOut(nil)
         }
+    }
+
+    // MARK: - Warcraft Launcher
+
+    /// Play Warcraft I / II on the bundled Stratagus engine (menu item's representedObject
+    /// carries the title). The CRT look is applied inside the engine — see WarcraftGame.
+    @objc private func launchWarcraft(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let title = WarcraftGame.Title(rawValue: raw) else { return }
+        WarcraftGame.launch(title)
     }
 
     // MARK: - Doom Launcher
