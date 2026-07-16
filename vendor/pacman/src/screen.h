@@ -96,7 +96,8 @@ class Screen {
 		bool beosFrame;     // draw BeOS window chrome (RETROMAC_THEME=beos)
 		bool macos9Frame;   // draw Mac OS 9 Platinum chrome (RETROMAC_THEME=macos9)
 		bool winxpFrame;    // draw Windows XP Luna chrome (RETROMAC_THEME=winxp)
-		bool themedFrame;   // beosFrame || macos9Frame || winxpFrame
+		bool macos6Frame;   // draw Mac System 6 (1-bit) chrome (RETROMAC_THEME=macos6)
+		bool themedFrame;   // beosFrame || macos9Frame || winxpFrame || macos6Frame
 		int frameBorder;    // side/bottom frame width for the active theme
 		int frameTitleH;    // top title strip height for the active theme
 		static TTF_Font *smallFont, *font, *largeFont, *veryLargeFont, *hugeFont;
@@ -106,6 +107,8 @@ class Screen {
 		void drawBeOSChrome();
 		void drawMac9Chrome();
 		void drawWinXPChrome();
+		void drawMac6Chrome();
+		void monochromeGameArea();   // desaturate the game area to match System 6's B/W look
 		int scalingFactor;
 };
 #endif

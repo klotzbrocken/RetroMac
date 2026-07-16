@@ -15,7 +15,7 @@ enum RetroFrameTheme {
         let name = (ThemeManager.shared.activeTheme?.config.name ?? "").lowercased()
         if name.contains("beos") { return "beos" }
         if name.contains("mac os 9") { return "macos9" }
-        if name.contains("mac os 6") { return "macos9" }   // System 6 clone shares the Platinum widget chrome
+        if name.contains("mac os 6") { return "macos6" }   // authentic 1-bit System 6 chrome (System6Chrome)
         if name.contains("mac os x") { return "macosx" }
         if name.contains("windows 98") { return "win98" }
         if name.contains("windows xp") || name == "xp" || name.hasPrefix("xp ") { return "winxp" }

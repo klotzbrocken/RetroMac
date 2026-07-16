@@ -308,3 +308,67 @@ final class WinXPTVChromeView: NSView {
         }
     }
 }
+
+/// Mac System 6 (authentic 1-bit B/W) chrome container: a white racing-stripe title bar with a
+/// hollow close box on the LEFT (no zoom/collapse), a thin black window frame, content below.
+final class System6TVChromeView: NSView {
+    static let barH: CGFloat = 20
+    var title = ""
+    var onClose: (() -> Void)?
+    var onZoom: (() -> Void)?
+    private var tracker = ChromeButtonTracker()
+    private let titleFont = System6Chrome.titleFont
+
+    private var barRect: NSRect { NSRect(x: 0, y: bounds.height - Self.barH, width: bounds.width, height: Self.barH) }
+    private var boxY: CGFloat { bounds.height - Self.barH + (Self.barH - System6Chrome.boxSize) / 2 }
+    private var closeRect: NSRect { NSRect(x: 8, y: boxY, width: System6Chrome.boxSize, height: System6Chrome.boxSize) }
+    private var zoomRect: NSRect { NSRect(x: bounds.width - 8 - System6Chrome.boxSize, y: boxY, width: System6Chrome.boxSize, height: System6Chrome.boxSize) }
+    private var hoverTracking: NSTrackingArea?
+
+    override var isOpaque: Bool { false }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let bar = barRect
+        System6Chrome.titleBar(bar, active: true)
+        System6Chrome.black.setFill(); NSBezierPath(rect: NSRect(x: 0, y: bar.minY, width: bounds.width, height: 1)).fill()
+        System6Chrome.windowFrame(bounds)
+        tracker.reset()
+        tracker.add(.close, closeRect.insetBy(dx: -3, dy: -3), interactive: true)
+        tracker.add(.zoom, zoomRect.insetBy(dx: -3, dy: -3), interactive: true)
+        System6Chrome.closeBox(closeRect, state: tracker.state(for: .close))
+        System6Chrome.resizeBox(zoomRect, state: tracker.state(for: .zoom))
+        System6Chrome.titlePlaque(title, bar: bar, font: titleFont, active: true)
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let sv = superview else { return super.hitTest(point) }
+        let p = convert(point, from: sv)
+        if barRect.contains(p) { return self }
+        return super.hitTest(point)
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let t = hoverTracking { removeTrackingArea(t) }
+        let t = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
+                               owner: self, userInfo: nil)
+        addTrackingArea(t); hoverTracking = t
+    }
+    override func mouseMoved(with event: NSEvent) {
+        if tracker.mouseMoved(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+    override func mouseExited(with event: NSEvent) { if tracker.mouseExited() { needsDisplay = true } }
+    override func mouseDown(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        if tracker.hitTest(p) != nil { if tracker.mouseDown(at: p) { needsDisplay = true }; return }
+        if barRect.contains(p) { window?.performDrag(with: event); return }
+    }
+    override func mouseDragged(with event: NSEvent) {
+        if tracker.mouseDragged(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+    override func mouseUp(with event: NSEvent) {
+        let r = tracker.mouseUp(at: convert(event.locationInWindow, from: nil))
+        if r.needsRedraw { needsDisplay = true }
+        switch r.fire { case .close: onClose?(); case .zoom: onZoom?(); default: break }
+    }
+}

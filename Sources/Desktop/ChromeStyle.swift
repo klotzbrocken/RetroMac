@@ -116,10 +116,25 @@ enum ChromeStyleFactory {
     static func style(forThemeKey key: String) -> ChromeStyle? {
         switch key {
         case "winxp":  return xp()
-        case "macos9": return macClassic()   // System 6 + Mac OS 9 share the Platinum chrome
+        case "macos9": return macClassic()   // Mac OS 9 Platinum
+        case "macos6": return system6()      // authentic 1-bit System 6 (System6Chrome)
         case "win98":  return win98()
         default:       return nil
         }
+    }
+
+    // Authentic Mac System 6 — 1-bit black & white; close box alone on the LEFT, no zoom/collapse,
+    // Chicago title. Drawing is done by `System6Chrome`; this supplies metrics.
+    static func system6() -> ChromeStyle {
+        return ChromeStyle(
+            titleHeight: 20, windowBorder: 0,
+            buttonSize: NSSize(width: System6Chrome.boxSize, height: System6Chrome.boxSize),
+            buttonSpacing: 6, buttonInset: 8,
+            cornerRadius: 0, buttonSide: .left,
+            titleFont: System6Chrome.titleFont, titleColor: .black, titleShadow: false,
+            titleAlignment: .center,
+            windowFill: .white, captionGradient: nil, captionFill: .white,
+            buttons: [ ChromeButton(.close, interactive: true, render: .native) ])
     }
 
     // Values lifted verbatim from `WebAppChromeView.drawXP` + `WinXPTVChromeView`.

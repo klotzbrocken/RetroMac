@@ -328,12 +328,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Flyout/menu "CRT Shader" = the whole-screen effect. Forces the scope to whole-screen so it
     /// can't get stuck on wallpaper after "Live Wallpaper" set `shaderWallpaperOnly = true`.
     func launcherToggleShader() {
-        if isActive && !isWallpaperOnlyScope { disableAll(); return }   // already whole-screen → off
+        if isActive && !isWallpaperOnlyScope {
+            disableAll()                                    // already whole-screen → off
+            rememberShaderStateForActiveTheme(on: false)    // persist "off" per theme (flyout path)
+            return
+        }
         let wasActive = isActive
         AppSettings.shared.shaderWallpaperOnly = false   // posts .shaderScopeChanged
         // If wallpaper/Lite was running, the .shaderScopeChanged observer restarts it whole-screen;
         // otherwise nothing is running yet, so start it here.
         if !wasActive { startOverlay(mode: .fullScreen) }
+        rememberShaderStateForActiveTheme(on: true)         // persist "on" per theme (flyout path)
     }
     func launcherToggleWebcam() { toggleVirtualCamera() }
     func launcherOpenSettings() { openSettings() }
@@ -1633,6 +1638,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func toggleOverlay() {
         if isActive {
             disableAll()
+            rememberShaderStateForActiveTheme(on: false)
         } else {
             // Mutual exclusivity: stop camera and viewport first
             if VirtualCameraManager.shared.isRunning { VirtualCameraManager.shared.stop() }
@@ -1646,7 +1652,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 startOverlay(mode: .fullScreen)
             }
+            rememberShaderStateForActiveTheme(on: true)
         }
+    }
+
+    /// Persist the shader on/off choice for the currently active theme, so switching away and
+    /// back restores it (empty override = "None" = off; a preset id = on). No-op when no theme
+    /// is active. Mirrors the per-theme preset override used by theme activation.
+    private func rememberShaderStateForActiveTheme(on: Bool) {
+        guard AppSettings.shared.dockEnabled,
+              let name = ThemeManager.shared.activeTheme?.config.name else { return }
+        AppSettings.shared.themePresetOverrides[name] =
+            on ? (currentPresetName ?? AppSettings.shared.defaultPreset) : ""
     }
 
     private func startOverlay(mode: CaptureMode, presetOverride: String? = nil, parentWindow: NSWindow? = nil) {
@@ -2358,7 +2375,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings.dockEnabled = true
             DockController.shared.start()
         }
-        if let preset = settings.presetForTheme(name: name) {
+        if settings.themePresetOverrides[name]?.isEmpty == true {
+            // Explicit per-theme "off" (user toggled the shader off here, or picked "None"):
+            // force the shader off so switching back to this theme restores that choice.
+            if isActive { disableAll() }
+        } else if let preset = settings.presetForTheme(name: name) {
             if preset == "none" {
                 // Theme wants no shader
                 if isActive { disableAll() }
@@ -2431,6 +2452,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard settings.dockEnabled else { return }
         let themeName = settings.dockTheme
 
+        if settings.themePresetOverrides[themeName]?.isEmpty == true {
+            // Explicit per-theme "off" (remembered toggle / "None") — force the shader off.
+            if isActive { disableAll() }
+            rebuildMenu()
+            return
+        }
         if let preset = settings.presetForTheme(name: themeName) {
             // "none" means no shader for this theme — disable overlay
             if preset == "none" {

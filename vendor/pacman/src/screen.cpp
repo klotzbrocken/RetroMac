@@ -33,6 +33,10 @@ static const SDL_Rect MAC9_CLOSE = { 8, 5, 13, 13 };   // close box, left
 static const int WINXP_BORDER  = 4;      // blue sizing frame
 static const int WINXP_TITLE_H = 30;     // full-width title bar
 
+static const int MAC6_BORDER  = 2;       // thin black side/bottom frame (System 6)
+static const int MAC6_TITLE_H = 22;      // full-width racing-stripe title bar
+static const SDL_Rect MAC6_CLOSE = { 8, 5, 13, 13 };   // hollow close box, left
+
 // Theme state shared with the static SDL callbacks (one theme per process).
 static bool        g_controls = false;   // has minimise/maximise boxes (Mac OS 9 / XP)
 static int         g_titleH   = BEOS_TITLE_H;
@@ -121,11 +125,13 @@ Screen::Screen():
 	beosFrame   = (th == NULL) || (strcmp(th, "beos") == 0);
 	macos9Frame = (th != NULL) && (strcmp(th, "macos9") == 0);
 	winxpFrame  = (th != NULL) && (strcmp(th, "winxp")  == 0);
-	themedFrame = beosFrame || macos9Frame || winxpFrame;
-	if (macos9Frame)     { frameBorder = MAC9_BORDER;  frameTitleH = MAC9_TITLE_H;  g_close = MAC9_CLOSE; }
-	else if (winxpFrame) { frameBorder = WINXP_BORDER; frameTitleH = WINXP_TITLE_H; }   // g_close set at draw time (right)
-	else                 { frameBorder = BEOS_BORDER;  frameTitleH = BEOS_TITLE_H;  g_close = BEOS_CLOSE; }
-	g_controls = macos9Frame || winxpFrame; g_titleH = frameTitleH;
+	macos6Frame = (th != NULL) && (strcmp(th, "macos6") == 0);
+	themedFrame = beosFrame || macos9Frame || winxpFrame || macos6Frame;
+	if (macos9Frame)      { frameBorder = MAC9_BORDER;  frameTitleH = MAC9_TITLE_H;  g_close = MAC9_CLOSE; }
+	else if (macos6Frame) { frameBorder = MAC6_BORDER;  frameTitleH = MAC6_TITLE_H;  g_close = MAC6_CLOSE; }
+	else if (winxpFrame)  { frameBorder = WINXP_BORDER; frameTitleH = WINXP_TITLE_H; }   // g_close set at draw time (right)
+	else                  { frameBorder = BEOS_BORDER;  frameTitleH = BEOS_TITLE_H;  g_close = BEOS_CLOSE; }
+	g_controls = macos9Frame || winxpFrame; g_titleH = frameTitleH;   // System 6 has only a close box
 	// initialize SDL
 	if(SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
 		std::cout << "SDL video initialization failed: " << SDL_GetError() << std::endl;
@@ -202,6 +208,7 @@ void Screen::addUpdateClipRect() {
 }
 
 void Screen::Refresh() {
+	if (macos6Frame) monochromeGameArea();   // desaturate the just-drawn game to 1-bit-ish B/W
 	if (themedFrame && !fullscreen) {
 		// Repaint the chrome and update the whole window — SDL's window surface
 		// doesn't reliably keep un-updated regions on macOS, so a once-drawn frame vanishes.
@@ -374,6 +381,7 @@ void Screen::drawFrame() {
 	Uint32 bg;
 	if (winxpFrame)       bg = SDL_MapRGB(screen_surface->format, 0x08, 0x31, 0xD9);   // Luna blue frame
 	else if (macos9Frame) bg = SDL_MapRGB(screen_surface->format, 0xD8, 0xD8, 0xD8);
+	else if (macos6Frame) bg = SDL_MapRGB(screen_surface->format, 0xFF, 0xFF, 0xFF);   // System 6 white
 	else                  bg = SDL_MapRGB(screen_surface->format, 0xD6, 0xD6, 0xD6);
 	SDL_FillRect(screen_surface, NULL, bg);
 	SDL_FillRect(screen_surface, &clipRect, SDL_MapRGB(screen_surface->format, 0, 0, 0));
@@ -385,6 +393,7 @@ void Screen::drawFrame() {
 void Screen::drawChrome() {
 	if (winxpFrame)       drawWinXPChrome();
 	else if (macos9Frame) drawMac9Chrome();
+	else if (macos6Frame) drawMac6Chrome();
 	else                  drawBeOSChrome();
 }
 
@@ -520,6 +529,75 @@ void Screen::drawMac9Chrome() {
 		SDL_Rect d = { (W - tw)/2, ty, tw, beosTitleSurf->h };
 		SDL_BlitSurface(beosTitleSurf, NULL, screen_surface, &d);
 	}
+}
+
+// Mac System 6 window: 1-bit racing-stripe title bar, hollow close box left, no zoom/collapse.
+void Screen::drawMac6Chrome() {
+	SDL_PixelFormat *f = screen_surface->format;
+	Uint32 black = SDL_MapRGB(f, 0, 0, 0);
+	Uint32 white = SDL_MapRGB(f, 0xFF, 0xFF, 0xFF);
+	auto line = [&](int x, int y, int w, int h, Uint32 c){ SDL_Rect r = {x,y,w,h}; SDL_FillRect(screen_surface, &r, c); };
+
+	int W = screen_surface->w, H = screen_surface->h;
+	int gx = clipRect.x, gy = clipRect.y, gw = clipRect.w, gh = clipRect.h;
+	int T = MAC6_TITLE_H;
+
+	// white bands around the game area
+	{ SDL_Rect r; r = {0,0,W,gy}; SDL_FillRect(screen_surface,&r,white);
+	  r = {0,gy+gh,W,H-(gy+gh)}; SDL_FillRect(screen_surface,&r,white);
+	  r = {0,gy,gx,gh}; SDL_FillRect(screen_surface,&r,white);
+	  r = {gx+gw,gy,W-(gx+gw),gh}; SDL_FillRect(screen_surface,&r,white); }
+
+	// racing-stripe title bar: fine full-width black lines every other row
+	for (int y = 3; y <= T - 5; y += 2) line(6, y, W - 12, 1, black);
+	// outer black window frame + separator under the title bar
+	line(0,0,W,1,black); line(0,0,1,H,black); line(0,H-1,W,1,black); line(W-1,0,1,H,black);
+	line(0, T - 1, W, 1, black);
+	// 1px black outline around the game area (sunken look, System 6 style)
+	line(gx-1, gy-1, gw+2, 1, black); line(gx-1, gy-1, 1, gh+2, black);
+	line(gx-1, gy+gh, gw+2, 1, black); line(gx+gw, gy-1, 1, gh+2, black);
+
+	// hollow close box (left): white fill + black outline
+	SDL_Rect cb = g_close;
+	SDL_FillRect(screen_surface, &cb, white);
+	line(cb.x, cb.y, cb.w, 1, black); line(cb.x, cb.y+cb.h-1, cb.w, 1, black);
+	line(cb.x, cb.y, 1, cb.h, black); line(cb.x+cb.w-1, cb.y, 1, cb.h, black);
+
+	// title plaque (centered) — white block interrupting the stripes, black Chicago-ish text
+	if (!beosTitleSurf) {
+		SDL_Color tc = {0, 0, 0, 255};
+		beosTitleSurf = TTF_RenderText_Solid(getSmallFont(), "Pacman", tc);
+	}
+	if (beosTitleSurf) {
+		int tw = beosTitleSurf->w, ty = (T - beosTitleSurf->h) / 2;
+		SDL_Rect plaque = { (W - tw)/2 - 10, 1, tw + 20, T - 2 };
+		SDL_FillRect(screen_surface, &plaque, white);
+		SDL_Rect d = { (W - tw)/2, ty, tw, beosTitleSurf->h };
+		SDL_BlitSurface(beosTitleSurf, NULL, screen_surface, &d);
+	}
+}
+
+// Desaturate the game area in place so Pac-Man matches System 6's monochrome (grayscale)
+// look. Software surface → iterate clipRect pixels (luma), readable but colourless.
+void Screen::monochromeGameArea() {
+	if (SDL_MUSTLOCK(screen_surface) && SDL_LockSurface(screen_surface) != 0) return;
+	SDL_PixelFormat *f = screen_surface->format;
+	int bpp = f->BytesPerPixel;
+	if (bpp != 4) { if (SDL_MUSTLOCK(screen_surface)) SDL_UnlockSurface(screen_surface); return; }
+	int x0 = clipRect.x, y0 = clipRect.y, x1 = clipRect.x + clipRect.w, y1 = clipRect.y + clipRect.h;
+	if (x0 < 0) x0 = 0; if (y0 < 0) y0 = 0;
+	if (x1 > screen_surface->w) x1 = screen_surface->w;
+	if (y1 > screen_surface->h) y1 = screen_surface->h;
+	for (int y = y0; y < y1; y++) {
+		Uint8 *row = (Uint8*)screen_surface->pixels + y * screen_surface->pitch;
+		for (int x = x0; x < x1; x++) {
+			Uint32 *p = (Uint32*)(row + x * bpp);
+			Uint8 r, g, b; SDL_GetRGB(*p, f, &r, &g, &b);
+			Uint8 lum = (Uint8)((r * 77 + g * 151 + b * 28) >> 8);   // Rec.601 luma
+			*p = SDL_MapRGB(f, lum, lum, lum);
+		}
+	}
+	if (SDL_MUSTLOCK(screen_surface)) SDL_UnlockSurface(screen_surface);
 }
 
 // BeOS window: yellow Lasche (flush-left) + close box.
