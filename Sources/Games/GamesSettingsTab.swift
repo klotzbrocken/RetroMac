@@ -8,6 +8,10 @@ struct GamesSettingsTab: View {
     @State private var razeInstalled = false
     @State private var vkQuakeInstalled = false
     @State private var yamagiQ2Installed = false
+    /// Per-title message from the last folder pick / extraction (keyed by Title.rawValue).
+    @State private var wcStatus: [String: String] = [:]
+    /// Title.rawValue of the extraction currently running, if any.
+    @State private var wcExtracting: String? = nil
 
     var body: some View {
         Form {
@@ -84,34 +88,45 @@ struct GamesSettingsTab: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Game data folder")
+                        Text("Game data")
                         Spacer()
-                        Button("Choose…") { chooseWarcraftFolder(title) }
-                        if !folder.isEmpty {
-                            Button("Clear") { setWarcraftFolder(title, "") }
+                        if wcExtracting == title.rawValue {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Button(folder.isEmpty ? "Choose Game…" : "Change…") { chooseWarcraftFolder(title) }
+                            if !folder.isEmpty {
+                                Button("Clear") {
+                                    setWarcraftFolder(title, "")
+                                    wcStatus[title.rawValue] = nil
+                                }
+                            }
                         }
                     }
                     Text(folder.isEmpty ? "Not set" : abbreviatePath(folder))
                         .font(.caption).foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.middle)
 
-                    if folder.isEmpty {
+                    if let message = wcStatus[title.rawValue] {
+                        HStack(spacing: 4) {
+                            let busy = (wcExtracting == title.rawValue)
+                            Image(systemName: busy ? "arrow.triangle.2.circlepath" : "exclamationmark.triangle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(busy ? Color.secondary : Color.orange)
+                            Text(message).font(.caption)
+                                .foregroundStyle(busy ? Color.secondary : Color.orange)
+                        }
+                    } else if folder.isEmpty {
                         HStack(spacing: 4) {
                             Image(systemName: "info.circle").font(.caption2).foregroundStyle(.secondary)
-                            Text("Point this at your extracted \(title.displayName) data — the folder containing graphics, sounds and scripts.")
+                            Text(WarcraftGame.canExtract(title)
+                                 ? "Pick your \(title.displayName) folder — the original game or data you already extracted. RetroMac works out which it is."
+                                 : "Pick a folder holding your extracted \(title.displayName) data.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     } else if dataOK {
                         HStack(spacing: 4) {
                             Image(systemName: "checkmark.circle.fill").font(.caption2).foregroundStyle(.green)
-                            Text("Game data recognised").font(.caption).foregroundStyle(.secondary)
-                        }
-                    } else {
-                        HStack(spacing: 4) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.caption2).foregroundStyle(.orange)
-                            Text("No extracted data here — expected \(title.configFile) plus a graphics folder.")
-                                .font(.caption).foregroundStyle(.orange)
+                            Text("Game data ready").font(.caption).foregroundStyle(.secondary)
                         }
                     }
 
@@ -119,7 +134,7 @@ struct GamesSettingsTab: View {
                         Button("Play \(title.displayName)") { WarcraftGame.launch(title) }
                             .font(.caption)
                     }
-                    Text("RetroMac ships the open-source engine and game logic only. The game media must come from your own copy — it is never bundled.")
+                    Text("RetroMac ships the open-source engine and game logic only. The game itself must come from your own copy — it is never bundled.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -131,14 +146,38 @@ struct GamesSettingsTab: View {
         else { settings.warcraft1DataFolder = path }
     }
 
+    /// One picker for both cases: hand it either an original game installation — which is
+    /// extracted automatically — or a folder someone already extracted. The user shouldn't
+    /// have to know which of the two they have, or that an extraction step exists at all.
     private func chooseWarcraftFolder(_ title: WarcraftGame.Title) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.message = "Choose your extracted \(title.displayName) data folder"
-        if panel.runModal() == .OK, let url = panel.url {
+        panel.message = "Choose your \(title.displayName) folder — the original game or already-extracted data"
+        panel.prompt = "Use Folder"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        if WarcraftGame.hasExtractedData(at: url, title) {
             setWarcraftFolder(title, url.path)
+            wcStatus[title.rawValue] = nil
+        } else if WarcraftGame.looksLikeInstallation(at: url, title) {
+            wcExtracting = title.rawValue
+            wcStatus[title.rawValue] = "Extracting game data — this takes a moment…"
+            WarcraftGame.extract(title, from: url) { result in
+                wcExtracting = nil
+                switch result {
+                case .success(let dest):
+                    setWarcraftFolder(title, dest.path)
+                    wcStatus[title.rawValue] = nil
+                case .failure(let error):
+                    wcStatus[title.rawValue] = "Extraction failed: \(error.message)"
+                }
+            }
+        } else {
+            wcStatus[title.rawValue] = WarcraftGame.canExtract(title)
+                ? "No Warcraft data there. Pick the game's own folder (the one with maindat.war) or an extracted data folder."
+                : "That folder holds no extracted \(title.displayName) data. RetroMac can't extract this title itself yet — use the Wargus tools to extract it first."
         }
     }
 
