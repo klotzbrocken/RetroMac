@@ -248,7 +248,10 @@ if [ -x "$WC_BUILD/stratagus" ]; then
         key="${pair%%:*}"; src="${pair#*:}"
         [ -d "$src/scripts" ] || continue
         mkdir -p "$WC_DIR/$key-base"
-        for d in scripts campaigns maps contrib shaders; do
+        # NOT shaders/: all seven of the game's own .cg.glsl files redeclare GLSL built-ins
+        # (gl_Vertex, gl_MultiTexCoord0), which macOS' stricter compiler rejects — they would
+        # only cost startup time and log noise. The engine's built-in CRT/VHS/xBRZ work.
+        for d in scripts campaigns maps contrib; do
             [ -d "$src/$d" ] && cp -R "$src/$d" "$WC_DIR/$key-base/$d"
         done
     done
