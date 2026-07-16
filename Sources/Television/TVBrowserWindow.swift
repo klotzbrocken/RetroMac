@@ -2,6 +2,7 @@ import AppKit
 import AVKit
 import MetalKit
 import CoreVideo
+import CoreImage
 import WebKit
 
 final class TVBrowserWindow: NSObject {
@@ -121,6 +122,8 @@ final class TVBrowserWindow: NSObject {
         applyMac9Chrome(win, title: bookmark.name)
         // Windows XP theme: wrap the content in a borderless Luna window.
         applyWinXPChrome(win, title: bookmark.name)
+        // Mac System 6 theme: wrap the content in a borderless 1-bit B/W window.
+        applySystem6Chrome(win, title: bookmark.name)
 
         // Double-click the video toggles full-screen (keeps the CRT shader + float level).
         if let cv = win.contentView {
@@ -261,6 +264,36 @@ final class TVBrowserWindow: NSObject {
         chrome.title = title
         chrome.onClose = { [weak self] in self?.window?.close() }
         chrome.onCollapse = { [weak self] in self?.toggleMac9Collapse() }
+        chrome.onZoom = { [weak self] in self?.toggleTVFullscreen() }
+        chrome.addSubview(content)
+        win.contentView = chrome
+    }
+
+    /// Mac System 6 theme: borderless 1-bit B/W window — racing-stripe title bar, hollow close
+    /// box left, no zoom/collapse; content inset below the bar.
+    private func applySystem6Chrome(_ win: NSWindow, title: String) {
+        guard RetroFrameTheme.key() == "macos6", let content = win.contentView else { return }
+        let bar = System6TVChromeView.barH
+        let size = win.frame.size
+        win.styleMask = [.borderless, .resizable]
+        win.isOpaque = false
+        win.backgroundColor = .clear
+        win.hasShadow = true
+        content.frame = NSRect(x: 0, y: 0, width: size.width, height: size.height - bar)
+        content.autoresizingMask = [.width, .height]
+        // System 6 is 1-bit B/W → desaturate the TV picture (web page / stream / shader output)
+        // so it matches the monochrome theme. Applied to the content layer only, so the crisp
+        // black-and-white title bar above is untouched.
+        content.wantsLayer = true
+        if let mono = CIFilter(name: "CIColorControls") {
+            mono.setValue(0.0, forKey: "inputSaturation")   // grayscale
+            mono.setValue(1.1, forKey: "inputContrast")     // slight push toward System 6's high-contrast look
+            content.layer?.filters = [mono]
+        }
+        let chrome = System6TVChromeView(frame: NSRect(origin: .zero, size: size))
+        chrome.wantsLayer = true
+        chrome.title = title
+        chrome.onClose = { [weak self] in self?.window?.close() }
         chrome.onZoom = { [weak self] in self?.toggleTVFullscreen() }
         chrome.addSubview(content)
         win.contentView = chrome

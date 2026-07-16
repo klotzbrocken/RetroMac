@@ -172,6 +172,7 @@
   // Per-theme clock face styling (authentic-ish to each OS).
   function style(){
     switch(theme){
+      case 'macos6': return {bg:'#ffffff', ring:'#000000', tick:'#000000', hand:'#000000', sec:'#000000', num:false, face:'#ffffff'};  // 1-bit monochrome
       case 'macos9': return {bg:'#ffffff', ring:'#000000', tick:'#000000', hand:'#000000', sec:'#cc2a17', num:false, face:'#ffffff'};
       case 'winxp':  return {bg:'#ffffff', ring:'#0831D9', tick:'#333333', hand:'#1a1a1a', sec:'#E35F44', num:true,  face:'#ffffff'};
       case 'maiksfav': return {bg:'#ffffff', ring:'#262626', tick:'#262626', hand:'#262626', sec:'#FF5F57', num:false, face:'#ffffff'};
@@ -231,6 +232,7 @@
     if(cl.contains('theme-macosx'))   return [...R('mxtitle'),...R('mxclose')];
     if(cl.contains('theme-maiksfav')) return [...R('mftitle'),...R('mfclose')];
     if(cl.contains('theme-winxp'))    return [...R('xptitle'),...R('xpclose')];
+    if(cl.contains('theme-macos6'))   return [...R('m9title'),...R('m9close')];
     if(cl.contains('theme-macos9'))   return [...R('m9title'),...R('m9close')];
     return [...R('tab'),...R('bxclose')];
   };
@@ -244,6 +246,7 @@ window.setBtnState = function(slot, state){
   else if (cl.contains('theme-macosx'))   ids = {close:'mxclose', collapse:'mxmin', zoom:'mxzoom'};
   else if (cl.contains('theme-maiksfav')) ids = {close:'mfclose', collapse:'mfmin', zoom:'mfzoom'};
   else if (cl.contains('theme-winxp'))    ids = {close:'xpclose', collapse:'xpmin', zoom:'xpmax'};
+  else if (cl.contains('theme-macos6'))   ids = {close:'m9close'};
   else if (cl.contains('theme-macos9'))   ids = {close:'m9close', collapse:'m9collapse', zoom:'m9zoom'};
   else ids = {close:'closebox'};
   const el = ids[slot] && document.getElementById(ids[slot]);
@@ -253,5 +256,27 @@ window.setBtnState = function(slot, state){
   else if (state === 'press') el.classList.add('is-press');
 };
 </script>
+<style>
+/* Mac System 6 (system.css by Sakun Acharige, MIT) */
+@font-face{font-family:Chicago_12;src:url(ChiKareGo2.woff2) format("woff2");}
+@font-face{font-family:Geneva_9;src:url(FindersKeepers.woff2) format("woff2");}
+body.theme-macos6 .tab,body.theme-macos6 .marker{display:none;}
+body.theme-macos6 #win{border:2px solid #000;background:#fff;box-shadow:2px 2px 0 rgba(0,0,0,.35);box-sizing:border-box;}
+body.theme-macos6 .window,body.theme-macos6 .body{border:none;box-shadow:none;background:#fff;font-family:Geneva_9,Geneva,sans-serif;}
+/* Title bar per system.css: height 1.5rem, stripes scale with height (6.667% × 13.333%). */
+body.theme-macos6 .m9-title{display:flex;align-items:center;position:relative;height:24px;flex:0 0 auto;box-sizing:border-box;
+  border-bottom:2px solid #000;image-rendering:auto;padding:3px 2px;
+  background:linear-gradient(#000 50%,transparent 50%);background-size:6.6667% 13.3333%;background-clip:content-box;}
+body.theme-macos6 .m9-right{display:none;}
+body.theme-macos6 .m9-close{position:relative;width:16px;height:16px;flex:0 0 16px;margin:0 4px;
+  background:#fff;border:2px solid #000;box-shadow:none;box-sizing:border-box;}
+body.theme-macos6 .m9-close::before,body.theme-macos6 .m9-close::after{content:"";position:absolute;inset:0;opacity:0;
+  background:linear-gradient(#000,#000) left center/32% 1.5px no-repeat,linear-gradient(#000,#000) right center/32% 1.5px no-repeat,
+    linear-gradient(#000,#000) center top/1.5px 32% no-repeat,linear-gradient(#000,#000) center bottom/1.5px 32% no-repeat;}
+body.theme-macos6 .m9-close.is-press::before,body.theme-macos6 .m9-close.is-press::after{opacity:1;}
+body.theme-macos6 .m9-close.is-press::after{transform:rotate(45deg) scale(1.1);}
+body.theme-macos6 .m9-plaque{background:#fff;padding:0 8px;color:#000;
+  font-family:Chicago_12,"ChiKareGo2",Chicago,sans-serif;font-weight:700;font-size:18px;line-height:1.1;}
+</style>
 </body>
 </html>

@@ -53,6 +53,18 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     private let appURL: String
     private let size: NSSize
     private var panel: WebAppPanel?
+    private var preZoomFrame: NSRect?
+
+    /// System 6 zoom box: toggle the window between its size and (near-)full screen.
+    private func toggleZoom() {
+        guard let p = panel, let screen = p.screen ?? NSScreen.main else { return }
+        if let f = preZoomFrame {
+            p.setFrame(f, display: true, animate: true); preZoomFrame = nil
+        } else {
+            preZoomFrame = p.frame
+            p.setFrame(screen.visibleFrame.insetBy(dx: 24, dy: 24), display: true, animate: true)
+        }
+    }
     private weak var webView: WKWebView?
     private var bridgeActive = false   // true only for trusted 98.js windows (native Save/Print)
 
@@ -110,6 +122,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         self.webView = wv
         chrome.onBack = { [weak wv] in if wv?.canGoBack == true { wv?.goBack() } }
         chrome.onForward = { [weak wv] in if wv?.canGoForward == true { wv?.goForward() } }
+        chrome.onZoom = { [weak self] in self?.toggleZoom() }
 
         let p = WebAppPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
@@ -328,11 +341,12 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
 final class WebAppChromeView: NSView {
 
-    enum Style { case win98, winxp, macClassic, plain }
+    enum Style { case win98, winxp, macClassic, system6, plain }
 
     var onClose: (() -> Void)?
     var onBack: (() -> Void)?
     var onForward: (() -> Void)?
+    var onZoom: (() -> Void)?
     private let title: String
     private let style: Style
     private let showNav: Bool
@@ -354,6 +368,7 @@ final class WebAppChromeView: NSView {
         case "win98":  style = .win98;      chromeStyle = ChromeStyleFactory.win98()
         case "winxp":  style = .winxp;      chromeStyle = ChromeStyleFactory.xp()
         case "macos9": style = .macClassic; chromeStyle = ChromeStyleFactory.macClassic()
+        case "macos6": style = .system6;    chromeStyle = ChromeStyleFactory.system6()
         default:       style = .plain;      chromeStyle = nil
         }
         super.init(frame: frame)
@@ -365,7 +380,9 @@ final class WebAppChromeView: NSView {
 
     override var isFlipped: Bool { true }
 
-    private var titleH: CGFloat { style == .winxp ? 30 : 22 }   // Win98/macClassic/plain: 22
+    private var titleH: CGFloat {
+        switch style { case .winxp: return 30; case .system6: return 20; default: return 22 }
+    }
     private var pad: CGFloat { 4 }
 
     /// Frame for the hosted webview (below the title bar, inside the window border).
@@ -405,8 +422,32 @@ final class WebAppChromeView: NSView {
         case .win98:      drawWin98(ctx, b)
         case .winxp:      drawXP(ctx, b)
         case .macClassic: drawMacClassic(ctx, b)
+        case .system6:    drawSystem6(ctx, b)
         case .plain:      drawPlain(ctx, b)
         }
+    }
+
+    // ---- Mac System 6 (authentic 1-bit B/W) — shared with the TV window via System6Chrome ----
+    private func drawSystem6(_ ctx: CGContext, _ b: NSRect) {
+        let cs = chromeStyle ?? ChromeStyleFactory.system6()
+        NSColor.white.setFill(); ctx.fill(b)                        // white body
+        let bar = NSRect(x: 0, y: 0, width: b.width, height: titleH)   // flipped: title bar at top
+        System6Chrome.titleBar(bar, active: true)                   // racing stripes
+        // 1px black separator under the title bar + the window frame
+        System6Chrome.black.setFill(); ctx.fill(NSRect(x: 0, y: bar.maxY, width: b.width, height: 1))
+        System6Chrome.windowFrame(b)
+        // close box alone on the LEFT; no zoom/collapse in System 6
+        let boxS = System6Chrome.boxSize
+        let boxY = (titleH - boxS) / 2
+        let closeR = NSRect(x: cs.buttonInset, y: boxY, width: boxS, height: boxS)
+        let zoomR  = NSRect(x: b.width - cs.buttonInset - boxS, y: boxY, width: boxS, height: boxS)
+        tracker.reset()
+        tracker.add(.close, closeR.insetBy(dx: -3, dy: -3), interactive: true)
+        tracker.add(.zoom, zoomR.insetBy(dx: -3, dy: -3), interactive: true)
+        System6Chrome.closeBox(closeR, state: tracker.state(for: .close))
+        System6Chrome.resizeBox(zoomR, state: tracker.state(for: .zoom))
+        System6Chrome.titlePlaque(title, bar: bar, font: cs.titleFont, active: true)
+        closeHit = .zero   // close is tracked via `tracker`
     }
 
     // ---- Classic Mac (System 6 / Platinum) — shared look with the TV window via ClassicMacChrome ----
@@ -719,7 +760,11 @@ final class WebAppChromeView: NSView {
         guard chromeStyle != nil else { return }
         let r = tracker.mouseUp(at: convert(event.locationInWindow, from: nil))
         if r.needsRedraw { needsDisplay = true }
-        if r.fire == .close { onClose?() }
+        switch r.fire {
+        case .close: onClose?()
+        case .zoom:  onZoom?()
+        default: break
+        }
     }
 }
 

@@ -237,6 +237,43 @@
   .m9-zoom::before{content:"";position:absolute;left:2px;top:2px;width:7px;height:7px;border:2px solid #545487;background:#c0c0c0;}
   .m9-collapse::before{content:"";position:absolute;left:3px;right:3px;top:8px;height:0;border-top:2px solid #545487;}
 
+  /* ===== Mac System 6 (system.css by Sakun Acharige, MIT) — fonts + exact title bar ===== */
+  @font-face{font-family:Chicago_12;src:url(ChiKareGo2.woff2) format("woff2");}
+  @font-face{font-family:Geneva_9;src:url(FindersKeepers.woff2) format("woff2");}
+  body.theme-macos6 .tab,body.theme-macos6 .marker{display:none;}
+  body.theme-macos6 .window{border:2px solid #000;background:#fff;box-shadow:2px 2px 0 rgba(0,0,0,.35);}
+  body.theme-macos6 .body{border:none;box-shadow:none;margin-top:0;background:#fff;
+    font-family:Geneva_9,Geneva,Chicago_12,sans-serif;}
+  body.theme-macos6 .m9-title{display:flex;position:relative;align-items:center;height:38px;box-sizing:border-box;
+    border-bottom:2px solid #000;image-rendering:auto;padding:5px 3px;margin:2px 0;
+    background:linear-gradient(#000 50%,transparent 50%);background-size:100% 4.4px;background-clip:content-box;}
+  body.theme-macos6 .m9-collapse{display:none;}
+  /* close + zoom boxes: white, 3px black border, ~26px (system.css 40px·scale.5, counter-scaled) */
+  body.theme-macos6 .m9-close,body.theme-macos6 .m9-zoom{position:relative;width:26px;height:26px;flex:0 0 26px;
+    background:#fff;border:3px solid #000;box-shadow:none;border-radius:0;box-sizing:border-box;}
+  body.theme-macos6 .m9-close{margin-left:6px;}
+  body.theme-macos6 .m9-zoom{margin-left:auto;margin-right:6px;}
+  body.theme-macos6 .m9-zoom::before{content:"";position:absolute;left:3px;top:3px;width:9px;height:9px;border:2px solid #000;background:#fff;}
+  /* close ✕ — hidden by default, shown on press (system.css shows it on :active) */
+  body.theme-macos6 .m9-close::before,body.theme-macos6 .m9-close::after{content:"";position:absolute;inset:0;opacity:0;
+    background:linear-gradient(#000,#000) left center/32% 3px no-repeat,linear-gradient(#000,#000) right center/32% 3px no-repeat,
+      linear-gradient(#000,#000) center top/3px 32% no-repeat,linear-gradient(#000,#000) center bottom/3px 32% no-repeat;}
+  body.theme-macos6 .m9-close.is-press::before,body.theme-macos6 .m9-close.is-press::after{opacity:1;}
+  body.theme-macos6 .m9-close.is-press::after{transform:rotate(45deg) scale(1.1);}
+  body.theme-macos6 .m9-zoom.is-press{background:#000;}
+  body.theme-macos6 .m9-plaque{background:#fff;padding:0 12px;height:auto;gap:0;color:#000;
+    font-family:Chicago_12,"ChiKareGo2",Chicago,sans-serif;font-weight:400;font-size:26px;line-height:1.1;}
+  /* Monochrome 1-bit LED graph (System 6): black = lit, light = off, no glow, no textured well */
+  body.theme-macos6 .led-well{background:#fff;background-image:none;border:2px solid #000;box-shadow:none;}
+  body.theme-macos6 .led{border-radius:0;box-shadow:none;}
+  body.theme-macos6 .led.off{background:#e6e6e6;box-shadow:inset 0 0 0 1px #cfcfcf;}
+  body.theme-macos6 .led.user,body.theme-macos6 .led.sys{background:#000;box-shadow:none;}
+  body.theme-macos6 .legend i{border:1px solid #000;border-radius:0;}
+  body.theme-macos6 .legend i.u{background:#fff;}
+  body.theme-macos6 .legend i.s{background:#000;}
+  /* Silicon chip → grayscale so nothing colored remains */
+  body.theme-macos6 .chip,body.theme-macos6 .die,body.theme-macos6 .soc{filter:grayscale(1) contrast(1.1);}
+
   /* ===== Windows XP (Luna Blue) chrome — counter-scaled 1/0.6 like the BeOS tab. ===== */
   .xp-title{display:none;}
   body.theme-winxp .tab,body.theme-winxp .marker{display:none;}
@@ -552,6 +589,7 @@
     else if (cl.contains('theme-macosx')) ids = {close:'mxclose', collapse:'mxmin', zoom:'mxzoom'};
     else if (cl.contains('theme-maiksfav')) ids = {close:'mfclose', collapse:'mfmin', zoom:'mfzoom'};
     else if (cl.contains('theme-winxp'))  ids = {close:'xpclose', collapse:'xpmin', zoom:'xpmax'};
+    else if (cl.contains('theme-macos6')) ids = {close:'m9close', zoom:'m9zoom'};   // System 6: close + zoom
     else if (cl.contains('theme-macos9')) ids = {close:'m9close', collapse:'m9collapse', zoom:'m9zoom'};
     else ids = {close:'closebox'};
     const el = ids[slot] && document.getElementById(ids[slot]);
@@ -577,6 +615,9 @@
     }
     if (cl.contains('theme-winxp')) {
       return [...R('xptitle'), ...R('xpclose'), ...R('xpmin'), ...R('xpmax')];
+    }
+    if (cl.contains('theme-macos6')) {
+      return [...R('m9title'), ...R('m9close'), 0,0,0,0, ...R('m9zoom')];   // System 6: close + zoom (no collapse)
     }
     if (cl.contains('theme-macos9')) {
       return [...R('m9title'), ...R('m9close'), ...R('m9collapse'), ...R('m9zoom')];

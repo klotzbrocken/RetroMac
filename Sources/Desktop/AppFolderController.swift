@@ -479,7 +479,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
     private static func installedApps() -> [[String: String]] {
         let k = RetroFrameTheme.key()
-        let themed = (k == "macos9" || k == "winxp" || k == "maiksfav" || k == "macosx" || k == "win98")
+        let themed = (k == "macos6" || k == "macos9" || k == "winxp" || k == "maiksfav" || k == "macosx" || k == "win98")
         let fm = FileManager.default
         var dirs = ["/Applications", "/Applications/Utilities",
                     "/System/Applications", "/System/Applications/Utilities"]

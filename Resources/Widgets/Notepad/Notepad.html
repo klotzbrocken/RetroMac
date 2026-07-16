@@ -867,6 +867,7 @@
     if(cl.contains('theme-macosx'))  return [...R('mxtitle'),...R('mxclose')];
     if(cl.contains('theme-maiksfav'))return [...R('mftitle'),...R('mfclose')];
     if(cl.contains('theme-winxp'))   return [...R('xptitle'),...R('xpclose'),...R('xpmin'),...R('xpmax')];
+    if(cl.contains('theme-macos6')) return [...R('m9title'),...R('m9close'),0,0,0,0,...R('m9zoom')];   // System 6: close + zoom
     if(cl.contains('theme-macos9')){
       if(cl.contains('app-simpletext')||cl.contains('app-teachtext'))
         return [...R('m9title'),...R('m9close'),...R('m9collapse'),...R('m9zoom')];
@@ -935,6 +936,7 @@ window.setBtnState = function(slot, state){
   else if (cl.contains('theme-macosx'))   ids = {close:'mxclose', collapse:'mxmin', zoom:'mxzoom'};
   else if (cl.contains('theme-maiksfav')) ids = {close:'mfclose', collapse:'mfmin', zoom:'mfzoom'};
   else if (cl.contains('theme-winxp'))    ids = {close:'xpclose', collapse:'xpmin', zoom:'xpmax'};
+  else if (cl.contains('theme-macos6'))   ids = {close:'m9close', zoom:'m9zoom'};
   else if (cl.contains('theme-macos9'))   ids = {close:'m9close', collapse:'m9collapse', zoom:'m9zoom'};
   else ids = {close:'closebox'};
   const el = ids[slot] && document.getElementById(ids[slot]);
@@ -944,5 +946,29 @@ window.setBtnState = function(slot, state){
   else if (state === 'press') el.classList.add('is-press');
 };
 </script>
+<style>
+/* Mac System 6 (system.css by Sakun Acharige, MIT) */
+@font-face{font-family:Chicago_12;src:url(ChiKareGo2.woff2) format("woff2");}
+@font-face{font-family:Geneva_9;src:url(FindersKeepers.woff2) format("woff2");}
+body.theme-macos6 .tab{display:none;}
+body.theme-macos6 #win{border:2px solid #000;background:#fff;box-shadow:2px 2px 0 rgba(0,0,0,.35);}
+body.theme-macos6 .m9-title{display:flex;align-items:center;position:relative;height:22px;flex:0 0 auto;box-sizing:border-box;
+  border-bottom:2px solid #000;image-rendering:auto;padding:4px 3px;
+  background:linear-gradient(#000 50%,transparent 50%);background-size:100% 2.8px;background-clip:content-box;}
+body.theme-macos6 .m9-collapse{display:none;}
+body.theme-macos6 .m9-close,body.theme-macos6 .m9-zoom{position:relative;width:16px;height:16px;flex:0 0 16px;
+  background:#fff;border:2px solid #000;box-shadow:none;box-sizing:border-box;}
+body.theme-macos6 .m9-close{margin-left:6px;}
+body.theme-macos6 .m9-zoom{margin-left:auto;margin-right:6px;}
+body.theme-macos6 .m9-zoom::before{content:"";position:absolute;left:2px;top:2px;width:6px;height:6px;border:1.5px solid #000;background:#fff;}
+body.theme-macos6 .m9-close::before,body.theme-macos6 .m9-close::after{content:"";position:absolute;inset:0;opacity:0;
+  background:linear-gradient(#000,#000) left center/32% 2px no-repeat,linear-gradient(#000,#000) right center/32% 2px no-repeat,
+    linear-gradient(#000,#000) center top/2px 32% no-repeat,linear-gradient(#000,#000) center bottom/2px 32% no-repeat;}
+body.theme-macos6 .m9-close.is-press::before,body.theme-macos6 .m9-close.is-press::after{opacity:1;}
+body.theme-macos6 .m9-close.is-press::after{transform:rotate(45deg) scale(1.1);}
+body.theme-macos6 .m9-zoom.is-press{background:#000;}
+body.theme-macos6 .m9-plaque{background:#fff;padding:0 10px;color:#000;
+  font-family:Chicago_12,"ChiKareGo2",Chicago,sans-serif;font-weight:400;font-size:18px;line-height:1.1;}
+</style>
 </body>
 </html>
