@@ -576,12 +576,6 @@ final class AppSettings: ObservableObject {
     @Published var warcraftPresetID: String {
         didSet { defaults.set(warcraftPresetID, forKey: "warcraftPresetID") }
     }
-    /// Start the Warcraft games fullscreen. Off = a window with RetroMac's themed title bar.
-    /// The engine's own ⌥F still toggles within a running game — but only there, not in its
-    /// menus, which is why the startup mode belongs here.
-    @Published var warcraftFullscreen: Bool {
-        didSet { defaults.set(warcraftFullscreen, forKey: "warcraftFullscreen") }
-    }
 
     // Games — Duke Nukem 3D (Raze)
     @Published var razeGrpFolder: String {
@@ -875,7 +869,6 @@ final class AppSettings: ObservableObject {
         warcraft2DataFolder = defaults.string(forKey: "warcraft2DataFolder") ?? ""
         warcraft1DataFolder = defaults.string(forKey: "warcraft1DataFolder") ?? ""
         warcraftPresetID = defaults.string(forKey: "warcraftPresetID") ?? ""   // "" = follow the app preset
-        warcraftFullscreen = defaults.bool(forKey: "warcraftFullscreen")       // default: windowed + themed bar
 
         // Games — Duke Nukem 3D (Raze)
         let defaultGrpDir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games"
