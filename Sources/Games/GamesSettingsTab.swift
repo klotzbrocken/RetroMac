@@ -13,6 +13,15 @@ struct GamesSettingsTab: View {
     /// Title.rawValue of the extraction currently running, if any.
     @State private var wcExtracting: String? = nil
 
+    /// Every CRT preset, grouped as the registry orders them ("" = None).
+    private var allPresets: [(String, String)] {
+        var list: [(String, String)] = [("", "None")]
+        for (_, presets) in PresetRegistry.categorizedPresets {
+            for p in presets { list.append((p.id, p.displayName)) }
+        }
+        return list
+    }
+
     var body: some View {
         Form {
             // One global CRT switch for all bundled PC games (replaces per-game toggles).
@@ -20,7 +29,7 @@ struct GamesSettingsTab: View {
                 Toggle("Apply CRT effect to games", isOn: $settings.gamesCRTEnabled)
                     .toggleStyle(.switch)
                     .tint(.rmAccent)
-                Text("Adds the bundled CRT shader to Doom, Raze, Heretic, Shadow Warrior and Freedoom.")
+                Text("Master switch. Doom, Duke Nukem 3D, Heretic, Shadow Warrior and Freedoom load a shader mod into the game engine itself. Warcraft and console ROMs can't do that, so RetroMac lays its own CRT over their window instead — which needs Screen Recording permission. Pick the preset per game below.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -127,6 +136,31 @@ struct GamesSettingsTab: View {
                         HStack(spacing: 4) {
                             Image(systemName: "checkmark.circle.fill").font(.caption2).foregroundStyle(.green)
                             Text("Game data ready").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+
+                    // The engine can't load a shader itself (its GLSL layer is compiled out on
+                    // Apple), so this picks what RetroMac lays over the window. One setting for
+                    // both Warcraft titles — shown once, on the WC2 section.
+                    if title == .warcraft2 {
+                        Divider().padding(.vertical, 2)
+                        HStack {
+                            Text("CRT preset")
+                            Spacer()
+                            Picker("", selection: $settings.warcraftPresetID) {
+                                Text("Follow current preset").tag("")
+                                Text("Off").tag("off")
+                                Divider()
+                                ForEach(allPresets.filter { !$0.0.isEmpty }, id: \.0) { id, name in
+                                    Text(name).tag(id)
+                                }
+                            }
+                            .labelsHidden().pickerStyle(.menu).frame(width: 200)
+                            .disabled(!settings.gamesCRTEnabled)
+                        }
+                        if !settings.gamesCRTEnabled {
+                            Text("Turn “Apply CRT effect to games” on to use this.")
+                                .font(.caption2).foregroundStyle(.secondary)
                         }
                     }
 

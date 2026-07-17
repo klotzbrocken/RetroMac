@@ -242,11 +242,20 @@ enum WarcraftGame {
     ///
     /// The game is a bare binary rather than an app bundle, so its window is matched by the
     /// PID we launched rather than a bundle identifier.
+    /// The preset to lay over the game: the user's per-game choice, or whatever the app is
+    /// currently running. "off" means they explicitly don't want one here.
+    static func effectivePreset() -> String? {
+        guard AppSettings.shared.gamesCRTEnabled else { return nil }
+        let choice = AppSettings.shared.warcraftPresetID
+        if choice == "off" { return nil }
+        if !choice.isEmpty { return choice }
+        let fallback = (NSApp.delegate as? AppDelegate)?.launcherCurrentPreset ?? ""
+        return fallback.isEmpty ? nil : fallback
+    }
+
     private static func startShaderOverlay(pid: pid_t) {
-        guard AppSettings.shared.gamesCRTEnabled,
+        guard let preset = effectivePreset(),
               let appDel = NSApp.delegate as? AppDelegate else { return }
-        let preset = appDel.launcherCurrentPreset
-        guard !preset.isEmpty else { return }
 
         var attempts = 0
         overlayPollTimer?.invalidate()
@@ -315,6 +324,17 @@ enum WarcraftGame {
         var env = RetroFrameTheme.gameEnv()
         env["HOME"] = user.path
         p.environment = env
+        // Put the desktop shader back exactly as we found it once the game quits — otherwise
+        // the game's window overlay outlives it and the flyout keeps showing the shader as on.
+        // We own this process, so its exit is the signal; no polling needed.
+        p.terminationHandler = { _ in
+            DispatchQueue.main.async {
+                overlayPollTimer?.invalidate()
+                overlayPollTimer = nil
+                (NSApp.delegate as? AppDelegate)?.restorePreviousOverlay()
+                print("[Warcraft] Game quit — previous overlay state restored")
+            }
+        }
         do {
             try p.run()
             print("[Warcraft] Launched \(title.displayName) (data: \(run.path))")
