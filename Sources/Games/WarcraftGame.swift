@@ -213,15 +213,15 @@ enum WarcraftGame {
         try? lines.joined(separator: "\n").write(to: prefs, atomically: true, encoding: .utf8)
     }
 
-    /// Apply the startup display mode on every launch.
+    /// Always start windowed — which, with a theme active, means borderless: just the picture,
+    /// so the CRT sits on the game and not on a title bar.
     ///
-    /// RetroMac owns this rather than the engine, because the engine's own ⌥F only works in
-    /// `CommandKey` — i.e. inside a running game, not in its menus, which is exactly where you
-    /// land on startup. Leaving it to the engine meant whatever it last saved won you the mode,
-    /// with no way to change it from the menu. Windowed gets our themed title bar; fullscreen
-    /// is a borderless desktop window, so the CRT overlay works either way.
+    /// Maximising is the game's own business: its Options menu has a working fullscreen
+    /// setting. RetroMac used to carry a "start fullscreen" switch too, but two places owning
+    /// one mode only produced surprises (whatever was saved last won, with no way back from
+    /// the menus). One owner, one default.
     private static func applyDisplayPreference(_ title: Title) {
-        setPreference(title, "VideoFullScreen", AppSettings.shared.warcraftFullscreen ? "true" : "false")
+        setPreference(title, "VideoFullScreen", "false")
     }
 
     // MARK: - CRT

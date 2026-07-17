@@ -142,11 +142,7 @@ struct GamesSettingsTab: View {
                     // One setting for both Warcraft titles — shown once, on the WC2 section.
                     if title == .warcraft2 {
                         Divider().padding(.vertical, 2)
-                        Toggle("Start in fullscreen", isOn: $settings.warcraftFullscreen)
-                            .toggleStyle(.switch).tint(.rmAccent)
-                        Text(settings.warcraftFullscreen
-                             ? "The game fills the screen."
-                             : "With a theme active the game opens in a borderless window — just the picture, so the CRT sits on the game and not on a title bar. Quit from the game's own menu; ⌥F toggles fullscreen once you're in a match.")
+                        Text("With a theme active the game opens in a borderless window — just the picture, so the CRT sits on the game and not on a title bar. Fullscreen and quitting are in the game's own menu.")
                             .font(.caption2).foregroundStyle(.secondary)
 
                         // The engine can't load a shader itself (its GLSL layer is compiled out
