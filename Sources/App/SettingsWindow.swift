@@ -430,6 +430,9 @@ struct DetailTitleBar: View {
 
 struct CameraTab: View {
     @ObservedObject var settings = AppSettings.shared
+    /// The Virtual Camera is a paid feature (enforced in AppDelegate.toggleVirtualCamera).
+    /// This tab used not to know that, which is why it was the one place without a padlock.
+    @ObservedObject var license = LicenseManager.shared
     @State private var cameras: [(id: String, name: String)] = []
     @State private var newSceneName = ""
 
@@ -439,7 +442,11 @@ struct CameraTab: View {
             VStack(alignment: .leading, spacing: RMSpacing.section) {
                 scenesCard
 
-                RMCard(title: "Virtual Camera", bodyPadding: 0) {
+                RMCard(title: license.label("Virtual Camera"),
+                       subtitle: license.isLicensed
+                            ? nil
+                            : "Pro — run a shader on your webcam feed for calls and streams.",
+                       bodyPadding: 0) {
                     VStack(spacing: 0) {
                         RMRow(label: "Status") {
                             HStack(spacing: 6) {

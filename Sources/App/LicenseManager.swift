@@ -40,6 +40,43 @@ final class LicenseManager: ObservableObject {
         freePresetIDs.filter { $0 != "passthrough" }.randomElement() ?? "crt-royale-lite"
     }
 
+    /// What the licence unlocks BESIDES the presets.
+    ///
+    /// `freePresetIDs` above only covers presets, so every other paid feature used to be an
+    /// ad-hoc `isLicensed` check at each call site — and every place that shows a lock or
+    /// lists what you get had to remember on its own. It didn't: the Virtual Camera row never
+    /// got a lock, and Live Wallpaper appeared in none of the three licence blurbs. One list,
+    /// so the next feature can't drift the same way.
+    struct PremiumFeature {
+        let name: String
+        let symbol: String
+    }
+    static let premiumFeatures: [PremiumFeature] = [
+        PremiumFeature(name: "Live Wallpaper", symbol: "photo.on.rectangle.angled"),
+        PremiumFeature(name: "Virtual Camera", symbol: "camera.fill"),
+    ]
+
+    /// A feature's name, with a padlock appended while it's locked — e.g. "Live Camera 🔒".
+    /// Use this everywhere a paid feature is labelled, so the two never disagree again.
+    func label(_ name: String) -> String {
+        isLicensed ? name : "\(name) \u{1F512}"
+    }
+
+    /// What a licence gets you, in one sentence — presets plus everything in `premiumFeatures`.
+    /// Welcome, About and Settings each used to word this themselves, so each was wrong in a
+    /// different way: none mentioned Live Wallpaper, and only one mentioned the camera.
+    static var unlockSummary: String {
+        let items = ["all \(PresetRegistry.builtinPresets.count) presets", "custom shaders"]
+            + premiumFeatures.map(\.name)
+        guard let last = items.last, items.count > 1 else { return "Unlock \(items.first ?? "")" }
+        return "Unlock " + items.dropLast().joined(separator: ", ") + " & " + last
+    }
+
+    /// Licensed-state heading. Deliberately not "All Presets Unlocked": that framed the licence
+    /// as a presets-only deal, which stopped being true once the camera and Live Wallpaper
+    /// were gated behind it.
+    static let unlockedTitle = "Everything Unlocked"
+
     private let defaults = UserDefaults.standard
     private let licenseKeyKey = "licenseKey"
     private let licenseEmailKey = "licenseEmail"

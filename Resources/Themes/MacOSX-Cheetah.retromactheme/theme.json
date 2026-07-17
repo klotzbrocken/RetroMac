@@ -1,5 +1,7 @@
 {
   "name": "Mac OS X",
+  "splashVideo": "boot.mp4",
+  "splashFullscreen": true,
   "systemTweaks": [
     { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "6", "refresh": "Finder" },
     { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "6", "refresh": "Finder" },
