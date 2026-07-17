@@ -1,8 +1,8 @@
 diff --git a/engine/stratagus/src/video/sdl.cpp b/engine/stratagus/src/video/sdl.cpp
-index 1ca2bac..74974c6 100644
+index 1ca2bac..30f8bbc 100644
 --- a/engine/stratagus/src/video/sdl.cpp
 +++ b/engine/stratagus/src/video/sdl.cpp
-@@ -109,6 +109,265 @@ uint8_t SizeChangeCounter = 0;
+@@ -109,6 +109,245 @@ uint8_t SizeChangeCounter = 0;
  
  static bool dummyRenderer = false;
  
@@ -42,23 +42,14 @@ index 1ca2bac..74974c6 100644
 +	rmTheme = RM_NONE; rmThemed = false; rmTitleH = 0; rmBorder = 0;
 +	rmClose = {0, 0, 0, 0}; rmZoom = {0, 0, 0, 0};
 +	const char *th = getenv("RETROMAC_THEME");
-+	if (!th || !*th) {
++	if (!th || !*th || fullscreen) {
 +		return;
 +	}
-+	RetroMacTheme t = RM_NONE;
-+	int border = 0, titleH = 0;
-+	SDL_Rect close = {0, 0, 0, 0};
-+	if (!strcmp(th, "beos"))          { t = RM_BEOS;   border = 4; titleH = 26; close = {8, 7, 14, 14}; }
-+	else if (!strcmp(th, "macos9"))   { t = RM_MACOS9; border = 2; titleH = 22; close = {8, 5, 13, 13}; }
-+	else if (!strcmp(th, "macos6"))   { t = RM_MACOS6; border = 2; titleH = 22; close = {8, 5, 13, 13}; }
-+	else if (!strcmp(th, "winxp"))    { t = RM_WINXP;  border = 4; titleH = 30; close = {0, 0, 21, 21}; }
++	if (!strcmp(th, "beos"))          { rmTheme = RM_BEOS;   rmBorder = 4; rmTitleH = 26; rmClose = {8, 7, 14, 14}; }
++	else if (!strcmp(th, "macos9"))   { rmTheme = RM_MACOS9; rmBorder = 2; rmTitleH = 22; rmClose = {8, 5, 13, 13}; }
++	else if (!strcmp(th, "macos6"))   { rmTheme = RM_MACOS6; rmBorder = 2; rmTitleH = 22; rmClose = {8, 5, 13, 13}; }
++	else if (!strcmp(th, "winxp"))    { rmTheme = RM_WINXP;  rmBorder = 4; rmTitleH = 30; rmClose = {0, 0, 21, 21}; }
 +	else                              { return; }
-+	// Remember the theme even in fullscreen, so leaving fullscreen brings the chrome back.
-+	rmTheme = t;
-+	if (fullscreen) {
-+		return;   // chrome is windowed-only; metrics stay zeroed so every gate below is off
-+	}
-+	rmBorder = border; rmTitleH = titleH; rmClose = close;
 +	rmThemed = true;
 +}
 +
@@ -107,21 +98,10 @@ index 1ca2bac..74974c6 100644
 +	return SDL_HITTEST_NORMAL;
 +}
 +
-+/// Title-bar gadgets and the fullscreen key.
-+///
-+/// ⌥F/⌃F is handled here ONLY outside a running game: the engine's own binding lives in
-+/// CommandKey, which never sees the menus — so from the menu (where you start) fullscreen
-+/// was a one-way trip, with no title bar left to click your way out of. In a game we stay
-+/// out of the way, or it would toggle twice and cancel itself.
++/// Title-bar gadgets, handled before the click can reach the game: close → quit,
++/// zoom → fullscreen (the engine's own ⌥F only works inside a running game).
 +static int SDLCALL RetroMacEventWatch(void *, SDL_Event *e)
 +{
-+	if (rmTheme != RM_NONE && e->type == SDL_KEYDOWN
-+	    && e->key.keysym.sym == SDLK_f
-+	    && (e->key.keysym.mod & (KMOD_ALT | KMOD_CTRL))
-+	    && !GameRunning) {
-+		ToggleFullScreen();
-+		return 1;
-+	}
 +	if (rmThemed && e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT) {
 +		if (RetroMacInRect(rmClose, e->button.x, e->button.y)) {
 +			SDL_Event q; q.type = SDL_QUIT; SDL_PushEvent(&q);
@@ -268,7 +248,7 @@ index 1ca2bac..74974c6 100644
  uint32_t SDL_CUSTOM_KEY_UP;
  
  /**
-@@ -377,8 +636,14 @@ void InitVideoSdl()
+@@ -377,8 +616,14 @@ void InitVideoSdl()
  
  	// Sam said: better for windows.
  	/* SDL_HWSURFACE|SDL_HWPALETTE | */
@@ -283,7 +263,7 @@ index 1ca2bac..74974c6 100644
  	} else {
  		flags |= SDL_WINDOW_RESIZABLE;
  	}
-@@ -413,8 +678,12 @@ void InitVideoSdl()
+@@ -413,8 +658,12 @@ void InitVideoSdl()
  		ss >> y;     // Y
  		printf("[Window Pos] %d,%d\n", x, y);
  	}
@@ -297,21 +277,20 @@ index 1ca2bac..74974c6 100644
  	if (TheWindow == nullptr) {
  		ErrorPrint("Couldn't set %dx%dx%d video mode: %s\n",
  		           Video.Width,
-@@ -440,6 +709,13 @@ void InitVideoSdl()
+@@ -440,6 +689,12 @@ void InitVideoSdl()
  		ErrorPrint("Couldn't create accelerated renderer: %s\n", SDL_GetError());
  		exit(1);
  	}
-+	if (rmTheme != RM_NONE) {
-+		// Registered whenever a theme is set, not just when the chrome is currently drawn:
-+		// starting fullscreen still needs the ⌥F handler below to get back out, and the
-+		// hit test is a no-op while the metrics are zeroed.
++	if (rmThemed) {
++		// Borderless: the OS no longer moves or closes the window for us, so the title
++		// strip has to drag it and the close box has to quit.
 +		SDL_SetWindowHitTest(TheWindow, RetroMacHitTest, nullptr);
 +		SDL_AddEventWatch(RetroMacEventWatch, nullptr);
 +	}
  	SDL_RendererInfo rendererInfo;
  	if (!SDL_GetRendererInfo(TheRenderer, &rendererInfo)) {
  		printf("[Renderer] %s\n", rendererInfo.name);
-@@ -726,6 +1002,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -726,6 +981,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -319,7 +298,7 @@ index 1ca2bac..74974c6 100644
  			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseButtonPress(callbacks, SDL_GetTicks(), event.button.button);
  			break;
-@@ -736,6 +1013,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -736,6 +992,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -327,7 +306,7 @@ index 1ca2bac..74974c6 100644
  			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseButtonRelease(callbacks, SDL_GetTicks(), event.button.button);
  			break;
-@@ -746,6 +1024,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -746,6 +1003,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -335,7 +314,7 @@ index 1ca2bac..74974c6 100644
  			event.motion.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseMove(callbacks, SDL_GetTicks(), event.motion.x, event.motion.y);
  			break;
-@@ -1081,7 +1360,20 @@ void RealizeVideoMemory()
+@@ -1081,7 +1339,20 @@ void RealizeVideoMemory()
  			SDL_RenderClear(TheRenderer);
  			//for (int i = 0; i < NumRects; i++)
  			//    SDL_UpdateTexture(TheTexture, &Rects[i], TheScreen->pixels, TheScreen->pitch);
@@ -357,7 +336,7 @@ index 1ca2bac..74974c6 100644
  		}
  		if (Parameters::Instance.benchmark) {
  			RenderBenchmarkOverlay();
-@@ -1181,6 +1473,7 @@ void ToggleFullScreen()
+@@ -1181,6 +1452,7 @@ void ToggleFullScreen()
  	Invalidate(); // Update display
  #endif
  	Video.FullScreen = (flags ^ SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
