@@ -139,10 +139,10 @@ struct AboutTab: View {
                             .font(.system(size: 20))
                             .foregroundStyle(license.isLicensed ? .green : .orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(license.isLicensed ? "All Presets Unlocked" : "Basic Edition")
+                            Text(license.isLicensed ? LicenseManager.unlockedTitle : "Basic Edition")
                                 .font(.caption)
                                 .fontWeight(.medium)
-                            Text(license.isLicensed ? "Thank you for supporting RetroMac!" : "Unlock all \(PresetRegistry.builtinPresets.count) presets + custom shaders")
+                            Text(license.isLicensed ? "Thank you for supporting RetroMac!" : LicenseManager.unlockSummary)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }

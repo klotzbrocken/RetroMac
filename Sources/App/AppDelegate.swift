@@ -876,7 +876,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         liveWallpaperPillToggle = livePill
         let liveRow = MenuToggleRowView(
             icon: "photo.on.rectangle.angled",
-            label: LicenseManager.shared.isLicensed ? "Live Wallpaper" : "Live Wallpaper \u{1F512}",
+            label: LicenseManager.shared.label("Live Wallpaper"),
             hotkeyHint: nil,
             pill: livePill
         ) { [weak self] in
@@ -887,12 +887,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         liveItem.view = liveRow
         menu.addItem(liveItem)
 
-        // ── Virtual Camera toggle ──
+        // ── Virtual Camera toggle (Pro) ──
         let cameraPill = PillToggleView(isOn: vcam.isRunning || vcam.activationPending)
         cameraPillToggle = cameraPill
         let cameraRow = MenuToggleRowView(
             icon: "camera.fill",
-            label: "Virtual Camera",
+            label: LicenseManager.shared.label("Virtual Camera"),
             hotkeyHint: nil,
             pill: cameraPill
         ) { [weak self] in

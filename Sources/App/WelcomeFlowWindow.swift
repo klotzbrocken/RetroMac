@@ -200,7 +200,10 @@ struct WelcomeFlowView: View {
                     Image(systemName: "heart.fill").font(.system(size: 40)).foregroundStyle(.pink)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Keep RetroMac free").font(.title2.bold())
-                        Text("No ads, no tracking, no feature locks. Optional support helps the developer keep improving the app.")
+                        // Not "no feature locks" any more — presets, Live Wallpaper and the
+                        // Virtual Camera are gated, and claiming otherwise on the very page
+                        // that sells the unlock was a bad look.
+                        Text("No ads, no tracking. The core is free forever; a one-off unlock opens the rest and helps the developer keep improving the app.")
                             .font(.subheadline).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -226,7 +229,7 @@ struct WelcomeFlowView: View {
                                chip: nil) { open(LicenseManager.kofiURL) }
 
                     supportRow(emoji: "🍕", title: "Buy a Pizza",
-                               subtitle: "Unlock all presets & Webcam Mode",
+                               subtitle: LicenseManager.unlockSummary,
                                chip: "Unlock") { open(LicenseManager.purchaseURL) }
 
                     supportRow(emoji: "🙁", title: "None of these :-(",

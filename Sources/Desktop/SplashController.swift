@@ -110,9 +110,30 @@ final class SplashController {
         ) { [weak self] _ in self?.dismiss() }
 
         player.play()
-        // Safety cap in case the end notification is missed.
+        armSafetyDismiss(for: player.currentItem?.asset)
+    }
+
+    /// Backstop in case `.AVPlayerItemDidPlayToEndTime` never arrives — it is NOT a length
+    /// limit, though a flat 15s timer made it one and silently cut off anything longer (the
+    /// Mac OS X boot runs 23s). Starts at 15s, then re-arms to the clip's real length once
+    /// that's loaded; the duration has to be read asynchronously since macOS 13.
+    private func armSafetyDismiss(for asset: AVAsset?) {
         dismissTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: false) { [weak self] _ in
             self?.dismiss()
+        }
+        guard let asset else { return }
+        // Reached through the singleton rather than captured, so this stays out of the
+        // Sendable-capture rules for a MainActor-only AppKit object.
+        Task { @MainActor in
+            guard let seconds = try? await asset.load(.duration).seconds,
+                  seconds.isFinite, seconds > 0 else { return }
+            let controller = SplashController.shared
+            guard controller.dismissTimer != nil else { return }   // nil once dismiss() ran
+            controller.dismissTimer?.invalidate()
+            controller.dismissTimer = Timer.scheduledTimer(withTimeInterval: seconds + 3.0,
+                                                           repeats: false) { _ in
+                SplashController.shared.dismiss()
+            }
         }
     }
 

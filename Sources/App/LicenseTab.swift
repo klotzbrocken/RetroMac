@@ -97,9 +97,15 @@ struct LicenseTab: View {
                 featureRow("Scanline & Reflection Overlays", free: true)
             }
 
-            Section("All Presets (Licensed)") {
+            Section("Licensed") {
                 featureRow("All \(PresetRegistry.builtinPresets.count) Shader Presets", free: false)
                 featureRow("Custom Presets (.metal)", free: false)
+                // Driven off the one premium list, so a new paid feature shows up here by
+                // itself — Live Wallpaper was gated for ages and never appeared in any of
+                // the three places that claim to say what the licence includes.
+                ForEach(LicenseManager.premiumFeatures, id: \.name) { feature in
+                    featureRow(feature.name, free: false)
+                }
             }
         }
         .formStyle(.grouped)
@@ -122,12 +128,12 @@ struct LicenseTab: View {
     }
 
     private var statusTitle: String {
-        license.isLicensed ? "All Presets Unlocked" : "Basic Edition"
+        license.isLicensed ? LicenseManager.unlockedTitle : "Basic Edition"
     }
 
     private var statusSubtitle: String {
         if license.isLicensed { return "Thank you for supporting RetroMac!" }
-        return "Unlock all \(PresetRegistry.builtinPresets.count) presets + custom shaders"
+        return LicenseManager.unlockSummary
     }
 
     private var maskedKey: String {
