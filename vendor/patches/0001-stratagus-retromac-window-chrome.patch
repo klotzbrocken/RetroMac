@@ -1,8 +1,8 @@
 diff --git a/engine/stratagus/src/video/sdl.cpp b/engine/stratagus/src/video/sdl.cpp
-index 1ca2bac..8fdadf5 100644
+index 1ca2bac..a2b74a3 100644
 --- a/engine/stratagus/src/video/sdl.cpp
 +++ b/engine/stratagus/src/video/sdl.cpp
-@@ -109,6 +109,177 @@ uint8_t SizeChangeCounter = 0;
+@@ -109,6 +109,184 @@ uint8_t SizeChangeCounter = 0;
  
  static bool dummyRenderer = false;
  
@@ -22,10 +22,17 @@ index 1ca2bac..8fdadf5 100644
 +// ---------------------------------------------------------------------------
 +enum RetroMacTheme { RM_NONE = 0, RM_BEOS, RM_MACOS9, RM_WINXP, RM_MACOS6 };
 +static RetroMacTheme rmTheme = RM_NONE;
-+static bool     rmThemed = false;   // chrome is actually being drawn (theme + windowed)
-+static int      rmTitleH = 0;       // height of the title strip
-+static int      rmBorder = 0;       // side/bottom frame width
 +static SDL_Rect rmClose  = {0, 0, 0, 0};
++
++// Shared with video.cpp: ResizeScreen has to include the chrome in the renderer's logical
++// size, otherwise every draw here is interpreted in the game's 640x480 space and the strip
++// lands inside the scaled picture instead of above it.
++bool RetroMacChromeActive = false;   // chrome is being drawn (theme set + windowed)
++int  RetroMacChromeTitleH = 0;       // height of the title strip
++int  RetroMacChromeBorder = 0;       // side/bottom frame width
++#define rmThemed RetroMacChromeActive
++#define rmTitleH RetroMacChromeTitleH
++#define rmBorder RetroMacChromeBorder
 +
 +/// Pick the chrome metrics for the host's theme. Unknown/absent theme → no chrome, so a
 +/// standalone run (or RetroMac's "default" theme) keeps an ordinary OS window.
@@ -180,7 +187,7 @@ index 1ca2bac..8fdadf5 100644
  uint32_t SDL_CUSTOM_KEY_UP;
  
  /**
-@@ -377,8 +548,14 @@ void InitVideoSdl()
+@@ -377,8 +555,14 @@ void InitVideoSdl()
  
  	// Sam said: better for windows.
  	/* SDL_HWSURFACE|SDL_HWPALETTE | */
@@ -195,7 +202,7 @@ index 1ca2bac..8fdadf5 100644
  	} else {
  		flags |= SDL_WINDOW_RESIZABLE;
  	}
-@@ -413,8 +590,12 @@ void InitVideoSdl()
+@@ -413,8 +597,12 @@ void InitVideoSdl()
  		ss >> y;     // Y
  		printf("[Window Pos] %d,%d\n", x, y);
  	}
@@ -209,7 +216,7 @@ index 1ca2bac..8fdadf5 100644
  	if (TheWindow == nullptr) {
  		ErrorPrint("Couldn't set %dx%dx%d video mode: %s\n",
  		           Video.Width,
-@@ -440,6 +621,12 @@ void InitVideoSdl()
+@@ -440,6 +628,12 @@ void InitVideoSdl()
  		ErrorPrint("Couldn't create accelerated renderer: %s\n", SDL_GetError());
  		exit(1);
  	}
@@ -222,7 +229,7 @@ index 1ca2bac..8fdadf5 100644
  	SDL_RendererInfo rendererInfo;
  	if (!SDL_GetRendererInfo(TheRenderer, &rendererInfo)) {
  		printf("[Renderer] %s\n", rendererInfo.name);
-@@ -726,6 +913,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -726,6 +920,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -230,7 +237,7 @@ index 1ca2bac..8fdadf5 100644
  			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseButtonPress(callbacks, SDL_GetTicks(), event.button.button);
  			break;
-@@ -736,6 +924,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -736,6 +931,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -238,7 +245,7 @@ index 1ca2bac..8fdadf5 100644
  			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseButtonRelease(callbacks, SDL_GetTicks(), event.button.button);
  			break;
-@@ -746,6 +935,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -746,6 +942,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -246,18 +253,21 @@ index 1ca2bac..8fdadf5 100644
  			event.motion.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseMove(callbacks, SDL_GetTicks(), event.motion.x, event.motion.y);
  			break;
-@@ -1081,7 +1271,17 @@ void RealizeVideoMemory()
+@@ -1081,7 +1278,20 @@ void RealizeVideoMemory()
  			SDL_RenderClear(TheRenderer);
  			//for (int i = 0; i < NumRects; i++)
  			//    SDL_UpdateTexture(TheTexture, &Rects[i], TheScreen->pixels, TheScreen->pitch);
 -			SDL_RenderCopy(TheRenderer, TheTexture, nullptr, nullptr);
 +			if (rmThemed) {
 +				// Repaint the frame every present (the renderer is cleared each frame),
-+				// then put the picture inside it.
-+				int winW = 0, winH = 0;
-+				SDL_GetWindowSize(TheWindow, &winW, &winH);
-+				RetroMacDrawChrome(TheRenderer, winW, winH);
-+				SDL_Rect dst = {rmBorder, rmTitleH, winW - 2 * rmBorder, winH - rmTitleH - rmBorder};
++				// then put the picture inside it. Work in the renderer's LOGICAL space —
++				// ResizeScreen sizes that to the whole window, chrome included — so these
++				// coordinates match the ones the hit test sees.
++				int lw = 0, lh = 0;
++				SDL_RenderGetLogicalSize(TheRenderer, &lw, &lh);
++				if (lw <= 0 || lh <= 0) { SDL_GetWindowSize(TheWindow, &lw, &lh); }
++				RetroMacDrawChrome(TheRenderer, lw, lh);
++				SDL_Rect dst = {rmBorder, rmTitleH, lw - 2 * rmBorder, lh - rmTitleH - rmBorder};
 +				SDL_RenderCopy(TheRenderer, TheTexture, nullptr, &dst);
 +			} else {
 +				SDL_RenderCopy(TheRenderer, TheTexture, nullptr, nullptr);
@@ -265,3 +275,48 @@ index 1ca2bac..8fdadf5 100644
  		}
  		if (Parameters::Instance.benchmark) {
  			RenderBenchmarkOverlay();
+diff --git a/engine/stratagus/src/video/video.cpp b/engine/stratagus/src/video/video.cpp
+index ca44880..17844e9 100644
+--- a/engine/stratagus/src/video/video.cpp
++++ b/engine/stratagus/src/video/video.cpp
+@@ -257,24 +257,37 @@ void CVideo::ClearScreen()
+ **
+ **  @return  True if the resolution changed, false otherwise
+ */
++// RetroMac window chrome (see sdl.cpp): when the host hands us a theme we draw our own
++// title strip, and the window is that much larger than the picture.
++extern bool RetroMacChromeActive;
++extern int  RetroMacChromeTitleH;
++extern int  RetroMacChromeBorder;
++
+ bool CVideo::ResizeScreen(int w, int h)
+ {
++	const int rmExtraW = RetroMacChromeActive ? 2 * RetroMacChromeBorder : 0;
++	const int rmExtraH = RetroMacChromeActive ? RetroMacChromeTitleH + RetroMacChromeBorder : 0;
++
+ 	if (!(SDL_GetWindowFlags(TheWindow) & SDL_WINDOW_FULLSCREEN_DESKTOP)
+ 		&& Width == WindowWidth
+ 		&& Height == WindowHeight) {
+ 		// if initially window was the same size as res, keep it that way, unless we've resized
+ 		int ww, wh;
+ 		SDL_GetWindowSize(TheWindow, &ww, &wh);
+-		if (ww == Width && wh == Height) {
++		if (ww == Width + rmExtraW && wh == Height + rmExtraH) {
+ 			WindowWidth = w;
+ 			WindowHeight = h;
+-			SDL_SetWindowSize(TheWindow, w, h);
++			SDL_SetWindowSize(TheWindow, w + rmExtraW, h + rmExtraH);
+ 		}
+ 	}
+ 	Width = w;
+ 	Height = h;
+ 
+-	SDL_RenderSetLogicalSize(TheRenderer, w, h * VerticalPixelSize);
++	// The logical space must be the WHOLE window, chrome included — otherwise the chrome is
++	// drawn inside the letterboxed game area and the close box ends up somewhere other than
++	// where it can be clicked. With the window sized to match, this stays 1:1, so window
++	// points, logical units and the mouse all agree.
++	SDL_RenderSetLogicalSize(TheRenderer, w + rmExtraW, h * VerticalPixelSize + rmExtraH);
+ 
+ 	// new surface
+ 	if (TheScreen) {
