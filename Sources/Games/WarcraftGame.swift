@@ -213,18 +213,15 @@ enum WarcraftGame {
         try? lines.joined(separator: "\n").write(to: prefs, atomically: true, encoding: .utf8)
     }
 
-    /// Windowed by default — the engine draws a RetroMac title bar itself when we hand it a
-    /// theme (see the chrome patch in vendor/patches), so a window is what we want. The user's
-    /// own fullscreen choice is left alone: the engine persists VideoFullScreen and can toggle
-    /// it in-game, and its fullscreen is a borderless desktop window rather than an exclusive
-    /// mode, so the CRT overlay keeps working either way.
+    /// Apply the startup display mode on every launch.
+    ///
+    /// RetroMac owns this rather than the engine, because the engine's own ⌥F only works in
+    /// `CommandKey` — i.e. inside a running game, not in its menus, which is exactly where you
+    /// land on startup. Leaving it to the engine meant whatever it last saved won you the mode,
+    /// with no way to change it from the menu. Windowed gets our themed title bar; fullscreen
+    /// is a borderless desktop window, so the CRT overlay works either way.
     private static func applyDisplayPreference(_ title: Title) {
-        // Only seed a default on the very first run; never override the user afterwards.
-        let prefs = userStateDir(title)
-            .appendingPathComponent(title.namespace)
-            .appendingPathComponent("preferences.lua")
-        guard !FileManager.default.fileExists(atPath: prefs.path) else { return }
-        setPreference(title, "VideoFullScreen", "false")
+        setPreference(title, "VideoFullScreen", AppSettings.shared.warcraftFullscreen ? "true" : "false")
     }
 
     // MARK: - CRT
