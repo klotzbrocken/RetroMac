@@ -12,6 +12,11 @@ final class DockController {
     private var fullscreenObserver: NSObjectProtocol?
     private var settingsObservers: [AnyCancellable] = []
     private var isVisible = false
+    /// A bundled game owns the screen — get out of its way. `isFrontmostAppFullscreen()` can't
+    /// see these: it detects fullscreen by the app having its own Mission Control Space, and
+    /// engines like Stratagus use a borderless desktop-sized window instead, on our Space.
+    /// The dock floats at level 24, so without this it draws straight over the game.
+    private var suspendedForGame = false
     private var manualToggle: Bool?
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
@@ -441,6 +446,12 @@ final class DockController {
             return
         }
 
+        if suspendedForGame {
+            dockLog("evaluateVisibility: game running → hide")
+            hide()
+            return
+        }
+
         if isFrontmostAppFullscreen() {
             dockLog("evaluateVisibility: fullscreen → hide (isOnActiveSpace=\(window?.isOnActiveSpace ?? false), isVisible=\(window?.isVisible ?? false), windowNum=\(window?.windowNumber ?? -1))")
             hide()
@@ -458,6 +469,16 @@ final class DockController {
         }
 
         show()
+    }
+
+    /// Step aside while a bundled game runs, then come back. Used by the game launchers, which
+    /// know when their process starts and exits — the fullscreen detection above cannot help
+    /// here (see `suspendedForGame`).
+    func setSuspendedForGame(_ suspended: Bool) {
+        guard suspendedForGame != suspended else { return }
+        suspendedForGame = suspended
+        dockLog("setSuspendedForGame(\(suspended))")
+        evaluateVisibility()
     }
 
     private func show() {

@@ -328,13 +328,17 @@ enum WarcraftGame {
             DispatchQueue.main.async {
                 overlayPollTimer?.invalidate()
                 overlayPollTimer = nil
+                DockController.shared.setSuspendedForGame(false)
                 (NSApp.delegate as? AppDelegate)?.restorePreviousOverlay()
-                print("[Warcraft] Game quit — previous overlay state restored")
+                print("[Warcraft] Game quit — dock and overlay state restored")
             }
         }
         do {
             try p.run()
             print("[Warcraft] Launched \(title.displayName) (data: \(run.path))")
+            // The themed dock floats above ordinary windows, so it would sit on top of the
+            // game — windowed or fullscreen alike. Stand it down until the game exits.
+            DockController.shared.setSuspendedForGame(true)
             startShaderOverlay(pid: p.processIdentifier)
         } catch {
             print("[Warcraft] Launch failed: \(error)")
