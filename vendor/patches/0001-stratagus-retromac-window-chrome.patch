@@ -1,8 +1,8 @@
 diff --git a/engine/stratagus/src/video/sdl.cpp b/engine/stratagus/src/video/sdl.cpp
-index 1ca2bac..a2b74a3 100644
+index 1ca2bac..de69f84 100644
 --- a/engine/stratagus/src/video/sdl.cpp
 +++ b/engine/stratagus/src/video/sdl.cpp
-@@ -109,6 +109,184 @@ uint8_t SizeChangeCounter = 0;
+@@ -109,6 +109,204 @@ uint8_t SizeChangeCounter = 0;
  
  static bool dummyRenderer = false;
  
@@ -49,6 +49,26 @@ index 1ca2bac..a2b74a3 100644
 +	else if (!strcmp(th, "winxp"))    { rmTheme = RM_WINXP;  rmBorder = 4; rmTitleH = 30; rmClose = {0, 0, 21, 21}; }
 +	else                              { return; }
 +	rmThemed = true;
++}
++
++/// Re-decide the chrome after a fullscreen toggle: it is windowed-only, so going fullscreen
++/// drops it and coming back restores it. Both the renderer's logical space and the window
++/// size have to follow, or the picture stays inset with nothing around it.
++static void RetroMacUpdateChromeForFullscreen()
++{
++	const bool was = rmThemed;
++	RetroMacInitChrome(Video.FullScreen != 0);
++	if (rmThemed == was || !TheRenderer) {
++		return;
++	}
++	const int extraW = rmThemed ? 2 * rmBorder : 0;
++	const int extraH = rmThemed ? rmTitleH + rmBorder : 0;
++	SDL_RenderSetLogicalSize(TheRenderer,
++	                         Video.Width + extraW,
++	                         Video.Height * Video.VerticalPixelSize + extraH);
++	if (rmThemed) {   // back to a window: give the frame its room again
++		SDL_SetWindowSize(TheWindow, Video.WindowWidth + extraW, Video.WindowHeight + extraH);
++	}
 +}
 +
 +/// Window coords → game-area coords. The chrome shifts the picture right and down, so every
@@ -187,7 +207,7 @@ index 1ca2bac..a2b74a3 100644
  uint32_t SDL_CUSTOM_KEY_UP;
  
  /**
-@@ -377,8 +555,14 @@ void InitVideoSdl()
+@@ -377,8 +575,14 @@ void InitVideoSdl()
  
  	// Sam said: better for windows.
  	/* SDL_HWSURFACE|SDL_HWPALETTE | */
@@ -202,7 +222,7 @@ index 1ca2bac..a2b74a3 100644
  	} else {
  		flags |= SDL_WINDOW_RESIZABLE;
  	}
-@@ -413,8 +597,12 @@ void InitVideoSdl()
+@@ -413,8 +617,12 @@ void InitVideoSdl()
  		ss >> y;     // Y
  		printf("[Window Pos] %d,%d\n", x, y);
  	}
@@ -216,7 +236,7 @@ index 1ca2bac..a2b74a3 100644
  	if (TheWindow == nullptr) {
  		ErrorPrint("Couldn't set %dx%dx%d video mode: %s\n",
  		           Video.Width,
-@@ -440,6 +628,12 @@ void InitVideoSdl()
+@@ -440,6 +648,12 @@ void InitVideoSdl()
  		ErrorPrint("Couldn't create accelerated renderer: %s\n", SDL_GetError());
  		exit(1);
  	}
@@ -229,7 +249,7 @@ index 1ca2bac..a2b74a3 100644
  	SDL_RendererInfo rendererInfo;
  	if (!SDL_GetRendererInfo(TheRenderer, &rendererInfo)) {
  		printf("[Renderer] %s\n", rendererInfo.name);
-@@ -726,6 +920,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -726,6 +940,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -237,7 +257,7 @@ index 1ca2bac..a2b74a3 100644
  			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseButtonPress(callbacks, SDL_GetTicks(), event.button.button);
  			break;
-@@ -736,6 +931,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -736,6 +951,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -245,7 +265,7 @@ index 1ca2bac..a2b74a3 100644
  			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseButtonRelease(callbacks, SDL_GetTicks(), event.button.button);
  			break;
-@@ -746,6 +942,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -746,6 +962,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -253,7 +273,7 @@ index 1ca2bac..a2b74a3 100644
  			event.motion.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseMove(callbacks, SDL_GetTicks(), event.motion.x, event.motion.y);
  			break;
-@@ -1081,7 +1278,20 @@ void RealizeVideoMemory()
+@@ -1081,7 +1298,20 @@ void RealizeVideoMemory()
  			SDL_RenderClear(TheRenderer);
  			//for (int i = 0; i < NumRects; i++)
  			//    SDL_UpdateTexture(TheTexture, &Rects[i], TheScreen->pixels, TheScreen->pitch);
@@ -275,6 +295,14 @@ index 1ca2bac..a2b74a3 100644
  		}
  		if (Parameters::Instance.benchmark) {
  			RenderBenchmarkOverlay();
+@@ -1181,6 +1411,7 @@ void ToggleFullScreen()
+ 	Invalidate(); // Update display
+ #endif
+ 	Video.FullScreen = (flags ^ SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
++	RetroMacUpdateChromeForFullscreen();
+ }
+ 
+ //@}
 diff --git a/engine/stratagus/src/video/video.cpp b/engine/stratagus/src/video/video.cpp
 index ca44880..17844e9 100644
 --- a/engine/stratagus/src/video/video.cpp
