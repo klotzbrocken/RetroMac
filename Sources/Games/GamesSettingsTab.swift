@@ -165,8 +165,12 @@ struct GamesSettingsTab: View {
                     }
 
                     if WarcraftGame.isPlayable(title) {
-                        Button("Play \(title.displayName)") { WarcraftGame.launch(title) }
-                            .font(.caption)
+                        HStack(spacing: 10) {
+                            Button("Play \(title.displayName)") { WarcraftGame.launch(title) }
+                            Text("⌥F in-game toggles fullscreen (also in the game's Options menu).")
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                        .font(.caption)
                     }
                     Text("RetroMac ships the open-source engine and game logic only. The game itself must come from your own copy — it is never bundled.")
                         .font(.caption2).foregroundStyle(.secondary)
