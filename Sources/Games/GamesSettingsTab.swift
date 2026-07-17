@@ -139,11 +139,18 @@ struct GamesSettingsTab: View {
                         }
                     }
 
-                    // The engine can't load a shader itself (its GLSL layer is compiled out on
-                    // Apple), so this picks what RetroMac lays over the window. One setting for
-                    // both Warcraft titles — shown once, on the WC2 section.
+                    // One setting for both Warcraft titles — shown once, on the WC2 section.
                     if title == .warcraft2 {
                         Divider().padding(.vertical, 2)
+                        Toggle("Start in fullscreen", isOn: $settings.warcraftFullscreen)
+                            .toggleStyle(.switch).tint(.rmAccent)
+                        Text(settings.warcraftFullscreen
+                             ? "The game fills the screen. ⌥F switches back once you're in a match."
+                             : "The game opens in a window with the current theme's title bar. ⌥F goes fullscreen once you're in a match (it does nothing in the game's menus).")
+                            .font(.caption2).foregroundStyle(.secondary)
+
+                        // The engine can't load a shader itself (its GLSL layer is compiled out
+                        // on Apple), so this picks what RetroMac lays over the window.
                         HStack {
                             Text("CRT preset")
                             Spacer()
@@ -165,12 +172,8 @@ struct GamesSettingsTab: View {
                     }
 
                     if WarcraftGame.isPlayable(title) {
-                        HStack(spacing: 10) {
-                            Button("Play \(title.displayName)") { WarcraftGame.launch(title) }
-                            Text("⌥F in-game toggles fullscreen (also in the game's Options menu).")
-                                .font(.caption2).foregroundStyle(.secondary)
-                        }
-                        .font(.caption)
+                        Button("Play \(title.displayName)") { WarcraftGame.launch(title) }
+                            .font(.caption)
                     }
                     Text("RetroMac ships the open-source engine and game logic only. The game itself must come from your own copy — it is never bundled.")
                         .font(.caption2).foregroundStyle(.secondary)
