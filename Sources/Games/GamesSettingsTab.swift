@@ -145,8 +145,8 @@ struct GamesSettingsTab: View {
                         Toggle("Start in fullscreen", isOn: $settings.warcraftFullscreen)
                             .toggleStyle(.switch).tint(.rmAccent)
                         Text(settings.warcraftFullscreen
-                             ? "The game fills the screen. ⌥F switches back once you're in a match."
-                             : "The game opens in a window with the current theme's title bar. ⌥F goes fullscreen once you're in a match (it does nothing in the game's menus).")
+                             ? "The game fills the screen."
+                             : "With a theme active the game opens in a borderless window — just the picture, so the CRT sits on the game and not on a title bar. Quit from the game's own menu; ⌥F toggles fullscreen once you're in a match.")
                             .font(.caption2).foregroundStyle(.secondary)
 
                         // The engine can't load a shader itself (its GLSL layer is compiled out

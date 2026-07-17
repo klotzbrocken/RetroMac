@@ -1,0 +1,24 @@
+diff --git a/engine/stratagus/src/video/sdl.cpp b/engine/stratagus/src/video/sdl.cpp
+index 1ca2bac..6070058 100644
+--- a/engine/stratagus/src/video/sdl.cpp
++++ b/engine/stratagus/src/video/sdl.cpp
+@@ -377,8 +377,19 @@ void InitVideoSdl()
+ 
+ 	// Sam said: better for windows.
+ 	/* SDL_HWSURFACE|SDL_HWPALETTE | */
++	// RetroMac hosts this engine and passes its active theme in RETROMAC_THEME. On a themed
++	// desktop a stock macOS title bar on the game looks wrong, and the CRT shader RetroMac
++	// lays over the window would sit on top of that bar rather than on the picture. So with a
++	// theme active: borderless — the picture and nothing else. Quit from the game's own menu;
++	// fullscreen is ⌥F in a match, or RetroMac's "Start in fullscreen" setting.
++	const char *retroMacTheme = getenv("RETROMAC_THEME");
++	const bool retroMacBorderless =
++		retroMacTheme && *retroMacTheme && strcmp(retroMacTheme, "default") != 0;
++
+ 	if (Video.FullScreen) {
+ 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
++	} else if (retroMacBorderless) {
++		flags |= SDL_WINDOW_BORDERLESS;
+ 	} else {
+ 		flags |= SDL_WINDOW_RESIZABLE;
+ 	}
