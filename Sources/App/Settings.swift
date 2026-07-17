@@ -571,6 +571,11 @@ final class AppSettings: ObservableObject {
     @Published var warcraft1DataFolder: String {
         didSet { defaults.set(warcraft1DataFolder, forKey: "warcraft1DataFolder") }
     }
+    /// Which CRT preset RetroMac lays over the Warcraft window.
+    /// "" = follow the app's current/default preset, "off" = no shader, else a preset id.
+    @Published var warcraftPresetID: String {
+        didSet { defaults.set(warcraftPresetID, forKey: "warcraftPresetID") }
+    }
 
     // Games — Duke Nukem 3D (Raze)
     @Published var razeGrpFolder: String {
@@ -863,6 +868,7 @@ final class AppSettings: ObservableObject {
         // own game data, so there is no sensible default location to guess).
         warcraft2DataFolder = defaults.string(forKey: "warcraft2DataFolder") ?? ""
         warcraft1DataFolder = defaults.string(forKey: "warcraft1DataFolder") ?? ""
+        warcraftPresetID = defaults.string(forKey: "warcraftPresetID") ?? ""   // "" = follow the app preset
 
         // Games — Duke Nukem 3D (Raze)
         let defaultGrpDir = NSHomeDirectory() + "/Library/Application Support/RetroMac/Games"

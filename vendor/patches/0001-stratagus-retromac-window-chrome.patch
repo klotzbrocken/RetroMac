@@ -1,5 +1,5 @@
 diff --git a/engine/stratagus/src/video/sdl.cpp b/engine/stratagus/src/video/sdl.cpp
-index 1ca2bac..a2b74a3 100644
+index 1ca2bac..f6f5ac3 100644
 --- a/engine/stratagus/src/video/sdl.cpp
 +++ b/engine/stratagus/src/video/sdl.cpp
 @@ -109,6 +109,184 @@ uint8_t SizeChangeCounter = 0;
@@ -275,6 +275,23 @@ index 1ca2bac..a2b74a3 100644
  		}
  		if (Parameters::Instance.benchmark) {
  			RenderBenchmarkOverlay();
+@@ -1091,6 +1301,16 @@ void RealizeVideoMemory()
+ 	}
+ 	if (!Preference.HardwareCursor) {
+ 		HideCursor();
++		// The game hides the system cursor and paints its own — but only inside the picture,
++		// so over our title strip the pointer would simply vanish. Hand the system cursor back
++		// while it is up there.
++		if (rmThemed) {
++			int mx = 0, my = 0;
++			SDL_GetMouseState(&mx, &my);
++			if (my < rmTitleH) {
++				SDL_ShowCursor(SDL_ENABLE);
++			}
++		}
+ 	}
+ }
+ 
 diff --git a/engine/stratagus/src/video/video.cpp b/engine/stratagus/src/video/video.cpp
 index ca44880..17844e9 100644
 --- a/engine/stratagus/src/video/video.cpp
