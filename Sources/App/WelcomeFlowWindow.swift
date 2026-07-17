@@ -7,6 +7,16 @@ enum WelcomePage: Equatable {
     case setupScreenRecording
     case setupAccessibility
     case coffee
+
+    /// Window height this page wants. Measured against its content: the What's-New list runs
+    /// to roughly 660pt, while the setup pages are a heading, two paragraphs and a button.
+    var preferredHeight: CGFloat {
+        switch self {
+        case .whatsNew:                            return 700
+        case .setupScreenRecording, .setupAccessibility: return 460
+        case .coffee:                              return 600
+        }
+    }
 }
 
 /// One window, multiple pages: What's New → Setup → Coffee/Unlock, shown conditionally.
@@ -26,6 +36,20 @@ struct WelcomeFlowView: View {
     private var page: WelcomePage { pages.indices.contains(index) ? pages[index] : .coffee }
     private var isLast: Bool { index >= pages.count - 1 }
 
+    /// Grow/shrink the window to the current page, keeping its top edge put — resizing from
+    /// the bottom-left origin would otherwise make the window appear to jump up the screen.
+    private func resizeWindowForPage() {
+        guard let win = NSApp.windows.first(where: { $0.title == WelcomeFlowWindowController.windowTitle })
+        else { return }
+        let target = page.preferredHeight
+        var frame = win.frame
+        let newFrame = win.frameRect(forContentRect: NSRect(x: 0, y: 0, width: 460, height: target))
+        guard abs(frame.height - newFrame.height) > 0.5 else { return }
+        frame.origin.y += frame.height - newFrame.height
+        frame.size.height = newFrame.height
+        win.setFrame(frame, display: true, animate: true)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Group {
@@ -41,10 +65,13 @@ struct WelcomeFlowView: View {
             Divider()
             navBar
         }
-        // Tall enough that the What's-New list fits without scrolling — six entries with
-        // wrapped descriptions come to roughly 660pt. The ScrollViews stay as a safety net
-        // for short screens and for future entries.
-        .frame(width: 460, height: 700)
+        // Per page, not one size for all: What's New is a long list, the setup pages are a
+        // couple of paragraphs and a button. Sizing everything to the tallest left the short
+        // ones mostly empty. The ScrollViews stay as a safety net for short screens.
+        .frame(width: 460, height: page.preferredHeight)
+        // The hosting view can't resize its window on its own, so carry the height over
+        // whenever the page changes.
+        .onChange(of: index) { _ in resizeWindowForPage() }
     }
 
     // MARK: - Nav
@@ -306,6 +333,8 @@ private struct RMDefaultButtonStyleSafe: ButtonStyle {
 // MARK: - Controller
 
 final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
+    /// Also how the flow view finds this window to resize it per page.
+    static let windowTitle = "Welcome to RetroMac"
     private var window: NSWindow?
     private var savedMenu: NSMenu?
     private var installedEditMenu = false
@@ -381,19 +410,23 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
             if coffeeAck { s.coffeeAckDate = Date() }
         }
         let hosting = NSHostingView(rootView: view)
+        // The window must follow the page's height (see WelcomePage.preferredHeight) — a
+        // fixed content rect would otherwise keep every page at the tallest one's size.
+        let startHeight = (pages.first ?? .whatsNew).preferredHeight
 
         // Reuse an existing window but ALWAYS swap in the requested pages, so e.g.
         // clicking a locked feature reliably shows the coffee/unlock page even if the
         // window was already open on a different page.
         if let window = window {
             window.contentView = hosting
+            window.setContentSize(NSSize(width: 460, height: startHeight))
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 700),
+        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: startHeight),
                            styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        win.title = "Welcome to RetroMac"
+        win.title = Self.windowTitle
         win.contentView = hosting
         win.center()
         win.level = .floating
