@@ -1,8 +1,8 @@
 diff --git a/engine/stratagus/src/video/sdl.cpp b/engine/stratagus/src/video/sdl.cpp
-index 1ca2bac..de69f84 100644
+index 1ca2bac..30f8bbc 100644
 --- a/engine/stratagus/src/video/sdl.cpp
 +++ b/engine/stratagus/src/video/sdl.cpp
-@@ -109,6 +109,204 @@ uint8_t SizeChangeCounter = 0;
+@@ -109,6 +109,245 @@ uint8_t SizeChangeCounter = 0;
  
  static bool dummyRenderer = false;
  
@@ -23,6 +23,7 @@ index 1ca2bac..de69f84 100644
 +enum RetroMacTheme { RM_NONE = 0, RM_BEOS, RM_MACOS9, RM_WINXP, RM_MACOS6 };
 +static RetroMacTheme rmTheme = RM_NONE;
 +static SDL_Rect rmClose  = {0, 0, 0, 0};
++static SDL_Rect rmZoom   = {0, 0, 0, 0};   // maximise gadget → fullscreen
 +
 +// Shared with video.cpp: ResizeScreen has to include the chrome in the renderer's logical
 +// size, otherwise every draw here is interpreted in the game's 640x480 space and the strip
@@ -39,6 +40,7 @@ index 1ca2bac..de69f84 100644
 +static void RetroMacInitChrome(bool fullscreen)
 +{
 +	rmTheme = RM_NONE; rmThemed = false; rmTitleH = 0; rmBorder = 0;
++	rmClose = {0, 0, 0, 0}; rmZoom = {0, 0, 0, 0};
 +	const char *th = getenv("RETROMAC_THEME");
 +	if (!th || !*th || fullscreen) {
 +		return;
@@ -85,21 +87,27 @@ index 1ca2bac..de69f84 100644
 +	return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 +}
 +
-+/// The title strip drags the window; the close box doesn't (it's a button).
++/// The title strip drags the window; the gadgets don't (they're buttons).
 +static SDL_HitTestResult SDLCALL RetroMacHitTest(SDL_Window *, const SDL_Point *p, void *)
 +{
-+	if (p->y < rmTitleH && !RetroMacInRect(rmClose, p->x, p->y)) {
++	if (p->y < rmTitleH
++	    && !RetroMacInRect(rmClose, p->x, p->y)
++	    && !RetroMacInRect(rmZoom, p->x, p->y)) {
 +		return SDL_HITTEST_DRAGGABLE;
 +	}
 +	return SDL_HITTEST_NORMAL;
 +}
 +
-+/// Close box → quit, before the click can reach the game.
++/// Title-bar gadgets, handled before the click can reach the game: close → quit,
++/// zoom → fullscreen (the engine's own ⌥F only works inside a running game).
 +static int SDLCALL RetroMacEventWatch(void *, SDL_Event *e)
 +{
-+	if (rmThemed && e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT
-+	    && RetroMacInRect(rmClose, e->button.x, e->button.y)) {
-+		SDL_Event q; q.type = SDL_QUIT; SDL_PushEvent(&q);
++	if (rmThemed && e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT) {
++		if (RetroMacInRect(rmClose, e->button.x, e->button.y)) {
++			SDL_Event q; q.type = SDL_QUIT; SDL_PushEvent(&q);
++		} else if (RetroMacInRect(rmZoom, e->button.x, e->button.y)) {
++			ToggleFullScreen();
++		}
 +	}
 +	return 1;
 +}
@@ -138,6 +146,13 @@ index 1ca2bac..de69f84 100644
 +		RetroMacFill(r, rmClose.x, rmClose.y, 1, rmClose.h, 0x2A, 0x2A, 0x2A);
 +		RetroMacFill(r, rmClose.x, rmClose.y + rmClose.h - 1, rmClose.w, 1, 0x2A, 0x2A, 0x2A);
 +		RetroMacFill(r, rmClose.x + rmClose.w - 1, rmClose.y, 1, rmClose.h, 0x2A, 0x2A, 0x2A);
++		rmZoom = {tabW - 8 - rmClose.w, rmClose.y, rmClose.w, rmClose.h};   // zoom, right of the tab
++		RetroMacFill(r, rmZoom.x, rmZoom.y, rmZoom.w, rmZoom.h, 0xEA, 0xB9, 0x2A);
++		RetroMacFill(r, rmZoom.x, rmZoom.y, rmZoom.w, 1, 0x2A, 0x2A, 0x2A);
++		RetroMacFill(r, rmZoom.x, rmZoom.y, 1, rmZoom.h, 0x2A, 0x2A, 0x2A);
++		RetroMacFill(r, rmZoom.x, rmZoom.y + rmZoom.h - 1, rmZoom.w, 1, 0x2A, 0x2A, 0x2A);
++		RetroMacFill(r, rmZoom.x + rmZoom.w - 1, rmZoom.y, 1, rmZoom.h, 0x2A, 0x2A, 0x2A);
++		RetroMacFill(r, rmZoom.x + 3, rmZoom.y + 3, rmZoom.w - 6, rmZoom.h - 6, 0x2A, 0x2A, 0x2A);
 +		break;
 +	}
 +	case RM_MACOS9: {
@@ -156,6 +171,14 @@ index 1ca2bac..de69f84 100644
 +		RetroMacFill(r, rmClose.x, rmClose.y, 1, rmClose.h, 0xFF, 0xFF, 0xFF);
 +		RetroMacFill(r, rmClose.x, rmClose.y + rmClose.h - 1, rmClose.w, 1, 0x80, 0x80, 0x80);
 +		RetroMacFill(r, rmClose.x + rmClose.w - 1, rmClose.y, 1, rmClose.h, 0x80, 0x80, 0x80);
++		rmZoom = {winW - 2 - 7 - rmClose.w, rmClose.y, rmClose.w, rmClose.h};   // zoom box, right
++		RetroMacFill(r, rmZoom.x, rmZoom.y, rmZoom.w, rmZoom.h, 0xD8, 0xD8, 0xD8);
++		RetroMacFill(r, rmZoom.x, rmZoom.y, rmZoom.w, 1, 0xFF, 0xFF, 0xFF);
++		RetroMacFill(r, rmZoom.x, rmZoom.y, 1, rmZoom.h, 0xFF, 0xFF, 0xFF);
++		RetroMacFill(r, rmZoom.x, rmZoom.y + rmZoom.h - 1, rmZoom.w, 1, 0x80, 0x80, 0x80);
++		RetroMacFill(r, rmZoom.x + rmZoom.w - 1, rmZoom.y, 1, rmZoom.h, 0x80, 0x80, 0x80);
++		RetroMacFill(r, rmZoom.x + 2, rmZoom.y + 2, rmZoom.w - 4, 1, 0x55, 0x55, 0x55);   // inner square
++		RetroMacFill(r, rmZoom.x + 2, rmZoom.y + 2, 1, rmZoom.h - 4, 0x55, 0x55, 0x55);
 +		break;
 +	}
 +	case RM_MACOS6: {
@@ -173,6 +196,16 @@ index 1ca2bac..de69f84 100644
 +		RetroMacFill(r, rmClose.x, rmClose.y, 1, rmClose.h, 0, 0, 0);
 +		RetroMacFill(r, rmClose.x, rmClose.y + rmClose.h - 1, rmClose.w, 1, 0, 0, 0);
 +		RetroMacFill(r, rmClose.x + rmClose.w - 1, rmClose.y, 1, rmClose.h, 0, 0, 0);
++		rmZoom = {winW - 6 - rmClose.w, rmClose.y, rmClose.w, rmClose.h};   // zoom box, right
++		RetroMacFill(r, rmZoom.x, rmZoom.y, rmZoom.w, rmZoom.h, 0xFF, 0xFF, 0xFF);
++		RetroMacFill(r, rmZoom.x, rmZoom.y, rmZoom.w, 1, 0, 0, 0);
++		RetroMacFill(r, rmZoom.x, rmZoom.y, 1, rmZoom.h, 0, 0, 0);
++		RetroMacFill(r, rmZoom.x, rmZoom.y + rmZoom.h - 1, rmZoom.w, 1, 0, 0, 0);
++		RetroMacFill(r, rmZoom.x + rmZoom.w - 1, rmZoom.y, 1, rmZoom.h, 0, 0, 0);
++		RetroMacFill(r, rmZoom.x + 2, rmZoom.y + 2, rmZoom.w - 6, 1, 0, 0, 0);   // nested square
++		RetroMacFill(r, rmZoom.x + 2, rmZoom.y + 2, 1, rmZoom.h - 6, 0, 0, 0);
++		RetroMacFill(r, rmZoom.x + 2, rmZoom.y + rmZoom.h - 5, rmZoom.w - 6, 1, 0, 0, 0);
++		RetroMacFill(r, rmZoom.x + rmZoom.w - 5, rmZoom.y + 2, 1, rmZoom.h - 6, 0, 0, 0);
 +		break;
 +	}
 +	case RM_WINXP: {
@@ -198,6 +231,14 @@ index 1ca2bac..de69f84 100644
 +			RetroMacFill(r, rmClose.x + 7 + i, rmClose.y + 6 + i, 2, 1, 0xFF, 0xFF, 0xFF);
 +			RetroMacFill(r, rmClose.x + 7 + i, rmClose.y + rmClose.h - 7 - i, 2, 1, 0xFF, 0xFF, 0xFF);
 +		}
++		rmZoom = {rmClose.x - 2 - 21, rmClose.y, 21, 21};                 // maximise, left of close
++		RetroMacFill(r, rmZoom.x, rmZoom.y, rmZoom.w, rmZoom.h, 0x1D, 0x63, 0xF0);
++		RetroMacFill(r, rmZoom.x, rmZoom.y, rmZoom.w, 1, 0xFF, 0xFF, 0xFF);
++		RetroMacFill(r, rmZoom.x, rmZoom.y, 1, rmZoom.h, 0xFF, 0xFF, 0xFF);
++		RetroMacFill(r, rmZoom.x + 5, rmZoom.y + 5, 11, 3, 0xFF, 0xFF, 0xFF);   // window glyph
++		RetroMacFill(r, rmZoom.x + 5, rmZoom.y + 5, 1, 11, 0xFF, 0xFF, 0xFF);
++		RetroMacFill(r, rmZoom.x + 15, rmZoom.y + 5, 1, 11, 0xFF, 0xFF, 0xFF);
++		RetroMacFill(r, rmZoom.x + 5, rmZoom.y + 15, 11, 1, 0xFF, 0xFF, 0xFF);
 +		break;
 +	}
 +	default: break;
@@ -207,7 +248,7 @@ index 1ca2bac..de69f84 100644
  uint32_t SDL_CUSTOM_KEY_UP;
  
  /**
-@@ -377,8 +575,14 @@ void InitVideoSdl()
+@@ -377,8 +616,14 @@ void InitVideoSdl()
  
  	// Sam said: better for windows.
  	/* SDL_HWSURFACE|SDL_HWPALETTE | */
@@ -222,7 +263,7 @@ index 1ca2bac..de69f84 100644
  	} else {
  		flags |= SDL_WINDOW_RESIZABLE;
  	}
-@@ -413,8 +617,12 @@ void InitVideoSdl()
+@@ -413,8 +658,12 @@ void InitVideoSdl()
  		ss >> y;     // Y
  		printf("[Window Pos] %d,%d\n", x, y);
  	}
@@ -236,7 +277,7 @@ index 1ca2bac..de69f84 100644
  	if (TheWindow == nullptr) {
  		ErrorPrint("Couldn't set %dx%dx%d video mode: %s\n",
  		           Video.Width,
-@@ -440,6 +648,12 @@ void InitVideoSdl()
+@@ -440,6 +689,12 @@ void InitVideoSdl()
  		ErrorPrint("Couldn't create accelerated renderer: %s\n", SDL_GetError());
  		exit(1);
  	}
@@ -249,7 +290,7 @@ index 1ca2bac..de69f84 100644
  	SDL_RendererInfo rendererInfo;
  	if (!SDL_GetRendererInfo(TheRenderer, &rendererInfo)) {
  		printf("[Renderer] %s\n", rendererInfo.name);
-@@ -726,6 +940,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -726,6 +981,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -257,7 +298,7 @@ index 1ca2bac..de69f84 100644
  			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseButtonPress(callbacks, SDL_GetTicks(), event.button.button);
  			break;
-@@ -736,6 +951,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -736,6 +992,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -265,7 +306,7 @@ index 1ca2bac..de69f84 100644
  			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseButtonRelease(callbacks, SDL_GetTicks(), event.button.button);
  			break;
-@@ -746,6 +962,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+@@ -746,6 +1003,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
  				break;
  			}
  #endif
@@ -273,7 +314,7 @@ index 1ca2bac..de69f84 100644
  			event.motion.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
  			InputMouseMove(callbacks, SDL_GetTicks(), event.motion.x, event.motion.y);
  			break;
-@@ -1081,7 +1298,20 @@ void RealizeVideoMemory()
+@@ -1081,7 +1339,20 @@ void RealizeVideoMemory()
  			SDL_RenderClear(TheRenderer);
  			//for (int i = 0; i < NumRects; i++)
  			//    SDL_UpdateTexture(TheTexture, &Rects[i], TheScreen->pixels, TheScreen->pitch);
@@ -295,7 +336,7 @@ index 1ca2bac..de69f84 100644
  		}
  		if (Parameters::Instance.benchmark) {
  			RenderBenchmarkOverlay();
-@@ -1181,6 +1411,7 @@ void ToggleFullScreen()
+@@ -1181,6 +1452,7 @@ void ToggleFullScreen()
  	Invalidate(); // Update display
  #endif
  	Video.FullScreen = (flags ^ SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
