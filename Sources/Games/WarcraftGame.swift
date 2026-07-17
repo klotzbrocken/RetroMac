@@ -213,17 +213,18 @@ enum WarcraftGame {
         try? lines.joined(separator: "\n").write(to: prefs, atomically: true, encoding: .utf8)
     }
 
-    /// Go fullscreen while a RetroMac theme is active, stay an ordinary window otherwise.
-    ///
-    /// This is what keeps the CRT off the title bar. We can't give the game themed chrome the
-    /// way the TV window gets it — that window belongs to RetroMac, this one belongs to the
-    /// engine — so instead we remove the title bar from the equation: fullscreen leaves nothing
-    /// but the picture for the shader to sit on. SDL uses FULLSCREEN_DESKTOP here, i.e. a
-    /// borderless window rather than an exclusive mode, so it gets no Space of its own and the
-    /// overlay can still cover it.
+    /// Windowed by default — the engine draws a RetroMac title bar itself when we hand it a
+    /// theme (see the chrome patch in vendor/patches), so a window is what we want. The user's
+    /// own fullscreen choice is left alone: the engine persists VideoFullScreen and can toggle
+    /// it in-game, and its fullscreen is a borderless desktop window rather than an exclusive
+    /// mode, so the CRT overlay keeps working either way.
     private static func applyDisplayPreference(_ title: Title) {
-        let themed = RetroFrameTheme.key() != "default"
-        setPreference(title, "VideoFullScreen", themed ? "true" : "false")
+        // Only seed a default on the very first run; never override the user afterwards.
+        let prefs = userStateDir(title)
+            .appendingPathComponent(title.namespace)
+            .appendingPathComponent("preferences.lua")
+        guard !FileManager.default.fileExists(atPath: prefs.path) else { return }
+        setPreference(title, "VideoFullScreen", "false")
     }
 
     // MARK: - CRT
@@ -307,9 +308,11 @@ enum WarcraftGame {
         let p = Process()
         p.executableURL = engine
         p.arguments = ["-d", run.path, "-u", user.path]
-        // Keep the engine's HOME/cache state inside our support folder rather than the
-        // user's real home, the way peonpad's own run script isolates a profile.
-        var env = ProcessInfo.processInfo.environment
+        // RETROMAC_THEME makes the engine draw our window chrome instead of the OS title bar
+        // (see the chrome patch in vendor/patches); HOME keeps its state inside our support
+        // folder rather than the user's real home, the way peonpad's own run script isolates
+        // a profile.
+        var env = RetroFrameTheme.gameEnv()
         env["HOME"] = user.path
         p.environment = env
         do {
