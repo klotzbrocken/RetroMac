@@ -41,7 +41,10 @@ struct WelcomeFlowView: View {
             Divider()
             navBar
         }
-        .frame(width: 460, height: 560)
+        // Tall enough that the What's-New list fits without scrolling — six entries with
+        // wrapped descriptions come to roughly 660pt. The ScrollViews stay as a safety net
+        // for short screens and for future entries.
+        .frame(width: 460, height: 700)
     }
 
     // MARK: - Nav
@@ -388,7 +391,7 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 560),
+        let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 700),
                            styleMask: [.titled, .closable], backing: .buffered, defer: false)
         win.title = "Welcome to RetroMac"
         win.contentView = hosting
