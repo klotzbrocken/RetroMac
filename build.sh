@@ -272,6 +272,17 @@ fi
 if [ -f "$PROFILE" ]; then
     cp "$PROFILE" "$CONTENTS/embedded.provisionprofile"
     echo "  ✓ Provisioning profile embedded"
+elif [ "$MODE" = "release" ]; then
+    # HARD FAIL: the release entitlements include com.apple.developer.system-extension.install,
+    # which AMFI only permits with an embedded provisioning profile. Without it the WHOLE APP
+    # is SIGKILLed on launch (exit 137, "cannot be opened") — and it still signs & notarizes
+    # cleanly, so nothing else catches it. A silent skip once shipped an un-launchable 2.2.
+    echo "  ❌ Release provisioning profile missing:"
+    echo "     $PROFILE"
+    echo "     A release build without it installs but is killed on launch (AMFI, exit 137)."
+    echo "     Create a Developer ID profile for App ID com.retromac.app (System Extension +"
+    echo "     App Groups) at developer.apple.com, download it to that path, and rebuild."
+    exit 1
 else
     echo "  ⚠ Provisioning profile not found — system extension activation may fail"
 fi
