@@ -91,6 +91,7 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
             }
 
             let container = NSView(frame: initial)
+            addWin7Glass(to: container)   // Aero glass behind the transparent webview (win7 only)
             container.addSubview(wv); container.addSubview(overlay)
 
             let p = NSPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
