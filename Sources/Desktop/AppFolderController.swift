@@ -131,6 +131,10 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
            let json = String(data: data, encoding: .utf8) {
             webView.evaluateJavaScript("window.setApps && window.setApps(\(json))")
         }
+        // Finder-style "N items, X GB available" info bar (Mac OS 9 theme).
+        if let avail = Self.availableSpaceString() {
+            webView.evaluateJavaScript("window.setDiskFree && window.setDiskFree('\(avail)')")
+        }
         // Position the drag/close overlay over the title bar (BeOS tab or Mac OS 9 bar).
         webView.evaluateJavaScript("window.regions ? window.regions() : []") { [weak self] result, _ in
             guard let self = self, let wv = self.webView, let overlay = self.dragOverlay,
@@ -166,6 +170,15 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     private var titleStripHeight: CGFloat = 22   // active chrome's title-bar height (captured live)
 
     /// WindowShade: roll the window up to just the title bar, or restore.
+    /// Free space on the home volume, formatted like the Mac OS 9 Finder ("12.3 GB available").
+    private static func availableSpaceString() -> String? {
+        let url = URL(fileURLWithPath: NSHomeDirectory())
+        guard let vals = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]),
+              let bytes = vals.volumeAvailableCapacityForImportantUsage else { return nil }
+        let f = ByteCountFormatter(); f.allowedUnits = [.useGB]; f.countStyle = .file
+        return f.string(fromByteCount: bytes) + " available"
+    }
+
     private func toggleCollapse() {
         guard let panel = panel else { return }
         if collapsed {

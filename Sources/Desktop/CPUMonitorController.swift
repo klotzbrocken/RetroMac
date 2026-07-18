@@ -364,6 +364,13 @@ final class DragOverlayView: NSView {
             onButtonState?(r, "press")
             return
         }
+        // Mac OS 9 / System 6 WindowShade: double-clicking the title bar rolls the window up to
+        // just the title bar (and back). Reuses the collapse-box path; only the classic Mac
+        // themes get this gesture (Windows double-click means maximise, not shade).
+        if event.clickCount == 2 {
+            let k = RetroFrameTheme.key()
+            if k == "macos9" || k == "macos6" { onCollapse?(); return }
+        }
         window?.performDrag(with: event)
     }
     override func mouseDragged(with event: NSEvent) {

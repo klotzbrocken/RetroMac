@@ -475,17 +475,33 @@ void Screen::drawWinXPChrome() {
 // Mac OS 9 Platinum window: pinstripe title bar, close box left, collapse+zoom right.
 void Screen::drawMac9Chrome() {
 	SDL_PixelFormat *f = screen_surface->format;
-	Uint32 face   = SDL_MapRGB(f, 0xD8, 0xD8, 0xD8);
-	Uint32 black  = SDL_MapRGB(f, 0, 0, 0);
-	Uint32 light  = SDL_MapRGB(f, 0xFF, 0xFF, 0xFF);
-	Uint32 dark   = SDL_MapRGB(f, 0x80, 0x80, 0x80);
-	Uint32 darker = SDL_MapRGB(f, 0x55, 0x55, 0x55);
-	Uint32 strLt  = SDL_MapRGB(f, 0xED, 0xED, 0xED);
-	Uint32 strDk  = SDL_MapRGB(f, 0xBD, 0xBD, 0xBD);
+	Uint32 face  = SDL_MapRGB(f, 0xDA, 0xDA, 0xDA);   // #dadada window (os9.ca)
+	Uint32 black = SDL_MapRGB(f, 0, 0, 0);
+	Uint32 white = SDL_MapRGB(f, 0xFF, 0xFF, 0xFF);
+	Uint32 c99   = SDL_MapRGB(f, 0x99, 0x99, 0x99);
+	Uint32 c73   = SDL_MapRGB(f, 0x73, 0x73, 0x73);   // pinstripe dark
+	Uint32 c80   = SDL_MapRGB(f, 0x80, 0x80, 0x80);
+	Uint32 c22   = SDL_MapRGB(f, 0x22, 0x22, 0x22);   // box outline
+	Uint32 cCC   = SDL_MapRGB(f, 0xCC, 0xCC, 0xCC);
+	Uint32 c88   = SDL_MapRGB(f, 0x88, 0x88, 0x88);
+	Uint32 c20   = SDL_MapRGB(f, 0x20, 0x20, 0x20);   // glyph
 	auto line = [&](int x, int y, int w, int h, Uint32 c){ SDL_Rect r = {x,y,w,h}; SDL_FillRect(screen_surface, &r, c); };
-	auto box = [&](SDL_Rect b){ SDL_FillRect(screen_surface, &b, face);
-		line(b.x, b.y, b.w, 1, light); line(b.x, b.y, 1, b.h, light);
-		line(b.x, b.y + b.h - 1, b.w, 1, dark); line(b.x + b.w - 1, b.y, 1, b.h, dark); };
+	// os9.ca control box (13x13): outer inset-white bevel (grey TL / white BR) + inner 11x11
+	// concave face (#999 top-left -> #fff bottom-right), #222 outline, inner bevel (#ccc TL / #888 BR).
+	auto ctrlBox = [&](SDL_Rect b){
+		line(b.x, b.y, b.w, 1, c80); line(b.x, b.y, 1, b.h, c80);
+		line(b.x, b.y+b.h-1, b.w, 1, white); line(b.x+b.w-1, b.y, 1, b.h, white);
+		SDL_Rect in = { b.x+1, b.y+1, b.w-2, b.h-2 };
+		int span = in.w + in.h - 2;
+		for (int j = 0; j < in.h; j++) for (int i = 0; i < in.w; i++) {
+			int v = 0x99 + (span ? (0xFF - 0x99) * (i + j) / span : 0);
+			SDL_Rect p = { in.x+i, in.y+j, 1, 1 }; SDL_FillRect(screen_surface, &p, SDL_MapRGB(f, v, v, v));
+		}
+		line(in.x, in.y, in.w, 1, c22); line(in.x, in.y, 1, in.h, c22);
+		line(in.x, in.y+in.h-1, in.w, 1, c22); line(in.x+in.w-1, in.y, 1, in.h, c22);
+		line(in.x+1, in.y+1, in.w-2, 1, cCC); line(in.x+1, in.y+1, 1, in.h-2, cCC);
+		line(in.x+1, in.y+in.h-2, in.w-2, 1, c88); line(in.x+in.w-2, in.y+1, 1, in.h-2, c88);
+	};
 
 	int W = screen_surface->w, H = screen_surface->h;
 	int gx = clipRect.x, gy = clipRect.y, gw = clipRect.w, gh = clipRect.h;
@@ -496,26 +512,27 @@ void Screen::drawMac9Chrome() {
 	  r = {0,gy,gx,gh}; SDL_FillRect(screen_surface,&r,face);
 	  r = {gx+gw,gy,W-(gx+gw),gh}; SDL_FillRect(screen_surface,&r,face); }
 
-	// outer black window frame
+	// window frame: black outer + inset #fff top-left + inset #999 bottom-right (os9.ca .window bevel)
 	line(0,0,W,1,black); line(0,0,1,H,black); line(0,H-1,W,1,black); line(W-1,0,1,H,black);
-	// title-bar pinstripes
-	for (int y = 1; y < MAC9_TITLE_H - 1; y += 2) { line(1,y,W-2,1,strLt); line(1,y+1,W-2,1,strDk); }
-	line(0, MAC9_TITLE_H - 1, W, 1, dark);   // separator under the title bar
+	line(1,1,W-2,1,white); line(1,1,1,H-2,white);
+	line(1,H-2,W-2,1,c99); line(W-2,1,1,H-2,c99);
+	// title-bar pinstripes (#fff + #737373), 12px band centred in the 22px bar
+	for (int y = 5; y < 17; y += 2) { line(2,y,W-4,1,white); line(2,y+1,W-4,1,c73); }
+	line(0, MAC9_TITLE_H - 1, W, 1, c99);   // separator under the title bar
 	// sunken frame around the game area
-	line(gx-1, gy-1, gw+2, 1, dark); line(gx-1, gy-1, 1, gh+2, dark);
+	line(gx-1, gy-1, gw+2, 1, c80); line(gx-1, gy-1, 1, gh+2, c80);
 
-	// close box (left)
-	box(g_close);
-	// right-side control boxes: collapse + zoom
+	// close box (left); zoom + windowshade (right — zoom left of windowshade, per os9.ca)
+	ctrlBox(g_close);
 	int bs = g_close.h, by = g_close.y;
-	SDL_Rect zoomR = { W - 2 - 7 - bs, by, bs, bs }; g_zoom = zoomR;
-	SDL_Rect collR = { zoomR.x - 5 - bs, by, bs, bs }; g_collapse = collR;
-	box(g_collapse); box(g_zoom);
-	// zoom inner square
-	line(g_zoom.x+2, g_zoom.y+2, bs-4, 1, darker); line(g_zoom.x+2, g_zoom.y+2, 1, bs-4, darker);
-	line(g_zoom.x+2, g_zoom.y+bs-3, bs-4, 1, darker); line(g_zoom.x+bs-3, g_zoom.y+2, 1, bs-4, darker);
-	// collapse inner line (WindowShade)
-	line(g_collapse.x+3, g_collapse.y+3, bs-6, 1, darker);
+	SDL_Rect wsR   = { W - MAC9_BORDER - 4 - bs, by, bs, bs };   // windowshade rightmost
+	SDL_Rect zoomR = { wsR.x - 4 - bs, by, bs, bs };            // zoom to its left
+	g_zoom = zoomR; g_collapse = wsR;
+	ctrlBox(g_zoom); ctrlBox(g_collapse);
+	// zoom glyph: 5x5 corner (bottom + right edges) at the top-left of the inner face
+	line(zoomR.x+3, zoomR.y+8, 5, 1, c20); line(zoomR.x+8, zoomR.y+3, 1, 6, c20);
+	// windowshade glyph: two horizontal lines
+	line(wsR.x+3, wsR.y+5, bs-6, 1, c20); line(wsR.x+3, wsR.y+7, bs-6, 1, c20);
 
 	// title plaque (centered)
 	if (!beosTitleSurf) {
