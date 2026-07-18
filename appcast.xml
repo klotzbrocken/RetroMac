@@ -5,6 +5,38 @@
     <link>https://raw.githubusercontent.com/klotzbrocken/RetroMac/main/appcast.xml</link>
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
+    <!--
+      2.2 is an INFORMATIONAL update on purpose. The old EdDSA signing key was lost, so 2.2
+      is signed with a NEW key whose public half only exists in 2.2+. Installs on 2.0/2.1
+      carry the OLD public key and would reject a normal (enclosure) 2.2 item, so instead we
+      show them a link to download 2.2 by hand — one time. Informational items have no
+      enclosure, so they need no signature. `belowVersion` scopes the nag to pre-2.2 installs;
+      once someone is on 2.2 (new key) they stop seeing it and normal auto-update resumes at
+      2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
+    -->
+    <item>
+      <title>Version 2.2</title>
+      <pubDate>Sat, 18 Jul 2026 12:00:00 +0000</pubDate>
+      <sparkle:version>2.2</sparkle:version>
+      <sparkle:shortVersionString>2.2</sparkle:shortVersionString>
+      <sparkle:informationalUpdate>
+        <sparkle:belowVersion>2.2</sparkle:belowVersion>
+      </sparkle:informationalUpdate>
+      <link>https://github.com/klotzbrocken/RetroMac/releases/latest</link>
+      <description><![CDATA[
+        <h2>RetroMac 2.2: please update manually, one time</h2>
+        <p>This release includes a technical change to how updates are delivered, so your
+           copy can&rsquo;t install it automatically. Please download 2.2 from the button
+           below and drag it into your Applications folder, just this once. After that,
+           automatic updates work as normal again.</p>
+        <ul>
+          <li><b>Authentic Mac System 6:</b> true 1-bit black &amp; white theme.</li>
+          <li><b>Warcraft I + II:</b> play them natively with your own game data.</li>
+          <li><b>Mac OS X boot animation</b> for the Mac OS X and Snow Leopard themes.</li>
+          <li>Clearer Pro unlocks and assorted polish.</li>
+        </ul>
+      ]]></description>
+    </item>
     <item>
       <title>Version 2.0</title>
       <pubDate>Mon, 06 Jul 2026 14:49:55 +0000</pubDate>
