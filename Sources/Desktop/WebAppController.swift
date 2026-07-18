@@ -341,7 +341,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
 final class WebAppChromeView: NSView {
 
-    enum Style { case win98, winxp, macClassic, system6, plain }
+    enum Style { case win98, winxp, win7, macClassic, system6, plain }
 
     var onClose: (() -> Void)?
     var onBack: (() -> Void)?
@@ -367,6 +367,7 @@ final class WebAppChromeView: NSView {
         switch RetroFrameTheme.key() {
         case "win98":  style = .win98;      chromeStyle = ChromeStyleFactory.win98()
         case "winxp":  style = .winxp;      chromeStyle = ChromeStyleFactory.xp()
+        case "win7":   style = .win7;       chromeStyle = ChromeStyleFactory.win7()
         case "macos9": style = .macClassic; chromeStyle = ChromeStyleFactory.macClassic()
         case "macos6": style = .system6;    chromeStyle = ChromeStyleFactory.system6()
         default:       style = .plain;      chromeStyle = nil
@@ -381,7 +382,7 @@ final class WebAppChromeView: NSView {
     override var isFlipped: Bool { true }
 
     private var titleH: CGFloat {
-        switch style { case .winxp: return 30; case .system6: return 20; default: return 22 }
+        switch style { case .winxp, .win7: return 30; case .system6: return 20; default: return 22 }
     }
     private var pad: CGFloat { 4 }
 
@@ -421,6 +422,7 @@ final class WebAppChromeView: NSView {
         switch style {
         case .win98:      drawWin98(ctx, b)
         case .winxp:      drawXP(ctx, b)
+        case .win7:       drawWin7(ctx, b)
         case .macClassic: drawMacClassic(ctx, b)
         case .system6:    drawSystem6(ctx, b)
         case .plain:      drawPlain(ctx, b)
@@ -696,6 +698,135 @@ final class WebAppChromeView: NSView {
         shadow.shadowOffset = NSSize(width: 1, height: -1)
         (title as NSString).draw(at: NSPoint(x: titleX, y: (titleH - 16) / 2),
                                  withAttributes: [.font: font, .foregroundColor: NSColor.white, .shadow: shadow])
+    }
+
+    // ---- Windows 7 (Aero glass; 7.css recipe, MIT © Khang Nguyen Duy) ----
+    private func drawWin7(_ ctx: CGContext, _ b: NSRect) {
+        let cs = chromeStyle ?? ChromeStyleFactory.win7()
+        let radius = cs.cornerRadius   // 6
+
+        // Aero glass frame: the whole window is a translucent blue glass slab (#4580C4). The
+        // webview covers the interior, so only the title bar + a thin glass border show. True
+        // desktop blur isn't available behind an NSView, so the glass is approximated by the
+        // #4580C4 sheen rather than a live blur.
+        let framePath = NSBezierPath(roundedRect: b, xRadius: radius, yRadius: radius)
+        cs.windowFill.setFill(); framePath.fill()
+
+        // Title-bar glass, clipped to the rounded window (top corners round, bottom edge flat).
+        let cap = NSRect(x: 0, y: 0, width: b.width, height: titleH)
+        NSGraphicsContext.saveGraphicsState()
+        framePath.addClip()
+        cs.captionGradient?.draw(in: cap)   // left→right white/dark/white sheen over the base
+        // top highlight band: transparent → #ffffffb3 → transparent
+        NSGradient(colorsAndLocations:
+            (NSColor.white.withAlphaComponent(0.0), 0.0),
+            (NSColor.white.withAlphaComponent(0.70), 0.5),
+            (NSColor.white.withAlphaComponent(0.0), 1.0))?
+            .draw(in: NSRect(x: 0, y: titleH * 0.18, width: b.width, height: titleH * 0.24), angle: -90)
+        NSGraphicsContext.restoreGraphicsState()
+
+        // Content body #f0f0f0, leaving a `pad` glass border on the sides/bottom.
+        let body = NSRect(x: pad, y: titleH, width: b.width - pad * 2, height: b.height - titleH - pad)
+        NSColor(srgbRed: 0.941, green: 0.941, blue: 0.941, alpha: 1).setFill()
+        ctx.fill(body)
+
+        // White inner glow (box-shadow inset 0 0 0 1px #fffa) + 1px dark frame edge.
+        NSColor.white.withAlphaComponent(0.66).setStroke()
+        let inner = NSBezierPath(roundedRect: b.insetBy(dx: 1, dy: 1),
+                                 xRadius: radius - 1, yRadius: radius - 1)
+        inner.lineWidth = 1; inner.stroke()
+        NSColor.black.withAlphaComponent(0.55).setStroke()
+        let edge = NSBezierPath(roundedRect: b.insetBy(dx: 0.5, dy: 0.5), xRadius: radius, yRadius: radius)
+        edge.lineWidth = 1; edge.stroke()
+
+        // Caption cluster: [min][max][close]. Close is red + interactive; on a fixed web-app
+        // window min/max are decorative (muted glass, no hit region) — same choice as XP.
+        let bw = cs.buttonSize.width, bh = cs.buttonSize.height
+        let by: CGFloat = 0
+        let closeR = NSRect(x: b.width - cs.buttonInset - bw, y: by, width: bw, height: bh)
+        let maxR   = NSRect(x: closeR.minX - bw, y: by, width: bw, height: bh)
+        let minR   = NSRect(x: maxR.minX - bw, y: by, width: bw, height: bh)
+        tracker.reset()
+        tracker.add(.close, closeR, interactive: true)
+        let sClose = tracker.state(for: .close)
+
+        let cluster = NSRect(x: minR.minX, y: by, width: closeR.maxX - minR.minX, height: bh)
+        let clusterPath = NSBezierPath(roundedRect: cluster, xRadius: 4, yRadius: 4)
+        NSGraphicsContext.saveGraphicsState()
+        clusterPath.addClip()
+        // min + max: translucent glass (`--w7-wct-bg`); close: red (`--w7-wct_close-bg`)
+        win7GlassFill(NSRect(x: minR.minX, y: by, width: maxR.maxX - minR.minX, height: bh))
+        win7CloseFill(closeR, state: sClose)
+        NSGraphicsContext.restoreGraphicsState()
+        // dividers + cluster border
+        NSColor.black.withAlphaComponent(0.28).setFill()
+        ctx.fill(NSRect(x: maxR.minX, y: by + 1, width: 1, height: bh - 2))
+        ctx.fill(NSRect(x: closeR.minX, y: by + 1, width: 1, height: bh - 2))
+        NSColor.black.withAlphaComponent(0.30).setStroke(); clusterPath.lineWidth = 1; clusterPath.stroke()
+
+        // Glyphs
+        win7Glyph(.minimize, in: minR, color: NSColor.black.withAlphaComponent(0.72))
+        win7Glyph(.maximize, in: maxR, color: NSColor.black.withAlphaComponent(0.72))
+        win7Glyph(.close, in: closeR, color: .white)
+        closeHit = .zero   // Win7 close is tracked via `tracker`
+        backHit = .zero; fwdHit = .zero
+
+        // Title text: black with a white glow halo for legibility on glass.
+        let glow = NSShadow(); glow.shadowColor = NSColor.white.withAlphaComponent(0.95)
+        glow.shadowOffset = .zero; glow.shadowBlurRadius = 4
+        (title as NSString).draw(at: NSPoint(x: 10, y: (titleH - 16) / 2),
+                                 withAttributes: [.font: cs.titleFont,
+                                                  .foregroundColor: NSColor.black, .shadow: glow])
+    }
+
+    /// Aero caption glass (`--w7-wct-bg`): translucent white top, dark mid-band, white bottom.
+    private func win7GlassFill(_ r: NSRect) {
+        let W = { (a: CGFloat) in NSColor(srgbRed: 1, green: 1, blue: 1, alpha: a) }
+        let K = { (a: CGFloat) in NSColor(srgbRed: 0, green: 0, blue: 0, alpha: a) }
+        NSGradient(colorsAndLocations:
+            (W(0.50), 0.0), (W(0.30), 0.45),
+            (K(0.10), 0.50), (K(0.10), 0.75), (W(0.50), 1.0))?
+            .draw(in: r, angle: -90)
+    }
+
+    /// Aero red Close button (`--w7-wct_close-bg`), brighter with an inner glow on hover.
+    private func win7CloseFill(_ r: NSRect, state: ChromeButtonState) {
+        func c(_ hex: (CGFloat, CGFloat, CGFloat), _ a: CGFloat = 1) -> NSColor {
+            NSColor(srgbRed: hex.0, green: hex.1, blue: hex.2, alpha: a)
+        }
+        var top = c((0.878, 0.631, 0.592))    // #E0A197
+        var mid = c((0.812, 0.475, 0.416))    // #CF796A
+        var bot = c((0.835, 0.310, 0.212))    // #D54F36
+        switch state {
+        case .hovered: top = c((0.98, 0.72, 0.66)); mid = c((0.90, 0.42, 0.34)); bot = c((0.92, 0.28, 0.16))
+        case .pressed: top = c((0.72, 0.34, 0.28)); mid = c((0.64, 0.20, 0.14)); bot = c((0.58, 0.12, 0.08))
+        default: break
+        }
+        NSGradient(colorsAndLocations: (top, 0.0), (mid, 0.25), (mid, 0.5), (bot, 0.5), (bot, 1.0))?
+            .draw(in: r, angle: -90)
+        if state == .hovered {   // cyan-tinged inner glow along the bottom, like Aero
+            NSColor.white.withAlphaComponent(0.22).setFill()
+            NSBezierPath(rect: NSRect(x: r.minX, y: r.minY, width: r.width, height: r.height * 0.4)).fill()
+        }
+    }
+
+    /// Native Aero caption glyphs (minimize `_`, maximize `▢`, close `✕`).
+    private func win7Glyph(_ kind: ChromeButtonKind, in r: NSRect, color: NSColor) {
+        color.setStroke(); color.setFill()
+        switch kind {
+        case .minimize:
+            NSBezierPath(rect: NSRect(x: r.midX - 4, y: r.midY + 3, width: 8, height: 2)).fill()
+        case .maximize:
+            let sq = NSRect(x: r.midX - 5, y: r.midY - 4, width: 10, height: 8)
+            let p = NSBezierPath(rect: sq); p.lineWidth = 1; p.stroke()
+            NSBezierPath(rect: NSRect(x: sq.minX, y: sq.minY, width: sq.width, height: 2)).fill()  // title cap
+        case .close:
+            let x = NSBezierPath(); x.lineWidth = 2
+            x.move(to: NSPoint(x: r.midX - 4, y: r.midY - 4)); x.line(to: NSPoint(x: r.midX + 4, y: r.midY + 4))
+            x.move(to: NSPoint(x: r.midX + 4, y: r.midY - 4)); x.line(to: NSPoint(x: r.midX - 4, y: r.midY + 4))
+            x.stroke()
+        default: break
+        }
     }
 
     // ---- Plain fallback ----
