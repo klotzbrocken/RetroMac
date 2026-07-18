@@ -32,9 +32,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.1</string>
+	<string>2.2</string>
 	<key>CFBundleVersion</key>
-	<string>2.1</string>
+	<string>2.2</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -55,7 +55,7 @@
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/klotzbrocken/RetroMac/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>BOcdIyAHhHsHTHq3S2mTcYqVqwFfMn18OLdX3xA4zkQ=</string>
+	<string>uXP0XBQgXcqjoQnLO4HA8wAZuojvKxlMTmtdyrZSt0o=</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

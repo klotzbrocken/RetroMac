@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 2.1")
+                Text("What's New in RetroMac 2.2")
                     .font(.title2.bold())
-                Text("A living wallpaper — bring your desktop to life")
+                Text("Authentic System 6, Warcraft, and a Mac OS X boot")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,31 +21,38 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "photo.on.rectangle.angled",
-                        color: .pink,
-                        title: "Living wallpaper",
-                        description: "A new effect scope applies the CRT/VHS shader to your wallpaper only — it wobbles and scans behind your icons and windows, which stay perfectly crisp. Because it renders the wallpaper instead of capturing the screen, it needs no Screen Recording permission. Set it under Settings ▸ Advanced ▸ Effects ▸ “Apply to: Wallpaper only.”"
+                        icon: "square.grid.2x2",
+                        color: .gray,
+                        title: "Authentic Mac System 6",
+                        description: "The “Mac OS 6 classic” theme is now true 1-bit black & white — racing-stripe title bars, hollow close boxes and Chicago type across windows and widgets, instead of the old Mac OS 9 Platinum look. Even the bundled Pac-Man goes monochrome."
                     )
 
                     featureRow(
-                        icon: "book",
-                        color: .indigo,
-                        title: "Build your own shaders",
-                        description: "Advanced ▸ Presets now has an in-app guide with an “Open guide” button for writing and importing your own .metal CRT shaders — they show up right in the Shader Presets menu."
+                        icon: "shield.lefthalf.filled",
+                        color: .red,
+                        title: "Warcraft I + II",
+                        description: "Play Warcraft: Orcs & Humans and Warcraft II natively on the bundled open-source Stratagus engine — point RetroMac at your own game data and go. The CRT shader lays right over the game."
                     )
 
                     featureRow(
-                        icon: "slider.horizontal.3",
-                        color: .orange,
-                        title: "Settings, refined",
-                        description: "A tidier Settings window — a narrower layout, cleaner Advanced controls, 16:9 theme previews, and unified control sizing throughout."
+                        icon: "sparkles",
+                        color: .blue,
+                        title: "Mac OS X boot animation",
+                        description: "Activate the Mac OS X or Snow Leopard theme and it boots like the real thing — the blue screen, the grey Apple with its spinner, the progress splash. Click to skip."
+                    )
+
+                    featureRow(
+                        icon: "lock.open",
+                        color: .green,
+                        title: "Clearer Pro unlocks",
+                        description: "Live Wallpaper and Virtual Camera now show a consistent lock when they're locked, and the license screens spell out everything the unlock includes — presets, custom shaders, Live Wallpaper and the camera."
                     )
 
                     featureRow(
                         icon: "wrench.and.screwdriver",
-                        color: .gray,
-                        title: "Fixes & polish",
-                        description: "Multi-monitor Tube/dock fixes, a hardened trusted-download installer for retro apps, slimmer app download, plus the System 6 Control Strip and boot-splash refinements."
+                        color: .indigo,
+                        title: "Polish",
+                        description: "Themed window frames with live title-bar buttons, boot videos that no longer get cut off partway, and a Welcome window that fits each page without scrolling."
                     )
                 }
                 .padding(.horizontal, 24)
