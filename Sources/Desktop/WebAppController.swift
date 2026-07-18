@@ -131,7 +131,29 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         p.hidesOnDeactivate = false
         p.minSize = NSSize(width: 360, height: 240)            // resizable, with a floor
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-        p.contentView = chrome
+        // Windows 7: real Aero glass. Put an NSVisualEffectView (behindWindow) behind the chrome
+        // so the live desktop is blurred through the translucent title bar + frame; the chrome
+        // draws its tints semi-transparently (see drawWin7). Other themes keep the opaque chrome.
+        if RetroFrameTheme.key() == "win7" {
+            let container = NSView(frame: NSRect(origin: .zero, size: frame.size))
+            container.autoresizesSubviews = true
+            let glass = NSVisualEffectView(frame: container.bounds)
+            glass.autoresizingMask = [.width, .height]
+            glass.blendingMode = .behindWindow
+            glass.material = .fullScreenUI
+            glass.state = .active
+            glass.appearance = NSAppearance(named: .aqua)   // stay light glass even in Dark Mode
+            glass.wantsLayer = true
+            glass.layer?.cornerRadius = 6
+            glass.layer?.masksToBounds = true
+            chrome.frame = container.bounds
+            chrome.autoresizingMask = [.width, .height]
+            container.addSubview(glass)
+            container.addSubview(chrome)
+            p.contentView = container
+        } else {
+            p.contentView = chrome
+        }
         self.panel = p
         if let screen = NSScreen.main {
             let vf = screen.visibleFrame
@@ -705,27 +727,31 @@ final class WebAppChromeView: NSView {
         let cs = chromeStyle ?? ChromeStyleFactory.win7()
         let radius = cs.cornerRadius   // 6
 
-        // Aero glass frame: the whole window is a translucent blue glass slab (#4580C4). The
-        // webview covers the interior, so only the title bar + a thin glass border show. True
-        // desktop blur isn't available behind an NSView, so the glass is approximated by the
-        // #4580C4 sheen rather than a live blur.
+        // REAL Aero glass: an NSVisualEffectView (behindWindow) sits behind this transparent
+        // view and blurs the live desktop. We therefore paint only SEMI-TRANSPARENT tints so the
+        // blur shows through — no opaque frame fill (see the win7 branch in WebAppController).
         let framePath = NSBezierPath(roundedRect: b, xRadius: radius, yRadius: radius)
-        cs.windowFill.setFill(); framePath.fill()
 
-        // Title-bar glass, clipped to the rounded window (top corners round, bottom edge flat).
+        // Title-bar + thin frame border are glass, clipped to the rounded window.
         let cap = NSRect(x: 0, y: 0, width: b.width, height: titleH)
         NSGraphicsContext.saveGraphicsState()
         framePath.addClip()
-        cs.captionGradient?.draw(in: cap)   // left→right white/dark/white sheen over the base
-        // top highlight band: transparent → #ffffffb3 → transparent
+        // faint blue frost over the whole glass frame, stronger on the title bar
+        NSColor(srgbRed: 0.271, green: 0.502, blue: 0.769, alpha: 0.16).setFill()
+        framePath.fill()
+        NSColor(srgbRed: 0.271, green: 0.502, blue: 0.769, alpha: 0.28).setFill()
+        ctx.fill(cap)
+        cs.captionGradient?.draw(in: cap)   // left→right white/dark/white sheen
+        // top highlight band: transparent → white → transparent
         NSGradient(colorsAndLocations:
             (NSColor.white.withAlphaComponent(0.0), 0.0),
-            (NSColor.white.withAlphaComponent(0.70), 0.5),
+            (NSColor.white.withAlphaComponent(0.55), 0.5),
             (NSColor.white.withAlphaComponent(0.0), 1.0))?
             .draw(in: NSRect(x: 0, y: titleH * 0.18, width: b.width, height: titleH * 0.24), angle: -90)
         NSGraphicsContext.restoreGraphicsState()
 
-        // Content body #f0f0f0, leaving a `pad` glass border on the sides/bottom.
+        // Content body — OPAQUE #f0f0f0 (the webview covers it); a `pad` glass border stays
+        // translucent around it so the frame reads as Aero glass.
         let body = NSRect(x: pad, y: titleH, width: b.width - pad * 2, height: b.height - titleH - pad)
         NSColor(srgbRed: 0.941, green: 0.941, blue: 0.941, alpha: 1).setFill()
         ctx.fill(body)
