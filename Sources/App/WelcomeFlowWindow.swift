@@ -114,23 +114,21 @@ struct WelcomeFlowView: View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
-                Text("What's New in RetroMac 1.9.5").font(.title2.bold())
-                Text("A new DOOM theme, a 24-hour clock & lots of fixes").font(.subheadline).foregroundStyle(.secondary)
+                Text("What's New in RetroMac 2.2").font(.title2.bold())
+                Text("Authentic System 6, Warcraft, and a Mac OS X boot").font(.subheadline).foregroundStyle(.secondary)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("flame.fill", .red, "New theme: Maiks Favourite II (DOOM)",
-                            "A pixel Doom Slayer patrols the dock — runs, fires, gets fragged, and blasts a Lost Soul that flies in. Hover to frag him, click the DOOM logo tile to launch DOOM, plus a new \u{201C}Apple Hell\u{201D} menu-bar logo.")
-                    feature("apple.logo", .pink, "Retro menu-bar Apple",
-                            "Cover the system Apple with the Rainbow, Aqua, Aqua Classic or new Apple Hell logo — cycle it from the flyout, with per-theme defaults.")
-                    feature("clock", .indigo, "24-hour clock",
-                            "New option for the dock and deskbar clocks, plus a digital readout under the analog Clock widget that follows it.")
-                    feature("iphone", .green, "iPhone as a camera",
-                            "Use your iPhone (Continuity Camera) or any webcam as the CRT-shaded virtual camera — the source list updates live as devices connect.")
-                    feature("wand.and.stars", .purple, "Smoother Dock + Snow Leopard 3D",
-                            "Fluid, real-Dock-style magnification (that no longer reacts beside the dock), a corrected Snow Leopard 3D glass shelf, and no background windows jumping to the front on a theme switch.")
-                    feature("wrench.and.screwdriver", .gray, "Reliability & polish",
-                            "Your real Dock reliably returns after turning a theme off (and never peeks out beside the retro dock), the floating launcher stays clickable beside a dock, \u{201C}Dock only\u{201D} behaves, and there's a clearer privacy/offline note in About.")
+                    feature("square.grid.2x2", .gray, "Authentic Mac System 6",
+                            "The \u{201C}Mac OS 6 classic\u{201D} theme is now true 1-bit black & white — racing-stripe title bars, hollow close boxes and Chicago type across windows and widgets, instead of the old Mac OS 9 Platinum look. Even the bundled Pac-Man goes monochrome.")
+                    feature("shield.lefthalf.filled", .red, "Warcraft I + II",
+                            "Play Warcraft: Orcs & Humans and Warcraft II natively on the bundled open-source Stratagus engine — point RetroMac at your own game data and go. The CRT shader lays right over the game.")
+                    feature("sparkles", .blue, "Mac OS X boot animation",
+                            "Activate the Mac OS X or Snow Leopard theme and it boots like the real thing — the blue screen, the grey Apple with its spinner, the progress splash. Click to skip.")
+                    feature("lock.open", .green, "Clearer Pro unlocks",
+                            "Live Wallpaper and Virtual Camera now show a consistent lock when they're locked, and the license screens spell out everything the unlock includes — presets, custom shaders, Live Wallpaper and the camera.")
+                    feature("wrench.and.screwdriver", .indigo, "Polish",
+                            "Themed window frames with live title-bar buttons, boot videos that no longer get cut off partway, and a Welcome window that fits each page without scrolling.")
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
         }
