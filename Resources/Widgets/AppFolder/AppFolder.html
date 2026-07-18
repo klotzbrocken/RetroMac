@@ -108,13 +108,13 @@
   /* title bar */
   /* Mac OS 9 Platinum title bar — faithful to the Mac OS 9 UI Kit (Figma) */
   body.theme-macos9 .m9-title{display:flex;position:relative;height:20px;flex:0 0 20px;
-    align-items:center;border-top:1px solid #f3f3f3;border-bottom:1px solid #b3b3da;
-    background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAIAAAAW4yFwAAAAEElEQVR4nGMoLy9n+Pz5MwAOGAQ/am3VkwAAAABJRU5ErkJggg==) repeat;
+    align-items:center;border-top:1px solid #f3f3f3;border-bottom:1px solid #9a9a9a;
+    background:repeating-linear-gradient(#e8e8e8 0 1px,#d0d0d0 1px 2px);
     image-rendering:pixelated;image-rendering:crisp-edges;}
   .m9-stripes{display:none;}
   .m9-title>*{position:relative;z-index:2;}
   .m9-ctl{position:relative;box-sizing:border-box;width:11px;height:11px;flex:0 0 11px;
-    background:#c0c0c0;border:1px solid #545487;box-shadow:inset 0 0 0 1px #dadaff;}
+    background:#c0c0c0;border:1px solid #7e7e8a;box-shadow:inset 0 0 0 1px #dadaff;}
   .m9-close{margin-left:7px;cursor:pointer;}
   .m9-plaque{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
     background:#f3f3f3;padding:0 8px;height:15px;display:flex;align-items:center;gap:5px;
@@ -122,8 +122,8 @@
     font-family:"Charcoal","ChicagoFLF","Helvetica Neue",Helvetica,sans-serif;}
   .m9-right{margin-left:auto;display:flex;gap:5px;padding-right:7px;}
   .m9-collapse,.m9-zoom{position:relative;cursor:pointer;}
-  .m9-zoom::before{content:"";position:absolute;left:1px;top:1px;width:4px;height:4px;border:1px solid #545487;background:#c0c0c0;}
-  .m9-collapse::before{content:"";position:absolute;left:2px;right:2px;top:4px;height:0;border-top:1px solid #545487;}
+  .m9-zoom::before{content:"";position:absolute;left:1px;top:1px;width:4px;height:4px;border:1px solid #7e7e8a;background:#c0c0c0;}
+  .m9-collapse::before{content:"";position:absolute;left:2px;right:2px;top:4px;height:0;border-top:1px solid #7e7e8a;}
   /* info bar */
   body.theme-macos9 .m9-info{display:block;text-align:center;font-size:11px;height:18px;line-height:18px;
     background:#d8d8d8;border-bottom:1px solid #808080;box-shadow:inset 0 1px 0 #fff;color:#000;}
@@ -340,6 +340,29 @@
   body.theme-win7 .xp-max::before{border-color:#1a1a1a;}
   body.theme-win7 .xp-close{background:linear-gradient(180deg,#e7a99e,#d76b58 45%,#d54f36 55%,#c23b22);
     border:1px solid rgba(0,0,0,.3);}
+  /* ===== Mac OS 9: proxy icon in the title plaque (authentic Platinum) ===== */
+  body.theme-macos9 .m9-plaque{padding:0 8px 0 22px;background:#dadada url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='14'%20height='12'%20viewBox='0%200%2014%2012'%3E%3Cpath%20d='M1%203h4l1.4%201.5H13V11H1z'%20fill='%23e9d9a6'%20stroke='%237a6a3a'/%3E%3Cpath%20d='M1%203h4l1.4%201.5H13'%20fill='none'%20stroke='%23fff8e0'/%3E%3C/svg%3E") 5px center/13px no-repeat;}
+        /* ===== Mac OS 9 Platinum title bar — matched to os9.ca original (authoritative) ===== */
+  /* Reverse-engineered 1:1 from os9.ca window.min.css */
+  body.theme-macos9 #win{background:#dadada!important;border:1px solid #000!important;
+    box-shadow:1px 1px #111,inset 1px 1px #fff,inset -1px -1px #999!important;}
+  body.theme-macos9 .m9-title{height:22px;border:none!important;
+    background:repeating-linear-gradient(#fff 0 1px,#737373 1px 2px) left 5px/100% 12px no-repeat,#dadada!important;}
+  body.theme-macos9 .m9-plaque{background-color:#dadada!important;font-family:'Charcoal','ChicagoFLF',sans-serif!important;font-weight:normal!important;}
+  body.theme-macos9 .m9-close,body.theme-macos9 .m9-collapse,body.theme-macos9 .m9-zoom{
+    display:block!important;box-sizing:content-box!important;width:9px!important;height:9px!important;position:relative;flex:0 0 auto;
+    border:1px solid #222!important;
+    background:linear-gradient(to bottom right,#999,#aaa,#bbb,#ccc,#ddd,#eee,#fff,#fff)!important;
+    box-shadow:inset 1px 1px #ccc,inset -1px -1px #888,-1px -1px 0 0 #808080,1px 1px 0 0 #fff!important;cursor:pointer;}
+  body.theme-macos9 .m9-close{margin:4px 0 0 5px!important;}
+  body.theme-macos9 .m9-right{margin-left:auto!important;display:flex!important;align-items:flex-start!important;gap:0!important;margin-right:0!important;padding-right:0!important;}
+  body.theme-macos9 .m9-zoom{order:1;margin:4px 4px 0 0!important;}
+  body.theme-macos9 .m9-collapse{order:2;margin:4px 5px 0 4px!important;}
+  body.theme-macos9 .m9-zoom::before{content:""!important;position:absolute;top:1px!important;left:1px!important;width:5px;height:5px;border-bottom:1px solid #202020!important;border-right:1px solid #202020!important;background:none!important;box-shadow:none!important;}
+  body.theme-macos9 .m9-zoom::after{content:none!important;}
+  body.theme-macos9 .m9-collapse::before{content:""!important;position:absolute;left:1px!important;right:1px!important;top:4px!important;height:1px!important;border-top:1px solid #202020!important;border-bottom:1px solid #202020!important;background:none!important;box-shadow:none!important;}
+  body.theme-macos9 .m9-collapse::after{content:none!important;}
+  body.theme-macos9 .body{margin:0 4px 4px 4px!important;border:1px solid #000!important;box-shadow:-1px -1px #9c9c9c,1px 1px #fff,inset 1px 1px #fff,inset -1px -1px #acacac!important;}
 </style>
 <style>
 /* Live title-bar button feedback (native DragOverlayView → window.setBtnState); the overlay
@@ -349,7 +372,7 @@
 .w98-btn.is-hover{filter:brightness(1.06);}
 .w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
 .m9-ctl.is-hover{background:#d0d0dc;}
-.m9-ctl.is-press{background:#9c9cb0;box-shadow:inset 0 0 0 2px #545487;}
+.m9-ctl.is-press{background:#9c9cb0;box-shadow:inset 0 0 0 2px #7e7e8a;}
 </style>
 </head>
 <body>
@@ -366,7 +389,7 @@
       <div class="m9-plaque"><span>Applications</span></div>
       <div class="m9-right"><span class="m9-ctl m9-zoom" id="m9zoom"></span><span class="m9-ctl m9-collapse" id="m9collapse"></span></div>
     </div>
-    <div class="m9-info" id="m9info">0 Objekte</div>
+    <div class="m9-info" id="m9info">0 items</div>
     <!-- Windows XP Luna title bar (shown only in theme-winxp) -->
     <div class="xp-title" id="xptitle">
       <span class="xp-sysicon"></span>
@@ -441,7 +464,7 @@
   const win=document.getElementById('win'), grid=document.getElementById('grid');
   const content=win.querySelector('.be-content');
   const st={x:0,y:0,gridW:0,gridH:0,maxX:0,maxY:0};
-  let apps=[]; let selected=null;
+  let apps=[]; let selected=null; let availSpace='';
   const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const post=o=>{ if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.appfolder) window.webkit.messageHandlers.appfolder.postMessage(o); };
 
@@ -486,10 +509,11 @@
       grid.appendChild(el);
     });
     document.getElementById('count').textContent=apps.length+' items';
-    const m9=document.getElementById('m9info'); if(m9) m9.textContent=apps.length+' Objekte';
+    const m9=document.getElementById('m9info'); if(m9) m9.textContent=apps.length+' items'+(availSpace?', '+availSpace:'');
     updateScroll();
   }
   window.setApps=function(list){ apps=Array.isArray(list)?list:[]; buildGrid(); };
+  window.setDiskFree=function(s){ availSpace=s||''; const m9=document.getElementById('m9info'); if(m9) m9.textContent=apps.length+' items'+(availSpace?', '+availSpace:''); };
   // Host sets the chrome theme ('beos' default · 'macos9' = Platinum Finder window).
   window.setTheme=function(k){ var t=k||'beos'; document.body.className='theme-'+t+(t==='win7'?' theme-winxp':''); buildGrid(); };
   window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
