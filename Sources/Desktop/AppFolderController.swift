@@ -56,6 +56,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             overlay.autoresizingMask = [.minYMargin]   // stay pinned to the top tab on resize
 
             let container = NSView(frame: initial)
+            addWin7Glass(to: container)   // Aero glass behind the transparent webview (win7 only)
             container.addSubview(wv)
 
             // Resize gadgets — bottom corners only. (The top corners would sit right on the

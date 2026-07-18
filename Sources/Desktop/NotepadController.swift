@@ -98,6 +98,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
             }
 
             let container = NSView(frame: initial)
+            addWin7Glass(to: container)   // Aero glass behind the transparent webview (win7 only)
             container.addSubview(wv)
 
             // Resize gadgets on all four corners (anchor the opposite corner).

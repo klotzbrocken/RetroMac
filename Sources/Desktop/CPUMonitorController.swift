@@ -58,6 +58,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
             }
 
             let container = NSView(frame: initial)
+            addWin7Glass(to: container)   // Aero glass behind the transparent webview (win7 only)
             container.addSubview(wv)
             container.addSubview(overlay)   // on top
 

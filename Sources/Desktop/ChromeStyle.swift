@@ -348,3 +348,24 @@ enum ChromeAssets {
         return img
     }
 }
+
+// MARK: - Windows 7 Aero glass helper
+
+/// Insert a rounded Aero-glass panel (`NSVisualEffectView`, `.behindWindow`) at the BACK of
+/// `container` so the live desktop blurs through the window's translucent chrome. No-op unless
+/// the active theme is Windows 7. Used by the HTML widget windows (Notepad/Clock/CPU/AppFolder),
+/// whose WKWebView is already transparent (`drawsBackground = false`); their win7 CSS paints the
+/// title bar + frame semi-transparently so this blur shows through.
+func addWin7Glass(to container: NSView, cornerRadius: CGFloat = 6) {
+    guard RetroFrameTheme.key() == "win7" else { return }
+    let glass = NSVisualEffectView(frame: container.bounds)
+    glass.autoresizingMask = [.width, .height]
+    glass.blendingMode = .behindWindow
+    glass.material = .fullScreenUI
+    glass.state = .active
+    glass.appearance = NSAppearance(named: .aqua)
+    glass.wantsLayer = true
+    glass.layer?.cornerRadius = cornerRadius
+    glass.layer?.masksToBounds = true
+    container.addSubview(glass, positioned: .below, relativeTo: nil)
+}
