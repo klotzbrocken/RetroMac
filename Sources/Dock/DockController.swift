@@ -195,6 +195,23 @@ final class DockController {
         dockView.magnificationOverflow = magOverflow
         if dynScale < 1.0 || hMagOverflow > 0 { dockView.rebuildItems() }
         win.contentView = dockView
+        // Windows 7: real Aero glass Superbar — an NSVisualEffectView (.behindWindow) blurs the
+        // desktop behind the translucent bar (the bar gradient carries alpha in theme.json). Other
+        // themes keep the opaque dockView as the contentView, untouched.
+        if RetroFrameTheme.key() == "win7" {
+            let container = NSView(frame: NSRect(origin: .zero, size: frame.size))
+            container.autoresizesSubviews = true
+            let glass = NSVisualEffectView(frame: container.bounds)
+            glass.autoresizingMask = [.width, .height]
+            glass.blendingMode = .behindWindow
+            glass.material = .fullScreenUI
+            glass.state = .active
+            glass.appearance = NSAppearance(named: .aqua)
+            dockView.autoresizingMask = [.width, .height]
+            container.addSubview(glass)
+            container.addSubview(dockView)
+            win.contentView = container
+        }
 
         self.window = win
         self.dockView = dockView
