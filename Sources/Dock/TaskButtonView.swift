@@ -5,7 +5,7 @@ import AppKit
 /// pressed/sunken. Used only by the Win98/XP taskbar; click is handled by DockView.
 final class TaskButtonView: NSView {
 
-    enum Style { case win98, winxp }
+    enum Style { case win98, winxp, win7 }
 
     private let title: String
     private let icon: NSImage?
@@ -64,6 +64,7 @@ final class TaskButtonView: NSView {
         switch style {
         case .win98: drawWin98(ctx, sunken: sunken)
         case .winxp: drawXP(ctx, sunken: sunken, hovered: hovered && !sunken)
+        case .win7:  drawWin7(ctx, sunken: sunken, hovered: hovered && !sunken)
         }
         drawContent(sunken: sunken)
     }
@@ -124,6 +125,31 @@ final class TaskButtonView: NSView {
         border.setStroke(); path.lineWidth = 1; path.stroke()
     }
 
+    // MARK: - Win7 Aero glass tab
+
+    private func drawWin7(_ ctx: CGContext, sunken: Bool, hovered: Bool) {
+        let b = bounds
+        func c(_ r: CGFloat, _ g: CGFloat, _ bl: CGFloat, _ a: CGFloat = 1) -> NSColor {
+            NSColor(srgbRed: r, green: g, blue: bl, alpha: a)
+        }
+        // Translucent glass panel; brighter when the window is open (sunken) or hovered.
+        let top: NSColor, bot: NSColor, border: NSColor
+        if sunken {                       // open/active window — lit aqua glass
+            top = c(0.92, 0.97, 1.0, 0.78); bot = c(0.66, 0.85, 0.96, 0.66); border = c(0.24, 0.50, 0.69, 0.9)
+        } else if hovered {               // hover — soft aqua glow
+            top = c(0.92, 0.96, 0.99, 0.55); bot = c(0.75, 0.90, 0.98, 0.42); border = c(0.24, 0.50, 0.69, 0.75)
+        } else {                          // resting — faint glass
+            top = c(1, 1, 1, 0.22); bot = c(1, 1, 1, 0.06); border = c(1, 1, 1, 0.42)
+        }
+        let path = NSBezierPath(roundedRect: b.insetBy(dx: 0.5, dy: 0.5), xRadius: 3, yRadius: 3)
+        NSGradient(starting: bot, ending: top)?.draw(in: path, angle: 90)
+        NSGraphicsContext.current?.saveGraphicsState(); path.addClip()
+        NSColor.white.withAlphaComponent(sunken ? 0.6 : 0.4).setFill()   // top inner highlight
+        ctx.fill(NSRect(x: b.minX, y: b.maxY - 2, width: b.width, height: 1.5))
+        NSGraphicsContext.current?.restoreGraphicsState()
+        border.setStroke(); path.lineWidth = 1; path.stroke()
+    }
+
     // MARK: - Icon + title
 
     private func drawContent(sunken: Bool) {
@@ -142,13 +168,15 @@ final class TaskButtonView: NSView {
             textX = iconX + iconSz + 5
         }
         let isWin98 = (style == .win98)
-        let color: NSColor = isWin98 ? .black : .white
+        let darkText = (style == .win98 || style == .win7)   // Win7 Superbar is light glass → dark text
+        let color: NSColor = darkText ? .black : .white
         let fsize: CGFloat = isWin98 ? 13 : 12
-        let font = NSFont(name: "Tahoma", size: fsize)   // XP & Win98 both use Tahoma
+        let fontName = (style == .win7) ? "Segoe UI" : "Tahoma"   // Win7 uses Segoe UI
+        let font = NSFont(name: fontName, size: fsize)
             ?? NSFont.systemFont(ofSize: fsize, weight: isWin98 ? .regular : .semibold)
         let p = NSMutableParagraphStyle(); p.lineBreakMode = .byTruncatingTail
         var attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color, .paragraphStyle: p]
-        if !isWin98 {
+        if style == .winxp {   // white XP text needs a dark shadow; dark glass/98 text does not
             let sh = NSShadow(); sh.shadowColor = NSColor.black.withAlphaComponent(0.5)
             sh.shadowOffset = NSSize(width: 0, height: -1); attrs[.shadow] = sh
         }

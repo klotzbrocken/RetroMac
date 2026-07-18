@@ -17,6 +17,7 @@ enum RetroFrameTheme {
         if name.contains("mac os 9") { return "macos9" }
         if name.contains("mac os 6") { return "macos6" }   // authentic 1-bit System 6 chrome (System6Chrome)
         if name.contains("mac os x") { return "macosx" }
+        if name.contains("windows 7") { return "win7" }   // Aero glass chrome (drawWin7)
         if name.contains("windows 98") { return "win98" }
         if name.contains("windows xp") || name == "xp" || name.hasPrefix("xp ") { return "winxp" }
         if name.contains("maiks favourite") || name.contains("maiks favorite") { return "maiksfav" }

@@ -1,0 +1,199 @@
+{
+  "name": "Windows 7",
+  "hideMenuBarDefault": true,
+  "version": "1.0",
+  "author": "RetroMac",
+  "splashScreen": "splash.png",
+  "splashFullscreen": true,
+  "wallpaper": "wallpaper.jpg",
+  "wallpapers": [
+    {
+      "name": "Harmony",
+      "file": "wallpaper.jpg"
+    },
+    {
+      "name": "Light Trails",
+      "file": "wallpaper2.jpg"
+    },
+    {
+      "name": "Beach",
+      "file": "wallpaper3.jpg"
+    }
+  ],
+  "dock": {
+    "height": 40,
+    "iconSize": 32,
+    "padding": 6,
+    "spacing": 4,
+    "cornerRadius": 0,
+    "backgroundColor": "#C9D4DEFF",
+    "backgroundGradientTop": "#E8EFF4",
+    "backgroundGradientBottom": "#B2C0CC",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#7E8E9EFF",
+    "borderWidth": 1,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#FFFFFFFF",
+    "bevelBottomColor": "#7C8A98FF",
+    "bevelWidth": 1,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "fullWidth": true,
+    "startButton": true,
+    "startButtonLabel": "",
+    "showClock": true,
+    "magnification": false,
+    "showTrash": false,
+    "startMenuStyle": "xp",
+    "gradientTop": "#E8EFF4FF",
+    "gradientBottom": "#B2C0CCFF",
+    "startButtonImage": "startwin7.png"
+  },
+  "icon": {
+    "renderStyle": "smooth",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.05,
+    "hoverAnimationDuration": 0.08
+  },
+  "indicator": {
+    "style": "highlight",
+    "color": "#5B9BD5",
+    "size": 3,
+    "offset": 2
+  },
+  "desktopIcons": [
+    {
+      "name": "Computer",
+      "icon": "win7_computer.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "All Programs",
+      "icon": "xp_documents.png",
+      "type": "appfolder",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Recycle Bin",
+      "icon": "win7_recycle_empty.png",
+      "iconFull": "win7_recycle_full.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "CPU",
+      "icon": "proz_xp.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Internet Explorer",
+      "icon": "ie.png",
+      "type": "webapp",
+      "url": "https://bored-win98.pisaucer.com/programs/explorer/index.html?address=https%3A%2F%2Fwww.amazon.com",
+      "args": [
+        "1020",
+        "740"
+      ],
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "Notepad",
+      "icon": "notepadclassic.png",
+      "type": "notepad",
+      "gridX": 0,
+      "gridY": 5
+    },
+    {
+      "name": "Paint",
+      "icon": "paint98.png",
+      "type": "webapp",
+      "url": "https://bored-win98.pisaucer.com/programs/jspaint/index.html",
+      "args": [
+        "920",
+        "640"
+      ],
+      "gridX": 0,
+      "gridY": 6
+    },
+    {
+      "name": "Minesweeper",
+      "icon": "mines.png",
+      "type": "webapp",
+      "url": "https://bored-win98.pisaucer.com/programs/minesweeper/index.html",
+      "args": [
+        "360",
+        "460"
+      ],
+      "gridX": 1,
+      "gridY": 0
+    },
+    {
+      "name": "Solitaire",
+      "icon": "solitaire.png",
+      "type": "webapp",
+      "url": "https://bored-win98.pisaucer.com/programs/js-solitaire/index.html",
+      "args": [
+        "800",
+        "600"
+      ],
+      "gridX": 1,
+      "gridY": 1
+    },
+    {
+      "name": "3D Pinball",
+      "icon": "pinball.png",
+      "type": "webapp",
+      "url": "https://bored-win98.pisaucer.com/programs/pinball/space-cadet.html",
+      "args": [
+        "640",
+        "620"
+      ],
+      "gridX": 1,
+      "gridY": 2
+    },
+    {
+      "name": "sheep.exe",
+      "icon": "sheep.png",
+      "type": "sheep",
+      "gridX": 1,
+      "gridY": 3
+    },
+    {
+      "name": "Screen Saver",
+      "icon": "screensaver.png",
+      "type": "screensaver",
+      "gridX": 1,
+      "gridY": 4
+    }
+  ],
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "lcd-retro-lite",
+  "iconMappings": {
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "ie.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.Notes": "notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.systempreferences": "settings.png",
+    "com.apple.Music": "music.png",
+    "com.apple.Terminal": "terminal.png"
+  },
+  "desktopIconSize": 48,
+  "screensaver": "pipes",
+  "appearance": "light",
+  "accentColor": "blue"
+}

@@ -116,11 +116,41 @@ enum ChromeStyleFactory {
     static func style(forThemeKey key: String) -> ChromeStyle? {
         switch key {
         case "winxp":  return xp()
+        case "win7":   return win7()         // Windows 7 Aero glass (7.css recipe)
         case "macos9": return macClassic()   // Mac OS 9 Platinum
         case "macos6": return system6()      // authentic 1-bit System 6 (System6Chrome)
         case "win98":  return win98()
         default:       return nil
         }
+    }
+
+    // Windows 7 Aero glass. Values derived from 7.css (MIT, © Khang Nguyen Duy): the title bar
+    // is the #4580c4 glass with a top highlight band; the caption pill sits top-right with a red
+    // Close and cyan-glow hover. Title text is BLACK with a white glow for legibility on glass.
+    // Drawn natively in `WebAppChromeView.drawWin7` — like XP, min/max are decorative on a
+    // fixed-size web-app window, so only Close carries a hit region.
+    static func win7() -> ChromeStyle {
+        // Left→right sheen over the Aero base (`--w7-w-grad`): white / dark / white.
+        let caption = ChromeGradient(stops: [
+            (NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.40), 0.0),
+            (NSColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.10), 0.5),
+            (NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.20), 1.0),
+        ], angle: 0)
+        let font = NSFont(name: "Segoe UI", size: 13)
+            ?? NSFont(name: "Tahoma", size: 13) ?? .systemFont(ofSize: 13)
+        return ChromeStyle(
+            titleHeight: 30, windowBorder: 4,
+            buttonSize: NSSize(width: 29, height: 19), buttonSpacing: 0, buttonInset: 6,
+            cornerRadius: 6, buttonSide: .right,
+            titleFont: font, titleColor: .black, titleShadow: true, titleAlignment: .left,
+            windowFill: NSColor(srgbRed: 0.271, green: 0.502, blue: 0.769, alpha: 1),  // #4580C4 Aero base
+            captionGradient: caption, captionFill: nil,
+            buttons: [
+                // Cluster order right→inward is [close][max][min]; store outermost first.
+                ChromeButton(.close, interactive: true, render: .native),
+                ChromeButton(.maximize, interactive: false, render: .native),
+                ChromeButton(.minimize, interactive: false, render: .native),
+            ])
     }
 
     // Authentic Mac System 6 — 1-bit black & white; close box alone on the LEFT, no zoom/collapse,

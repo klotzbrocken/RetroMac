@@ -577,7 +577,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows XP") {
+               (tn == "Windows 98" || tn == "Windows XP" || tn == "Windows 7") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -936,7 +936,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows XP") {
+               (tn == "Windows 98" || tn == "Windows XP" || tn == "Windows 7") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -1163,7 +1163,12 @@ final class DockView: NSView {
     /// One elongated taskbar button per open window (Win98/XP), plus a launch button for each
     /// pinned app that isn't running. Fills the bar from `startX` up to the right-side trays.
     private func addTaskButtonStrip(startX: CGFloat, rightEdge: CGFloat, barRect: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
-        let style: TaskButtonView.Style = theme.isXPStartMenu ? .winxp : .win98
+        let style: TaskButtonView.Style
+        switch RetroFrameTheme.key() {
+        case "win7":  style = .win7
+        case "winxp": style = .winxp
+        default:      style = theme.isXPStartMenu ? .winxp : .win98
+        }
         let models = buildTaskModels()
         guard !models.isEmpty else { return }
         let gap: CGFloat = 2
