@@ -404,6 +404,24 @@
   .w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
   .m9-ctl.is-hover{background:#d0d0dc;}
   .m9-ctl.is-press{background:#9c9cb0;box-shadow:inset 0 0 0 2px #545487;}
+  /* ===== Windows 7 (Aero glass) — inherits XP structure via dual class (theme-win7 theme-winxp) ===== */
+  body.theme-win7 #win{border-radius:6px 6px 2px 2px;background:#4580c4;
+    box-shadow:0 8px 22px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.7);}
+  body.theme-win7 .xp-title{border-radius:6px 6px 0 0;
+    background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,.14) 46%,rgba(0,0,0,.05) 54%,rgba(255,255,255,.22)),#5a89c6;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.85);}
+  body.theme-win7 .xp-cap,body.theme-win7 .xp-caption{color:#0b1a2e;font-family:"Segoe UI",Tahoma,sans-serif;
+    text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 4px #fff,0 0 3px #fff;}
+  body.theme-win7 .body{background:#f0f0f0;}
+  body.theme-win7 .np-toolbar,body.theme-win7 .np-status,
+  body.theme-win7 .w98-menubar,body.theme-win7 .w98-drop{background:#f0f0f0;}
+  body.theme-win7 .xp-min,body.theme-win7 .xp-max{
+    background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.3) 45%,rgba(0,0,0,.08) 55%,rgba(255,255,255,.5));
+    border:1px solid rgba(0,0,0,.3);}
+  body.theme-win7 .xp-min::before{background:#1a1a1a;}
+  body.theme-win7 .xp-max::before{border-color:#1a1a1a;}
+  body.theme-win7 .xp-close{background:linear-gradient(180deg,#e7a99e,#d76b58 45%,#d54f36 55%,#c23b22);
+    border:1px solid rgba(0,0,0,.3);}
 </style>
 </head>
 <body>
@@ -557,7 +575,7 @@
   };
 
   // Host sets the chrome theme: 'beos' (yellow tab, default) · 'macos9' (Platinum window).
-  window.setTheme = function(k){ document.body.className = 'theme-' + (k || 'beos'); };
+  window.setTheme = function(k){ var t=k||'beos'; document.body.className = 'theme-'+t+(t==='win7'?' theme-winxp':''); };
   window.setHover = function(h){ document.body.classList.toggle('hovering', !!h); };
 
   // Mac OS 9 title controls — return new widget size so the host can resize its window.

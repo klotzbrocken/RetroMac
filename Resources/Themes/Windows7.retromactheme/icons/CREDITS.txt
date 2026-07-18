@@ -6,7 +6,8 @@ Window chrome (Aero glass title bars + caption buttons)
   Colours/gradients derived from 7.css, MIT License, © 2021 Khang Nguyen Duy
   https://github.com/khang-nd/7.css
 
-Start orb, Computer and Recycle Bin icons (win7_*.png, startwin7.png)
+Win7 icons: Start orb, Computer, Recycle Bin, Internet Explorer, Notepad,
+Solitaire, Minesweeper (win7_*.png, startwin7.png)
   Derived from the "Windows 7" GTK icon theme by B00merang-Artwork:
     https://github.com/B00merang-Artwork/Windows-7
   NOTE: that repository ships WITHOUT a license file. The icons also reproduce
