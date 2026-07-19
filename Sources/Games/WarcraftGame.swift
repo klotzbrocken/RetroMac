@@ -321,15 +321,41 @@ enum WarcraftGame {
         var env = RetroFrameTheme.gameEnv()
         env["HOME"] = user.path
         p.environment = env
+
+        // The game runs windowed on the themed desktop (own title bar), so the theme's dock stays
+        // visible next to it. When the player switches the game to fullscreen from its Options
+        // menu the engine prints a "[RETROMAC] fullscreen 1/0" marker on stdout (see the chrome
+        // patch); we watch for it and hide the floating dock in fullscreen, restore it in a window.
+        let outPipe = Pipe()
+        p.standardOutput = outPipe
+        var lineBuffer = ""
+        outPipe.fileHandleForReading.readabilityHandler = { fh in
+            let data = fh.availableData
+            if data.isEmpty { fh.readabilityHandler = nil; return }
+            lineBuffer += String(decoding: data, as: UTF8.self)
+            while let nl = lineBuffer.firstIndex(of: "\n") {
+                let line = String(lineBuffer[..<nl])
+                lineBuffer.removeSubrange(lineBuffer.startIndex...nl)
+                if let r = line.range(of: "[RETROMAC] fullscreen ") {
+                    let fullscreen = line[r.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("1")
+                    DispatchQueue.main.async { DockController.shared.setSuspendedForGame(fullscreen) }
+                } else if !line.isEmpty {
+                    print(line)   // keep the engine's normal logging visible
+                }
+            }
+        }
+
         // Put the desktop shader back exactly as we found it once the game quits — otherwise
         // the game's window overlay outlives it and the flyout keeps showing the shader as on.
         // We own this process, so its exit is the signal; no polling needed.
         p.terminationHandler = { _ in
+            outPipe.fileHandleForReading.readabilityHandler = nil
             DispatchQueue.main.async {
                 overlayPollTimer?.invalidate()
                 overlayPollTimer = nil
+                DockController.shared.setSuspendedForGame(false)   // restore dock if it quit fullscreen
                 (NSApp.delegate as? AppDelegate)?.restorePreviousOverlay()
-                print("[Warcraft] Game quit — overlay state restored")
+                print("[Warcraft] Game quit — dock and overlay state restored")
             }
         }
         do {

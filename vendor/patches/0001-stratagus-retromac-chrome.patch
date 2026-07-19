@@ -37,7 +37,7 @@ index 4dc1fe9..5f5524e 100644
  
  /**
 diff --git a/engine/stratagus/src/video/sdl.cpp b/engine/stratagus/src/video/sdl.cpp
-index 1ca2bac..32a4ba0 100644
+index 1ca2bac..1ccd6ee 100644
 --- a/engine/stratagus/src/video/sdl.cpp
 +++ b/engine/stratagus/src/video/sdl.cpp
 @@ -88,6 +88,50 @@ SDL_Renderer *TheRenderer = nullptr; /// Internal screen
@@ -334,7 +334,7 @@ index 1ca2bac..32a4ba0 100644
  	}
  }
  
-@@ -1181,6 +1384,13 @@ void ToggleFullScreen()
+@@ -1181,6 +1384,20 @@ void ToggleFullScreen()
  	Invalidate(); // Update display
  #endif
  	Video.FullScreen = (flags ^ SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
@@ -345,6 +345,13 @@ index 1ca2bac..32a4ba0 100644
 +	RetroMacUpdateChrome();
 +	SDL_RenderSetLogicalSize(TheRenderer, Video.Width,
 +	                         static_cast<int>(Video.Height * Video.VerticalPixelSize) + RetroMacChromeH);
++
++	// Tell the RetroMac host (which launched us) so it can hide its floating dock in fullscreen
++	// and bring it back when we return to a window. Parsed from our stdout by WarcraftGame.swift.
++	if (RetroMacTheme[0]) {
++		printf("[RETROMAC] fullscreen %d\n", Video.FullScreen ? 1 : 0);
++		fflush(stdout);
++	}
  }
  
  //@}
