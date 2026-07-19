@@ -1,41 +1,34 @@
 import AppKit
 import WebKit
 
-/// Desktop analog-clock widget — square, themed (BeOS replicant / Mac OS 9 / Windows XP /
-/// Maiks Favourite). Opened by clicking the clock in the deskbar / taskbar / control strip.
-/// Mirrors CPUMonitorController (borderless WKWebView panel + DragOverlayView chrome).
-final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+/// Desktop Calculator widget — a themed standard calculator (BeOS / Mac OS 9 / Windows XP /
+/// Windows 98 / Maiks Favourite / Mac OS X Aqua). Opened from a "Calculator" desktop icon
+/// (type "calculator"). Mirrors ClockWidgetController (borderless WKWebView panel +
+/// DragOverlayView chrome) but uses a key-accepting panel so the keypad takes keyboard input.
+final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
 
-    static let shared = ClockWidgetController()
+    static let shared = CalculatorController()
 
-    private var panel: NSPanel?
+    private var panel: KeyableWidgetPanel?
     private var webView: WKWebView?
     private var dragOverlay: DragOverlayView?
     private var moveObserver: NSObjectProtocol?
-    private let posKey = "clockWidgetOrigin"
+    private let posKey = "calculatorWidgetOrigin"
 
     private override init() {
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(themeChanged),
                                                name: .dockThemeChanged, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(clockFormatChanged),
-                                               name: .clockFormatChanged, object: nil)
     }
 
     @objc private func themeChanged() { destroy() }
-
-    @objc private func clockFormatChanged() {
-        webView?.evaluateJavaScript("window.set24 && window.set24(\(AppSettings.shared.clockUse24Hour))")
-    }
 
     func toggle() { if panel?.isVisible == true { close() } else { show() } }
 
     /// Warm hide — keeps the WebView alive for instant reopen.
     func close() { saveOrigin(); panel?.orderOut(nil) }
 
-    /// Cold teardown — removes the script-message handler (breaks the userContentController→self
-    /// retain cycle) and releases the WebView + its WebContent process. Use when widgets are
-    /// turned off or the theme changes.
+    /// Cold teardown — removes the script-message handler and releases the WebView.
     func destroy() {
         saveOrigin()
         if let mo = moveObserver { NotificationCenter.default.removeObserver(mo); moveObserver = nil }
@@ -69,13 +62,13 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
     }
 
     func show() {
-        guard let html = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Clock/Clock.html"),
+        guard let html = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Calculator/Calculator.html"),
               FileManager.default.fileExists(atPath: html.path) else { NSSound.beep(); return }
 
         if panel == nil {
-            let initial = NSRect(x: 0, y: 0, width: 200, height: 224)
+            let initial = NSRect(x: 0, y: 0, width: 236, height: 240)
             let cfg = WKWebViewConfiguration()
-            cfg.userContentController.add(self, name: "clock")
+            cfg.userContentController.add(self, name: "calculator")
             let wv = WKWebView(frame: initial, configuration: cfg)
             wv.navigationDelegate = self
             wv.autoresizingMask = [.width, .height]
@@ -107,19 +100,18 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
         }
 
         webView?.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
-        restorePosition()   // remember the last spot (no jump on show)
-        panel?.orderFrontRegardless()
+        restorePosition()
+        NSApp.activate(ignoringOtherApps: true)
+        panel?.makeKeyAndOrderFront(nil)
     }
 
     func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
-        if message.name == "clock", (message.body as? String) == "close" { close() }
+        if message.name == "calculator", (message.body as? String) == "close" { close() }
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
-        webView.evaluateJavaScript("window.set24 && window.set24(\(AppSettings.shared.clockUse24Hour))")
-        // Size the panel to the themed widget, then place the drag/close overlay over the title.
-        webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [200,224]") { [weak self] result, _ in
+        webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [236,240]") { [weak self] result, _ in
             guard let self = self, let panel = self.panel,
                   let a = (result as? [NSNumber])?.map({ CGFloat(truncating: $0) }), a.count == 2, a[0] > 20 else { return }
             panel.setContentSize(NSSize(width: a[0], height: a[1]))
@@ -134,8 +126,6 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
                   let a = (result as? [NSNumber])?.map({ CGFloat(truncating: $0) }), a.count >= 8 else { return }
             let tabY = a[1], tabH = a[3]
             let H = wv.bounds.height
-            // Full-width title strip as the drag region (robust — the BeOS tab is narrow;
-            // dragging anywhere along the top now moves the window). Close box mapped within it.
             overlay.frame = CGRect(x: 0, y: H - (tabY + tabH), width: wv.bounds.width, height: tabH)
             overlay.closeRect = CGRect(x: a[4], y: tabH - ((a[5] - tabY) + a[7]), width: a[6], height: a[7])
             overlay.collapseRect = .zero; overlay.zoomRect = .zero

@@ -132,7 +132,7 @@ final class ThemeManager {
         switch name {
         case "Mountain Lion":      s = "Mac OS Mountain Lion"
         case "Snow Leopard":       s = "Mac OS Snow Leopard"
-        case "Mac OS 9.2 Classic": s = "Apple System 9"
+        case "Mac OS 9.2 Classic": s = "Mac OS System 9"
         case "Mac OS 6 classic":   s = "Apple System 6"
         default: break
         }

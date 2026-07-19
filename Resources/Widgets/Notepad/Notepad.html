@@ -122,8 +122,8 @@
 
   /* ===== Mac OS X (Aqua 10.0–10.4) ===== */
   body.theme-macosx .tab{display:none;}
-  body.theme-macosx #win{border-radius:7px 7px 4px 4px;overflow:hidden;
-    border:1px solid #5c5c5c;box-shadow:0 22px 50px rgba(0,0,0,.45),0 6px 14px rgba(0,0,0,.30);}
+  body.theme-macosx #win{border-radius:6px 6px 3px 3px;overflow:hidden;
+    border:1px solid #7a7a7a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);}
   body.theme-macosx .body{border:none;margin:0;padding:0;background:#ededed;box-shadow:none;}
   body.theme-macosx .mx-title{display:flex;align-items:center;position:relative;height:22px;gap:6px;padding:0 8px;flex:0 0 auto;
     background:linear-gradient(to bottom,#fafafa,#ededed 26%,#dadada 60%,#c6c6c6 92%,#bcbcbc);
@@ -143,7 +143,7 @@
   .mx-glyph{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
     font:700 11px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
     text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
-  body.hovering .mx-glyph{opacity:1;}
+  .mx-glyph{display:none;}
 
   /* ---- Toolbar + status bar (all themes) ---- */
   .np-toolbar{display:flex;align-items:center;gap:4px;padding:4px 6px;flex-wrap:wrap;flex:0 0 auto;
@@ -336,7 +336,7 @@
   body.theme-win7 .xp-close{background:linear-gradient(180deg,#e7a99e,#d76b58 45%,#d54f36 55%,#c23b22);
     border:1px solid rgba(0,0,0,.3);}
   /* ===== Mac OS 9: proxy icon in the title plaque (authentic Platinum) ===== */
-  body.theme-macos9 .m9-plaque{padding:0 8px 0 22px;background:#dadada url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='13'%20height='13'%20viewBox='0%200%2013%2013'%3E%3Cpath%20d='M2%201h5l4%204v7H2z'%20fill='%23fff'%20stroke='%237a7a7a'/%3E%3Cpath%20d='M7%201v4h4'%20fill='%23dcdcdc'%20stroke='%237a7a7a'/%3E%3Cpath%20d='M4%207h5M4%209h5M4%2011h3'%20stroke='%239a9a9a'/%3E%3C/svg%3E") 5px center/13px no-repeat;}
+  body.theme-macos9 .m9-plaque{padding:0 8px 0 26px;background:#dadada url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAF+mlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxNDUgNzkuMTYzNDk5LCAyMDE4LzA4LzEzLTE2OjQwOjIyICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1sbnM6cGhvdG9zaG9wPSJodHRwOi8vbnMuYWRvYmUuY29tL3Bob3Rvc2hvcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RFdnQ9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZUV2ZW50IyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ0MgMjAxOSAoV2luZG93cykiIHhtcDpDcmVhdGVEYXRlPSIyMDIxLTA5LTE5VDAyOjA2OjMzLTA3OjAwIiB4bXA6TW9kaWZ5RGF0ZT0iMjAyMS0wOS0xOVQwMjoxMDozOC0wNzowMCIgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyMS0wOS0xOVQwMjoxMDozOC0wNzowMCIgZGM6Zm9ybWF0PSJpbWFnZS9wbmciIHBob3Rvc2hvcDpDb2xvck1vZGU9IjMiIHBob3Rvc2hvcDpJQ0NQcm9maWxlPSJzUkdCIElFQzYxOTY2LTIuMSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpjN2U5YmQxNC0xNzI1LTY1NDMtOTViMi1jY2M3N2I2MDNhNTAiIHhtcE1NOkRvY3VtZW50SUQ9ImFkb2JlOmRvY2lkOnBob3Rvc2hvcDoyZWI4ZTc2NC04YTY2LWQxNGItYWFlNS01NTZlYmEyODc5ODkiIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo1MGIyZjdkMy1hOWNkLWRhNGEtOGVjNi1lZTNkODUyMGI1MjYiPiA8eG1wTU06SGlzdG9yeT4gPHJkZjpTZXE+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJjcmVhdGVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOjUwYjJmN2QzLWE5Y2QtZGE0YS04ZWM2LWVlM2Q4NTIwYjUyNiIgc3RFdnQ6d2hlbj0iMjAyMS0wOS0xOVQwMjowNjozMy0wNzowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTkgKFdpbmRvd3MpIi8+IDxyZGY6bGkgc3RFdnQ6YWN0aW9uPSJzYXZlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDpjN2U5YmQxNC0xNzI1LTY1NDMtOTViMi1jY2M3N2I2MDNhNTAiIHN0RXZ0OndoZW49IjIwMjEtMDktMTlUMDI6MTA6MzgtMDc6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE5IChXaW5kb3dzKSIgc3RFdnQ6Y2hhbmdlZD0iLyIvPiA8L3JkZjpTZXE+IDwveG1wTU06SGlzdG9yeT4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz5LgiMhAAABA0lEQVRYw72X0Q3DIAxEGakdKd2qEhNF6iL9yApuQKJCCY7hziGSPyih7+qC8QURCWjsjzDr83cw8O27CSuCgpdgRNBwVoQLvFdEmi8xLKAF1z7T1j8fL4lLlM8q//dc4ZqIIzy+JY9zNjzgV5nQ4GlsCkDh9ZwGNzOAwOtxD1zdA7PgTQHWUdNSjcBPAmb852ohmpH25hFFzjkKb9WJab9crRPWxusRI+sYvF7rU/F2ASlG4V2nwNoTtYAiYuTWdLl4jjFyZUP3PhqXdeBuEWqfwHRALLyrIWFFmG2aRy+IwumekIW7d8VIi+7mC1B/4OKMGHNCe8OpzugOgxpoe0264x8dzurS4/2+nAAAAABJRU5ErkJggg==") 5px center/16px no-repeat;}
           /* ===== Mac OS 9 Platinum title bar — matched to os9.ca original (authoritative) ===== */
   /* Reverse-engineered 1:1 from os9.ca window.min.css */
   body.theme-macos9 #win{background:#dadada!important;border:1px solid #000!important;
@@ -358,12 +358,18 @@
   body.theme-macos9 .m9-collapse::before{content:""!important;position:absolute;left:1px!important;right:1px!important;top:4px!important;height:1px!important;border-top:1px solid #202020!important;border-bottom:1px solid #202020!important;background:none!important;box-shadow:none!important;}
   body.theme-macos9 .m9-collapse::after{content:none!important;}
   body.theme-macos9 .body{margin:0 4px 4px 4px!important;border:1px solid #000!important;box-shadow:-1px -1px #9c9c9c,1px 1px #fff,inset 1px 1px #fff,inset -1px -1px #acacac!important;}
+  /* Inactive window (os9.ca .window.blur): grey shadow/borders, 50% title, flat boxes */
+  body.theme-macos9.rm-blur #win,body.theme-macos9.rm-blur .window,body.theme-macos9.rm-blur .be-win{box-shadow:1px 1px #525252!important;border-color:#525252!important;}
+  body.theme-macos9.rm-blur .m9-close,body.theme-macos9.rm-blur .m9-collapse,body.theme-macos9.rm-blur .m9-zoom{border-color:#525252!important;box-shadow:none!important;}
+  body.theme-macos9.rm-blur .m9-zoom::before,body.theme-macos9.rm-blur .m9-zoom::after,body.theme-macos9.rm-blur .m9-collapse::before{border-color:#525252!important;background:#525252!important;}
+  body.theme-macos9.rm-blur .m9-plaque{opacity:.5;}
 </style>
 <style>
 /* Live title-bar button feedback (native DragOverlayView → window.setBtnState); the overlay
    intercepts mouse events, so these classes stand in for :hover/:active. */
-.xp-close.is-hover,.mf-close.is-hover,.mx-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
-.xp-close.is-press,.mf-close.is-press,.mx-close.is-press,.closebox.is-press{filter:brightness(.82);}
+.xp-close.is-hover,.mf-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
+.xp-close.is-press,.mf-close.is-press,.closebox.is-press{filter:brightness(.82);}
+.mx-close.is-press,.mx-zoom.is-press{box-shadow:inset 0 0 3px 1px rgba(0,0,0,.45),inset 0 -4px 5px rgba(0,0,0,.32);}
 .w98-btn.is-hover{filter:brightness(1.06);}
 .w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
 .m9-ctl.is-hover{background:#d0d0dc;}

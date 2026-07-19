@@ -102,9 +102,18 @@
   .m9-title,.m9-info{display:none;}
   body.theme-macos9 .be-tab{display:none;}
   body.theme-macos9 .be-menubar{display:none;}
-  body.theme-macos9 .be-win{top:0;border:1px solid #000;background:#d8d8d8;
+  body.theme-macos9 .be-win{top:0;border:1px solid #000;background:#dadada;box-shadow:1px 1px #111,inset 1px 1px #fff,inset -1px -1px #999;
     box-shadow:1px 1px 0 rgba(0,0,0,.35), 3px 3px 8px rgba(0,0,0,.30);}
-  body.theme-macos9 .be-content{box-shadow:inset 1px 1px 0 #555;}
+  /* os9 window: the black frame is the OUTER line; the scrollbars sit INSIDE it.
+     Frame joins .be-mid (content + vertical scrollbar) and .be-status (horizontal scrollbar). */
+  body.theme-macos9 .be-content{margin:0;border:none;box-shadow:none;background:#fff;}
+  body.theme-macos9 .be-mid{margin:2px 4px 0 4px;border:1px solid #000;border-bottom:none;
+    box-shadow:inset 1px 1px #fff, inset -1px 0 #acacac;}
+  body.theme-macos9 .be-status{margin:0 4px 4px 4px;border:1px solid #000;border-top:none;
+    box-shadow:inset -1px -1px #acacac, inset 1px 0 #fff;}
+  /* vertical scrollbar flush inside the right frame edge; a hairline separates it from the content */
+  body.theme-macos9 .vsb{border-left:1px solid #808080;}
+  body.theme-macos9 .hsb{border-left:1px solid #808080;}
   /* title bar */
   /* Mac OS 9 Platinum title bar — faithful to the Mac OS 9 UI Kit (Figma) */
   body.theme-macos9 .m9-title{display:flex;position:relative;height:20px;flex:0 0 20px;
@@ -125,8 +134,8 @@
   .m9-zoom::before{content:"";position:absolute;left:1px;top:1px;width:4px;height:4px;border:1px solid #7e7e8a;background:#c0c0c0;}
   .m9-collapse::before{content:"";position:absolute;left:2px;right:2px;top:4px;height:0;border-top:1px solid #7e7e8a;}
   /* info bar */
-  body.theme-macos9 .m9-info{display:block;text-align:center;font-size:11px;height:18px;line-height:18px;
-    background:#d8d8d8;border-bottom:1px solid #808080;box-shadow:inset 0 1px 0 #fff;color:#000;}
+  body.theme-macos9 .m9-info{display:block;text-align:center;height:16px;line-height:15px;margin:0 4px;box-sizing:border-box;
+    background:#dadada;border:1px solid #000;box-shadow:-1px -1px #9c9c9c,1px 1px #fff,inset 1px 1px #fff,inset -1px -1px #b3b3b3;color:#000;font:10px Arial,sans-serif;letter-spacing:.4px;}
   /* Platinum scrollbars / status */
   body.theme-macos9 .vsb,body.theme-macos9 .hsb,body.theme-macos9 .be-status{background:#d8d8d8;}
   body.theme-macos9 .sb-btn{background:linear-gradient(#f3f3f3,#cfcfcf);border:1px solid #808080;box-shadow:none;}
@@ -231,8 +240,8 @@
   /* ===== Mac OS X — Aqua 10.0–10.4 ===== */
   .mx-title{display:none;}
   body.theme-macosx .be-tab,body.theme-macosx .m9-title,body.theme-macosx .m9-info,body.theme-macosx .xp-title,body.theme-macosx .mf-title{display:none;}
-  body.theme-macosx .be-win{top:0;background:#ededed;border:1px solid #5c5c5c;border-radius:7px 7px 4px 4px;overflow:hidden;
-    box-shadow:0 22px 50px rgba(0,0,0,.45),0 6px 14px rgba(0,0,0,.30);}
+  body.theme-macosx .be-win{top:0;background:#ededed;border:1px solid #7a7a7a;border-radius:6px 6px 3px 3px;overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);}
   body.theme-macosx .mx-title{display:flex;align-items:center;position:relative;height:22px;flex:0 0 22px;gap:6px;padding:0 8px;
     background:linear-gradient(to bottom,#fafafa,#ededed 26%,#dadada 60%,#c6c6c6 92%,#bcbcbc);
     border-bottom:1px solid #888;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
@@ -249,7 +258,7 @@
   .mx-glyph{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
     font:700 11px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
     text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
-  body.hovering .mx-glyph{opacity:1;}
+  .mx-glyph{display:none;}
   .mx-caption{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
     font:700 13px "Lucida Grande","Helvetica Neue",Helvetica,Arial,sans-serif;color:#1a1a1a;text-shadow:0 1px 0 rgba(255,255,255,.6);white-space:nowrap;}
   body.theme-macosx .be-menubar{color:#2a2a2a;border:none;border-bottom:1px solid #9b9b9b;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
@@ -341,7 +350,7 @@
   body.theme-win7 .xp-close{background:linear-gradient(180deg,#e7a99e,#d76b58 45%,#d54f36 55%,#c23b22);
     border:1px solid rgba(0,0,0,.3);}
   /* ===== Mac OS 9: proxy icon in the title plaque (authentic Platinum) ===== */
-  body.theme-macos9 .m9-plaque{padding:0 8px 0 22px;background:#dadada url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='14'%20height='12'%20viewBox='0%200%2014%2012'%3E%3Cpath%20d='M1%203h4l1.4%201.5H13V11H1z'%20fill='%23e9d9a6'%20stroke='%237a6a3a'/%3E%3Cpath%20d='M1%203h4l1.4%201.5H13'%20fill='none'%20stroke='%23fff8e0'/%3E%3C/svg%3E") 5px center/13px no-repeat;}
+  body.theme-macos9 .m9-plaque{padding:0 8px 0 26px;background:#dadada url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAIvGlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxNDUgNzkuMTYzNDk5LCAyMDE4LzA4LzEzLTE2OjQwOjIyICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0RXZ0PSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VFdmVudCMiIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczpwaG90b3Nob3A9Imh0dHA6Ly9ucy5hZG9iZS5jb20vcGhvdG9zaG9wLzEuMC8iIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTkgKFdpbmRvd3MpIiB4bXA6Q3JlYXRlRGF0ZT0iMjAyMS0wOC0xM1QxNTo0MDo1OS0wNzowMCIgeG1wOk1ldGFkYXRhRGF0ZT0iMjAyMS0wOC0xM1QxNTo0MToxMy0wNzowMCIgeG1wOk1vZGlmeURhdGU9IjIwMjEtMDgtMTNUMTU6NDE6MTMtMDc6MDAiIGRjOmZvcm1hdD0iaW1hZ2UvcG5nIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjZjOTM1MGNlLTZjZTgtNmY0NS05MDg0LTBjMzY3MWY5YWFhNSIgeG1wTU06RG9jdW1lbnRJRD0iYWRvYmU6ZG9jaWQ6cGhvdG9zaG9wOjZmNDY0M2NhLTAzYjItZDg0NC1hN2RhLWE4NmNjNjA0MDRiNyIgeG1wTU06T3JpZ2luYWxEb2N1bWVudElEPSJ4bXAuZGlkOmU0OTY4NDFlLTkwNjEtMzA0YS1hMjcyLTVjMzFlNTQ5ZmE5YiIgcGhvdG9zaG9wOkNvbG9yTW9kZT0iMyIgcGhvdG9zaG9wOklDQ1Byb2ZpbGU9InNSR0IgSUVDNjE5NjYtMi4xIj4gPHhtcE1NOkhpc3Rvcnk+IDxyZGY6U2VxPiA8cmRmOmxpIHN0RXZ0OmFjdGlvbj0iY3JlYXRlZCIgc3RFdnQ6aW5zdGFuY2VJRD0ieG1wLmlpZDplNDk2ODQxZS05MDYxLTMwNGEtYTI3Mi01YzMxZTU0OWZhOWIiIHN0RXZ0OndoZW49IjIwMjEtMDgtMTNUMTU6NDA6NTktMDc6MDAiIHN0RXZ0OnNvZnR3YXJlQWdlbnQ9IkFkb2JlIFBob3Rvc2hvcCBDQyAyMDE5IChXaW5kb3dzKSIvPiA8cmRmOmxpIHN0RXZ0OmFjdGlvbj0ic2F2ZWQiIHN0RXZ0Omluc3RhbmNlSUQ9InhtcC5paWQ6YTgyYTNkYWUtZDgxNi0wNjRiLTg4OGItNmVmOTM3ZWFhYThiIiBzdEV2dDp3aGVuPSIyMDIxLTA4LTEzVDE1OjQxOjEzLTA3OjAwIiBzdEV2dDpzb2Z0d2FyZUFnZW50PSJBZG9iZSBQaG90b3Nob3AgQ0MgMjAxOSAoV2luZG93cykiIHN0RXZ0OmNoYW5nZWQ9Ii8iLz4gPHJkZjpsaSBzdEV2dDphY3Rpb249ImNvbnZlcnRlZCIgc3RFdnQ6cGFyYW1ldGVycz0iZnJvbSBhcHBsaWNhdGlvbi92bmQuYWRvYmUucGhvdG9zaG9wIHRvIGltYWdlL3BuZyIvPiA8cmRmOmxpIHN0RXZ0OmFjdGlvbj0iZGVyaXZlZCIgc3RFdnQ6cGFyYW1ldGVycz0iY29udmVydGVkIGZyb20gYXBwbGljYXRpb24vdm5kLmFkb2JlLnBob3Rvc2hvcCB0byBpbWFnZS9wbmciLz4gPHJkZjpsaSBzdEV2dDphY3Rpb249InNhdmVkIiBzdEV2dDppbnN0YW5jZUlEPSJ4bXAuaWlkOjZjOTM1MGNlLTZjZTgtNmY0NS05MDg0LTBjMzY3MWY5YWFhNSIgc3RFdnQ6d2hlbj0iMjAyMS0wOC0xM1QxNTo0MToxMy0wNzowMCIgc3RFdnQ6c29mdHdhcmVBZ2VudD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTkgKFdpbmRvd3MpIiBzdEV2dDpjaGFuZ2VkPSIvIi8+IDwvcmRmOlNlcT4gPC94bXBNTTpIaXN0b3J5PiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDphODJhM2RhZS1kODE2LTA2NGItODg4Yi02ZWY5MzdlYWFhOGIiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6ZTQ5Njg0MWUtOTA2MS0zMDRhLWEyNzItNWMzMWU1NDlmYTliIiBzdFJlZjpvcmlnaW5hbERvY3VtZW50SUQ9InhtcC5kaWQ6ZTQ5Njg0MWUtOTA2MS0zMDRhLWEyNzItNWMzMWU1NDlmYTliIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+mhfL7gAAAUFJREFUWIXt1rEOgjAQBuCbTZidXVxc8A18EBdxd3NkdnQjMSGObr6IiS/kct4BhVIPaaFgTCD5ExNJ72t7aQFEBM46TJET7Z4IACEF1H9DpvoBET4fiOkFR4XUZs7FOWNCspnjqyrIGRNSLj3HFWL0zbILrgZwhTTgnCAiwBaipyvkK6ANIoXfV+95A3SBFIDWVXACuEB4GxTCO8AWovphMIBNs2bnzNAACaIQowJ0iEL8BFA/DybABPgHgH61DgGgIhvKghKYdwPkHxfRxx3vGXCmHCSI/niDCIAbJREgMxCe3hABcC8Q1wJxpGwzhL4XviANABMRU1ZSV/aGtAB4K06UvQjwAbHYgrjog8Dmm80Z0tCEZvF5NloboAtEACRm8XJMW4ALpOEcqBUvx3MF2EIMgFi8F8AGos0+bzhhxd8+x7GrukWI6wAAAABJRU5ErkJggg==") 5px center/16px no-repeat;}
         /* ===== Mac OS 9 Platinum title bar — matched to os9.ca original (authoritative) ===== */
   /* Reverse-engineered 1:1 from os9.ca window.min.css */
   body.theme-macos9 #win{background:#dadada!important;border:1px solid #000!important;
@@ -363,12 +372,18 @@
   body.theme-macos9 .m9-collapse::before{content:""!important;position:absolute;left:1px!important;right:1px!important;top:4px!important;height:1px!important;border-top:1px solid #202020!important;border-bottom:1px solid #202020!important;background:none!important;box-shadow:none!important;}
   body.theme-macos9 .m9-collapse::after{content:none!important;}
   body.theme-macos9 .body{margin:0 4px 4px 4px!important;border:1px solid #000!important;box-shadow:-1px -1px #9c9c9c,1px 1px #fff,inset 1px 1px #fff,inset -1px -1px #acacac!important;}
+  /* Inactive window (os9.ca .window.blur): grey shadow/borders, 50% title, flat boxes */
+  body.theme-macos9.rm-blur #win,body.theme-macos9.rm-blur .window,body.theme-macos9.rm-blur .be-win{box-shadow:1px 1px #525252!important;border-color:#525252!important;}
+  body.theme-macos9.rm-blur .m9-close,body.theme-macos9.rm-blur .m9-collapse,body.theme-macos9.rm-blur .m9-zoom{border-color:#525252!important;box-shadow:none!important;}
+  body.theme-macos9.rm-blur .m9-zoom::before,body.theme-macos9.rm-blur .m9-zoom::after,body.theme-macos9.rm-blur .m9-collapse::before{border-color:#525252!important;background:#525252!important;}
+  body.theme-macos9.rm-blur .m9-plaque{opacity:.5;}
 </style>
 <style>
 /* Live title-bar button feedback (native DragOverlayView → window.setBtnState); the overlay
    intercepts mouse events, so these classes stand in for :hover/:active. */
-.xp-close.is-hover,.mf-close.is-hover,.mx-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
-.xp-close.is-press,.mf-close.is-press,.mx-close.is-press,.closebox.is-press{filter:brightness(.82);}
+.xp-close.is-hover,.mf-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
+.xp-close.is-press,.mf-close.is-press,.closebox.is-press{filter:brightness(.82);}
+.mx-close.is-press,.mx-zoom.is-press{box-shadow:inset 0 0 3px 1px rgba(0,0,0,.45),inset 0 -4px 5px rgba(0,0,0,.32);}
 .w98-btn.is-hover{filter:brightness(1.06);}
 .w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
 .m9-ctl.is-hover{background:#d0d0dc;}

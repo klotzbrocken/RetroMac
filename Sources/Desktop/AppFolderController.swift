@@ -76,13 +76,14 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
             container.addSubview(overlay)   // topmost: title-bar boxes + drag win over resize grips
 
-            let p = NSPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
+            let p = KeyableWidgetPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
             p.level = .normal   // behaves like a normal window (not always-on-top)
             p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = container
             self.panel = p; self.webView = wv; self.dragOverlay = overlay
+            installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
         }
 
         webView?.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
