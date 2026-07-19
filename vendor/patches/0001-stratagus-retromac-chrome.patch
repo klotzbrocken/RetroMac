@@ -1,0 +1,365 @@
+diff --git a/engine/stratagus/src/include/video.h b/engine/stratagus/src/include/video.h
+index 294745e..a0e5873 100644
+--- a/engine/stratagus/src/include/video.h
++++ b/engine/stratagus/src/include/video.h
+@@ -55,6 +55,14 @@ extern SDL_Renderer *TheRenderer;
+ extern SDL_Surface *TheScreen;
+ extern SDL_Texture *TheTexture;
+ 
++/// RetroMac themed title bar ("chrome"): reserved logical rows at the top of the window (0 when
++/// off / fullscreen). Every render path copies its picture into RetroMacContentRect() and flips
++/// through RetroMacPresent(), which draws the chrome last. See video/sdl.cpp.
++extern int RetroMacChromeH;
++extern void RetroMacPresent(SDL_Renderer *ren);
++extern void RetroMacUpdateChrome();
++extern SDL_Rect RetroMacContentRect();
++
+ #define RSHIFT  16
+ #define GSHIFT  8
+ #define BSHIFT  0
+diff --git a/engine/stratagus/src/video/movie.cpp b/engine/stratagus/src/video/movie.cpp
+index 4dc1fe9..5f5524e 100644
+--- a/engine/stratagus/src/video/movie.cpp
++++ b/engine/stratagus/src/video/movie.cpp
+@@ -231,8 +231,12 @@ static void OutputTheora(OggData &data, SDL_Texture &yuv_overlay, SDL_Rect &rect
+ 
+ 	SDL_UpdateYUVTexture(&yuv_overlay, nullptr, yuv.y, yuv.y_stride, yuv.u, yuv.uv_stride, yuv.v, yuv.uv_stride);
+ 	SDL_RenderClear(TheRenderer);
+-	SDL_RenderCopy(TheRenderer, &yuv_overlay, nullptr, &rect);
+-	SDL_RenderPresent(TheRenderer);
++	// Same present contract as the game path: the cutscene lands in the content viewport below
++	// the chrome, and the flip goes through RetroMacPresent so the title bar is drawn on top.
++	SDL_Rect dst = rect;
++	dst.y += RetroMacChromeH;
++	SDL_RenderCopy(TheRenderer, &yuv_overlay, nullptr, &dst);
++	RetroMacPresent(TheRenderer);
+ }
+ 
+ /**
+diff --git a/engine/stratagus/src/video/sdl.cpp b/engine/stratagus/src/video/sdl.cpp
+index 1ca2bac..32a4ba0 100644
+--- a/engine/stratagus/src/video/sdl.cpp
++++ b/engine/stratagus/src/video/sdl.cpp
+@@ -88,6 +88,50 @@ SDL_Renderer *TheRenderer = nullptr; /// Internal screen
+ SDL_Texture *TheTexture; /// Internal screen
+ SDL_Surface *TheScreen; /// Internal screen
+ 
++// ============================ RetroMac themed chrome ============================
++// When RetroMac hosts this engine under a retro theme (RETROMAC_THEME), the borderless game
++// window gets a themed title bar ("chrome") drawn INSIDE it. The bar occupies the top
++// RetroMacChromeH *logical* rows; the game / movie / menu picture is copied into the viewport
++// BELOW it. Every present funnels through RetroMacPresent(), which guarantees the chrome is
++// (re)drawn last, immediately before the flip — so no render path can leave it stale. In
++// fullscreen the chrome is switched off atomically (RetroMacChromeH == 0 → picture fills the
++// screen, RetroMacDrawChrome() is a no-op).
++static const int RETROMAC_CHROME_H = 22;         // reserved logical rows when the chrome is on
++static char      RetroMacTheme[32] = "";         // theme key from RETROMAC_THEME ("" = none)
++int              RetroMacChromeH = 0;             // reserved rows now (0 when off / fullscreen)
++static SDL_Rect  RetroMacCloseBox = {0, 0, 0, 0};// logical rect of the close control (hit-test)
++static bool      RetroMacMouseInChrome = false;  // pointer currently over the title bar strip
++
++static bool RetroMacFullscreenNow()
++{
++	return TheWindow && (SDL_GetWindowFlags(TheWindow) & SDL_WINDOW_FULLSCREEN_DESKTOP);
++}
++
++// (Re)compute the reserved strip height from theme + fullscreen state. Call after anything that
++// changes either (init, fullscreen toggle). Keeps the present/viewport/mouse contract in sync.
++void RetroMacUpdateChrome()
++{
++	RetroMacChromeH = (RetroMacTheme[0] && !RetroMacFullscreenNow()) ? RETROMAC_CHROME_H : 0;
++}
++
++static void RetroMacChromeClick(int x, int y);   // defined with the drawing code below
++
++// Window hit test: the title bar drags the window (SDL moves it natively), except the close box
++// which stays a normal click. Content and fullscreen are always normal. Coordinates are window
++// pixels; the borderless themed window is created at logical size (scale 1) so they match the
++// logical chrome/close-box rects.
++static SDL_HitTestResult SDLCALL RetroMacHitTest(SDL_Window * /*win*/, const SDL_Point *area, void * /*data*/)
++{
++	if (RetroMacChromeH <= 0 || area->y >= RetroMacChromeH) {
++		return SDL_HITTEST_NORMAL;
++	}
++	if (area->x >= RetroMacCloseBox.x && area->x < RetroMacCloseBox.x + RetroMacCloseBox.w &&
++	    area->y >= RetroMacCloseBox.y && area->y < RetroMacCloseBox.y + RetroMacCloseBox.h) {
++		return SDL_HITTEST_NORMAL;   // close box: a real click, not a drag
++	}
++	return SDL_HITTEST_DRAGGABLE;    // rest of the title bar: drag the window
++}
++
+ static SDL_Rect Rects[100];
+ static int NumRects;
+ 
+@@ -377,8 +421,20 @@ void InitVideoSdl()
+ 
+ 	// Sam said: better for windows.
+ 	/* SDL_HWSURFACE|SDL_HWPALETTE | */
++	// RetroMac hosts this engine and passes its active theme in RETROMAC_THEME. On a themed
++	// desktop a stock macOS title bar on the game looks wrong, and the CRT shader RetroMac
++	// lays over the window would sit on top of that bar rather than on the picture. So with a
++	// theme active: borderless, with RetroMac's own themed title bar drawn inside the window
++	// (see the RetroMac chrome block near the top of this file). Fullscreen drops the bar and
++	// gives the picture the whole screen (⌥F in a match, or "Start in fullscreen").
++	const char *retroMacTheme = getenv("RETROMAC_THEME");
++	const bool retroMacBorderless =
++		retroMacTheme && *retroMacTheme && strcmp(retroMacTheme, "default") != 0;
++
+ 	if (Video.FullScreen) {
+ 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
++	} else if (retroMacBorderless) {
++		flags |= SDL_WINDOW_BORDERLESS;
+ 	} else {
+ 		flags |= SDL_WINDOW_RESIZABLE;
+ 	}
+@@ -395,6 +451,13 @@ void InitVideoSdl()
+ 		Video.Depth = 32;
+ 	}
+ 
++	// RetroMac themed title bar: reserve rows at the top of the borderless window, so the game
++	// picture lands in the viewport below it. Off in fullscreen (picture uses the whole screen).
++	strncpy(RetroMacTheme, retroMacBorderless ? retroMacTheme : "", sizeof(RetroMacTheme) - 1);
++	RetroMacTheme[sizeof(RetroMacTheme) - 1] = '\0';
++	RetroMacChromeH = (retroMacBorderless && !Video.FullScreen) ? RETROMAC_CHROME_H : 0;
++	Video.WindowHeight += RetroMacChromeH;
++
+ 	const char *win_title = "Stratagus";
+ 	// Set WindowManager Title
+ 	if (!FullGameName.empty()) {
+@@ -423,6 +486,10 @@ void InitVideoSdl()
+ 		           SDL_GetError());
+ 		exit(1);
+ 	}
++	// The RetroMac title bar drags the borderless window (SDL handles the move natively).
++	if (RetroMacChromeH > 0) {
++		SDL_SetWindowHitTest(TheWindow, RetroMacHitTest, nullptr);
++	}
+ #ifdef PEONPAD_IOS
+ 	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "metal");
+ #else
+@@ -720,13 +787,21 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+ 	unsigned int keysym = 0;
+ 
+ 	switch (event.type) {
++		// Mouse coordinates arrive from SDL already in logical space (SDL_RenderSetLogicalSize),
++		// whose top RetroMacChromeH rows are the title bar. Convert window→content ONCE here:
++		// subtract the chrome strip, then the vertical-pixel-size divide. A press inside the strip
++		// is a chrome interaction (close box) and is not forwarded to the game.
+ 		case SDL_MOUSEBUTTONDOWN:
+ #ifdef PEONPAD_IOS
+ 			if (event.button.which == SDL_TOUCH_MOUSEID && PeonPadSuppressTouchMouse) {
+ 				break;
+ 			}
+ #endif
+-			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
++			if (RetroMacChromeH > 0 && event.button.y < RetroMacChromeH) {
++				RetroMacChromeClick(event.button.x, event.button.y);
++				break;
++			}
++			event.button.y = static_cast<int>(std::floor(std::max(0, event.button.y - RetroMacChromeH) / Video.VerticalPixelSize + 0.5));
+ 			InputMouseButtonPress(callbacks, SDL_GetTicks(), event.button.button);
+ 			break;
+ 
+@@ -736,7 +811,7 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+ 				break;
+ 			}
+ #endif
+-			event.button.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
++			event.button.y = static_cast<int>(std::floor(std::max(0, event.button.y - RetroMacChromeH) / Video.VerticalPixelSize + 0.5));
+ 			InputMouseButtonRelease(callbacks, SDL_GetTicks(), event.button.button);
+ 			break;
+ 
+@@ -746,7 +821,18 @@ static void SdlDoEvent(const EventCallback &callbacks, SDL_Event &event)
+ 				break;
+ 			}
+ #endif
+-			event.motion.y = static_cast<int>(std::floor(event.button.y / Video.VerticalPixelSize + 0.5));
++			// Over the title bar: show the real arrow (the game blanks the OS cursor and draws its
++			// own software one, which cannot reach the strip). Don't forward — the game cursor
++			// freezes in place instead of snapping to the content edge, and the arrow does the aiming.
++			if (RetroMacChromeH > 0 && event.motion.y < RetroMacChromeH) {
++				if (!RetroMacMouseInChrome) {
++					RetroMacMouseInChrome = true;
++					SDL_SetCursor(SDL_GetDefaultCursor());
++				}
++				break;
++			}
++			RetroMacMouseInChrome = false;   // back over content → game re-blanks + draws its cursor
++			event.motion.y = static_cast<int>(std::floor(std::max(0, event.motion.y - RetroMacChromeH) / Video.VerticalPixelSize + 0.5));
+ 			InputMouseMove(callbacks, SDL_GetTicks(), event.motion.x, event.motion.y);
+ 			break;
+ 
+@@ -1037,6 +1123,121 @@ void WaitEventsOneFrame()
+ 	}
+ }
+ 
++// --- RetroMac chrome drawing (SDL_Renderer primitives, in logical coordinates) -------------
++static inline void rmRect(int x, int y, int w, int h, Uint8 r, Uint8 g, Uint8 b)
++{
++	SDL_SetRenderDrawColor(TheRenderer, r, g, b, 255);
++	SDL_Rect rc = { x, y, w, h };
++	SDL_RenderFillRect(TheRenderer, &rc);
++}
++// Vertical top→bottom gradient across [0,W) × [y0,y0+h).
++static inline void rmVGrad(int W, int y0, int h,
++                           Uint8 r0, Uint8 g0, Uint8 b0, Uint8 r1, Uint8 g1, Uint8 b1)
++{
++	for (int i = 0; i < h; ++i) {
++		float f = h > 1 ? (float)i / (h - 1) : 0.f;
++		rmRect(0, y0 + i, W, 1,
++		       (Uint8)(r0 + (r1 - r0) * f), (Uint8)(g0 + (g1 - g0) * f), (Uint8)(b0 + (b1 - b0) * f));
++	}
++}
++
++// Draw the themed title bar into the top RetroMacChromeH logical rows. No-op when the chrome is
++// off (windowed-with-theme only). Runs on EVERY present, so it can never be left stale.
++static void RetroMacDrawChrome(SDL_Renderer * /*ren*/)
++{
++	const int H = RetroMacChromeH;
++	if (H <= 0) return;
++	const int W = Video.Width;
++	const char *t = RetroMacTheme;
++	auto is = [&](const char *k) { return strcmp(t, k) == 0; };
++
++	const int bs = 11;                       // control-box side
++	SDL_Rect close = { 7, (H - bs) / 2, bs, bs };
++	RetroMacCloseBox = close;
++
++	if (is("macos9") || is("macos6")) {
++		// Platinum: #dadada bar, centred 12px pinstripe band (white / #737373), black underline.
++		rmRect(0, 0, W, H, 0xda, 0xda, 0xda);
++		for (int y = (H - 12) / 2; y < (H - 12) / 2 + 12; y += 2) {
++			rmRect(2, y, W - 4, 1, 0xff, 0xff, 0xff);
++			rmRect(2, y + 1, W - 4, 1, 0x73, 0x73, 0x73);
++		}
++		rmRect(0, H - 1, W, 1, 0x00, 0x00, 0x00);
++		// concave close box: #222 outline, light face
++		rmRect(close.x, close.y, bs, bs, 0x22, 0x22, 0x22);
++		rmRect(close.x + 1, close.y + 1, bs - 2, bs - 2, 0xcc, 0xcc, 0xcc);
++		rmRect(close.x + 2, close.y + 2, bs - 4, bs - 4, 0xaa, 0xaa, 0xaa);
++	} else if (is("winxp") || is("win7")) {
++		// Luna blue title bar (vertical gradient), red close box with an ×.
++		rmVGrad(W, 0, H, 0x09, 0x97, 0xFF, 0x00, 0x3D, 0xD2);
++		SDL_Rect c = { W - 24, (H - 16) / 2, 20, 16 };
++		RetroMacCloseBox = c;
++		rmRect(c.x, c.y, c.w, c.h, 0xE3, 0x5F, 0x44);
++		SDL_SetRenderDrawColor(TheRenderer, 255, 255, 255, 255);
++		SDL_RenderDrawLine(TheRenderer, c.x + 6, c.y + 5, c.x + 13, c.y + 11);
++		SDL_RenderDrawLine(TheRenderer, c.x + 13, c.y + 5, c.x + 6, c.y + 11);
++	} else if (is("win98")) {
++		// Navy→blue horizontal gradient, grey close box with a black ×.
++		for (int x = 0; x < W; ++x) {
++			float f = (float)x / (W ? W : 1);
++			SDL_SetRenderDrawColor(TheRenderer, (Uint8)(0x00 + 0x10 * f),
++			                       (Uint8)(0x00 + 0x85 * f), (Uint8)(0x7b + (0xd2 - 0x7b) * f), 255);
++			SDL_RenderDrawLine(TheRenderer, x, 0, x, H - 1);
++		}
++		SDL_Rect c = { W - 22, (H - 16) / 2, 18, 16 };
++		RetroMacCloseBox = c;
++		rmRect(c.x, c.y, c.w, c.h, 0xc4, 0xc4, 0xc4);          // face
++		rmRect(c.x, c.y, c.w, 1, 0xff, 0xff, 0xff);            // top hilite
++		rmRect(c.x, c.y, 1, c.h, 0xff, 0xff, 0xff);            // left hilite
++		rmRect(c.x, c.y + c.h - 1, c.w, 1, 0x00, 0x00, 0x00);  // bottom shadow
++		rmRect(c.x + c.w - 1, c.y, 1, c.h, 0x00, 0x00, 0x00);  // right shadow
++		SDL_SetRenderDrawColor(TheRenderer, 0, 0, 0, 255);
++		SDL_RenderDrawLine(TheRenderer, c.x + 5, c.y + 5, c.x + 12, c.y + 11);
++		SDL_RenderDrawLine(TheRenderer, c.x + 12, c.y + 5, c.x + 5, c.y + 11);
++	} else if (is("macosx")) {
++		// Aqua brushed grey; three gel dots (approximated as small rounded squares).
++		rmVGrad(W, 0, H, 0xfa, 0xfa, 0xfa, 0xbc, 0xbc, 0xbc);
++		rmRect(0, H - 1, W, 1, 0x88, 0x88, 0x88);
++		const int d = 12, cy = (H - d) / 2;
++		SDL_Rect r = { 9, cy, d, d };          RetroMacCloseBox = r;
++		rmRect(r.x + 1, r.y, d - 2, d, 0xd5, 0x4f, 0x36);          // red (close)
++		rmRect(9 + d + 6 + 1, cy, d - 2, d, 0xe6, 0xb2, 0x2e);     // yellow
++		rmRect(9 + 2 * (d + 6) + 1, cy, d - 2, d, 0x3a, 0xa9, 0x0e); // green
++	} else {
++		// BeOS / Maiks Favourite / default: yellow tab strip, brown close box.
++		rmRect(0, 0, W, H, 0xf2, 0xbd, 0x23);
++		rmRect(0, H - 1, W, 1, 0x2a, 0x2a, 0x2a);
++		rmRect(close.x, close.y, bs, bs, 0x6f, 0x5a, 0x10);
++		rmRect(close.x + 1, close.y + 1, bs - 2, bs - 2, 0xfb, 0xe2, 0x7e);
++	}
++	SDL_SetRenderDrawColor(TheRenderer, 0, 0, 0, 255);
++}
++
++// The one present all render paths funnel through: chrome is guaranteed drawn last, then flip.
++void RetroMacPresent(SDL_Renderer *ren)
++{
++	RetroMacDrawChrome(ren);
++	SDL_RenderPresent(ren);
++}
++
++// Content viewport (logical coords) reserved below the chrome. When the chrome is off this is
++// the whole logical area, so callers can copy into it unconditionally.
++SDL_Rect RetroMacContentRect()
++{
++	SDL_Rect r = { 0, RetroMacChromeH, Video.Width,
++	               (int)std::lround(Video.Height * Video.VerticalPixelSize) };
++	return r;
++}
++
++// Left-click in the chrome strip: quit if it hit the close box (push SDL_QUIT → normal exit).
++static void RetroMacChromeClick(int x, int y)
++{
++	if (x >= RetroMacCloseBox.x && x < RetroMacCloseBox.x + RetroMacCloseBox.w &&
++	    y >= RetroMacCloseBox.y && y < RetroMacCloseBox.y + RetroMacCloseBox.h) {
++		SDL_Event q; q.type = SDL_QUIT; SDL_PushEvent(&q);
++	}
++}
++
+ /**
+ **  Realize video memory.
+ */
+@@ -1081,16 +1282,18 @@ void RealizeVideoMemory()
+ 			SDL_RenderClear(TheRenderer);
+ 			//for (int i = 0; i < NumRects; i++)
+ 			//    SDL_UpdateTexture(TheTexture, &Rects[i], TheScreen->pixels, TheScreen->pitch);
+-			SDL_RenderCopy(TheRenderer, TheTexture, nullptr, nullptr);
++			// Game picture goes into the reserved viewport below the chrome (full area when off).
++			SDL_Rect dst = RetroMacContentRect();
++			SDL_RenderCopy(TheRenderer, TheTexture, nullptr, &dst);
+ 		}
+ 		if (Parameters::Instance.benchmark) {
+ 			RenderBenchmarkOverlay();
+ 		}
+-		SDL_RenderPresent(TheRenderer);
++		RetroMacPresent(TheRenderer);   // draws chrome last, then flips
+ 		NumRects = 0;
+ 	}
+-	if (!Preference.HardwareCursor) {
+-		HideCursor();
++	if (!Preference.HardwareCursor && !RetroMacMouseInChrome) {
++		HideCursor();   // skip re-blanking the OS cursor while the arrow is over the title bar
+ 	}
+ }
+ 
+@@ -1181,6 +1384,13 @@ void ToggleFullScreen()
+ 	Invalidate(); // Update display
+ #endif
+ 	Video.FullScreen = (flags ^ SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;
++
++	// Switch the reserved title-bar strip and the content viewport atomically with fullscreen:
++	// fullscreen drops the chrome (picture fills the screen), windowed restores it. Re-set the
++	// logical size so the letterbox + mouse mapping match the new chrome height in one step.
++	RetroMacUpdateChrome();
++	SDL_RenderSetLogicalSize(TheRenderer, Video.Width,
++	                         static_cast<int>(Video.Height * Video.VerticalPixelSize) + RetroMacChromeH);
+ }
+ 
+ //@}
+diff --git a/engine/stratagus/src/video/video.cpp b/engine/stratagus/src/video/video.cpp
+index ca44880..65fa346 100644
+--- a/engine/stratagus/src/video/video.cpp
++++ b/engine/stratagus/src/video/video.cpp
+@@ -274,7 +274,9 @@ bool CVideo::ResizeScreen(int w, int h)
+ 	Width = w;
+ 	Height = h;
+ 
+-	SDL_RenderSetLogicalSize(TheRenderer, w, h * VerticalPixelSize);
++	// The logical area is taller than the game picture by the RetroMac chrome strip, so SDL's
++	// letterbox + mouse mapping account for the reserved title bar (0 extra when the chrome is off).
++	SDL_RenderSetLogicalSize(TheRenderer, w, static_cast<int>(h * VerticalPixelSize) + RetroMacChromeH);
+ 
+ 	// new surface
+ 	if (TheScreen) {
