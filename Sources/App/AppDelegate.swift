@@ -293,7 +293,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let themeMenu = NSMenu()
         let active = ThemeManager.shared.activeTheme?.config.name
         for t in ThemeManager.shared.availableThemes {
-            let mi = NSMenuItem(title: t.config.name, action: #selector(selectTheme(_:)), keyEquivalent: "")
+            let mi = NSMenuItem(title: ThemeManager.displayName(for: t.config.name), action: #selector(selectTheme(_:)), keyEquivalent: "")
             mi.target = self
             mi.representedObject = t.config.name
             mi.state = (t.config.name == active) ? .on : .off

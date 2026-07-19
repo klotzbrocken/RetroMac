@@ -49,6 +49,9 @@ enum DesktopLauncher {
         case "notepad":
             NotepadController.shared.show()
 
+        case "calculator":
+            CalculatorController.shared.show()
+
         case "webapp":
             // Hosted 98.js app (Notepad/Paint/IE/games) in a theme-chromed window.
             if let urlString = entry.url {

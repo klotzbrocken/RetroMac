@@ -128,6 +128,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = container
             self.panel = p; self.webView = wv; self.dragOverlay = overlay
+            installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
             moveObserver = NotificationCenter.default.addObserver(
                 forName: NSWindow.didMoveNotification, object: p, queue: .main) { [weak self] _ in self?.saveOrigin() }
         }

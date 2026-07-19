@@ -62,7 +62,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
             container.addSubview(wv)
             container.addSubview(overlay)   // on top
 
-            let p = NSPanel(contentRect: initial,
+            let p = KeyableWidgetPanel(contentRect: initial,
                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             p.level = .normal   // behaves like a normal window (not always-on-top)
             p.isOpaque = false
@@ -72,6 +72,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
             p.contentView = container
             self.panel = p
             self.webView = wv
+            installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
             self.dragOverlay = overlay
             // Remember the position whenever the user drags the widget.
             moveObserver = NotificationCenter.default.addObserver(
@@ -357,6 +358,8 @@ final class DragOverlayView: NSView {
         }
     }
     override func mouseDown(with event: NSEvent) {
+        // Make this the key widget so the Mac OS 9 active/inactive chrome updates (others grey out).
+        window?.makeKeyAndOrderFront(nil)
         let p = convert(event.locationInWindow, from: nil)
         if let r = regionAt(p) {
             // Press the button (visual only); it fires on mouse-up-inside, like the native chrome.

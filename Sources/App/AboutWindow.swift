@@ -276,6 +276,12 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Link("siddhartha77/os9", destination: URL(string: "https://github.com/siddhartha77/os9")!)
+                        .font(.caption)
+                    Text("Mac OS 9 theme: Platinum desktop, folder, drive, trash and document icons reconstructed by the os9.ca project. Original Platinum artwork © Apple Computer, Inc.; used for a non-commercial retro tribute.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("jcherven/BeOS-r5-Icons on GitHub",
                          destination: URL(string: "https://github.com/jcherven/BeOS-r5-Icons")!)
                         .font(.caption)

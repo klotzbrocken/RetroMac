@@ -204,6 +204,13 @@
       "type": "screensaver",
       "gridX": 1,
       "gridY": 4
+    },
+    {
+      "name": "Calculator",
+      "icon": "calculator.png",
+      "type": "calculator",
+      "gridX": 1,
+      "gridY": 5
     }
   ],
   "desktopIconSize": 40,

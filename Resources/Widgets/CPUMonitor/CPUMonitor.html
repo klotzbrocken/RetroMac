@@ -347,8 +347,9 @@
   /* ===== Mac OS X — Aqua 10.0–10.4 (counter-scaled like Maiks Favourite) ===== */
   .mx-title{display:none;}
   body.theme-macosx .tab,body.theme-macosx .marker{display:none;}
-  body.theme-macosx .window{background:#ededed;border:1px solid #5c5c5c;border-radius:11px 11px 6px 6px;overflow:hidden;
-    box-shadow:0 22px 50px rgba(0,0,0,.45),0 6px 14px rgba(0,0,0,.30);}
+  /* Cheetah window edge: ~6px top corners (not 11 — that read as a glassy rim), crisp 1px grey frame. */
+  body.theme-macosx .window{background:#ededed;border:1px solid #7a7a7a;border-radius:6px 6px 3px 3px;overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);}
   body.theme-macosx .body{border:none;box-shadow:none;margin:0 7px 7px;}
   body.theme-macosx .mx-title{display:flex;align-items:center;position:relative;height:40px;gap:11px;padding:0 14px;
     background:linear-gradient(to bottom,#fafafa,#ededed 26%,#dadada 60%,#c6c6c6 92%,#bcbcbc);
@@ -370,7 +371,7 @@
   .mx-glyph{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
     font:700 17px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
     text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
-  body.hovering .mx-glyph{opacity:1;}
+  .mx-glyph{display:none;}
 
   /* ===== Windows 98 — exakt nach SPEC, counter-scaled (1/0.6) ===== */
   .w98-title{display:none;}
@@ -398,8 +399,11 @@
 
   /* ===== Live title-bar button feedback (native DragOverlayView → window.setBtnState) ===== */
   /* The overlay intercepts mouse events, so these classes stand in for :hover/:active. */
-  .xp-close.is-hover,.mf-close.is-hover,.mx-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
-  .xp-close.is-press,.mf-close.is-press,.mx-close.is-press,.closebox.is-press{filter:brightness(.82);}
+  .xp-close.is-hover,.mf-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
+  .xp-close.is-press,.mf-close.is-press,.closebox.is-press{filter:brightness(.82);}
+  /* Aqua traffic lights: no per-button brightness filter (caused hover flicker under scale(0.6));
+     the glyphs already reveal on title-bar hover. Press = a static inset shade, no filter. */
+  .mx-close.is-press,.mx-zoom.is-press{box-shadow:inset 0 0 3px 1px rgba(0,0,0,.45),inset 0 0 1.5px 1px rgba(0,0,0,.38),inset 0 -4px 5px rgba(0,0,0,.32);}
   .w98-btn.is-hover{filter:brightness(1.06);}
   .w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
   .m9-ctl.is-hover{background:#d0d0dc;}
@@ -423,7 +427,7 @@
   body.theme-win7 .xp-close{background:linear-gradient(180deg,#e7a99e,#d76b58 45%,#d54f36 55%,#c23b22);
     border:1px solid rgba(0,0,0,.3);}
   /* ===== Mac OS 9: proxy icon in the title plaque (authentic Platinum) ===== */
-  body.theme-macos9 .m9-plaque{padding:0 8px 0 22px;background:#dadada url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='13'%20height='13'%20viewBox='0%200%2013%2013'%3E%3Cpath%20d='M2%201h5l4%204v7H2z'%20fill='%23fff'%20stroke='%237a7a7a'/%3E%3Cpath%20d='M7%201v4h4'%20fill='%23dcdcdc'%20stroke='%237a7a7a'/%3E%3Cpath%20d='M4%207h5M4%209h5M4%2011h3'%20stroke='%239a9a9a'/%3E%3C/svg%3E") 5px center/13px no-repeat;}
+  body.theme-macos9 .m9-plaque{padding:0 8px 0 43px;background:#dadada url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='13'%20height='13'%20viewBox='0%200%2013%2013'%3E%3Cpath%20d='M2%201h5l4%204v7H2z'%20fill='%23fff'%20stroke='%237a7a7a'/%3E%3Cpath%20d='M7%201v4h4'%20fill='%23dcdcdc'%20stroke='%237a7a7a'/%3E%3Cpath%20d='M4%207h5M4%209h5M4%2011h3'%20stroke='%239a9a9a'/%3E%3C/svg%3E") 8px center/27px no-repeat;}
         /* ===== Mac OS 9 Platinum title bar — matched to os9.ca original (authoritative, CPU 1/0.6) ===== */
   /* Reverse-engineered 1:1 from os9.ca window.min.css */
   body.theme-macos9 #win, body.theme-macos9 .window{background:#dadada!important;border:1.67px solid #000!important;
@@ -445,6 +449,11 @@
   body.theme-macos9 .m9-collapse::before{content:""!important;position:absolute;left:1.67px!important;right:1.67px!important;top:6.67px!important;height:1.67px!important;border-top:1.67px solid #202020!important;border-bottom:1.67px solid #202020!important;background:none!important;box-shadow:none!important;}
   body.theme-macos9 .m9-collapse::after{content:none!important;}
   body.theme-macos9 .body{margin:0 6.67px 6.67px 6.67px!important;border:1.67px solid #000!important;box-shadow:-1.67px -1.67px #9c9c9c,1.67px 1.67px #fff,inset 1.67px 1.67px #fff,inset -1.67px -1.67px #acacac!important;}
+  /* Inactive window (os9.ca .window.blur): grey shadow/borders, 50% title, flat boxes */
+  body.theme-macos9.rm-blur #win,body.theme-macos9.rm-blur .window,body.theme-macos9.rm-blur .be-win{box-shadow:1px 1px #525252!important;border-color:#525252!important;}
+  body.theme-macos9.rm-blur .m9-close,body.theme-macos9.rm-blur .m9-collapse,body.theme-macos9.rm-blur .m9-zoom{border-color:#525252!important;box-shadow:none!important;}
+  body.theme-macos9.rm-blur .m9-zoom::before,body.theme-macos9.rm-blur .m9-zoom::after,body.theme-macos9.rm-blur .m9-collapse::before{border-color:#525252!important;background:#525252!important;}
+  body.theme-macos9.rm-blur .m9-plaque{opacity:.5;}
 </style>
 </head>
 <body>

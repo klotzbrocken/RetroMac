@@ -26,7 +26,7 @@ static const int BEOS_TITLE_H = 26;      // top title-tab strip
 static const int BEOS_TAB_W   = 168;     // yellow Lasche width
 static const SDL_Rect BEOS_CLOSE = { 8, 7, 14, 14 };   // close box (window coords)
 // ---- Mac OS 9 (Platinum) window-chrome geometry ----
-static const int MAC9_BORDER  = 2;       // thin side/bottom frame
+static const int MAC9_BORDER  = 6;       // side/bottom frame: room for window bevel + grey band + content frame
 static const int MAC9_TITLE_H = 22;      // full-width title bar
 static const SDL_Rect MAC9_CLOSE = { 8, 5, 13, 13 };   // close box, left
 // ---- Windows XP (Luna) window-chrome geometry ----
@@ -519,8 +519,12 @@ void Screen::drawMac9Chrome() {
 	// title-bar pinstripes (#fff + #737373), 12px band centred in the 22px bar
 	for (int y = 5; y < 17; y += 2) { line(2,y,W-4,1,white); line(2,y+1,W-4,1,c73); }
 	line(0, MAC9_TITLE_H - 1, W, 1, c99);   // separator under the title bar
-	// sunken frame around the game area
-	line(gx-1, gy-1, gw+2, 1, c80); line(gx-1, gy-1, 1, gh+2, c80);
+	// content frame around the game area (os9.ca .contents): black border on all 4 sides +
+	// inset bevel (dark top-left, light bottom-right).
+	line(gx-2, gy-2, gw+4, 1, black); line(gx-2, gy-2, 1, gh+4, black);
+	line(gx-2, gy+gh+1, gw+4, 1, black); line(gx+gw+1, gy-2, 1, gh+4, black);
+	line(gx-1, gy-1, gw+2, 1, c88); line(gx-1, gy-1, 1, gh+2, c88);
+	line(gx-1, gy+gh, gw+2, 1, white); line(gx+gw, gy-1, 1, gh+2, white);
 
 	// close box (left); zoom + windowshade (right — zoom left of windowshade, per os9.ca)
 	ctrlBox(g_close);
