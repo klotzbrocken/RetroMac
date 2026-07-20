@@ -23,6 +23,23 @@ final class ThemeBundle {
     var name: String { config.name }
     var iconsDirectory: URL { url.appendingPathComponent("icons") }
 
+    /// Resolve a theme-relative resource path, confined to `base` (inside the bundle). Returns nil
+    /// if the resolved path escapes the bundle via `../` or a symlink, or does not exist. RetroMac
+    /// is unsandboxed and imports untrusted themes, so a theme must never reference files outside
+    /// its own directory (arbitrary-file-as-icon/wallpaper). `internal` so tests can exercise it.
+    static func confinedResource(_ name: String?, under base: URL) -> URL? {
+        guard let name, !name.isEmpty else { return nil }
+        let root = base.standardizedFileURL.resolvingSymlinksInPath()
+        let candidate = base.appendingPathComponent(name).standardizedFileURL.resolvingSymlinksInPath()
+        guard candidate.path == root.path || candidate.path.hasPrefix(root.path + "/") else { return nil }
+        guard FileManager.default.fileExists(atPath: candidate.path) else { return nil }
+        return candidate
+    }
+    /// Confined lookup in the theme's `icons/` directory.
+    func iconResource(_ name: String?) -> URL? { Self.confinedResource(name, under: iconsDirectory) }
+    /// Confined lookup at the theme bundle root.
+    func rootResource(_ name: String?) -> URL? { Self.confinedResource(name, under: url) }
+
     /// URL to the theme's preview image — prefers the compact preview.jpg, falls back to preview.png.
     var previewImageURL: URL? {
         for name in ["preview.jpg", "preview.png"] {
@@ -35,54 +52,34 @@ final class ThemeBundle {
     /// Icon for the app's Dock icon in Dock Mode. Only an explicit per-theme `dock.appIcon`
     /// overrides it; otherwise nil → keep the default RetroMac app icon (theming comes later).
     func dockIconURL() -> URL? {
-        if let filename = config.dock.appIcon {
-            let u = iconsDirectory.appendingPathComponent(filename)
-            if FileManager.default.fileExists(atPath: u.path) { return u }
-        }
-        return nil
+        return iconResource(config.dock.appIcon)
     }
 
     /// Small square icon representing the theme (for the launcher's theme strip). Prefers
     /// `dock.appIcon`, then a bundled `appIcon.png` / `icon.png`. Nil → caller shows a
     /// placeholder (per-theme icons are supplied later).
     func themeIconURL() -> URL? {
-        if let filename = config.dock.appIcon {
-            let u = iconsDirectory.appendingPathComponent(filename)
-            if FileManager.default.fileExists(atPath: u.path) { return u }
-        }
+        if let u = iconResource(config.dock.appIcon) { return u }
         for name in ["appIcon.png", "icon.png"] {
-            let u = url.appendingPathComponent(name)
-            if FileManager.default.fileExists(atPath: u.path) { return u }
+            if let u = rootResource(name) { return u }
         }
         return nil
     }
 
     func iconURL(for bundleID: String) -> URL? {
-        guard let filename = config.iconMappings[bundleID] else { return nil }
-        let iconURL = iconsDirectory.appendingPathComponent(filename)
-        if FileManager.default.fileExists(atPath: iconURL.path) { return iconURL }
-        return nil
+        return iconResource(config.iconMappings[bundleID])
     }
 
     func fallbackIconURL() -> URL? {
-        guard let filename = config.fallbackIcon else { return nil }
-        let iconURL = iconsDirectory.appendingPathComponent(filename)
-        if FileManager.default.fileExists(atPath: iconURL.path) { return iconURL }
-        return nil
+        return iconResource(config.fallbackIcon)
     }
 
     func startButtonIconURL() -> URL? {
-        guard let filename = config.dock.startButtonIcon else { return nil }
-        let iconURL = iconsDirectory.appendingPathComponent(filename)
-        if FileManager.default.fileExists(atPath: iconURL.path) { return iconURL }
-        return nil
+        return iconResource(config.dock.startButtonIcon)
     }
 
     func startButtonImageURL() -> URL? {
-        guard let filename = config.dock.startButtonImage else { return nil }
-        let imgURL = iconsDirectory.appendingPathComponent(filename)
-        if FileManager.default.fileExists(atPath: imgURL.path) { return imgURL }
-        return nil
+        return iconResource(config.dock.startButtonImage)
     }
 
     /// Returns all icon image files available in this theme's icons directory
@@ -100,10 +97,7 @@ final class ThemeBundle {
     }
 
     func wallpaperURL() -> URL? {
-        guard let filename = config.wallpaper else { return nil }
-        let wpURL = url.appendingPathComponent(filename)
-        if FileManager.default.fileExists(atPath: wpURL.path) { return wpURL }
-        return nil
+        return rootResource(config.wallpaper)
     }
 
     /// Returns all available wallpaper options for this theme
@@ -113,8 +107,7 @@ final class ThemeBundle {
         // Add wallpapers from the wallpapers array
         if let wallpapers = config.wallpapers {
             for wp in wallpapers {
-                let wpURL = url.appendingPathComponent(wp.file)
-                if FileManager.default.fileExists(atPath: wpURL.path) {
+                if let wpURL = rootResource(wp.file) {
                     options.append((name: wp.name, url: wpURL))
                 }
             }
@@ -122,8 +115,7 @@ final class ThemeBundle {
 
         // If no wallpapers array, use the single wallpaper field
         if options.isEmpty, let filename = config.wallpaper {
-            let wpURL = url.appendingPathComponent(filename)
-            if FileManager.default.fileExists(atPath: wpURL.path) {
+            if let wpURL = rootResource(filename) {
                 let name = (filename as NSString).deletingPathExtension
                     .replacingOccurrences(of: "wallpaper-", with: "")
                     .replacingOccurrences(of: "wallpaper", with: "Default")
@@ -141,8 +133,7 @@ final class ThemeBundle {
     }
 
     func backgroundImage() -> NSImage? {
-        guard let bgName = config.dock.backgroundImage else { return nil }
-        let bgURL = url.appendingPathComponent(bgName)
+        guard let bgURL = rootResource(config.dock.backgroundImage) else { return nil }
         return NSImage(contentsOf: bgURL)
     }
 

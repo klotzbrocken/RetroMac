@@ -2504,14 +2504,14 @@ final class DockView: NSView {
                     }
                 } else if btnStyle == "flat" {
                     // Flat: no bevel, just background
-                    NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1).setFill()
+                    (Win98Scheme.activeFaceColor() ?? NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)).setFill()
                     NSBezierPath(rect: startButtonFrame).fill()
                 } else {
                     // Classic Win98 raised: light top-left, dark bottom-right
                     let lightColor: NSColor = startButtonPressed ? NSColor(white: 0.5, alpha: 1) : .white
                     let darkColor: NSColor = startButtonPressed ? .white : NSColor(white: 0.5, alpha: 1)
 
-                    NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1).setFill()
+                    (Win98Scheme.activeFaceColor() ?? NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)).setFill()
                     NSBezierPath(rect: startButtonFrame).fill()
 
                     lightColor.setStroke()
@@ -3846,8 +3846,7 @@ final class DockView: NSView {
         // pre-shrinking the image to 16×16 (while the views ask for 20px) was the source
         // of the "Win98 menu icons missing" report. Returning the unmodified image makes
         // the classic Win98 path identical to the working XP path.
-        guard let theme = ThemeManager.shared.activeTheme else { return nil }
-        let iconURL = theme.iconsDirectory.appendingPathComponent(name)
+        guard let theme = ThemeManager.shared.activeTheme, let iconURL = theme.iconResource(name) else { return nil }
         return NSImage(contentsOf: iconURL)
     }
 

@@ -506,26 +506,27 @@ final class WebAppChromeView: NSView {
 
     // ---- Windows 98 (SPEC: #C4C4C4 surface, 4-step bevel, #00007B→#1085D2 caption) ----
     private func drawWin98(_ ctx: CGContext, _ b: NSRect) {
-        NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1).setFill()   // #C4C4C4
+        let cs = chromeStyle ?? ChromeStyleFactory.win98()
+        let hi = cs.bevelHilight ?? .white
+        let lo = cs.bevelDkShadow ?? .black
+        let light = cs.bevelLight ?? NSColor(srgbRed: 0.859, green: 0.859, blue: 0.859, alpha: 1)  // #DBDBDB
+        let shade = cs.bevelShadow ?? NSColor(srgbRed: 0.502, green: 0.502, blue: 0.502, alpha: 1) // #808080
+        cs.windowFill.setFill()   // ButtonFace (#C4C4C4 default)
         ctx.fill(b)
-        // raised window bevel (outer white/black, inner #DBDBDB/#808080)
+        // raised window bevel (outer hilight/dkShadow, inner light/shadow)
         func line(_ r: NSRect, _ c: NSColor) { c.setFill(); ctx.fill(r) }
-        line(NSRect(x: 0, y: 0, width: b.width, height: 1), .white)
-        line(NSRect(x: 0, y: 0, width: 1, height: b.height), .white)
-        line(NSRect(x: 0, y: b.height - 1, width: b.width, height: 1), .black)
-        line(NSRect(x: b.width - 1, y: 0, width: 1, height: b.height), .black)
-        let light = NSColor(srgbRed: 0.859, green: 0.859, blue: 0.859, alpha: 1)  // #DBDBDB
-        let shade = NSColor(srgbRed: 0.502, green: 0.502, blue: 0.502, alpha: 1)  // #808080
+        line(NSRect(x: 0, y: 0, width: b.width, height: 1), hi)
+        line(NSRect(x: 0, y: 0, width: 1, height: b.height), hi)
+        line(NSRect(x: 0, y: b.height - 1, width: b.width, height: 1), lo)
+        line(NSRect(x: b.width - 1, y: 0, width: 1, height: b.height), lo)
         line(NSRect(x: 1, y: 1, width: b.width - 2, height: 1), light)
         line(NSRect(x: 1, y: 1, width: 1, height: b.height - 2), light)
         line(NSRect(x: 1, y: b.height - 2, width: b.width - 2, height: 1), shade)
         line(NSRect(x: b.width - 2, y: 1, width: 1, height: b.height - 2), shade)
 
-        // caption: #00007B → #1085D2, left → right
+        // caption: active-title gradient (scheme, or built-in navy), left → right
         let cap = NSRect(x: pad, y: pad, width: b.width - pad * 2, height: titleH)
-        let grad = NSGradient(starting: NSColor(srgbRed: 0, green: 0, blue: 0.482, alpha: 1),
-                              ending: NSColor(srgbRed: 0.063, green: 0.522, blue: 0.824, alpha: 1))
-        grad?.draw(in: cap, angle: 0)
+        cs.captionGradient?.draw(in: cap)
 
         // Caption button: only Close — a fixed web-app window has no working min/max, so no
         // dead grey placeholders (98.css likewise only styles real controls).
@@ -574,35 +575,38 @@ final class WebAppChromeView: NSView {
             titleX = fwdR.maxX + 7
         }
 
-        // title text — bold, white, left
+        // title text — bold, scheme title colour (white default), left
         let font = NSFont(name: "Tahoma-Bold", size: 12) ?? NSFont.boldSystemFont(ofSize: 12)
         (title as NSString).draw(at: NSPoint(x: titleX, y: cap.minY + (titleH - 15) / 2),
-                                 withAttributes: [.font: font, .foregroundColor: NSColor.white])
+                                 withAttributes: [.font: font, .foregroundColor: cs.titleColor])
     }
 
     private func drawW98Button(_ ctx: CGContext, _ r: NSRect, state: ChromeButtonState = .normal) {
-        var faceCol = NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1)   // #C4C4C4
-        if state == .hovered { faceCol = NSColor(srgbRed: 0.83, green: 0.83, blue: 0.83, alpha: 1) }
+        let cs = chromeStyle ?? ChromeStyleFactory.win98()
+        let hi = cs.bevelHilight ?? .white
+        let lo = cs.bevelDkShadow ?? .black
+        let light = cs.bevelLight ?? NSColor(srgbRed: 0.859, green: 0.859, blue: 0.859, alpha: 1)
+        let shade = cs.bevelShadow ?? NSColor(srgbRed: 0.502, green: 0.502, blue: 0.502, alpha: 1)
+        var faceCol = cs.windowFill
+        if state == .hovered { faceCol = faceCol.blended(withFraction: 0.08, of: .white) ?? faceCol }
         faceCol.setFill(); ctx.fill(r)
         func line(_ rr: NSRect, _ c: NSColor) { c.setFill(); ctx.fill(rr) }
-        let light = NSColor(srgbRed: 0.859, green: 0.859, blue: 0.859, alpha: 1)
-        let shade = NSColor(srgbRed: 0.502, green: 0.502, blue: 0.502, alpha: 1)
         if state == .pressed {
             // Sunken bevel (inverted): dark top-left, light bottom-right.
             line(NSRect(x: r.minX, y: r.minY, width: r.width, height: 1), shade)
             line(NSRect(x: r.minX, y: r.minY, width: 1, height: r.height), shade)
-            line(NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1), .white)
-            line(NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height), .white)
-            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: r.width - 2, height: 1), .black)
-            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: 1, height: r.height - 2), .black)
+            line(NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1), hi)
+            line(NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height), hi)
+            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: r.width - 2, height: 1), lo)
+            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: 1, height: r.height - 2), lo)
         } else {
-            // Raised bevel (outer white/black, inner light/shade).
+            // Raised bevel (outer hilight/dkShadow, inner light/shade).
             line(NSRect(x: r.minX, y: r.minY, width: r.width, height: 1), light)
             line(NSRect(x: r.minX, y: r.minY, width: 1, height: r.height), light)
-            line(NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1), .black)
-            line(NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height), .black)
-            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: r.width - 2, height: 1), .white)
-            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: 1, height: r.height - 2), .white)
+            line(NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1), lo)
+            line(NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height), lo)
+            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: r.width - 2, height: 1), hi)
+            line(NSRect(x: r.minX + 1, y: r.minY + 1, width: 1, height: r.height - 2), hi)
             line(NSRect(x: r.minX + 1, y: r.maxY - 2, width: r.width - 2, height: 1), shade)
             line(NSRect(x: r.maxX - 2, y: r.minY + 1, width: 1, height: r.height - 2), shade)
         }

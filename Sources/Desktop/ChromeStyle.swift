@@ -101,6 +101,13 @@ struct ChromeStyle {
     /// separately by the view.
     var buttons: [ChromeButton]
 
+    // Windows 3D bevel colours (Win98). nil → the draw path's built-in literals. Fed by a
+    // theme's `chromeColors` scheme so Win98 Plus! themes recolour the button/window bevels.
+    var bevelHilight: NSColor? = nil    // lightest edge (ButtonHilight)
+    var bevelLight: NSColor? = nil      // ButtonLight
+    var bevelShadow: NSColor? = nil     // ButtonShadow
+    var bevelDkShadow: NSColor? = nil   // darkest edge (ButtonDkShadow)
+
     // Hook for the future theme-bundle path — build a style from a decoded theme.json blob.
     // Intentionally unused today; the factory below is the source of truth.
     // init?(config: ChromeStyleConfig, themeBundle: URL) { ... }
@@ -217,25 +224,43 @@ enum ChromeStyleFactory {
             ])
     }
 
-    // Values lifted from `WebAppChromeView.drawWin98`.
+    // Values lifted from `WebAppChromeView.drawWin98`. Colours come from the active theme's
+    // `chromeColors` scheme when present (Win98 Plus! themes), else the built-in navy defaults.
     static func win98() -> ChromeStyle {
-        let caption = ChromeGradient(stops: [
-            (NSColor(srgbRed: 0, green: 0, blue: 0.482, alpha: 1), 0.0),      // #00007B
-            (NSColor(srgbRed: 0.063, green: 0.522, blue: 0.824, alpha: 1), 1.0),  // #1085D2
-        ], angle: 0)
+        let cc = ThemeManager.shared.activeTheme?.config.chromeColors
+        func col(_ hex: String?, _ fb: NSColor) -> NSColor {
+            guard let hex, !hex.isEmpty else { return fb }
+            return NSColor.fromHex(hex)
+        }
+        let defFace = NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1)    // #C4C4C4
+        let navyStart = NSColor(srgbRed: 0, green: 0, blue: 0.482, alpha: 1)          // #00007B
+        let navyEnd = NSColor(srgbRed: 0.063, green: 0.522, blue: 0.824, alpha: 1)    // #1085D2
+        let titleA = col(cc?.activeTitle, navyStart)
+        // A scheme with an explicit gradient end uses it; a scheme with only activeTitle is a
+        // solid bar (Plus! themes); with no scheme at all, the built-in navy gradient.
+        let titleB: NSColor = {
+            if let e = cc?.activeTitleEnd, !e.isEmpty { return NSColor.fromHex(e) }
+            if let a = cc?.activeTitle, !a.isEmpty { return titleA }
+            return navyEnd
+        }()
+        let caption = ChromeGradient(stops: [(titleA, 0.0), (titleB, 1.0)], angle: 0)
         let font = NSFont(name: "Tahoma-Bold", size: 12) ?? .boldSystemFont(ofSize: 12)
         return ChromeStyle(
             titleHeight: 22, windowBorder: 4,
             buttonSize: NSSize(width: 20, height: 18), buttonSpacing: 0, buttonInset: 2,
             cornerRadius: 0, buttonSide: .right,
-            titleFont: font, titleColor: .white, titleShadow: false, titleAlignment: .left,
-            windowFill: NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1),  // #C4C4C4
+            titleFont: font, titleColor: col(cc?.titleText, .white), titleShadow: false, titleAlignment: .left,
+            windowFill: col(cc?.face, defFace),
             captionGradient: caption, captionFill: nil,
             buttons: [
                 ChromeButton(.close, interactive: true, render: .native),
                 ChromeButton(.maximize, interactive: false, render: .native),
                 ChromeButton(.minimize, interactive: false, render: .native),
-            ])
+            ],
+            bevelHilight: col(cc?.hilight, .white),
+            bevelLight: col(cc?.light, NSColor(srgbRed: 0.859, green: 0.859, blue: 0.859, alpha: 1)),   // #DBDBDB
+            bevelShadow: col(cc?.shadow, NSColor(srgbRed: 0.502, green: 0.502, blue: 0.502, alpha: 1)), // #808080
+            bevelDkShadow: col(cc?.dkShadow, .black))
     }
 }
 

@@ -16,6 +16,10 @@ extension CursorThemeManager {
         case "Mac OS X":                                return loadBundledSet("Cursors/MacOSX")
         case "Windows 3.1":                             return loadBundledSet("Cursors/Retrosmart")
         case "Windows XP":                              return loadBundledSet("Cursors/WindowsXP", scale: AppSettings.shared.xpCursorScale)
+        case "Windows 98":
+            // The default Windows 98 scheme keeps the system pointer; the Plus! schemes ship a set.
+            guard let dir = Win98Scheme.byID[AppSettings.shared.win98Scheme]?.cursorDir else { return nil }
+            return loadBundledSet(dir)
         default:                                        return nil
         }
     }

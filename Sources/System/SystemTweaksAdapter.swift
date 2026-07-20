@@ -19,20 +19,50 @@ enum SystemTweaksAdapter {
     /// Originals as [[domain,key,type,orig,refresh]]; `orig` == "" means the key was unset.
     private static let origKey = "systemTweaksOriginals"
 
+    /// All reconcile runs (apply / restore / crash-recovery) are serialized here so the snapshot's
+    /// read-modify-write can never interleave — a concurrent queue could otherwise snapshot an
+    /// already-tweaked value as the "original" and make the change permanently irreversible.
+    private static let queue = DispatchQueue(label: "com.retromac.systemtweaks")
+
+    /// The ONLY `(domain, key)` pairs a theme may touch: strictly cosmetic keys the bundled themes
+    /// use, across the four Apple UI domains. Anything else in a theme's `systemTweaks` is ignored.
+    /// This is defense-in-depth behind the built-in-only gate in `apply` — a theme cannot write to
+    /// arbitrary domains/keys even if it somehow reaches `reconcile`.
+    private static let allowedKeys: Set<String> = [
+        "-g\tAppleReduceDesktopTinting", "-g\tAppleShowAllExtensions", "-g\tAppleShowScrollBars",
+        "-g\tNSAutomaticWindowAnimationsEnabled", "-g\tNSConvolutionOverride1",
+        "-g\tNSScrollAnimationEnabled", "-g\tNSSplitViewItemGlassMinimumCornerRadius",
+        "-g\tNSSplitViewItemSidebarDefaultsToFloatingAppearance", "-g\tNSTableViewDefaultSizeMode",
+        "-g\tNSUseAnimatedFocusRing",
+        "com.apple.dock\tlaunchanim", "com.apple.dock\tmineffect",
+        "com.apple.finder\tDisableAllAnimations", "com.apple.finder\tFXPreferredViewStyle",
+        "com.apple.finder\tShowPathbar", "com.apple.finder\tShowStatusBar",
+        "com.apple.finder\t_FXShowPosixPathInTitle",
+        "com.apple.universalaccess\treduceTransparency",
+    ]
+
+    /// Whether a tweak is on the cosmetic allowlist. `internal` so tests can exercise it directly.
+    static func isTweakAllowed(_ t: DockThemeConfig.SystemTweak) -> Bool {
+        allowedKeys.contains(t.domain + "\t" + t.key)
+    }
+
     /// Apply the theme's tweaks (no-op unless the switch is on). Reconciles to the theme's set,
     /// so switching themes reverts the previous theme's tweaks that the new one doesn't declare.
-    static func apply(for config: DockThemeConfig) {
+    ///
+    /// Only BUILT-IN themes may apply tweaks: imported (untrusted) themes never mutate the real
+    /// system, they just reconcile to an empty set (reverting any previously-applied tweaks).
+    static func apply(for config: DockThemeConfig, isBuiltIn: Bool) {
         guard AppSettings.shared.themeApplySystemTweaks else { return }
-        let target = config.systemTweaks ?? []
-        DispatchQueue.global(qos: .utility).async { reconcile(to: target) }
+        let target = isBuiltIn ? (config.systemTweaks ?? []) : []
+        queue.async { reconcile(to: target) }
     }
 
     /// Put every tracked key back to the user's original value. Pass `sync: true` on the quit
     /// path — the app process exits right after `applicationWillTerminate`, so an async restore
     /// would be killed mid-flight and leave the Finder tweaks (font size, corners…) stuck.
     static func restore(sync: Bool = false) {
-        if sync { reconcile(to: []) }
-        else { DispatchQueue.global(qos: .utility).async { reconcile(to: []) } }
+        if sync { queue.sync { reconcile(to: []) } }
+        else { queue.async { reconcile(to: []) } }
     }
 
     /// One-time heads-up (shown when the user first enables "Classic Finder" on a theme that
@@ -67,9 +97,17 @@ enum SystemTweaksAdapter {
 
     /// Make the currently-applied set exactly equal `target`: revert tracked keys not in the
     /// target, snapshot+write new ones, then `killall` each affected app once.
-    private static func reconcile(to target: [DockThemeConfig.SystemTweak]) {
+    private static func reconcile(to requested: [DockThemeConfig.SystemTweak]) {
         let sb = SystemBridge.shared
         func id(_ domain: String, _ key: String) -> String { domain + "\t" + key }
+
+        // Enforce the cosmetic allowlist: anything off it is dropped here (the single sink), so a
+        // dropped key that was tracked before falls out of `targetIDs` and gets reverted in step 1.
+        let target = requested.filter { isTweakAllowed($0) }
+        if target.count != requested.count {
+            let dropped = requested.filter { !isTweakAllowed($0) }.map { $0.domain + "/" + $0.key }
+            print("[SystemTweaks] ignored non-allowlisted tweaks: \(dropped)")
+        }
 
         var stored = (d.array(forKey: origKey) as? [[String: String]]) ?? []
         let targetIDs = Set(target.map { id($0.domain, $0.key) })
@@ -133,8 +171,11 @@ enum SystemTweaksAdapter {
     /// Which app(s) to `killall` so a change becomes visible. Explicit `refresh` wins; otherwise
     /// derive from the domain. `-g`/NSGlobalDomain chrome shows after refreshing Finder + Dock
     /// (other apps pick it up on their next launch).
-    private static func refreshTargets(domain: String, refresh: String?) -> Set<String> {
-        if let r = refresh, !r.isEmpty { return [r] }
+    static func refreshTargets(domain: String, refresh: String?) -> Set<String> {
+        // Clamp an explicit refresh to Finder/Dock only — a theme must never be able to `killall`
+        // an arbitrary process (e.g. loginwindow, WindowServer). Anything else falls back to the
+        // domain-derived default.
+        if let r = refresh, r == "Finder" || r == "Dock" { return [r] }
         switch domain {
         case "com.apple.finder":         return ["Finder"]
         case "com.apple.dock":           return ["Dock"]

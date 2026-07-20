@@ -73,7 +73,7 @@ final class TaskButtonView: NSView {
 
     private func drawWin98(_ ctx: CGContext, sunken: Bool) {
         let b = bounds
-        NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1).setFill()   // #C4C4C4 face
+        (Win98Scheme.activeFaceColor() ?? NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1)).setFill()   // scheme face / #C4C4C4
         ctx.fill(b)
         func line(_ r: NSRect, _ c: NSColor) { c.setFill(); ctx.fill(r) }
         let white = NSColor.white

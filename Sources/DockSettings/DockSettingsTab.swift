@@ -293,6 +293,23 @@ struct DockSettingsTab: View {
                         }
                     }
                 }
+                if selectedThemeConfig?.name == "Windows 98" {
+                    RMRow(label: "Scheme", hint: "Windows 98 Plus! desktop themes: recolour the title bars and windows, and swap the wallpaper, desktop icons and mouse cursors.") {
+                        Picker("", selection: $settings.win98Scheme) {
+                            ForEach(Win98Scheme.pickerOptions, id: \.id) { opt in
+                                Text(opt.display).tag(opt.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 200)
+                        .onChange(of: settings.win98Scheme) { _, _ in
+                            guard settings.dockEnabled,
+                                  ThemeManager.shared.activeTheme?.baseConfig.name == "Windows 98" else { return }
+                            ThemeManager.shared.setActiveTheme(name: "Windows 98",
+                                                               applyWallpaper: !AppSettings.shared.dockOnly)
+                        }
+                    }
+                }
                 if selectedThemeConfig?.systemTweaks != nil {
                     RMRow(label: "Classic Finder", hint: "Make the real Finder match this era — opaque windows, classic scrollbars, list view, fewer animations. Changes your system Finder while the theme is on; restored when you switch it off.") {
                         Toggle("", isOn: $settings.themeApplySystemTweaks)
@@ -300,9 +317,10 @@ struct DockSettingsTab: View {
                             .tint(.rmAccent)
                             .labelsHidden()
                             .onChange(of: settings.themeApplySystemTweaks) { _, on in
-                                guard let cfg = ThemeManager.shared.activeTheme?.config else { return }
+                                guard let theme = ThemeManager.shared.activeTheme else { return }
+                                let cfg = theme.config
                                 if on {
-                                    SystemTweaksAdapter.apply(for: cfg)
+                                    SystemTweaksAdapter.apply(for: cfg, isBuiltIn: theme.isBuiltIn)
                                     SystemTweaksAdapter.showCornerHintIfNeeded(for: cfg)
                                 } else {
                                     SystemTweaksAdapter.restore()

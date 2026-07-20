@@ -16,7 +16,6 @@ let package = Package(
             path: "Sources",
             exclude: ["CameraExtension", "DALPlugin"],
             resources: [
-                .copy("../Resources/Shaders"),
                 .copy("../Resources/Themes"),
                 .copy("../Resources/TV"),
                 .copy("../Resources/Widgets"),
