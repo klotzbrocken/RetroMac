@@ -343,6 +343,7 @@ final class ThemeManager {
                 } else {
                     print("[Theme] WARNING: no original wallpaper captured for screen \(screenKey) (\(screen.localizedName)) — desktopImageURL=\(ws.desktopImageURL(for: screen)?.path ?? "nil")")
                 }
+                persistWallpaperBackup()   // crash-safe: back up the original BEFORE overwriting it
             }
             try? ws.setDesktopImageURL(finalURL, for: screen, options: [:])
         }
@@ -441,6 +442,7 @@ final class ThemeManager {
             let dict = savedWallpapers.mapValues { $0.absoluteString }
             defaults.set(dict, forKey: wallpaperBackupKey)
         }
+        defaults.synchronize()   // flush so a crash/restart can still restore the user's wallpaper
     }
 
     func icon(for bundleID: String, size: CGFloat) -> NSImage {

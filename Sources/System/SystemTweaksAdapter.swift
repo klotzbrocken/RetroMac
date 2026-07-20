@@ -129,21 +129,35 @@ enum SystemTweaksAdapter {
             return id(dm, k)
         })
 
-        // 2. Snapshot (once) + write each target tweak.
+        // 2. Snapshot every new target's original, and PERSIST the snapshot BEFORE writing any
+        //    tweak. Otherwise a crash between the write and the persist leaves the change on the
+        //    system with nothing recording how to undo it (e.g. the Finder font/view size stays
+        //    stuck after a crash, since the next launch has no snapshot to revert).
+        for t in target where !storedIDs.contains(id(t.domain, t.key)) {
+            let orig = sb.readDefault(t.domain, t.key) ?? ""   // "" ⇒ was unset ⇒ restore deletes
+            stored.append([
+                "domain": t.domain, "key": t.key, "type": t.type,
+                "orig": orig, "refresh": t.refresh ?? ""
+            ])
+        }
+        persistSnapshot(stored)   // crash-safe: snapshot on disk before the system is touched
+
+        // 3. Write each target tweak (the snapshot above already records how to undo them).
         for t in target {
-            if !storedIDs.contains(id(t.domain, t.key)) {
-                let orig = sb.readDefault(t.domain, t.key) ?? ""   // "" ⇒ was unset ⇒ restore deletes
-                stored.append([
-                    "domain": t.domain, "key": t.key, "type": t.type,
-                    "orig": orig, "refresh": t.refresh ?? ""
-                ])
-            }
             sb.runDefaults(["write", t.domain, t.key, flag(t.type), t.value])
             kill.formUnion(refreshTargets(domain: t.domain, refresh: t.refresh))
         }
+        persistSnapshot(stored)   // re-persist (keeps the empty-after-revert case in sync)
 
-        // 3. Persist the snapshot (or clear it once nothing is applied). Clear keys AFTER the
-        //    writes ran, so a crash mid-reconcile still leaves the snapshot for a retry.
+        // 4. One refresh per affected app + a color/appearance nudge for freshly-launched apps.
+        for app in kill.sorted() { sb.killall(app) }
+        notifyChanged()
+        print("[SystemTweaks] target=\(target.count) tracked=\(stored.count) refreshed=\(kill.sorted())")
+    }
+
+    /// Persist the snapshot (or clear it when nothing is tracked) and flush to disk so a
+    /// force-quit / crash can still undo on the next launch.
+    private static func persistSnapshot(_ stored: [[String: String]]) {
         if stored.isEmpty {
             d.removeObject(forKey: origKey)
             d.removeObject(forKey: snapKey)
@@ -152,11 +166,6 @@ enum SystemTweaksAdapter {
             d.set(true, forKey: snapKey)
         }
         d.synchronize()
-
-        // 4. One refresh per affected app + a color/appearance nudge for freshly-launched apps.
-        for app in kill.sorted() { sb.killall(app) }
-        notifyChanged()
-        print("[SystemTweaks] target=\(target.count) tracked=\(stored.count) refreshed=\(kill.sorted())")
     }
 
     private static func flag(_ type: String) -> String {
