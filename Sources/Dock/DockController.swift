@@ -133,7 +133,16 @@ final class DockController {
         BeOSDeskbarController.shared.hide()
         RainbowAppleController.shared.hide()
 
-        restoreSystemDock(synchronous: synchronous, forceReload: true)
+        if didHideSystemDock {
+            restoreSystemDock(synchronous: synchronous, forceReload: true)
+        } else {
+            // Flag-desync guard: if an earlier state (theme switch, crash-relaunch that re-hid) left
+            // the real Dock hidden WITHOUT the in-memory flag, `restoreSystemDock` would early-return
+            // and leave it hidden. The fingerprint recovery restores it regardless — so turning
+            // RetroMac's dock off always brings the real macOS Dock (and any app's runtime dock tile,
+            // e.g. an Electron app's per-theme `app.dock.setIcon`) back into view.
+            restoreSystemDockIfNeeded()
+        }
 
         // Restore menu bar and desktop icons
         if AppSettings.shared.hideMenuBar {
