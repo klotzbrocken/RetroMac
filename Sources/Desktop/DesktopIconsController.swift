@@ -260,6 +260,15 @@ final class DesktopIconsController {
             return ThemeManager.shared.icon(for: bid, size: size)
         }
 
+        // Fallback for native-game shortcut types (Setup Assistant) — a game-controller glyph.
+        if ["doom", "duke3d", "quake", "quake2", "warcraft2", "warcraft1", "pacman"].contains(entry.type) {
+            let cfg = NSImage.SymbolConfiguration(pointSize: size * 0.66, weight: .regular)
+            if let img = NSImage(systemSymbolName: "gamecontroller.fill", accessibilityDescription: entry.name)?
+                .withSymbolConfiguration(cfg) {
+                return img
+            }
+        }
+
         // Fallback for "trash" type
         if entry.type == "trash" {
             return NSImage(systemSymbolName: "trash", accessibilityDescription: "Trash")

@@ -735,7 +735,7 @@ final class AppSettings: ObservableObject {
         lastSeenVersion = defaults.string(forKey: "lastSeenVersion") ?? ""
         coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
         dockModeEnabled = defaults.object(forKey: "dockModeEnabled") as? Bool ?? false
-        shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? true
+        shaderOnThemeChange = defaults.object(forKey: "shaderOnThemeChange") as? Bool ?? false
         themeAdaptAppearance = defaults.object(forKey: "themeAdaptAppearance") as? Bool ?? true
         themeApplySystemTweaks = defaults.bool(forKey: "themeApplySystemTweaks")   // default false (opt-in)
         themeTerminalProfile = defaults.object(forKey: "themeTerminalProfile") as? Bool ?? true
