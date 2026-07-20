@@ -1,0 +1,4 @@
+# Vendored engine patches are unified diffs stored as tracked files: their context lines carry a
+# leading space before tab-indented code and blank diff lines, which git's whitespace checker
+# flags spuriously. Exclude patch files from whitespace checks (git diff --check / git apply).
+vendor/patches/*.patch -whitespace
