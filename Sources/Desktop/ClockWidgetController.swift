@@ -117,6 +117,7 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         webView.evaluateJavaScript("window.set24 && window.set24(\(AppSettings.shared.clockUse24Hour))")
         // Size the panel to the themed widget, then place the drag/close overlay over the title.
         webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [200,224]") { [weak self] result, _ in

@@ -125,6 +125,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         // Theme the window chrome (BeOS tab vs Mac OS 9 Platinum) before populating.
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         let escTitle = windowTitle.replacingOccurrences(of: "'", with: "\\'")
         webView.evaluateJavaScript("window.setTitle && window.setTitle('\(escTitle)')")
         let items = (kind == .tv) ? Self.tvItems() : Self.installedApps()

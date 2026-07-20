@@ -146,8 +146,39 @@ final class ThemeManager {
         case "Mac OS 6 classic":      applyMacOS6DockVariant()
         case "Mac OS 9.2 Classic":    applyMacOS9DockVariant()
         case "BeOS":                  applyBeOSDockVariant()
+        case "Windows 98":            applyWin98PlusVariant()
         default: break
         }
+    }
+
+    /// Windows 98 Plus! scheme: recolour the chrome + swap wallpaper/desktop icons via a runtime
+    /// config override (cursors are handled by CursorThemeManager reading the same setting). The
+    /// default scheme ("") clears the override → the built-in navy Windows 98 look.
+    private func applyWin98PlusVariant() {
+        guard let t = activeTheme, t.baseConfig.name == "Windows 98" else { return }
+        guard let scheme = Win98Scheme.byID[AppSettings.shared.win98Scheme] else {
+            t.setConfigOverride(nil); return
+        }
+        var c = t.baseConfig
+        c.chromeColors = scheme.colors
+        if let face = scheme.colors.face, !face.isEmpty { c.dock.backgroundColor = face }   // recolour the taskbar
+        if let wp = scheme.wallpaper {
+            c.wallpaper = wp
+            c.wallpapers = [DockThemeConfig.WallpaperOption(name: scheme.display, file: wp)]
+        }
+        if var icons = c.desktopIcons {
+            for i in icons.indices {
+                switch icons[i].name {
+                case "My Computer": if let x = scheme.iconComputer { icons[i].icon = x }
+                case "Recycle Bin":
+                    if let e = scheme.iconRecycleEmpty { icons[i].icon = e }
+                    if let f = scheme.iconRecycleFull { icons[i].iconFull = f }
+                default: break
+                }
+            }
+            c.desktopIcons = icons
+        }
+        t.setConfigOverride(c)
     }
 
     /// BeOS option: use the regular RetroMac dock instead of the classic Deskbar panel
@@ -277,8 +308,7 @@ final class ThemeManager {
            FileManager.default.fileExists(atPath: customPath) {
             wpURL = URL(fileURLWithPath: customPath)
         } else if let overrideFile = AppSettings.shared.themeWallpaperOverrides[theme.name] {
-            let overrideURL = theme.url.appendingPathComponent(overrideFile)
-            if FileManager.default.fileExists(atPath: overrideURL.path) {
+            if let overrideURL = theme.rootResource(overrideFile) {
                 wpURL = overrideURL
             } else if let fallback = theme.wallpaperURL() {
                 wpURL = fallback
@@ -321,7 +351,7 @@ final class ThemeManager {
         AppearanceAdapter.apply(for: theme.config)
         CursorThemeManager.shared.apply(for: theme.config)
         TerminalThemer.apply(forThemeNamed: theme.config.name)
-        SystemTweaksAdapter.apply(for: theme.config)   // "Classic Finder" defaults tweaks (opt-in)
+        SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)   // "Classic Finder" defaults tweaks (opt-in, built-in themes only)
     }
 
     /// Renders a small pattern tile edge-to-edge at the screen's pixel size (1 tile pixel

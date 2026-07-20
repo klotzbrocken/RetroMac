@@ -388,6 +388,10 @@ final class AppSettings: ObservableObject {
     @Published var dockHideSystemDock: Bool {
         didSet { defaults.set(dockHideSystemDock, forKey: "dockHideSystemDock") }
     }
+    /// Chosen Windows 98 Plus! scheme ("" = default Windows 98). See Win98Scheme / applyWin98PlusVariant.
+    @Published var win98Scheme: String {
+        didSet { defaults.set(win98Scheme, forKey: "win98Scheme") }
+    }
     @Published var hideMenuBar: Bool {
         didSet {
             defaults.set(hideMenuBar, forKey: "hideMenuBar")
@@ -809,6 +813,7 @@ final class AppSettings: ObservableObject {
         // Dock
         dockEnabled = defaults.bool(forKey: "dockEnabled")
         dockHideSystemDock = defaults.object(forKey: "dockHideSystemDock") as? Bool ?? true
+        win98Scheme = defaults.string(forKey: "win98Scheme") ?? ""
         hideMenuBar = defaults.bool(forKey: "hideMenuBar")
         // Menu-bar Apple style (migrate the legacy menuBarRainbowApple bool: true → rainbow).
         if let style = defaults.object(forKey: "menuBarAppleStyle") as? Int {

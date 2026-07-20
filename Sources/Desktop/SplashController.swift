@@ -37,8 +37,8 @@ final class SplashController {
             }
         }
         // Fall back to the image splash.
-        guard let file = theme.config.splashScreen,
-              let image = NSImage(contentsOf: theme.url.appendingPathComponent(file)) else { return }
+        guard let splashURL = theme.rootResource(theme.config.splashScreen),
+              let image = NSImage(contentsOf: splashURL) else { return }
         show(image: image, on: screen, fullscreen: theme.config.splashFullscreen == true)
     }
 

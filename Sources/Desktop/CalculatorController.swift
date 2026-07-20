@@ -111,6 +111,7 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [236,240]") { [weak self] result, _ in
             guard let self = self, let panel = self.panel,
                   let a = (result as? [NSNumber])?.map({ CGFloat(truncating: $0) }), a.count == 2, a[0] > 20 else { return }

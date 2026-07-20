@@ -26,10 +26,34 @@ struct DockThemeConfig: Codable {
     var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present
     var screensaver: String? = nil    // default screensaver id for this theme (pipes/flowerbox/flying-toasters/flurry/none)
     var systemTweaks: [SystemTweak]? = nil   // optional "Classic Finder" defaults writes (see SystemTweaksAdapter)
+    var chromeColors: ChromeColors? = nil    // per-scheme window-chrome palette (Win98 Plus! themes); nil = built-in defaults
 
     struct WallpaperOption: Codable {
         var name: String
         var file: String
+    }
+
+    /// A Windows-style appearance colour scheme (from a `.theme` `[Control Panel\Colors]` section):
+    /// recolours the title bar, window face, and 3D button bevels. All hex ("#RRGGBB"), all optional
+    /// so a partial scheme falls back to the built-in look. Fed to `ChromeStyle`, the dock, and the
+    /// widgets (as CSS variables) so one scheme recolours every Win98 surface consistently.
+    struct ChromeColors: Codable {
+        var activeTitle: String? = nil       // active title bar (gradient start / solid)
+        var activeTitleEnd: String? = nil    // gradient end (nil → solid activeTitle)
+        var titleText: String? = nil
+        var inactiveTitle: String? = nil
+        var inactiveTitleText: String? = nil
+        var face: String? = nil              // ButtonFace — the 3D grey (window/body/button fill)
+        var hilight: String? = nil           // ButtonHilight — lightest bevel edge
+        var light: String? = nil             // ButtonLight
+        var shadow: String? = nil            // ButtonShadow
+        var dkShadow: String? = nil          // ButtonDkShadow — darkest bevel edge
+        var window: String? = nil            // content background
+        var windowText: String? = nil
+        var menu: String? = nil
+        var menuText: String? = nil
+        var selection: String? = nil         // Hilight (selection background)
+        var selectionText: String? = nil
     }
 
     /// A single cosmetic `defaults write` that makes the real Finder/system look like this

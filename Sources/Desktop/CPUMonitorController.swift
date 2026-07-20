@@ -151,6 +151,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
         pushCPUInfo()
         // Theme the window chrome (BeOS tab vs Mac OS 9 Platinum) before sizing.
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         // Size the panel to the SCALED widget, then capture the draggable title-tab region.
         webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [0,0]") { [weak self] result, _ in
             guard let self = self, let panel = self.panel,

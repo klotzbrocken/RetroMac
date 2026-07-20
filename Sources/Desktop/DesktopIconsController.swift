@@ -249,8 +249,7 @@ final class DesktopIconsController {
         if entry.type == "sheep", let img = NSImage(contentsOf: DesktopPetController.sheepIconCacheURL) {
             return img
         }
-        if let theme = theme {
-            let iconURL = theme.iconsDirectory.appendingPathComponent(entry.icon)
+        if let theme = theme, let iconURL = theme.iconResource(entry.icon) {
             if let img = NSImage(contentsOf: iconURL) {
                 return img
             }
@@ -282,8 +281,7 @@ final class DesktopIconsController {
     }
 
     private func loadIconImageByName(_ name: String, theme: ThemeBundle?, size: CGFloat) -> NSImage? {
-        guard let theme = theme else { return nil }
-        let iconURL = theme.iconsDirectory.appendingPathComponent(name)
+        guard let theme = theme, let iconURL = theme.iconResource(name) else { return nil }
         return NSImage(contentsOf: iconURL)
     }
 
