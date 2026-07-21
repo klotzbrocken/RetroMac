@@ -163,10 +163,11 @@ struct SetupWizardView: View {
             WizardGame(id: "quake2", name: "Quake II", dataHint: "Pick the base folder (contains baseq2/pak0.pak).",
                        hasData: { Self.quakeHasData(AppSettings.shared.quake2BasePath, sub: "baseq2") },
                        choose: { chooseFolder("Select your Quake II base directory (baseq2/pak0.pak)") { AppSettings.shared.quake2BasePath = $0 } }),
+            // Only Warcraft II: RetroMac can extract + run it (proven working). Warcraft I (war1gus)
+            // has no bundled extractor and isn't reliably playable, so it stays in Settings ▸ Games
+            // for advanced users rather than being offered — and shortcut-launched — here.
             WizardGame(id: "warcraft2", name: "Warcraft II", dataHint: "Pick your Warcraft II folder (the game or extracted data).",
                        hasData: { WarcraftGame.hasExtractedData(.warcraft2) }, choose: { chooseWarcraft(.warcraft2) }),
-            WizardGame(id: "warcraft1", name: "Warcraft I", dataHint: "Pick your Warcraft folder (the game or extracted data).",
-                       hasData: { WarcraftGame.hasExtractedData(.warcraft1) }, choose: { chooseWarcraft(.warcraft1) }),
         ]
     }
 
@@ -293,8 +294,14 @@ struct SetupWizardView: View {
         // actually showing (desktop off), and the user explicitly picked it here. setActiveTheme
         // is idempotent.
         if !selectedTheme.isEmpty {
-            settings.dockEnabled = true   // the themed desktop must be on for the theme to show
             ThemeManager.shared.setActiveTheme(name: selectedTheme, applyWallpaper: !settings.dockOnly)
+            settings.dockEnabled = true   // the themed desktop must be on for the theme to show
+            // Setting the flag alone does NOT start the dock: the DockController's own
+            // dockEnabled observer is only registered inside start(), so if the dock wasn't
+            // running at launch (dockEnabled was off), flipping it here goes unheard. Every
+            // other "enable dock" site calls start() explicitly (selectTheme / toggleDock);
+            // do the same so the retro dock actually appears after the assistant. Idempotent.
+            DockController.shared.start()
         }
         let themeName = ThemeManager.shared.activeTheme?.config.name ?? selectedTheme
         guard gamesSetup, !themeName.isEmpty else { return }

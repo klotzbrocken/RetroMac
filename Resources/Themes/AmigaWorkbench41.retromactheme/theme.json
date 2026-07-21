@@ -78,6 +78,27 @@
       "path": "/tmp",
       "gridX": 0,
       "gridY": 2
+    },
+    {
+      "name": "TV",
+      "icon": "",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Clock",
+      "icon": "",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "CPU",
+      "icon": "",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 5
     }
   ],
   "fallbackIcon": "drawer.png",

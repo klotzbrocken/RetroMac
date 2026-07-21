@@ -16,7 +16,10 @@ enum RetroFrameTheme {
         if name.contains("beos") { return "beos" }
         if name.contains("mac os 9") { return "macos9" }
         if name.contains("mac os 6") { return "macos6" }   // authentic 1-bit System 6 chrome (System6Chrome)
-        if name.contains("mac os x") { return "macosx" }
+        // The whole Aqua family shares the macOS X window chrome (traffic lights + grey title bar),
+        // so games / TV / widgets show Aqua under Snow Leopard and Mountain Lion too — not just the
+        // theme literally named "Mac OS X" (Cheetah).
+        if name.contains("mac os x") || name.contains("snow leopard") || name.contains("mountain lion") { return "macosx" }
         if name.contains("windows 7") { return "win7" }   // Aero glass chrome (drawWin7)
         if name.contains("windows 98") { return "win98" }
         if name.contains("windows xp") || name == "xp" || name.hasPrefix("xp ") { return "winxp" }

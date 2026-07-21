@@ -64,5 +64,28 @@
     "com.apple.Terminal": "terminal.png"
   },
   "appearance": "light",
-  "accentColor": "blue"
+  "accentColor": "blue",
+  "desktopIcons": [
+    {
+      "name": "TV",
+      "icon": "",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Clock",
+      "icon": "",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "CPU",
+      "icon": "",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 2
+    }
+  ]
 }

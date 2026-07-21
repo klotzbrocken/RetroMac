@@ -187,6 +187,20 @@
       "type": "calculator",
       "gridX": 1,
       "gridY": 5
+    },
+    {
+      "name": "TV",
+      "icon": "",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 7
+    },
+    {
+      "name": "Clock",
+      "icon": "",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 8
     }
   ],
   "fallbackIcon": "generic.png",

@@ -131,6 +131,13 @@
       "type": "screensaver",
       "gridX": 0,
       "gridY": 6
+    },
+    {
+      "name": "TV",
+      "icon": "quicktime.png",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 7
     }
   ],
   "iconMappings": {

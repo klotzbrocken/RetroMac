@@ -60,6 +60,7 @@ final class DockController {
         ProgramManagerController.shared.update()
         SGIDesktopController.shared.update()
         BeOSDeskbarController.shared.update()
+        WindowBorderController.shared.update()
         RainbowAppleController.shared.update()
         if AppSettings.shared.hideMenuBar {
             SystemUIHelper.setMenuBarAutoHide(true)
@@ -131,6 +132,7 @@ final class DockController {
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
         BeOSDeskbarController.shared.hide()
+        WindowBorderController.shared.update()   // dock off → borders off (gated on dockEnabled)
         RainbowAppleController.shared.hide()
 
         if didHideSystemDock {

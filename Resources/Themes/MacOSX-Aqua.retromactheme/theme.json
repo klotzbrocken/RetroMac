@@ -116,5 +116,28 @@
     "com.apple.BluetoothFileExchange": "bluetooth.png"
   },
   "appearance": "light",
-  "accentColor": "blue"
+  "accentColor": "blue",
+  "desktopIcons": [
+    {
+      "name": "TV",
+      "icon": "quicktime.png",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Clock",
+      "icon": "clock.png",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "CPU",
+      "icon": "activitymonitor.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 2
+    }
+  ]
 }

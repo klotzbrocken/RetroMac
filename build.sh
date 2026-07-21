@@ -108,6 +108,12 @@ if [ -d "Resources/Cursors" ]; then
     rsync -a --delete Resources/Cursors/ "$CONTENTS/Resources/Cursors/"
 fi
 
+# Per-game icons for the Setup Assistant's desktop shortcuts (Doom/Duke/Quake/Warcraft…)
+if [ -d "Resources/GameIcons" ]; then
+    mkdir -p "$CONTENTS/Resources/GameIcons"
+    rsync -a --delete Resources/GameIcons/ "$CONTENTS/Resources/GameIcons/"
+fi
+
 # Window-chrome glyph assets (XP.css caption buttons etc.)
 if [ -d "Resources/Chrome" ]; then
     mkdir -p "$CONTENTS/Resources/Chrome"

@@ -221,6 +221,21 @@
             "icon": "recorder.png",
             "type": "app",
             "bundleID": "com.apple.VoiceMemos"
+          },
+          {
+            "name": "TV",
+            "icon": "mediaplayer.png",
+            "type": "tvfolder"
+          },
+          {
+            "name": "Clock",
+            "icon": "clock.png",
+            "type": "clock"
+          },
+          {
+            "name": "CPU",
+            "icon": "",
+            "type": "cpumonitor"
           }
         ]
       },

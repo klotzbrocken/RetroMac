@@ -82,6 +82,20 @@
       "type": "cpumonitor",
       "gridX": 0,
       "gridY": 7
+    },
+    {
+      "name": "TV",
+      "icon": "",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Clock",
+      "icon": "",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 2
     }
   ],
   "fallbackIcon": "generic.png",

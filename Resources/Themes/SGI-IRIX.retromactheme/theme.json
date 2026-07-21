@@ -287,6 +287,21 @@
         "icon": "display.png",
         "type": "app",
         "bundleID": "com.apple.Terminal"
+      },
+      {
+        "name": "TV",
+        "icon": "media.png",
+        "type": "tvfolder"
+      },
+      {
+        "name": "Clock",
+        "icon": "clock.png",
+        "type": "clock"
+      },
+      {
+        "name": "CPU",
+        "icon": "",
+        "type": "cpumonitor"
       }
     ]
   },
