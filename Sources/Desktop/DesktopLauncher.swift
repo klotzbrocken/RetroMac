@@ -46,6 +46,9 @@ enum DesktopLauncher {
         case "clock":
             ClockWidgetController.shared.userShow()   // user opened it → clears the closed flag
 
+        case "nyanochrome":
+            NyanochromeController.shared.toggle()
+
         case "notepad":
             NotepadController.shared.show()
 
