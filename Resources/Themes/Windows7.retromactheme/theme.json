@@ -117,7 +117,7 @@
     },
     {
       "name": "Paint",
-      "icon": "paint98.png",
+      "icon": "win7_paint.png",
       "type": "webapp",
       "url": "https://bored-win98.pisaucer.com/programs/jspaint/index.html",
       "args": [
@@ -153,7 +153,7 @@
     },
     {
       "name": "3D Pinball",
-      "icon": "pinball.png",
+      "icon": "win7_pinball.png",
       "type": "webapp",
       "url": "https://bored-win98.pisaucer.com/programs/pinball/space-cadet.html",
       "args": [
@@ -163,13 +163,7 @@
       "gridX": 1,
       "gridY": 2
     },
-    {
-      "name": "sheep.exe",
-      "icon": "sheep.png",
-      "type": "sheep",
-      "gridX": 1,
-      "gridY": 3
-    },
+
     {
       "name": "Screen Saver",
       "icon": "screensaver.png",

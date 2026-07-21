@@ -261,7 +261,7 @@ final class DesktopIconsController {
         }
 
         // Widget shortcut types (TV / Clock / CPU): a system glyph when the theme ships no art.
-        let widgetGlyph: [String: String] = ["tvfolder": "tv", "clock": "clock", "cpumonitor": "cpu"]
+        let widgetGlyph: [String: String] = ["tvfolder": "tv", "clock": "clock", "cpumonitor": "cpu", "nyanochrome": "cat"]
         if let sym = widgetGlyph[entry.type] {
             let cfg = NSImage.SymbolConfiguration(pointSize: size * 0.6, weight: .regular)
             if let img = NSImage(systemSymbolName: sym, accessibilityDescription: entry.name)?

@@ -84,13 +84,9 @@
         fill: currentColor;
       }
     </style>
-    <script src="lib/sri-fallback.js"></script>
-    <script
-      x-sri-fallback="lib/three.min.js"
-      src="lib/three.min.js"
-      integrity="sha256-MbIcpOhIEGLabqntH1B7ZgE7a6V0TrocmKouz1npT1g="
-      crossorigin="anonymous"
-    ></script>
+    <!-- three.js is bundled locally and loaded over file://; SRI + crossorigin would make WebKit
+         treat it as a failed CORS/SRI fetch and skip it (black screen), so load it plainly. -->
+    <script src="lib/three.min.js"></script>
     <script src="lib/OrbitControls.js"></script>
     <script src="lib/TeapotBufferGeometry.js"></script>
     <meta name="viewport" content="width=device-width, user-scalable=no" />
