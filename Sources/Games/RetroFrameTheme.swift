@@ -22,6 +22,7 @@ enum RetroFrameTheme {
         if name.contains("mac os x") || name.contains("snow leopard") || name.contains("mountain lion") { return "macosx" }
         if name.contains("windows 7") { return "win7" }   // Aero glass chrome (drawWin7)
         if name.contains("windows 98") { return "win98" }
+        if name.contains("windows 3") { return "win31" }   // flat pre-3D window frame
         if name.contains("windows xp") || name == "xp" || name.hasPrefix("xp ") { return "winxp" }
         if name.contains("maiks favourite") || name.contains("maiks favorite") { return "maiksfav" }
         return "default"

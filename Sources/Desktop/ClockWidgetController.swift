@@ -28,10 +28,20 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
         webView?.evaluateJavaScript("window.set24 && window.set24(\(AppSettings.shared.clockUse24Hour))")
     }
 
-    func toggle() { if panel?.isVisible == true { close() } else { show() } }
+    /// Whether the user closed the clock. Persisted so a theme switch doesn't reopen it against
+    /// the user's wish (applyThemeWidgets only auto-shows when this is false).
+    var userHidden: Bool {
+        get { UserDefaults.standard.bool(forKey: "clockWidgetHidden") }
+        set { UserDefaults.standard.set(newValue, forKey: "clockWidgetHidden") }
+    }
 
-    /// Warm hide — keeps the WebView alive for instant reopen.
-    func close() { saveOrigin(); panel?.orderOut(nil) }
+    func toggle() { if panel?.isVisible == true { close() } else { userShow() } }
+
+    /// Explicit user open (deskbar/taskbar/desktop shortcut) — clears the closed flag.
+    func userShow() { userHidden = false; show() }
+
+    /// Warm hide — keeps the WebView alive for instant reopen. Records the user's intent.
+    func close() { userHidden = true; saveOrigin(); panel?.orderOut(nil) }
 
     /// Cold teardown — removes the script-message handler (breaks the userContentController→self
     /// retain cycle) and releases the WebView + its WebContent process. Use when widgets are
