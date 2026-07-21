@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Debug/dev entitlements. Deliberately WITHOUT com.apple.developer.system-extension.install
+         and application-groups so no provisioning profile is required — the app then launches
+         directly under an Apple Development signature (AMFI only demands a matching profile for
+         those restricted entitlements). Trade-off: the Camera system extension (virtual camera)
+         cannot be activated in a debug build; build release to test it. -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+    <key>com.apple.security.device.camera</key>
+    <true/>
+</dict>
+</plist>

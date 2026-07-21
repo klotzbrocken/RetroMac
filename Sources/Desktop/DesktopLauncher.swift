@@ -44,7 +44,7 @@ enum DesktopLauncher {
             CPUMonitorController.shared.show()
 
         case "clock":
-            ClockWidgetController.shared.show()
+            ClockWidgetController.shared.userShow()   // user opened it → clears the closed flag
 
         case "notepad":
             NotepadController.shared.show()

@@ -250,6 +250,9 @@ final class WindowBorderController {
                           loInner: NSColor.fromHex("#9A9AA2"), loOuter: NSColor.fromHex("#5A5A62"), width: 3, radius: R)
         case "macos6":
             return .solid(color: .black, width: 2, topRadius: R, bottomRadius: R)
+        case "win31":
+            // Windows 3.1 had a flat (pre-3D) window frame with a crisp dark outline.
+            return .solid(color: NSColor.fromHex("#404040"), width: 2, topRadius: R, bottomRadius: R)
         case "winxp":
             return .solid(color: NSColor.fromHex("#2A63D8"), width: 4, topRadius: R, bottomRadius: R)
         case "win7":

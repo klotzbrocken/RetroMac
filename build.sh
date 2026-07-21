@@ -12,7 +12,10 @@ if [ "$MODE" = "release" ]; then
 else
     SIGN_ID="Apple Development: Maik Klotz (VB63U5MZD7)"
     SIGN_FLAGS="--timestamp=none"
-    APP_ENTITLEMENTS="RetroMac.entitlements"
+    # Reduced entitlements (no system-extension.install / app-groups) so the debug build needs no
+    # provisioning profile and launches directly — no manual AMFI re-sign. (Virtual camera can't be
+    # activated in debug; build release for that.)
+    APP_ENTITLEMENTS="RetroMac-debug.entitlements"
 fi
 # Release builds are Universal (Intel + Apple Silicon) for distribution.
 # Debug/dev builds stay native (host arch only) for fast iteration.
@@ -269,28 +272,30 @@ cat > "$CONTENTS/PkgInfo" <<'PKG'
 APPL????
 PKG
 
-# Embed provisioning profile (required for system-extension.install entitlement)
+# Embed provisioning profile (required for the system-extension.install entitlement).
+# Debug uses reduced entitlements without that entitlement, so it needs NO profile — remove any
+# stale one so AMFI doesn't try to validate it against the Apple Development signing cert and
+# SIGKILL the app (exit 137).
 if [ "$MODE" = "release" ]; then
     PROFILE="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/RetroMac_Developer_ID.provisionprofile"
+    if [ -f "$PROFILE" ]; then
+        cp "$PROFILE" "$CONTENTS/embedded.provisionprofile"
+        echo "  ✓ Provisioning profile embedded"
+    else
+        # HARD FAIL: the release entitlements include com.apple.developer.system-extension.install,
+        # which AMFI only permits with an embedded provisioning profile. Without it the WHOLE APP
+        # is SIGKILLed on launch (exit 137, "cannot be opened") — and it still signs & notarizes
+        # cleanly, so nothing else catches it. A silent skip once shipped an un-launchable 2.2.
+        echo "  ❌ Release provisioning profile missing:"
+        echo "     $PROFILE"
+        echo "     A release build without it installs but is killed on launch (AMFI, exit 137)."
+        echo "     Create a Developer ID profile for App ID com.retromac.app (System Extension +"
+        echo "     App Groups) at developer.apple.com, download it to that path, and rebuild."
+        exit 1
+    fi
 else
-    PROFILE="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/80aeb44c-9e5a-4578-892e-092ebc27c57f.provisionprofile"
-fi
-if [ -f "$PROFILE" ]; then
-    cp "$PROFILE" "$CONTENTS/embedded.provisionprofile"
-    echo "  ✓ Provisioning profile embedded"
-elif [ "$MODE" = "release" ]; then
-    # HARD FAIL: the release entitlements include com.apple.developer.system-extension.install,
-    # which AMFI only permits with an embedded provisioning profile. Without it the WHOLE APP
-    # is SIGKILLed on launch (exit 137, "cannot be opened") — and it still signs & notarizes
-    # cleanly, so nothing else catches it. A silent skip once shipped an un-launchable 2.2.
-    echo "  ❌ Release provisioning profile missing:"
-    echo "     $PROFILE"
-    echo "     A release build without it installs but is killed on launch (AMFI, exit 137)."
-    echo "     Create a Developer ID profile for App ID com.retromac.app (System Extension +"
-    echo "     App Groups) at developer.apple.com, download it to that path, and rebuild."
-    exit 1
-else
-    echo "  ⚠ Provisioning profile not found — system extension activation may fail"
+    rm -f "$CONTENTS/embedded.provisionprofile"
+    echo "  ✓ Debug build: reduced entitlements, no provisioning profile (launches directly)"
 fi
 
 # Sign the main app (extension must be signed first, then app wraps it)

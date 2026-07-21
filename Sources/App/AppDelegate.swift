@@ -2444,7 +2444,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// preference (set in the Setup Assistant). First version = the desktop Clock.
     private func applyThemeWidgets(for themeName: String) {
         // Dock-only deliberately changes nothing but the dock — no desktop widgets.
-        if AppSettings.shared.themeIncludeWidgets && !AppSettings.shared.dockOnly {
+        if AppSettings.shared.themeIncludeWidgets && !AppSettings.shared.dockOnly
+            && !ClockWidgetController.shared.userHidden {   // don't reopen a clock the user closed
             ClockWidgetController.shared.show()
         } else {
             ClockWidgetController.shared.destroy()   // fully release the WebView when widgets are off

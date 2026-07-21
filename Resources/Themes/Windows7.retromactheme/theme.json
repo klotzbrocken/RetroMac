@@ -179,14 +179,14 @@
     },
     {
       "name": "TV",
-      "icon": "",
+      "icon": "win7_tv.png",
       "type": "tvfolder",
       "gridX": 0,
       "gridY": 7
     },
     {
       "name": "Clock",
-      "icon": "",
+      "icon": "win7_clock.png",
       "type": "clock",
       "gridX": 0,
       "gridY": 8

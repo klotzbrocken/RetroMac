@@ -85,14 +85,14 @@
     },
     {
       "name": "TV",
-      "icon": "",
+      "icon": "beos_tv.png",
       "type": "tvfolder",
       "gridX": 0,
       "gridY": 0
     },
     {
       "name": "Clock",
-      "icon": "",
+      "icon": "beos_clock.png",
       "type": "clock",
       "gridX": 0,
       "gridY": 2

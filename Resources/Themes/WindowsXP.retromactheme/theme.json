@@ -190,14 +190,14 @@
     },
     {
       "name": "TV",
-      "icon": "",
+      "icon": "xp_tv.png",
       "type": "tvfolder",
       "gridX": 0,
       "gridY": 7
     },
     {
       "name": "Clock",
-      "icon": "",
+      "icon": "xp_clock.png",
       "type": "clock",
       "gridX": 0,
       "gridY": 8
