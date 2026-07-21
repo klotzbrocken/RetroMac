@@ -260,8 +260,24 @@ final class DesktopIconsController {
             return ThemeManager.shared.icon(for: bid, size: size)
         }
 
-        // Fallback for native-game shortcut types (Setup Assistant) — a game-controller glyph.
-        if ["doom", "duke3d", "quake", "quake2", "warcraft2", "warcraft1", "pacman"].contains(entry.type) {
+        // Widget shortcut types (TV / Clock / CPU): a system glyph when the theme ships no art.
+        let widgetGlyph: [String: String] = ["tvfolder": "tv", "clock": "clock", "cpumonitor": "cpu"]
+        if let sym = widgetGlyph[entry.type] {
+            let cfg = NSImage.SymbolConfiguration(pointSize: size * 0.6, weight: .regular)
+            if let img = NSImage(systemSymbolName: sym, accessibilityDescription: entry.name)?
+                .withSymbolConfiguration(cfg) {
+                return img
+            }
+        }
+
+        // Native-game shortcut types (Setup Assistant): use the bundled per-game icon, else a
+        // game-controller glyph.
+        if ["doom", "duke3d", "quake", "quake2", "warcraft2", "warcraft1", "heretic", "pacman"].contains(entry.type) {
+            if let url = Bundle.main.resourceURL?.appendingPathComponent("GameIcons/\(entry.type).png"),
+               let img = NSImage(contentsOf: url) {
+                img.size = NSSize(width: size, height: size)
+                return img
+            }
             let cfg = NSImage.SymbolConfiguration(pointSize: size * 0.66, weight: .regular)
             if let img = NSImage(systemSymbolName: "gamecontroller.fill", accessibilityDescription: entry.name)?
                 .withSymbolConfiguration(cfg) {

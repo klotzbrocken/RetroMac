@@ -61,6 +61,27 @@
       "path": "/",
       "gridX": 0,
       "gridY": 0
+    },
+    {
+      "name": "TV",
+      "icon": "quicktime.png",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Clock",
+      "icon": "clock.png",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "CPU",
+      "icon": "activitymonitor.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 3
     }
   ],
   "wallpaper": "wallpaper.jpg",

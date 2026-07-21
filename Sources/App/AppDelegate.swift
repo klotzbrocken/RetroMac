@@ -151,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
             BeOSDeskbarController.shared.update()
+            WindowBorderController.shared.update()   // recolour theme window borders on theme change
             // The active theme drives the menu-bar Apple logo (Mac OS 9 → rainbow, Mac OS X →
             // aqua-classic, Maiks Favourite II → hell); every other theme turns it off.
             // Setting the style triggers RainbowAppleController.update() via its didSet.
@@ -311,6 +312,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cam.target = self
         cam.state = VirtualCameraManager.shared.isRunning ? .on : .off
         menu.addItem(cam)
+        let borders = NSMenuItem(title: "Window Borders (Theme)", action: #selector(toggleThemeWindowBorders), keyEquivalent: "")
+        borders.target = self
+        borders.state = AppSettings.shared.themeWindowBorders ? .on : .off
+        menu.addItem(borders)
 
         menu.addItem(.separator())
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: "")
@@ -933,6 +938,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let tubeToggleItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         tubeToggleItem.view = tubeRow
         menu.addItem(tubeToggleItem)
+
+        // ── Window Borders (Theme) toggle — prototype ──
+        let bordersPill = PillToggleView(isOn: AppSettings.shared.themeWindowBorders)
+        let bordersRow = MenuToggleRowView(
+            icon: "macwindow",
+            label: "Window Borders (Theme)",
+            hotkeyHint: nil,
+            pill: bordersPill
+        ) { [weak self] in
+            self?.toggleThemeWindowBorders()
+            bordersPill.isOn = AppSettings.shared.themeWindowBorders
+            self?.updateMenuLive()
+        }
+        let bordersToggleItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        bordersToggleItem.view = bordersRow
+        menu.addItem(bordersToggleItem)
 
         // ── PRESETS section ──
         menu.addItem(sectionLabel("PRESETS"))
@@ -2457,6 +2478,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ProgramManagerController.shared.update()
         SGIDesktopController.shared.update()
         BeOSDeskbarController.shared.update()
+        WindowBorderController.shared.update()
         RainbowAppleController.shared.update()
         applyThemeWidgets(for: AppSettings.shared.dockTheme)
     }
@@ -4190,6 +4212,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Virtual Camera
+
+    @objc private func toggleThemeWindowBorders() {
+        // Prototype toggle: theme-coloured border around the focused window of every app.
+        // AppSettings.didSet drives WindowBorderController.update(); flip the flag here.
+        AppSettings.shared.themeWindowBorders.toggle()
+    }
 
     @objc private func toggleVirtualCamera() {
         let vcam = VirtualCameraManager.shared

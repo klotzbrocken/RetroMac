@@ -211,11 +211,22 @@
       "type": "calculator",
       "gridX": 1,
       "gridY": 5
+    },
+    {
+      "name": "TV",
+      "icon": "menu-multimedia.png",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 8
     }
   ],
   "desktopIconSize": 40,
   "splashVideo": "boot.mp4",
   "screensaver": "flowerbox",
   "appearance": "light",
-  "accentColor": "blue"
+  "accentColor": "blue",
+  "systemTweaks": [
+    { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "2", "refresh": "Finder" },
+    { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "2", "refresh": "Finder" }
+  ]
 }
