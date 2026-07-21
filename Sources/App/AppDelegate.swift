@@ -92,6 +92,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Probe OS capabilities once (async, off-main) so features can degrade gracefully.
         SystemBridge.shared.probeAll()
 
+        // Reflect the persisted window-borders flag at launch (gated internally; no-op when off).
+        WindowBorderController.shared.update()
+
         // Restore system UI if previous session crashed while UI was hidden
         SystemUIHelper.restoreIfNeeded()
         SystemUIHelper.restoreDesktopIconsIfNeeded()   // crash/force-quit-safe desktop-icon restore
