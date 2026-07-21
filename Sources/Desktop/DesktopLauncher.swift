@@ -49,6 +49,9 @@ enum DesktopLauncher {
         case "nyanochrome":
             NyanochromeController.shared.toggle()
 
+        case "tictactoe":
+            TicTacToeController.shared.toggle()
+
         case "notepad":
             NotepadController.shared.show()
 

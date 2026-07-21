@@ -1,5 +1,6 @@
 {
   "name": "Mac OS 6 classic",
+  "splashWelcome": true,
   "systemTweaks": [
     { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "2", "refresh": "Finder" },
     { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "2", "refresh": "Finder" },
@@ -181,6 +182,13 @@
       "type": "nyanochrome",
       "gridX": 1,
       "gridY": 1
+    },
+    {
+      "name": "Tic-Tac-Toe",
+      "icon": "tictactoe.png",
+      "type": "tictactoe",
+      "gridX": 1,
+      "gridY": 2
     }
   ],
   "fallbackIcon": "generic.png",

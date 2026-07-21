@@ -278,7 +278,14 @@ final class DockView: NSView {
         wsObserver = nc.addObserver(
             forName: NSWorkspace.didLaunchApplicationNotification,
             object: nil, queue: .main
-        ) { [weak self] _ in self?.updateRunningIndicators() }
+        ) { [weak self] _ in
+            self?.updateRunningIndicators()
+            // updateRunningIndicators fires onRunningAppsChanged immediately, but a just-launched
+            // app often isn't a `.regular` process yet, so runningAppsNotInDock() excludes it and
+            // the dock doesn't grow — and no further event arrives once it becomes regular. Re-run
+            // the resize+relayout shortly after so the new app's transient tile actually appears.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self?.onRunningAppsChanged?() }
+        }
 
         let nc2 = NotificationCenter.default
         appsObserver = nc2.addObserver(forName: .dockAppsChanged, object: nil, queue: .main) { [weak self] _ in
@@ -307,7 +314,7 @@ final class DockView: NSView {
 
         let wsNC = NSWorkspace.shared.notificationCenter
         wsTerminateObserver = wsNC.addObserver(forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.updateRunningIndicators()
+            self?.updateRunningIndicators()   // fires onRunningAppsChanged → dock shrinks past the quit app
         }
         wsActivateObserver = wsNC.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
             self?.updateRunningIndicators()

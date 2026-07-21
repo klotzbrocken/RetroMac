@@ -171,6 +171,8 @@ for (let t = 0; t < 12; t++) {
 // ---- visible canvas: System-6 title bar + animated scene ----
 const cv = document.getElementById('c'); cv.width = W; cv.height = TBH + H;
 const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+let closePressed = false;
+window.setClosePressed = function (b) { closePressed = !!b; };            // native bridge: close-box press feedback
 function titleBar() {
   g.fillStyle = '#fff'; g.fillRect(0, 0, W, TBH);
   g.fillStyle = '#000';
@@ -178,6 +180,7 @@ function titleBar() {
   g.fillRect(0, 0, W, 2); g.fillRect(0, TBH - 2, W, 2); g.fillRect(0, 0, 2, TBH); g.fillRect(W - 2, 0, 2, TBH);
   g.fillStyle = '#fff'; g.fillRect(8, 4, 14, 14); g.fillStyle = '#000'; g.strokeStyle = '#000'; g.lineWidth = 2;
   g.strokeRect(9, 5, 12, 12);                                             // close box
+  if (closePressed) { g.fillStyle = '#000'; g.fillRect(12, 8, 6, 6); }    // pressed feedback
   const label = 'NyanCat'; g.font = 'bold 13px Geneva, Chicago, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
   const tw = g.measureText(label).width + 12, tx = (W - tw) / 2;
   g.fillStyle = '#fff'; g.fillRect(tx, 2, tw, TBH - 4); g.fillStyle = '#000'; g.strokeRect(tx + 1, 3, tw - 2, TBH - 6);
