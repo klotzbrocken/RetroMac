@@ -1,23 +1,23 @@
 import AppKit
 import WebKit
 
-/// A tiny 1-bit "Nyanochrome" cat widget for the System 6 theme — a monochrome Nyan Cat drawn on a
-/// canvas (Widgets/Nyanochrome/index.html), shown in a borderless, drag-anywhere panel. Opened from
-/// the System 6 desktop "Nyanochrome" icon (toggles). Mirrors the other WebView widgets but simpler
-/// (no themed title chrome — the HTML draws its own System 6 black window frame).
-final class NyanochromeController: NSObject {
+/// A playable Tic-Tac-Toe widget for the classic Mac themes — the board rendering ported from Josh
+/// Juran's Mac Tic-tac-toe (metamage_1), an unbeatable minimax opponent, in a System 6 window.
+/// Opened from the desktop "Tic-Tac-Toe" icon (toggles). Unlike Nyanochrome, only the title bar is
+/// draggable so board clicks reach the game.
+final class TicTacToeController: NSObject {
 
-    static let shared = NyanochromeController()
+    static let shared = TicTacToeController()
 
     private var panel: NSPanel?
     private var webView: WKWebView?
-    private let posKey = "nyanochromeOrigin"
+    private let posKey = "ticTacToeOrigin"
 
-    /// Transparent full-panel overlay: click the title-bar close box to close, drag anywhere else.
-    /// The close box mirrors the CPU widget's chrome: it shows a pressed state on mouse-down and
-    /// only fires on mouse-up-inside (drag out of the box cancels), so closing feels like a real click.
-    private final class DragView: NSView {
-        var closeRect: CGRect = .zero
+    /// Title-bar-only overlay: click the close box to close, drag elsewhere in the bar to move.
+    /// Like the CPU widget, the close box shows a pressed state on mouse-down and only fires on
+    /// mouse-up-inside (dragging out cancels), so closing reads as a real click.
+    private final class TitleDragView: NSView {
+        var closeRect: CGRect = .zero      // in this view's local (bottom-left) coords
         var onClose: (() -> Void)?
         var onClosePress: ((Bool) -> Void)?
         private var pressingClose = false
@@ -34,7 +34,6 @@ final class NyanochromeController: NSObject {
             guard pressingClose else { return }
             pressingClose = false
             if closeRect.contains(convert(event.locationInWindow, from: nil)) {
-                // hold the pressed frame a beat so the click reads, then close (matches the CPU widget)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
                     self?.onClosePress?(false); self?.onClose?()
                 }
@@ -57,20 +56,20 @@ final class NyanochromeController: NSObject {
     }
 
     func show() {
-        guard let html = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Nyanochrome/index.html"),
+        guard let html = Bundle.main.resourceURL?.appendingPathComponent("Widgets/TicTacToe/index.html"),
               FileManager.default.fileExists(atPath: html.path) else { NSSound.beep(); return }
 
         if panel == nil {
-            let initial = NSRect(x: 0, y: 0, width: 280, height: 310)   // matches the 280x310 canvas (title bar + 280x288 scene)
+            let W: CGFloat = 224, H: CGFloat = 248, TB: CGFloat = 24   // matches the canvas
+            let initial = NSRect(x: 0, y: 0, width: W, height: H)
             let wv = WKWebView(frame: initial, configuration: WKWebViewConfiguration())
             wv.autoresizingMask = [.width, .height]
             wv.setValue(false, forKey: "drawsBackground")
 
-            let drag = DragView(frame: initial)
-            drag.autoresizingMask = [.width, .height]
-            // Close box lives in the canvas title bar top-left; map it to view coords (bottom-left
-            // Close box: canvas (8,4) size 14x14 at the top → view coords (bottom-left origin), 1:1 scale.
-            drag.closeRect = CGRect(x: 6, y: initial.height - 22, width: 18, height: 18)
+            // Drag overlay covers ONLY the title bar (top strip) so board clicks pass to the WebView.
+            let drag = TitleDragView(frame: NSRect(x: 0, y: H - TB, width: W, height: TB))
+            drag.autoresizingMask = [.width, .minYMargin]
+            drag.closeRect = CGRect(x: 6, y: 2, width: 18, height: 18)   // close box, local coords
             drag.onClose = { [weak self] in self?.close() }
             drag.onClosePress = { [weak self] pressed in
                 self?.webView?.evaluateJavaScript("window.setClosePressed && window.setClosePressed(\(pressed))", completionHandler: nil)
@@ -78,7 +77,7 @@ final class NyanochromeController: NSObject {
 
             let container = NSView(frame: initial)
             container.addSubview(wv)
-            container.addSubview(drag)   // over the webview → drag anywhere
+            container.addSubview(drag)
 
             let p = NSPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
@@ -93,8 +92,6 @@ final class NyanochromeController: NSObject {
         restorePosition()
         panel?.orderFrontRegardless()
     }
-
-    // MARK: - Position persistence
 
     private func saveOrigin() {
         guard let panel = panel, panel.isVisible else { return }
