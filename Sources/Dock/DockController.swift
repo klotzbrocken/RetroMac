@@ -417,8 +417,11 @@ final class DockController {
             let fullY = (position == "top") ? (screen.frame.maxY - height) : screen.frame.minY
             return NSRect(x: screen.frame.minX, y: fullY, width: screen.frame.width, height: height)
         }
+        // The Mac OS Control Strip docks flush to the left or right screen edge (user choice),
+        // staying horizontal at the bottom — like the historical strip.
+        let effectiveAlignment = (config?.isControlStrip == true) ? AppSettings.shared.controlStripSide : alignment
         let x: CGFloat
-        switch alignment {
+        switch effectiveAlignment {
         // Flush to the PHYSICAL screen edge (screen.frame), not visibleFrame — otherwise a
         // system Dock on the left/right pushes our dock inward and leaves a gap.
         case "left":  x = screen.frame.minX + offset
@@ -543,6 +546,19 @@ final class DockController {
         dockView.horizontalMagOverflow = 0
         let (width, height, magOverflow, hMagOverflow, dynScale) = calculateDockSize(dockView: dockView, screen: screen)
         let targetFrame = dockFrame(screen: screen, width: width, height: height)
+
+        // Right-docked: the strip is flush-right and collapses toward the right edge (the tab stays
+        // at that edge). The left-anchored clip-slide would reveal the wrong side, so snap instantly.
+        if dockView.controlStripRight {
+            window.setFrame(targetFrame, display: true)
+            dockView.dynamicScale = dynScale
+            dockView.horizontalMagOverflow = hMagOverflow
+            dockView.frame = NSRect(origin: .zero, size: targetFrame.size)
+            dockView.magnificationOverflow = magOverflow
+            dockView.relayoutItems()
+            dockView.needsDisplay = true
+            return
+        }
 
         if collapsed {
             // Collapsing: animate clip from full width → left cap only, then resize window
@@ -817,6 +833,10 @@ final class DockController {
         // so they must run on the NEXT runloop tick, once the value is committed.
         // Otherwise every change is applied one step late (stale read).
         s.$themeDockPositionOverride.dropFirst().sink { [weak self] _ in
+            DispatchQueue.main.async { self?.recreateWindow() }
+        }.store(in: &settingsObservers)
+
+        s.$controlStripSide.dropFirst().sink { [weak self] _ in
             DispatchQueue.main.async { self?.recreateWindow() }
         }.store(in: &settingsObservers)
 
@@ -1203,6 +1223,11 @@ final class DockController {
         AppSettings.shared.themeDockPositionOverride[name] = pos
     }
 
+    @objc private func menuSetControlStripSide(_ sender: NSMenuItem) {
+        guard let side = sender.representedObject as? String else { return }
+        AppSettings.shared.controlStripSide = side   // observer recreates the dock window
+    }
+
     @objc private func menuToggleAutoHide(_ sender: NSMenuItem) {
         guard let name = ThemeManager.shared.activeTheme?.config.name else { return }
         let current = AppSettings.shared.themeDockAutoHide[name] ?? false
@@ -1315,21 +1340,35 @@ final class DockController {
     private func appendDockPositionItems(to menu: NSMenu) {
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         menu.addItem(.separator())
-        let current = theme.effectiveDockPosition
-        let posTitle = NSMenuItem(title: "Dock Position", action: nil, keyEquivalent: "")
-        let posMenu = NSMenu()
-        // Windows XP taskbar is bottom-only — hide the left/right options for that theme.
-        let isXP = theme.name.lowercased().contains("windows xp") || theme.name.lowercased().contains("xp")
-        var positions = [("Bottom", "bottom"), ("Left", "left"), ("Right", "right")]
-        if isXP { positions = [("Bottom", "bottom")] }
-        for (label, value) in positions {
-            let mi = NSMenuItem(title: label, action: #selector(menuSetDockPosition(_:)), keyEquivalent: "")
-            mi.target = self; mi.representedObject = value
-            if value == current { mi.state = .on }
-            posMenu.addItem(mi)
+        if theme.isControlStrip {
+            // The Control Strip stays horizontal; it only docks to the left or right edge.
+            let csTitle = NSMenuItem(title: "Control Strip", action: nil, keyEquivalent: "")
+            let csMenu = NSMenu()
+            for (label, value) in [("Left", "left"), ("Right", "right")] {
+                let mi = NSMenuItem(title: label, action: #selector(menuSetControlStripSide(_:)), keyEquivalent: "")
+                mi.target = self; mi.representedObject = value
+                if value == AppSettings.shared.controlStripSide { mi.state = .on }
+                csMenu.addItem(mi)
+            }
+            csTitle.submenu = csMenu
+            menu.addItem(csTitle)
+        } else {
+            let current = theme.effectiveDockPosition
+            let posTitle = NSMenuItem(title: "Dock Position", action: nil, keyEquivalent: "")
+            let posMenu = NSMenu()
+            // Windows XP taskbar is bottom-only — hide the left/right options for that theme.
+            let isXP = theme.name.lowercased().contains("windows xp") || theme.name.lowercased().contains("xp")
+            var positions = [("Bottom", "bottom"), ("Left", "left"), ("Right", "right")]
+            if isXP { positions = [("Bottom", "bottom")] }
+            for (label, value) in positions {
+                let mi = NSMenuItem(title: label, action: #selector(menuSetDockPosition(_:)), keyEquivalent: "")
+                mi.target = self; mi.representedObject = value
+                if value == current { mi.state = .on }
+                posMenu.addItem(mi)
+            }
+            posTitle.submenu = posMenu
+            menu.addItem(posTitle)
         }
-        posTitle.submenu = posMenu
-        menu.addItem(posTitle)
         if theme.supportsAutoHide {
             let ah = NSMenuItem(title: "Auto-Hide Dock", action: #selector(menuToggleAutoHide(_:)), keyEquivalent: "")
             ah.target = self

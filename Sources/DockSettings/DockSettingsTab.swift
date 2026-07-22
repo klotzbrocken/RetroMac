@@ -221,6 +221,16 @@ struct DockSettingsTab: View {
                         .frame(width: 200)
                     }
                 }
+                if selectedThemeConfig?.isControlStrip == true {
+                    RMRow(label: "Control Strip edge", hint: "Docks the Control Strip flush to the left or right screen edge, like classic Mac OS. It stays horizontal; the grip/tab faces the screen interior.") {
+                        Picker("", selection: $settings.controlStripSide) {
+                            Text("Left").tag("left")
+                            Text("Right").tag("right")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                    }
+                }
                 if selectedThemeConfig?.hasMagnification == true {
                     RMRow(label: "Magnification on hover") {
                         Toggle("", isOn: $settings.dockMagnification)
