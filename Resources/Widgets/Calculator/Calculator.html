@@ -31,6 +31,7 @@
 
   /* ===== hidden title bars by default ===== */
   .m9-title,.xp-title,.mf-title,.mx-title,.w98-title{display:none;}
+  .w98-menubar{display:none;}
 
   /* ===== Mac OS 9 (Platinum) ===== */
   body.theme-macos9 .tab{display:none;}
@@ -118,6 +119,12 @@
   body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:22px;margin:3px 3px 0;padding:0 2px 0 6px;
     background:linear-gradient(90deg,#00007b,#1085d2);}
   body.theme-win98 .disp{background:#fff;border:none;box-shadow:inset -1px -1px 0 #dbdbdb,inset 1px 1px 0 #808080,inset -2px -2px 0 #fff,inset 2px 2px 0 #000;color:#000;}
+  /* calc.exe menu bar (Edit / View / Help) */
+  body.theme-win98 .w98-menubar{display:flex;height:16px;margin:1px 3px 0;padding:0 2px;
+    background:#c4c4c4;align-items:center;gap:0;
+    font:12px Tahoma,"MS Sans Serif",Verdana,sans-serif;color:#000;}
+  body.theme-win98 .w98-menubar span{padding:1px 6px;line-height:1;cursor:default;}
+  body.theme-win98 .w98-menubar u{text-decoration:underline;}
 
   /* ===== Windows 7 (Aero glass) — inherits XP structure via dual class ===== */
   body.theme-win7 #win{border-radius:6px 6px 2px 2px;background:rgba(69,128,196,0.34);
@@ -155,6 +162,7 @@
     </div>
     <!-- Windows 98 -->
     <div class="w98-title" id="w98title"><span class="w98-cap">Calculator</span><span class="w98-btn w98-close" id="w98close">×</span></div>
+    <div class="w98-menubar" id="w98menu"><span><u>E</u>dit</span><span><u>V</u>iew</span><span><u>H</u>elp</span></div>
     <div class="body">
       <div class="disp" id="disp">0</div>
       <div class="grid">
