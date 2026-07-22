@@ -113,14 +113,28 @@ enum SystemTweaksAdapter {
         let targetIDs = Set(target.map { id($0.domain, $0.key) })
         var kill = Set<String>()
 
-        // 1. Revert any tracked key that the new target no longer includes.
+        // 1. Revert any tracked key that the new target no longer includes. CRITICAL: only stop
+        //    tracking a key once the restore actually reached the user's original state. If a
+        //    `defaults write/delete` fails, keep the snapshot entry so a later reconcile or the
+        //    next launch retries — otherwise a single transient failure would lose the original
+        //    value forever (the whole point of the snapshot is reversibility).
         var remaining: [[String: String]] = []
         for e in stored {
             guard let domain = e["domain"], let key = e["key"], let type = e["type"] else { continue }
             if targetIDs.contains(id(domain, key)) { remaining.append(e); continue }
             let orig = e["orig"] ?? ""
-            if orig.isEmpty { sb.runDefaults(["delete", domain, key]) }
-            else { sb.runDefaults(["write", domain, key, flag(type), orig]) }
+            let restored: Bool
+            if orig.isEmpty {
+                // Original was unset ⇒ restore = delete. A failed delete is fine only if the key
+                // is already absent (goal reached); otherwise keep tracking to retry.
+                if case .success = sb.runDefaults(["delete", domain, key]) { restored = true }
+                else { restored = (sb.readDefault(domain, key) == nil) }
+            } else {
+                // Write the original back; keep tracking unless it succeeded.
+                if case .success = sb.runDefaults(["write", domain, key, flag(type), orig]) { restored = true }
+                else { restored = false }
+            }
+            if !restored { remaining.append(e); continue }   // retry later — do NOT drop the original
             kill.formUnion(refreshTargets(domain: domain, refresh: e["refresh"]))
         }
         stored = remaining
