@@ -371,6 +371,20 @@ struct AboutTab: View {
                     Text("After Dark “Flying Toasters” artwork (MIT) — basis for the Mac OS 9 screensaver.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    Link("mrdoob/three.js on GitHub",
+                         destination: URL(string: "https://github.com/mrdoob/three.js")!)
+                        .font(.caption)
+                    Text("three.js (MIT) by mrdoob & contributors — bundled to render the “3D Pipes” screensaver.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("jjuran/metamage_1 on GitHub",
+                         destination: URL(string: "https://github.com/jjuran/metamage_1")!)
+                        .font(.caption)
+                    Text("The Nyanochrome cat and Tic-Tac-Toe desktop widgets (Mac OS 6 & 9 themes) are ports of Josh Juran's metamage_1 apps (AGPL-3.0).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Bundled Game & Libraries") {
@@ -385,6 +399,16 @@ struct AboutTab: View {
                          destination: URL(string: "https://github.com/libsdl-org/SDL")!)
                         .font(.caption)
                     Text("SDL2 — render/input layer for the bundled Pac-Man.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("Wargus/stratagus on GitHub",
+                         destination: URL(string: "https://github.com/Wargus/stratagus")!)
+                        .font(.caption)
+                    Link("Wargus/war1gus on GitHub",
+                         destination: URL(string: "https://github.com/Wargus/war1gus")!)
+                        .font(.caption)
+                    Text("Stratagus real-time-strategy engine with the War1gus (Warcraft I) and Wargus (Warcraft II) data mods (GPLv2) — bundled so the games run from your own original data.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
