@@ -168,10 +168,13 @@ uint64_t skb_send_to_space(uint32_t wid, uint32_t target) {
     CFNumberRef bn = CFNumberCreate(NULL, kCFNumberSInt32Type, &wid);
     const void *bvals[1] = { bn };
     CFArrayRef blist = CFArrayCreate(NULL, bvals, 1, &kCFTypeArrayCallBacks);
-    SLSMoveWindowsToManagedSpace(cid, blist, sid);
+    // Return the space id ONLY if the move actually landed the window on it. Otherwise report
+    // failure (0) so the caller keeps retrying — else a border can stay on no visible space
+    // (the "frame briefly there, then gone" symptom).
+    CGError moveErr = SLSMoveWindowsToManagedSpace(cid, blist, sid);
     CFRelease(blist);
     CFRelease(bn);
-    return sid;
+    return (moveErr == kCGErrorSuccess) ? sid : 0;
 }
 
 void skb_order(uint32_t wid, int level, uint32_t target) {
@@ -196,5 +199,16 @@ void skb_flush(uint32_t wid, CGContextRef ctx) {
 }
 
 void skb_destroy(uint32_t wid) {
-    if (wid) SLSReleaseWindow(SLSMainConnectionID(), wid);
+    if (!wid) return;
+    int cid = SLSMainConnectionID();
+    // Order the window OUT with a SYNCHRONOUS commit first, so it vanishes from the screen this
+    // frame (a bare SLSReleaseWindow can leave the border visible for a beat — e.g. trailing over
+    // a minimize animation). Then release it.
+    CFTypeRef t = SLSTransactionCreate(cid);
+    if (t) {
+        SLSTransactionOrderWindow(t, wid, 0 /* out */, 0);
+        SLSTransactionCommit(t, 1 /* synchronous */);
+        CFRelease(t);
+    }
+    SLSReleaseWindow(cid, wid);
 }
