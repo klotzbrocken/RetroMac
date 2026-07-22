@@ -318,12 +318,10 @@ final class WindowBorderController {
             // our own border windows (their wid isn't a border key); a false positive self-heals
             // on the next sync.
             dropBorder(for: wid)
-        case PrivateWindowAPI.EVENT_WINDOW_REORDER:
+        case PrivateWindowAPI.EVENT_WINDOW_REORDER, PrivateWindowAPI.EVENT_FRONT_CHANGE:
+            // Focus/z-order changed → cheap single-pass re-order of existing borders. (Minimize is
+            // handled by the dedicated 816 event + AX, so front-change no longer needs a full sync.)
             reorderAll()
-        case PrivateWindowAPI.EVENT_FRONT_CHANGE:
-            // Focus changed — e.g. the front window was just minimized. Re-sync so a minimized
-            // (now off-screen) window's border is dropped immediately instead of lingering.
-            sync()
         case PrivateWindowAPI.EVENT_WINDOW_CREATE, PrivateWindowAPI.EVENT_WINDOW_DESTROY:
             sync()
         default: break
@@ -443,9 +441,14 @@ private func borderNotifyProc(_ event: UInt32, _ data: UnsafeMutableRawPointer?,
     else { DispatchQueue.main.async { controller.handleServerEvent(event: event, wid: wid) } }
 }
 
-/// Private AX helper: map an AXUIElement window to its CGWindowID (same id space as the borders).
-@_silgen_name("_AXUIElementGetWindow")
-private func _AXUIElementGetWindow(_ element: AXUIElement, _ wid: UnsafeMutablePointer<CGWindowID>) -> AXError
+/// Private AX helper (`_AXUIElementGetWindow`, in HIServices): maps an AXUIElement window to its
+/// CGWindowID. Resolved via `dlsym(RTLD_DEFAULT,…)` rather than `@_silgen_name` so that if Apple
+/// ever removes the symbol the app still LAUNCHES (a hard link would make dyld abort at startup);
+/// the callback then simply falls back to a full re-sync.
+private let axUIElementGetWindow: (@convention(c) (AXUIElement, UnsafeMutablePointer<CGWindowID>) -> AXError)? = {
+    guard let sym = dlsym(UnsafeMutableRawPointer(bitPattern: -2) /* RTLD_DEFAULT */, "_AXUIElementGetWindow") else { return nil }
+    return unsafeBitCast(sym, to: (@convention(c) (AXUIElement, UnsafeMutablePointer<CGWindowID>) -> AXError).self)
+}()
 
 /// AX observer callback (main run loop): a window was (de)miniaturized. `element` is normally that
 /// window, but some apps deliver the application element instead — then `_AXUIElementGetWindow`
@@ -455,7 +458,7 @@ private func axWindowNotify(_ observer: AXObserver, _ element: AXUIElement,
     guard let context = context else { return }
     let controller = Unmanaged<WindowBorderController>.fromOpaque(context).takeUnretainedValue()
     var wid: CGWindowID = 0
-    let gotWid = (_AXUIElementGetWindow(element, &wid) == .success) && wid != 0
+    let gotWid = (axUIElementGetWindow?(element, &wid) == .success) && wid != 0
     if (notification as String) == (kAXWindowMiniaturizedNotification as String) {
         if gotWid { controller.dropBorder(for: wid) }   // remove the specific border, before the genie
         else { controller.resync() }                    // couldn't resolve the window → re-sync (drops off-screen ones)
