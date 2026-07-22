@@ -5,7 +5,7 @@ import WebKit
 /// canvas (Widgets/Nyanochrome/index.html), shown in a borderless, drag-anywhere panel. Opened from
 /// the System 6 desktop "Nyanochrome" icon (toggles). Mirrors the other WebView widgets but simpler
 /// (no themed title chrome — the HTML draws its own System 6 black window frame).
-final class NyanochromeController: NSObject {
+final class NyanochromeController: NSObject, WKNavigationDelegate {
 
     static let shared = NyanochromeController()
 
@@ -63,6 +63,7 @@ final class NyanochromeController: NSObject {
         if panel == nil {
             let initial = NSRect(x: 0, y: 0, width: 280, height: 310)   // matches the 280x310 canvas (title bar + 280x288 scene)
             let wv = WKWebView(frame: initial, configuration: WKWebViewConfiguration())
+            wv.navigationDelegate = self
             wv.autoresizingMask = [.width, .height]
             wv.setValue(false, forKey: "drawsBackground")
 
@@ -92,6 +93,11 @@ final class NyanochromeController: NSObject {
         webView?.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
         restorePosition()
         panel?.orderFrontRegardless()
+    }
+
+    /// Hand the active theme to the widget so it can switch chrome (System 6 b/w vs System 9 colour).
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
     }
 
     // MARK: - Position persistence
