@@ -22,7 +22,11 @@ final class WindowBorderController {
         var size: CGSize
         var level: Int32 = 0
         var origin: CGPoint = CGPoint(x: -99999, y: -99999)
-        init(wid: UInt32, ctx: CGContext, size: CGSize) { self.wid = wid; self.ctx = ctx; self.size = size }
+        var onSpace: Bool = false   // did SLSMoveWindowsToManagedSpace succeed? retry until it does
+        var hidpi: Bool             // backing scale of the display this border was created for
+        init(wid: UInt32, ctx: CGContext, size: CGSize, hidpi: Bool) {
+            self.wid = wid; self.ctx = ctx; self.size = size; self.hidpi = hidpi
+        }
     }
 
     private var running = false
@@ -31,7 +35,29 @@ final class WindowBorderController {
     private var wsTokens: [NSObjectProtocol] = []
     private var syncTimer: Timer?
     private var didRegisterEvents = false
-    private let hidpi: Bool = (NSScreen.main?.backingScaleFactor ?? 2) >= 2
+    /// Per-app Accessibility observers for window (de)miniaturize. WindowServer has no reliable
+    /// minimize event and during the genie the window still reports full on-screen bounds, so the
+    /// border would linger over the animation. AX fires the instant minimize begins → drop it then.
+    private var axObservers: [pid_t: AXObserver] = [:]
+
+    /// Backing scale of the display a window sits on. `windowBounds` are Quartz global coords
+    /// (top-left origin, y-down); convert each NSScreen into that space and pick the one with the
+    /// largest overlap, so borders on a non-Retina display don't inherit the main display's 2x
+    /// (and vice-versa). Recomputed per window and on every move so a drag across displays retiles.
+    private func isHiDPI(for windowBounds: CGRect) -> Bool {
+        guard let primary = NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main else { return true }
+        let primaryTop = primary.frame.maxY
+        var best: NSScreen?
+        var bestArea: CGFloat = 0
+        for s in NSScreen.screens {
+            let f = s.frame
+            let quartz = CGRect(x: f.minX, y: primaryTop - f.maxY, width: f.width, height: f.height)
+            let inter = quartz.intersection(windowBounds)
+            let area = inter.isNull ? 0 : inter.width * inter.height
+            if area > bestArea { bestArea = area; best = s }
+        }
+        return ((best ?? NSScreen.main)?.backingScaleFactor ?? 2) >= 2
+    }
 
     // MARK: - Lifecycle
 
@@ -49,12 +75,21 @@ final class WindowBorderController {
         guard !running else { restyle(); return }
         running = true
         registerServerEvents()
+        setupMinimizeObservers()
         let nc = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didActivateApplicationNotification,
                      NSWorkspace.activeSpaceDidChangeNotification,
                      NSWorkspace.didLaunchApplicationNotification,
                      NSWorkspace.didTerminateApplicationNotification] {
-            wsTokens.append(nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.sync() })
+            wsTokens.append(nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                // A newly launched OR (re)activated app gets its minimize observer — activation
+                // is also the retry path for an app whose registration failed while it was launching.
+                if name == NSWorkspace.didLaunchApplicationNotification || name == NSWorkspace.didActivateApplicationNotification,
+                   let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
+                    self?.addMinimizeObserver(pid: app.processIdentifier)
+                }
+                self?.sync()
+            })
         }
         let t = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in self?.sync() }
         RunLoop.main.add(t, forMode: .common)
@@ -68,9 +103,54 @@ final class WindowBorderController {
         let nc = NSWorkspace.shared.notificationCenter
         wsTokens.forEach { nc.removeObserver($0) }
         wsTokens.removeAll()
+        removeMinimizeObservers()
         for b in borders.values { skb_destroy(b.wid) }
         borders.removeAll()
     }
+
+    // MARK: - Minimize detection (Accessibility)
+
+    private func setupMinimizeObservers() {
+        for app in NSWorkspace.shared.runningApplications where app.activationPolicy == .regular {
+            addMinimizeObserver(pid: app.processIdentifier)
+        }
+    }
+
+    fileprivate func addMinimizeObserver(pid: pid_t) {
+        guard pid != getpid(), axObservers[pid] == nil else { return }
+        var observer: AXObserver?
+        // Requires Accessibility permission (the app already uses it); fails gracefully otherwise —
+        // then the event/poll path still removes the border, just not as instantly.
+        let createErr = AXObserverCreate(pid, axWindowNotify, &observer)
+        guard createErr == .success, let observer = observer else { return }
+        let appEl = AXUIElementCreateApplication(pid)
+        let ctx = Unmanaged.passUnretained(self).toOpaque()
+        // If the app can't register the notification yet (e.g. still launching → .cannotComplete),
+        // do NOT store the observer, so a later app activation/launch retries instead of leaving it
+        // permanently ineffective. The miniaturize notification is the one that matters.
+        let addErr = AXObserverAddNotification(observer, appEl, kAXWindowMiniaturizedNotification as CFString, ctx)
+        guard addErr == .success else { return }
+        AXObserverAddNotification(observer, appEl, kAXWindowDeminiaturizedNotification as CFString, ctx)
+        CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
+        axObservers[pid] = observer
+    }
+
+    private func removeMinimizeObservers() {
+        for (_, observer) in axObservers {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
+        }
+        axObservers.removeAll()
+    }
+
+    /// Drop a window's border immediately (called the instant AX reports a minimize).
+    fileprivate func dropBorder(for wid: CGWindowID) {
+        guard let b = borders[wid] else { return }
+        skb_destroy(b.wid)
+        borders.removeValue(forKey: wid)
+    }
+
+    /// Re-add a border after a window is de-miniaturized (restored from the Dock).
+    fileprivate func resync() { sync() }
 
     private func restyle() {
         currentStyle = Self.style(for: RetroFrameTheme.key(),
@@ -136,23 +216,28 @@ final class WindowBorderController {
             return
         }
         let f = outerFrame(windowBounds)
+        let hd = isHiDPI(for: windowBounds)
 
         if let b = borders[target] {
-            if b.size != f.size {                            // resized → recreate (context is size-bound)
+            // Recreate on a size OR resolution change (the context is bound to both) — e.g. dragging
+            // the window onto a display with a different backing scale.
+            if b.size != f.size || b.hidpi != hd {
                 skb_destroy(b.wid)
                 borders.removeValue(forKey: target)
             } else {
                 if b.origin != f.origin { skb_move(b.wid, Float(f.minX), Float(f.minY)); b.origin = f.origin }
                 if b.level != level { skb_order(b.wid, level, target); b.level = level }
+                // Retry a previously-failed space assignment so the border can't stay invisible.
+                if !b.onSpace { b.onSpace = (skb_send_to_space(b.wid, target) != 0) }
                 return
             }
         }
         // (Re)create. Shape/position and order the window FIRST, then draw into its context —
         // reshaping after drawing discards the backing content.
         var wid: UInt32 = 0
-        guard let ctx = skb_create(Float(f.width), Float(f.height), hidpi, &wid), wid != 0 else { return }
-        let b = SkyBorder(wid: wid, ctx: ctx, size: f.size)
-        _ = skb_send_to_space(b.wid, target)             // a fresh window is on no space → invisible
+        guard let ctx = skb_create(Float(f.width), Float(f.height), hd, &wid), wid != 0 else { return }
+        let b = SkyBorder(wid: wid, ctx: ctx, size: f.size, hidpi: hd)
+        b.onSpace = (skb_send_to_space(b.wid, target) != 0)   // a fresh window is on no space → invisible
         skb_set_frame(b.wid, Float(f.minX), Float(f.minY), Float(f.width), Float(f.height))
         b.origin = f.origin
         skb_order(b.wid, level, target)
@@ -164,9 +249,16 @@ final class WindowBorderController {
 
     /// Live reposition from a WindowServer move/resize event (zero-lag during a drag).
     private func reposition(_ target: CGWindowID) {
-        guard let b = borders[target], let g = PrivateWindowAPI.bounds(of: target) else { return }
+        guard let b = borders[target] else { return }
+        guard let g = PrivateWindowAPI.bounds(of: target) else {
+            // No valid bounds anymore (window minimizing / hidden / gone) → drop its border now
+            // instead of leaving it hanging over the minimize animation until the next sync.
+            skb_destroy(b.wid); borders.removeValue(forKey: target)
+            return
+        }
         let f = outerFrame(g)
-        if b.size != f.size { apply(target: target, windowBounds: g, level: b.level) }   // resize → recreate
+        // Resize OR a cross-display move to a different backing scale → recreate at the new size/res.
+        if b.size != f.size || b.hidpi != isHiDPI(for: g) { apply(target: target, windowBounds: g, level: b.level) }
         else if b.origin != f.origin { skb_move(b.wid, Float(f.minX), Float(f.minY)); b.origin = f.origin }
     }
 
@@ -206,9 +298,11 @@ final class WindowBorderController {
         didRegisterEvents = true
         let ctx = Unmanaged.passUnretained(self).toOpaque()
         let procPtr = unsafeBitCast(borderNotifyProc as PrivateWindowAPI.NotifyProc, to: UnsafeMutableRawPointer.self)
-        for e in [PrivateWindowAPI.EVENT_WINDOW_MOVE, PrivateWindowAPI.EVENT_WINDOW_RESIZE,
+        let events: [UInt32] = [PrivateWindowAPI.EVENT_WINDOW_MOVE, PrivateWindowAPI.EVENT_WINDOW_RESIZE,
+                  PrivateWindowAPI.EVENT_WINDOW_MINIMIZE,
                   PrivateWindowAPI.EVENT_WINDOW_REORDER, PrivateWindowAPI.EVENT_FRONT_CHANGE,
-                  PrivateWindowAPI.EVENT_WINDOW_CREATE, PrivateWindowAPI.EVENT_WINDOW_DESTROY] {
+                  PrivateWindowAPI.EVENT_WINDOW_CREATE, PrivateWindowAPI.EVENT_WINDOW_DESTROY]
+        for e in Set(events) {
             PrivateWindowAPI.register(proc: procPtr, event: e, context: ctx)
         }
     }
@@ -218,8 +312,18 @@ final class WindowBorderController {
         switch event {
         case PrivateWindowAPI.EVENT_WINDOW_MOVE, PrivateWindowAPI.EVENT_WINDOW_RESIZE:
             reposition(wid)
-        case PrivateWindowAPI.EVENT_WINDOW_REORDER, PrivateWindowAPI.EVENT_FRONT_CHANGE:
+        case PrivateWindowAPI.EVENT_WINDOW_MINIMIZE:
+            // Fires at the START of the minimize (before the genie), unlike the AX notification
+            // which only arrives at the end. Drop the border now so it doesn't trail. No-op for
+            // our own border windows (their wid isn't a border key); a false positive self-heals
+            // on the next sync.
+            dropBorder(for: wid)
+        case PrivateWindowAPI.EVENT_WINDOW_REORDER:
             reorderAll()
+        case PrivateWindowAPI.EVENT_FRONT_CHANGE:
+            // Focus changed — e.g. the front window was just minimized. Re-sync so a minimized
+            // (now off-screen) window's border is dropped immediately instead of lingering.
+            sync()
         case PrivateWindowAPI.EVENT_WINDOW_CREATE, PrivateWindowAPI.EVENT_WINDOW_DESTROY:
             sync()
         default: break
@@ -324,10 +428,40 @@ private func borderNotifyProc(_ event: UInt32, _ data: UnsafeMutableRawPointer?,
                               _ length: Int, _ context: UnsafeMutableRawPointer?) {
     guard let context = context else { return }
     let controller = Unmanaged<WindowBorderController>.fromOpaque(context).takeUnretainedValue()
-    let wid: CGWindowID = (event == PrivateWindowAPI.EVENT_FRONT_CHANGE)
-        ? 0 : (data?.assumingMemoryBound(to: UInt32.self).pointee ?? 0)
+    // The payload format for these private events is undocumented and varies by event. Only read a
+    // window id when the payload is actually large enough — never dereference past `length`. Use an
+    // unaligned load since `data` isn't guaranteed 4-byte aligned. A zero id is a harmless no-op.
+    let wid: CGWindowID
+    if event == PrivateWindowAPI.EVENT_FRONT_CHANGE {
+        wid = 0
+    } else if let data = data, length >= MemoryLayout<UInt32>.size {
+        wid = data.loadUnaligned(fromByteOffset: 0, as: UInt32.self)
+    } else {
+        wid = 0
+    }
     if Thread.isMainThread { controller.handleServerEvent(event: event, wid: wid) }
     else { DispatchQueue.main.async { controller.handleServerEvent(event: event, wid: wid) } }
+}
+
+/// Private AX helper: map an AXUIElement window to its CGWindowID (same id space as the borders).
+@_silgen_name("_AXUIElementGetWindow")
+private func _AXUIElementGetWindow(_ element: AXUIElement, _ wid: UnsafeMutablePointer<CGWindowID>) -> AXError
+
+/// AX observer callback (main run loop): a window was (de)miniaturized. `element` is normally that
+/// window, but some apps deliver the application element instead — then `_AXUIElementGetWindow`
+/// yields no id, so fall back to a full re-sync rather than silently doing nothing.
+private func axWindowNotify(_ observer: AXObserver, _ element: AXUIElement,
+                            _ notification: CFString, _ context: UnsafeMutableRawPointer?) {
+    guard let context = context else { return }
+    let controller = Unmanaged<WindowBorderController>.fromOpaque(context).takeUnretainedValue()
+    var wid: CGWindowID = 0
+    let gotWid = (_AXUIElementGetWindow(element, &wid) == .success) && wid != 0
+    if (notification as String) == (kAXWindowMiniaturizedNotification as String) {
+        if gotWid { controller.dropBorder(for: wid) }   // remove the specific border, before the genie
+        else { controller.resync() }                    // couldn't resolve the window → re-sync (drops off-screen ones)
+    } else {
+        controller.resync()                             // de-miniaturized (restored) → re-add its border
+    }
 }
 
 // MARK: - Private SkyLight bridge (events + live bounds; window creation lives in SkyLightBridge.c)
@@ -342,6 +476,7 @@ enum PrivateWindowAPI {
     static let EVENT_WINDOW_MOVE:    UInt32 = 806
     static let EVENT_WINDOW_RESIZE:  UInt32 = 807
     static let EVENT_WINDOW_REORDER: UInt32 = 808
+    static let EVENT_WINDOW_MINIMIZE: UInt32 = 816   // fires at minimize START (before the genie)
     static let EVENT_WINDOW_CREATE:  UInt32 = 1325
     static let EVENT_WINDOW_DESTROY: UInt32 = 1326
     static let EVENT_FRONT_CHANGE:   UInt32 = 1508
