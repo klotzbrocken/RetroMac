@@ -40,6 +40,18 @@ function fill_rect(x, y, dx, dy, p) { for (let by = 0; by < dy; by++) for (let b
 function set_pixel(x, y, p) { fill_rect(x, y, 1, 1, p); }
 
 // ---- rainbow waves ----
+// System 9 colour accent: draw the trailing rainbow in real RGB instead of 1-bit dither.
+let colorMode = false;                            // set by setTheme('macos9')
+const rainbowRGB = [[255,33,33],[255,148,10],[252,224,20],[54,201,72],[45,120,246],[150,54,214]];
+function fill_rect_rgb(x, y, dx, dy, rgb) {
+  for (let by = 0; by < dy; by++) for (let bx = 0; bx < dx; bx++) {
+    const X0 = (x+bx)*Z, Y0 = (y+by)*Z;
+    for (let zy = 0; zy < Z; zy++) for (let zx = 0; zx < Z; zx++) {
+      const X = X0+zx, Y = Y0+zy; if (X<0||X>=W||Y<0||Y>=H) continue;
+      const i = (Y*W+X)*4; d[i]=rgb[0]; d[i+1]=rgb[1]; d[i+2]=rgb[2]; d[i+3]=255;
+    }
+  }
+}
 function draw_wave(y, stage, color) {
   const a = stage ? 0 : 1, b = stage ? 1 : 0; let x = 0, dx = 2 + a, dy = 3;
   fill_rect(x, y + a, dx, dy, color); x += dx; dx = 8;
@@ -48,7 +60,20 @@ function draw_wave(y, stage, color) {
   fill_rect(x, y + b, dx, dy, color); x += dx;
   if (stage === 0) set_pixel(x, y, color);
 }
-function draw_waves(y, step) { for (let i = 0; i < 6; i++) { draw_wave(y, step, wave_colors[i]); y += 3; } }
+function draw_wave_rgb(y, stage, rgb) {                 // same geometry, solid RGB fill
+  const a = stage ? 0 : 1, b = stage ? 1 : 0; let x = 0, dx = 2 + a, dy = 3;
+  fill_rect_rgb(x, y + a, dx, dy, rgb); x += dx; dx = 8;
+  fill_rect_rgb(x, y + b, dx, dy, rgb); x += dx; dx = 8;
+  fill_rect_rgb(x, y + a, dx, dy, rgb); x += dx; dx = 7 + b;
+  fill_rect_rgb(x, y + b, dx, dy, rgb); x += dx;
+  if (stage === 0) fill_rect_rgb(x, y, 1, 1, rgb);
+}
+function draw_waves(y, step) {
+  for (let i = 0; i < 6; i++) {
+    if (colorMode) draw_wave_rgb(y, step, rainbowRGB[i]); else draw_wave(y, step, wave_colors[i]);
+    y += 3;
+  }
+}
 
 // ---- fireworks / stars ----
 const fireworks = [
@@ -160,20 +185,54 @@ function draw_frame(t) {
   draw_head(head_x, head_y);
 }
 
-// ---- precompute the 12 frames as offscreen canvases ----
+// ---- precompute the 12 frames as offscreen canvases (rebuilt when colour mode flips) ----
 const frames = [];
-for (let t = 0; t < 12; t++) {
-  const oc = document.createElement('canvas'); oc.width = W; oc.height = H;
-  const octx = oc.getContext('2d'); const img = octx.createImageData(W, H); d = img.data;
-  draw_frame(t); octx.putImageData(img, 0, 0); frames.push(oc);
+function buildFrames() {
+  frames.length = 0;
+  for (let t = 0; t < 12; t++) {
+    const oc = document.createElement('canvas'); oc.width = W; oc.height = H;
+    const octx = oc.getContext('2d'); const img = octx.createImageData(W, H); d = img.data;
+    draw_frame(t); octx.putImageData(img, 0, 0); frames.push(oc);
+  }
 }
+buildFrames();
 
 // ---- visible canvas: System-6 title bar + animated scene ----
 const cv = document.getElementById('c'); cv.width = W; cv.height = TBH + H;
 const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
 let closePressed = false;
+let theme = 'macos6';                                                    // 'macos9' → colour Platinum chrome
 window.setClosePressed = function (b) { closePressed = !!b; };            // native bridge: close-box press feedback
+window.setTheme = function (k) {
+  const cm = (k === 'macos9');
+  if (cm !== colorMode) { colorMode = cm; buildFrames(); }               // recolour the rainbow trail
+  theme = k || 'macos6';
+};
+// ---- Mac OS 9 Platinum title bar (colour) ----
+function titleBarPlatinum() {
+  for (let ly = 0; ly < TBH; ly++) {                                     // vertical platinum gradient
+    const base = Math.round(233 - (ly / TBH) * 30);
+    g.fillStyle = `rgb(${base},${base},${base})`; g.fillRect(0, ly, W, 1);
+  }
+  g.fillStyle = 'rgba(255,255,255,0.30)';                                // pinstripes
+  for (let ly = 3; ly < TBH - 3; ly += 2) g.fillRect(3, ly, W - 6, 1);
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, 1);
+  g.fillStyle = '#8b8b8b'; g.fillRect(0, TBH - 1, W, 1);
+  g.fillStyle = '#5a5a5a'; g.fillRect(0, 0, 1, TBH); g.fillRect(W - 1, 0, 1, TBH);
+  const cx = 8, cy = 5, cs = 12;                                         // close box (raised bevel)
+  g.fillStyle = '#cfcfcf'; g.fillRect(cx, cy, cs, cs);
+  g.strokeStyle = '#6a6a76'; g.lineWidth = 1; g.strokeRect(cx + 0.5, cy + 0.5, cs - 1, cs - 1);
+  g.strokeStyle = '#f2f2f7'; g.strokeRect(cx + 1.5, cy + 1.5, cs - 3, cs - 3);
+  if (closePressed) { g.fillStyle = '#9a9aa2'; g.fillRect(cx + 3, cy + 3, cs - 6, cs - 6); }
+  const label = 'NyanCat'; g.font = 'bold 12px Charcoal, "ChicagoFLF", Geneva, sans-serif';
+  g.textBaseline = 'middle'; g.textAlign = 'center';
+  const tw = g.measureText(label).width + 16, tx = (W - tw) / 2;
+  g.fillStyle = '#e8e8e8'; g.fillRect(tx, 2, tw, TBH - 4);
+  g.fillStyle = '#ffffff'; g.fillRect(tx, 2, tw, 1); g.fillStyle = '#9a9a9a'; g.fillRect(tx, TBH - 3, tw, 1);
+  g.fillStyle = '#000'; g.fillText(label, W / 2, TBH / 2 + 1);
+}
 function titleBar() {
+  if (theme === 'macos9') return titleBarPlatinum();
   g.fillStyle = '#fff'; g.fillRect(0, 0, W, TBH);
   g.fillStyle = '#000';
   for (let ly = 4; ly <= TBH - 6; ly += 3) g.fillRect(2, ly, W - 4, 1);   // racing stripes

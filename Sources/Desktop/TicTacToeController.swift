@@ -5,7 +5,7 @@ import WebKit
 /// Juran's Mac Tic-tac-toe (metamage_1), an unbeatable minimax opponent, in a System 6 window.
 /// Opened from the desktop "Tic-Tac-Toe" icon (toggles). Unlike Nyanochrome, only the title bar is
 /// draggable so board clicks reach the game.
-final class TicTacToeController: NSObject {
+final class TicTacToeController: NSObject, WKNavigationDelegate {
 
     static let shared = TicTacToeController()
 
@@ -63,6 +63,7 @@ final class TicTacToeController: NSObject {
             let W: CGFloat = 224, H: CGFloat = 248, TB: CGFloat = 24   // matches the canvas
             let initial = NSRect(x: 0, y: 0, width: W, height: H)
             let wv = WKWebView(frame: initial, configuration: WKWebViewConfiguration())
+            wv.navigationDelegate = self
             wv.autoresizingMask = [.width, .height]
             wv.setValue(false, forKey: "drawsBackground")
 
@@ -91,6 +92,11 @@ final class TicTacToeController: NSObject {
         webView?.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
         restorePosition()
         panel?.orderFrontRegardless()
+    }
+
+    /// Hand the active theme to the widget so it can switch chrome (System 6 b/w vs System 9 colour).
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
     }
 
     private func saveOrigin() {

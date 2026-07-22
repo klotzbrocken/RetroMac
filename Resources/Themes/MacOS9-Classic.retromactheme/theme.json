@@ -77,6 +77,38 @@
     {
       "name": "Mac OS 9 Background",
       "file": "wallpaper-macos9.jpg"
+    },
+    {
+      "name": "Molecule",
+      "file": "wallpaper-molecule.jpg"
+    },
+    {
+      "name": "Capsules",
+      "file": "wallpaper-capsules.jpg"
+    },
+    {
+      "name": "Water Drops",
+      "file": "wallpaper-waterdrops.jpg"
+    },
+    {
+      "name": "Poppy",
+      "file": "wallpaper-poppy.jpg"
+    },
+    {
+      "name": "Fish",
+      "file": "wallpaper-fish.jpg"
+    },
+    {
+      "name": "Waves",
+      "file": "wallpaper-waves.jpg"
+    },
+    {
+      "name": "Swoosh",
+      "file": "wallpaper-swoosh.jpg"
+    },
+    {
+      "name": "Blue Abstract",
+      "file": "wallpaper-blue-abstract.jpg"
     }
   ],
   "desktopIcons": [
@@ -144,6 +176,20 @@
       "type": "screensaver",
       "gridX": 1,
       "gridY": 1
+    },
+    {
+      "name": "Nyanochrome",
+      "icon": "nyanochrome.png",
+      "type": "nyanochrome",
+      "gridX": 1,
+      "gridY": 2
+    },
+    {
+      "name": "Tic-Tac-Toe",
+      "icon": "tictactoe.png",
+      "type": "tictactoe",
+      "gridX": 1,
+      "gridY": 3
     }
   ],
   "fallbackIcon": "generic.png",

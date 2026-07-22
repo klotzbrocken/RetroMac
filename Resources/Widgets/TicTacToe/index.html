@@ -24,7 +24,9 @@ const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
 let board = new Array(9).fill(0);                  // 1 = X (human), -1 = O (computer)
 let over = false, turn = 1;
 let closePressed = false;
+let theme = 'macos6';                                                     // 'macos9' → colour Platinum chrome + colour tokens
 window.setClosePressed = function (b) { closePressed = !!b; render(); };   // native bridge: close-box press feedback
+window.setTheme = function (k) { theme = k || 'macos6'; render(); };
 
 // ---- win test (tictactoe.cc) ----
 const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
@@ -61,7 +63,9 @@ function draw_O() {
   g.beginPath(); g.arc(3, 3, 2.5, 0, 2 * Math.PI); g.stroke();
 }
 function draw_token(token, col, row) {
-  g.save(); g.translate(4 + 9 * col, 4 + 9 * row); token > 0 ? draw_X() : draw_O(); g.restore();
+  g.save(); g.translate(4 + 9 * col, 4 + 9 * row);
+  if (theme === 'macos9') g.strokeStyle = token > 0 ? '#d21f1f' : '#1f5fd2';   // colour accent: X red, O blue
+  token > 0 ? draw_X() : draw_O(); g.restore();
 }
 function render() {
   g.fillStyle = '#fff'; g.fillRect(0, 0, BW, H);
@@ -79,8 +83,32 @@ function render() {
   if (msg) g.fillText(msg, BW / 2, H - 3);
 }
 
+// ---- Mac OS 9 Platinum title bar (colour) ----
+function titleBarPlatinum() {
+  for (let ly = 0; ly < TBH; ly++) {
+    const base = Math.round(233 - (ly / TBH) * 30);
+    g.fillStyle = `rgb(${base},${base},${base})`; g.fillRect(0, ly, BW, 1);
+  }
+  g.fillStyle = 'rgba(255,255,255,0.30)';
+  for (let ly = 3; ly < TBH - 3; ly += 2) g.fillRect(3, ly, BW - 6, 1);
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, BW, 1);
+  g.fillStyle = '#8b8b8b'; g.fillRect(0, TBH - 1, BW, 1);
+  g.fillStyle = '#5a5a5a'; g.fillRect(0, 0, 1, TBH); g.fillRect(BW - 1, 0, 1, TBH);
+  const cx = 8, cy = 6, cs = 12;
+  g.fillStyle = '#cfcfcf'; g.fillRect(cx, cy, cs, cs);
+  g.strokeStyle = '#6a6a76'; g.lineWidth = 1; g.strokeRect(cx + 0.5, cy + 0.5, cs - 1, cs - 1);
+  g.strokeStyle = '#f2f2f7'; g.strokeRect(cx + 1.5, cy + 1.5, cs - 3, cs - 3);
+  if (closePressed) { g.fillStyle = '#9a9aa2'; g.fillRect(cx + 3, cy + 3, cs - 6, cs - 6); }
+  const label = 'Tic-Tac-Toe'; g.font = 'bold 12px Charcoal, "ChicagoFLF", Geneva, sans-serif';
+  g.textBaseline = 'middle'; g.textAlign = 'center';
+  const tw = g.measureText(label).width + 16, tx = (BW - tw) / 2;
+  g.fillStyle = '#e8e8e8'; g.fillRect(tx, 2, tw, TBH - 4);
+  g.fillStyle = '#ffffff'; g.fillRect(tx, 2, tw, 1); g.fillStyle = '#9a9a9a'; g.fillRect(tx, TBH - 3, tw, 1);
+  g.fillStyle = '#000'; g.fillText(label, BW / 2, TBH / 2 + 1);
+}
 // ---- System 6 title bar ----
 function titleBar() {
+  if (theme === 'macos9') return titleBarPlatinum();
   g.fillStyle = '#fff'; g.fillRect(0, 0, BW, TBH);
   g.fillStyle = '#000';
   for (let ly = 4; ly <= TBH - 6; ly += 3) g.fillRect(2, ly, BW - 4, 1);
