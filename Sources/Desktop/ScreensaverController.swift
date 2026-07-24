@@ -106,7 +106,7 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
     // MARK: - Saver resolution
 
     private func resolvedSaverID() -> String {
-        let name = ThemeManager.shared.activeTheme?.config.name ?? ""
+        let name = ThemeManager.shared.activeTheme?.config.settingsKey ?? ""
         if let o = AppSettings.shared.themeScreensaverOverrides[name], !o.isEmpty { return o }
         return ThemeManager.shared.activeTheme?.config.screensaver ?? "none"
     }

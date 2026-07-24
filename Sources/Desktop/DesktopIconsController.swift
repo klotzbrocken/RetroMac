@@ -15,7 +15,10 @@ final class DesktopIconsController {
     private var screenObserver: Any?
     private var trashPollTimer: Timer?
     private var custom = DesktopStore.ThemeCustom()
-    private var themeName: String { ThemeManager.shared.activeTheme?.config.name ?? "?" }
+    /// Storage key for everything this controller persists per theme (desktop layout via
+    /// `DesktopStore`, wallpaper overrides). This is the theme's stable id, not its display name,
+    /// so renaming a theme keeps its desktop arrangement — see `DockThemeConfig.settingsKey`.
+    private var themeName: String { ThemeManager.shared.activeTheme?.config.settingsKey ?? "?" }
 
     // Computed grid layout — the dock leads (unless the desktop slider is unlocked).
     private var iconSize: CGFloat {

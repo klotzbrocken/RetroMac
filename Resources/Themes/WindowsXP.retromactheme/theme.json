@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.microsoft.windowsxp",
+  "family": {
+    "id": "microsoft",
+    "name": "Microsoft Windows",
+    "order": 2
+  },
+  "release": {
+    "label": "Windows XP",
+    "year": 2001
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "winxp"
+  },
   "name": "Windows XP",
   "hideMenuBarDefault": true,
   "version": "1.0",

@@ -131,7 +131,7 @@ enum SystemTweaksAdapter {
                 else { restored = (sb.readDefault(domain, key) == nil) }
             } else {
                 // Write the original back; keep tracking unless it succeeded.
-                if case .success = sb.runDefaults(["write", domain, key, flag(type), orig]) { restored = true }
+                if case .success = sb.runDefaults(["write", domain, key, flag(type), literal(type, orig)]) { restored = true }
                 else { restored = false }
             }
             if !restored { remaining.append(e); continue }   // retry later — do NOT drop the original
@@ -158,7 +158,7 @@ enum SystemTweaksAdapter {
 
         // 3. Write each target tweak (the snapshot above already records how to undo them).
         for t in target {
-            sb.runDefaults(["write", t.domain, t.key, flag(t.type), t.value])
+            sb.runDefaults(["write", t.domain, t.key, flag(t.type), literal(t.type, t.value)])
             kill.formUnion(refreshTargets(domain: t.domain, refresh: t.refresh))
         }
         persistSnapshot(stored)   // re-persist (keeps the empty-after-revert case in sync)
@@ -188,6 +188,22 @@ enum SystemTweaksAdapter {
         case "int":   return "-int"
         case "float": return "-float"
         default:      return "-string"
+        }
+    }
+
+    /// Normalise a value for `defaults write`. Critical for booleans: `defaults read` PRINTS a
+    /// bool as `1`/`0`, but `defaults write -bool 1` is rejected outright (exit 255 — it only
+    /// accepts true/false/yes/no). Snapshotted originals therefore come back as "1"/"0" and,
+    /// written back verbatim, the restore silently failed every single time: the user's original
+    /// setting was never returned and the snapshot entry could never be retired, so the app
+    /// retried the same doomed command on every launch. Only bools need the translation; int,
+    /// float and string round-trip through `defaults read` unchanged.
+    static func literal(_ type: String, _ value: String) -> String {
+        guard type == "bool" else { return value }
+        switch value.trimmingCharacters(in: .whitespaces).lowercased() {
+        case "1", "true", "yes":  return "true"
+        case "0", "false", "no":  return "false"
+        default:                  return value
         }
     }
 

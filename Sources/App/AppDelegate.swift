@@ -830,7 +830,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func themeValueString() -> String {
         let s = AppSettings.shared
         if !s.dockEnabled { return "Off" }
-        return s.dockTheme
+        // dockTheme stores the stable id — show the theme's display name instead.
+        return ThemeManager.shared.theme(for: s.dockTheme)?.name ?? s.dockTheme
     }
 
     private func rebuildMenu() {
@@ -1195,7 +1196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let item = NSMenuItem(title: ThemeManager.displayName(for: theme.name), action: #selector(selectTheme(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = theme.name
-                if dockOn && theme.name == currentTheme { item.state = .on }
+                if dockOn && theme.stableID == currentTheme { item.state = .on }
                 // The crown (👑) is carried by displayName across all crowned themes —
                 // one consistent marker, no separate SF-Symbol image.
                 catMenu.addItem(item)
@@ -1701,7 +1702,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// is active. Mirrors the per-theme preset override used by theme activation.
     private func rememberShaderStateForActiveTheme(on: Bool) {
         guard AppSettings.shared.dockEnabled,
-              let name = ThemeManager.shared.activeTheme?.config.name else { return }
+              let name = ThemeManager.shared.activeTheme?.config.settingsKey else { return }
         AppSettings.shared.themePresetOverrides[name] =
             on ? (currentPresetName ?? AppSettings.shared.defaultPreset) : ""
     }
@@ -2415,7 +2416,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings.dockEnabled = true
             DockController.shared.start()
         }
-        if settings.themePresetOverrides[name]?.isEmpty == true {
+        // The menu hands us a DISPLAY name; per-theme settings are keyed by stable id.
+        let themeKey = ThemeManager.shared.theme(for: name)?.stableID ?? name
+        if settings.themePresetOverrides[themeKey]?.isEmpty == true {
             // Explicit per-theme "off" (user toggled the shader off here, or picked "None"):
             // force the shader off so switching back to this theme restores that choice.
             if isActive { disableAll() }

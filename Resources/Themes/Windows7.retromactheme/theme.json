@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.microsoft.windows7",
+  "family": {
+    "id": "microsoft",
+    "name": "Microsoft Windows",
+    "order": 2
+  },
+  "release": {
+    "label": "Windows 7",
+    "year": 2009
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "win7"
+  },
   "name": "Windows 7",
   "hideMenuBarDefault": true,
   "version": "1.0",

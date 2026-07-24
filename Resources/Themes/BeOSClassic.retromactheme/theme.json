@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.be.beos5",
+  "family": {
+    "id": "be",
+    "name": "Be Inc.",
+    "order": 3
+  },
+  "release": {
+    "label": "BeOS R5",
+    "year": 2000
+  },
+  "experienceLevel": "partial",
+  "chrome": {
+    "style": "beos"
+  },
   "name": "BeOS",
   "version": "1.0",
   "author": "RetroMac",

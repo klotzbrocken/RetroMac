@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.system6",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "System 6",
+    "year": 1988
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "macos6"
+  },
   "name": "Mac OS 6 classic",
   "splashWelcome": true,
   "systemTweaks": [
