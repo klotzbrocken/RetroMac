@@ -3,7 +3,7 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## 2.3 (unreleased)
+## 2.3
 
 - **Windows 7 Aero theme**: the Superbar taskbar with the Start orb, translucent glass window
   titles, and the Aero wallpaper.
@@ -11,15 +11,24 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Leonardo da Vinci, More Windows). Each recolours the whole Windows 98 look (title bars, windows,
   start menu) and swaps the wallpaper, desktop icons and mouse cursors.
 - **Mac OS System 9**: pixel-accurate Platinum title bars, proxy icons, a Finder info bar,
-  WindowShade collapse, authentic desktop/proxy icons, and a cleaner inactive-window state.
-- **Calculator widget** for the Windows 98 and XP themes.
+  WindowShade collapse, authentic desktop/proxy icons, an expanded icon set, imported classic
+  wallpapers, colour Nyanochrome and Tic-Tac-Toe widgets, and a cleaner inactive-window state.
+- **Dockable Control Strip**: the System 9 Control Strip now snaps flush to the left or right
+  screen edge (Settings ▸ Dock), mirrors correctly, and gains scroll chevrons when it overflows,
+  just like the historical original.
+- **Window borders**: per-window themed borders are steadier when windows change focus or space,
+  and clear more promptly on minimize.
+- **Calculator widget** for the Windows 98 and XP themes, plus an authentic Windows 98 screensaver
+  icon and a working Edit/View/Help menu bar on the Windows calculator.
 - **Warcraft I + II**: a theme-matched title bar drawn by the engine, so the game sits in a normal
   window on the themed desktop with the dock beside it (hidden only in fullscreen).
 - **Setup Assistant**: a Games step to point RetroMac at your Doom, Quake, Duke Nukem and Warcraft
   files (and add desktop shortcuts), and a final step to pick the theme to start with. The
   "shader on theme change" default is now off.
 - **Security**: imported themes can no longer run system tweaks or reach files outside their
-  bundle; a refunded or revoked licence is now detected on revalidation.
+  bundle; system tweaks are only dropped from the restore snapshot once they are actually reverted,
+  so a transient failure can no longer strand a changed setting; a refunded or revoked licence is
+  now detected on revalidation.
 - **Fixes**: the real macOS Dock is restored when RetroMac's dock is turned off; Mac OS X Cheetah
   title-bar hover no longer flickers; assorted polish.
 

@@ -114,24 +114,28 @@ struct WelcomeFlowView: View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
-                Text("What's New in RetroMac 2.2").font(.title2.bold())
-                Text("Authentic System 6, Warcraft, and a Mac OS X boot").font(.subheadline).foregroundStyle(.secondary)
+                Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
+                Text("Windows 7 Aero, Windows 98 Plus!, and a sharper System 9").font(.subheadline).foregroundStyle(.secondary)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("square.grid.2x2", .gray, "Authentic Mac System 6",
-                            "The \u{201C}Mac OS 6 classic\u{201D} theme is now true 1-bit black & white — racing-stripe title bars, hollow close boxes and Chicago type across windows and widgets, instead of the old Mac OS 9 Platinum look. Even the bundled Pac-Man goes monochrome.")
-                    feature("shield.lefthalf.filled", .red, "Warcraft I + II",
-                            "Play Warcraft: Orcs & Humans and Warcraft II natively on the bundled open-source Stratagus engine — point RetroMac at your own game data and go. The CRT shader lays right over the game.")
-                    feature("sparkles", .blue, "Mac OS X boot animation",
-                            "Activate the Mac OS X or Snow Leopard theme and it boots like the real thing — the blue screen, the grey Apple with its spinner, the progress splash. Click to skip.")
-                    feature("lock.open", .green, "Clearer Pro unlocks",
-                            "Live Wallpaper and Virtual Camera now show a consistent lock when they're locked, and the license screens spell out everything the unlock includes — presets, custom shaders, Live Wallpaper and the camera.")
-                    feature("wrench.and.screwdriver", .indigo, "Polish",
-                            "Themed window frames with live title-bar buttons, boot videos that no longer get cut off partway, and a Welcome window that fits each page without scrolling.")
+                    feature("macwindow", .blue, "Windows 7 Aero",
+                            "The Superbar taskbar with the Start orb, translucent glass title bars and the Aero wallpaper. Windows 7 joins the lineup.")
+                    feature("paintpalette", .orange, "Windows 98 Plus! themes",
+                            "Pick a scheme under Settings, Dock, Scheme: Dangerous Creatures, Leonardo da Vinci or More Windows. Each recolours the whole Windows 98 look and swaps the wallpaper, icons and cursors.")
+                    feature("square.grid.3x3", .gray, "Mac OS System 9",
+                            "Pixel-accurate Platinum title bars, proxy icons, a Finder info bar and WindowShade collapse. The Control Strip now docks to the left or right edge, just like the original.")
+                    feature("shield.lefthalf.filled", .red, "Warcraft in a real window",
+                            "Warcraft I and II now run inside a themed window with a matching title bar, so the game sits on your retro desktop with the dock beside it (hidden only in fullscreen).")
+                    feature("wrench.and.screwdriver", .indigo, "Setup and polish",
+                            "A new Setup Assistant Games step points RetroMac at your Doom, Quake, Duke Nukem and Warcraft files. Plus a Calculator widget, more classic wallpapers and desktop icons, tighter window borders and hardened theme imports.")
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
         }
+    }
+
+    private var whatsNewVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.3"
     }
 
     private func feature(_ icon: String, _ color: Color, _ title: String, _ desc: String) -> some View {
