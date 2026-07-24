@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.snow-leopard",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "Mac OS X 10.6 Snow Leopard",
+    "year": 2009
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "macosx"
+  },
   "name": "Snow Leopard",
   "splashVideo": "boot.mp4",
   "splashFullscreen": true,

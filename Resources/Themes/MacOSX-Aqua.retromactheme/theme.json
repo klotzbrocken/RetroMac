@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.mountain-lion",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "OS X 10.8 Mountain Lion",
+    "year": 2012
+  },
+  "experienceLevel": "partial",
+  "chrome": {
+    "style": "macosx"
+  },
   "name": "Mountain Lion",
   "systemTweaks": [
     { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "6", "refresh": "Finder" },

@@ -12,15 +12,19 @@ struct DockSettingsTab: View {
     @State private var showAllApps: Bool = false
     @State private var showAdvanced: Bool = false
 
+    // `settings.dockTheme` holds the theme's STABLE ID, so every lookup here goes through
+    // `ThemeManager.resolve` (id first, display name as the pre-Manifest-2.0 fallback) and
+    // anything user-visible is derived from the resolved bundle's `name`, never from the id.
     private var selectedThemeConfig: DockThemeConfig? {
-        themes.first(where: { $0.name == settings.dockTheme })?.config
-            ?? ThemeManager.shared.activeTheme?.config
+        selectedThemeBundle?.config ?? ThemeManager.shared.activeTheme?.config
     }
 
     private var selectedThemeBundle: ThemeBundle? {
-        themes.first(where: { $0.name == settings.dockTheme })
-            ?? ThemeManager.shared.activeTheme
+        ThemeManager.resolve(settings.dockTheme, in: themes) ?? ThemeManager.shared.activeTheme
     }
+
+    /// Display name of the selected theme — for labels, gradients and any name-based check.
+    private var selectedThemeName: String { selectedThemeBundle?.name ?? settings.dockTheme }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
@@ -82,8 +86,10 @@ struct DockSettingsTab: View {
 
             HStack(spacing: RMSpacing.md) {
                 Picker("", selection: $settings.dockTheme) {
-                    ForEach(themes, id: \.name) { theme in
-                        Text(themeShortName(theme.name)).tag(theme.name)
+                    // Tag by stable id: the selection is what gets STORED, and it must not change
+                    // when a theme is renamed. The label stays the display name.
+                    ForEach(themes, id: \.stableID) { theme in
+                        Text(themeShortName(theme.name)).tag(theme.stableID)
                     }
                 }
                 .labelsHidden()
@@ -103,7 +109,7 @@ struct DockSettingsTab: View {
     /// preview.png if present, otherwise a placeholder until screenshots are dropped in.
     @ViewBuilder
     private var themePreview: some View {
-        let bundle = themes.first(where: { $0.name == settings.dockTheme }) ?? ThemeManager.shared.activeTheme
+        let bundle = selectedThemeBundle
         if let url = bundle?.previewImageURL, let img = NSImage(contentsOf: url) {
             // Match the screenshot's own aspect ratio — no cropping.
             Image(nsImage: img)
@@ -114,7 +120,7 @@ struct DockSettingsTab: View {
                 .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1))
         } else {
             // Placeholder until a screenshot exists — keep a sensible 16:9 box.
-            let gradient = themeGradient(settings.dockTheme)
+            let gradient = themeGradient(selectedThemeName)
             Color.clear
                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                 .frame(maxWidth: .infinity)
@@ -124,7 +130,7 @@ struct DockSettingsTab: View {
                         VStack(spacing: 6) {
                             Image(systemName: "photo.on.rectangle.angled")
                                 .font(.system(size: 28)).foregroundStyle(.white.opacity(0.85))
-                            Text(themeShortName(settings.dockTheme))
+                            Text(themeShortName(selectedThemeName))
                                 .font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
                             Text("Preview image coming soon")
                                 .font(.caption).foregroundStyle(.white.opacity(0.8))
@@ -154,7 +160,7 @@ struct DockSettingsTab: View {
     }
 
     private var themeDisplayName: String {
-        themeShortName(settings.dockTheme)
+        themeShortName(selectedThemeName)
     }
 
     /// Themes that support switching between vertical (left) and horizontal (bottom) orientation
@@ -168,7 +174,7 @@ struct DockSettingsTab: View {
 
     /// Whether the current theme is Windows 98 or Windows XP (for Re:Amp integration)
     private var isWin98OrXP: Bool {
-        let name = settings.dockTheme
+        let name = selectedThemeName
         return name == "Windows 98" || name == "Windows XP"
     }
 

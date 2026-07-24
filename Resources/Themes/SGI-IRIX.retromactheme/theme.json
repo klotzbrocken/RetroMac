@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.sgi.irix",
+  "family": {
+    "id": "sgi",
+    "name": "Silicon Graphics",
+    "order": 5
+  },
+  "release": {
+    "label": "IRIX 6.5",
+    "year": 1998
+  },
+  "experienceLevel": "partial",
+  "chrome": {
+    "style": "default"
+  },
   "name": "SGI IRIX",
   "version": "1.0",
   "author": "RetroMac",

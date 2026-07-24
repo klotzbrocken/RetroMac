@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.microsoft.windows98",
+  "family": {
+    "id": "microsoft",
+    "name": "Microsoft Windows",
+    "order": 2
+  },
+  "release": {
+    "label": "Windows 98",
+    "year": 1998
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "win98"
+  },
   "name": "Windows 98",
   "hideMenuBarDefault": true,
   "version": "1.0",

@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.macos9",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "Mac OS 9.2",
+    "year": 2001
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "macos9"
+  },
   "name": "Mac OS 9.2 Classic",
   "systemTweaks": [
     { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "4", "refresh": "Finder" },

@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.ibm.os2warp4",
+  "family": {
+    "id": "ibm",
+    "name": "IBM",
+    "order": 4
+  },
+  "release": {
+    "label": "OS/2 Warp 4",
+    "year": 1996
+  },
+  "experienceLevel": "partial",
+  "chrome": {
+    "style": "default"
+  },
   "name": "OS/2 Warp 4",
   "version": "1.2",
   "author": "RetroMac",

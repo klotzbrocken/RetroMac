@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.aqua-cheetah",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "Mac OS X 10.0 Cheetah",
+    "year": 2001
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "macosx"
+  },
   "name": "Mac OS X",
   "splashVideo": "boot.mp4",
   "splashFullscreen": true,

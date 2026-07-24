@@ -71,7 +71,7 @@ struct HealthCheckTab: View {
             Section("Dock") {
                 let settings = AppSettings.shared
                 LabeledContent("Status", value: settings.dockEnabled ? "Enabled" : "Disabled")
-                LabeledContent("Theme", value: settings.dockTheme)
+                LabeledContent("Theme", value: ThemeManager.shared.theme(for: settings.dockTheme)?.name ?? settings.dockTheme)
                 LabeledContent("System Dock Hidden", value: settings.dockHideSystemDock ? "Yes" : "No")
             }
 

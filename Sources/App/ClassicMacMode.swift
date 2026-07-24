@@ -7,7 +7,7 @@ enum ClassicMacMode {
         let settings = AppSettings.shared
         saveSnapshot(settings)
 
-        settings.dockTheme = "Mac OS 9.2 Classic"
+        settings.dockTheme = "com.retromac.apple.macos9"
         settings.macos9UseDock = true   // Platinum dock (the merged former "Mac OS 9.2" theme)
         settings.hideSystemUI = true
         settings.vignetteIntensity = 0.4

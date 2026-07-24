@@ -6,13 +6,27 @@ import AppKit
 enum RetroFrameTheme {
 
     /// Active RetroMac theme key handed to launched processes via RETROMAC_THEME.
+    ///
+    /// This one value drives the window chrome, window borders, widget chrome, TV chrome and the
+    /// context-menu style across ~30 call sites. It is therefore the single place that decides
+    /// "which era does this theme look like" — so it reads the theme's DECLARED `chrome.style`
+    /// (Manifest 2.0). A theme can pick its renderer without any central switch being edited;
+    /// the display-name heuristic below survives only for pre-2.0 themes that declare nothing.
     static func key() -> String {
         // Only frame launched content (TV window chrome, game frames) when a theme
         // is actually ON. After a clean launch ThemeManager still remembers the last
         // theme, but dockEnabled == false means "no theme active" — TV/games must not
         // inherit a stale theme's window chrome / menu bar.
         guard AppSettings.shared.dockEnabled else { return "default" }
-        let name = (ThemeManager.shared.activeTheme?.config.name ?? "").lowercased()
+        guard let config = ThemeManager.shared.activeTheme?.config else { return "default" }
+        if let declared = config.chrome?.style, !declared.isEmpty { return declared }
+        return legacyKeyFromName(config.name)
+    }
+
+    /// Pre-Manifest-2.0 fallback: guess the chrome from the display name. Kept byte-for-byte as it
+    /// was so imported themes without a `chrome.style` keep rendering exactly as before.
+    static func legacyKeyFromName(_ displayName: String) -> String {
+        let name = displayName.lowercased()
         if name.contains("beos") { return "beos" }
         if name.contains("mac os 9") { return "macos9" }
         if name.contains("mac os 6") { return "macos6" }   // authentic 1-bit System 6 chrome (System6Chrome)

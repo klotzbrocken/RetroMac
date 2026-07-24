@@ -335,6 +335,30 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// Bookmarks that shipped before 2.3.
+    static let baseTVBookmarks: [TVBookmark] = [
+        TVBookmark(name: "Retro", url: "http://stream.mediawork.cz/retrotv/retrotvHQ1/chunklist_w627639048.m3u8"),
+        TVBookmark(name: "Now 90s", url: "https://lightning-now90s-samsungnz.amagi.tv/playlist.m3u8"),
+        TVBookmark(name: "Now 80s", url: "https://lightning-now80s-samsunguk.amagi.tv/playlist.m3u8"),
+        TVBookmark(name: "Classic Movies", url: "https://rpn.bozztv.com/gusa/gusa-tvsclassicmovies/index.m3u8"),
+        TVBookmark(name: "Quiz Show", url: "https://rpn.bozztv.com/gusa/gusa-tvsgameshow/index.m3u8"),
+        TVBookmark(name: "Baywatch", url: "https://amg00145-fremantlemedian-baywatch-samsungau-gtsd6.amagi.tv/playlist/amg00145-fremantlemedian-baywatch-samsungau/playlist.m3u8"),
+    ]
+
+    /// Music-video / retro streams added in 2.3. Merged into existing installs once (see init).
+    static let newTVBookmarksV23: [TVBookmark] = [
+        TVBookmark(name: "Stingray Nothin' But 90s", url: "https://lotus.stingray.com/manifest/ose-142ads-montreal/samsungtvplus/master.m3u8"),
+        TVBookmark(name: "VEVO 90s", url: "https://amg00056-vevotv-vevo90saunz-samsungau-n6a0d.amagi.tv/playlist/amg00056-vevotv-vevo90saunz-samsungau/playlist.m3u8"),
+        TVBookmark(name: "NOW 90s00s", url: "https://amg01076-amg01076c19-rakuten-gb-8653.playouts.now.amagi.tv/playlist/amg01076-lightning-now90s00s-rakutengb/playlist.m3u8"),
+        TVBookmark(name: "VEVO 2K", url: "https://d1s6jz7jeei17.cloudfront.net/playlist/amg00056-vevotv-vevo2kau-samsungau/playlist.m3u8"),
+        TVBookmark(name: "VEVO Retro Rock", url: "https://d2lyea6if8kkz9.cloudfront.net/playlist/amg00056-vevotv-vevoretrorockau-samsungau/playlist.m3u8"),
+        TVBookmark(name: "VEVO 80s", url: "https://amg00056-vevotv-vevo80saunz-samsungau-rp5e3.amagi.tv/playlist/amg00056-vevotv-vevo80saunz-samsungau/playlist.m3u8"),
+        TVBookmark(name: "Totalmusic 80s", url: "https://cdn.global.elektamedia.com/live/c7eds/Totalmusic_80s/SA_LIVE_hls_enc/master.m3u8"),
+    ]
+
+    /// The full built-in set for a fresh install.
+    static var defaultTVBookmarks: [TVBookmark] { baseTVBookmarks + newTVBookmarksV23 }
+
     // ── Tube Mode (flyout retro TV with bezel) ──
     @Published var tvTubePreset: String {
         didSet { defaults.set(tvTubePreset, forKey: "tvTubePreset") }
@@ -717,6 +741,12 @@ final class AppSettings: ObservableObject {
     static let defaultHotkeyModifiers = UInt32(cmdKey | shiftKey)
 
     init() {
+        // MUST be the first thing here: it rewrites the theme-keyed defaults from display name to
+        // stable id, and everything below reads those defaults. Running it later would mean
+        // assigning through the @Published setters instead — and writing `dockTheme` re-enters
+        // DockController's sink, replaying the whole theme switch on every launch.
+        ThemeIdentityMigration.runIfNeeded(defaults: .standard)
+
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         presetsDir = appSupport.appendingPathComponent("RetroMac/Presets")
         try? FileManager.default.createDirectory(at: presetsDir, withIntermediateDirectories: true)
@@ -809,16 +839,27 @@ final class AppSettings: ObservableObject {
         // Television
         if let data = defaults.data(forKey: "tvBookmarks"),
            let bookmarks = try? JSONDecoder().decode([TVBookmark].self, from: data) {
-            tvBookmarks = bookmarks
+            // One-time merge: append the streams added in 2.3 that the user doesn't already
+            // have (matched by URL), without disturbing their order or resurrecting anything
+            // they deliberately removed. `didSet` does NOT fire for this first assignment in
+            // init, so persist the merged list explicitly before setting the done-flag.
+            let mergeKey = "tvBookmarksMerged_v2_3"
+            if !defaults.bool(forKey: mergeKey) {
+                let existingURLs = Set(bookmarks.map { $0.url })
+                let missing = Self.newTVBookmarksV23.filter { !existingURLs.contains($0.url) }
+                let merged = bookmarks + missing
+                tvBookmarks = merged
+                if !missing.isEmpty, let data = try? JSONEncoder().encode(merged) {
+                    defaults.set(data, forKey: "tvBookmarks")
+                }
+                defaults.set(true, forKey: mergeKey)
+            } else {
+                tvBookmarks = bookmarks
+            }
         } else {
-            tvBookmarks = [
-                TVBookmark(name: "Retro", url: "http://stream.mediawork.cz/retrotv/retrotvHQ1/chunklist_w627639048.m3u8"),
-                TVBookmark(name: "Now 90s", url: "https://lightning-now90s-samsungnz.amagi.tv/playlist.m3u8"),
-                TVBookmark(name: "Now 80s", url: "https://lightning-now80s-samsunguk.amagi.tv/playlist.m3u8"),
-                TVBookmark(name: "Classic Movies", url: "https://rpn.bozztv.com/gusa/gusa-tvsclassicmovies/index.m3u8"),
-                TVBookmark(name: "Quiz Show", url: "https://rpn.bozztv.com/gusa/gusa-tvsgameshow/index.m3u8"),
-                TVBookmark(name: "Baywatch", url: "https://amg00145-fremantlemedian-baywatch-samsungau-gtsd6.amagi.tv/playlist/amg00145-fremantlemedian-baywatch-samsungau/playlist.m3u8"),
-            ]
+            tvBookmarks = Self.defaultTVBookmarks
+            // A fresh install already has the 2.3 streams; don't merge them again later.
+            defaults.set(true, forKey: "tvBookmarksMerged_v2_3")
         }
         tvTubePreset = defaults.string(forKey: "tvTubePreset") ?? "joel-gdv-ntsc"
         tvTubeBezel = defaults.string(forKey: "tvTubeBezel") ?? ""
@@ -947,12 +988,14 @@ final class AppSettings: ObservableObject {
     }
 
     /// Returns the preset for a theme: user override > theme.json default > nil
+    /// `name` may be a stable theme id (what we store now) or a display name (older callers).
     func presetForTheme(name: String) -> String? {
-        if let override = themePresetOverrides[name] {
+        let key = ThemeManager.shared.theme(for: name)?.stableID ?? name
+        if let override = themePresetOverrides[key] {
             return override.isEmpty ? nil : override  // empty = "None"
         }
         // Fall back to theme.json defaultPreset
-        return ThemeManager.shared.availableThemes.first(where: { $0.name == name })?.config.defaultPreset
+        return ThemeManager.shared.theme(for: name)?.config.defaultPreset
     }
 
     var hotkeyDisplayString: String {

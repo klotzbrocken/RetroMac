@@ -6,7 +6,14 @@ struct ScreensaverSettingsTab: View {
     @ObservedObject var settings = AppSettings.shared
     @State private var installMessage = ""
 
+    /// Storage key for the per-theme saver / boot-screen settings — `dockTheme` holds the stable
+    /// theme id, never the display name.
     private var themeName: String { settings.dockTheme }
+
+    /// What the user should actually SEE — the id is an internal identifier.
+    private var themeLabel: String {
+        ThemeManager.shared.theme(for: themeName).map { ThemeManager.displayName(for: $0.name) } ?? themeName
+    }
 
     /// Copy the bundled .saver modules into ~/Library/Screen Savers.
     private func installSavers() {
@@ -29,7 +36,7 @@ struct ScreensaverSettingsTab: View {
     }
 
     private var themeConfig: DockThemeConfig? {
-        ThemeManager.shared.availableThemes.first(where: { $0.name == themeName })?.config
+        ThemeManager.shared.theme(for: themeName)?.config
     }
 
     private var saverBinding: Binding<String> {
@@ -60,7 +67,7 @@ struct ScreensaverSettingsTab: View {
                 }
                 .disabled(!settings.screensaverEnabled)
 
-                Picker("Saver for “\(themeName)”", selection: saverBinding) {
+                Picker("Saver for “\(themeLabel)”", selection: saverBinding) {
                     ForEach(ScreensaverController.available, id: \.id) { s in
                         Text(s.name).tag(s.id)
                     }
@@ -87,7 +94,7 @@ struct ScreensaverSettingsTab: View {
             }
 
             Section("Boot Screen") {
-                Toggle("Show boot screen for “\(themeName)”", isOn: bootBinding)
+                Toggle("Show boot screen for “\(themeLabel)”", isOn: bootBinding)
                 Text("Plays this theme's boot video or image when you switch to it.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

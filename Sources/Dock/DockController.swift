@@ -1219,7 +1219,7 @@ final class DockController {
 
     @objc private func menuSetDockPosition(_ sender: NSMenuItem) {
         guard let pos = sender.representedObject as? String,
-              let name = ThemeManager.shared.activeTheme?.config.name else { return }
+              let name = ThemeManager.shared.activeTheme?.config.settingsKey else { return }
         AppSettings.shared.themeDockPositionOverride[name] = pos
     }
 
@@ -1229,7 +1229,7 @@ final class DockController {
     }
 
     @objc private func menuToggleAutoHide(_ sender: NSMenuItem) {
-        guard let name = ThemeManager.shared.activeTheme?.config.name else { return }
+        guard let name = ThemeManager.shared.activeTheme?.config.settingsKey else { return }
         let current = AppSettings.shared.themeDockAutoHide[name] ?? false
         AppSettings.shared.themeDockAutoHide[name] = !current
     }

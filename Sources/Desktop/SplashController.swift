@@ -25,7 +25,7 @@ final class SplashController {
     /// Show the boot screen for the active theme if enabled. No-op otherwise.
     func showIfEnabled(for theme: ThemeBundle) {
         guard AppSettings.shared.showSplashScreen, let screen = NSScreen.main else { return }
-        let enabled = AppSettings.shared.themeBootscreenEnabled[theme.config.name] ?? bootscreenDefaultOn(theme)
+        let enabled = AppSettings.shared.themeBootscreenEnabled[theme.stableID] ?? bootscreenDefaultOn(theme)
         guard enabled else { return }
 
         // Prefer a boot video (played fullscreen with sound) when present.
