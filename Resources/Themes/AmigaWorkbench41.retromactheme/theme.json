@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.amiga.workbench41",
+  "family": {
+    "id": "amiga",
+    "name": "Amiga",
+    "order": 6
+  },
+  "release": {
+    "label": "Workbench 4.1",
+    "year": 2008
+  },
+  "experienceLevel": "partial",
+  "chrome": {
+    "style": "default"
+  },
   "name": "Amiga Workbench 4.1",
   "version": "1.0",
   "author": "RetroMac",
@@ -78,6 +93,27 @@
       "path": "/tmp",
       "gridX": 0,
       "gridY": 2
+    },
+    {
+      "name": "TV",
+      "icon": "",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Clock",
+      "icon": "",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "CPU",
+      "icon": "",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 5
     }
   ],
   "fallbackIcon": "drawer.png",

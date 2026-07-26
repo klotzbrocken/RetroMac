@@ -101,6 +101,13 @@ struct ChromeStyle {
     /// separately by the view.
     var buttons: [ChromeButton]
 
+    // Windows 3D bevel colours (Win98). nil → the draw path's built-in literals. Fed by a
+    // theme's `chromeColors` scheme so Win98 Plus! themes recolour the button/window bevels.
+    var bevelHilight: NSColor? = nil    // lightest edge (ButtonHilight)
+    var bevelLight: NSColor? = nil      // ButtonLight
+    var bevelShadow: NSColor? = nil     // ButtonShadow
+    var bevelDkShadow: NSColor? = nil   // darkest edge (ButtonDkShadow)
+
     // Hook for the future theme-bundle path — build a style from a decoded theme.json blob.
     // Intentionally unused today; the factory below is the source of truth.
     // init?(config: ChromeStyleConfig, themeBundle: URL) { ... }
@@ -116,11 +123,56 @@ enum ChromeStyleFactory {
     static func style(forThemeKey key: String) -> ChromeStyle? {
         switch key {
         case "winxp":  return xp()
+        case "win7":   return win7()         // Windows 7 Aero glass (7.css recipe)
         case "macos9": return macClassic()   // Mac OS 9 Platinum
         case "macos6": return system6()      // authentic 1-bit System 6 (System6Chrome)
         case "win98":  return win98()
+        case "nextstep": return nextstep()
         default:       return nil
         }
+    }
+
+    // NeXTSTEP: black key-window title bar, white CENTERED Helvetica-Bold title, square corners.
+    // Buttons sit on BOTH sides (miniaturize left, close right), which the generic `buttonSide`
+    // layout can't express — `WebAppChromeView.drawNextstep` places them explicitly. Metrics only.
+    static func nextstep() -> ChromeStyle {
+        return ChromeStyle(
+            titleHeight: 22, windowBorder: 2,
+            buttonSize: NSSize(width: 16, height: 16), buttonSpacing: 0, buttonInset: 3,
+            cornerRadius: 0, buttonSide: .right,
+            titleFont: NeXTChrome.titleFont(13), titleColor: .white, titleShadow: false,
+            titleAlignment: .center,
+            windowFill: NeXTChrome.face, captionGradient: nil, captionFill: NeXTChrome.black,
+            buttons: [ ChromeButton(.close, interactive: true, render: .native) ])
+    }
+
+    // Windows 7 Aero glass. Values derived from 7.css (MIT, © Khang Nguyen Duy): the title bar
+    // is the #4580c4 glass with a top highlight band; the caption pill sits top-right with a red
+    // Close and cyan-glow hover. Title text is BLACK with a white glow for legibility on glass.
+    // Drawn natively in `WebAppChromeView.drawWin7` — like XP, min/max are decorative on a
+    // fixed-size web-app window, so only Close carries a hit region.
+    static func win7() -> ChromeStyle {
+        // Left→right sheen over the Aero base (`--w7-w-grad`): white / dark / white.
+        let caption = ChromeGradient(stops: [
+            (NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.40), 0.0),
+            (NSColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.10), 0.5),
+            (NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.20), 1.0),
+        ], angle: 0)
+        let font = NSFont(name: "Segoe UI", size: 13)
+            ?? NSFont(name: "Tahoma", size: 13) ?? .systemFont(ofSize: 13)
+        return ChromeStyle(
+            titleHeight: 30, windowBorder: 4,
+            buttonSize: NSSize(width: 29, height: 19), buttonSpacing: 0, buttonInset: 6,
+            cornerRadius: 6, buttonSide: .right,
+            titleFont: font, titleColor: .black, titleShadow: true, titleAlignment: .left,
+            windowFill: NSColor(srgbRed: 0.271, green: 0.502, blue: 0.769, alpha: 1),  // #4580C4 Aero base
+            captionGradient: caption, captionFill: nil,
+            buttons: [
+                // Cluster order right→inward is [close][max][min]; store outermost first.
+                ChromeButton(.close, interactive: true, render: .native),
+                ChromeButton(.maximize, interactive: false, render: .native),
+                ChromeButton(.minimize, interactive: false, render: .native),
+            ])
     }
 
     // Authentic Mac System 6 — 1-bit black & white; close box alone on the LEFT, no zoom/collapse,
@@ -187,25 +239,43 @@ enum ChromeStyleFactory {
             ])
     }
 
-    // Values lifted from `WebAppChromeView.drawWin98`.
+    // Values lifted from `WebAppChromeView.drawWin98`. Colours come from the active theme's
+    // `chromeColors` scheme when present (Win98 Plus! themes), else the built-in navy defaults.
     static func win98() -> ChromeStyle {
-        let caption = ChromeGradient(stops: [
-            (NSColor(srgbRed: 0, green: 0, blue: 0.482, alpha: 1), 0.0),      // #00007B
-            (NSColor(srgbRed: 0.063, green: 0.522, blue: 0.824, alpha: 1), 1.0),  // #1085D2
-        ], angle: 0)
+        let cc = ThemeManager.shared.activeTheme?.config.chromeColors
+        func col(_ hex: String?, _ fb: NSColor) -> NSColor {
+            guard let hex, !hex.isEmpty else { return fb }
+            return NSColor.fromHex(hex)
+        }
+        let defFace = NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1)    // #C4C4C4
+        let navyStart = NSColor(srgbRed: 0, green: 0, blue: 0.482, alpha: 1)          // #00007B
+        let navyEnd = NSColor(srgbRed: 0.063, green: 0.522, blue: 0.824, alpha: 1)    // #1085D2
+        let titleA = col(cc?.activeTitle, navyStart)
+        // A scheme with an explicit gradient end uses it; a scheme with only activeTitle is a
+        // solid bar (Plus! themes); with no scheme at all, the built-in navy gradient.
+        let titleB: NSColor = {
+            if let e = cc?.activeTitleEnd, !e.isEmpty { return NSColor.fromHex(e) }
+            if let a = cc?.activeTitle, !a.isEmpty { return titleA }
+            return navyEnd
+        }()
+        let caption = ChromeGradient(stops: [(titleA, 0.0), (titleB, 1.0)], angle: 0)
         let font = NSFont(name: "Tahoma-Bold", size: 12) ?? .boldSystemFont(ofSize: 12)
         return ChromeStyle(
             titleHeight: 22, windowBorder: 4,
             buttonSize: NSSize(width: 20, height: 18), buttonSpacing: 0, buttonInset: 2,
             cornerRadius: 0, buttonSide: .right,
-            titleFont: font, titleColor: .white, titleShadow: false, titleAlignment: .left,
-            windowFill: NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1),  // #C4C4C4
+            titleFont: font, titleColor: col(cc?.titleText, .white), titleShadow: false, titleAlignment: .left,
+            windowFill: col(cc?.face, defFace),
             captionGradient: caption, captionFill: nil,
             buttons: [
                 ChromeButton(.close, interactive: true, render: .native),
                 ChromeButton(.maximize, interactive: false, render: .native),
                 ChromeButton(.minimize, interactive: false, render: .native),
-            ])
+            ],
+            bevelHilight: col(cc?.hilight, .white),
+            bevelLight: col(cc?.light, NSColor(srgbRed: 0.859, green: 0.859, blue: 0.859, alpha: 1)),   // #DBDBDB
+            bevelShadow: col(cc?.shadow, NSColor(srgbRed: 0.502, green: 0.502, blue: 0.502, alpha: 1)), // #808080
+            bevelDkShadow: col(cc?.dkShadow, .black))
     }
 }
 
@@ -317,4 +387,25 @@ enum ChromeAssets {
         cache[key] = img
         return img
     }
+}
+
+// MARK: - Windows 7 Aero glass helper
+
+/// Insert a rounded Aero-glass panel (`NSVisualEffectView`, `.behindWindow`) at the BACK of
+/// `container` so the live desktop blurs through the window's translucent chrome. No-op unless
+/// the active theme is Windows 7. Used by the HTML widget windows (Notepad/Clock/CPU/AppFolder),
+/// whose WKWebView is already transparent (`drawsBackground = false`); their win7 CSS paints the
+/// title bar + frame semi-transparently so this blur shows through.
+func addWin7Glass(to container: NSView, cornerRadius: CGFloat = 6) {
+    guard RetroFrameTheme.key() == "win7" else { return }
+    let glass = NSVisualEffectView(frame: container.bounds)
+    glass.autoresizingMask = [.width, .height]
+    glass.blendingMode = .behindWindow
+    glass.material = .fullScreenUI
+    glass.state = .active
+    glass.appearance = NSAppearance(named: .aqua)
+    glass.wantsLayer = true
+    glass.layer?.cornerRadius = cornerRadius
+    glass.layer?.masksToBounds = true
+    container.addSubview(glass, positioned: .below, relativeTo: nil)
 }

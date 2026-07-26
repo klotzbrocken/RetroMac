@@ -55,9 +55,11 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
     /// Show the screensaver now — used by the idle trigger, the Settings "Preview" button and
     /// the desktop "Screen Saver" icon.
     func start() {
-        guard !active else { return }
         let id = resolvedSaverID()
         guard id != "none", let url = saverURL(id) else { NSSound.beep(); return }
+        // Always rebuild fresh (self-heals a stale active flag / prior invisible windows).
+        windows.forEach { $0.orderOut(nil) }
+        windows.removeAll()
         active = true
         shownAt = Date()
         for screen in NSScreen.screens {
@@ -104,7 +106,7 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
     // MARK: - Saver resolution
 
     private func resolvedSaverID() -> String {
-        let name = ThemeManager.shared.activeTheme?.config.name ?? ""
+        let name = ThemeManager.shared.activeTheme?.config.settingsKey ?? ""
         if let o = AppSettings.shared.themeScreensaverOverrides[name], !o.isEmpty { return o }
         return ThemeManager.shared.activeTheme?.config.screensaver ?? "none"
     }

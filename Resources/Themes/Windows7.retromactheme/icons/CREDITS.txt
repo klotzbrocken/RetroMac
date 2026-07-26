@@ -1,0 +1,25 @@
+Windows 7 theme — asset provenance
+===================================
+
+Window chrome (Aero glass title bars + caption buttons)
+  Drawn natively in Swift (WebAppChromeView.drawWin7 / ChromeStyleFactory.win7).
+  Colours/gradients derived from 7.css, MIT License, © 2021 Khang Nguyen Duy
+  https://github.com/khang-nd/7.css
+
+Win7 icons: Start orb, Computer, Recycle Bin, Internet Explorer, Notepad,
+Solitaire, Minesweeper (win7_*.png, startwin7.png)
+  Derived from the "Windows 7" GTK icon theme by B00merang-Artwork:
+    https://github.com/B00merang-Artwork/Windows-7
+  NOTE: that repository ships WITHOUT a license file. The icons also reproduce
+  Microsoft's Windows 7 visual style (the Start orb is a Microsoft trademark).
+  Bundled here as a deliberate project decision; they are Microsoft trade dress
+  and carry no explicit redistribution license from the upstream repo.
+  The 3-state Start-orb sprite (startwin7.png) was assembled from that theme's
+  start-here.png (normal, plus brightened/darkened hover & pressed states).
+
+Wallpapers (wallpaper*.jpg)
+  Microsoft's Windows 7 wallpapers ("Harmony" default + theme scenics).
+  Microsoft copyright; bundled as trade dress, same as the Windows XP theme.
+
+Other app/desktop icons
+  Reused from RetroMac's existing Windows XP theme icon set.

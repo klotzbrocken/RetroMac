@@ -60,6 +60,10 @@ final class DockController {
         ProgramManagerController.shared.update()
         SGIDesktopController.shared.update()
         BeOSDeskbarController.shared.update()
+        NextMenuController.shared.update()
+        NextDockController.shared.update()
+        NextRunningAppsController.shared.update()
+        WindowBorderController.shared.update()
         RainbowAppleController.shared.update()
         if AppSettings.shared.hideMenuBar {
             SystemUIHelper.setMenuBarAutoHide(true)
@@ -131,9 +135,22 @@ final class DockController {
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
         BeOSDeskbarController.shared.hide()
+        NextMenuController.shared.hide()
+        NextDockController.shared.hide()
+        NextRunningAppsController.shared.hide()
+        WindowBorderController.shared.update()   // dock off → borders off (gated on dockEnabled)
         RainbowAppleController.shared.hide()
 
-        restoreSystemDock(synchronous: synchronous, forceReload: true)
+        if didHideSystemDock {
+            restoreSystemDock(synchronous: synchronous, forceReload: true)
+        } else {
+            // Flag-desync guard: if an earlier state (theme switch, crash-relaunch that re-hid) left
+            // the real Dock hidden WITHOUT the in-memory flag, `restoreSystemDock` would early-return
+            // and leave it hidden. The fingerprint recovery restores it regardless — so turning
+            // RetroMac's dock off always brings the real macOS Dock (and any app's runtime dock tile,
+            // e.g. an Electron app's per-theme `app.dock.setIcon`) back into view.
+            restoreSystemDockIfNeeded()
+        }
 
         // Restore menu bar and desktop icons
         if AppSettings.shared.hideMenuBar {
@@ -195,6 +212,23 @@ final class DockController {
         dockView.magnificationOverflow = magOverflow
         if dynScale < 1.0 || hMagOverflow > 0 { dockView.rebuildItems() }
         win.contentView = dockView
+        // Windows 7: real Aero glass Superbar — an NSVisualEffectView (.behindWindow) blurs the
+        // desktop behind the translucent bar (the bar gradient carries alpha in theme.json). Other
+        // themes keep the opaque dockView as the contentView, untouched.
+        if RetroFrameTheme.key() == "win7" {
+            let container = NSView(frame: NSRect(origin: .zero, size: frame.size))
+            container.autoresizesSubviews = true
+            let glass = NSVisualEffectView(frame: container.bounds)
+            glass.autoresizingMask = [.width, .height]
+            glass.blendingMode = .behindWindow
+            glass.material = .fullScreenUI
+            glass.state = .active
+            glass.appearance = NSAppearance(named: .aqua)
+            dockView.autoresizingMask = [.width, .height]
+            container.addSubview(glass)
+            container.addSubview(dockView)
+            win.contentView = container
+        }
 
         self.window = win
         self.dockView = dockView
@@ -214,6 +248,9 @@ final class DockController {
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
             BeOSDeskbarController.shared.update()
+            NextMenuController.shared.update()
+            NextDockController.shared.update()
+            NextRunningAppsController.shared.update()
             // These themes replace the dock entirely (Win 3.1 Program Manager, BeOS Deskbar,
             // SGI desktop) — hide the system Dock too, otherwise every running app + minimized
             // window stays piled at the bottom of the screen.
@@ -226,6 +263,9 @@ final class DockController {
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
         BeOSDeskbarController.shared.hide()
+        NextMenuController.shared.hide()
+        NextDockController.shared.hide()
+        NextRunningAppsController.shared.hide()
         DesktopIconsController.shared.update()
 
         createWindow()
@@ -389,8 +429,11 @@ final class DockController {
             let fullY = (position == "top") ? (screen.frame.maxY - height) : screen.frame.minY
             return NSRect(x: screen.frame.minX, y: fullY, width: screen.frame.width, height: height)
         }
+        // The Mac OS Control Strip docks flush to the left or right screen edge (user choice),
+        // staying horizontal at the bottom — like the historical strip.
+        let effectiveAlignment = (config?.isControlStrip == true) ? AppSettings.shared.controlStripSide : alignment
         let x: CGFloat
-        switch alignment {
+        switch effectiveAlignment {
         // Flush to the PHYSICAL screen edge (screen.frame), not visibleFrame — otherwise a
         // system Dock on the left/right pushes our dock inward and leaves a gap.
         case "left":  x = screen.frame.minX + offset
@@ -515,6 +558,19 @@ final class DockController {
         dockView.horizontalMagOverflow = 0
         let (width, height, magOverflow, hMagOverflow, dynScale) = calculateDockSize(dockView: dockView, screen: screen)
         let targetFrame = dockFrame(screen: screen, width: width, height: height)
+
+        // Right-docked: the strip is flush-right and collapses toward the right edge (the tab stays
+        // at that edge). The left-anchored clip-slide would reveal the wrong side, so snap instantly.
+        if dockView.controlStripRight {
+            window.setFrame(targetFrame, display: true)
+            dockView.dynamicScale = dynScale
+            dockView.horizontalMagOverflow = hMagOverflow
+            dockView.frame = NSRect(origin: .zero, size: targetFrame.size)
+            dockView.magnificationOverflow = magOverflow
+            dockView.relayoutItems()
+            dockView.needsDisplay = true
+            return
+        }
 
         if collapsed {
             // Collapsing: animate clip from full width → left cap only, then resize window
@@ -792,6 +848,10 @@ final class DockController {
             DispatchQueue.main.async { self?.recreateWindow() }
         }.store(in: &settingsObservers)
 
+        s.$controlStripSide.dropFirst().sink { [weak self] _ in
+            DispatchQueue.main.async { self?.recreateWindow() }
+        }.store(in: &settingsObservers)
+
         s.$themeDockAutoHide.dropFirst().sink { [weak self] _ in
             DispatchQueue.main.async {
                 self?.refreshAutoHide()
@@ -954,12 +1014,16 @@ final class DockController {
     /// points at our dock's location instead of flying off to another screen edge.
     /// macOS Dock orientation only supports "left", "bottom", "right" (no top).
     private func systemDockEdge(forThemeEdge themeEdge: String) -> String {
+        // On MULTI-display a hidden "bottom" system Dock re-homes (via killall) onto a secondary
+        // screen, so the minimize genie flies there. "left" reliably resolves to the primary, so
+        // hide a bottom/top theme's system Dock on the LEFT edge when more than one display is
+        // present (it stays hidden either way; minimize then targets the primary, left edge).
+        // Getting it exactly bottom-on-primary isn't reliable — any bottom reload re-homes it.
+        let multi = NSScreen.screens.count > 1
         switch themeEdge {
-        case "bottom": return "bottom"
-        case "left":   return "left"
-        case "right":  return "right"
-        case "top":    return "bottom"
-        default:       return "bottom"
+        case "left":  return "left"
+        case "right": return "right"
+        default:      return multi ? "left" : "bottom"   // bottom / top
         }
     }
 
@@ -970,6 +1034,8 @@ final class DockController {
     /// becomes the Dock's home display; the caller then restores "bottom" and it stays on the
     /// primary. No-op unless a screen really sits below the primary (single-display / side-by-side
     /// setups are unaffected) and the target orientation is "bottom" (left/right already work).
+    /// (Side-by-side multi-display now hides the system Dock on "left" via systemDockEdge, so it
+    /// never sets a bottom orientation there and this stays scoped to the below-primary case.)
     private func reanchorBottomDockToPrimaryIfNeeded(orientation: String) {
         guard orientation == "bottom", NSScreen.screens.count > 1,
               let primary = NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main,
@@ -1165,12 +1231,17 @@ final class DockController {
 
     @objc private func menuSetDockPosition(_ sender: NSMenuItem) {
         guard let pos = sender.representedObject as? String,
-              let name = ThemeManager.shared.activeTheme?.config.name else { return }
+              let name = ThemeManager.shared.activeTheme?.config.settingsKey else { return }
         AppSettings.shared.themeDockPositionOverride[name] = pos
     }
 
+    @objc private func menuSetControlStripSide(_ sender: NSMenuItem) {
+        guard let side = sender.representedObject as? String else { return }
+        AppSettings.shared.controlStripSide = side   // observer recreates the dock window
+    }
+
     @objc private func menuToggleAutoHide(_ sender: NSMenuItem) {
-        guard let name = ThemeManager.shared.activeTheme?.config.name else { return }
+        guard let name = ThemeManager.shared.activeTheme?.config.settingsKey else { return }
         let current = AppSettings.shared.themeDockAutoHide[name] ?? false
         AppSettings.shared.themeDockAutoHide[name] = !current
     }
@@ -1281,21 +1352,35 @@ final class DockController {
     private func appendDockPositionItems(to menu: NSMenu) {
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         menu.addItem(.separator())
-        let current = theme.effectiveDockPosition
-        let posTitle = NSMenuItem(title: "Dock Position", action: nil, keyEquivalent: "")
-        let posMenu = NSMenu()
-        // Windows XP taskbar is bottom-only — hide the left/right options for that theme.
-        let isXP = theme.name.lowercased().contains("windows xp") || theme.name.lowercased().contains("xp")
-        var positions = [("Bottom", "bottom"), ("Left", "left"), ("Right", "right")]
-        if isXP { positions = [("Bottom", "bottom")] }
-        for (label, value) in positions {
-            let mi = NSMenuItem(title: label, action: #selector(menuSetDockPosition(_:)), keyEquivalent: "")
-            mi.target = self; mi.representedObject = value
-            if value == current { mi.state = .on }
-            posMenu.addItem(mi)
+        if theme.isControlStrip {
+            // The Control Strip stays horizontal; it only docks to the left or right edge.
+            let csTitle = NSMenuItem(title: "Control Strip", action: nil, keyEquivalent: "")
+            let csMenu = NSMenu()
+            for (label, value) in [("Left", "left"), ("Right", "right")] {
+                let mi = NSMenuItem(title: label, action: #selector(menuSetControlStripSide(_:)), keyEquivalent: "")
+                mi.target = self; mi.representedObject = value
+                if value == AppSettings.shared.controlStripSide { mi.state = .on }
+                csMenu.addItem(mi)
+            }
+            csTitle.submenu = csMenu
+            menu.addItem(csTitle)
+        } else {
+            let current = theme.effectiveDockPosition
+            let posTitle = NSMenuItem(title: "Dock Position", action: nil, keyEquivalent: "")
+            let posMenu = NSMenu()
+            // Windows XP taskbar is bottom-only — hide the left/right options for that theme.
+            let isXP = theme.name.lowercased().contains("windows xp") || theme.name.lowercased().contains("xp")
+            var positions = [("Bottom", "bottom"), ("Left", "left"), ("Right", "right")]
+            if isXP { positions = [("Bottom", "bottom")] }
+            for (label, value) in positions {
+                let mi = NSMenuItem(title: label, action: #selector(menuSetDockPosition(_:)), keyEquivalent: "")
+                mi.target = self; mi.representedObject = value
+                if value == current { mi.state = .on }
+                posMenu.addItem(mi)
+            }
+            posTitle.submenu = posMenu
+            menu.addItem(posTitle)
         }
-        posTitle.submenu = posMenu
-        menu.addItem(posTitle)
         if theme.supportsAutoHide {
             let ah = NSMenuItem(title: "Auto-Hide Dock", action: #selector(menuToggleAutoHide(_:)), keyEquivalent: "")
             ah.target = self

@@ -1,5 +1,21 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.system6",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "System 6",
+    "year": 1988
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "macos6"
+  },
   "name": "Mac OS 6 classic",
+  "splashWelcome": true,
   "systemTweaks": [
     { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "2", "refresh": "Finder" },
     { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "2", "refresh": "Finder" },
@@ -174,6 +190,20 @@
       "type": "notepad",
       "gridX": 0,
       "gridY": 8
+    },
+    {
+      "name": "Nyanochrome",
+      "icon": "",
+      "type": "nyanochrome",
+      "gridX": 1,
+      "gridY": 1
+    },
+    {
+      "name": "Tic-Tac-Toe",
+      "icon": "tictactoe.png",
+      "type": "tictactoe",
+      "gridX": 1,
+      "gridY": 2
     }
   ],
   "fallbackIcon": "generic.png",

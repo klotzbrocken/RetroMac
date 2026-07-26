@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.microsoft.windows31",
+  "family": {
+    "id": "microsoft",
+    "name": "Microsoft Windows",
+    "order": 2
+  },
+  "release": {
+    "label": "Windows 3.1",
+    "year": 1992
+  },
+  "experienceLevel": "partial",
+  "chrome": {
+    "style": "win31"
+  },
   "name": "Windows 3.1",
   "version": "1.0",
   "author": "RetroMac",
@@ -221,6 +236,21 @@
             "icon": "recorder.png",
             "type": "app",
             "bundleID": "com.apple.VoiceMemos"
+          },
+          {
+            "name": "TV",
+            "icon": "mediaplayer.png",
+            "type": "tvfolder"
+          },
+          {
+            "name": "Clock",
+            "icon": "clock.png",
+            "type": "clock"
+          },
+          {
+            "name": "CPU",
+            "icon": "",
+            "type": "cpumonitor"
           }
         ]
       },

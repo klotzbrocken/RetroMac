@@ -164,7 +164,7 @@ final class LicenseManager: ObservableObject {
         isValidating = true
         validationError = nil
 
-        verifyWithGumroad(key: trimmedKey) { [weak self] success, email, error in
+        verifyWithGumroad(key: trimmedKey) { [weak self] success, email, error, _ in
             DispatchQueue.main.async {
                 self?.isValidating = false
                 if success {
@@ -197,10 +197,21 @@ final class LicenseManager: ObservableObject {
 
     private func revalidate() {
         guard !licenseKey.isEmpty else { return }
-        verifyWithGumroad(key: licenseKey) { [weak self] success, _, error in
+        verifyWithGumroad(key: licenseKey) { [weak self] valid, _, error, definitive in
             DispatchQueue.main.async {
-                if !success {
-                    print("[License] Revalidation failed: \(error ?? "unknown")")
+                guard let self = self else { return }
+                if valid {
+                    // Refresh the timestamp so we don't re-check on every launch past the 7-day mark.
+                    self.defaults.set(Date(), forKey: self.lastValidationKey)
+                } else if definitive {
+                    // The server says this license is no longer valid (refunded / chargebacked /
+                    // unknown key) — revoke access. Transient failures fall through and keep status.
+                    self.isLicensed = false
+                    self.defaults.set(false, forKey: self.licenseValidKey)
+                    self.validationError = error
+                    print("[License] Revoked on revalidation: \(error ?? "invalid")")
+                } else {
+                    print("[License] Revalidation deferred (transient): \(error ?? "unknown")")
                 }
             }
         }
@@ -255,9 +266,33 @@ final class LicenseManager: ObservableObject {
 
     // MARK: - Gumroad API
 
-    private func verifyWithGumroad(key: String, completion: @escaping (Bool, String?, String?) -> Void) {
+    /// Pure decode of a Gumroad verify response. `definitive` = the server returned a clear verdict
+    /// (valid, refunded, chargebacked, or `success:false`) → callers may act on it (activate / revoke).
+    /// It is `false` only for transient failures (network / unparsable body), which must NOT be
+    /// treated as "license invalid". `internal` so it can be unit-tested without a network call.
+    static func parseGumroad(_ json: [String: Any]) -> (valid: Bool, email: String?, error: String?, definitive: Bool) {
+        // No boolean `success` field ⇒ not a real Gumroad verdict (proxy/error page): treat as
+        // transient so we never revoke a paying user on a malformed-but-parseable response.
+        guard let success = json["success"] as? Bool else {
+            return (false, nil, "Invalid response", false)
+        }
+        guard success else {
+            let message = json["message"] as? String ?? "Invalid license key"
+            return (false, nil, message, true)   // server verdict: definitively invalid
+        }
+        let purchase = json["purchase"] as? [String: Any]
+        if let refunded = purchase?["refunded"] as? Bool, refunded {
+            return (false, nil, "This license has been refunded.", true)
+        }
+        if let chargebacked = purchase?["chargebacked"] as? Bool, chargebacked {
+            return (false, nil, "This license has been chargebacked.", true)
+        }
+        return (true, purchase?["email"] as? String, nil, true)
+    }
+
+    private func verifyWithGumroad(key: String, completion: @escaping (Bool, String?, String?, Bool) -> Void) {
         guard let url = URL(string: "https://api.gumroad.com/v2/licenses/verify") else {
-            completion(false, nil, "Invalid API URL")
+            completion(false, nil, "Invalid API URL", true)
             return
         }
 
@@ -275,36 +310,18 @@ final class LicenseManager: ObservableObject {
 
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
-                completion(false, nil, "Network error: \(error.localizedDescription)")
+                completion(false, nil, "Network error: \(error.localizedDescription)", false)   // transient — keep status
                 return
             }
 
             guard let data = data,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                completion(false, nil, "Invalid response")
+                completion(false, nil, "Invalid response", false)   // transient — keep status
                 return
             }
 
-            let success = json["success"] as? Bool ?? false
-            if success {
-                let purchase = json["purchase"] as? [String: Any]
-                let email = purchase?["email"] as? String
-
-                if let refunded = purchase?["refunded"] as? Bool, refunded {
-                    completion(false, nil, "This license has been refunded.")
-                    return
-                }
-
-                if let chargebacked = purchase?["chargebacked"] as? Bool, chargebacked {
-                    completion(false, nil, "This license has been chargebacked.")
-                    return
-                }
-
-                completion(true, email, nil)
-            } else {
-                let message = json["message"] as? String ?? "Invalid license key"
-                completion(false, nil, message)
-            }
+            let r = Self.parseGumroad(json)
+            completion(r.valid, r.email, r.error, r.definitive)
         }.resume()
     }
 }

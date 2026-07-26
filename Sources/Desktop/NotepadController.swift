@@ -98,6 +98,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
             }
 
             let container = NSView(frame: initial)
+            addWin7Glass(to: container)   // Aero glass behind the transparent webview (win7 only)
             container.addSubview(wv)
 
             // Resize gadgets on all four corners (anchor the opposite corner).
@@ -127,6 +128,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = container
             self.panel = p; self.webView = wv; self.dragOverlay = overlay
+            installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
             moveObserver = NotificationCenter.default.addObserver(
                 forName: NSWindow.didMoveNotification, object: p, queue: .main) { [weak self] _ in self?.saveOrigin() }
         }
@@ -203,6 +205,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         webView.evaluateJavaScript("window.setEditorApp && window.setEditorApp('\(editorAppFlavor())')")
         let saved = UserDefaults.standard.string(forKey: textKey) ?? ""
         if let data = try? JSONSerialization.data(withJSONObject: [saved]),

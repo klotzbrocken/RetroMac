@@ -276,6 +276,12 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Link("siddhartha77/os9", destination: URL(string: "https://github.com/siddhartha77/os9")!)
+                        .font(.caption)
+                    Text("Mac OS 9 theme: Platinum desktop, folder, drive, trash and document icons reconstructed by the os9.ca project. Original Platinum artwork © Apple Computer, Inc.; used for a non-commercial retro tribute.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("jcherven/BeOS-r5-Icons on GitHub",
                          destination: URL(string: "https://github.com/jcherven/BeOS-r5-Icons")!)
                         .font(.caption)
@@ -335,6 +341,13 @@ struct AboutTab: View {
                     Text("SGI IRIX theme application icons.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    Link("trunkmaster/nextspace on GitHub",
+                         destination: URL(string: "https://github.com/trunkmaster/nextspace")!)
+                        .font(.caption)
+                    Text("NeXTSTEP theme icons (home, folders, recycler, tile, printer) from the NEXTSPACE theme, licensed GPL-3.0. The NeXT logo is not used.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Web Apps & Desktop Extras") {
@@ -365,6 +378,20 @@ struct AboutTab: View {
                     Text("After Dark “Flying Toasters” artwork (MIT) — basis for the Mac OS 9 screensaver.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    Link("mrdoob/three.js on GitHub",
+                         destination: URL(string: "https://github.com/mrdoob/three.js")!)
+                        .font(.caption)
+                    Text("three.js (MIT) by mrdoob & contributors — bundled to render the “3D Pipes” screensaver.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("jjuran/metamage_1 on GitHub",
+                         destination: URL(string: "https://github.com/jjuran/metamage_1")!)
+                        .font(.caption)
+                    Text("The Nyanochrome cat and Tic-Tac-Toe desktop widgets (Mac OS 6 & 9 themes) are ports of Josh Juran's metamage_1 apps (AGPL-3.0).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Bundled Game & Libraries") {
@@ -379,6 +406,16 @@ struct AboutTab: View {
                          destination: URL(string: "https://github.com/libsdl-org/SDL")!)
                         .font(.caption)
                     Text("SDL2 — render/input layer for the bundled Pac-Man.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("Wargus/stratagus on GitHub",
+                         destination: URL(string: "https://github.com/Wargus/stratagus")!)
+                        .font(.caption)
+                    Link("Wargus/war1gus on GitHub",
+                         destination: URL(string: "https://github.com/Wargus/war1gus")!)
+                        .font(.caption)
+                    Text("Stratagus real-time-strategy engine with the War1gus (Warcraft I) and Wargus (Warcraft II) data mods (GPLv2) — bundled so the games run from your own original data.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

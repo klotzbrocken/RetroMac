@@ -11,9 +11,21 @@ import ScreenCaptureKit
 private enum WizardPage: Int, CaseIterable {
     case intro
     case appearance
+    case games
     case system
     case permissions
+    case theme
     case done
+}
+
+/// One selectable PC game on the Setup Assistant's Games page: a data-folder picker + an
+/// optional themed desktop shortcut (DesktopStore.added entry of `shortcutType`).
+private struct WizardGame: Identifiable {
+    let id: String            // shortcut type ("doom","duke3d","quake","quake2","warcraft2","warcraft1")
+    let name: String
+    let dataHint: String      // what folder to pick
+    let hasData: () -> Bool
+    let choose: () -> Void
 }
 
 struct SetupWizardView: View {
@@ -22,6 +34,15 @@ struct SetupWizardView: View {
     @State private var screenRecordingGranted = false
     @State private var accessibilityGranted = false
     @State private var reframeInstalled = SetupWizardView.isReframeInstalled()
+
+    // Games page
+    @State private var gamesSetup = false
+    @State private var addShortcut: [String: Bool] = [:]   // shortcut type → create a themed desktop icon
+    @State private var wcStatus: [String: String] = [:]    // Warcraft extraction status per title
+    @State private var dataTick = 0                        // bump to re-read folder settings after a pick
+
+    // Theme page — which theme to switch to on finish ("" = keep current)
+    @State private var selectedTheme: String = ThemeManager.shared.activeTheme?.config.name ?? ""
 
     /// Called when the user finishes or skips the wizard.
     let onFinish: () -> Void
@@ -52,8 +73,10 @@ struct SetupWizardView: View {
         switch page {
         case .intro:       introPage
         case .appearance:  appearancePage
+        case .games:       gamesPage
         case .system:      systemPage
         case .permissions: permissionsPage
+        case .theme:       themePage
         case .done:        donePage
         }
     }
@@ -70,8 +93,10 @@ struct SetupWizardView: View {
                 .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 8) {
                 introBullet("paintbrush", "Appearance — desktop, shader, menu bar, widgets")
+                introBullet("gamecontroller", "Games — Doom, Quake, Duke Nukem & Warcraft")
                 introBullet("gearshape.2", "System — Dock Mode, start at login, Reframe")
                 introBullet("lock.shield", "Permissions — screen recording & accessibility")
+                introBullet("paintbrush.pointed", "Theme — pick the look to start with")
             }
             .padding(.top, 6)
             Spacer(minLength: 12)
@@ -119,6 +144,177 @@ struct SetupWizardView: View {
                       subtitle: "Replace the system-wide mouse cursor with the theme's set (classic Mac, XP, …). Your normal cursor returns afterwards.",
                       isOn: $settings.themeAdaptCursor)
         }
+    }
+
+    // MARK: - Games page
+
+    private var gamesList: [WizardGame] {
+        _ = dataTick   // re-read folder settings after a pick
+        return [
+            WizardGame(id: "doom", name: "Doom", dataHint: "Pick your WAD folder (also enables Heretic & Freedoom).",
+                       hasData: { Self.doomHasData(AppSettings.shared.doomWadFolder) },
+                       choose: { chooseFolder("Select the folder with your Doom WAD files") { AppSettings.shared.doomWadFolder = $0 } }),
+            WizardGame(id: "duke3d", name: "Duke Nukem 3D", dataHint: "Pick your GRP folder (also enables Shadow Warrior).",
+                       hasData: { Self.folderHasFile(AppSettings.shared.razeGrpFolder) { $0.lowercased().hasSuffix(".grp") } },
+                       choose: { chooseFolder("Select the folder with your Duke Nukem 3D GRP files") { AppSettings.shared.razeGrpFolder = $0 } }),
+            WizardGame(id: "quake", name: "Quake", dataHint: "Pick the base folder (contains id1/PAK0.PAK).",
+                       hasData: { Self.quakeHasData(AppSettings.shared.quakeBasePath, sub: "id1") },
+                       choose: { chooseFolder("Select your Quake base directory (id1/PAK0.PAK)") { AppSettings.shared.quakeBasePath = $0 } }),
+            WizardGame(id: "quake2", name: "Quake II", dataHint: "Pick the base folder (contains baseq2/pak0.pak).",
+                       hasData: { Self.quakeHasData(AppSettings.shared.quake2BasePath, sub: "baseq2") },
+                       choose: { chooseFolder("Select your Quake II base directory (baseq2/pak0.pak)") { AppSettings.shared.quake2BasePath = $0 } }),
+            // Only Warcraft II: RetroMac can extract + run it (proven working). Warcraft I (war1gus)
+            // has no bundled extractor and isn't reliably playable, so it stays in Settings ▸ Games
+            // for advanced users rather than being offered — and shortcut-launched — here.
+            WizardGame(id: "warcraft2", name: "Warcraft II", dataHint: "Pick your Warcraft II folder (the game or extracted data).",
+                       hasData: { WarcraftGame.hasExtractedData(.warcraft2) }, choose: { chooseWarcraft(.warcraft2) }),
+        ]
+    }
+
+    // Game-data validation — a non-empty folder path is not enough; check for the actual files so
+    // a green tick / desktop shortcut never promises a game that can't launch (Warcraft already
+    // validates via WarcraftGame.hasExtractedData).
+    static func folderHasFile(_ folder: String, matching: (String) -> Bool) -> Bool {
+        guard !folder.isEmpty,
+              let items = try? FileManager.default.contentsOfDirectory(atPath: folder) else { return false }
+        return items.contains(where: matching)
+    }
+    static func doomHasData(_ folder: String) -> Bool {
+        folderHasFile(folder) { let l = $0.lowercased(); return l.hasSuffix(".wad") || l.hasSuffix(".pk3") || l.hasSuffix(".ipk3") }
+    }
+    /// Quake / Quake II: `base/<sub>/pak0.pak` (case-insensitive), or `pak0.pak` in the picked folder.
+    static func quakeHasData(_ base: String, sub: String) -> Bool {
+        guard !base.isEmpty else { return false }
+        let fm = FileManager.default
+        func hasPak(_ dir: String) -> Bool {
+            guard let items = try? fm.contentsOfDirectory(atPath: dir) else { return false }
+            return items.contains { $0.lowercased() == "pak0.pak" }
+        }
+        if let subs = try? fm.contentsOfDirectory(atPath: base),
+           let match = subs.first(where: { $0.lowercased() == sub }),
+           hasPak((base as NSString).appendingPathComponent(match)) {
+            return true
+        }
+        return hasPak(base)
+    }
+
+    private var gamesPage: some View {
+        pageScaffold(icon: "gamecontroller.fill", tint: .green, title: "Games",
+                     subtitle: "Play classic PC games with your own game files.") {
+            toggleRow(icon: "gamecontroller", tint: .green, title: "Set up games",
+                      subtitle: "Point RetroMac at the games you own — and optionally add a desktop shortcut for the active theme.",
+                      isOn: $gamesSetup)
+            if gamesSetup {
+                ForEach(gamesList) { g in
+                    Divider()
+                    gameRow(g)
+                }
+                Text("RetroMac only ships the open-source engines / game logic — the games themselves must come from your own copy. Doom and Duke Nukem also need GZDoom / Raze installed (Settings ▸ Games).")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func gameRow(_ g: WizardGame) -> some View {
+        let has = g.hasData()
+        return HStack(alignment: .top, spacing: 12) {
+            Image(systemName: has ? "checkmark.circle.fill" : "folder")
+                .font(.system(size: 16)).foregroundStyle(has ? .green : .secondary).frame(width: 22)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(g.name).font(.headline)
+                Text(has ? "Game data set." : g.dataHint).font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let s = wcStatus[g.id] { Text(s).font(.caption2).foregroundStyle(.orange) }
+                Toggle("Add desktop shortcut", isOn: Binding(
+                    get: { addShortcut[g.id] ?? false }, set: { addShortcut[g.id] = $0 }))
+                    .font(.caption).toggleStyle(.checkbox)
+            }
+            Spacer()
+            Button(has ? "Change…" : "Choose…") { g.choose() }
+        }
+    }
+
+    private func chooseFolder(_ message: String, _ apply: @escaping (String) -> Void) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
+        panel.message = message; panel.prompt = "Use Folder"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        apply(url.path); dataTick += 1
+    }
+
+    /// Warcraft picker — accepts an original installation (auto-extracted) or already-extracted data.
+    private func chooseWarcraft(_ title: WarcraftGame.Title) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.allowsMultipleSelection = false
+        panel.message = "Choose your \(title.displayName) folder — the original game or already-extracted data"
+        panel.prompt = "Use Folder"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        func setFolder(_ p: String) {
+            if title == .warcraft2 { settings.warcraft2DataFolder = p } else { settings.warcraft1DataFolder = p }
+        }
+        if WarcraftGame.hasExtractedData(at: url, title) {
+            setFolder(url.path); wcStatus[title.rawValue] = nil; dataTick += 1
+        } else if WarcraftGame.looksLikeInstallation(at: url, title) {
+            wcStatus[title.rawValue] = "Extracting game data — this takes a moment…"
+            WarcraftGame.extract(title, from: url) { result in
+                switch result {
+                case .success(let dest): setFolder(dest.path); wcStatus[title.rawValue] = nil
+                case .failure(let e):    wcStatus[title.rawValue] = "Extraction failed: \(e.message)"
+                }
+                dataTick += 1
+            }
+        } else {
+            wcStatus[title.rawValue] = "No \(title.displayName) data found in that folder."
+        }
+    }
+
+    // MARK: - Theme page
+
+    private var themeChoices: [(String, String)] {
+        ThemeManager.shared.availableThemes.map { ($0.config.name, ThemeManager.displayName(for: $0.config.name)) }
+    }
+
+    private var themePage: some View {
+        pageScaffold(icon: "paintbrush.pointed.fill", tint: .indigo, title: "Choose a theme",
+                     subtitle: "Which look should RetroMac start with? You can switch any time from the menu.") {
+            Picker("", selection: $selectedTheme) {
+                Text("Keep current / none").tag("")
+                ForEach(themeChoices, id: \.0) { name, display in
+                    Text(display).tag(name)
+                }
+            }
+            .labelsHidden().pickerStyle(.inline)
+        }
+    }
+
+    /// Applied when the user finishes: switch to the chosen theme and add the requested game
+    /// shortcuts to that theme's desktop.
+    private func applyFinalChoices() {
+        // Always (re)apply the chosen theme — even if it matches the current name it may not be
+        // actually showing (desktop off), and the user explicitly picked it here. setActiveTheme
+        // is idempotent.
+        if !selectedTheme.isEmpty {
+            ThemeManager.shared.setActiveTheme(name: selectedTheme, applyWallpaper: !settings.dockOnly)
+            settings.dockEnabled = true   // the themed desktop must be on for the theme to show
+            // Setting the flag alone does NOT start the dock: the DockController's own
+            // dockEnabled observer is only registered inside start(), so if the dock wasn't
+            // running at launch (dockEnabled was off), flipping it here goes unheard. Every
+            // other "enable dock" site calls start() explicitly (selectTheme / toggleDock);
+            // do the same so the retro dock actually appears after the assistant. Idempotent.
+            DockController.shared.start()
+        }
+        let themeName = ThemeManager.shared.activeTheme?.config.name ?? selectedTheme
+        guard gamesSetup, !themeName.isEmpty else { return }
+        var custom = DesktopStore.load(theme: themeName)
+        var nextRow = (custom.added.compactMap { $0.gridY }.max() ?? 6) + 1
+        for g in gamesList where (addShortcut[g.id] ?? false) && g.hasData() {
+            guard !custom.added.contains(where: { $0.type == g.id }) else { continue }
+            custom.added.append(DockThemeConfig.DesktopIconEntry(
+                name: g.name, icon: "", type: g.id, gridX: 0, gridY: nextRow))
+            nextRow += 1
+        }
+        DesktopStore.save(custom, theme: themeName)
+        DesktopIconsController.shared.update()
     }
 
     private var systemPage: some View {
@@ -224,7 +420,7 @@ struct SetupWizardView: View {
     }
 
     private func goNext() {
-        if page == .done { onFinish(); return }
+        if page == .done { applyFinalChoices(); onFinish(); return }
         if let next = WizardPage(rawValue: page.rawValue + 1) {
             withAnimation(.easeInOut(duration: 0.15)) { page = next }
             if next == .permissions { refreshPermissions() }

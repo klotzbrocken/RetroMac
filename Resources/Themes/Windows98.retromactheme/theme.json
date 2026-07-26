@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.microsoft.windows98",
+  "family": {
+    "id": "microsoft",
+    "name": "Microsoft Windows",
+    "order": 2
+  },
+  "release": {
+    "label": "Windows 98",
+    "year": 1998
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "win98"
+  },
   "name": "Windows 98",
   "hideMenuBarDefault": true,
   "version": "1.0",
@@ -204,11 +219,29 @@
       "type": "screensaver",
       "gridX": 1,
       "gridY": 4
+    },
+    {
+      "name": "Calculator",
+      "icon": "calculator.png",
+      "type": "calculator",
+      "gridX": 1,
+      "gridY": 5
+    },
+    {
+      "name": "TV",
+      "icon": "menu-multimedia.png",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 8
     }
   ],
   "desktopIconSize": 40,
   "splashVideo": "boot.mp4",
   "screensaver": "flowerbox",
   "appearance": "light",
-  "accentColor": "blue"
+  "accentColor": "blue",
+  "systemTweaks": [
+    { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "2", "refresh": "Finder" },
+    { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "2", "refresh": "Finder" }
+  ]
 }

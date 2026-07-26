@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-user-select:none;}
+  #win{position:relative;width:236px;}
+
+  /* ---- BeOS yellow tab (default chrome) ---- */
+  .tab{display:flex;align-items:center;gap:8px;height:22px;padding:0 8px;width:fit-content;
+    position:relative;z-index:3;border:1.4px solid #2a2a2a;border-bottom:none;border-radius:5px 5px 0 0;
+    background:linear-gradient(180deg,#fbd85c,#f2bd23);box-shadow:inset 1px 1px 0 rgba(255,255,255,.55);}
+  .tab b{font-size:12px;font-weight:700;color:#2a2306;white-space:nowrap;}
+  .closebox{width:13px;height:13px;border:1.4px solid #6f5a10;cursor:pointer;
+    background:linear-gradient(135deg,#fbe27e,#eab92a);box-shadow:inset 1px 1px 0 rgba(255,255,255,.75);}
+  .body{position:relative;z-index:2;margin-top:-1px;padding:8px;border:1px solid #000;
+    background:#d8d3c0;box-shadow:inset 2px 2px 0 #efeada,inset -2px -2px 0 #b3ad98;}
+
+  /* ---- Calculator (theme-neutral base) ---- */
+  .disp{box-sizing:border-box;width:100%;height:30px;margin-bottom:8px;padding:2px 8px;text-align:right;
+    font:600 20px "Lucida Console","DejaVu Sans Mono",monospace;color:#000;background:#fff;
+    border:1px solid #808080;box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #dbdbdb;overflow:hidden;}
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;}
+  .k{height:26px;font:700 13px Tahoma,"Segoe UI",sans-serif;cursor:pointer;color:#000;
+    background:#c4c4c4;border:none;box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;
+    display:flex;align-items:center;justify-content:center;line-height:1;padding:0;}
+  .k:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080,inset -2px -2px 0 #dbdbdb;}
+  .k.wide{grid-column:span 2;}
+  .k.dig{color:#0000d0;} .k.op,.k.fn,.k.mem,.k.clr{color:#c00000;}
+
+  /* ===== hidden title bars by default ===== */
+  .m9-title,.xp-title,.mf-title,.mx-title,.w98-title{display:none;}
+  .w98-menubar{display:none;}
+
+  /* ===== Mac OS 9 (Platinum) ===== */
+  body.theme-macos9 .tab{display:none;}
+  body.theme-macos9 #win{border:1px solid #000;background:#d8d8d8;box-shadow:2px 2px 8px rgba(0,0,0,.3);}
+  body.theme-macos9 .body{border:none;background:#d8d8d8;box-shadow:none;margin:0;}
+  body.theme-macos9 .m9-title{display:flex;align-items:center;position:relative;height:20px;
+    border-top:1px solid #f3f3f3;border-bottom:1px solid #9a9a9a;
+    background:repeating-linear-gradient(#e8e8e8 0 1px,#d0d0d0 1px 2px);image-rendering:pixelated;}
+  .m9-close{position:relative;z-index:2;box-sizing:border-box;width:11px;height:11px;margin-left:7px;
+    background:#c0c0c0;border:1px solid #7e7e8a;box-shadow:inset 0 0 0 1px #dadaff;cursor:pointer;}
+  .m9-plaque{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;background:#f3f3f3;
+    padding:0 8px;font-size:12px;font-weight:700;color:#000;
+    font-family:"Charcoal","ChicagoFLF","Helvetica Neue",Helvetica,sans-serif;}
+
+  /* ===== Windows XP (Luna) ===== */
+  body.theme-winxp .tab{display:none;}
+  body.theme-winxp #win{border-radius:8px 8px 2px 2px;background:#0831D9;overflow:hidden;box-shadow:2px 5px 14px rgba(0,0,0,.45);}
+  body.theme-winxp .body{border:none;background:#ECE9D8;margin:0 4px 4px;}
+  body.theme-winxp .xp-title{display:flex;align-items:center;height:26px;gap:6px;padding:0 4px 0 8px;
+    border-radius:8px 8px 0 0;background:linear-gradient(180deg,#0997FF,#0053EE 45%,#0066FF 52%,#003DD2);}
+  .xp-cap{color:#fff;font:700 12px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,40,.5);}
+  .xp-close{margin-left:auto;width:21px;height:19px;border-radius:3px;position:relative;cursor:pointer;
+    border:1px solid rgba(255,255,255,.55);background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
+  .xp-close::before,.xp-close::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#fff;}
+  .xp-close::before{transform:translate(-50%,-50%) rotate(45deg);} .xp-close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  /* XP Luna keys */
+  body.theme-winxp .k{background:linear-gradient(180deg,#fdfeff,#eaf0fb 45%,#d6e2f5);border:1px solid #7f9fc4;border-radius:3px;box-shadow:none;}
+  body.theme-winxp .k:hover{border-color:#ff9a00;box-shadow:inset 0 0 5px rgba(255,154,0,.55);}
+  body.theme-winxp .k:active{background:linear-gradient(180deg,#cdd9ee,#e6eefc);}
+  body.theme-winxp .disp{background:#fff;border:1px solid #7f9db9;box-shadow:inset 1px 1px 2px rgba(0,0,0,.18);}
+
+  /* ===== Maiks Favourite (pixel macOS) ===== */
+  body.theme-maiksfav .tab{display:none;}
+  body.theme-maiksfav #win{background:#ECECEC;border:2px solid #262626;border-radius:10px;overflow:hidden;
+    box-shadow:inset 2px 2px 0 #fff,inset -2px -2px 0 #c4c4c4,6px 6px 0 rgba(0,0,0,.35);}
+  body.theme-maiksfav .body{border:none;background:#ECECEC;margin:0;}
+  body.theme-maiksfav .mf-title{display:flex;align-items:center;position:relative;height:26px;gap:8px;padding:0 10px;
+    background:#E3E3E3;border-bottom:2px solid #262626;font-family:"Pixelify Sans",monospace;}
+  .mf-close{width:12px;height:12px;border-radius:50%;background:#FF5F57;border:1px solid rgba(0,0,0,.3);cursor:pointer;}
+  .mf-cap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:13px;font-weight:700;color:#3a3a3a;}
+  body.theme-maiksfav .k{border-radius:5px;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #c4c4c4;background:#e8e8e8;}
+
+  /* ===== Mac OS X (Aqua 10.0–10.4) ===== */
+  body.theme-macosx .tab{display:none;}
+  body.theme-macosx #win{border-radius:6px 6px 3px 3px;overflow:hidden;border:1px solid #7a7a7a;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);}
+  body.theme-macosx .body{border:none;margin:0;padding:10px;background:#ededed;box-shadow:none;}
+  body.theme-macosx .mx-title{display:flex;align-items:center;position:relative;height:22px;gap:6px;padding:0 8px;
+    background:linear-gradient(to bottom,#fafafa,#ededed 26%,#dadada 60%,#c6c6c6 92%,#bcbcbc);
+    border-bottom:1px solid #888;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
+  body.theme-macosx .mx-title::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(to bottom,rgba(255,255,255,.14) 0 1px,rgba(0,0,0,.028) 1px 2px);}
+  .mx-lights{display:flex;gap:6px;align-items:center;position:relative;z-index:1;}
+  .mx-gel{width:14px;height:14px;border-radius:50%;position:relative;flex:0 0 14px;
+    box-shadow:inset 0 0 1px .5px rgba(0,0,0,.38),inset 0 -2.5px 3px rgba(0,0,0,.32),inset 0 2px 2px rgba(255,255,255,.30),0 1px 1.5px rgba(0,0,0,.42);}
+  .mx-gel::before{content:"";position:absolute;left:2.5px;right:2.5px;top:1.5px;height:6px;border-radius:50%;z-index:1;
+    background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.98),rgba(255,255,255,.55) 52%,rgba(255,255,255,0));}
+  .mx-close{background:radial-gradient(circle at 50% 34%,#ffe6df,#ff8f7c 20%,#fb5038 46%,#e22a16 66%,#b51d0d 84%,#861309);cursor:pointer;}
+  .mx-min,.mx-zoom{background:radial-gradient(circle at 50% 34%,#ffffff,#f2f2f2 20%,#dedede 48%,#c2c2c2 70%,#a6a6a6 86%,#858585);}
+  .mx-min .mx-glyph,.mx-zoom .mx-glyph{display:none;}
+  .mx-cap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;
+    font:700 13px "Lucida Grande","Helvetica Neue",Helvetica,Arial,sans-serif;color:#1a1a1a;text-shadow:0 1px 0 rgba(255,255,255,.6);}
+  .mx-glyph{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+    font:700 11px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
+    text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
+  .mx-glyph{display:none;}
+  body.theme-macosx .k{border-radius:5px;border:1px solid #adadad;background:linear-gradient(180deg,#fefefe,#e2e2e2);box-shadow:0 1px 0 rgba(0,0,0,.08);}
+  body.theme-macosx .k:active{background:linear-gradient(180deg,#d6e6ff,#a9c8f5);}
+
+  /* ===== Windows 98 ===== */
+  .w98-cap{color:#fff;font:700 12px Tahoma,"Microsoft Sans Serif",sans-serif;
+    flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .w98-btn{width:20px;height:18px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;
+    font:700 13px Tahoma,Verdana,sans-serif;color:#000;display:flex;align-items:center;justify-content:center;line-height:1;}
+  .w98-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #dbdbdb,inset 2px 2px 0 #808080,inset -2px -2px 0 #fff;}
+  .w98-close{margin-left:3px;font-size:0;position:relative;}
+  #w98close::before,#w98close::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#000;}
+  #w98close::before{transform:translate(-50%,-50%) rotate(45deg);}
+  #w98close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  body.theme-win98 .tab{display:none;}
+  body.theme-win98 #win{background:#c4c4c4;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;}
+  body.theme-win98 .body{border:none;background:#c4c4c4;box-shadow:none;margin:0;padding:8px;}
+  body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:22px;margin:3px 3px 0;padding:0 2px 0 6px;
+    background:linear-gradient(90deg,#00007b,#1085d2);}
+  body.theme-win98 .disp{background:#fff;border:none;box-shadow:inset -1px -1px 0 #dbdbdb,inset 1px 1px 0 #808080,inset -2px -2px 0 #fff,inset 2px 2px 0 #000;color:#000;}
+  /* calc.exe menu bar (Edit / View / Help) */
+  body.theme-win98 .w98-menubar{display:flex;height:16px;margin:1px 3px 0;padding:0 2px;
+    background:#c4c4c4;align-items:center;gap:0;
+    font:12px Tahoma,"MS Sans Serif",Verdana,sans-serif;color:#000;}
+  body.theme-win98 .w98-menubar span{padding:1px 6px;line-height:1;cursor:default;}
+  body.theme-win98 .w98-menubar u{text-decoration:underline;}
+
+  /* ===== Windows 7 (Aero glass) — inherits XP structure via dual class ===== */
+  body.theme-win7 #win{border-radius:6px 6px 2px 2px;background:rgba(69,128,196,0.34);
+    box-shadow:0 8px 22px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.7);}
+  body.theme-win7 .xp-title{border-radius:6px 6px 0 0;
+    background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,.14) 46%,rgba(0,0,0,.05) 54%,rgba(255,255,255,.22)),rgba(90,137,198,0.30);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.85);}
+  body.theme-win7 .xp-cap{color:#0b1a2e;font-family:"Segoe UI",Tahoma,sans-serif;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 3px #fff;}
+  body.theme-win7 .body{background:#f0f0f0;}
+  body.theme-win7 .xp-close{background:linear-gradient(180deg,#e7a99e,#d76b58 45%,#d54f36 55%,#c23b22);border:1px solid rgba(0,0,0,.3);}
+</style>
+<style>
+/* Live title-bar button feedback (native DragOverlayView → window.setBtnState). */
+.xp-close.is-hover,.mf-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
+.xp-close.is-press,.mf-close.is-press,.closebox.is-press{filter:brightness(.82);}
+.mx-close.is-press{box-shadow:inset 0 0 3px 1px rgba(0,0,0,.45),inset 0 -4px 5px rgba(0,0,0,.32);}
+.w98-btn.is-hover{filter:brightness(1.06);}
+.w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
+</style>
+</head>
+<body>
+  <div id="win">
+    <!-- BeOS tab (default) -->
+    <div class="tab" id="tab"><span class="closebox" id="bxclose" title="Close"></span><b>Calculator</b></div>
+    <!-- Mac OS 9 -->
+    <div class="m9-title" id="m9title"><span class="m9-close" id="m9close"></span><div class="m9-plaque">Calculator</div></div>
+    <!-- Windows XP -->
+    <div class="xp-title" id="xptitle"><span class="xp-cap">Calculator</span><span class="xp-close" id="xpclose"></span></div>
+    <!-- Maiks Favourite -->
+    <div class="mf-title" id="mftitle"><span class="mf-close" id="mfclose"></span><span class="mf-cap">Calculator</span></div>
+    <!-- Mac OS X Aqua -->
+    <div class="mx-title" id="mxtitle">
+      <span class="mx-lights"><span class="mx-gel mx-close" id="mxclose" title="Close"><span class="mx-glyph">&times;</span></span><span class="mx-gel mx-min"><span class="mx-glyph">&minus;</span></span><span class="mx-gel mx-zoom"><span class="mx-glyph">+</span></span></span>
+      <span class="mx-cap">Calculator</span>
+    </div>
+    <!-- Windows 98 -->
+    <div class="w98-title" id="w98title"><span class="w98-cap">Calculator</span><span class="w98-btn w98-close" id="w98close">×</span></div>
+    <div class="w98-menubar" id="w98menu"><span><u>E</u>dit</span><span><u>V</u>iew</span><span><u>H</u>elp</span></div>
+    <div class="body">
+      <div class="disp" id="disp">0</div>
+      <div class="grid">
+        <button class="k clr wide" data-k="back">Backspace</button>
+        <button class="k clr wide" data-k="ce">CE</button>
+        <button class="k clr wide" data-k="c">C</button>
+
+        <button class="k mem" data-k="mc">MC</button>
+        <button class="k dig" data-k="7">7</button>
+        <button class="k dig" data-k="8">8</button>
+        <button class="k dig" data-k="9">9</button>
+        <button class="k op" data-k="/">/</button>
+        <button class="k fn" data-k="sqrt">sqrt</button>
+
+        <button class="k mem" data-k="mr">MR</button>
+        <button class="k dig" data-k="4">4</button>
+        <button class="k dig" data-k="5">5</button>
+        <button class="k dig" data-k="6">6</button>
+        <button class="k op" data-k="*">*</button>
+        <button class="k fn" data-k="pct">%</button>
+
+        <button class="k mem" data-k="ms">MS</button>
+        <button class="k dig" data-k="1">1</button>
+        <button class="k dig" data-k="2">2</button>
+        <button class="k dig" data-k="3">3</button>
+        <button class="k op" data-k="-">-</button>
+        <button class="k fn" data-k="inv">1/x</button>
+
+        <button class="k mem" data-k="mp">M+</button>
+        <button class="k dig" data-k="0">0</button>
+        <button class="k fn" data-k="neg">+/-</button>
+        <button class="k dig" data-k=".">.</button>
+        <button class="k op" data-k="+">+</button>
+        <button class="k op" data-k="eq">=</button>
+      </div>
+    </div>
+  </div>
+<script>
+  const disp = document.getElementById('disp');
+  let acc = null, op = null, cur = '0', fresh = true, mem = 0;
+
+  function show(){ let s = cur; if (s.length > 16) s = String(Number(s)); disp.textContent = s; }
+  function num(){ return parseFloat(cur) || 0; }
+  function setNum(n){ if (!isFinite(n)) { cur = 'Error'; fresh = true; return; }
+    cur = String(Math.round(n * 1e12) / 1e12); fresh = true; }
+
+  function digit(d){ if (cur === 'Error') clearAll();
+    if (fresh) { cur = (d === '.') ? '0.' : d; fresh = false; }
+    else if (d === '.') { if (!cur.includes('.')) cur += '.'; }
+    else { cur = (cur === '0') ? d : cur + d; } show(); }
+
+  function apply(a, o, b){ switch(o){ case '+':return a+b; case '-':return a-b;
+    case '*':return a*b; case '/':return b===0?NaN:a/b; } return b; }
+
+  function operator(o){ if (cur === 'Error') return;
+    if (op !== null && !fresh) { acc = apply(acc, op, num()); setNum(acc); }
+    else { acc = num(); }
+    op = o; fresh = true; show(); }
+
+  function equals(){ if (op === null || cur === 'Error') return;
+    acc = apply(acc, op, num()); setNum(acc); op = null; show(); }
+
+  function clearAll(){ acc = null; op = null; cur = '0'; fresh = true; show(); }
+  function clearEntry(){ cur = '0'; fresh = true; show(); }
+  function back(){ if (fresh || cur === 'Error') return;
+    cur = cur.length > 1 ? cur.slice(0, -1) : '0'; if (cur === '-') cur = '0'; show(); }
+
+  function key(k){
+    if (/^[0-9.]$/.test(k)) return digit(k);
+    switch(k){
+      case '+': case '-': case '*': case '/': return operator(k);
+      case 'eq': return equals();
+      case 'c': return clearAll();
+      case 'ce': return clearEntry();
+      case 'back': return back();
+      case 'neg': if (cur !== '0' && cur !== 'Error') { cur = cur.startsWith('-') ? cur.slice(1) : '-' + cur; show(); } return;
+      case 'sqrt': setNum(Math.sqrt(num())); show(); return;
+      case 'inv': setNum(num()===0?NaN:1/num()); show(); return;
+      case 'pct': setNum(acc!==null ? acc*num()/100 : 0); show(); return;
+      case 'mc': mem = 0; return;
+      case 'mr': setNum(mem); show(); return;
+      case 'ms': mem = num(); return;
+      case 'mp': mem += num(); return;
+    }
+  }
+
+  document.querySelectorAll('.k').forEach(b=>{
+    b.addEventListener('click', ev=>{ ev.stopPropagation(); key(b.dataset.k); });
+  });
+  // Physical keyboard
+  window.addEventListener('keydown', ev=>{
+    const m = {'Enter':'eq','=':'eq','Escape':'c','Backspace':'back','%':'pct'};
+    if (/^[0-9.]$/.test(ev.key)) { digit(ev.key); ev.preventDefault(); return; }
+    if ('+-*/'.includes(ev.key)) { operator(ev.key); ev.preventDefault(); return; }
+    if (m[ev.key]) { key(m[ev.key]); ev.preventDefault(); }
+  });
+  show();
+
+  window.setTheme=function(k){ theme=k||'beos'; document.body.className='theme-'+theme+(k==='win7'?' theme-winxp':''); };
+  window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
+
+  function postClose(){ if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.calculator) webkit.messageHandlers.calculator.postMessage('close'); }
+  ['bxclose','m9close','xpclose','mfclose','mxclose','w98close'].forEach(id=>{ const e=document.getElementById(id); if(e) e.addEventListener('click',ev=>{ev.stopPropagation();postClose();}); });
+
+  window.regions=function(){
+    const cl=document.body.classList;
+    const R=id=>{const e=document.getElementById(id);if(!e)return[0,0,0,0];const b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
+    if(cl.contains('theme-win98'))    return [...R('w98title'),...R('w98close')];
+    if(cl.contains('theme-macosx'))   return [...R('mxtitle'),...R('mxclose')];
+    if(cl.contains('theme-maiksfav')) return [...R('mftitle'),...R('mfclose')];
+    if(cl.contains('theme-winxp'))    return [...R('xptitle'),...R('xpclose')];
+    if(cl.contains('theme-macos9'))   return [...R('m9title'),...R('m9close')];
+    return [...R('tab'),...R('bxclose')];
+  };
+  window.widgetSize=function(){ const w=document.getElementById('win'); return [w.offsetWidth, w.offsetHeight]; };
+  let theme='beos';
+</script>
+<script>
+window.setBtnState = function(slot, state){
+  const cl = document.body.classList;
+  let ids;
+  if (cl.contains('theme-win98'))         ids = {close:'w98close'};
+  else if (cl.contains('theme-macosx'))   ids = {close:'mxclose'};
+  else if (cl.contains('theme-maiksfav')) ids = {close:'mfclose'};
+  else if (cl.contains('theme-winxp'))    ids = {close:'xpclose'};
+  else if (cl.contains('theme-macos9'))   ids = {close:'m9close'};
+  else ids = {close:'closebox'};
+  const el = ids[slot] && document.getElementById(ids[slot]);
+  if (!el) return;
+  el.classList.remove('is-hover','is-press');
+  if (state === 'hover') el.classList.add('is-hover');
+  else if (state === 'press') el.classList.add('is-press');
+};
+</script>
+</body>
+</html>
