@@ -60,6 +60,9 @@ final class DockController {
         ProgramManagerController.shared.update()
         SGIDesktopController.shared.update()
         BeOSDeskbarController.shared.update()
+        NextMenuController.shared.update()
+        NextDockController.shared.update()
+        NextRunningAppsController.shared.update()
         WindowBorderController.shared.update()
         RainbowAppleController.shared.update()
         if AppSettings.shared.hideMenuBar {
@@ -132,6 +135,9 @@ final class DockController {
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
         BeOSDeskbarController.shared.hide()
+        NextMenuController.shared.hide()
+        NextDockController.shared.hide()
+        NextRunningAppsController.shared.hide()
         WindowBorderController.shared.update()   // dock off → borders off (gated on dockEnabled)
         RainbowAppleController.shared.hide()
 
@@ -242,6 +248,9 @@ final class DockController {
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
             BeOSDeskbarController.shared.update()
+            NextMenuController.shared.update()
+            NextDockController.shared.update()
+            NextRunningAppsController.shared.update()
             // These themes replace the dock entirely (Win 3.1 Program Manager, BeOS Deskbar,
             // SGI desktop) — hide the system Dock too, otherwise every running app + minimized
             // window stays piled at the bottom of the screen.
@@ -254,6 +263,9 @@ final class DockController {
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
         BeOSDeskbarController.shared.hide()
+        NextMenuController.shared.hide()
+        NextDockController.shared.hide()
+        NextRunningAppsController.shared.hide()
         DesktopIconsController.shared.update()
 
         createWindow()

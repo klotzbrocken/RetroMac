@@ -3,6 +3,28 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 2.4
+
+- **NeXTSTEP theme**: the full NeXT desktop, rebuilt natively. A vertical Workspace menu top-left,
+  a right-edge dock of grey tiles with a live clock/calendar and the Recycler, black title bars with
+  the miniaturize box left and close box right, the four-grey chiseled bevel throughout, and the
+  MegaPixel grey-violet wallpaper. Running apps float free on the workspace as draggable icons that
+  snap to a grid, and the NeXT cursor replaces the pointer.
+- **File Viewer**: the NeXT Workspace file browser, with the shelf of category drawers, a
+  current-location path strip, the icon grid of your installed apps and TV streams, and the
+  authentic left-side scroller (arrows grouped at the bottom, dimpled knob). It opens on its own
+  when the theme starts, as it always did on NeXTSTEP.
+- **Change any dock or app icon**: right-click a tile and pick from 120 authentic NeXT "Fleet"
+  icons or your own image. A "fill the whole tile" option decides whether the pick covers the
+  cell edge-to-edge or sits inset on the silver tile.
+- **TV in themed windows**: the Classic Themed Window for TV streams now wears the NeXT window
+  chrome too (it already matched BeOS, Mac OS 9, Windows XP and System 6).
+- **Stable theme identity (under the hood)**: themes now carry a stable id, so renaming or
+  duplicating a theme keeps its wallpaper, dock position, preset and other per-theme settings, and
+  two themes can share a name without clashing. Existing settings migrate automatically on first run.
+- **Fixes**: bringing a running app back to the front from its NeXT icon now works reliably; the
+  System Tweaks boolean restore and the wallpaper restore both round-trip correctly.
+
 ## 2.3
 
 - **Windows 7 Aero theme**: the Superbar taskbar with the Start orb, translucent glass window

@@ -127,8 +127,23 @@ enum ChromeStyleFactory {
         case "macos9": return macClassic()   // Mac OS 9 Platinum
         case "macos6": return system6()      // authentic 1-bit System 6 (System6Chrome)
         case "win98":  return win98()
+        case "nextstep": return nextstep()
         default:       return nil
         }
+    }
+
+    // NeXTSTEP: black key-window title bar, white CENTERED Helvetica-Bold title, square corners.
+    // Buttons sit on BOTH sides (miniaturize left, close right), which the generic `buttonSide`
+    // layout can't express — `WebAppChromeView.drawNextstep` places them explicitly. Metrics only.
+    static func nextstep() -> ChromeStyle {
+        return ChromeStyle(
+            titleHeight: 22, windowBorder: 2,
+            buttonSize: NSSize(width: 16, height: 16), buttonSpacing: 0, buttonInset: 3,
+            cornerRadius: 0, buttonSide: .right,
+            titleFont: NeXTChrome.titleFont(13), titleColor: .white, titleShadow: false,
+            titleAlignment: .center,
+            windowFill: NeXTChrome.face, captionGradient: nil, captionFill: NeXTChrome.black,
+            buttons: [ ChromeButton(.close, interactive: true, render: .native) ])
     }
 
     // Windows 7 Aero glass. Values derived from 7.css (MIT, © Khang Nguyen Duy): the title bar

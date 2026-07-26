@@ -11,7 +11,7 @@ struct WhatsNewView: View {
                     .padding(.top, 24)
                 Text("What's New in RetroMac \(currentAppVersion)")
                     .font(.title2.bold())
-                Text("Windows 7 Aero, Windows 98 Plus!, and a sharper System 9")
+                Text("NeXTSTEP joins the lineup")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,38 +21,38 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "macwindow",
-                        color: .blue,
-                        title: "Windows 7 Aero",
-                        description: "The Superbar taskbar with the Start orb, translucent glass title bars and the Aero wallpaper. Windows 7 joins the lineup."
+                        icon: "cube",
+                        color: .purple,
+                        title: "NeXTSTEP theme",
+                        description: "The full NeXT desktop, rebuilt natively: a vertical Workspace menu, a right-edge dock with a live clock/calendar and the Recycler, black title bars with the four-grey chiseled bevel, the MegaPixel wallpaper, and the NeXT cursor. Running apps float free as draggable icons."
                     )
 
                     featureRow(
-                        icon: "paintpalette",
-                        color: .orange,
-                        title: "Windows 98 Plus! themes",
-                        description: "Pick a scheme under Settings, Dock, Scheme: Dangerous Creatures, Leonardo da Vinci or More Windows. Each recolours the whole Windows 98 look and swaps the wallpaper, icons and cursors."
-                    )
-
-                    featureRow(
-                        icon: "square.grid.3x3",
+                        icon: "macwindow.on.rectangle",
                         color: .gray,
-                        title: "Mac OS System 9",
-                        description: "Pixel-accurate Platinum title bars, proxy icons, a Finder info bar and WindowShade collapse. The Control Strip now docks to the left or right edge, just like the original."
+                        title: "The File Viewer",
+                        description: "The NeXT Workspace file browser is back: the shelf of drawers, a current-location path strip, a grid of your apps and TV streams, and the authentic left-side scroller. It opens on its own when the theme starts, just like it always did."
                     )
 
                     featureRow(
-                        icon: "shield.lefthalf.filled",
-                        color: .red,
-                        title: "Warcraft in a real window",
-                        description: "Warcraft I and II now run inside a themed window with a matching title bar, so the game sits on your retro desktop with the dock beside it (hidden only in fullscreen)."
+                        icon: "square.grid.2x2",
+                        color: .orange,
+                        title: "Change any dock icon",
+                        description: "Right-click a dock or app tile and pick from 120 authentic NeXT \u{201C}Fleet\u{201D} icons or your own image. A \u{201C}fill the whole tile\u{201D} option chooses edge-to-edge or inset on the silver tile."
                     )
 
                     featureRow(
-                        icon: "wrench.and.screwdriver",
-                        color: .indigo,
-                        title: "Setup and polish",
-                        description: "A new Setup Assistant Games step points RetroMac at your Doom, Quake, Duke Nukem and Warcraft files. Plus a Calculator widget, more classic wallpapers and desktop icons, tighter window borders and hardened theme imports."
+                        icon: "tv",
+                        color: .blue,
+                        title: "TV in themed windows",
+                        description: "The Classic Themed Window for TV streams now wears the NeXT window chrome too, alongside BeOS, Mac OS 9, Windows XP and System 6."
+                    )
+
+                    featureRow(
+                        icon: "tag",
+                        color: .green,
+                        title: "Stable theme identity",
+                        description: "Renaming or duplicating a theme now keeps its wallpaper, dock position and other settings, and two themes can share a name without clashing. Your existing settings migrate automatically."
                     )
                 }
                 .padding(.horizontal, 24)

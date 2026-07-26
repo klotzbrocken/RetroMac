@@ -146,6 +146,7 @@ final class ThemeManager {
             || n.contains("windows xp") || n.contains("windows 98")
             || (n.contains("beos") && n.contains("classic"))
             || n.contains("maiks favourite")
+            || n.contains("nextstep")
     }
 
     /// User-facing theme name: crowned themes get a 👑 prefix; the Mac OS family also

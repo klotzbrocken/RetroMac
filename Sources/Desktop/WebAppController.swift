@@ -363,7 +363,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
 final class WebAppChromeView: NSView {
 
-    enum Style { case win98, winxp, win7, macClassic, system6, plain }
+    enum Style { case win98, winxp, win7, macClassic, system6, nextstep, plain }
 
     var onClose: (() -> Void)?
     var onBack: (() -> Void)?
@@ -392,6 +392,7 @@ final class WebAppChromeView: NSView {
         case "win7":   style = .win7;       chromeStyle = ChromeStyleFactory.win7()
         case "macos9": style = .macClassic; chromeStyle = ChromeStyleFactory.macClassic()
         case "macos6": style = .system6;    chromeStyle = ChromeStyleFactory.system6()
+        case "nextstep": style = .nextstep; chromeStyle = ChromeStyleFactory.nextstep()
         default:       style = .plain;      chromeStyle = nil
         }
         super.init(frame: frame)
@@ -404,7 +405,7 @@ final class WebAppChromeView: NSView {
     override var isFlipped: Bool { true }
 
     private var titleH: CGFloat {
-        switch style { case .winxp, .win7: return 30; case .system6: return 20; default: return 22 }
+        switch style { case .winxp, .win7: return 30; case .system6: return 20; case .nextstep: return 22; default: return 22 }
     }
     private var pad: CGFloat { 4 }
 
@@ -447,8 +448,32 @@ final class WebAppChromeView: NSView {
         case .win7:       drawWin7(ctx, b)
         case .macClassic: drawMacClassic(ctx, b)
         case .system6:    drawSystem6(ctx, b)
+        case .nextstep:   drawNextstep(ctx, b)
         case .plain:      drawPlain(ctx, b)
         }
+    }
+
+    // ---- NeXTSTEP: chiseled grey window, black title bar, miniaturize LEFT + close RIGHT ----
+    private func drawNextstep(_ ctx: CGContext, _ b: NSRect) {
+        // Body (grey face) + the 2px chiseled window frame (white TL / dark BR).
+        NeXTChrome.face.setFill(); ctx.fill(b)
+        NeXTChrome.bevel(b, raised: true, width: 2, flipped: true, in: ctx)
+
+        // Title bar across the top (flipped: y=0 is the top). A desktop widget is always "key".
+        let bar = NSRect(x: 2, y: 2, width: b.width - 4, height: titleH)
+        NeXTChrome.titleBar(bar, title: title, state: .key, in: ctx)
+
+        // Buttons: miniaturize top-LEFT (decorative on a web/widget window), close top-RIGHT.
+        let s: CGFloat = 16
+        let by = bar.midY - s/2
+        let miniR  = NSRect(x: bar.minX + 3, y: by, width: s, height: s)
+        let closeR = NSRect(x: bar.maxX - 3 - s, y: by, width: s, height: s)
+        tracker.reset()
+        tracker.add(.minimize, miniR.insetBy(dx: -3, dy: -3), interactive: false)
+        tracker.add(.close, closeR.insetBy(dx: -3, dy: -3), interactive: true)
+        NeXTChrome.button(miniR, kind: .miniaturize, flipped: true, in: ctx)
+        NeXTChrome.button(closeR, kind: .close, pressed: tracker.state(for: .close) == .pressed, flipped: true, in: ctx)
+        closeHit = .zero   // close handled via `tracker`
     }
 
     // ---- Mac System 6 (authentic 1-bit B/W) — shared with the TV window via System6Chrome ----
