@@ -15,6 +15,31 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.4</title>
+      <pubDate>Sun, 26 Jul 2026 09:43:45 +0000</pubDate>
+      <sparkle:version>2.4</sparkle:version>
+      <sparkle:shortVersionString>2.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.4 &mdash; NeXTSTEP joins the lineup</h2>
+        <ul>
+          <li><b>NeXTSTEP theme:</b> the full NeXT desktop, rebuilt natively &mdash; a vertical Workspace menu, a right-edge dock with a live clock/calendar and the Recycler, black title bars with the four-grey chiseled bevel, the MegaPixel wallpaper, and the NeXT cursor. Running apps float free on the workspace as draggable icons.</li>
+          <li><b>File Viewer:</b> the NeXT Workspace file browser is back &mdash; shelf drawers, a current-location path strip, a grid of your apps and TV streams, and the authentic left-side scroller. It opens on its own when the theme starts.</li>
+          <li><b>Change any dock icon:</b> right-click a dock or app tile and pick from 120 authentic NeXT &ldquo;Fleet&rdquo; icons or your own image, with a &ldquo;fill the whole tile&rdquo; option.</li>
+          <li><b>TV in themed windows:</b> the Classic Themed Window for TV streams now wears the NeXT window chrome too, alongside BeOS, Mac OS 9, Windows XP and System 6.</li>
+          <li><b>Stable theme identity:</b> renaming or duplicating a theme keeps its wallpaper, dock position and other settings; your existing settings migrate automatically.</li>
+          <li><b>Fixes:</b> bringing a running app back to the front from its NeXT icon now works reliably, and the System Tweaks and wallpaper restores round-trip correctly.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.4/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="cBPdeDNCkIC+ODU2bazIYl+u6WaXnQkvkxdJMRNelk7mufsEtdWtl5T+Rfn6fHdKvTih2E4htmUhlHMWkkiBDw=="
+        length="66842931"
+      />
+    </item>
+
+    <item>
       <title>Version 2.2</title>
       <pubDate>Sat, 18 Jul 2026 12:00:00 +0000</pubDate>
       <sparkle:version>2.2</sparkle:version>
