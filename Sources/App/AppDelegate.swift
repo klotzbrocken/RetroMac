@@ -154,6 +154,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
             BeOSDeskbarController.shared.update()
+            NextMenuController.shared.update()
+            NextDockController.shared.update()
+            NextRunningAppsController.shared.update()
             WindowBorderController.shared.update()   // recolour theme window borders on theme change
             // The active theme drives the menu-bar Apple logo (Mac OS 9 → rainbow, Mac OS X →
             // aqua-classic, Maiks Favourite II → hell); every other theme turns it off.
@@ -214,6 +217,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // dockEnabled is reset so the menu/settings consistently reflect the inactive state.
         settings.dockEnabled = false
         isActive = false
+
+        // Test/QA hook: with RETROMAC_AUTOACTIVATE_THEME set, immediately turn on the remembered
+        // theme on launch (mirrors selecting it from the menu). Never set in production, so the
+        // clean-start behaviour above is unchanged for real users.
+        if ProcessInfo.processInfo.environment["RETROMAC_AUTOACTIVATE_THEME"] != nil {
+            DispatchQueue.main.async {
+                ThemeManager.shared.setActiveTheme(name: settings.dockTheme)
+                if !settings.dockEnabled { settings.dockEnabled = true; DockController.shared.start() }
+                if ProcessInfo.processInfo.environment["RETROMAC_OPEN_APPS"] != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        CPUMonitorController.shared.show()
+                        ClockWidgetController.shared.show()
+                        NotepadController.shared.show()
+                        NextAppsWindowController.shared.show()
+                    }
+                }
+            }
+        }
 
         // Rainbow Apple is theme-independent — show it on launch if the user enabled it.
         RainbowAppleController.shared.update()
@@ -2485,6 +2506,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ProgramManagerController.shared.update()
         SGIDesktopController.shared.update()
         BeOSDeskbarController.shared.update()
+        NextMenuController.shared.update()
+        NextDockController.shared.update()
+        NextRunningAppsController.shared.update()
         WindowBorderController.shared.update()
         RainbowAppleController.shared.update()
         applyThemeWidgets(for: AppSettings.shared.dockTheme)
@@ -2621,6 +2645,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DesktopIconsController.shared.hide()
             ProgramManagerController.shared.hide()
             SGIDesktopController.shared.hide()
+            NextMenuController.shared.hide()
+            NextDockController.shared.hide()
+            NextRunningAppsController.shared.hide()
             ThemeManager.shared.clearActiveTheme()
             ThemeManager.shared.restoreWallpapers()
         }
@@ -2642,6 +2669,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DesktopIconsController.shared.hide()
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
+        NextMenuController.shared.hide()
+        NextDockController.shared.hide()
+        NextRunningAppsController.shared.hide()
         ThemeManager.shared.clearActiveTheme()
         ThemeManager.shared.restoreWallpapers()
         // Also stop the CRT overlay when disabling theme

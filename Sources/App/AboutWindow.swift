@@ -341,6 +341,13 @@ struct AboutTab: View {
                     Text("SGI IRIX theme application icons.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    Link("trunkmaster/nextspace on GitHub",
+                         destination: URL(string: "https://github.com/trunkmaster/nextspace")!)
+                        .font(.caption)
+                    Text("NeXTSTEP theme icons (home, folders, recycler, tile, printer) from the NEXTSPACE theme, licensed GPL-3.0. The NeXT logo is not used.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Web Apps & Desktop Extras") {

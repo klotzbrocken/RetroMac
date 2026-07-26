@@ -124,6 +124,9 @@ final class TVBrowserWindow: NSObject {
         applyWinXPChrome(win, title: bookmark.name)
         // Mac System 6 theme: wrap the content in a borderless 1-bit B/W window.
         applySystem6Chrome(win, title: bookmark.name)
+        // NeXTSTEP theme: wrap the content in the borderless NeXT window (black title bar,
+        // miniaturize-left / close-right, chiseled grey frame).
+        applyNextChrome(win, title: bookmark.name)
 
         // Double-click the video toggles full-screen (keeps the CRT shader + float level).
         if let cv = win.contentView {
@@ -296,6 +299,23 @@ final class TVBrowserWindow: NSObject {
         chrome.onClose = { [weak self] in self?.window?.close() }
         chrome.onZoom = { [weak self] in self?.toggleTVFullscreen() }
         chrome.addSubview(content)
+        win.contentView = chrome
+    }
+
+    /// NeXTSTEP theme: borderless NeXT window — black title bar (miniaturize box left, close-X
+    /// right), chiseled grey frame; the TV picture sits inside the frame. Reuses the same
+    /// `NextWindowFrameView` chrome as the File Viewer and widgets, so it stays pixel-consistent.
+    private func applyNextChrome(_ win: NSWindow, title: String) {
+        guard RetroFrameTheme.key() == "nextstep", let content = win.contentView else { return }
+        let size = win.frame.size
+        win.styleMask = [.borderless, .resizable]
+        win.isOpaque = false
+        win.backgroundColor = .clear
+        win.hasShadow = true
+        let chrome = NextWindowFrameView(title: title, onClose: { [weak self] in self?.window?.close() })
+        chrome.frame = NSRect(origin: .zero, size: size)
+        chrome.autoresizingMask = [.width, .height]
+        chrome.embed(content)   // positions the content in the framed area, below the title bar
         win.contentView = chrome
     }
 

@@ -305,8 +305,12 @@ extension DockThemeConfig {
     /// BeOS Classic Deskbar — a vertical panel (Be menu + status + app list) replacing the dock.
     var isDeskbar: Bool { dock.dockStyle == "deskbar" }
     /// When true, no dock/taskbar bar is shown (e.g. Windows 3.1 Program Manager desktop,
-    /// or the BeOS Deskbar which provides its own panel instead).
-    var hidesDock: Bool { dock.dockStyle == "none" || dock.dockStyle == "deskbar" }
+    /// the BeOS Deskbar, or NeXTSTEP — all provide their own panel instead of RetroMac's DockView).
+    var hidesDock: Bool { dock.dockStyle == "none" || dock.dockStyle == "deskbar" || isNextStep }
+
+    /// NeXTSTEP theme: shows the always-on-screen vertical Workspace menu (top-left). Gated on the
+    /// declared chrome so only the NeXT theme brings up that panel.
+    var isNextStep: Bool { chrome?.style == "nextstep" }
 }
 
 extension NSColor {

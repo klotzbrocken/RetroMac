@@ -355,6 +355,13 @@ final class WindowBorderController {
         case "win31":
             // Windows 3.1 had a flat (pre-3D) window frame with a crisp dark outline.
             return .solid(color: NSColor.fromHex("#404040"), width: 2, topRadius: R, bottomRadius: R)
+        case "nextstep":
+            // NeXTSTEP's signature chiseled frame: a crisp 2px bevel, white top-left / black
+            // bottom-right, square-cornered. Same primitive as Win98's raised ring, just thinner
+            // and hard-edged (radius 0) with the NeXT four-grey ramp (#FFF / #AAA / #555 / #000).
+            return .bevel(hiOuter: NSColor.fromHex("#FFFFFF"), hiInner: NSColor.fromHex("#AAAAAA"),
+                          loInner: NSColor.fromHex("#555555"), loOuter: NSColor.fromHex("#000000"),
+                          width: 2, radius: 0)
         case "winxp":
             return .solid(color: NSColor.fromHex("#2A63D8"), width: 4, topRadius: R, bottomRadius: R)
         case "win7":

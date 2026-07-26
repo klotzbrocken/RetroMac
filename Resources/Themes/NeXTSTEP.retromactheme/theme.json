@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.next.nextstep",
+  "family": {
+    "id": "next",
+    "name": "NeXT",
+    "order": 8
+  },
+  "release": {
+    "label": "NeXTSTEP 3.3",
+    "year": 1995
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "nextstep"
+  },
+  "name": "NeXTSTEP",
+  "version": "1.0",
+  "author": "RetroMac",
+  "wallpaper": "wallpaper.png",
+  "wallpaperTiled": true,
+  "dock": {
+    "height": 64,
+    "iconSize": 48,
+    "padding": 8,
+    "spacing": 0,
+    "cornerRadius": 0,
+    "backgroundColor": "#505170FF",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#2A2A40FF",
+    "borderWidth": 1,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#7C7C99FF",
+    "bevelBottomColor": "#33334DFF",
+    "bevelWidth": 2,
+    "orientation": "vertical",
+    "position": "right",
+    "fullWidth": false,
+    "startButton": false,
+    "showClock": false,
+    "magnification": false,
+    "showTrash": true,
+    "showGrip": false,
+    "alignment": "center",
+    "edgeOffset": 0
+  },
+  "icon": {
+    "renderStyle": "smooth",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.1
+  },
+  "indicator": {
+    "style": "dot",
+    "color": "#FFFFFF",
+    "size": 4,
+    "offset": 3
+  },
+  "desktopIcons": [],
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "lcd-retro-lite",
+  "iconMappings": {
+    "com.apple.finder": "home.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.Notes": "docs.png",
+    "com.apple.Music": "music.png",
+    "com.apple.TextEdit": "docs.png",
+    "com.apple.Preview": "photos.png",
+    "__trash__": "recycler.png",
+    "__trash_full__": "recycler_full.png"
+  },
+  "appearance": "dark",
+  "accentColor": "graphite"
+}

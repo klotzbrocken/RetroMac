@@ -363,6 +363,30 @@
   body.theme-macos9.rm-blur .m9-close,body.theme-macos9.rm-blur .m9-collapse,body.theme-macos9.rm-blur .m9-zoom{border-color:#525252!important;box-shadow:none!important;}
   body.theme-macos9.rm-blur .m9-zoom::before,body.theme-macos9.rm-blur .m9-zoom::after,body.theme-macos9.rm-blur .m9-collapse::before{border-color:#525252!important;background:#525252!important;}
   body.theme-macos9.rm-blur .m9-plaque{opacity:.5;}
+
+  /* ===== NeXTSTEP (theme-nextstep) — black title bar, close on the RIGHT, chiseled grey frame ===== */
+  body.theme-nextstep{background:transparent;}
+  body.theme-nextstep .window{background:#8a8a98;border:none;border-radius:0;overflow:hidden;
+    box-shadow:inset 2px 2px 0 #fff, inset -2px -2px 0 #3d3e45, 0 0 0 1px #000;}
+  body.theme-nextstep .m9-title,body.theme-nextstep .xp-title,body.theme-nextstep .mf-title,
+  body.theme-nextstep .mx-title,body.theme-nextstep .w98-title,body.theme-nextstep .marker{display:none;}
+  body.theme-nextstep .tab{position:relative;display:block;width:100%;box-sizing:border-box;
+    height:22px;background:#000;border:none;border-radius:0;padding:0;margin:0;overflow:hidden;}
+  body.theme-nextstep .tab b{position:absolute;left:24px;right:24px;top:0;line-height:22px;text-align:center;
+    color:#fff;font:700 13px Helvetica,Arial,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* miniaturize square, top-left (decorative) */
+  body.theme-nextstep .tab::before{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;
+    background:#aaaab7;box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 0 #555;}
+  body.theme-nextstep .tab::after{content:"";position:absolute;left:8px;top:8px;width:6px;height:6px;border:1px solid #000;}
+  /* close box, top-right, with an X (keeps the functional #closebox / #bxclose element) */
+  body.theme-nextstep .closebox{position:absolute;right:3px;top:3px;left:auto;width:16px;height:16px;
+    background:#aaaab7;border:none;border-radius:0;box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 0 #555;}
+  body.theme-nextstep .closebox::before,body.theme-nextstep .closebox::after{content:"";position:absolute;
+    left:2px;top:7px;width:12px;height:2px;background:#000;}
+  body.theme-nextstep .closebox::before{transform:rotate(45deg);}
+  body.theme-nextstep .closebox::after{transform:rotate(-45deg);}
+  body.theme-nextstep .body{background:#8a8a98;border:none;box-shadow:none;margin:2px;}
+
 </style>
 <style>
 /* Live title-bar button feedback (native DragOverlayView → window.setBtnState); the overlay
