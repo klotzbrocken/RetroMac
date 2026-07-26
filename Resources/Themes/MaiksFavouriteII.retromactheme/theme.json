@@ -1,4 +1,18 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.personal.maiks-favourite-2",
+  "family": {
+    "id": "personal",
+    "name": "Personal",
+    "order": 7
+  },
+  "release": {
+    "label": "Maiks Favourite II"
+  },
+  "experienceLevel": "partial",
+  "chrome": {
+    "style": "maiksfav"
+  },
   "name": "Maiks Favourite II",
   "version": "1.0",
   "author": "Maik",

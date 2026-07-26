@@ -4,6 +4,50 @@ struct DockThemeConfig: Codable {
     var name: String
     var version: String = "1.0"
     var author: String = "RetroMac"
+
+    // ── Manifest 2.0 identity (all optional — a 1.x theme.json still decodes unchanged) ──
+    //
+    // `name` used to be the theme's ONLY identity: display name, stored selection, and the key
+    // for every per-theme setting. That made renaming lossy and let two themes collide. These
+    // fields separate a stable, never-localised `id` from the human-facing `name`.
+    //
+    // NOTE: `ThemeBundle.save(config:)` re-encodes only the fields modelled here, so anything a
+    // theme author puts in theme.json that is NOT in this struct is dropped on save. Every
+    // manifest field we intend to preserve must therefore be declared.
+    var schemaVersion: Int? = nil
+    /// Permanent, lowercase, non-localised identifier (e.g. "com.retromac.microsoft.windows98").
+    /// Never derived from the folder name — the folder and the display name can disagree
+    /// (MacOSX-Aqua.retromactheme is called "Mountain Lion"). See `ThemeBundle.stableID`.
+    var id: String? = nil
+    var family: Family? = nil
+    var release: Release? = nil
+    /// How complete this theme's era illusion is: "full" | "partial" | "minimal".
+    var experienceLevel: String? = nil
+    /// Refuse/warn if the running RetroMac is older than this (e.g. "2.4").
+    var minimumRetroMacVersion: String? = nil
+    /// Declared window/widget chrome. `chrome.style` replaces the display-name heuristic in
+    /// `RetroFrameTheme.key()` — see that file.
+    var chrome: ChromeDecl? = nil
+
+    /// The OS family this theme belongs to, for grouping themes in the UI.
+    struct Family: Codable {
+        var id: String                // "windows", "apple", "be", …
+        var name: String? = nil       // "Microsoft Windows"
+        var order: Int? = nil         // sort position among families
+    }
+
+    /// The specific OS release this theme recreates.
+    struct Release: Codable {
+        var label: String? = nil      // "Windows 98"
+        var year: Int? = nil          // 1998
+    }
+
+    /// Declarative chrome selection. `style` is the key every chrome/border/widget renderer
+    /// already switches on ("win98", "winxp", "win7", "macos9", "macos6", "macosx", "win31",
+    /// "beos", "maiksfav", "default").
+    struct ChromeDecl: Codable {
+        var style: String? = nil
+    }
     var dock: DockStyle
     var icon: IconStyle
     var indicator: IndicatorStyle
@@ -24,12 +68,37 @@ struct DockThemeConfig: Codable {
     var splashScreen: String? = nil   // boot splash image shown briefly on theme activation
     var splashFullscreen: Bool? = nil // true = fill the whole screen (e.g. Win 98 boot)
     var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present
+    var splashWelcome: Bool? = nil    // true = draw the classic "Welcome to Macintosh" boot screen (System 6)
     var screensaver: String? = nil    // default screensaver id for this theme (pipes/flowerbox/flying-toasters/flurry/none)
     var systemTweaks: [SystemTweak]? = nil   // optional "Classic Finder" defaults writes (see SystemTweaksAdapter)
+    var chromeColors: ChromeColors? = nil    // per-scheme window-chrome palette (Win98 Plus! themes); nil = built-in defaults
 
     struct WallpaperOption: Codable {
         var name: String
         var file: String
+    }
+
+    /// A Windows-style appearance colour scheme (from a `.theme` `[Control Panel\Colors]` section):
+    /// recolours the title bar, window face, and 3D button bevels. All hex ("#RRGGBB"), all optional
+    /// so a partial scheme falls back to the built-in look. Fed to `ChromeStyle`, the dock, and the
+    /// widgets (as CSS variables) so one scheme recolours every Win98 surface consistently.
+    struct ChromeColors: Codable {
+        var activeTitle: String? = nil       // active title bar (gradient start / solid)
+        var activeTitleEnd: String? = nil    // gradient end (nil → solid activeTitle)
+        var titleText: String? = nil
+        var inactiveTitle: String? = nil
+        var inactiveTitleText: String? = nil
+        var face: String? = nil              // ButtonFace — the 3D grey (window/body/button fill)
+        var hilight: String? = nil           // ButtonHilight — lightest bevel edge
+        var light: String? = nil             // ButtonLight
+        var shadow: String? = nil            // ButtonShadow
+        var dkShadow: String? = nil          // ButtonDkShadow — darkest bevel edge
+        var window: String? = nil            // content background
+        var windowText: String? = nil
+        var menu: String? = nil
+        var menuText: String? = nil
+        var selection: String? = nil         // Hilight (selection background)
+        var selectionText: String? = nil
     }
 
     /// A single cosmetic `defaults write` that makes the real Finder/system look like this
@@ -159,6 +228,13 @@ struct DockThemeConfig: Codable {
 }
 
 extension DockThemeConfig {
+    /// THE key for every per-theme setting (preset, wallpaper, dock position, auto-hide, …).
+    /// `ThemeBundle` guarantees `id` is populated for every loaded theme — a legacy theme gets a
+    /// generated `legacy.*` id written into its manifest on first load — so this is the stable
+    /// identity, not the renameable display name. The `name` fallback only covers a config that
+    /// was built in memory rather than loaded through `ThemeBundle`.
+    var settingsKey: String { id ?? name }
+
     var parsedBackgroundColor: NSColor { NSColor.fromHex(dock.backgroundColor) }
     var parsedBorderColor: NSColor { NSColor.fromHex(dock.borderColor) }
     var parsedShadowColor: NSColor { NSColor.fromHex(dock.shadowColor) }
@@ -174,17 +250,17 @@ extension DockThemeConfig {
 
     /// The dock edge after applying any user override: "top"/"bottom"/"left"/"right".
     var effectiveDockPosition: String {
-        if let p = AppSettings.shared.themeDockPositionOverride[name],
+        if let p = AppSettings.shared.themeDockPositionOverride[settingsKey],
            ["top", "bottom", "left", "right"].contains(p) { return p }
         return dock.position ?? "bottom"
     }
 
     var isVertical: Bool {
         // A user position override on the left/right edges forces vertical layout.
-        if let p = AppSettings.shared.themeDockPositionOverride[name] {
+        if let p = AppSettings.shared.themeDockPositionOverride[settingsKey] {
             return p == "left" || p == "right"
         }
-        if let override = AppSettings.shared.themeOrientationOverrides[name] {
+        if let override = AppSettings.shared.themeOrientationOverrides[settingsKey] {
             return override == "vertical"
         }
         return dock.orientation == "vertical"
@@ -192,10 +268,10 @@ extension DockThemeConfig {
 
     /// Themes whose real-world dock/taskbar supported auto-hide.
     var supportsAutoHide: Bool {
-        ["Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "OS/2 Warp 4"].contains(name)
+        ["Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows 7", "OS/2 Warp 4"].contains(name)
     }
     var dockAutoHideEnabled: Bool {
-        supportsAutoHide && (AppSettings.shared.themeDockAutoHide[name] ?? false)
+        supportsAutoHide && (AppSettings.shared.themeDockAutoHide[settingsKey] ?? false)
     }
     var isFullWidth: Bool { dock.fullWidth == true }
     var hasStartButton: Bool { dock.startButton == true }
@@ -229,8 +305,12 @@ extension DockThemeConfig {
     /// BeOS Classic Deskbar — a vertical panel (Be menu + status + app list) replacing the dock.
     var isDeskbar: Bool { dock.dockStyle == "deskbar" }
     /// When true, no dock/taskbar bar is shown (e.g. Windows 3.1 Program Manager desktop,
-    /// or the BeOS Deskbar which provides its own panel instead).
-    var hidesDock: Bool { dock.dockStyle == "none" || dock.dockStyle == "deskbar" }
+    /// the BeOS Deskbar, or NeXTSTEP — all provide their own panel instead of RetroMac's DockView).
+    var hidesDock: Bool { dock.dockStyle == "none" || dock.dockStyle == "deskbar" || isNextStep }
+
+    /// NeXTSTEP theme: shows the always-on-screen vertical Workspace menu (top-left). Gated on the
+    /// declared chrome so only the NeXT theme brings up that panel.
+    var isNextStep: Bool { chrome?.style == "nextstep" }
 }
 
 extension NSColor {

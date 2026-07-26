@@ -47,16 +47,18 @@ final class ThemeManager {
         availableThemes = themes
         print("[Theme] Found \(themes.count) themes: \(themes.map { $0.name }.joined(separator: ", "))")
 
-        var activeID = selectTheme ?? AppSettings.shared.dockTheme
-        if activeID == "Mac OS 9.2" {
-            // Former standalone Platinum theme — merged into Classic as a dock variant.
-            activeID = "Mac OS 9.2 Classic"
-            AppSettings.shared.dockTheme = activeID
+        let selector = selectTheme ?? AppSettings.shared.dockTheme
+        if selector == "Mac OS 9.2" {
+            // Former standalone Platinum theme — merged into Classic as a dock variant. Only the
+            // side effect is applied here; the selector itself is remapped in `resolve`, and the
+            // stored value is rewritten once by the id migration. reload() must stay WRITE-FREE
+            // for dockTheme: its @Published sink calls reload() again, so writing here would make
+            // every launch re-enter the whole theme switch (splash + window rebuild) twice.
             AppSettings.shared.macos9UseDock = true
         }
-        activeTheme = themes.first(where: { $0.config.name == activeID })
-            ?? themes.first(where: { $0.config.name == "Maiks Favourite" })
-            ?? themes.first(where: { $0.config.name == "Mountain Lion" })
+        activeTheme = Self.resolve(selector, in: themes)
+            ?? Self.resolve("Maiks Favourite", in: themes)
+            ?? Self.resolve("Mountain Lion", in: themes)
             ?? themes.first
         // reload() recreates every ThemeBundle from disk, which drops runtime config
         // overrides — re-apply them here (the dockTheme sink reloads on EVERY switch).
@@ -64,6 +66,22 @@ final class ThemeManager {
         registerThemeFonts()
         print("[Theme] Active: \(activeTheme?.name ?? "nil")")
     }
+
+    /// Stored selectors from older releases that no longer match any theme's name. Kept in one
+    /// place so both `resolve` and the id migration understand them identically.
+    static let legacySelectorAliases: [String: String] = ["Mac OS 9.2": "Mac OS 9.2 Classic"]
+
+    /// Resolve a stored selection to a theme. Manifest 2.0 stores a stable `id`; anything saved
+    /// before that is a display name. Ids are matched FIRST so a theme cannot hijack another
+    /// theme's selection by taking a name that happens to equal an id.
+    static func resolve(_ selector: String, in themes: [ThemeBundle]) -> ThemeBundle? {
+        let s = legacySelectorAliases[selector] ?? selector
+        return themes.first(where: { $0.stableID == s })
+            ?? themes.first(where: { $0.config.name == s })
+    }
+
+    /// Resolve against the currently loaded themes.
+    func theme(for selector: String) -> ThemeBundle? { Self.resolve(selector, in: availableThemes) }
 
     private func loadThemes(from directory: URL, builtIn: Bool) -> [ThemeBundle] {
         let fm = FileManager.default
@@ -89,10 +107,15 @@ final class ThemeManager {
         print("[Theme] Active theme: none (disabled)")
     }
 
+    /// Select a theme by display name (what the pickers hand us) or by stable id — both are
+    /// resolved through `theme(for:)`. Whatever comes in, what gets STORED is the stable id, so a
+    /// later rename of the theme cannot orphan the selection or its per-theme settings.
     func setActiveTheme(name: String, applyWallpaper applyWP: Bool = true) {
-        AppSettings.shared.dockTheme = name
-        AppSettings.shared.loadIconScales(forTheme: name)   // each theme remembers its icon sizes
-        activeTheme = availableThemes.first(where: { $0.config.name == name })
+        let bundle = theme(for: name)
+        let key = bundle?.stableID ?? name
+        AppSettings.shared.dockTheme = key
+        AppSettings.shared.loadIconScales(forTheme: key)   // each theme remembers its icon sizes
+        activeTheme = bundle
         iconCache.removeAllObjects()
         registerThemeFonts()   // e.g. Chicago/Geneva for Mac OS 6 (process-scoped, idempotent)
         applyDockVariants()
@@ -123,6 +146,7 @@ final class ThemeManager {
             || n.contains("windows xp") || n.contains("windows 98")
             || (n.contains("beos") && n.contains("classic"))
             || n.contains("maiks favourite")
+            || n.contains("nextstep")
     }
 
     /// User-facing theme name: crowned themes get a 👑 prefix; the Mac OS family also
@@ -132,7 +156,7 @@ final class ThemeManager {
         switch name {
         case "Mountain Lion":      s = "Mac OS Mountain Lion"
         case "Snow Leopard":       s = "Mac OS Snow Leopard"
-        case "Mac OS 9.2 Classic": s = "Apple System 9"
+        case "Mac OS 9.2 Classic": s = "Mac OS System 9"
         case "Mac OS 6 classic":   s = "Apple System 6"
         default: break
         }
@@ -146,8 +170,39 @@ final class ThemeManager {
         case "Mac OS 6 classic":      applyMacOS6DockVariant()
         case "Mac OS 9.2 Classic":    applyMacOS9DockVariant()
         case "BeOS":                  applyBeOSDockVariant()
+        case "Windows 98":            applyWin98PlusVariant()
         default: break
         }
+    }
+
+    /// Windows 98 Plus! scheme: recolour the chrome + swap wallpaper/desktop icons via a runtime
+    /// config override (cursors are handled by CursorThemeManager reading the same setting). The
+    /// default scheme ("") clears the override → the built-in navy Windows 98 look.
+    private func applyWin98PlusVariant() {
+        guard let t = activeTheme, t.baseConfig.name == "Windows 98" else { return }
+        guard let scheme = Win98Scheme.byID[AppSettings.shared.win98Scheme] else {
+            t.setConfigOverride(nil); return
+        }
+        var c = t.baseConfig
+        c.chromeColors = scheme.colors
+        if let face = scheme.colors.face, !face.isEmpty { c.dock.backgroundColor = face }   // recolour the taskbar
+        if let wp = scheme.wallpaper {
+            c.wallpaper = wp
+            c.wallpapers = [DockThemeConfig.WallpaperOption(name: scheme.display, file: wp)]
+        }
+        if var icons = c.desktopIcons {
+            for i in icons.indices {
+                switch icons[i].name {
+                case "My Computer": if let x = scheme.iconComputer { icons[i].icon = x }
+                case "Recycle Bin":
+                    if let e = scheme.iconRecycleEmpty { icons[i].icon = e }
+                    if let f = scheme.iconRecycleFull { icons[i].iconFull = f }
+                default: break
+                }
+            }
+            c.desktopIcons = icons
+        }
+        t.setConfigOverride(c)
     }
 
     /// BeOS option: use the regular RetroMac dock instead of the classic Deskbar panel
@@ -266,6 +321,48 @@ final class ThemeManager {
         }
     }
 
+    /// Last-resort desktop picture when a screen has no recoverable original. Anything is better
+    /// than leaving the user stuck on a retro theme wallpaper they cannot get rid of.
+    static var systemDefaultWallpaper: URL {
+        let candidates = [
+            "/System/Library/CoreServices/DefaultDesktop.heic",
+            "/System/Library/Desktop Pictures/Ventura Graphic.heic",
+            "/System/Library/Desktop Pictures/Monterey Graphic.heic",
+        ]
+        for p in candidates where FileManager.default.fileExists(atPath: p) {
+            return URL(fileURLWithPath: p)
+        }
+        return URL(fileURLWithPath: "/System/Library/CoreServices/DefaultDesktop.heic")
+    }
+
+    /// Where `tiledWallpaperURL` caches its pre-rendered pattern tiles.
+    private static var tiledWallpaperDir: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("RetroMac/TiledWallpapers", isDirectory: true)
+    }
+
+    /// Is this desktop picture one RetroMac put there (a theme's own file, or a rendered tile)?
+    /// Such a URL must NEVER be snapshotted as the user's "original" — doing so is how a screen
+    /// ends up permanently stuck on a theme wallpaper with nothing left to restore.
+    private func isOwnWallpaper(_ url: URL) -> Bool {
+        let path = url.standardizedFileURL.path
+        if path.hasPrefix(Self.tiledWallpaperDir.standardizedFileURL.path + "/") { return true }
+        return availableThemes.contains { path.hasPrefix($0.url.standardizedFileURL.path + "/") }
+    }
+
+    /// A screen identifier that survives sleep, reconnects and reboots. `displayID` is handed out
+    /// by the window server per session, so keying the wallpaper backup by it silently orphaned
+    /// the entry whenever an external display was re-enumerated — the restore then found nothing
+    /// for that screen and left the theme wallpaper in place.
+    private func screenKey(for screen: NSScreen) -> String {
+        let displayID = screen.displayID
+        if let uuid = CGDisplayCreateUUIDFromDisplayID(displayID)?.takeRetainedValue(),
+           let str = CFUUIDCreateString(nil, uuid) as String? {
+            return str
+        }
+        return "displayID:\(displayID)"   // last resort — better than nothing
+    }
+
     func applyWallpaper() {
         guard let theme = activeTheme else {
             restoreWallpapers()
@@ -273,12 +370,11 @@ final class ThemeManager {
         }
         // Highest priority: a custom wallpaper picked via "Browse…" (absolute path)
         let wpURL: URL
-        if let customPath = AppSettings.shared.themeCustomWallpaper[theme.name],
+        if let customPath = AppSettings.shared.themeCustomWallpaper[theme.stableID],
            FileManager.default.fileExists(atPath: customPath) {
             wpURL = URL(fileURLWithPath: customPath)
-        } else if let overrideFile = AppSettings.shared.themeWallpaperOverrides[theme.name] {
-            let overrideURL = theme.url.appendingPathComponent(overrideFile)
-            if FileManager.default.fileExists(atPath: overrideURL.path) {
+        } else if let overrideFile = AppSettings.shared.themeWallpaperOverrides[theme.stableID] {
+            if let overrideURL = theme.rootResource(overrideFile) {
                 wpURL = overrideURL
             } else if let fallback = theme.wallpaperURL() {
                 wpURL = fallback
@@ -302,17 +398,24 @@ final class ThemeManager {
                let tiled = tiledWallpaperURL(tile: wpURL, for: screen, themeName: theme.name) {
                 finalURL = tiled
             }
-            let screenKey = "\(screen.displayID)"
-            // Only capture the ORIGINAL once, and never capture our own theme wallpaper
-            // as the "original" (guards against re-entrant applyWallpaper calls that would
-            // otherwise overwrite the backup with the theme image → default on restore).
+            let screenKey = screenKey(for: screen)
+            // Only capture the ORIGINAL once, and never capture one of OUR OWN wallpapers as the
+            // "original" — not just the exact file we are about to set, but any theme file or
+            // rendered tile. Capturing one of ours is how a screen got stranded: the backup then
+            // pointed at a theme image, so "restore" put the theme wallpaper back for good.
             if savedWallpapers[screenKey] == nil {
-                if let current = ws.desktopImageURL(for: screen), current != wpURL, current != finalURL {
+                let current = ws.desktopImageURL(for: screen)
+                if let current, !isOwnWallpaper(current) {
                     savedWallpapers[screenKey] = current
                     print("[Theme] Saved original wallpaper for screen \(screenKey) (\(screen.localizedName)): \(current.path)")
                 } else {
-                    print("[Theme] WARNING: no original wallpaper captured for screen \(screenKey) (\(screen.localizedName)) — desktopImageURL=\(ws.desktopImageURL(for: screen)?.path ?? "nil")")
+                    // No recoverable original (screen already shows one of ours, or macOS reports
+                    // nothing). Remember that explicitly so the restore can still get the screen
+                    // OFF our wallpaper instead of leaving it there forever.
+                    savedWallpapers[screenKey] = Self.systemDefaultWallpaper
+                    print("[Theme] No original wallpaper for screen \(screenKey) (\(screen.localizedName)) — will fall back to the system default on restore (was \(current?.path ?? "nil"))")
                 }
+                persistWallpaperBackup()   // crash-safe: back up the original BEFORE overwriting it
             }
             try? ws.setDesktopImageURL(finalURL, for: screen, options: [:])
         }
@@ -321,7 +424,7 @@ final class ThemeManager {
         AppearanceAdapter.apply(for: theme.config)
         CursorThemeManager.shared.apply(for: theme.config)
         TerminalThemer.apply(forThemeNamed: theme.config.name)
-        SystemTweaksAdapter.apply(for: theme.config)   // "Classic Finder" defaults tweaks (opt-in)
+        SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)   // "Classic Finder" defaults tweaks (opt-in, built-in themes only)
     }
 
     /// Renders a small pattern tile edge-to-edge at the screen's pixel size (1 tile pixel
@@ -366,7 +469,7 @@ final class ThemeManager {
         CursorThemeManager.shared.restore()   // and so does the user's cursor
         TerminalThemer.restore()      // and so does the user's Terminal profile
         SystemTweaksAdapter.restore() // and the real Finder/system look reverts too
-        guard !savedWallpapers.isEmpty else { return }
+        guard !savedWallpapers.isEmpty || anyScreenShowsOwnWallpaper() else { return }
         applyOriginalWallpapers()
         savedWallpapers.removeAll()
         persistWallpaperBackup()
@@ -379,27 +482,46 @@ final class ThemeManager {
     /// but the wallpaper had none, so it stuck until the user toggled a theme on+off. `savedWallpapers`
     /// is loaded from the persisted backup in init, so this puts the user's original back at launch.
     func restoreWallpapersIfNeeded() {
-        guard !savedWallpapers.isEmpty else { return }
+        // An EMPTY backup used to mean "nothing to do" — which is exactly how a screen stayed
+        // stuck on a theme wallpaper forever once its backup was lost. If any screen still shows
+        // one of ours, run the pass anyway so `applyOriginalWallpapers` can rescue it.
+        guard !savedWallpapers.isEmpty || anyScreenShowsOwnWallpaper() else { return }
         applyOriginalWallpapers()
         savedWallpapers.removeAll()
         persistWallpaperBackup()
         print("[Theme] Launch wallpaper recovery complete")
     }
 
+    /// True if any connected screen currently displays a RetroMac theme wallpaper.
+    private func anyScreenShowsOwnWallpaper() -> Bool {
+        NSScreen.screens.contains { screen in
+            guard let current = NSWorkspace.shared.desktopImageURL(for: screen) else { return false }
+            return isOwnWallpaper(current)
+        }
+    }
+
     private func applyOriginalWallpapers() {
         let ws = NSWorkspace.shared
         for screen in NSScreen.screens {
-            let screenKey = "\(screen.displayID)"
-            if let original = savedWallpapers[screenKey] {
-                let ok = FileManager.default.fileExists(atPath: original.path)
-                do {
-                    try ws.setDesktopImageURL(original, for: screen, options: [:])
-                    print("[Theme] Restored screen \(screenKey) (\(screen.localizedName)) → \(original.lastPathComponent)\(ok ? "" : " [WARNING: file missing]")")
-                } catch {
-                    print("[Theme] FAILED to restore screen \(screenKey) (\(screen.localizedName)) → \(original.path): \(error.localizedDescription)")
-                }
-            } else {
-                print("[Theme] No saved wallpaper for screen \(screenKey) (\(screen.localizedName)) — leaving as-is")
+            let key = screenKey(for: screen)
+            // Prefer the captured original. If there is none (a screen connected only after the
+            // theme was applied, or a backup lost with an older build), the screen must still not
+            // be left showing OUR wallpaper — fall back to the system default in that case.
+            var target = savedWallpapers[key]
+            if target == nil, let current = ws.desktopImageURL(for: screen), isOwnWallpaper(current) {
+                target = Self.systemDefaultWallpaper
+                print("[Theme] No backup for screen \(key) (\(screen.localizedName)) but it still shows a theme wallpaper — falling back to the system default")
+            }
+            guard let original = target else {
+                print("[Theme] No saved wallpaper for screen \(key) (\(screen.localizedName)) — leaving as-is")
+                continue
+            }
+            let ok = FileManager.default.fileExists(atPath: original.path)
+            do {
+                try ws.setDesktopImageURL(original, for: screen, options: [:])
+                print("[Theme] Restored screen \(key) (\(screen.localizedName)) → \(original.lastPathComponent)\(ok ? "" : " [WARNING: file missing]")")
+            } catch {
+                print("[Theme] FAILED to restore screen \(key) (\(screen.localizedName)) → \(original.path): \(error.localizedDescription)")
             }
         }
     }
@@ -411,6 +533,7 @@ final class ThemeManager {
             let dict = savedWallpapers.mapValues { $0.absoluteString }
             defaults.set(dict, forKey: wallpaperBackupKey)
         }
+        defaults.synchronize()   // flush so a crash/restart can still restore the user's wallpaper
     }
 
     func icon(for bundleID: String, size: CGFloat) -> NSImage {
@@ -425,7 +548,7 @@ final class ThemeManager {
     }
 
     private func loadIcon(for bundleID: String, size: CGFloat) -> NSImage {
-        if let themeName = activeTheme?.name,
+        if let themeName = activeTheme?.stableID,
            let customPath = iconOverrides[themeName]?[bundleID] {
             if let img = NSImage(contentsOfFile: customPath) {
                 img.size = NSSize(width: size, height: size)
@@ -546,7 +669,7 @@ final class ThemeManager {
     /// Only custom user overrides are applied.
     func systemIcon(for bundleID: String, size: CGFloat) -> NSImage {
         // Check custom override first (user explicitly set this)
-        if let themeName = activeTheme?.name,
+        if let themeName = activeTheme?.stableID,
            let customPath = iconOverrides[themeName]?[bundleID] {
             if let img = NSImage(contentsOfFile: customPath) {
                 img.size = NSSize(width: size, height: size)
@@ -573,13 +696,14 @@ final class ThemeManager {
 
     // MARK: - Per-Theme Icon Overrides
 
+    /// `theme` may be a stable id or a display name; both resolve to the id used for storage.
     func customIconPath(for bundleID: String, theme: String? = nil) -> String? {
-        let name = theme ?? activeTheme?.name ?? ""
+        let name = theme.flatMap { self.theme(for: $0)?.stableID ?? $0 } ?? activeTheme?.stableID ?? ""
         return iconOverrides[name]?[bundleID]
     }
 
     func setCustomIcon(for bundleID: String, path: String?) {
-        guard let themeName = activeTheme?.name else { return }
+        guard let themeName = activeTheme?.stableID else { return }
         if iconOverrides[themeName] == nil {
             iconOverrides[themeName] = [:]
         }
@@ -590,7 +714,7 @@ final class ThemeManager {
     }
 
     func hasOverrides(for theme: String? = nil) -> Bool {
-        let name = theme ?? activeTheme?.name ?? ""
+        let name = theme.flatMap { self.theme(for: $0)?.stableID ?? $0 } ?? activeTheme?.stableID ?? ""
         guard let overrides = iconOverrides[name] else { return false }
         return !overrides.isEmpty
     }
@@ -600,7 +724,7 @@ final class ThemeManager {
             print("[Theme] Cannot save: no active user theme")
             return
         }
-        guard let overrides = iconOverrides[theme.name], !overrides.isEmpty else {
+        guard let overrides = iconOverrides[theme.stableID], !overrides.isEmpty else {
             print("[Theme] No overrides to save for \(theme.name)")
             return
         }
@@ -620,7 +744,7 @@ final class ThemeManager {
         }
 
         try theme.save(config: updatedConfig)
-        iconOverrides.removeValue(forKey: theme.name)
+        iconOverrides.removeValue(forKey: theme.stableID)
         defaults.set(iconOverrides, forKey: overridesKey)
         iconCache.removeAllObjects()
         reload()
@@ -651,7 +775,7 @@ final class ThemeManager {
         let iconsDir = destURL.appendingPathComponent("icons")
         try? fm.createDirectory(at: iconsDir, withIntermediateDirectories: true)
 
-        if let overrides = iconOverrides[base.name] {
+        if let overrides = iconOverrides[base.stableID] {
             for (bundleID, sourcePath) in overrides {
                 let ext = (sourcePath as NSString).pathExtension
                 let iconName = bundleID.replacingOccurrences(of: ".", with: "_") + "." + (ext.isEmpty ? "png" : ext)
@@ -662,15 +786,23 @@ final class ThemeManager {
             }
         }
 
+        // "Save as new theme" produces a genuinely NEW theme, so it must not keep the source's
+        // id — otherwise the copy and the original would share every per-theme setting, and
+        // selecting one would select the other. Written before reload() so the bundle re-read
+        // from disk picks the new identity up.
+        let newID = "user.\(ThemeBundle.slugify(name)).\(UUID().uuidString.prefix(8).lowercased())"
+        newConfig.id = newID
+        newConfig.schemaVersion = max(newConfig.schemaVersion ?? 0, 2)
+
         let newBundle = try ThemeBundle(url: destURL, isBuiltIn: false)
         try newBundle.save(config: newConfig)
 
-        iconOverrides.removeValue(forKey: base.name)
+        iconOverrides.removeValue(forKey: base.stableID)
         defaults.set(iconOverrides, forKey: overridesKey)
 
         reload()
-        AppSettings.shared.dockTheme = name
-        print("[Theme] Saved new theme: \(name)")
+        AppSettings.shared.dockTheme = newID
+        print("[Theme] Saved new theme: \(name) [\(newID)]")
     }
 
     func importTheme(from sourceURL: URL) throws {
@@ -759,7 +891,7 @@ final class ThemeManager {
             let img = loadIcon(for: bid, size: 512)
 
             // Check if we have a themed icon (not just the system icon)
-            let hasThemeIcon = iconOverrides[theme.name]?[bid] != nil
+            let hasThemeIcon = iconOverrides[theme.stableID]?[bid] != nil
                 || theme.iconURL(for: bid) != nil
 
             if hasThemeIcon {

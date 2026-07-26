@@ -58,10 +58,11 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
             }
 
             let container = NSView(frame: initial)
+            addWin7Glass(to: container)   // Aero glass behind the transparent webview (win7 only)
             container.addSubview(wv)
             container.addSubview(overlay)   // on top
 
-            let p = NSPanel(contentRect: initial,
+            let p = KeyableWidgetPanel(contentRect: initial,
                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             p.level = .normal   // behaves like a normal window (not always-on-top)
             p.isOpaque = false
@@ -71,6 +72,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
             p.contentView = container
             self.panel = p
             self.webView = wv
+            installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
             self.dragOverlay = overlay
             // Remember the position whenever the user drags the widget.
             moveObserver = NotificationCenter.default.addObserver(
@@ -149,6 +151,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
         pushCPUInfo()
         // Theme the window chrome (BeOS tab vs Mac OS 9 Platinum) before sizing.
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         // Size the panel to the SCALED widget, then capture the draggable title-tab region.
         webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [0,0]") { [weak self] result, _ in
             guard let self = self, let panel = self.panel,
@@ -356,12 +359,21 @@ final class DragOverlayView: NSView {
         }
     }
     override func mouseDown(with event: NSEvent) {
+        // Make this the key widget so the Mac OS 9 active/inactive chrome updates (others grey out).
+        window?.makeKeyAndOrderFront(nil)
         let p = convert(event.locationInWindow, from: nil)
         if let r = regionAt(p) {
             // Press the button (visual only); it fires on mouse-up-inside, like the native chrome.
             pressed = r; hovered = r
             onButtonState?(r, "press")
             return
+        }
+        // Mac OS 9 / System 6 WindowShade: double-clicking the title bar rolls the window up to
+        // just the title bar (and back). Reuses the collapse-box path; only the classic Mac
+        // themes get this gesture (Windows double-click means maximise, not shade).
+        if event.clickCount == 2 {
+            let k = RetroFrameTheme.key()
+            if k == "macos9" || k == "macos6" { onCollapse?(); return }
         }
         window?.performDrag(with: event)
     }

@@ -1,4 +1,19 @@
 {
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.snow-leopard",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "Mac OS X 10.6 Snow Leopard",
+    "year": 2009
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "macosx"
+  },
   "name": "Snow Leopard",
   "splashVideo": "boot.mp4",
   "splashFullscreen": true,
@@ -61,6 +76,27 @@
       "path": "/",
       "gridX": 0,
       "gridY": 0
+    },
+    {
+      "name": "TV",
+      "icon": "quicktime.png",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Clock",
+      "icon": "clock.png",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "CPU",
+      "icon": "activitymonitor.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 3
     }
   ],
   "wallpaper": "wallpaper.jpg",

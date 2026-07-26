@@ -908,7 +908,7 @@ private final class ClassicStartMenuContentView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        let gray = NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)
+        let gray = Win98Scheme.activeFaceColor() ?? NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)
 
         gray.setFill()
         NSBezierPath(rect: bounds).fill()
@@ -935,12 +935,12 @@ private final class ClassicStartMenuContentView: NSView {
         line.lineWidth = bw; line.stroke()
 
         let bannerRect = NSRect(x: bw, y: bw + 1, width: bannerWidth, height: bounds.height - bw * 2 - 2)
-        // Win98 banner, Figma-exact: #00007B (bottom) → #1085D2 (top).
-        let bannerGrad = NSGradient(
-            starting: NSColor(red: 0.0, green: 0.0, blue: 0.482, alpha: 1.0),
-            ending: NSColor(red: 0.063, green: 0.522, blue: 0.824, alpha: 1.0)
-        )
-        bannerGrad?.draw(in: bannerRect, angle: 90)
+        // Win98 banner: default #00007B (bottom) → #1085D2 (top), or the active Plus! scheme's
+        // active-title colours (solid schemes draw a flat banner).
+        let (bannerBottom, bannerTop) = Win98Scheme.activeTitleColors()
+            ?? (NSColor(red: 0.0, green: 0.0, blue: 0.482, alpha: 1.0),
+                NSColor(red: 0.063, green: 0.522, blue: 0.824, alpha: 1.0))
+        NSGradient(starting: bannerBottom, ending: bannerTop)?.draw(in: bannerRect, angle: 90)
 
         if !bannerText.isEmpty {
             let ctx = NSGraphicsContext.current!.cgContext
@@ -949,13 +949,14 @@ private final class ClassicStartMenuContentView: NSView {
             let size: CGFloat = 16
             let boldFont = NSFont(name: "Tahoma-Bold", size: size) ?? NSFont.boldSystemFont(ofSize: size)
             let regFont  = NSFont(name: "Tahoma", size: size) ?? NSFont.systemFont(ofSize: size)
+            let bannerTextColor = Win98Scheme.activeTitleTextColor() ?? NSColor.white
             let parts = bannerText.split(separator: " ", maxSplits: 1).map(String.init)
             let text = NSMutableAttributedString()
             text.append(NSAttributedString(string: parts.first ?? bannerText,
-                                           attributes: [.font: boldFont, .foregroundColor: NSColor.white]))
+                                           attributes: [.font: boldFont, .foregroundColor: bannerTextColor]))
             if parts.count > 1 {
                 text.append(NSAttributedString(string: parts[1],
-                                               attributes: [.font: regFont, .foregroundColor: NSColor.white]))
+                                               attributes: [.font: regFont, .foregroundColor: bannerTextColor]))
             }
             let textSize = text.size()
             let tx = bannerRect.minX + (bannerRect.width + textSize.height) / 2
@@ -1102,7 +1103,7 @@ private final class SubmenuContentView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        let gray = NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)
+        let gray = Win98Scheme.activeFaceColor() ?? NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)
         let bw = bevelWidth
 
         gray.setFill()

@@ -56,6 +56,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             overlay.autoresizingMask = [.minYMargin]   // stay pinned to the top tab on resize
 
             let container = NSView(frame: initial)
+            addWin7Glass(to: container)   // Aero glass behind the transparent webview (win7 only)
             container.addSubview(wv)
 
             // Resize gadgets — bottom corners only. (The top corners would sit right on the
@@ -75,13 +76,14 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
 
             container.addSubview(overlay)   // topmost: title-bar boxes + drag win over resize grips
 
-            let p = NSPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
+            let p = KeyableWidgetPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
             p.level = .normal   // behaves like a normal window (not always-on-top)
             p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = container
             self.panel = p; self.webView = wv; self.dragOverlay = overlay
+            installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
         }
 
         webView?.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
@@ -123,12 +125,17 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         // Theme the window chrome (BeOS tab vs Mac OS 9 Platinum) before populating.
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         let escTitle = windowTitle.replacingOccurrences(of: "'", with: "\\'")
         webView.evaluateJavaScript("window.setTitle && window.setTitle('\(escTitle)')")
         let items = (kind == .tv) ? Self.tvItems() : Self.installedApps()
         if let data = try? JSONSerialization.data(withJSONObject: items),
            let json = String(data: data, encoding: .utf8) {
             webView.evaluateJavaScript("window.setApps && window.setApps(\(json))")
+        }
+        // Finder-style "N items, X GB available" info bar (Mac OS 9 theme).
+        if let avail = Self.availableSpaceString() {
+            webView.evaluateJavaScript("window.setDiskFree && window.setDiskFree('\(avail)')")
         }
         // Position the drag/close overlay over the title bar (BeOS tab or Mac OS 9 bar).
         webView.evaluateJavaScript("window.regions ? window.regions() : []") { [weak self] result, _ in
@@ -165,6 +172,15 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     private var titleStripHeight: CGFloat = 22   // active chrome's title-bar height (captured live)
 
     /// WindowShade: roll the window up to just the title bar, or restore.
+    /// Free space on the home volume, formatted like the Mac OS 9 Finder ("12.3 GB available").
+    private static func availableSpaceString() -> String? {
+        let url = URL(fileURLWithPath: NSHomeDirectory())
+        guard let vals = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]),
+              let bytes = vals.volumeAvailableCapacityForImportantUsage else { return nil }
+        let f = ByteCountFormatter(); f.allowedUnits = [.useGB]; f.countStyle = .file
+        return f.string(fromByteCount: bytes) + " available"
+    }
+
     private func toggleCollapse() {
         guard let panel = panel else { return }
         if collapsed {

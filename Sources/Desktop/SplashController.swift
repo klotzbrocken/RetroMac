@@ -19,13 +19,13 @@ final class SplashController {
     /// Default boot-screen state when the user hasn't toggled it: ON for any theme that
     /// defines a boot video or image.
     private func bootscreenDefaultOn(_ theme: ThemeBundle) -> Bool {
-        theme.config.splashVideo != nil || theme.config.splashScreen != nil
+        theme.config.splashVideo != nil || theme.config.splashScreen != nil || theme.config.splashWelcome == true
     }
 
     /// Show the boot screen for the active theme if enabled. No-op otherwise.
     func showIfEnabled(for theme: ThemeBundle) {
         guard AppSettings.shared.showSplashScreen, let screen = NSScreen.main else { return }
-        let enabled = AppSettings.shared.themeBootscreenEnabled[theme.config.name] ?? bootscreenDefaultOn(theme)
+        let enabled = AppSettings.shared.themeBootscreenEnabled[theme.stableID] ?? bootscreenDefaultOn(theme)
         guard enabled else { return }
 
         // Prefer a boot video (played fullscreen with sound) when present.
@@ -36,9 +36,14 @@ final class SplashController {
                 return
             }
         }
+        // Classic "Welcome to Macintosh" boot screen (System 6), drawn natively.
+        if theme.config.splashWelcome == true {
+            showWelcome(on: screen)
+            return
+        }
         // Fall back to the image splash.
-        guard let file = theme.config.splashScreen,
-              let image = NSImage(contentsOf: theme.url.appendingPathComponent(file)) else { return }
+        guard let splashURL = theme.rootResource(theme.config.splashScreen),
+              let image = NSImage(contentsOf: splashURL) else { return }
         show(image: image, on: screen, fullscreen: theme.config.splashFullscreen == true)
     }
 
@@ -170,12 +175,74 @@ final class SplashController {
         }
     }
 
+    /// Classic Mac boot screen: the "Welcome to Macintosh" dialog box on a grey desktop, drawn
+    /// natively (ported from metamage_1's Welcome demo — happy Mac icon + text in a dBoxProc frame).
+    private func showWelcome(on screen: NSScreen) {
+        dismiss()
+        let frame = screen.frame
+        let win = bootWindow(frame, opaque: true)
+        win.hasShadow = false
+        let content = WelcomeSplashView(frame: NSRect(origin: .zero, size: frame.size))
+        let dv = dismissView(NSRect(origin: .zero, size: frame.size), content: content)
+        win.contentView = dv
+        addCoverScreens(except: screen)
+        present(win, dismissView: dv)
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: false) { [weak self] _ in self?.dismiss() }
+    }
+
     func dismiss() {
         dismissTimer?.invalidate(); dismissTimer = nil
         if let obs = endObserver { NotificationCenter.default.removeObserver(obs); endObserver = nil }
         player?.pause(); player = nil
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
+    }
+}
+
+/// The classic "Welcome to Macintosh" boot screen: a happy-Mac dialog box on a 50% grey desktop.
+private final class WelcomeSplashView: NSView {
+    override var isFlipped: Bool { true }
+
+    private static let grayFill: NSColor = {
+        let img = NSImage(size: NSSize(width: 2, height: 2))
+        img.lockFocus()
+        NSColor.white.setFill(); NSRect(x: 0, y: 0, width: 2, height: 2).fill()
+        NSColor.black.setFill(); NSRect(x: 0, y: 0, width: 1, height: 1).fill(); NSRect(x: 1, y: 1, width: 1, height: 1).fill()
+        img.unlockFocus()
+        return NSColor(patternImage: img)
+    }()
+
+    override func draw(_ dirtyRect: NSRect) {
+        Self.grayFill.setFill(); bounds.fill()                      // 50% grey desktop
+
+        let bw: CGFloat = 480, bh: CGFloat = 128
+        let box = NSRect(x: (bounds.width - bw) / 2, y: (bounds.height - bh) * 0.28, width: bw, height: bh)
+        NSColor.white.setFill(); box.fill()
+        NSColor.black.setStroke()
+        let outer = NSBezierPath(rect: box); outer.lineWidth = 2; outer.stroke()          // dBoxProc double frame
+        let inner = NSBezierPath(rect: box.insetBy(dx: 4, dy: 4)); inner.lineWidth = 1; inner.stroke()
+
+        drawHappyMac(in: NSRect(x: box.minX + 30, y: box.midY - 32, width: 64, height: 64))
+
+        let text = "Welcome to Macintosh."
+        let font = NSFont(name: "Chicago", size: 26) ?? NSFont.boldSystemFont(ofSize: 24)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
+        let size = (text as NSString).size(withAttributes: attrs)
+        (text as NSString).draw(at: NSPoint(x: box.minX + 118, y: box.midY - size.height / 2), withAttributes: attrs)
+    }
+
+    /// Compact-Macintosh happy face, drawn on a 32-unit grid scaled into `r` (black on the box).
+    private func drawHappyMac(in r: NSRect) {
+        let s = r.width / 32
+        func P(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: r.minX + x * s, y: r.minY + y * s) }
+        func rect(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> NSRect { NSRect(x: r.minX + x * s, y: r.minY + y * s, width: w * s, height: h * s) }
+        NSColor.black.setStroke(); NSColor.black.setFill()
+        let body = NSBezierPath(roundedRect: rect(5, 1, 22, 30), xRadius: 3 * s, yRadius: 3 * s); body.lineWidth = 1.6 * s; body.stroke()   // computer
+        let screen = NSBezierPath(rect: rect(8, 4, 16, 13)); screen.lineWidth = 1.4 * s; screen.stroke()                                    // screen
+        rect(11, 8, 2.4, 2.4).fill(); rect(18.6, 8, 2.4, 2.4).fill()                                                                         // eyes
+        let smile = NSBezierPath(); smile.lineWidth = 1.4 * s; smile.lineCapStyle = .round                                                   // smile
+        smile.move(to: P(12, 12.5)); smile.curve(to: P(20, 12.5), controlPoint1: P(14.5, 15), controlPoint2: P(17.5, 15)); smile.stroke()
+        let slot = NSBezierPath(); slot.lineWidth = 1.4 * s; slot.move(to: P(10, 21)); slot.line(to: P(22, 21)); slot.stroke()               // floppy slot
     }
 }
 

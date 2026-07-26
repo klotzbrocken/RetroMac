@@ -9,9 +9,9 @@ struct WhatsNewView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.yellow)
                     .padding(.top, 24)
-                Text("What's New in RetroMac 2.2")
+                Text("What's New in RetroMac \(currentAppVersion)")
                     .font(.title2.bold())
-                Text("Authentic System 6, Warcraft, and a Mac OS X boot")
+                Text("NeXTSTEP joins the lineup")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,38 +21,38 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "square.grid.2x2",
+                        icon: "cube",
+                        color: .purple,
+                        title: "NeXTSTEP theme",
+                        description: "The full NeXT desktop, rebuilt natively: a vertical Workspace menu, a right-edge dock with a live clock/calendar and the Recycler, black title bars with the four-grey chiseled bevel, the MegaPixel wallpaper, and the NeXT cursor. Running apps float free as draggable icons."
+                    )
+
+                    featureRow(
+                        icon: "macwindow.on.rectangle",
                         color: .gray,
-                        title: "Authentic Mac System 6",
-                        description: "The “Mac OS 6 classic” theme is now true 1-bit black & white — racing-stripe title bars, hollow close boxes and Chicago type across windows and widgets, instead of the old Mac OS 9 Platinum look. Even the bundled Pac-Man goes monochrome."
+                        title: "The File Viewer",
+                        description: "The NeXT Workspace file browser is back: the shelf of drawers, a current-location path strip, a grid of your apps and TV streams, and the authentic left-side scroller. It opens on its own when the theme starts, just like it always did."
                     )
 
                     featureRow(
-                        icon: "shield.lefthalf.filled",
-                        color: .red,
-                        title: "Warcraft I + II",
-                        description: "Play Warcraft: Orcs & Humans and Warcraft II natively on the bundled open-source Stratagus engine — point RetroMac at your own game data and go. The CRT shader lays right over the game."
+                        icon: "square.grid.2x2",
+                        color: .orange,
+                        title: "Change any dock icon",
+                        description: "Right-click a dock or app tile and pick from 120 authentic NeXT \u{201C}Fleet\u{201D} icons or your own image. A \u{201C}fill the whole tile\u{201D} option chooses edge-to-edge or inset on the silver tile."
                     )
 
                     featureRow(
-                        icon: "sparkles",
+                        icon: "tv",
                         color: .blue,
-                        title: "Mac OS X boot animation",
-                        description: "Activate the Mac OS X or Snow Leopard theme and it boots like the real thing — the blue screen, the grey Apple with its spinner, the progress splash. Click to skip."
+                        title: "TV in themed windows",
+                        description: "The Classic Themed Window for TV streams now wears the NeXT window chrome too, alongside BeOS, Mac OS 9, Windows XP and System 6."
                     )
 
                     featureRow(
-                        icon: "lock.open",
+                        icon: "tag",
                         color: .green,
-                        title: "Clearer Pro unlocks",
-                        description: "Live Wallpaper and Virtual Camera now show a consistent lock when they're locked, and the license screens spell out everything the unlock includes — presets, custom shaders, Live Wallpaper and the camera."
-                    )
-
-                    featureRow(
-                        icon: "wrench.and.screwdriver",
-                        color: .indigo,
-                        title: "Polish",
-                        description: "Themed window frames with live title-bar buttons, boot videos that no longer get cut off partway, and a Welcome window that fits each page without scrolling."
+                        title: "Stable theme identity",
+                        description: "Renaming or duplicating a theme now keeps its wallpaper, dock position and other settings, and two themes can share a name without clashing. Your existing settings migrate automatically."
                     )
                 }
                 .padding(.horizontal, 24)

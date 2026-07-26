@@ -12,12 +12,16 @@ enum ClassicMacChrome {
 
     // Platinum palette
     static let face      = NSColor(calibratedWhite: 0.953, alpha: 1)          // #F3F3F3 light plate
-    static let boxBP     = NSColor(calibratedRed: 0.329, green: 0.329, blue: 0.529, alpha: 1) // #545487 bevel
-    static let boxHi     = NSColor(calibratedRed: 0.855, green: 0.855, blue: 1.0, alpha: 1)   // #DADAFF highlight
-    static let boxFace   = NSColor(calibratedWhite: 0.753, alpha: 1)          // #C0C0C0 box face
+    // Control boxes: DARK outline + white inner highlight + light-grey face (measured off os9.ca),
+    // not the lavender/purple bevel — that read completely wrong.
+    static let boxBP     = NSColor(calibratedWhite: 0.165, alpha: 1)          // #2A2A2A dark outline
+    static let boxHi     = NSColor(calibratedWhite: 1.0, alpha: 1)            // #FFFFFF inner highlight
+    static let boxFace   = NSColor(calibratedWhite: 0.847, alpha: 1)          // #D8D8D8 box face
     static let botShadow = NSColor(calibratedRed: 0.702, green: 0.702, blue: 0.855, alpha: 1) // #B3B3DA
-    static let stripeLt  = NSColor(calibratedWhite: 0.953, alpha: 1)          // #F3F3F3
-    static let stripeDk  = NSColor(calibratedWhite: 0.467, alpha: 1)          // #777777
+    // STRONG platinum pinstripes (os9.ca): near-white + mid-grey, clearly visible.
+    static let stripeLt  = NSColor(calibratedWhite: 0.957, alpha: 1)          // #F4F4F4
+    static let stripeDk  = NSColor(calibratedWhite: 0.490, alpha: 1)          // #7D7D7D
+    static let plaque    = NSColor(calibratedWhite: 0.863, alpha: 1)          // #DCDCDC grey title plate
 
     /// Standard Platinum control-box side length.
     static let boxSize: CGFloat = 11
@@ -70,7 +74,7 @@ enum ClassicMacChrome {
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
         let s = title.size(withAttributes: attrs)
         let px = bar.minX + (bar.width - s.width) / 2
-        fill(NSRect(x: px - 8, y: bar.minY, width: s.width + 16, height: bar.height), stripeLt)
+        fill(NSRect(x: px - 8, y: bar.minY, width: s.width + 16, height: bar.height), plaque)
         // draw(in:) respects the current context's flipped-ness, so this works in both views.
         let style = NSMutableParagraphStyle(); style.alignment = .center
         var a = attrs; a[.paragraphStyle] = style

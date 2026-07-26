@@ -28,10 +28,20 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
         webView?.evaluateJavaScript("window.set24 && window.set24(\(AppSettings.shared.clockUse24Hour))")
     }
 
-    func toggle() { if panel?.isVisible == true { close() } else { show() } }
+    /// Whether the user closed the clock. Persisted so a theme switch doesn't reopen it against
+    /// the user's wish (applyThemeWidgets only auto-shows when this is false).
+    var userHidden: Bool {
+        get { UserDefaults.standard.bool(forKey: "clockWidgetHidden") }
+        set { UserDefaults.standard.set(newValue, forKey: "clockWidgetHidden") }
+    }
 
-    /// Warm hide — keeps the WebView alive for instant reopen.
-    func close() { saveOrigin(); panel?.orderOut(nil) }
+    func toggle() { if panel?.isVisible == true { close() } else { userShow() } }
+
+    /// Explicit user open (deskbar/taskbar/desktop shortcut) — clears the closed flag.
+    func userShow() { userHidden = false; show() }
+
+    /// Warm hide — keeps the WebView alive for instant reopen. Records the user's intent.
+    func close() { userHidden = true; saveOrigin(); panel?.orderOut(nil) }
 
     /// Cold teardown — removes the script-message handler (breaks the userContentController→self
     /// retain cycle) and releases the WebView + its WebContent process. Use when widgets are
@@ -91,15 +101,17 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
             }
 
             let container = NSView(frame: initial)
+            addWin7Glass(to: container)   // Aero glass behind the transparent webview (win7 only)
             container.addSubview(wv); container.addSubview(overlay)
 
-            let p = NSPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
+            let p = KeyableWidgetPanel(contentRect: initial, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
             p.level = .normal
             p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = container
             self.panel = p; self.webView = wv; self.dragOverlay = overlay
+            installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
             moveObserver = NotificationCenter.default.addObserver(
                 forName: NSWindow.didMoveNotification, object: p, queue: .main) { [weak self] _ in self?.saveOrigin() }
         }
@@ -115,6 +127,7 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         webView.evaluateJavaScript("window.set24 && window.set24(\(AppSettings.shared.clockUse24Hour))")
         // Size the panel to the themed widget, then place the drag/close overlay over the title.
         webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [200,224]") { [weak self] result, _ in

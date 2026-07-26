@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Tic-Tac-Toe</title>
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent;cursor:default}
+  #c{image-rendering:pixelated;display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Tic-Tac-Toe — the board rendering ported 1:1 from Josh Juran's Mac Tic-tac-toe (metamage_1
+// CGTictactoe: 32-unit grid at 11.5/20.5, X = diagonal cross, O = circle, tokens at 4+9*col,4+9*row)
+// and the original win test (tictactoe-logic). Human is X; the computer (O) plays an unbeatable
+// minimax. Framed in a System 6 window. AGPL-3.0 upstream drawing.
+
+const U = 32, S = 7, TBH = 24;                     // board units, pixel scale, title-bar height
+const BW = U * S, H = TBH + BW;
+const cv = document.getElementById('c'); cv.width = BW; cv.height = H;
+const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+
+let board = new Array(9).fill(0);                  // 1 = X (human), -1 = O (computer)
+let over = false, turn = 1;
+let closePressed = false;
+let theme = 'macos6';                                                     // 'macos9' → colour Platinum chrome + colour tokens
+window.setClosePressed = function (b) { closePressed = !!b; render(); };   // native bridge: close-box press feedback
+window.setTheme = function (k) { theme = k || 'macos6'; render(); };
+
+// ---- win test (tictactoe.cc) ----
+const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+function winner(b) { for (const [i,j,k] of wins) if (b[i] && b[i]===b[j] && b[j]===b[k]) return b[i]; return 0; }
+function full(b) { return b.every(v => v !== 0); }
+
+// ---- unbeatable minimax for O ----
+function minimax(b, player) {
+  const w = winner(b); if (w) return { score: w * 10 };
+  const empties = []; for (let i = 0; i < 9; i++) if (!b[i]) empties.push(i);
+  if (!empties.length) return { score: 0 };
+  let best = null;
+  for (const m of empties) {
+    b[m] = player; const s = minimax(b, -player).score; b[m] = 0;
+    if (!best || (player === 1 ? s > best.score : s < best.score)) best = { score: s, move: m };
+  }
+  return best;
+}
+
+// ---- drawing (CGTictactoe.cc) ----
+function draw_grid() {
+  g.beginPath();
+  g.moveTo(3, 11.5); g.lineTo(29, 11.5);
+  g.moveTo(3, 20.5); g.lineTo(29, 20.5);
+  g.moveTo(11.5, 3); g.lineTo(11.5, 29);
+  g.moveTo(20.5, 3); g.lineTo(20.5, 29);
+  g.stroke();
+}
+function draw_X() {
+  const o = 0.35, min = o, max = 6 - o;
+  g.beginPath(); g.moveTo(min, min); g.lineTo(max, max); g.moveTo(min, max); g.lineTo(max, min); g.stroke();
+}
+function draw_O() {
+  g.beginPath(); g.arc(3, 3, 2.5, 0, 2 * Math.PI); g.stroke();
+}
+function draw_token(token, col, row) {
+  g.save(); g.translate(4 + 9 * col, 4 + 9 * row);
+  if (theme === 'macos9') g.strokeStyle = token > 0 ? '#d21f1f' : '#1f5fd2';   // colour accent: X red, O blue
+  token > 0 ? draw_X() : draw_O(); g.restore();
+}
+function render() {
+  g.fillStyle = '#fff'; g.fillRect(0, 0, BW, H);
+  titleBar();
+  g.save();
+  g.translate(0, TBH); g.scale(S, S);
+  g.strokeStyle = '#000'; g.lineWidth = 0.6; g.lineCap = 'round'; g.lineJoin = 'round';
+  draw_grid();
+  for (let i = 0; i < 9; i++) if (board[i]) draw_token(board[i], i % 3, (i / 3) | 0);
+  g.restore();
+  // status line
+  g.fillStyle = '#000'; g.font = 'bold 11px Geneva, Chicago, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  const w = winner(board);
+  const msg = w === 1 ? 'You win!' : w === -1 ? 'Computer wins' : (over ? 'Draw — click to replay' : '');
+  if (msg) g.fillText(msg, BW / 2, H - 3);
+}
+
+// ---- Mac OS 9 Platinum title bar (colour) ----
+function titleBarPlatinum() {
+  for (let ly = 0; ly < TBH; ly++) {
+    const base = Math.round(233 - (ly / TBH) * 30);
+    g.fillStyle = `rgb(${base},${base},${base})`; g.fillRect(0, ly, BW, 1);
+  }
+  g.fillStyle = 'rgba(255,255,255,0.30)';
+  for (let ly = 3; ly < TBH - 3; ly += 2) g.fillRect(3, ly, BW - 6, 1);
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, BW, 1);
+  g.fillStyle = '#8b8b8b'; g.fillRect(0, TBH - 1, BW, 1);
+  g.fillStyle = '#5a5a5a'; g.fillRect(0, 0, 1, TBH); g.fillRect(BW - 1, 0, 1, TBH);
+  const cx = 8, cy = 6, cs = 12;
+  g.fillStyle = '#cfcfcf'; g.fillRect(cx, cy, cs, cs);
+  g.strokeStyle = '#6a6a76'; g.lineWidth = 1; g.strokeRect(cx + 0.5, cy + 0.5, cs - 1, cs - 1);
+  g.strokeStyle = '#f2f2f7'; g.strokeRect(cx + 1.5, cy + 1.5, cs - 3, cs - 3);
+  if (closePressed) { g.fillStyle = '#9a9aa2'; g.fillRect(cx + 3, cy + 3, cs - 6, cs - 6); }
+  const label = 'Tic-Tac-Toe'; g.font = 'bold 12px Charcoal, "ChicagoFLF", Geneva, sans-serif';
+  g.textBaseline = 'middle'; g.textAlign = 'center';
+  const tw = g.measureText(label).width + 16, tx = (BW - tw) / 2;
+  g.fillStyle = '#e8e8e8'; g.fillRect(tx, 2, tw, TBH - 4);
+  g.fillStyle = '#ffffff'; g.fillRect(tx, 2, tw, 1); g.fillStyle = '#9a9a9a'; g.fillRect(tx, TBH - 3, tw, 1);
+  g.fillStyle = '#000'; g.fillText(label, BW / 2, TBH / 2 + 1);
+}
+// ---- System 6 title bar ----
+function titleBar() {
+  if (theme === 'macos9') return titleBarPlatinum();
+  g.fillStyle = '#fff'; g.fillRect(0, 0, BW, TBH);
+  g.fillStyle = '#000';
+  for (let ly = 4; ly <= TBH - 6; ly += 3) g.fillRect(2, ly, BW - 4, 1);
+  g.fillRect(0, 0, BW, 2); g.fillRect(0, TBH - 2, BW, 2); g.fillRect(0, 0, 2, TBH); g.fillRect(BW - 2, 0, 2, TBH);
+  g.fillStyle = '#fff'; g.fillRect(8, 5, 14, 14); g.strokeStyle = '#000'; g.lineWidth = 2; g.strokeRect(9, 6, 12, 12);
+  if (closePressed) { g.fillStyle = '#000'; g.fillRect(12, 9, 6, 6); }     // pressed feedback
+  g.fillStyle = '#fff'; g.font = 'bold 13px Geneva, Chicago, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
+  const label = 'Tic-Tac-Toe', tw = g.measureText(label).width + 12;
+  g.fillRect((BW - tw) / 2, 2, tw, TBH - 4); g.strokeStyle = '#000'; g.lineWidth = 2; g.strokeRect((BW - tw) / 2 + 1, 3, tw - 2, TBH - 6);
+  g.fillStyle = '#000'; g.fillText(label, BW / 2, TBH / 2 + 1);
+}
+
+function reset() { board.fill(0); over = false; turn = 1; render(); }
+
+function computerMove() {
+  const best = minimax(board.slice(), -1);
+  if (best.move != null) board[best.move] = -1;
+  if (winner(board) || full(board)) over = true;
+  turn = 1;
+  render();
+}
+
+cv.addEventListener('mousedown', (e) => {
+  const r = cv.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width * BW;
+  const py = (e.clientY - r.top) / r.height * H;
+  if (py < TBH) return;                              // title bar handled natively
+  if (over) { reset(); return; }
+  if (turn !== 1) return;
+  const ux = px / S, uy = (py - TBH) / S;
+  const col = ux < 11.5 ? 0 : ux < 20.5 ? 1 : 2;
+  const row = uy < 11.5 ? 0 : uy < 20.5 ? 1 : 2;
+  const idx = row * 3 + col;
+  if (board[idx]) return;
+  board[idx] = 1;
+  if (winner(board) || full(board)) { over = true; render(); return; }
+  turn = -1; render();
+  setTimeout(computerMove, 250);                     // brief pause, then the computer replies
+});
+
+render();
+</script>
+</body>
+</html>

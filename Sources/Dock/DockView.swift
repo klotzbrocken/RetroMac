@@ -278,7 +278,14 @@ final class DockView: NSView {
         wsObserver = nc.addObserver(
             forName: NSWorkspace.didLaunchApplicationNotification,
             object: nil, queue: .main
-        ) { [weak self] _ in self?.updateRunningIndicators() }
+        ) { [weak self] _ in
+            self?.updateRunningIndicators()
+            // updateRunningIndicators fires onRunningAppsChanged immediately, but a just-launched
+            // app often isn't a `.regular` process yet, so runningAppsNotInDock() excludes it and
+            // the dock doesn't grow — and no further event arrives once it becomes regular. Re-run
+            // the resize+relayout shortly after so the new app's transient tile actually appears.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self?.onRunningAppsChanged?() }
+        }
 
         let nc2 = NotificationCenter.default
         appsObserver = nc2.addObserver(forName: .dockAppsChanged, object: nil, queue: .main) { [weak self] _ in
@@ -307,7 +314,7 @@ final class DockView: NSView {
 
         let wsNC = NSWorkspace.shared.notificationCenter
         wsTerminateObserver = wsNC.addObserver(forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.updateRunningIndicators()
+            self?.updateRunningIndicators()   // fires onRunningAppsChanged → dock shrinks past the quit app
         }
         wsActivateObserver = wsNC.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
             self?.updateRunningIndicators()
@@ -461,10 +468,10 @@ final class DockView: NSView {
             // Mac OS 9 Control Strip layout: left cap PNG + icon modules + right cap PNG
             // Each module = icon + ▶ arrow, separated by grooves
             loadControlStripCaps()
-            let leftCapW = controlStripLeftCapWidth
             let arrowWidth: CGFloat = 14   // space for ▶ arrow after icon
             let grooveWidth: CGFloat = 2   // 1px dark + 1px light
-            var x = barRect.minX + leftCapW
+            let scrollCellW: CGFloat = 12  // ◀ scroll-arrow cell before the first module
+            var x = barRect.minX + controlStripLeadingCapWidth + scrollCellW + grooveWidth
 
             // Skip start button, clock, disk free, tray icon, trash for Control Strip
             startButtonFrame = .zero
@@ -577,7 +584,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows XP") {
+               (tn == "Windows 98" || tn == "Windows XP" || tn == "Windows 7") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -827,10 +834,10 @@ final class DockView: NSView {
             restCentersY = itemViews.map { $0.frame.midY }
         } else if isControlStrip {
             // Mac OS 9 Control Strip relayout: left cap + icon modules + right cap
-            let leftCapW = controlStripLeftCapWidth
             let arrowWidth: CGFloat = 14
             let grooveWidth: CGFloat = 2
-            var x = barRect.minX + leftCapW
+            let scrollCellW: CGFloat = 12  // ◀ scroll-arrow cell before the first module
+            var x = barRect.minX + controlStripLeadingCapWidth + scrollCellW + grooveWidth
 
             startButtonFrame = .zero
             clockFrame = .zero
@@ -936,7 +943,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows XP") {
+               (tn == "Windows 98" || tn == "Windows XP" || tn == "Windows 7") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -1163,7 +1170,12 @@ final class DockView: NSView {
     /// One elongated taskbar button per open window (Win98/XP), plus a launch button for each
     /// pinned app that isn't running. Fills the bar from `startX` up to the right-side trays.
     private func addTaskButtonStrip(startX: CGFloat, rightEdge: CGFloat, barRect: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
-        let style: TaskButtonView.Style = theme.isXPStartMenu ? .winxp : .win98
+        let style: TaskButtonView.Style
+        switch RetroFrameTheme.key() {
+        case "win7":  style = .win7
+        case "winxp": style = .winxp
+        default:      style = theme.isXPStartMenu ? .winxp : .win98
+        }
         let models = buildTaskModels()
         guard !models.isEmpty else { return }
         let gap: CGFloat = 2
@@ -1420,18 +1432,9 @@ final class DockView: NSView {
         // Control Strip: left cap PNG + icon modules + right cap PNG
         if isControlStrip {
             loadControlStripCaps()
-            let leftCapW = controlStripLeftCapWidth
-            if controlStripCollapsed {
-                return leftCapW
-            }
-            let grooveWidth: CGFloat = 2    // 1px dark + 1px light
-            let arrowWidth: CGFloat = 14    // ▶ arrow after each icon
-            let rightCapW = controlStripRightCapWidth
-            let pinnedCount = CGFloat(AppManager.shared.apps.count)
-            let transientCount = CGFloat(runningAppsNotInDock().count)
-            let totalCount = pinnedCount + transientCount
-            let modulesWidth = totalCount * (iconSize + arrowWidth) + max(0, totalCount - 1) * grooveWidth
-            return leftCapW + modulesWidth + rightCapW
+            // Collapsed → only the collapse tab (at the anchored edge) is visible.
+            if controlStripCollapsed { return controlStripLeftCapWidth }
+            return controlStripFullWidth
         }
 
         let pinnedCount = CGFloat(AppManager.shared.apps.count)
@@ -2499,14 +2502,14 @@ final class DockView: NSView {
                     }
                 } else if btnStyle == "flat" {
                     // Flat: no bevel, just background
-                    NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1).setFill()
+                    (Win98Scheme.activeFaceColor() ?? NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)).setFill()
                     NSBezierPath(rect: startButtonFrame).fill()
                 } else {
                     // Classic Win98 raised: light top-left, dark bottom-right
                     let lightColor: NSColor = startButtonPressed ? NSColor(white: 0.5, alpha: 1) : .white
                     let darkColor: NSColor = startButtonPressed ? .white : NSColor(white: 0.5, alpha: 1)
 
-                    NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1).setFill()
+                    (Win98Scheme.activeFaceColor() ?? NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)).setFill()
                     NSBezierPath(rect: startButtonFrame).fill()
 
                     lightColor.setStroke()
@@ -2833,6 +2836,25 @@ final class DockView: NSView {
         return origW * controlStripRightCapScale
     }
 
+    /// Control Strip docked to the right screen edge → mirror the chrome so the grip handle sits
+    /// on the inner (left) side pointing toward the screen centre, like the historical strip.
+    var controlStripRight: Bool { isControlStrip && AppSettings.shared.controlStripSide == "right" }
+    /// Width of the cap at the PHYSICAL left end — this is the collapse/grip handle you click:
+    /// the grip when right-docked, the collapse tab when left-docked.
+    var controlStripLeadingCapWidth: CGFloat { controlStripRight ? controlStripRightCapWidth : controlStripLeftCapWidth }
+    /// Full expanded strip width (ignores the collapsed state) — used to anchor the strip's inner
+    /// edge so collapsing retracts the modules while the handle stays put.
+    var controlStripFullWidth: CGFloat {
+        loadControlStripCaps()
+        let scale = CGFloat(AppSettings.shared.dockIconScale)
+        let iconSize = (ThemeManager.shared.activeTheme?.config.dock.iconSize ?? 28) * scale
+        let grooveWidth: CGFloat = 2, arrowWidth: CGFloat = 14, scrollCellW: CGFloat = 12
+        let totalCount = CGFloat(AppManager.shared.apps.count) + CGFloat(runningAppsNotInDock().count)
+        let modulesWidth = totalCount * (iconSize + arrowWidth) + max(0, totalCount - 1) * grooveWidth
+        return controlStripLeftCapWidth + scrollCellW + grooveWidth + modulesWidth + grooveWidth + scrollCellW + controlStripRightCapWidth
+    }
+
+
     /// Mac OS 9 Control Strip — uses PNG end caps, ▶ arrows per module, grooves.
     private func drawControlStrip(ctx: CGContext, theme: DockThemeConfig, barRect: NSRect, bgAlpha: CGFloat) {
         loadControlStripCaps()
@@ -2857,21 +2879,40 @@ final class DockView: NSView {
         let highlightH   = round(4 * scale)   // 4px white bevel (top)
         let shadowH       = round(4 * scale)   // 4px gray shadow (bottom)
 
-        // 1. Draw left cap PNG (collapse button) — pixel-crisp rendering
-        let leftCapRect = NSRect(x: r.minX, y: r.minY, width: leftCapW, height: r.height)
-        if let leftCap = controlStripLeftCap {
+        // Side-aware caps: right-docked mirrors the chrome so the grip handle is on the inner
+        // (physical-left) side pointing toward the screen centre, and the collapse tab (the plain
+        // end cap) sits at the anchored screen edge — physical-right when right-docked. You click
+        // the collapse tab at that edge to collapse, and the strip retracts toward it (like the
+        // left-docked strip mirrored).
+        let right = controlStripRight
+        let leadingCapW  = right ? rightCapW : leftCapW
+        let trailingCapW = right ? leftCapW : rightCapW
+        func drawCap(_ img: NSImage?, at rect: NSRect, flip: Bool) {
+            guard let img = img else { return }
             ctx.saveGState()
             ctx.interpolationQuality = .none  // nearest-neighbor for pixel art
-            leftCap.draw(in: leftCapRect, from: .zero, operation: .sourceOver, fraction: bgAlpha)
+            if flip { ctx.translateBy(x: rect.minX + rect.maxX, y: 0); ctx.scaleBy(x: -1, y: 1) }
+            img.draw(in: rect, from: .zero, operation: .sourceOver, fraction: bgAlpha)
             ctx.restoreGState()
         }
+        // Collapse tab (controlStripLeftCap graphic) at the anchored screen edge.
+        let tabRect = right
+            ? NSRect(x: r.maxX - leftCapW, y: r.minY, width: leftCapW, height: r.height)
+            : NSRect(x: r.minX, y: r.minY, width: leftCapW, height: r.height)
 
-        // If collapsed, only draw left cap
-        if controlStripCollapsed { return }
+        // Collapsed → only the collapse tab shows, tucked at the anchored edge.
+        if controlStripCollapsed {
+            drawCap(controlStripLeftCap, at: tabRect, flip: right)
+            return
+        }
+
+        // 1. Leading cap (physical left) — grip (points inward) when right-docked, collapse tab when left.
+        drawCap(right ? controlStripRightCap : controlStripLeftCap,
+                at: NSRect(x: r.minX, y: r.minY, width: leadingCapW, height: r.height), flip: right)
 
         // 2. Middle section background — matches PNG border structure exactly
-        let midX = r.minX + leftCapW
-        let midW = r.width - leftCapW - rightCapW
+        let midX = r.minX + leadingCapW
+        let midW = r.width - leadingCapW - trailingCapW
         if midW > 0 {
             // a) Dark border — top 2px
             borderColor.setFill()
@@ -2899,14 +2940,36 @@ final class DockView: NSView {
                                       width: midW, height: darkBorderH)).fill()
         }
 
-        // 3. Right cap PNG (grip handle) — pixel-crisp rendering for retro look
-        let rightCapRect = NSRect(x: r.maxX - rightCapW, y: r.minY, width: rightCapW, height: r.height)
-        if let rightCap = controlStripRightCap {
-            ctx.saveGState()
-            ctx.interpolationQuality = .none  // nearest-neighbor for pixel art
-            rightCap.draw(in: rightCapRect, from: .zero, operation: .sourceOver, fraction: bgAlpha)
-            ctx.restoreGState()
+        // 2b. Scroll-arrow chevrons ◀ ▶ + grooves at the strip ends (authentic Control Strip)
+        let scrollCellW: CGFloat = 12
+        let gTop = r.minY + darkBorderH + shadowH
+        let gBot = r.maxY - darkBorderH - highlightH
+        func chevron(cx: CGFloat, left: Bool) {
+            let triH: CGFloat = 8, triW: CGFloat = 5, cy = r.midY
+            let p = NSBezierPath()
+            if left {
+                p.move(to: NSPoint(x: cx + triW / 2, y: cy - triH / 2))
+                p.line(to: NSPoint(x: cx - triW / 2, y: cy))
+                p.line(to: NSPoint(x: cx + triW / 2, y: cy + triH / 2))
+            } else {
+                p.move(to: NSPoint(x: cx - triW / 2, y: cy - triH / 2))
+                p.line(to: NSPoint(x: cx + triW / 2, y: cy))
+                p.line(to: NSPoint(x: cx - triW / 2, y: cy + triH / 2))
+            }
+            p.close(); arrowColor.setFill(); p.fill()
         }
+        if midW > 0 {
+            chevron(cx: r.minX + leadingCapW + scrollCellW / 2, left: true)
+            drawGroove(at: r.minX + leadingCapW + scrollCellW, top: gTop, bottom: gBot,
+                       dark: grooveDark, light: grooveLight)
+            chevron(cx: r.maxX - trailingCapW - scrollCellW / 2, left: false)
+            drawGroove(at: r.maxX - trailingCapW - scrollCellW - grooveWidth, top: gTop, bottom: gBot,
+                       dark: grooveDark, light: grooveLight)
+        }
+
+        // 3. Trailing cap (physical right) = plain end cap at the anchored screen edge.
+        drawCap(right ? controlStripLeftCap : controlStripRightCap,
+                at: NSRect(x: r.maxX - trailingCapW, y: r.minY, width: trailingCapW, height: r.height), flip: right)
 
         // 4. Arrows ▶ and grooves between icon modules
         for (i, item) in itemViews.enumerated() {
@@ -2941,10 +3004,14 @@ final class DockView: NSView {
     /// Handle click on Control Strip left cap (collapse/expand toggle).
     func handleControlStripCollapseClick(at localPoint: NSPoint) -> Bool {
         guard isControlStrip else { return false }
-        let leftCapW = controlStripLeftCapWidth
-        // Use full bounds height so click detection works even during animations
-        let capRect = NSRect(x: 0, y: 0, width: leftCapW, height: bounds.height)
-        if capRect.contains(localPoint) {
+        // Either end cap toggles collapse — the grip on the inner side OR the tab at the screen
+        // edge — so a click on either end works whichever way the strip is mirrored/docked.
+        let leadingW  = controlStripLeadingCapWidth
+        let trailingW = controlStripRight ? controlStripLeftCapWidth : controlStripRightCapWidth
+        let leadingRect  = NSRect(x: 0, y: 0, width: leadingW, height: bounds.height)
+        let trailingRect = NSRect(x: bounds.width - trailingW, y: 0, width: trailingW, height: bounds.height)
+        let hit = leadingRect.contains(localPoint) || trailingRect.contains(localPoint)
+        if hit {
             controlStripCollapsed.toggle()
             onControlStripToggle?(controlStripCollapsed)
             return true
@@ -3841,8 +3908,7 @@ final class DockView: NSView {
         // pre-shrinking the image to 16×16 (while the views ask for 20px) was the source
         // of the "Win98 menu icons missing" report. Returning the unmodified image makes
         // the classic Win98 path identical to the working XP path.
-        guard let theme = ThemeManager.shared.activeTheme else { return nil }
-        let iconURL = theme.iconsDirectory.appendingPathComponent(name)
+        guard let theme = ThemeManager.shared.activeTheme, let iconURL = theme.iconResource(name) else { return nil }
         return NSImage(contentsOf: iconURL)
     }
 

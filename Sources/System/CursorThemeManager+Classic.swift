@@ -16,8 +16,21 @@ extension CursorThemeManager {
         case "Mac OS X":                                return loadBundledSet("Cursors/MacOSX")
         case "Windows 3.1":                             return loadBundledSet("Cursors/Retrosmart")
         case "Windows XP":                              return loadBundledSet("Cursors/WindowsXP", scale: AppSettings.shared.xpCursorScale)
+        case "Windows 98":
+            // The default Windows 98 scheme keeps the system pointer; the Plus! schemes ship a set.
+            guard let dir = Win98Scheme.byID[AppSettings.shared.win98Scheme]?.cursorDir else { return nil }
+            return loadBundledSet(dir)
+        case "NeXTSTEP":                                return nextstepSet()
         default:                                        return nil
         }
+    }
+
+    /// NeXTSTEP pointer — the classic black arrow with a white outline (what `vectorArrow` draws).
+    /// Only the arrow slot is themed; the other cursors stay as the system's.
+    private static func nextstepSet() -> [CursorSlot: CursorFrames] {
+        [.arrow: CursorFrames(images: [vectorArrow(fill: .black, outline: .white, lineWidth: 1.6)],
+                              frameCount: 1, size: CGSize(width: 16, height: 16),
+                              hotspot: CGPoint(x: 1, y: 1), frameDuration: 0)]
     }
 
     /// A drawn black default-look pointer — the last-resort restore if no originals were

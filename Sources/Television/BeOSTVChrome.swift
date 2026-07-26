@@ -68,12 +68,16 @@ final class Mac9TVChromeView: NSView {
     // Colors measured from the Mac OS 9 UI Kit (Figma) title bar.
     private let face   = NSColor(calibratedWhite: 0.953, alpha: 1)          // #F3F3F3 light plate
     private let dark   = NSColor(calibratedWhite: 0.502, alpha: 1)
-    private let boxBP  = NSColor(calibratedRed: 0.329, green: 0.329, blue: 0.529, alpha: 1) // #545487 bevel
+    private let boxBP  = NSColor(calibratedWhite: 0.125, alpha: 1)          // #202020 os9 glyph line
     private let boxHi  = NSColor(calibratedRed: 0.855, green: 0.855, blue: 1.0, alpha: 1)   // #DADAFF highlight
-    private let boxFace = NSColor(calibratedWhite: 0.753, alpha: 1)         // #C0C0C0 box face
+    private let boxFace = NSColor(calibratedWhite: 0.878, alpha: 1)         // #E0E0E0 box face (os9 light)
     private let botShadow = NSColor(calibratedRed: 0.702, green: 0.702, blue: 0.855, alpha: 1) // #B3B3DA
-    private let strLt  = NSColor(calibratedWhite: 0.953, alpha: 1)          // #F3F3F3
-    private let strDk  = NSColor(calibratedWhite: 0.467, alpha: 1)          // #777777
+    // os9.ca pinstripes: repeating white / #737373; title plaque #dadada grey.
+    private let strLt  = NSColor(calibratedWhite: 1.0, alpha: 1)            // #FFFFFF
+    private let strDk  = NSColor(calibratedWhite: 0.451, alpha: 1)          // #737373
+    private let plaque = NSColor(calibratedWhite: 0.855, alpha: 1)          // #DADADA
+    private let bevHi  = NSColor(calibratedWhite: 1.0, alpha: 1)            // inset top-left
+    private let bevLo  = NSColor(calibratedWhite: 0.6, alpha: 1)            // #999 bottom-right
     private let titleFont = NSFont(name: "Charcoal", size: 12)
         ?? NSFont(name: "ChicagoFLF", size: 12) ?? .boldSystemFont(ofSize: 12)
     private let boxS: CGFloat = 11
@@ -100,8 +104,13 @@ final class Mac9TVChromeView: NSView {
         var y = bar.minY + 1
         while y < bar.maxY - 1 { fill(NSRect(x: 1, y: y, width: bounds.width - 2, height: 1), strLt)
                                  fill(NSRect(x: 1, y: y + 1, width: bounds.width - 2, height: 1), strDk); y += 2 }
-        // 1px black window frame + light-purple shadow line under the bar
+        // os9.ca .window frame: 1px black border + inset white top-left + #999 bottom-right bevel
         NSColor.black.setStroke(); NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5)).stroke()
+        let w = bounds.width, h = bounds.height
+        fill(NSRect(x: 1, y: h - 2, width: w - 2, height: 1), bevHi)   // inset white — top
+        fill(NSRect(x: 1, y: 1, width: 1, height: h - 2), bevHi)       // inset white — left
+        fill(NSRect(x: 1, y: 1, width: w - 2, height: 1), bevLo)       // #999 — bottom
+        fill(NSRect(x: w - 2, y: 1, width: 1, height: h - 2), bevLo)   // #999 — right
         fill(NSRect(x: 0, y: bar.minY, width: bounds.width, height: 1), botShadow)
         // control boxes (interactive: close left, collapse + zoom right) with hover/press
         tracker.reset()
@@ -120,7 +129,7 @@ final class Mac9TVChromeView: NSView {
         let attrs: [NSAttributedString.Key: Any] = [.font: titleFont, .foregroundColor: NSColor.black]
         let s = title.size(withAttributes: attrs)
         let px = (bounds.width - s.width) / 2
-        fill(NSRect(x: px - 8, y: bar.minY, width: s.width + 16, height: Self.barH), strLt)
+        fill(NSRect(x: px - 8, y: bar.minY, width: s.width + 16, height: Self.barH), plaque)
         title.draw(at: NSPoint(x: px, y: bar.midY - s.height / 2), withAttributes: attrs)
     }
 

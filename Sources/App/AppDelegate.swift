@@ -92,6 +92,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Probe OS capabilities once (async, off-main) so features can degrade gracefully.
         SystemBridge.shared.probeAll()
 
+        // Reflect the persisted window-borders flag at launch (gated internally; no-op when off).
+        WindowBorderController.shared.update()
+
         // Restore system UI if previous session crashed while UI was hidden
         SystemUIHelper.restoreIfNeeded()
         SystemUIHelper.restoreDesktopIconsIfNeeded()   // crash/force-quit-safe desktop-icon restore
@@ -151,6 +154,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ProgramManagerController.shared.update()
             SGIDesktopController.shared.update()
             BeOSDeskbarController.shared.update()
+            NextMenuController.shared.update()
+            NextDockController.shared.update()
+            NextRunningAppsController.shared.update()
+            WindowBorderController.shared.update()   // recolour theme window borders on theme change
             // The active theme drives the menu-bar Apple logo (Mac OS 9 → rainbow, Mac OS X →
             // aqua-classic, Maiks Favourite II → hell); every other theme turns it off.
             // Setting the style triggers RainbowAppleController.update() via its didSet.
@@ -210,6 +217,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // dockEnabled is reset so the menu/settings consistently reflect the inactive state.
         settings.dockEnabled = false
         isActive = false
+
+        // Test/QA hook: with RETROMAC_AUTOACTIVATE_THEME set, immediately turn on the remembered
+        // theme on launch (mirrors selecting it from the menu). Never set in production, so the
+        // clean-start behaviour above is unchanged for real users.
+        if ProcessInfo.processInfo.environment["RETROMAC_AUTOACTIVATE_THEME"] != nil {
+            DispatchQueue.main.async {
+                ThemeManager.shared.setActiveTheme(name: settings.dockTheme)
+                if !settings.dockEnabled { settings.dockEnabled = true; DockController.shared.start() }
+                if ProcessInfo.processInfo.environment["RETROMAC_OPEN_APPS"] != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        CPUMonitorController.shared.show()
+                        ClockWidgetController.shared.show()
+                        NotepadController.shared.show()
+                        NextAppsWindowController.shared.show()
+                    }
+                }
+            }
+        }
 
         // Rainbow Apple is theme-independent — show it on launch if the user enabled it.
         RainbowAppleController.shared.update()
@@ -293,7 +318,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let themeMenu = NSMenu()
         let active = ThemeManager.shared.activeTheme?.config.name
         for t in ThemeManager.shared.availableThemes {
-            let mi = NSMenuItem(title: t.config.name, action: #selector(selectTheme(_:)), keyEquivalent: "")
+            let mi = NSMenuItem(title: ThemeManager.displayName(for: t.config.name), action: #selector(selectTheme(_:)), keyEquivalent: "")
             mi.target = self
             mi.representedObject = t.config.name
             mi.state = (t.config.name == active) ? .on : .off
@@ -311,6 +336,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cam.target = self
         cam.state = VirtualCameraManager.shared.isRunning ? .on : .off
         menu.addItem(cam)
+        let borders = NSMenuItem(title: "Window Borders (Theme)", action: #selector(toggleThemeWindowBorders), keyEquivalent: "")
+        borders.target = self
+        borders.state = AppSettings.shared.themeWindowBorders ? .on : .off
+        menu.addItem(borders)
 
         menu.addItem(.separator())
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: "")
@@ -822,7 +851,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func themeValueString() -> String {
         let s = AppSettings.shared
         if !s.dockEnabled { return "Off" }
-        return s.dockTheme
+        // dockTheme stores the stable id — show the theme's display name instead.
+        return ThemeManager.shared.theme(for: s.dockTheme)?.name ?? s.dockTheme
     }
 
     private func rebuildMenu() {
@@ -933,6 +963,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let tubeToggleItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         tubeToggleItem.view = tubeRow
         menu.addItem(tubeToggleItem)
+
+        // ── Window Borders (Theme) toggle — prototype ──
+        let bordersPill = PillToggleView(isOn: AppSettings.shared.themeWindowBorders)
+        let bordersRow = MenuToggleRowView(
+            icon: "macwindow",
+            label: "Window Borders (Theme)",
+            hotkeyHint: nil,
+            pill: bordersPill
+        ) { [weak self] in
+            self?.toggleThemeWindowBorders()
+            bordersPill.isOn = AppSettings.shared.themeWindowBorders
+            self?.updateMenuLive()
+        }
+        let bordersToggleItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        bordersToggleItem.view = bordersRow
+        menu.addItem(bordersToggleItem)
 
         // ── PRESETS section ──
         menu.addItem(sectionLabel("PRESETS"))
@@ -1171,7 +1217,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let item = NSMenuItem(title: ThemeManager.displayName(for: theme.name), action: #selector(selectTheme(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = theme.name
-                if dockOn && theme.name == currentTheme { item.state = .on }
+                if dockOn && theme.stableID == currentTheme { item.state = .on }
                 // The crown (👑) is carried by displayName across all crowned themes —
                 // one consistent marker, no separate SF-Symbol image.
                 catMenu.addItem(item)
@@ -1677,7 +1723,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// is active. Mirrors the per-theme preset override used by theme activation.
     private func rememberShaderStateForActiveTheme(on: Bool) {
         guard AppSettings.shared.dockEnabled,
-              let name = ThemeManager.shared.activeTheme?.config.name else { return }
+              let name = ThemeManager.shared.activeTheme?.config.settingsKey else { return }
         AppSettings.shared.themePresetOverrides[name] =
             on ? (currentPresetName ?? AppSettings.shared.defaultPreset) : ""
     }
@@ -2391,7 +2437,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settings.dockEnabled = true
             DockController.shared.start()
         }
-        if settings.themePresetOverrides[name]?.isEmpty == true {
+        // The menu hands us a DISPLAY name; per-theme settings are keyed by stable id.
+        let themeKey = ThemeManager.shared.theme(for: name)?.stableID ?? name
+        if settings.themePresetOverrides[themeKey]?.isEmpty == true {
             // Explicit per-theme "off" (user toggled the shader off here, or picked "None"):
             // force the shader off so switching back to this theme restores that choice.
             if isActive { disableAll() }
@@ -2420,7 +2468,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// preference (set in the Setup Assistant). First version = the desktop Clock.
     private func applyThemeWidgets(for themeName: String) {
         // Dock-only deliberately changes nothing but the dock — no desktop widgets.
-        if AppSettings.shared.themeIncludeWidgets && !AppSettings.shared.dockOnly {
+        if AppSettings.shared.themeIncludeWidgets && !AppSettings.shared.dockOnly
+            && !ClockWidgetController.shared.userHidden {   // don't reopen a clock the user closed
             ClockWidgetController.shared.show()
         } else {
             ClockWidgetController.shared.destroy()   // fully release the WebView when widgets are off
@@ -2457,6 +2506,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ProgramManagerController.shared.update()
         SGIDesktopController.shared.update()
         BeOSDeskbarController.shared.update()
+        NextMenuController.shared.update()
+        NextDockController.shared.update()
+        NextRunningAppsController.shared.update()
+        WindowBorderController.shared.update()
         RainbowAppleController.shared.update()
         applyThemeWidgets(for: AppSettings.shared.dockTheme)
     }
@@ -2592,6 +2645,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DesktopIconsController.shared.hide()
             ProgramManagerController.shared.hide()
             SGIDesktopController.shared.hide()
+            NextMenuController.shared.hide()
+            NextDockController.shared.hide()
+            NextRunningAppsController.shared.hide()
             ThemeManager.shared.clearActiveTheme()
             ThemeManager.shared.restoreWallpapers()
         }
@@ -2613,6 +2669,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DesktopIconsController.shared.hide()
         ProgramManagerController.shared.hide()
         SGIDesktopController.shared.hide()
+        NextMenuController.shared.hide()
+        NextDockController.shared.hide()
+        NextRunningAppsController.shared.hide()
         ThemeManager.shared.clearActiveTheme()
         ThemeManager.shared.restoreWallpapers()
         // Also stop the CRT overlay when disabling theme
@@ -4190,6 +4249,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Virtual Camera
+
+    @objc private func toggleThemeWindowBorders() {
+        // Prototype toggle: theme-coloured border around the focused window of every app.
+        // AppSettings.didSet drives WindowBorderController.update(); flip the flag here.
+        AppSettings.shared.themeWindowBorders.toggle()
+    }
 
     @objc private func toggleVirtualCamera() {
         let vcam = VirtualCameraManager.shared

@@ -15,7 +15,10 @@ final class DesktopIconsController {
     private var screenObserver: Any?
     private var trashPollTimer: Timer?
     private var custom = DesktopStore.ThemeCustom()
-    private var themeName: String { ThemeManager.shared.activeTheme?.config.name ?? "?" }
+    /// Storage key for everything this controller persists per theme (desktop layout via
+    /// `DesktopStore`, wallpaper overrides). This is the theme's stable id, not its display name,
+    /// so renaming a theme keeps its desktop arrangement — see `DockThemeConfig.settingsKey`.
+    private var themeName: String { ThemeManager.shared.activeTheme?.config.settingsKey ?? "?" }
 
     // Computed grid layout — the dock leads (unless the desktop slider is unlocked).
     private var iconSize: CGFloat {
@@ -249,8 +252,7 @@ final class DesktopIconsController {
         if entry.type == "sheep", let img = NSImage(contentsOf: DesktopPetController.sheepIconCacheURL) {
             return img
         }
-        if let theme = theme {
-            let iconURL = theme.iconsDirectory.appendingPathComponent(entry.icon)
+        if let theme = theme, let iconURL = theme.iconResource(entry.icon) {
             if let img = NSImage(contentsOf: iconURL) {
                 return img
             }
@@ -259,6 +261,31 @@ final class DesktopIconsController {
         // Fallback for "app" type — use system icon
         if entry.type == "app", let bid = entry.bundleID {
             return ThemeManager.shared.icon(for: bid, size: size)
+        }
+
+        // Widget shortcut types (TV / Clock / CPU): a system glyph when the theme ships no art.
+        let widgetGlyph: [String: String] = ["tvfolder": "tv", "clock": "clock", "cpumonitor": "cpu", "nyanochrome": "cat"]
+        if let sym = widgetGlyph[entry.type] {
+            let cfg = NSImage.SymbolConfiguration(pointSize: size * 0.6, weight: .regular)
+            if let img = NSImage(systemSymbolName: sym, accessibilityDescription: entry.name)?
+                .withSymbolConfiguration(cfg) {
+                return img
+            }
+        }
+
+        // Native-game shortcut types (Setup Assistant): use the bundled per-game icon, else a
+        // game-controller glyph.
+        if ["doom", "duke3d", "quake", "quake2", "warcraft2", "warcraft1", "heretic", "pacman"].contains(entry.type) {
+            if let url = Bundle.main.resourceURL?.appendingPathComponent("GameIcons/\(entry.type).png"),
+               let img = NSImage(contentsOf: url) {
+                img.size = NSSize(width: size, height: size)
+                return img
+            }
+            let cfg = NSImage.SymbolConfiguration(pointSize: size * 0.66, weight: .regular)
+            if let img = NSImage(systemSymbolName: "gamecontroller.fill", accessibilityDescription: entry.name)?
+                .withSymbolConfiguration(cfg) {
+                return img
+            }
         }
 
         // Fallback for "trash" type
@@ -282,8 +309,7 @@ final class DesktopIconsController {
     }
 
     private func loadIconImageByName(_ name: String, theme: ThemeBundle?, size: CGFloat) -> NSImage? {
-        guard let theme = theme else { return nil }
-        let iconURL = theme.iconsDirectory.appendingPathComponent(name)
+        guard let theme = theme, let iconURL = theme.iconResource(name) else { return nil }
         return NSImage(contentsOf: iconURL)
     }
 

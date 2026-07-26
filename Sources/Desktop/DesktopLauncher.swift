@@ -44,10 +44,19 @@ enum DesktopLauncher {
             CPUMonitorController.shared.show()
 
         case "clock":
-            ClockWidgetController.shared.show()
+            ClockWidgetController.shared.userShow()   // user opened it → clears the closed flag
+
+        case "nyanochrome":
+            NyanochromeController.shared.toggle()
+
+        case "tictactoe":
+            TicTacToeController.shared.toggle()
 
         case "notepad":
             NotepadController.shared.show()
+
+        case "calculator":
+            CalculatorController.shared.show()
 
         case "webapp":
             // Hosted 98.js app (Notepad/Paint/IE/games) in a theme-chromed window.
@@ -67,6 +76,15 @@ enum DesktopLauncher {
 
         case "pacman":
             PacmanGame.launch()
+
+        // Native PC games launched from a themed desktop shortcut (added by the Setup Assistant).
+        // Doom/Duke3D/Quake go through the AppDelegate's @objc launchers; Warcraft is static.
+        case "doom":       (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchDoom")))
+        case "duke3d":     (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchDuke3D")))
+        case "quake":      (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchQuake")))
+        case "quake2":     (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchQuake2")))
+        case "warcraft2":  WarcraftGame.launch(.warcraft2)
+        case "warcraft1":  WarcraftGame.launch(.warcraft1)
 
         default:
             break

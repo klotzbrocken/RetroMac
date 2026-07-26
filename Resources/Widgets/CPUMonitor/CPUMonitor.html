@@ -222,20 +222,20 @@
      after the widget's SCALE(0.6) they render at the same physical size as the Clock. */
   body.theme-macos9 .m9-title{display:flex;position:relative;align-items:center;height:33px;
     border-top:2px solid #f3f3f3;border-bottom:2px solid #b3b3da;
-    background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAECAIAAADAusJtAAAAGElEQVR4nGMoLy9nYmBgYPj8+TMTAwMDACTMBEMaH6sVAAAAAElFTkSuQmCC) repeat;
+    background:repeating-linear-gradient(#e8e8e8 0 1px,#d0d0d0 1px 2px);
     image-rendering:pixelated;image-rendering:crisp-edges;}
   .m9-stripes{display:none;}
   .m9-title>*{position:relative;z-index:2;}
   .m9-ctl{position:relative;box-sizing:border-box;width:18px;height:18px;flex:0 0 18px;
-    background:#c0c0c0;border:2px solid #545487;box-shadow:inset 0 0 0 2px #dadaff;}
+    background:#c0c0c0;border:2px solid #7e7e8a;box-shadow:inset 0 0 0 2px #dadaff;}
   .m9-close{margin-left:12px;cursor:pointer;}
   .m9-collapse,.m9-zoom{cursor:pointer;}
   .m9-plaque{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
     background:#f3f3f3;padding:0 13px;height:25px;display:flex;align-items:center;gap:8px;
     font-size:21px;font-weight:700;color:#000;font-family:"Charcoal","ChicagoFLF","Helvetica Neue",Helvetica,sans-serif;}
   .m9-right{margin-left:auto;display:flex;gap:8px;padding-right:12px;}
-  .m9-zoom::before{content:"";position:absolute;left:2px;top:2px;width:7px;height:7px;border:2px solid #545487;background:#c0c0c0;}
-  .m9-collapse::before{content:"";position:absolute;left:3px;right:3px;top:8px;height:0;border-top:2px solid #545487;}
+  .m9-zoom::before{content:"";position:absolute;left:2px;top:2px;width:7px;height:7px;border:2px solid #7e7e8a;background:#c0c0c0;}
+  .m9-collapse::before{content:"";position:absolute;left:3px;right:3px;top:8px;height:0;border-top:2px solid #7e7e8a;}
 
   /* ===== Mac System 6 (system.css by Sakun Acharige, MIT) — fonts + exact title bar ===== */
   @font-face{font-family:Chicago_12;src:url(ChiKareGo2.woff2) format("woff2");}
@@ -347,8 +347,9 @@
   /* ===== Mac OS X — Aqua 10.0–10.4 (counter-scaled like Maiks Favourite) ===== */
   .mx-title{display:none;}
   body.theme-macosx .tab,body.theme-macosx .marker{display:none;}
-  body.theme-macosx .window{background:#ededed;border:1px solid #5c5c5c;border-radius:11px 11px 6px 6px;overflow:hidden;
-    box-shadow:0 22px 50px rgba(0,0,0,.45),0 6px 14px rgba(0,0,0,.30);}
+  /* Cheetah window edge: ~6px top corners (not 11 — that read as a glassy rim), crisp 1px grey frame. */
+  body.theme-macosx .window{background:#ededed;border:1px solid #7a7a7a;border-radius:6px 6px 3px 3px;overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);}
   body.theme-macosx .body{border:none;box-shadow:none;margin:0 7px 7px;}
   body.theme-macosx .mx-title{display:flex;align-items:center;position:relative;height:40px;gap:11px;padding:0 14px;
     background:linear-gradient(to bottom,#fafafa,#ededed 26%,#dadada 60%,#c6c6c6 92%,#bcbcbc);
@@ -370,7 +371,7 @@
   .mx-glyph{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
     font:700 17px "Lucida Grande",Helvetica,Arial,sans-serif;color:rgba(0,0,0,.6);
     text-shadow:0 1px 0 rgba(255,255,255,.4);opacity:0;transition:opacity .08s linear;pointer-events:none;}
-  body.hovering .mx-glyph{opacity:1;}
+  .mx-glyph{display:none;}
 
   /* ===== Windows 98 — exakt nach SPEC, counter-scaled (1/0.6) ===== */
   .w98-title{display:none;}
@@ -398,12 +399,95 @@
 
   /* ===== Live title-bar button feedback (native DragOverlayView → window.setBtnState) ===== */
   /* The overlay intercepts mouse events, so these classes stand in for :hover/:active. */
-  .xp-close.is-hover,.mf-close.is-hover,.mx-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
-  .xp-close.is-press,.mf-close.is-press,.mx-close.is-press,.closebox.is-press{filter:brightness(.82);}
+  .xp-close.is-hover,.mf-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
+  .xp-close.is-press,.mf-close.is-press,.closebox.is-press{filter:brightness(.82);}
+  /* Aqua traffic lights: no per-button brightness filter (caused hover flicker under scale(0.6));
+     the glyphs already reveal on title-bar hover. Press = a static inset shade, no filter. */
+  .mx-close.is-press,.mx-zoom.is-press{box-shadow:inset 0 0 3px 1px rgba(0,0,0,.45),inset 0 0 1.5px 1px rgba(0,0,0,.38),inset 0 -4px 5px rgba(0,0,0,.32);}
   .w98-btn.is-hover{filter:brightness(1.06);}
   .w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
   .m9-ctl.is-hover{background:#d0d0dc;}
-  .m9-ctl.is-press{background:#9c9cb0;box-shadow:inset 0 0 0 2px #545487;}
+  .m9-ctl.is-press{background:#9c9cb0;box-shadow:inset 0 0 0 2px #7e7e8a;}
+  /* ===== Windows 7 (Aero glass) — inherits XP structure via dual class (theme-win7 theme-winxp) ===== */
+  body.theme-win7 #win{border-radius:6px 6px 2px 2px;background:rgba(69,128,196,0.34);
+    box-shadow:0 8px 22px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.7);}
+  body.theme-win7 .xp-title{border-radius:6px 6px 0 0;
+    background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,.14) 46%,rgba(0,0,0,.05) 54%,rgba(255,255,255,.22)),rgba(90,137,198,0.30);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.85);}
+  body.theme-win7 .xp-cap,body.theme-win7 .xp-caption{color:#0b1a2e;font-family:"Segoe UI",Tahoma,sans-serif;
+    text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 4px #fff,0 0 3px #fff;}
+  body.theme-win7 .body{background:#f0f0f0;}
+  body.theme-win7 .np-toolbar,body.theme-win7 .np-status,
+  body.theme-win7 .w98-menubar,body.theme-win7 .w98-drop{background:#f0f0f0;}
+  body.theme-win7 .xp-min,body.theme-win7 .xp-max{
+    background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.3) 45%,rgba(0,0,0,.08) 55%,rgba(255,255,255,.5));
+    border:1px solid rgba(0,0,0,.3);}
+  body.theme-win7 .xp-min::before{background:#1a1a1a;}
+  body.theme-win7 .xp-max::before{border-color:#1a1a1a;}
+  body.theme-win7 .xp-close{background:linear-gradient(180deg,#e7a99e,#d76b58 45%,#d54f36 55%,#c23b22);
+    border:1px solid rgba(0,0,0,.3);}
+  /* ===== Mac OS 9: proxy icon in the title plaque (authentic Platinum) ===== */
+  body.theme-macos9 .m9-plaque{padding:0 8px 0 43px;background:#dadada url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='13'%20height='13'%20viewBox='0%200%2013%2013'%3E%3Cpath%20d='M2%201h5l4%204v7H2z'%20fill='%23fff'%20stroke='%237a7a7a'/%3E%3Cpath%20d='M7%201v4h4'%20fill='%23dcdcdc'%20stroke='%237a7a7a'/%3E%3Cpath%20d='M4%207h5M4%209h5M4%2011h3'%20stroke='%239a9a9a'/%3E%3C/svg%3E") 8px center/27px no-repeat;}
+        /* ===== Mac OS 9 Platinum title bar — matched to os9.ca original (authoritative, CPU 1/0.6) ===== */
+  /* Reverse-engineered 1:1 from os9.ca window.min.css */
+  body.theme-macos9 #win, body.theme-macos9 .window{background:#dadada!important;border:1.67px solid #000!important;
+    box-shadow:1.67px 1.67px #111,inset 1.67px 1.67px #fff,inset -1.67px -1.67px #999!important;}
+  body.theme-macos9 .m9-title{height:36.67px;border:none!important;
+    background:repeating-linear-gradient(#fff 0 1.67px,#737373 1.67px 3.33px) left 8.33px/100% 20.0px no-repeat,#dadada!important;}
+  body.theme-macos9 .m9-plaque{background-color:#dadada!important;font-family:'Charcoal','ChicagoFLF',sans-serif!important;font-weight:normal!important;}
+  body.theme-macos9 .m9-close,body.theme-macos9 .m9-collapse,body.theme-macos9 .m9-zoom{
+    display:block!important;box-sizing:content-box!important;width:15.0px!important;height:15.0px!important;position:relative;flex:0 0 auto;
+    border:1.67px solid #222!important;
+    background:linear-gradient(to bottom right,#999,#aaa,#bbb,#ccc,#ddd,#eee,#fff,#fff)!important;
+    box-shadow:inset 1.67px 1.67px #ccc,inset -1.67px -1.67px #888,-1.67px -1.67px 0 0 #808080,1.67px 1.67px 0 0 #fff!important;cursor:pointer;}
+  body.theme-macos9 .m9-close{margin:6.67px 0 0 8.33px!important;}
+  body.theme-macos9 .m9-right{margin-left:auto!important;display:flex!important;align-items:flex-start!important;gap:0!important;margin-right:0!important;padding-right:0!important;}
+  body.theme-macos9 .m9-zoom{order:1;margin:6.67px 6.67px 0 0!important;}
+  body.theme-macos9 .m9-collapse{order:2;margin:6.67px 8.33px 0 6.67px!important;}
+  body.theme-macos9 .m9-zoom::before{content:""!important;position:absolute;top:1.67px!important;left:1.67px!important;width:8.33px;height:8.33px;border-bottom:1.67px solid #202020!important;border-right:1.67px solid #202020!important;background:none!important;box-shadow:none!important;}
+  body.theme-macos9 .m9-zoom::after{content:none!important;}
+  body.theme-macos9 .m9-collapse::before{content:""!important;position:absolute;left:1.67px!important;right:1.67px!important;top:6.67px!important;height:1.67px!important;border-top:1.67px solid #202020!important;border-bottom:1.67px solid #202020!important;background:none!important;box-shadow:none!important;}
+  body.theme-macos9 .m9-collapse::after{content:none!important;}
+  body.theme-macos9 .body{margin:0 6.67px 6.67px 6.67px!important;border:1.67px solid #000!important;box-shadow:-1.67px -1.67px #9c9c9c,1.67px 1.67px #fff,inset 1.67px 1.67px #fff,inset -1.67px -1.67px #acacac!important;}
+  /* Inactive window (os9.ca .window.blur): grey shadow/borders, 50% title, flat boxes */
+  body.theme-macos9.rm-blur #win,body.theme-macos9.rm-blur .window,body.theme-macos9.rm-blur .be-win{box-shadow:1px 1px #525252!important;border-color:#525252!important;}
+  body.theme-macos9.rm-blur .m9-close,body.theme-macos9.rm-blur .m9-collapse,body.theme-macos9.rm-blur .m9-zoom{border-color:#525252!important;box-shadow:none!important;}
+  body.theme-macos9.rm-blur .m9-zoom::before,body.theme-macos9.rm-blur .m9-zoom::after,body.theme-macos9.rm-blur .m9-collapse::before{border-color:#525252!important;background:#525252!important;}
+  body.theme-macos9.rm-blur .m9-plaque{opacity:.5;}
+
+  /* ===== NeXTSTEP (theme-nextstep) — black title bar, close on the RIGHT, chiseled grey frame ===== */
+  body.theme-nextstep{background:transparent;}
+  body.theme-nextstep .window{background:#8a8a98;border:none;border-radius:0;overflow:hidden;
+    box-shadow:inset 2px 2px 0 #fff, inset -2px -2px 0 #3d3e45, 0 0 0 1px #000;}
+  body.theme-nextstep .m9-title,body.theme-nextstep .xp-title,body.theme-nextstep .mf-title,
+  body.theme-nextstep .mx-title,body.theme-nextstep .w98-title,body.theme-nextstep .marker{display:none;}
+  body.theme-nextstep .tab{position:relative;display:block;width:100%;box-sizing:border-box;
+    height:22px;background:#000;border:none;border-radius:0;padding:0;margin:0;overflow:hidden;}
+  body.theme-nextstep .tab b{position:absolute;left:24px;right:24px;top:0;line-height:22px;text-align:center;
+    color:#fff;font:700 13px Helvetica,Arial,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* miniaturize square, top-left (decorative) */
+  body.theme-nextstep .tab::before{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;
+    background:#aaaab7;box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 0 #555;}
+  body.theme-nextstep .tab::after{content:"";position:absolute;left:8px;top:8px;width:6px;height:6px;border:1px solid #000;}
+  /* close box, top-right, with an X (keeps the functional #closebox / #bxclose element) */
+  body.theme-nextstep .closebox{position:absolute;right:3px;top:3px;left:auto;width:16px;height:16px;
+    background:#aaaab7;border:none;border-radius:0;box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 0 #555;}
+  body.theme-nextstep .closebox::before,body.theme-nextstep .closebox::after{content:"";position:absolute;
+    left:2px;top:7px;width:12px;height:2px;background:#000;}
+  body.theme-nextstep .closebox::before{transform:rotate(45deg);}
+  body.theme-nextstep .closebox::after{transform:rotate(-45deg);}
+  body.theme-nextstep .body{background:#8a8a98;border:none;box-shadow:none;margin:2px;}
+
+
+  /* CPU renders its content at SCALE 0.6 — counter-scale the NeXT title so it matches Clock/Notes (22px on screen). */
+  body.theme-nextstep .tab{height:37px;}
+  body.theme-nextstep .tab b{left:40px;right:40px;line-height:37px;font-size:22px;}
+  body.theme-nextstep .tab::before{width:27px;height:27px;left:5px;top:5px;}
+  body.theme-nextstep .tab::after{left:13px;top:13px;width:10px;height:10px;}
+  body.theme-nextstep .closebox{width:27px;height:27px;right:5px;top:5px;}
+  body.theme-nextstep .closebox::before,body.theme-nextstep .closebox::after{left:3px;top:12px;width:20px;height:3px;}
+  body.theme-nextstep .window{box-shadow:inset 3px 3px 0 #fff, inset -3px -3px 0 #3d3e45, 0 0 0 2px #000;}
+
 </style>
 </head>
 <body>
@@ -557,7 +641,7 @@
   };
 
   // Host sets the chrome theme: 'beos' (yellow tab, default) · 'macos9' (Platinum window).
-  window.setTheme = function(k){ document.body.className = 'theme-' + (k || 'beos'); };
+  window.setTheme = function(k){ var t=k||'beos'; document.body.className = 'theme-'+t+(t==='win7'?' theme-winxp':''); };
   window.setHover = function(h){ document.body.classList.toggle('hovering', !!h); };
 
   // Mac OS 9 title controls — return new widget size so the host can resize its window.
