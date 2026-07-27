@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows XP</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#245edb; font-family:"Tahoma","Segoe UI","Helvetica Neue",sans-serif; color:#182838; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#eef3fb; border:1px solid #2a5fd0; border-radius:8px; box-shadow:0 10px 34px rgba(0,0,0,.38); border-radius:8px; overflow:hidden; }
+  .titlebar { background:linear-gradient(#3a80f0,#1550c8);color:#fff;padding:7px 12px;font-size:13px;font-weight:700; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border-radius:8px; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#153a7a; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#4a5a70; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#1e56b8; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #c2d2ee; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#2a7a2a; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#e3ecfb; border:1px solid #b8ccee; border-radius:6px; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#1e56b8; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #2a7a2a; padding-left:12px; margin:4px 0 0; color:#4a5a70; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #c2d2ee; font-size:11px; color:#4a5a70; line-height:1.6; }
+  footer a { color:#1550c8; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-title">Windows XP</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="icons/appIcon.png" alt="Windows XP">
+        <div><h1>Windows XP</h1><p class="sub">Microsoft &middot; 2001</p></div>
+      </div>
+      <p>Windows XP (2001) finally merged Microsoft's two worlds: the consumer 9x line and the stable NT line became a single system for everyone. It wore the bright <b>Luna</b> theme &mdash; a blue title bar, a green Start button, rounded silver chrome &mdash; over the rolling green hills of the <b>Bliss</b> wallpaper.</p><p>It proved so solid and familiar that people (and businesses) refused to let go, keeping it running for well over a decade.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li><b>Luna</b>: the blue-and-green candy interface with the green Start button.</li><li>Unified the consumer and business Windows lines on the <b>NT</b> core.</li><li>The <b>Bliss</b> wallpaper &mdash; those green hills.</li><li>Fast user switching, a friendlier Start menu and Remote Desktop.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>Bliss is a real place.</b> The default wallpaper is an unretouched 1996 photograph of green hills in Sonoma County, California, taken by Charles O'Rear &mdash; one of the most-viewed photos in history.</div><div class="item"><b>Two Windows become one.</b> XP was the first time home users and businesses ran the same NT-based Windows, ending the old 9x/NT split.</div><div class="item"><b>It just wouldn't retire.</b> Support officially ended in 2014, yet XP kept running on ATMs, tills and machinery for years afterward.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>

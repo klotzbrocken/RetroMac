@@ -239,15 +239,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Rainbow Apple is theme-independent — show it on launch if the user enabled it.
         RainbowAppleController.shared.update()
 
+        // QA hook: force the onboarding coach marks (bypasses the one-time gate).
+        if ProcessInfo.processInfo.environment["RETROMAC_FORCE_COACH"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { CoachMarkController.shared.forceShow() }
+        }
+
         // First run: the Setup Assistant is the primary onboarding (incl. permissions).
         // After it finishes, fall through to the welcome flow for What's New / Coffee.
         // On subsequent launches the wizard is skipped and only the welcome flow runs.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             if !AppSettings.shared.setupWizardComplete {
-                self.setupWizard.onFinishExtra = { [weak self] in self?.welcomeFlow.showIfNeeded() }
+                self.setupWizard.onFinishExtra = { [weak self] in
+                    self?.welcomeFlow.showIfNeeded()
+                    CoachMarkController.shared.showIfNeeded()   // self-defers until onboarding windows close
+                }
                 self.setupWizard.show()
             } else {
                 self.welcomeFlow.showIfNeeded()
+                CoachMarkController.shared.showIfNeeded()
             }
 
             // Honor "Turn the shader on when RetroMac launches" (Settings ▸ System). The clean-start
@@ -1227,6 +1236,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         themesItem.submenu = themesMenu
         menu.addItem(themesItem)
+
+        // About This Theme — a historical readme (with "did you know" curiosities) for the
+        // active theme's OS, shown only when the theme ships a readme.html.
+        if ThemeReadmeController.activeThemeHasReadme() {
+            let aboutTheme = NSMenuItem(title: "About This Theme\u{2026}", action: #selector(showThemeReadme), keyEquivalent: "")
+            aboutTheme.image = sfIcon("book")
+            aboutTheme.target = self
+            menu.addItem(aboutTheme)
+        }
 
         // (Television submenu removed — channels live in the TV Tube toggle + its
         // right-click menu; the dock/start-menu entries start the Tube directly.)
@@ -2426,6 +2444,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 alert.runModal()
             }
         }
+    }
+
+    @objc private func showThemeReadme() {
+        ThemeReadmeController.shared.showForActiveTheme()
+    }
+
+    /// The menu-bar status-item icon in screen coordinates (target for the onboarding coach mark).
+    var statusButtonScreenRect: NSRect? {
+        guard let button = statusItem?.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
+
+    /// Open the GitHub repo (used by the coach mark's "Updates & source" step).
+    func openGitHubRepo() {
+        if let url = URL(string: "https://github.com/klotzbrocken/RetroMac") { NSWorkspace.shared.open(url) }
     }
 
     @objc private func selectTheme(_ sender: NSMenuItem) {

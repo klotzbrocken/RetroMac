@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows 3.1</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#008080; font-family:"MS Sans Serif","Helvetica Neue",Tahoma,sans-serif; color:#000; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#c0c0c0; border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #808080;border-bottom:2px solid #808080; box-shadow:0 10px 34px rgba(0,0,0,.38);  }
+  .titlebar { background:#000080;color:#fff;padding:4px 8px;font-size:13px;font-weight:700;display:flex;align-items:center; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border:2px solid #808080; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#000; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#333; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#000080; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #808080; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#000080; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#cfcfcf; border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#000080; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #000080; padding-left:12px; margin:4px 0 0; color:#333; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #808080; font-size:11px; color:#333; line-height:1.6; }
+  footer a { color:#000080; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-title">Windows 3.1</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="icons/appIcon.png" alt="Windows 3.1">
+        <div><h1>Windows 3.1</h1><p class="sub">Microsoft &middot; 1992</p></div>
+      </div>
+      <p>Windows 3.1 (1992) is the release that made Windows mainstream. It ran on top of DOS and organised everything through Program Manager and File Manager, with grey 3D buttons, the teal (#008080) desktop and, for the first time, scalable <b>TrueType</b> fonts.</p><p>It wasn't a full operating system on its own &mdash; DOS did the real work underneath &mdash; but it put a friendly, mouse-driven face on the PC for millions of people.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li><b>Program Manager</b> and <b>File Manager</b>, the DOS-era desktop.</li><li><b>TrueType</b> fonts arrived, so text scaled cleanly.</li><li>The unmistakable teal desktop and grey 3D chrome.</li><li>Solitaire and Minesweeper shipped in the box.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>Solitaire had a job.</b> Microsoft bundled Solitaire not just for fun but to teach a generation the mouse &mdash; dragging cards taught click-and-drag.</div><div class="item"><b>Not really an OS.</b> Windows 3.x was a graphical shell running on top of MS-DOS, which still handled files and hardware underneath.</div><div class="item"><b>That teal.</b> The default #008080 desktop is burned into the memory of everyone who used a PC in the early '90s.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>

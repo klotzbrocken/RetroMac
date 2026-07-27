@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mac OS X</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#5b6b86; font-family:"Lucida Grande","Helvetica Neue",Helvetica,sans-serif; color:#1c1c22; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#f3f5f9; border:1px solid #9aa6bd; border-radius:8px; box-shadow:0 10px 34px rgba(0,0,0,.38); border-radius:8px; overflow:hidden; }
+  .titlebar { background:linear-gradient(#eef2f8,#c6cfdd);color:#333;padding:7px 12px;font-size:13px;font-weight:600;text-align:center;border-bottom:1px solid #9aa6bd; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border-radius:14px; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#20304a; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#5a6070; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#33506a; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #bcc6d6; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#3a78c8; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#e7eef8; border:1px solid #bcccE0; border-radius:6px; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#33506a; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #3a78c8; padding-left:12px; margin:4px 0 0; color:#5a6070; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #bcc6d6; font-size:11px; color:#5a6070; line-height:1.6; }
+  footer a { color:#1a5fbf; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-title">Mac OS X</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="icons/appIcon.png" alt="Mac OS X">
+        <div><h1>Mac OS X</h1><p class="sub">Apple &middot; 10.0 “Cheetah”, March 2001</p></div>
+      </div>
+      <p>Mac OS X 10.0 &mdash; internally “Cheetah” &mdash; shipped in March 2001 and started everything modern about the Mac. It introduced <b>Aqua</b>: glossy pinstripes, a pulsing blue default button, translucent menus, the Genie minimise effect and the magnifying Dock.</p><p>Under the candy shell it was Unix: the Darwin core (BSD + the Mach kernel) inherited straight from NeXTSTEP, which Apple acquired in 1997.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li><b>Aqua</b> &mdash; glossy “lickable” buttons, pinstripes and the pulsing default button.</li><li>The magnifying <b>Dock</b> and the <b>Genie</b> minimise animation.</li><li>A real <b>Unix</b> foundation (Darwin) with protected memory and true multitasking.</li><li>The first of the big-cat release names.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>Good enough to lick.</b> Steve Jobs on Aqua's candy-coloured buttons:<div class="quote">“We made the buttons on the screen look so good you'll want to lick them.”</div></div><div class="item"><b>NeXT under the hood.</b> OS X descends directly from NeXTSTEP &mdash; the Dock, the Cocoa frameworks and the “NS” class prefix all came along when Apple bought NeXT and Jobs returned.</div><div class="item"><b>Slow but pivotal.</b> 10.0 crawled on 2001 hardware; a free 10.1 update later that year made it usable, and the line never looked back.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>

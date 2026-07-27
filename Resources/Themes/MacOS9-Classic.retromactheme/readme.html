@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mac OS 9</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#7d7d85; font-family:"Charcoal", "Helvetica Neue", Geneva, sans-serif; color:#222; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#dcdce2; border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #8a8a92;border-bottom:1px solid #8a8a92; box-shadow:0 10px 34px rgba(0,0,0,.38);  }
+  .titlebar { background:linear-gradient(#f0f0f4,#c8c8d0);color:#222;padding:5px 10px;font-size:13px;font-weight:700;text-align:center;border-bottom:1px solid #9a9aa2; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border-radius:8px; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#26262e; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#55555e; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#33333a; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #b0b0b8; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#7a7a86; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#e6e6ec; border:1px solid #ccc; border-radius:4px; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#33333a; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #7a7a86; padding-left:12px; margin:4px 0 0; color:#55555e; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #b0b0b8; font-size:11px; color:#55555e; line-height:1.6; }
+  footer a { color:#1c4fb0; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-title">Mac OS 9</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="icons/appIcon.png" alt="Mac OS 9">
+        <div><h1>Mac OS 9</h1><p class="sub">Apple &middot; 2001 (the last “classic” Mac OS)</p></div>
+      </div>
+      <p>Mac OS 9 (2001) was the final chapter of the classic Mac line before Mac OS X took over. It wore the <b>Platinum</b> look &mdash; soft grey gradients and pinstripes &mdash; with the Charcoal font, the colourful Apple menu, Sherlock search and a sea of Extensions and Control Panels.</p><p>Underneath it still used cooperative multitasking with no protected memory, so a single misbehaving program could bring down the whole machine.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li>The <b>Platinum</b> appearance: pinstripes, WindowShade roll-up and proxy icons.</li><li><b>Sherlock</b> for searching files and the web.</li><li>Extensions &amp; Control Panels &mdash; endlessly tweakable, occasionally fragile.</li><li>The multi-colour Apple logo in the top-left.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>A funeral for OS 9.</b> At WWDC 2002 Steve Jobs held a mock funeral on stage, complete with a coffin, to tell developers it was time to move to Mac OS X.<div class="quote">“Mac OS 9 was a friend to us all. He worked tirelessly on our behalf.”</div></div><div class="item"><b>The bomb.</b> With no protected memory, a crash often meant a dialog with a little bomb icon &mdash; and a restart.</div><div class="item"><b>Classic inside X.</b> Early Mac OS X could boot the whole OS 9 system in a “Classic” compatibility environment.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows 98</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#3a6ea5; font-family:"Tahoma","MS Sans Serif","Helvetica Neue",sans-serif; color:#000; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#c0c0c0; border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #808080;border-bottom:2px solid #808080; box-shadow:0 10px 34px rgba(0,0,0,.38);  }
+  .titlebar { background:linear-gradient(90deg,#000080,#1084d0);color:#fff;padding:4px 8px;font-size:13px;font-weight:700;display:flex;align-items:center; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border:2px solid #808080; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#000; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#333; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#000080; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #808080; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#1084d0; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#cfcfcf; border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#000080; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #1084d0; padding-left:12px; margin:4px 0 0; color:#333; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #808080; font-size:11px; color:#333; line-height:1.6; }
+  footer a { color:#000080; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-title">Windows 98</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="icons/appIcon.png" alt="Windows 98">
+        <div><h1>Windows 98</h1><p class="sub">Microsoft &middot; 1998</p></div>
+      </div>
+      <p>Windows 98 polished the grey-and-teal Windows 95 formula and wired the web into the desktop. It brought the <b>Quick Launch</b> bar, Windows Update, Active Desktop, proper <b>USB</b> support and the FAT32 file system, all under those blue-gradient title bars and the Tahoma font.</p><p>It sat on the consumer 9x/DOS lineage, and for a lot of households it was the machine that first got online.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li>The <b>Quick Launch</b> bar and <b>Windows Update</b>.</li><li><b>USB</b> plug-and-play that finally worked in daily use.</li><li><b>Active Desktop</b> put live web content on your wallpaper.</li><li>FAT32, larger disks and the familiar blue title bars.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>The blue screen heard round the world.</b> During a live 1998 demo of USB plug-and-play, a test PC crashed to a Blue Screen of Death on stage next to Bill Gates. “That must be why we're not shipping Windows 98 yet,” quipped his presenter to a roar of laughter.</div><div class="item"><b>The web on your desktop.</b> Active Desktop could pin web pages and channels straight onto the wallpaper &mdash; an early, ambitious mash-up of browser and desktop.</div><div class="item"><b>USB grows up.</b> 98 was where USB devices became genuinely plug-and-play for most people.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>

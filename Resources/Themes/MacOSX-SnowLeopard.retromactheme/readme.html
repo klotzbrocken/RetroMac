@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snow Leopard</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#3a3f4a; font-family:"Lucida Grande","Helvetica Neue",Helvetica,sans-serif; color:#20242a; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#eceef2; border:1px solid #9aa0aa; border-radius:8px; box-shadow:0 10px 34px rgba(0,0,0,.38); border-radius:8px; overflow:hidden; }
+  .titlebar { background:linear-gradient(#f2f3f6,#cfd3da);color:#333;padding:7px 12px;font-size:13px;font-weight:600;text-align:center;border-bottom:1px solid #a6acb6; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border-radius:14px; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#242830; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#565b64; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#3a4450; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #c2c6cd; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#4a5a86; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#e3e6ec; border:1px solid #c2c8d2; border-radius:6px; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#3a4450; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #4a5a86; padding-left:12px; margin:4px 0 0; color:#565b64; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #c2c6cd; font-size:11px; color:#565b64; line-height:1.6; }
+  footer a { color:#2a5fb0; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-title">Snow Leopard</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="icons/appIcon.png" alt="Snow Leopard">
+        <div><h1>Snow Leopard</h1><p class="sub">Apple &middot; Mac OS X 10.6, 2009</p></div>
+      </div>
+      <p>Snow Leopard (10.6, 2009) is the release Apple famously sold on having <b>no new features</b>. Instead it was a deep clean: a smaller, faster, fully 64-bit system that dropped support for the old PowerPC chips and reclaimed gigabytes of disk space.</p><p>Its refinements went under the hood &mdash; Grand Central Dispatch for multicore, OpenCL for the GPU &mdash; and it earned a lasting reputation as one of the most stable Macs ever.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li>Sold on <b>polish and speed</b>, not features.</li><li><b>Grand Central Dispatch</b> made multicore programming practical.</li><li><b>OpenCL</b> put the graphics card to work on general computing.</li><li>Fully 64-bit; freed roughly 7&nbsp;GB of disk.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>Zero new features.</b> Apple's own marketing leaned into it &mdash; the headline was refinement, reliability and a smaller footprint rather than a feature list.</div><div class="item"><b>The last of Rosetta.</b> Snow Leopard was the final OS X that could run old PowerPC apps via Rosetta; 10.7 dropped it.</div><div class="item"><b>Still beloved.</b> Years later many users called it the high-water mark for Mac stability.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>

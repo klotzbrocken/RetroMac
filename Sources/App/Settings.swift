@@ -145,6 +145,10 @@ final class AppSettings: ObservableObject {
     @Published var onboardingComplete: Bool {
         didSet { defaults.set(onboardingComplete, forKey: "onboardingComplete") }
     }
+    /// The one-time coach marks (arrow → floating button → menu-bar icon → GitHub) shown after setup.
+    @Published var hasSeenCoachMarks: Bool {
+        didSet { defaults.set(hasSeenCoachMarks, forKey: "hasSeenCoachMarks") }
+    }
     @Published var lastSeenVersion: String {
         didSet { defaults.set(lastSeenVersion, forKey: "lastSeenVersion") }
     }
@@ -776,6 +780,7 @@ final class AppSettings: ObservableObject {
 
         // Onboarding / Features
         onboardingComplete = defaults.bool(forKey: "onboardingComplete")
+        hasSeenCoachMarks = defaults.bool(forKey: "hasSeenCoachMarks")
         lastSeenVersion = defaults.string(forKey: "lastSeenVersion") ?? ""
         coffeeAckDate = defaults.object(forKey: "coffeeAckDate") as? Date
         dockModeEnabled = defaults.object(forKey: "dockModeEnabled") as? Bool ?? false
@@ -966,7 +971,7 @@ final class AppSettings: ObservableObject {
         screenshotHotkeyCode = defaults.object(forKey: "screenshotHotkeyCode") as? UInt32 ?? 0
         screenshotHotkeyModifiers = defaults.object(forKey: "screenshotHotkeyModifiers") as? UInt32 ?? 0
         showHotkeyConflictTips = defaults.object(forKey: "showHotkeyConflictTips") as? Bool ?? true
-        showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true
+        showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? false
 
         // Per-app rules (migrate from old perAppPresets if needed)
         if let data = defaults.data(forKey: "perAppRules"),
