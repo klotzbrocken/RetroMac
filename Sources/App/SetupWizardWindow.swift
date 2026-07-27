@@ -124,6 +124,11 @@ struct SetupWizardView: View {
                       subtitle: "Turn on a theme’s CRT shader automatically.",
                       isOn: $settings.shaderOnThemeChange)
             Divider()
+            toggleRow(icon: "film.fill", tint: .teal,
+                      title: "Boot animation on theme change",
+                      subtitle: "Play a theme’s boot screen (like the Mac OS X startup) when you switch to it. Off by default.",
+                      isOn: $settings.showSplashScreen)
+            Divider()
             toggleRow(icon: "menubar.rectangle", tint: .orange,
                       title: "Hide the macOS menu bar",
                       subtitle: "Show it again by moving the pointer to the top of the screen.",

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BeOS</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#6f6f6f; font-family:"Helvetica Neue", "Swis721", Helvetica, Arial, sans-serif; color:#222; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#d8d8d0; border:1px solid #888; box-shadow:0 10px 34px rgba(0,0,0,.38); border-radius:0 6px 6px 6px; }
+  .titlebar { background:#e8c400;color:#222;padding:5px 12px;font-size:13px;font-weight:700;border-radius:6px 6px 0 0;display:inline-block;margin:8px 0 0 8px; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border-radius:8px; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#222; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#555; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#444; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #aaa; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#c9a900; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#ecece6; border:1px solid #ccc; border-radius:4px; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#444; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #c9a900; padding-left:12px; margin:4px 0 0; color:#555; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #aaa; font-size:11px; color:#555; line-height:1.6; }
+  footer a { color:#8a6d00; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-title">BeOS</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="icons/appIcon.png" alt="BeOS">
+        <div><h1>BeOS</h1><p class="sub">Be Inc. &middot; 1995&ndash;2001</p></div>
+      </div>
+      <p>Be Inc. was founded in 1990 by Jean-Louis Gassée, a former Apple executive, to build a “media OS” from scratch with no legacy baggage. BeOS was pervasively multithreaded, symmetric-multiprocessing from the start, and sat on the 64-bit journaling BeFS whose files you could query like a database.</p><p>Its signature look: the yellow window tab you could slide along the title bar, and the corner Deskbar. It first ran on the twin-CPU BeBox before moving to PowerPC and x86.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li><b>Built for media</b> &mdash; multithreading everywhere kept audio and video smooth.</li><li><b>BeFS</b>: a 64-bit journaling file system with live, database-style queries.</li><li>The sliding <b>yellow tab</b> and corner Deskbar &mdash; recreated by this theme.</li><li>Lives on today as the open-source <b>Haiku</b>.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>Apple almost bought Be.</b> In 1996 Apple shopped for a modern OS foundation and seriously considered BeOS &mdash; then chose NeXT instead, which brought Steve Jobs back to Apple.</div><div class="item"><b>Blinkenlights.</b> The dual-CPU BeBox had two columns of LEDs on its front bezel that danced with processor load, plus a hobbyist “GeekPort”.</div><div class="item"><b>Query your files.</b> BeFS treated file attributes like a database, so a folder could be a live search result.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>

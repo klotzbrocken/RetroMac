@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeXTSTEP</title>
+<style>
+  :root {
+    --face: #a8a8a8; --dark: #555555; --darker: #3d3e45; --light: #ffffff;
+    --violet: #909098; --ink: #111111;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #7c7c8a;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    padding: 22px 18px 40px;
+  }
+  /* Chiseled NeXT "window" card: white top+left, dark bottom+right. */
+  .win {
+    max-width: 640px; margin: 0 auto;
+    background: var(--face);
+    border-top: 2px solid var(--light); border-left: 2px solid var(--light);
+    border-right: 2px solid var(--darker); border-bottom: 2px solid var(--darker);
+    box-shadow: 0 10px 34px rgba(0,0,0,.4);
+  }
+  .titlebar {
+    background: #000; color: #fff; text-align: center;
+    font-weight: 700; font-size: 13px; letter-spacing: .3px;
+    padding: 5px 0; border-bottom: 2px solid var(--darker);
+  }
+  .body { padding: 22px 26px 26px; }
+  .hero { display: flex; align-items: center; gap: 18px; margin-bottom: 14px; }
+  .hero img {
+    width: 66px; height: 66px; image-rendering: -webkit-optimize-contrast;
+    border-top: 1px solid var(--light); border-left: 1px solid var(--light);
+    border-right: 1px solid var(--darker); border-bottom: 1px solid var(--darker);
+  }
+  .hero h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -.5px; }
+  .hero .sub { margin: 3px 0 0; font-size: 13px; color: #33333a; font-weight: 600; }
+  h2 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: #2a2a30; margin: 22px 0 8px; padding-bottom: 5px;
+    border-bottom: 1px solid var(--dark);
+  }
+  p { font-size: 14px; line-height: 1.55; margin: 0 0 11px; }
+  .facts { list-style: none; margin: 0; padding: 0; }
+  .facts li {
+    font-size: 13px; line-height: 1.5; padding: 4px 0 4px 20px; position: relative;
+  }
+  .facts li::before {
+    content: "\25AA"; position: absolute; left: 3px; top: 3px; color: var(--darker); font-size: 12px;
+  }
+  /* "Did you know" — a recessed panel (inverted chisel). */
+  .dyk {
+    margin: 8px 0 4px; padding: 14px 16px;
+    background: #b6b6be;
+    border-top: 2px solid var(--darker); border-left: 2px solid var(--darker);
+    border-right: 2px solid var(--light); border-bottom: 2px solid var(--light);
+  }
+  .dyk h3 {
+    margin: 0 0 9px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: #1a1a20;
+  }
+  .dyk .item { font-size: 13px; line-height: 1.5; margin: 0 0 10px; }
+  .dyk .item:last-child { margin-bottom: 0; }
+  .dyk .item b { font-weight: 700; }
+  .quote {
+    font-style: italic; border-left: 3px solid var(--darker); padding-left: 12px;
+    margin: 4px 0 0; color: #26262c; font-size: 13px;
+  }
+  footer {
+    margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--dark);
+    font-size: 11px; color: #33333a; line-height: 1.6;
+  }
+  footer a { color: #1c1c50; }
+  @media (prefers-color-scheme: dark) { body { background: #55555c; } }
+</style>
+</head>
+<body>
+  <div class="win">
+    <div class="titlebar">NeXTSTEP</div>
+    <div class="body">
+      <div class="hero">
+        <img src="icons/nx_workspace.png" alt="NeXT">
+        <div>
+          <h1>NeXTSTEP</h1>
+          <p class="sub">NeXT, Inc. &middot; 1.0 released September 1989</p>
+        </div>
+      </div>
+
+      <p>After leaving Apple in 1985, Steve Jobs founded NeXT to build a workstation for higher
+         education. NeXTSTEP was its operating system: a Unix core (the Mach microkernel over BSD)
+         wrapped in the most advanced object-oriented desktop of its era, drawn on screen with
+         Display PostScript in a crisp four-grey palette.</p>
+
+      <p>Its development tools &mdash; Interface Builder and Project Builder, written in
+         Objective&#8209;C against the AppKit framework &mdash; let a small team assemble real
+         applications by dragging objects together. That toolchain is the direct ancestor of today's
+         Xcode and Cocoa.</p>
+
+      <h2>What made it special</h2>
+      <ul class="facts">
+        <li>The <b>Dock</b>, the vertical application menu and the Workspace file viewer &mdash; the
+            layout this theme recreates &mdash; all debuted here.</li>
+        <li>Ran on the <b>NeXT Computer</b>, a one-foot magnesium cube ($6,500), and later the
+            cheaper NeXTstation "slab".</li>
+        <li>Fully object-oriented, network-transparent, with a printing model identical to the
+            screen &mdash; what you saw is what you got.</li>
+        <li><b>OpenStep</b> (1994, with Sun) opened the frameworks; GNUstep and NEXTSPACE keep them
+            alive today.</li>
+      </ul>
+
+      <div class="dyk">
+        <h3>&#9432;&nbsp; Did you know&hellip;</h3>
+        <div class="item"><b>The World Wide Web was born on a NeXT.</b> Tim Berners-Lee wrote the
+          first browser and web server on a NeXT Computer at CERN in 1990. He taped a hand-written
+          label on it:
+          <div class="quote">"This machine is a server. DO NOT POWER IT DOWN!!"</div>
+        </div>
+        <div class="item"><b>Doom and Quake were built on NeXT.</b> id Software developed both
+          landmark games on NeXTSTEP workstations before shipping them to DOS.</div>
+        <div class="item"><b>You use NeXTSTEP every day.</b> Apple bought NeXT in 1997, bringing Jobs
+          back; NeXTSTEP became the foundation of Mac OS X, and so of macOS and iOS. That is why
+          Apple's frameworks are still full of classes prefixed <b>NS</b> &mdash; for
+          <b>NeXTSTEP</b> (NSString, NSObject, &hellip;).</div>
+      </div>
+
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub:
+        <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a><br>
+        NeXT art from the GPL-licensed NEXTSPACE project. Trademarks belong to their owners.
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

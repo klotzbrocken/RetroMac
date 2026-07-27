@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amiga Workbench</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#8a95a5; font-family:"Courier New", monospace; color:#1a1a1a; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#c9c9c9; border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #707070;border-bottom:2px solid #707070; box-shadow:0 10px 34px rgba(0,0,0,.38);  }
+  .titlebar { background:#4d6d9a;color:#fff;padding:5px 10px;font-size:13px;font-weight:700; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border:1px solid #707070; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#20304a; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#3a3a3a; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#2a3a55; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #8a8a8a; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#d06a1a; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#bcbcbc; border-top:2px solid #707070;border-left:2px solid #707070;border-right:2px solid #fff;border-bottom:2px solid #fff; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#2a3a55; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #d06a1a; padding-left:12px; margin:4px 0 0; color:#3a3a3a; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #8a8a8a; font-size:11px; color:#3a3a3a; line-height:1.6; }
+  footer a { color:#20408a; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-title">Amiga Workbench</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="wallpaper.png" alt="Amiga Workbench">
+        <div><h1>Amiga Workbench</h1><p class="sub">Commodore / Hyperion &middot; Workbench debuted 1985, 4.1 in 2008</p></div>
+      </div>
+      <p>The Amiga arrived in 1985 with something no home computer had: real pre-emptive multitasking, driven by custom chips (Agnus, Denise and Paula) that handled graphics and four-channel sound in hardware. Workbench was its desktop &mdash; folders as “drawers”, disks on the workbench, a spare grey-blue-orange palette.</p><p>Workbench 4.1 (2008, Hyperion) is the modern PowerPC-era AmigaOS, keeping the drawers-and-Workbench metaphor decades after Commodore itself was gone.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li><b>Pre-emptive multitasking in 1985</b> &mdash; years before the Mac or Windows managed it.</li><li>Custom silicon for graphics, blitter and sound made the Amiga a video and demo-scene legend.</li><li>Powered the <b>Video Toaster</b> and the CGI for TV shows like <i>Babylon&nbsp;5</i>.</li><li>The <b>Guru Meditation</b> &mdash; the Amiga's cryptic red crash screen.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>The Boing Ball.</b> At CES 1984 a bouncing, spinning checkered ball with a stereo thud stunned onlookers &mdash; a demo showing the custom chips off before the Amiga even shipped. It became the machine's mascot.</div><div class="item"><b>Ahead of its time.</b> True multitasking, a 4096-colour mode and hardware sprites in a 1985 home computer that cost a fraction of a workstation.</div><div class="item"><b>Hollywood &amp; TV.</b> Amigas running the Video Toaster produced broadcast graphics and effects on a budget for years.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>
