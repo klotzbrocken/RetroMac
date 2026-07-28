@@ -494,6 +494,13 @@ struct DockSettingsTab: View {
                             }
                         }
                 }
+                RMRow(label: "Restore system cursor", hint: "Force the normal macOS pointer back — use this if a themed cursor got stuck (e.g. RetroMac was force-quit while a cursor was active). RetroMac already does this automatically on the next launch; this is the manual button. It also turns Match cursor off.") {
+                    Button("Restore") {
+                        settings.themeAdaptCursor = false
+                        CursorThemeManager.shared.restore(force: true)
+                    }
+                    .buttonStyle(.bordered)
+                }
                 if ThemeManager.shared.activeTheme?.config.name == "Windows XP" {
                     RMRow(label: "XP cursor size", hint: "Windows XP cursors (modernXP, GPL-3.0) come in three sizes — the theme is drawn to scale crisply.") {
                         Picker("", selection: $settings.xpCursorSize) {

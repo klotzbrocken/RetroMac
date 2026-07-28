@@ -99,6 +99,7 @@ final class CursorThemeManager {
         for (slot, frames) in set { registerGroup(slot, frames) }
         finalize()
         d.set(true, forKey: appliedKey)
+        d.synchronize()   // survive a force-quit right after applying, so next launch can auto-restore
         print("[Cursor] Applied \(set.count)-cursor set for \(config.name)")
     }
 
@@ -106,8 +107,12 @@ final class CursorThemeManager {
     /// the override off doesn't reveal the built-ins on Tahoe, so restore re-registers the
     /// originals and keeps the override on (visually identical to before). Falls back to a
     /// drawn default arrow if nothing was captured.
-    func restore() {
-        guard isSupported, d.bool(forKey: appliedKey) || d.bool(forKey: snapKey) else { return }
+    /// `force: true` restores unconditionally (the manual "Restore system cursor" button), even
+    /// if every flag was somehow lost while a themed cursor is still stuck on screen.
+    func restore(force: Bool = false) {
+        let flagged = d.bool(forKey: appliedKey) || d.bool(forKey: snapKey)
+            || legacyKeys.contains(where: { d.bool(forKey: $0) })
+        guard isSupported, force || flagged else { return }
         var restoredAny = false
         for slot in CursorSlot.allCases {
             guard let frames = loadCaptured(slot) else { continue }
@@ -125,9 +130,10 @@ final class CursorThemeManager {
         print("[Cursor] Restored original cursors")
     }
 
-    /// Crash / force-quit recovery.
+    /// Crash / force-quit recovery, run at launch. Delegates to `restore()`, whose guard also
+    /// covers `snapKey` — that flag IS synchronised the moment originals are captured, so it
+    /// survives a force-quit even if `appliedKey` didn't flush, and the stuck cursor still resets.
     func restoreIfNeeded() {
-        guard isSupported, d.bool(forKey: appliedKey) || legacyKeys.contains(where: { d.bool(forKey: $0) }) else { return }
         restore()
     }
 

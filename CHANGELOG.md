@@ -3,6 +3,18 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 2.5
+
+- **Futurama theme**: a Planet Express take on the desktop. The dock is the show's riveted metal
+  girder: a pressure-gauge control panel on the left, a recessed glass shelf your icons rest on,
+  and a grille end cap on the right. It comes with a teal Bender-and-friends icon set, the Planet
+  Express wallpaper, a teal Apple logo, and bold cel-shaded window outlines.
+- **Restore system cursor**: a new button in Cursor settings puts the normal macOS pointer straight
+  back if a themed cursor ever gets stuck. RetroMac also recovers the cursor reliably on the next
+  launch now, even if it was force-quit while a themed cursor was active.
+- **Fix (all custom docks)**: minimizing or restoring a window, or changing your pinned apps, now
+  resizes the dock immediately instead of leaving it the wrong size until you moused over it.
+
 ## 2.4
 
 - **NeXTSTEP theme**: the full NeXT desktop, rebuilt natively. A vertical Workspace menu top-left,
