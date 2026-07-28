@@ -287,6 +287,7 @@ extension DockThemeConfig {
         case "aqua": return 2
         case "aqua-classic", "aquaclassic", "classic": return 3
         case "hell", "apple-hell", "doom": return 4
+        case "futurama", "teal": return 5
         default: return nil
         }
     }

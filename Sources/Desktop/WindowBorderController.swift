@@ -366,6 +366,10 @@ final class WindowBorderController {
             return .solid(color: NSColor.fromHex("#2A63D8"), width: 4, topRadius: R, bottomRadius: R)
         case "win7":
             return .glow(color: NSColor.fromHex("#6FB3F0").withAlphaComponent(0.55), width: 6, radius: R)
+        case "futurama":
+            // Futurama is a cel-shaded cartoon: everything is drawn with a bold dark ink outline,
+            // so the window frame is a thick near-black teal line rather than a bevel or glow.
+            return .solid(color: NSColor.fromHex("#12302A"), width: 3, topRadius: R, bottomRadius: R)
         default:
             return .none
         }

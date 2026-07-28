@@ -207,6 +207,13 @@ final class RainbowAppleController {
     // MARK: - Image
 
     private func appleImage() -> NSImage {
+        // Futurama: a solid teal-green apple, drawn (no bundled PNG needed).
+        if AppSettings.shared.menuBarAppleStyle == 5 {
+            if let c = imageCache["futurama_apple"] { return c }
+            let img = drawnSolidApple(NSColor(srgbRed: 0.13, green: 0.46, blue: 0.41, alpha: 1))
+            imageCache["futurama_apple"] = img
+            return img
+        }
         let name: String
         switch AppSettings.shared.menuBarAppleStyle {
         case 2: name = "aqua_apple"
@@ -224,6 +231,37 @@ final class RainbowAppleController {
         }
         imageCache[name] = img
         return img
+    }
+
+    /// A single-colour apple silhouette (used by the Futurama theme's teal logo). The SF Symbol
+    /// carries generous internal padding, so the raw glyph sat smaller and higher than the bundled
+    /// PNG apples. We render big, then TRIM to the silhouette's bounding box so the returned image
+    /// is a tight apple that fills the menu-bar glyph height like the other logos.
+    private func drawnSolidApple(_ color: NSColor) -> NSImage {
+        let cfg = NSImage.SymbolConfiguration(pointSize: 230, weight: .black)
+        guard let sym = NSImage(systemSymbolName: "apple.logo", accessibilityDescription: nil)?
+            .withSymbolConfiguration(cfg) else { return NSImage() }
+        // Render at the symbol's NATURAL size (its own aspect) — drawing it into a forced square
+        // stretched the apple wide. Fill that rect with the tint, masked by the glyph.
+        let render = sym.size
+        let base = NSImage(size: render)
+        base.lockFocus()
+        color.setFill(); NSRect(origin: .zero, size: render).fill()
+        sym.draw(in: NSRect(origin: .zero, size: render), from: .zero, operation: .destinationIn, fraction: 1.0)
+        base.unlockFocus()
+        guard let tiff = base.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) else { return base }
+        let W = rep.pixelsWide, H = rep.pixelsHigh
+        var minX = W, minY = H, maxX = -1, maxY = -1
+        for y in 0..<H { for x in 0..<W {
+            if (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.05 {
+                if x < minX { minX = x }; if x > maxX { maxX = x }
+                if y < minY { minY = y }; if y > maxY { maxY = y }
+            }
+        } }
+        guard maxX >= minX, maxY >= minY, let cg = rep.cgImage else { return base }
+        let crop = CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
+        guard let cropped = cg.cropping(to: crop) else { return base }
+        return NSImage(cgImage: cropped, size: NSSize(width: crop.width, height: crop.height))
     }
 
     /// Fallback only if the bundled PNG is missing: six-stripe rainbow from the
