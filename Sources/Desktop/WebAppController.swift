@@ -363,7 +363,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
 final class WebAppChromeView: NSView {
 
-    enum Style { case win98, winxp, win7, macClassic, system6, nextstep, plain }
+    enum Style { case win98, winxp, win7, macClassic, system6, nextstep, futurama, plain }
 
     var onClose: (() -> Void)?
     var onBack: (() -> Void)?
@@ -393,6 +393,7 @@ final class WebAppChromeView: NSView {
         case "macos9": style = .macClassic; chromeStyle = ChromeStyleFactory.macClassic()
         case "macos6": style = .system6;    chromeStyle = ChromeStyleFactory.system6()
         case "nextstep": style = .nextstep; chromeStyle = ChromeStyleFactory.nextstep()
+        case "futurama": style = .futurama; chromeStyle = nil
         default:       style = .plain;      chromeStyle = nil
         }
         super.init(frame: frame)
@@ -405,7 +406,7 @@ final class WebAppChromeView: NSView {
     override var isFlipped: Bool { true }
 
     private var titleH: CGFloat {
-        switch style { case .winxp, .win7: return 30; case .system6: return 20; case .nextstep: return 22; default: return 22 }
+        switch style { case .winxp, .win7: return 30; case .system6: return 20; case .nextstep: return 22; case .futurama: return 26; default: return 22 }
     }
     private var pad: CGFloat { 4 }
 
@@ -449,8 +450,61 @@ final class WebAppChromeView: NSView {
         case .macClassic: drawMacClassic(ctx, b)
         case .system6:    drawSystem6(ctx, b)
         case .nextstep:   drawNextstep(ctx, b)
+        case .futurama:   drawFuturama(ctx, b)
         case .plain:      drawPlain(ctx, b)
         }
+    }
+
+    // ---- Futurama: cream body, sage-green rounded title bar, macOS traffic lights LEFT,
+    //      centered dark title (as in the FuturamaOS mockup) ----
+    private func drawFuturama(_ ctx: CGContext, _ b: NSRect) {
+        let cream = NSColor(srgbRed: 0.95, green: 0.93, blue: 0.86, alpha: 1)
+        let sageTop = NSColor(srgbRed: 0.72, green: 0.82, blue: 0.74, alpha: 1)
+        let sageBot = NSColor(srgbRed: 0.62, green: 0.74, blue: 0.67, alpha: 1)
+        let edge = NSColor(srgbRed: 0.40, green: 0.52, blue: 0.46, alpha: 1)
+        // Window body + a soft rounded outer frame.
+        let frame = NSBezierPath(roundedRect: b.insetBy(dx: 0.5, dy: 0.5), xRadius: 10, yRadius: 10)
+        cream.setFill(); frame.fill()
+        // Title bar (rounded top only).
+        let bar = NSRect(x: 1, y: 1, width: b.width - 2, height: titleH)
+        ctx.saveGState()
+        let clip = NSBezierPath(); let r: CGFloat = 9
+        clip.move(to: NSPoint(x: bar.minX, y: bar.maxY))
+        clip.line(to: NSPoint(x: bar.minX, y: bar.minY + r))
+        clip.appendArc(withCenter: NSPoint(x: bar.minX + r, y: bar.minY + r), radius: r, startAngle: 180, endAngle: 270)
+        clip.line(to: NSPoint(x: bar.maxX - r, y: bar.minY))
+        clip.appendArc(withCenter: NSPoint(x: bar.maxX - r, y: bar.minY + r), radius: r, startAngle: 270, endAngle: 360)
+        clip.line(to: NSPoint(x: bar.maxX, y: bar.maxY))
+        clip.close(); clip.addClip()
+        NSGradient(colors: [sageTop, sageBot])!.draw(in: bar, angle: 90)
+        ctx.restoreGState()
+        edge.withAlphaComponent(0.6).setStroke()
+        let sep = NSBezierPath(); sep.move(to: NSPoint(x: bar.minX, y: bar.maxY)); sep.line(to: NSPoint(x: bar.maxX, y: bar.maxY)); sep.lineWidth = 1; sep.stroke()
+        frame.lineWidth = 1; edge.withAlphaComponent(0.5).setStroke(); frame.stroke()
+
+        // Traffic lights on the LEFT (close red / min yellow / zoom green), dark outline.
+        let d: CGFloat = 12, gap: CGFloat = 8, ly = bar.midY - d/2
+        let lights: [(NSColor, CGFloat)] = [
+            (NSColor(srgbRed: 0.94, green: 0.33, blue: 0.31, alpha: 1), bar.minX + 12),
+            (NSColor(srgbRed: 0.96, green: 0.74, blue: 0.22, alpha: 1), bar.minX + 12 + d + gap),
+            (NSColor(srgbRed: 0.36, green: 0.78, blue: 0.36, alpha: 1), bar.minX + 12 + 2*(d + gap))]
+        for (col, lx) in lights {
+            let dot = NSRect(x: lx, y: ly, width: d, height: d)
+            col.setFill(); NSBezierPath(ovalIn: dot).fill()
+            NSColor.black.withAlphaComponent(0.35).setStroke()
+            let ring = NSBezierPath(ovalIn: dot.insetBy(dx: 0.5, dy: 0.5)); ring.lineWidth = 1; ring.stroke()
+        }
+        let closeR = NSRect(x: bar.minX + 12, y: ly, width: d, height: d)
+        tracker.reset()
+        tracker.add(.close, closeR.insetBy(dx: -4, dy: -4), interactive: true)
+        closeHit = .zero
+
+        // Centered title.
+        let p = NSMutableParagraphStyle(); p.alignment = .center; p.lineBreakMode = .byTruncatingTail
+        let font = NSFont(name: "Helvetica-Bold", size: 13) ?? .boldSystemFont(ofSize: 13)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor(white: 0.12, alpha: 1), .paragraphStyle: p]
+        let ts = (title as NSString).size(withAttributes: attrs)
+        (title as NSString).draw(in: NSRect(x: bar.minX + 90, y: bar.midY - ts.height/2, width: bar.width - 180, height: ts.height), withAttributes: attrs)
     }
 
     // ---- NeXTSTEP: chiseled grey window, black title bar, miniaturize LEFT + close RIGHT ----

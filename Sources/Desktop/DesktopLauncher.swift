@@ -67,6 +67,9 @@ enum DesktopLauncher {
                 WebAppController.open(name: entry.name, url: urlString, width: w, height: h)
             }
 
+        case "readme":
+            ThemeReadmeController.shared.showForActiveTheme()
+
         case "screensaver":
             ScreensaverController.shared.start()
 

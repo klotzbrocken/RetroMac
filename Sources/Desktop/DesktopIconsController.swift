@@ -61,12 +61,35 @@ final class DesktopIconsController {
     func update() {
         // Dock-only changes nothing but the dock — no themed desktop icons.
         if AppSettings.shared.dockOnly { hide(); return }
-        let entries = ThemeManager.shared.activeTheme?.config.desktopIcons ?? []
+        var entries = ThemeManager.shared.activeTheme?.config.desktopIcons ?? []
+        // Add a "Read Me" shortcut that opens the theme's About readme, for any theme that both
+        // ships a readme.html AND shows a themed desktop (skips NeXT, whose desktop has no icons).
+        if !entries.isEmpty, let theme = ThemeManager.shared.activeTheme, ThemeReadmeController.activeThemeHasReadme() {
+            let col0Rows = entries.compactMap { ($0.gridX ?? 0) == 0 ? ($0.gridY ?? 0) : nil }
+            var e = DockThemeConfig.DesktopIconEntry(name: "Read Me", icon: readmeIconName(for: theme), type: "readme")
+            e.gridX = 0
+            e.gridY = (col0Rows.max() ?? -1) + 1
+            entries.append(e)
+        }
         if entries.isEmpty {
             hide()
             return
         }
         show(entries: entries)
+    }
+
+    /// A period-appropriate document icon for the "Read Me" shortcut: the first of these that the
+    /// active theme actually ships (SimpleText/TextEdit on Mac, Notepad on Windows, …). Empty
+    /// string falls back to a generic document glyph (Amiga/SGI ship no text-document icon).
+    private func readmeIconName(for theme: ThemeBundle) -> String {
+        let candidates = ["simpletext.png", "textedit.png", "win7_notepad.png", "notepad98.png",
+                          "notepadclassic.png", "notepad.png", "write.png", "new-text.png",
+                          "document.png", "documents.png", "notes.png", "file.png"]
+        let dir = theme.url.appendingPathComponent("icons")
+        for c in candidates where FileManager.default.fileExists(atPath: dir.appendingPathComponent(c).path) {
+            return c
+        }
+        return ""
     }
 
     /// Remove desktop icons window.
@@ -264,7 +287,7 @@ final class DesktopIconsController {
         }
 
         // Widget shortcut types (TV / Clock / CPU): a system glyph when the theme ships no art.
-        let widgetGlyph: [String: String] = ["tvfolder": "tv", "clock": "clock", "cpumonitor": "cpu", "nyanochrome": "cat"]
+        let widgetGlyph: [String: String] = ["tvfolder": "tv", "clock": "clock", "cpumonitor": "cpu", "nyanochrome": "cat", "readme": "doc.text.fill"]
         if let sym = widgetGlyph[entry.type] {
             let cfg = NSImage.SymbolConfiguration(pointSize: size * 0.6, weight: .regular)
             if let img = NSImage(systemSymbolName: sym, accessibilityDescription: entry.name)?

@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.tv.futurama",
+  "family": {
+    "id": "screen",
+    "name": "Screen & Sci-Fi",
+    "order": 9
+  },
+  "release": {
+    "label": "Futurama",
+    "year": 1999
+  },
+  "experienceLevel": "partial",
+  "chrome": {
+    "style": "futurama"
+  },
+  "name": "Futurama",
+  "version": "1.0",
+  "author": "RetroMac",
+  "menuBarApple": "futurama",
+  "wallpaper": "wallpaper.jpg",
+  "dock": {
+    "height": 90,
+    "iconSize": 52,
+    "padding": 10,
+    "spacing": 10,
+    "cornerRadius": 0,
+    "backgroundColor": "#669A92FF",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#1E3E36FF",
+    "borderWidth": 0,
+    "shadowEnabled": false,
+    "shadowColor": "#00000070",
+    "shadowRadius": 14,
+    "bevelTopColor": null,
+    "bevelBottomColor": null,
+    "bevelWidth": 0,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "fullWidth": false,
+    "startButton": false,
+    "showClock": false,
+    "magnification": true,
+    "showTrash": true,
+    "alignment": "center",
+    "edgeOffset": 0,
+    "windowPreview": true
+  },
+  "icon": {
+    "renderStyle": "smooth",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.35,
+    "hoverAnimationDuration": 0.12
+  },
+  "indicator": {
+    "style": "dot",
+    "color": "#E8C000",
+    "size": 5,
+    "offset": 3
+  },
+  "desktopIcons": [
+    {
+      "name": "Documents",
+      "icon": "folder.png",
+      "type": "folder",
+      "path": "~/Documents",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "OmniBrowser",
+      "icon": "globe.png",
+      "type": "app",
+      "bundleID": "com.apple.Safari",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "ZapMail",
+      "icon": "mail.png",
+      "type": "app",
+      "bundleID": "com.apple.mail",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "SqueakiTunes",
+      "icon": "music.png",
+      "type": "app",
+      "bundleID": "com.apple.Music",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Settings",
+      "icon": "gear.png",
+      "type": "app",
+      "bundleID": "com.apple.systempreferences",
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "Noted-O-Matic",
+      "icon": "notepad.png",
+      "type": "notepad",
+      "gridX": 0,
+      "gridY": 5
+    },
+    {
+      "name": "ChronoCalendar",
+      "icon": "calendar.png",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 6
+    },
+    {
+      "name": "Bender-O-Meter",
+      "icon": "bender.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 7
+    },
+    {
+      "name": "Terminal",
+      "icon": "terminal.png",
+      "type": "app",
+      "bundleID": "com.apple.Terminal",
+      "gridX": 0,
+      "gridY": 8
+    },
+    {
+      "name": "Trash",
+      "icon": "trash-empty.png",
+      "iconFull": "trash-full.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": 9
+    }
+  ],
+  "fallbackIcon": "rocket.png",
+  "defaultPreset": "lcd-retro-lite",
+  "iconMappings": {
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "safari.png",
+    "com.google.Chrome": "chrome.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Music": "music.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.iChat": "messages.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.reminders": "tasks.png",
+    "com.apple.Terminal": "terminal.png",
+    "com.apple.systempreferences": "gear.png",
+    "com.apple.Notes": "notepad.png",
+    "com.microsoft.Word": "word.png",
+    "com.microsoft.Powerpoint": "powerpoint.png",
+    "com.microsoft.Excel": "excel.png",
+    "com.anthropic.claudefordesktop": "claude.png",
+    "__trash__": "trash-empty.png",
+    "__trash_full__": "trash-full.png"
+  },
+  "appearance": "light",
+  "accentColor": "green"
+}

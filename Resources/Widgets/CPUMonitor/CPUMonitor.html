@@ -214,6 +214,18 @@
   /* ===== Mac OS 9 (Platinum) chrome — counter-scaled 1/0.6 like the BeOS tab so it
      renders at the same physical size after the widget's SCALE(0.6). ===== */
   .m9-title{display:none;}
+  /* ===== Futurama (counter-scaled for SCALE 0.6): sage title bar, 3 lights, centered ===== */
+  body.theme-futurama .tab{width:auto;box-sizing:border-box;justify-content:center;height:44px;padding:0 20px;gap:0;
+    border:1.6px solid #46695c;border-bottom:none;border-radius:14px 14px 0 0;
+    background:linear-gradient(180deg,#b8ceba,#9fbcaa);box-shadow:inset 0 2px 0 rgba(255,255,255,.45);}
+  body.theme-futurama .tab b{color:#16281f;font-size:22px;}
+  body.theme-futurama .closebox{position:absolute;left:18px;top:50%;transform:translateY(-50%);
+    width:20px;height:20px;border-radius:50%;border:1.6px solid rgba(0,0,0,.35);background:#ef5350;box-shadow:none;}
+  body.theme-futurama .tab::before{content:'';position:absolute;left:48px;top:50%;transform:translateY(-50%);
+    width:20px;height:20px;border-radius:50%;background:#f5bd39;border:1.6px solid rgba(0,0,0,.3);
+    box-shadow:32px 0 0 0 #5cc85c,32px 0 0 1.6px rgba(0,0,0,.3);}
+  body.theme-futurama .body{border:1.6px solid #46695c;background:#f2ecdd;
+    box-shadow:inset 2px 2px 0 #fbf7ee,inset -2px -2px 0 #d8d2c2;}
   body.theme-macos9 .tab,body.theme-macos9 .marker{display:none;}
   body.theme-macos9 .window{border:1.6px solid #000;background:#d8d8d8;
     box-shadow:2px 2px 0 rgba(0,0,0,.30);}

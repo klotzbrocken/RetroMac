@@ -290,6 +290,7 @@ final class DockView: NSView {
         let nc2 = NotificationCenter.default
         appsObserver = nc2.addObserver(forName: .dockAppsChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuildItems()
+            self?.onRunningAppsChanged?()   // item count changed → resize the dock window to match
         }
         themeObserver = nc2.addObserver(forName: .dockThemeChanged, object: nil, queue: .main) { [weak self] _ in
             // The new theme may not have a "Show Desktop" tile — un-hide anything the old
@@ -298,8 +299,12 @@ final class DockView: NSView {
             self?.rebuildItems()
         }
         // Minimized windows of non-pinned apps surface as dock tiles; rebuild when they change.
+        // Rebuild alone only refills the CURRENT window bounds — the tile count changed, so the
+        // window must also resize, otherwise the dock stayed the wrong size until a hover/other
+        // event forced a reposition (the "wrong size until mouse-over" bug on custom docks).
         minimizedObserver = nc2.addObserver(forName: .minimizedWindowsChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuildItems()
+            self?.onRunningAppsChanged?()   // resize the dock window to fit the new minimized-tile count
         }
         pacmanObserver = nc2.addObserver(forName: .pacmanAnimationChanged, object: nil, queue: .main) { [weak self] _ in
             self?.needsDisplay = true   // re-configure layers (draw() → updatePacmanBorder)
@@ -507,7 +512,7 @@ final class DockView: NSView {
             }
 
         } else {
-            var x = barRect.minX + padding
+            var x = barRect.minX + padding + futuramaCapWidths().left
 
             if hasStartButton {
                 loadStartButtonIcon()
@@ -868,7 +873,7 @@ final class DockView: NSView {
             }
 
         } else {
-            var x = barRect.minX + padding
+            var x = barRect.minX + padding + futuramaCapWidths().left
 
             if hasStartButton {
                 loadStartButtonIcon()
@@ -1101,10 +1106,13 @@ final class DockView: NSView {
         } else {
             let icon: NSImage
             if isTransient && ThemeManager.shared.customIconPath(for: bundleID) == nil
-                && !theme.isPixelated && theme.icon.monochrome != true {
+                && !theme.isPixelated && theme.icon.monochrome != true
+                && theme.iconMappings[bundleID] == nil {
                 // Transient (running) apps show their real system icon unless user set a
                 // custom one — except in pixel/monochrome themes, where icon(for:)
-                // pixelates/desaturates the real icon so the whole dock stays consistent.
+                // pixelates/desaturates the real icon so the whole dock stays consistent,
+                // and except apps the theme explicitly maps (e.g. Word/Chrome/Claude in
+                // Futurama), which should wear their themed art whether pinned or running.
                 icon = ThemeManager.shared.systemIcon(for: bundleID, size: iconSize)
             } else {
                 icon = ThemeManager.shared.icon(for: bundleID, size: iconSize)
@@ -1361,21 +1369,26 @@ final class DockView: NSView {
     private func rawTrashIcon(size: CGFloat) -> NSImage {
         let trashFull = !isTrashEmpty()
 
-        // Try theme-specific trash icon first (trash_full.png / trash.png)
+        // Try theme-specific trash icon first. Scale to `size` on the LONGER edge so a
+        // non-square can (e.g. Futurama's 52×69) keeps its aspect — forcing a square here
+        // squashed the dock trash while the desktop trash (proportional) stayed correct.
         if let themeBundle = ThemeManager.shared.activeTheme {
             let iconsDir = themeBundle.iconsDirectory
-            if trashFull {
-                // Try trash_full first, fall back to trash (empty) icon
-                let fullURL = iconsDir.appendingPathComponent("trash_full.png")
-                if let img = NSImage(contentsOf: fullURL) {
+            func fitted(_ img: NSImage) -> NSImage {
+                let s = img.size
+                if s.width > 0, s.height > 0 {
+                    let sc = size / max(s.width, s.height)
+                    img.size = NSSize(width: s.width * sc, height: s.height * sc)
+                } else {
                     img.size = NSSize(width: size, height: size)
-                    return img
                 }
-            }
-            let trashURL = iconsDir.appendingPathComponent("trash.png")
-            if let img = NSImage(contentsOf: trashURL) {
-                img.size = NSSize(width: size, height: size)
                 return img
+            }
+            // Accept both the hyphen names this theme ships and the legacy underscore names.
+            let empty = ["trash-empty.png", "trash.png"]
+            let full = ["trash-full.png", "trash_full.png"]
+            for name in (trashFull ? full + empty : empty) {
+                if let img = NSImage(contentsOf: iconsDir.appendingPathComponent(name)) { return fitted(img) }
             }
         }
         // Fallback: AppKit's authentic Aqua trash images, which DO reflect full vs.
@@ -1439,6 +1452,10 @@ final class DockView: NSView {
 
         let pinnedCount = CGFloat(AppManager.shared.apps.count)
         var width = padding * 2 + pinnedCount * iconSize + max(0, pinnedCount - 1) * spacing
+
+        // Futurama: reserve room for the gauge panel (left) and grille end cap (right).
+        let futCaps = futuramaCapWidths()
+        width += futCaps.left + futCaps.right
 
         if hasShowDesktop {
             width += iconSize + spacing + 4   // tile + start-button groove allowance
@@ -2034,6 +2051,113 @@ final class DockView: NSView {
         else { pacmanTimer?.invalidate(); pacmanTimer = nil }
     }
 
+    private static var beamCache: [String: NSImage] = [:]
+    private func beamImage(_ name: String) -> NSImage? {
+        if let c = DockView.beamCache[name] { return c }
+        guard let url = ThemeManager.shared.activeTheme?.iconResource(name),
+              let img = NSImage(contentsOf: url) else { return nil }
+        DockView.beamCache[name] = img
+        return img
+    }
+
+    /// Width the Futurama girder end caps reserve on each side, so the layout can push the first/
+    /// last icon clear of the gauge panel (left) and the grille end (right). The cap art keeps its
+    /// own aspect: width scales from the resting bar height and each cut-out's native proportions.
+    func futuramaCapWidths() -> (left: CGFloat, right: CGFloat) {
+        // Key off the theme's declared chrome directly (NOT RetroFrameTheme.key(), which returns
+        // "default" whenever dockEnabled is momentarily false) so the icon inset is reserved
+        // consistently with what drawFuturamaBeam paints — otherwise icons land on the end caps.
+        guard let cfg = ThemeManager.shared.activeTheme?.config,
+              cfg.chrome?.style == "futurama",
+              let left = beamImage("dock-left.png"), let right = beamImage("dock-right.png"),
+              left.size.height > 0, right.size.height > 0 else { return (0, 0) }
+        let scale = CGFloat(AppSettings.shared.dockIconScale)
+        let barH = cfg.dock.height * scale
+        return (left.size.width * (barH / left.size.height),
+                right.size.width * (barH / right.size.height))
+    }
+
+    /// The Futurama "Planet Express girder": the whole empty dock cut from the mockup as three
+    /// slices — the left gauge panel, a UNIFORM recessed-glass middle, and the right grille end.
+    /// The middle is a flat, feature-free panel, so it STRETCHES cleanly (no blur, no tiling seams)
+    /// while the icons rest on the glass. Each slice keeps its own aspect; the caps carry the
+    /// rounded metal frame (its end shadows), so no separate moulding is drawn. Fully opaque —
+    /// the metal is solid in the mockup, so the dock ignores the transparency slider here.
+    private func drawFuturamaBeam(ctx: CGContext, rect: NSRect, path: NSBezierPath, alpha: CGFloat) {
+        guard let left = beamImage("dock-left.png"),
+              let mid = beamImage("dock-mid.png"),
+              let right = beamImage("dock-right.png"),
+              left.size.height > 0, right.size.height > 0 else { return }
+        ctx.clear(rect)   // drop the flat rounded base — the beam art defines the shape
+        let op = NSCompositingOperation.sourceOver
+        let lw = left.size.width * (rect.height / left.size.height)
+        let rw = right.size.width * (rect.height / right.size.height)
+        // Stretch the uniform recessed-glass panel ONLY between the two caps — NOT across the whole
+        // bar — so the caps' rounded, transparent corners stay see-through (a full-width fill behind
+        // them squared the dock off). All three slices are cut at the same pixel height, so the metal
+        // rails line up exactly at the joins (no step/seam). A 1pt overlap hides the hairline seam.
+        let midLeft = rect.minX + lw
+        let midRight = rect.maxX - rw
+        if midRight > midLeft {
+            mid.draw(in: NSRect(x: midLeft - 1, y: rect.minY, width: (midRight - midLeft) + 2, height: rect.height),
+                     from: .zero, operation: op, fraction: 1.0)
+        }
+        left.draw(in: NSRect(x: rect.minX, y: rect.minY, width: lw, height: rect.height),
+                  from: .zero, operation: op, fraction: 1.0)
+        right.draw(in: NSRect(x: rect.maxX - rw, y: rect.minY, width: rw, height: rect.height),
+                   from: .zero, operation: op, fraction: 1.0)
+        // Top-edge highlight: a slightly thicker bright rail line along the flat top so the moulding
+        // reads continuous through the cap↔mid joins (the stretched middle rail looked thinner than
+        // the caps'). The girder's top rail sits ~12/121 of the art height down from the top.
+        // Only across the flat middle — the caps' own top rail (now cut so it meets the mid at the
+        // same height) carries the edge round the sloped corners, so the line must NOT run onto them.
+        // Top-edge highlight that TRACES the girder's real rim: it follows each slice's actual top
+        // edge (flat across the middle, curving down onto the rounded caps) and simply stops once the
+        // edge drops past the flat band — so it never floats above the metal or ends in a hard step.
+        let sfL = rect.height / left.size.height
+        let sfM = rect.height / mid.size.height
+        let sfR = rect.height / right.size.height
+        let cutoff = 22   // stop tracing once the rim has curved down more than this (into a corner)
+        var pts: [CGPoint] = []
+        func appendEdge(_ name: String, _ x0: CGFloat, _ sf: CGFloat) {
+            guard let (rows, _) = beamTopEdge(name) else { return }
+            for (col, r) in rows.enumerated() where r >= 0 && r <= cutoff {
+                pts.append(CGPoint(x: x0 + CGFloat(col) * sf, y: rect.maxY - (CGFloat(r) + 1.5) * sf))
+            }
+        }
+        appendEdge("dock-left.png", rect.minX, sfL)
+        if midRight > midLeft {
+            // Same +1.5 rim offset the caps use, so the flat middle meets the caps' traced edge
+            // at exactly the same height (no 1–2px notch at the joins).
+            let midTopY = rect.maxY - (12.0 + 1.5) * sfM
+            pts.append(CGPoint(x: midLeft, y: midTopY)); pts.append(CGPoint(x: midRight, y: midTopY))
+        }
+        appendEdge("dock-right.png", rect.maxX - rw, sfR)
+        pts.sort { $0.x < $1.x }
+        if pts.count > 1 {
+            ctx.setLineCap(.round); ctx.setLineJoin(.round); ctx.setLineWidth(2.5)
+            ctx.setStrokeColor(NSColor(srgbRed: 0.82, green: 0.90, blue: 0.82, alpha: 0.9).cgColor)
+            ctx.beginPath(); ctx.move(to: pts[0])
+            for p in pts.dropFirst() { ctx.addLine(to: p) }
+            ctx.strokePath()
+        }
+    }
+
+    static var beamTopEdgeCache: [String: (rows: [Int], H: Int)] = [:]
+    /// Topmost opaque row per column of a beam slice (row 0 = top), so the moulding can follow the
+    /// real rim. Cached — computed once per slice from its bitmap.
+    private func beamTopEdge(_ name: String) -> (rows: [Int], H: Int)? {
+        if let c = DockView.beamTopEdgeCache[name] { return c }
+        guard let img = beamImage(name), let tiff = img.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        let W = rep.pixelsWide, H = rep.pixelsHigh
+        var top = [Int](repeating: -1, count: W)
+        for x in 0..<W {
+            for y in 0..<H where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 { top[x] = y; break }
+        }
+        let result = (top, H); DockView.beamTopEdgeCache[name] = result; return result
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         let ctx = NSGraphicsContext.current!.cgContext
@@ -2109,6 +2233,12 @@ final class DockView: NSView {
         } else {
             bgColor.setFill()
             bgPath.fill()
+        }
+
+        // Futurama: turn the flat teal bar into the riveted metal girder from the mockup. The metal
+        // is solid in the mockup, so the beam is drawn fully opaque regardless of the slider.
+        if RetroFrameTheme.key() == "futurama" {
+            drawFuturamaBeam(ctx: ctx, rect: rect, path: bgPath, alpha: 1.0)
         }
 
         // Aqua pinstripe texture: fine horizontal lines over the (clipped) background.
@@ -3460,9 +3590,12 @@ final class DockView: NSView {
             hoverLabel?.isHidden = true
         }
 
-        // 4. Expand the dock bar background to contain magnified icons
-        let magLeft = originalCenter - totalMagnified / 2 - padding
-        let magRight = originalCenter + totalMagnified / 2 + padding
+        // 4. Expand the dock bar background to contain magnified icons. Reserve the Futurama end
+        // caps too: they are ~90pt wide, so expanding by only `padding` let the gauge/grille cap
+        // overpaint the end icons when the row spread. Growing by cap width keeps the caps clear.
+        let expandCaps = futuramaCapWidths()
+        let magLeft = originalCenter - totalMagnified / 2 - padding - expandCaps.left
+        let magRight = originalCenter + totalMagnified / 2 + padding + expandCaps.right
         let expandedLeft = min(barRect.minX, magLeft)
         let expandedRight = max(barRect.maxX, magRight)
         magnifiedDockBarRect = NSRect(
