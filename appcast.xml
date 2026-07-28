@@ -15,6 +15,28 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.5</title>
+      <pubDate>Tue, 28 Jul 2026 15:15:29 +0000</pubDate>
+      <sparkle:version>2.5</sparkle:version>
+      <sparkle:shortVersionString>2.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.5 &mdash; Futurama joins the lineup</h2>
+        <ul>
+          <li><b>Futurama theme:</b> a Planet Express take on the desktop. The dock is the show&rsquo;s riveted metal girder &mdash; a pressure-gauge control panel on the left, a recessed glass shelf your icons rest on, and a grille end cap on the right &mdash; with a teal Bender-and-friends icon set, the Planet Express wallpaper, a teal Apple logo, and bold cel-shaded window outlines.</li>
+          <li><b>Restore system cursor:</b> a new button in Cursor settings puts the normal macOS pointer straight back if a themed cursor ever gets stuck, and RetroMac now recovers the cursor reliably on the next launch even if it was force-quit while a themed cursor was active.</li>
+          <li><b>Fix (all custom docks):</b> minimizing or restoring a window, or changing your pinned apps, now resizes the dock immediately instead of leaving it the wrong size until you moused over it.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.5/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="mxMJpynG/jEjgLnPANCZy44xHUDT3OLjbi6dC9fZ27RDRQDzLrmVYylkabLUbuM9a9zTstDpEjuQnm8PWFdEAg=="
+        length="67664025"
+      />
+    </item>
+
+    <item>
       <title>Version 2.4</title>
       <pubDate>Sun, 26 Jul 2026 09:43:45 +0000</pubDate>
       <sparkle:version>2.4</sparkle:version>
