@@ -1013,17 +1013,25 @@ final class DockController {
     /// with a huge autohide-delay, so it never reveals): the minimize animation then
     /// points at our dock's location instead of flying off to another screen edge.
     /// macOS Dock orientation only supports "left", "bottom", "right" (no top).
+    /// True when a secondary display sits BELOW the primary — the one arrangement where a hidden
+    /// "bottom" system Dock re-homes (via killall) onto that lower screen.
+    private func hasScreenBelowPrimary() -> Bool {
+        guard NSScreen.screens.count > 1,
+              let primary = NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main
+        else { return false }
+        return NSScreen.screens.contains(where: { $0 !== primary && $0.frame.minY < primary.frame.minY })
+    }
+
     private func systemDockEdge(forThemeEdge themeEdge: String) -> String {
-        // On MULTI-display a hidden "bottom" system Dock re-homes (via killall) onto a secondary
-        // screen, so the minimize genie flies there. "left" reliably resolves to the primary, so
-        // hide a bottom/top theme's system Dock on the LEFT edge when more than one display is
-        // present (it stays hidden either way; minimize then targets the primary, left edge).
-        // Getting it exactly bottom-on-primary isn't reliable — any bottom reload re-homes it.
-        let multi = NSScreen.screens.count > 1
+        // A hidden "bottom" system Dock only re-homes onto a secondary screen when one sits BELOW
+        // the primary (killall then lands it there, and the minimize genie flies to that screen).
+        // Side-by-side multi-display keeps it on the primary, so ONLY the below-primary case falls
+        // back to "left"; every other bottom/top theme minimizes straight DOWN into the themed dock,
+        // single- or multi-display.
         switch themeEdge {
         case "left":  return "left"
         case "right": return "right"
-        default:      return multi ? "left" : "bottom"   // bottom / top
+        default:      return hasScreenBelowPrimary() ? "left" : "bottom"   // bottom / top
         }
     }
 
@@ -1034,7 +1042,7 @@ final class DockController {
     /// becomes the Dock's home display; the caller then restores "bottom" and it stays on the
     /// primary. No-op unless a screen really sits below the primary (single-display / side-by-side
     /// setups are unaffected) and the target orientation is "bottom" (left/right already work).
-    /// (Side-by-side multi-display now hides the system Dock on "left" via systemDockEdge, so it
+    /// (A below-primary multi-display hides the system Dock on "left" via systemDockEdge, so it
     /// never sets a bottom orientation there and this stays scoped to the below-primary case.)
     private func reanchorBottomDockToPrimaryIfNeeded(orientation: String) {
         guard orientation == "bottom", NSScreen.screens.count > 1,
