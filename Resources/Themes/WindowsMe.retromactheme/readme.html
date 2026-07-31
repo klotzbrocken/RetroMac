@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows Me</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#3a6ea5; font-family:"Tahoma","MS Sans Serif","Helvetica Neue",sans-serif; color:#000; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#c0c0c0; border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #808080;border-bottom:2px solid #808080; box-shadow:0 10px 34px rgba(0,0,0,.38);  }
+  .titlebar { background:linear-gradient(90deg,#0A246A,#A6CAF0);color:#fff;padding:3px 3px 3px 4px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px;user-select:none; }
+  .titlebar .tb-ico { width:16px; height:16px; image-rendering:-webkit-optimize-contrast; }
+  .titlebar .tb-title { flex:1; }
+  .tb-btns { display:flex; gap:2px; }
+  .tb-btn { width:16px; height:14px; background:#c0c0c0; border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #404040;border-bottom:1px solid #404040; box-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; display:flex;align-items:center;justify-content:center; padding:0; cursor:default; }
+  .tb-btn:active { border-top:1px solid #404040;border-left:1px solid #404040;border-right:1px solid #fff;border-bottom:1px solid #fff; box-shadow:inset 1px 1px 0 #808080; }
+  .tb-btn svg { display:block; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border:2px solid #808080; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#000; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#333; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#000080; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #808080; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#1084d0; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#cfcfcf; border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#000080; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #1084d0; padding-left:12px; margin:4px 0 0; color:#333; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #808080; font-size:11px; color:#333; line-height:1.6; }
+  footer a { color:#000080; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar">
+      <img class="tb-ico" src="appIcon.png" alt="">
+      <span class="tb-title">Windows Me</span>
+      <span class="tb-btns">
+        <button class="tb-btn" aria-label="Minimize"><svg width="8" height="8" viewBox="0 0 8 8"><rect x="1" y="6" width="6" height="1.5" fill="#000"/></svg></button>
+        <button class="tb-btn" aria-label="Maximize"><svg width="9" height="9" viewBox="0 0 9 9"><rect x="0.5" y="0.5" width="8" height="8" fill="none" stroke="#000" stroke-width="1"/><rect x="0.5" y="0.5" width="8" height="2" fill="#000"/></svg></button>
+        <button class="tb-btn" id="tbClose" aria-label="Close"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 1 L7 7 M7 1 L1 7" stroke="#000" stroke-width="1.3"/></svg></button>
+      </span>
+    </div>
+    <div class="body">
+      <div class="hero">
+        <img src="appIcon.png" alt="Windows Me">
+        <div><h1>Windows Me</h1><p class="sub">Microsoft &middot; Millennium Edition &middot; 2000</p></div>
+      </div>
+      <p>Windows Me kept the familiar grey-and-blue Windows 98 desktop and layered on a more consumer, multimedia focus. It introduced <b>System Restore</b>, <b>Windows Movie Maker</b> and <b>Windows Media Player 7</b>, refreshed the Start menu with its "Windows Me / Millennium Edition" banner, and hid real-mode DOS to boot faster.</p><p>It was the last of the 9x/DOS consumer line before Windows XP unified the home and business worlds on the NT kernel.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li><b>System Restore</b> &mdash; roll the PC back to an earlier working day.</li><li><b>Windows Movie Maker</b> and <b>Media Player 7</b> for home video and music.</li><li>Refreshed shell: updated folders, <b>My Network Places</b>, and the Me Start banner.</li><li>Faster boot by hiding real-mode MS-DOS &mdash; the same 98 look under the hood.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>The last of the line.</b> Windows Me was the final release built on the MS-DOS/9x foundation &mdash; every consumer Windows after it runs on the NT kernel.</div><div class="item"><b>Movie Maker&rsquo;s debut.</b> Me was where Windows first shipped a built-in video editor, a decade before smartphones made everyone a filmmaker.</div><div class="item"><b>The safety net.</b> System Restore&rsquo;s "go back to yesterday" idea was novel enough that it outlived Me and survives in Windows to this day.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+  <script>
+    document.getElementById('tbClose').addEventListener('click', function(){
+      try { window.webkit.messageHandlers.readmeClose.postMessage(1); } catch(e) {}
+    });
+  </script>
+</body></html>

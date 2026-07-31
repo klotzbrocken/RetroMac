@@ -935,36 +935,77 @@ private final class ClassicStartMenuContentView: NSView {
         line.lineWidth = bw; line.stroke()
 
         let bannerRect = NSRect(x: bw, y: bw + 1, width: bannerWidth, height: bounds.height - bw * 2 - 2)
-        // Win98 banner: default #00007B (bottom) → #1085D2 (top), or the active Plus! scheme's
-        // active-title colours (solid schemes draw a flat banner).
-        let (bannerBottom, bannerTop) = Win98Scheme.activeTitleColors()
-            ?? (NSColor(red: 0.0, green: 0.0, blue: 0.482, alpha: 1.0),
-                NSColor(red: 0.063, green: 0.522, blue: 0.824, alpha: 1.0))
-        NSGradient(starting: bannerBottom, ending: bannerTop)?.draw(in: bannerRect, angle: 90)
+        let isMe = bannerText.lowercased().contains("windows me")
+        if isMe {
+            // Windows Me banner: a vivid royal-blue → navy → black gradient running UP the strip, with
+            // a big white "Windows" + italic "Me" over the blue at the bottom and a small "Millennium
+            // Edition" fading into the black above. Colour stops sampled from the original screenshot
+            // (bottom → top): #2410CE → #1B0E9C → #110667 → #0C0833 → black, black holding the top ~30%.
+            let grad = NSGradient(colorsAndLocations:
+                (NSColor(srgbRed: 0.141, green: 0.063, blue: 0.808, alpha: 1), 0.0),
+                (NSColor(srgbRed: 0.106, green: 0.055, blue: 0.612, alpha: 1), 0.25),
+                (NSColor(srgbRed: 0.067, green: 0.024, blue: 0.404, alpha: 1), 0.42),
+                (NSColor(srgbRed: 0.047, green: 0.031, blue: 0.200, alpha: 1), 0.56),
+                (NSColor.black, 0.72),
+                (NSColor.black, 1.0))
+            grad?.draw(in: bannerRect, angle: 90)   // first colour at the bottom
+        } else {
+            // Win98: default #00007B (bottom) → #1085D2 (top), or the active Plus! scheme's colours.
+            let (bannerBottom, bannerTop) = Win98Scheme.activeTitleColors()
+                ?? (NSColor(red: 0.0, green: 0.0, blue: 0.482, alpha: 1.0),
+                    NSColor(red: 0.063, green: 0.522, blue: 0.824, alpha: 1.0))
+            NSGradient(starting: bannerBottom, ending: bannerTop)?.draw(in: bannerRect, angle: 90)
+        }
 
         if !bannerText.isEmpty {
             let ctx = NSGraphicsContext.current!.cgContext
-            ctx.saveGState()
-            // Original banner reads "Windows" (bold) + "98" (regular) with NO space.
-            let size: CGFloat = 16
-            let boldFont = NSFont(name: "Tahoma-Bold", size: size) ?? NSFont.boldSystemFont(ofSize: size)
-            let regFont  = NSFont(name: "Tahoma", size: size) ?? NSFont.systemFont(ofSize: size)
-            let bannerTextColor = Win98Scheme.activeTitleTextColor() ?? NSColor.white
-            let parts = bannerText.split(separator: " ", maxSplits: 1).map(String.init)
-            let text = NSMutableAttributedString()
-            text.append(NSAttributedString(string: parts.first ?? bannerText,
-                                           attributes: [.font: boldFont, .foregroundColor: bannerTextColor]))
-            if parts.count > 1 {
-                text.append(NSAttributedString(string: parts[1],
-                                               attributes: [.font: regFont, .foregroundColor: bannerTextColor]))
+            if isMe {
+                // "Windows" (bold sans) + "Me" (connected brush script, as in the original logotype),
+                // then "Millennium Edition" (small sans) further up. The Me logo "Me" is a brush script:
+                // prefer Brush Script MT, fall back to the always-present Snell Roundhand (never plain
+                // bold) so it stays a script on Macs without Office.
+                let big: CGFloat = 17
+                let bold = NSFont(name: "Tahoma-Bold", size: big) ?? NSFont.boldSystemFont(ofSize: big)
+                let script = NSFont(name: "BrushScriptMT", size: big + 6)
+                    ?? NSFont(name: "SnellRoundhand-Bold", size: big + 5)
+                    ?? NSFontManager.shared.convert(bold, toHaveTrait: .italicFontMask)
+                let main = NSMutableAttributedString()
+                main.append(NSAttributedString(string: "Windows ", attributes: [.font: bold, .foregroundColor: NSColor.white]))
+                main.append(NSAttributedString(string: "Me", attributes: [.font: script, .foregroundColor: NSColor.white, .baselineOffset: -3]))
+                let sub = NSAttributedString(string: "Millennium Edition",
+                    attributes: [.font: NSFont(name: "Tahoma", size: 10) ?? NSFont.systemFont(ofSize: 10),
+                                 .foregroundColor: NSColor.white])
+                func drawRot(_ s: NSAttributedString, up: CGFloat) {
+                    ctx.saveGState()
+                    let h = s.size().height
+                    ctx.translateBy(x: bannerRect.minX + (bannerRect.width + h) / 2, y: bannerRect.minY + 5 + up)
+                    ctx.rotate(by: CGFloat.pi / 2)
+                    s.draw(at: .zero)
+                    ctx.restoreGState()
+                }
+                drawRot(main, up: 0)
+                drawRot(sub, up: main.size().width + 12)
+            } else {
+                ctx.saveGState()
+                // Original banner reads "Windows" (bold) + "98" (regular) with NO space.
+                let size: CGFloat = 16
+                let boldFont = NSFont(name: "Tahoma-Bold", size: size) ?? NSFont.boldSystemFont(ofSize: size)
+                let regFont  = NSFont(name: "Tahoma", size: size) ?? NSFont.systemFont(ofSize: size)
+                let bannerTextColor = Win98Scheme.activeTitleTextColor() ?? NSColor.white
+                let parts = bannerText.split(separator: " ", maxSplits: 1).map(String.init)
+                let text = NSMutableAttributedString()
+                text.append(NSAttributedString(string: parts.first ?? bannerText,
+                                               attributes: [.font: boldFont, .foregroundColor: bannerTextColor]))
+                if parts.count > 1 {
+                    text.append(NSAttributedString(string: parts[1],
+                                                   attributes: [.font: regFont, .foregroundColor: bannerTextColor]))
+                }
+                let textSize = text.size()
+                ctx.translateBy(x: bannerRect.minX + (bannerRect.width + textSize.height) / 2, y: bannerRect.minY + 6)
+                ctx.rotate(by: CGFloat.pi / 2)
+                text.draw(at: .zero)
+                ctx.restoreGState()
             }
-            let textSize = text.size()
-            let tx = bannerRect.minX + (bannerRect.width + textSize.height) / 2
-            let ty = bannerRect.minY + 6
-            ctx.translateBy(x: tx, y: ty)
-            ctx.rotate(by: CGFloat.pi / 2)
-            text.draw(at: .zero)
-            ctx.restoreGState()
         }
 
         let contentX = bw + bannerWidth

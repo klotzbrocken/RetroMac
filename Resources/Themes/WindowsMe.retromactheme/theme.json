@@ -1,20 +1,38 @@
 {
   "schemaVersion": 2,
-  "id": "com.retromac.microsoft.windows98",
+  "id": "com.retromac.microsoft.windowsme",
   "family": {
     "id": "microsoft",
     "name": "Microsoft Windows",
-    "order": 2
+    "order": 3
   },
   "release": {
-    "label": "Windows 98",
-    "year": 1998
+    "label": "Windows Me",
+    "year": 2000
   },
   "experienceLevel": "full",
   "chrome": {
     "style": "win98"
   },
-  "name": "Windows 98",
+  "chromeColors": {
+    "activeTitle": "#0A246A",
+    "activeTitleEnd": "#A6CAF0",
+    "titleText": "#FFFFFF",
+    "inactiveTitle": "#808080",
+    "inactiveTitleText": "#D4D0C8",
+    "face": "#D4D0C8",
+    "hilight": "#FFFFFF",
+    "light": "#D4D0C8",
+    "shadow": "#808080",
+    "dkShadow": "#404040",
+    "window": "#FFFFFF",
+    "windowText": "#000000",
+    "menu": "#D4D0C8",
+    "menuText": "#000000",
+    "selection": "#0A246A",
+    "selectionText": "#FFFFFF"
+  },
+  "name": "Windows Me",
   "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",
@@ -23,12 +41,8 @@
   "wallpaper": "wallpaper.jpg",
   "wallpapers": [
     {
-      "name": "Clouds",
+      "name": "Windows Me",
       "file": "wallpaper.jpg"
-    },
-    {
-      "name": "Classic Teal",
-      "file": "wallpaper-teal.png"
     }
   ],
   "dock": {
@@ -37,7 +51,7 @@
     "padding": 4,
     "spacing": 4,
     "cornerRadius": 0,
-    "backgroundColor": "#C4C4C4FF",
+    "backgroundColor": "#D4D0C8FF",
     "backgroundImage": null,
     "backgroundImageMode": "tile",
     "borderColor": "#000000FF",
@@ -121,11 +135,19 @@
       "gridY": 1
     },
     {
+      "name": "My Network Places",
+      "icon": "network.png",
+      "type": "folder",
+      "path": "/Volumes",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
       "name": "Programs",
       "icon": "programsfolder.png",
       "type": "appfolder",
       "gridX": 0,
-      "gridY": 2
+      "gridY": 3
     },
     {
       "name": "Internet Explorer",
@@ -137,14 +159,14 @@
         "740"
       ],
       "gridX": 0,
-      "gridY": 3
+      "gridY": 4
     },
     {
       "name": "Notepad",
       "icon": "notepadclassic.png",
       "type": "notepad",
       "gridX": 0,
-      "gridY": 4
+      "gridY": 5
     },
     {
       "name": "Paint",
@@ -156,7 +178,7 @@
         "640"
       ],
       "gridX": 0,
-      "gridY": 5
+      "gridY": 6
     },
     {
       "name": "Minesweeper",
@@ -168,7 +190,7 @@
         "460"
       ],
       "gridX": 0,
-      "gridY": 6
+      "gridY": 7
     },
     {
       "name": "Solitaire",
@@ -180,7 +202,7 @@
         "600"
       ],
       "gridX": 0,
-      "gridY": 7
+      "gridY": 8
     },
     {
       "name": "CPU Monitor",
@@ -229,12 +251,11 @@
       "name": "TV",
       "icon": "menu-multimedia.png",
       "type": "tvfolder",
-      "gridX": 0,
-      "gridY": 8
+      "gridX": 1,
+      "gridY": 6
     }
   ],
   "desktopIconSize": 40,
-  "splashVideo": "boot.mp4",
   "screensaver": "flowerbox",
   "appearance": "light",
   "accentColor": "blue",

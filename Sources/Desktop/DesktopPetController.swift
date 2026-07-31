@@ -65,7 +65,7 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
     private var enabledForActiveTheme: Bool {
         guard AppSettings.shared.desktopPetEnabled else { return false }
         let n = (ThemeManager.shared.activeTheme?.config.name ?? "").lowercased()
-        return n.contains("windows xp") || n.contains("windows 98")
+        return n.contains("windows xp") || n.contains("windows 98") || n.contains("windows me")
     }
 
     func applyForCurrentTheme() {

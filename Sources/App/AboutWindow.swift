@@ -368,7 +368,7 @@ struct AboutTab: View {
                     Link("nestoris/Win98SE on GitHub",
                          destination: URL(string: "https://github.com/nestoris/Win98SE")!)
                         .font(.caption)
-                    Text("Windows 98 SE start-menu icons.")
+                    Text("Windows 98 SE start-menu and desktop icons (also used by the Windows Me theme).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

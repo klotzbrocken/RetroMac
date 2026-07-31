@@ -57,18 +57,30 @@ struct Win98Scheme {
 
     static let byID: [String: Win98Scheme] = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
 
+    /// The Plus! 98 schemes are a WINDOWS 98 feature — they must apply only to the Windows 98 theme
+    /// itself, not to every theme that merely reuses the win98 chrome (e.g. Windows Me), which would
+    /// otherwise inherit the globally-selected scheme's colours. Scope all scheme accessors to this.
+    static var isWin98Active: Bool {
+        RetroFrameTheme.key() == "win98" && ThemeManager.shared.activeTheme?.config.name == "Windows 98"
+    }
+
     /// The active scheme's ButtonFace as an NSColor, or nil when the default Windows 98 scheme is
     /// active (or the theme isn't Win98). Used by the dock's task buttons / start button so they
     /// match the scheme's window face.
     static func activeFaceColor() -> NSColor? {
-        guard RetroFrameTheme.key() == "win98",
-              let hex = byID[AppSettings.shared.win98Scheme]?.colors.face, !hex.isEmpty else { return nil }
-        return NSColor.fromHex(hex)
+        if isWin98Active, let hex = byID[AppSettings.shared.win98Scheme]?.colors.face, !hex.isEmpty {
+            return NSColor.fromHex(hex)
+        }
+        // A win98-chrome theme that ships its own palette (e.g. Windows Me) uses its face colour.
+        if RetroFrameTheme.key() == "win98", let hex = ThemeManager.shared.activeTheme?.config.chromeColors?.face, !hex.isEmpty {
+            return NSColor.fromHex(hex)
+        }
+        return nil
     }
 
     /// The active scheme's title-text colour (e.g. More Windows uses gold), or nil for default.
     static func activeTitleTextColor() -> NSColor? {
-        guard RetroFrameTheme.key() == "win98",
+        guard isWin98Active,
               let hex = byID[AppSettings.shared.win98Scheme]?.colors.titleText, !hex.isEmpty else { return nil }
         return NSColor.fromHex(hex)
     }
@@ -77,7 +89,7 @@ struct Win98Scheme {
     /// and any other title-coloured surface. A scheme with no gradient end is a solid bar. nil for
     /// the default scheme.
     static func activeTitleColors() -> (NSColor, NSColor)? {
-        guard RetroFrameTheme.key() == "win98",
+        guard isWin98Active,
               let c = byID[AppSettings.shared.win98Scheme]?.colors,
               let a = c.activeTitle, !a.isEmpty else { return nil }
         let start = NSColor.fromHex(a)
@@ -90,13 +102,16 @@ struct Win98Scheme {
     /// default scheme). Every widget controller runs this right after `setTheme`.
     static func widgetOverrideJS() -> String {
         let remove = "var e=document.getElementById('w98scheme'); if(e) e.remove();"
-        guard RetroFrameTheme.key() == "win98",
-              let s = byID[AppSettings.shared.win98Scheme] else { return remove }
-        let c = s.colors
-        let a = c.activeTitle ?? "#00007b"
-        let b = c.activeTitleEnd ?? a
-        let tt = c.titleText ?? "#ffffff"
-        let face = c.face ?? "#c4c4c4"
+        guard RetroFrameTheme.key() == "win98" else { return remove }
+        // Win98 Plus! scheme (Windows 98 only), else the active theme's own palette (e.g. Windows Me).
+        let c: DockThemeConfig.ChromeColors?
+        if isWin98Active { c = byID[AppSettings.shared.win98Scheme]?.colors }
+        else { c = ThemeManager.shared.activeTheme?.config.chromeColors }
+        guard let colors = c else { return remove }
+        let a = colors.activeTitle ?? "#00007b"
+        let b = colors.activeTitleEnd ?? a
+        let tt = colors.titleText ?? "#ffffff"
+        let face = colors.face ?? "#c4c4c4"
         let css = """
         body.theme-win98 .w98-title,body.theme-win98 .w98-dlg-tb{background:linear-gradient(90deg,\(a),\(b))!important;}
         body.theme-win98 .w98-cap,body.theme-win98 .w98-dlg-tb{color:\(tt)!important;}

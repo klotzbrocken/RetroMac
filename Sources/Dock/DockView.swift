@@ -589,7 +589,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows XP" || tn == "Windows 7") {
+               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows XP" || tn == "Windows 7") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -948,7 +948,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows XP" || tn == "Windows 7") {
+               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows XP" || tn == "Windows 7") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
