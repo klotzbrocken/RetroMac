@@ -138,8 +138,9 @@ final class ThemeManager {
         return n.hasPrefix("mac os") || n == "mountain lion" || n == "snow leopard"
     }
 
-    /// "Special" full-chrome themes that carry the crown marker — one consistent 👑
-    /// across every OS family (Mac OS, Windows, BeOS Classic, Maiks Favourite).
+    /// "100 %" themes — the fully-realised, full-chrome specials that carry the 💯 marker,
+    /// one consistent badge across every OS family (Mac OS, Windows, BeOS Classic, Maiks
+    /// Favourite, NeXTSTEP, Futurama).
     static func isCrowned(_ name: String) -> Bool {
         let n = name.lowercased()
         return isMacOSTheme(name)
@@ -147,10 +148,11 @@ final class ThemeManager {
             || (n.contains("beos") && n.contains("classic"))
             || n.contains("maiks favourite")
             || n.contains("nextstep")
+            || n.contains("futurama")
     }
 
-    /// User-facing theme name: crowned themes get a 👑 prefix; the Mac OS family also
-    /// gets a full "Mac OS …" name. Internal names are unchanged (display only).
+    /// User-facing theme name: "100 %" themes get a 💯 marker AFTER the name; the Mac OS
+    /// family also gets a full "Mac OS …" name. Internal names are unchanged (display only).
     static func displayName(for name: String) -> String {
         var s = name
         switch name {
@@ -160,7 +162,7 @@ final class ThemeManager {
         case "Mac OS 6 classic":   s = "Apple System 6"
         default: break
         }
-        return isCrowned(name) ? "👑 " + s : s
+        return isCrowned(name) ? s + " 💯" : s
     }
 
     /// Per-theme dock variants ("Dock instead of Control Strip" options).

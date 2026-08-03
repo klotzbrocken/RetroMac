@@ -20,9 +20,9 @@
     "titleText": "#FFFFFF",
     "inactiveTitle": "#808080",
     "inactiveTitleText": "#D4D0C8",
-    "face": "#D4D0C8",
+    "face": "#D6CFC6",
     "hilight": "#FFFFFF",
-    "light": "#D4D0C8",
+    "light": "#D6CFC6",
     "shadow": "#808080",
     "dkShadow": "#404040",
     "window": "#FFFFFF",
@@ -51,7 +51,7 @@
     "padding": 4,
     "spacing": 4,
     "cornerRadius": 0,
-    "backgroundColor": "#D4D0C8FF",
+    "backgroundColor": "#D6CFC6FF",
     "backgroundImage": null,
     "backgroundImageMode": "tile",
     "borderColor": "#000000FF",
@@ -128,7 +128,7 @@
     },
     {
       "name": "My Documents",
-      "icon": "documents.png",
+      "icon": "menu-documents.png",
       "type": "folder",
       "path": "~/Documents",
       "gridX": 0,
@@ -249,7 +249,7 @@
     },
     {
       "name": "TV",
-      "icon": "menu-multimedia.png",
+      "icon": "music.png",
       "type": "tvfolder",
       "gridX": 1,
       "gridY": 6

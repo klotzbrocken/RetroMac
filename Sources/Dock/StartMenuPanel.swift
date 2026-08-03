@@ -107,6 +107,10 @@ final class StartMenuPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
+        // The classic Start menu appears instantly — no fade/scale. Without this, AppKit gives a
+        // borderless panel a default appear animation, which combined with the alpha-derived drop
+        // shadow makes the menu visibly "shimmer"/settle for a frame after it opens.
+        animationBehavior = .none
         level = NSWindow.Level(rawValue: 27)
         collectionBehavior = [.canJoinAllSpaces, .stationary]
     }
@@ -152,7 +156,12 @@ final class StartMenuPanel: NSPanel {
         let screenPoint = parentWindow.convertPoint(toScreen: parentView.convert(point, to: nil))
         let panelOrigin = NSPoint(x: screenPoint.x, y: screenPoint.y)
         setFrame(NSRect(origin: panelOrigin, size: size), display: true)
+        // Draw the content synchronously before the window server samples its alpha for the drop
+        // shadow, then recompute the shadow once more after it is on screen — otherwise the shadow
+        // is built from the not-yet-drawn content and visibly re-settles ("wabert") a frame later.
+        contentView?.displayIfNeeded()
         orderFrontRegardless()
+        invalidateShadow()
 
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self else { return }
@@ -973,7 +982,7 @@ private final class ClassicStartMenuContentView: NSView {
                 main.append(NSAttributedString(string: "Windows ", attributes: [.font: bold, .foregroundColor: NSColor.white]))
                 main.append(NSAttributedString(string: "Me", attributes: [.font: script, .foregroundColor: NSColor.white, .baselineOffset: -3]))
                 let sub = NSAttributedString(string: "Millennium Edition",
-                    attributes: [.font: NSFont(name: "Tahoma", size: 10) ?? NSFont.systemFont(ofSize: 10),
+                    attributes: [.font: NSFont(name: "Tahoma", size: 12.5) ?? NSFont.systemFont(ofSize: 12.5),
                                  .foregroundColor: NSColor.white])
                 func drawRot(_ s: NSAttributedString, up: CGFloat) {
                     ctx.saveGState()

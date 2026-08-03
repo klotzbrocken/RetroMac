@@ -1035,7 +1035,10 @@ final class SettingsWindowController {
             return
         }
 
-        let hostingView = NSHostingView(rootView: SettingsView(updater: updater!))
+        // Pin the SwiftUI environment to light too (not just the NSWindow appearance below):
+        // otherwise in Dark Mode SwiftUI still resolves text as white while the aqua field
+        // backgrounds are light — e.g. a pasted license key was white-on-white in Activate.
+        let hostingView = NSHostingView(rootView: SettingsView(updater: updater!).preferredColorScheme(.light))
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 700, height: 640),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],

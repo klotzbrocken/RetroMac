@@ -257,6 +257,12 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("Futurama Theme Credits") {
+                    Text("Futurama™ is a registered trademark of Twentieth Century Fox Film Corporation (20th Television, a division of The Walt Disney Company). The “Futurama” theme is an unofficial fan-made homage, included for personal, non-commercial use to celebrate the show’s look and feel. RetroMac is not affiliated with, sponsored by, or endorsed by The Walt Disney Company, 20th Television, Matt Groening, or any rights holder, and no ownership of the Futurama name or artwork is claimed.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Resources") {
                     Link("soqueroeu/Soqueroeu-TV-Backgrounds_V2.0 on GitHub",
                          destination: URL(string: "https://github.com/soqueroeu/Soqueroeu-TV-Backgrounds_V2.0")!)

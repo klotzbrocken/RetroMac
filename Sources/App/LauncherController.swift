@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Dock Mode launcher: a slim, popover-styled borderless panel shown just above the Dock
 /// when the user left-clicks RetroMac's Dock icon. Quick access to themes, effect toggles,
@@ -231,6 +232,7 @@ struct LauncherView: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var editMode = false
     @State private var changingSlot: Int? = nil
+    @State private var draggingSlot: Int? = nil
     var onClose: () -> Void
 
     private let accentBlue = Color(red: 0.039, green: 0.478, blue: 1.0)    // #0a7aff
@@ -247,12 +249,29 @@ struct LauncherView: View {
     private static let aquaAppleIcon: NSImage = bundledIcon("aqua_apple")
     private static let aquaClassicAppleIcon: NSImage = bundledIcon("aqua_classic_apple")
     private static let hellAppleIcon: NSImage = bundledIcon("apple_hell")
+    /// Futurama style 5 has no bundled PNG — it's the drawn teal apple. Render a small teal
+    /// `apple.logo` silhouette for the flyout row so it can be picked like the others.
+    private static let futuramaAppleIcon: NSImage = {
+        let teal = NSColor(srgbRed: 0.13, green: 0.46, blue: 0.41, alpha: 1)
+        let cfg = NSImage.SymbolConfiguration(pointSize: 64, weight: .black)
+        guard let sym = NSImage(systemSymbolName: "apple.logo", accessibilityDescription: nil)?
+            .withSymbolConfiguration(cfg) else { return NSImage() }
+        let size = sym.size
+        let img = NSImage(size: size)
+        img.lockFocus()
+        teal.setFill(); NSRect(origin: .zero, size: size).fill()
+        sym.draw(in: NSRect(origin: .zero, size: size), from: .zero, operation: .destinationIn, fraction: 1)
+        img.unlockFocus()
+        img.isTemplate = false
+        return img
+    }()
 
     private static func appleIcon(forStyle style: Int) -> NSImage {
         switch style {
         case 2: return aquaAppleIcon
         case 3: return aquaClassicAppleIcon
         case 4: return hellAppleIcon
+        case 5: return futuramaAppleIcon
         default: return rainbowAppleIcon
         }
     }
@@ -262,6 +281,7 @@ struct LauncherView: View {
         case 2: return "Aqua"
         case 3: return "Aqua Classic"
         case 4: return "Apple Hell"
+        case 5: return "Futurama"
         default: return "Off"
         }
     }
@@ -402,27 +422,52 @@ struct LauncherView: View {
     @ViewBuilder
     private func slotView(_ i: Int) -> some View {
         let name = slots[i]
-        if name.isEmpty {
-            Button { changingSlot = i } label: { emptyTile }
-                .buttonStyle(.plain)
-        } else {
-            let active = name == model.activeTheme
-            ZStack(alignment: .topLeading) {
-                Button {
-                    if editMode { changingSlot = i } else { tapSlot(name) }
-                } label: { filledTile(name, active: active) }
-                .buttonStyle(.plain)
+        Group {
+            if name.isEmpty {
+                Button { changingSlot = i } label: { emptyTile }
+                    .buttonStyle(.plain)
+            } else {
+                let active = name == model.activeTheme
+                ZStack(alignment: .topLeading) {
+                    Button {
+                        if editMode { changingSlot = i } else { tapSlot(name) }
+                    } label: { filledTile(name, active: active) }
+                    .buttonStyle(.plain)
 
-                if editMode {
-                    Button { setSlot(i, "") } label: {
-                        Image(systemName: "minus.circle.fill")
-                            .font(.system(size: 15)).foregroundStyle(destructive)
-                            .background(Circle().fill(.white).frame(width: 13, height: 13))
+                    if editMode {
+                        Button { setSlot(i, "") } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.system(size: 15)).foregroundStyle(destructive)
+                                .background(Circle().fill(.white).frame(width: 13, height: 13))
+                        }
+                        .buttonStyle(.plain).offset(x: -5, y: -5)
                     }
-                    .buttonStyle(.plain).offset(x: -5, y: -5)
                 }
             }
         }
+        // Edit mode: drag a slot onto another to reorder (empty slots are valid drop targets).
+        .opacity(draggingSlot == i ? 0.35 : 1)
+        .applyIf(editMode) { v in
+            v.onDrop(of: [.text], isTargeted: nil) { _ in performSlotDrop(onto: i) }
+        }
+        .applyIf(editMode && !name.isEmpty) { v in
+            v.onDrag {
+                draggingSlot = i
+                return NSItemProvider(object: String(i) as NSString)
+            }
+        }
+    }
+
+    /// Move the dragged slot to the drop target's position, keeping the fixed 8-slot layout.
+    private func performSlotDrop(onto index: Int) -> Bool {
+        defer { draggingSlot = nil }
+        guard let from = draggingSlot, from != index else { return false }
+        var s = slots
+        let item = s.remove(at: from)
+        let dest = from < index ? index - 1 : index
+        s.insert(item, at: max(0, min(dest, s.count)))
+        settings.quickAccessSlots = Array(s.prefix(8))
+        return true
     }
 
     private func filledTile(_ name: String, active: Bool) -> some View {
@@ -538,7 +583,9 @@ struct LauncherView: View {
             Spacer()
         }
         .contentShape(Rectangle())
-        .onTapGesture { settings.menuBarAppleStyle = (settings.menuBarAppleStyle + 1) % 5 }
+        // Cycle through all six styles incl. Futurama (teal): Off → Rainbow → Aqua → Aqua
+        // Classic → Apple Hell → Futurama → Off.
+        .onTapGesture { settings.menuBarAppleStyle = (settings.menuBarAppleStyle + 1) % 6 }
     }
 
     private var shaderPicker: some View {
@@ -571,5 +618,12 @@ struct LauncherView: View {
         }
         .font(.system(size: 15, weight: .medium))
         .buttonStyle(.plain)
+    }
+}
+
+private extension View {
+    /// Conditionally apply a modifier chain (keeps call sites readable for edit-mode-only drag/drop).
+    @ViewBuilder func applyIf<V: View>(_ condition: Bool, _ transform: (Self) -> V) -> some View {
+        if condition { transform(self) } else { self }
     }
 }

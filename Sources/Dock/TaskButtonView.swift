@@ -14,17 +14,22 @@ final class TaskButtonView: NSView {
     /// Upper bound for the tab icon — the Quick Launch icon size, so a tab icon is never LARGER
     /// than the pinned Quick Launch icons.
     private let maxIconSize: CGFloat
+    /// True when `icon` is a real macOS app icon (theme has no art for this app). Such icons carry
+    /// built-in transparent padding, so they are drawn slightly enlarged to visually match the
+    /// edge-to-edge themed tabs.
+    private let enlargeIcon: Bool
     var onClick: (() -> Void)?
     private var pressed = false
     private var hovered = false
     private var trackingArea: NSTrackingArea?
 
-    init(frame: NSRect, title: String, icon: NSImage?, style: Style, isActive: Bool, maxIconSize: CGFloat) {
+    init(frame: NSRect, title: String, icon: NSImage?, style: Style, isActive: Bool, maxIconSize: CGFloat, enlargeIcon: Bool = false) {
         self.title = title
         self.icon = icon
         self.style = style
         self.isActive = isActive
         self.maxIconSize = maxIconSize
+        self.enlargeIcon = enlargeIcon
         super.init(frame: frame)
         wantsLayer = true
     }
@@ -155,11 +160,14 @@ final class TaskButtonView: NSView {
     private func drawContent(sunken: Bool) {
         let b = bounds
         let off: CGFloat = (sunken ? 1 : 0)
-        // Win98 icon fills nearly the full button height; XP = larger icon per the UI-kit tab.
-        // Capped at the Quick Launch icon size so a tab icon is never larger than those.
-        let base: CGFloat = (style == .win98) ? (b.height - 4) : min(26, b.height - 2)
-        let iconSz = min(base, maxIconSize)
-        let iconX = (style == .win98 ? 4 : 6) + off
+        // Win98 icon sits inside the button with a little margin (not edge-to-edge); XP = larger
+        // icon per the UI-kit tab. Capped at the Quick Launch icon size so a tab icon is never
+        // larger than those. Real macOS app icons (enlargeIcon) get a ~15% bump to offset their
+        // built-in transparent padding so they read the same size as the themed tabs.
+        let base: CGFloat = (style == .win98) ? (b.height - 6) : min(26, b.height - 2)
+        var iconSz = min(base, maxIconSize)
+        if enlargeIcon { iconSz = min(b.height - 2, iconSz * 1.15) }
+        let iconX = (style == .win98 ? 6 : 6) + off
         let iconY = (b.height - iconSz) / 2 - off
         var textX = iconX
         if let icon = icon {

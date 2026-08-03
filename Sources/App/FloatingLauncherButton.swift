@@ -31,6 +31,10 @@ final class FloatingLauncherButton {
     private func build() {
         let view = FloatingButtonView(frame: NSRect(x: 0, y: 0, width: side, height: side))
         view.onClick = { [weak self] in LauncherController.shared.toggle(anchorRect: self?.window?.frame) }
+        view.onDoubleClick = {
+            LauncherController.shared.close()   // dismiss the popover the first click opened
+            AppDelegate.shared?.toggleLastActiveTheme()
+        }
         view.onMoved = { [weak self] origin in self?.saveOrigin(origin) }
 
         let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: side, height: side),
@@ -79,6 +83,7 @@ final class FloatingLauncherButton {
 /// click-vs-drag aware. Hover raises the window's opacity so it stays unobtrusive at rest.
 private final class FloatingButtonView: NSView {
     var onClick: (() -> Void)?
+    var onDoubleClick: (() -> Void)?
     var onMoved: ((NSPoint) -> Void)?
     weak var hostWindow: NSWindow?
 
@@ -145,6 +150,13 @@ private final class FloatingButtonView: NSView {
     override func mouseUp(with event: NSEvent) {
         if didDrag {
             if let origin = hostWindow?.frame.origin { onMoved?(origin) }
+            return
+        }
+        // Single click is instant (no double-click delay). The first click of a double-click
+        // opens the popover; the second click (clickCount 2) runs onDoubleClick, which closes
+        // that popover again and toggles the last theme.
+        if event.clickCount >= 2 {
+            onDoubleClick?()
         } else {
             onClick?()
         }

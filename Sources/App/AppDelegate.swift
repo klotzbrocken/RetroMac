@@ -363,6 +363,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         selectTheme(item)
     }
     func launcherDisableTheme() { disableTheme() }
+
+    /// Double-click on the floating launcher button: toggle the last-used theme. If a theme is
+    /// currently active it turns Dock Mode off; otherwise it re-activates the theme ThemeManager
+    /// still remembers (falling back to the first available theme on a fresh start).
+    func toggleLastActiveTheme() {
+        if AppSettings.shared.dockEnabled {
+            disableTheme()
+        } else if let name = ThemeManager.shared.activeTheme?.config.name {
+            launcherActivateTheme(name)
+        } else if let first = ThemeManager.shared.availableThemes.first?.config.name {
+            launcherActivateTheme(first)
+        }
+    }
     /// Flyout/menu "CRT Shader" = the whole-screen effect. Forces the scope to whole-screen so it
     /// can't get stuck on wallpaper after "Live Wallpaper" set `shaderWallpaperOnly = true`.
     func launcherToggleShader() {
@@ -2103,6 +2116,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         settingsWindow.show()
+    }
+
+    /// The classic "Windows Update" Start-menu entry: on-theme, it checks for RetroMac updates via
+    /// Sparkle. In .dev builds Sparkle is off, so fall back to the GitHub releases page.
+    @objc private func windowsUpdate() {
+        if AppDelegate.sparkleEnabled {
+            updaterController.checkForUpdates(nil)
+        } else if let url = URL(string: "https://github.com/klotzbrocken/RetroMac/releases") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     /// Launch the post-install Setup Assistant on demand (menu / Settings ▸ Overview).

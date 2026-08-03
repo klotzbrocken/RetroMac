@@ -1191,7 +1191,9 @@ final class DockView: NSView {
         let n = CGFloat(models.count)
         var bw = (available - gap * (n - 1)) / n
         bw = min(160, max(40, bw))
-        let h = barRect.height - 4
+        // Buttons sit a touch narrower than the bar (more "Rand" top/bottom), matching the real
+        // Windows Me taskbar where the buttons don't fill the whole bar height.
+        let h = barRect.height - 8
         let y = (barRect.height - h) / 2
         var x = startX
         for m in models {
@@ -1200,7 +1202,8 @@ final class DockView: NSView {
                                      title: m.label, icon: m.icon, style: style, isActive: m.active,
                                      // Quick Launch icons render inset by 2px (DockItemView) → their
                                      // visible size is iconSize-4; cap tab icons to that, never larger.
-                                     maxIconSize: max(0, iconSize - 4))
+                                     maxIconSize: max(0, iconSize - 4),
+                                     enlargeIcon: m.system)
             let wasActive = m.active
             btn.onClick = { [weak self, weak btn] in
                 m.action()
@@ -1224,8 +1227,8 @@ final class DockView: NSView {
     /// so they are NOT repeated here as launch buttons — only their open windows show (exactly
     /// like real Windows, where a quick-launch icon and its taskbar button are separate). Pinned
     /// apps' windows are grouped first for a stable order, then any remaining windows.
-    private func buildTaskModels() -> [(label: String, icon: NSImage?, active: Bool, action: () -> Void)] {
-        var models: [(label: String, icon: NSImage?, active: Bool, action: () -> Void)] = []
+    private func buildTaskModels() -> [(label: String, icon: NSImage?, active: Bool, system: Bool, action: () -> Void)] {
+        var models: [(label: String, icon: NSImage?, active: Bool, system: Bool, action: () -> Void)] = []
         let all = MinimizedWindowTracker.shared.allWindows
         let pinnedBundles = Set(AppManager.shared.apps.map { $0.bundleID })
         for bid in AppManager.shared.apps.map({ $0.bundleID }) {
@@ -1237,12 +1240,17 @@ final class DockView: NSView {
         return models
     }
 
-    private func windowModel(_ w: MinimizedWindowTracker.Entry) -> (label: String, icon: NSImage?, active: Bool, action: () -> Void) {
+    private func windowModel(_ w: MinimizedWindowTracker.Entry) -> (label: String, icon: NSImage?, active: Bool, system: Bool, action: () -> Void) {
         // Use the themed icon (respects the theme's custom icon mapping / pixelation),
         // not the raw system icon, so program tabs match the rest of the themed dock.
-        let icon = ThemeManager.shared.icon(for: w.bundleID, size: 18)
+        let icon = ThemeManager.shared.icon(for: w.bundleID, size: 24)
+        // Apps the theme has no icon art for fall back to their real macOS icon, which carries
+        // built-in transparent padding — so it renders visibly smaller than the edge-to-edge themed
+        // tabs. Flag those so the tab can enlarge them to match.
+        let mapped = (ThemeManager.shared.activeTheme?.config.iconMappings[w.bundleID] != nil)
+            || ThemeManager.shared.customIconPath(for: w.bundleID) != nil
         // Active (focused, non-minimized) → minimize; minimized or background → restore + raise.
-        return (w.title, icon, w.isFocused && !w.isMinimized, {
+        return (w.title, icon, w.isFocused && !w.isMinimized, !mapped, {
             if !w.isMinimized && w.isFocused { MinimizedWindowTracker.shared.minimize(w) }
             else { MinimizedWindowTracker.shared.activate(w) }
         })
@@ -2380,14 +2388,17 @@ final class DockView: NSView {
             }
         }
 
-        // Vertical taskbar separators. Win98 (classic start menu) draws the authentic
-        // etched groove (1px shadow + 1px highlight, almost full bar height).
+        // Vertical taskbar separators. Win98/Me (classic start menu) draws the authentic
+        // toolbar-band GRIPPER: a raised vertical ridge (highlight on the left, shadow on the
+        // right), the little grab handle at the left of Quick Launch and the task-button band.
+        // (A raised ridge, not a sunken groove — the groove was nearly invisible.)
         func drawTaskbarSeparator(atX sx: CGFloat) {
             if theme.dock.startMenuStyle == "classic" {
-                NSColor(white: 0.50, alpha: 1).setFill()
-                NSBezierPath(rect: NSRect(x: sx - 1, y: rect.minY + 3, width: 1, height: rect.height - 6)).fill()
-                NSColor.white.setFill()
-                NSBezierPath(rect: NSRect(x: sx, y: rect.minY + 3, width: 1, height: rect.height - 6)).fill()
+                let top = rect.minY + 3, gh = rect.height - 6
+                NSColor.white.setFill()                                   // highlight (left)
+                NSBezierPath(rect: NSRect(x: sx - 1, y: top, width: 1, height: gh)).fill()
+                NSColor(white: 0.50, alpha: 1).setFill()                  // shadow (right)
+                NSBezierPath(rect: NSRect(x: sx + 1, y: top, width: 1, height: gh)).fill()
             } else {
                 // Snow Leopard dock separator: a single thin vertical "zebra" of short light
                 // dashes (not a solid line), matching the real dock's dotted divider.
@@ -3976,8 +3987,13 @@ final class DockView: NSView {
             }),
         ]
 
-        // Build top-level items
+        // Build top-level items. The classic Windows Start menu opens with "Windows Update" at the
+        // very top, set off by a separator from Programs/Favorites/… below.
         let items: [MI] = [
+            MI(title: "Windows Update", icon: win98Icon("menu-windows-update.png"), action: {
+                NSApp.sendAction(Selector(("windowsUpdate")), to: nil, from: nil)
+            }),
+            MI(separator: true),
             MI(title: "Programs", icon: win98Icon("menu-programs.png"), submenuItems: programItems),
             MI(title: "Favorites", icon: win98Icon("menu-favorites.png"), submenuItems: favItems),
             MI(title: "Documents", icon: win98Icon("menu-documents.png"), submenuItems: docItems),
