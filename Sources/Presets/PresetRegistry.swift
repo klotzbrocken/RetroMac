@@ -54,6 +54,7 @@ enum PresetRegistry {
             PresetInfo(id: "newpixie-crt", displayName: "NewPixie CRT", description: "Soft warm CRT + curvature"),
             PresetInfo(id: "newpixie", displayName: "NewPixie", description: "Soft pixelation + warm color"),
             PresetInfo(id: "curvature-x", displayName: "CurvatureX 0.01", description: "Very subtle barrel distortion"),
+            PresetInfo(id: "crt-easymode", displayName: "CRT EasyMode", description: "Clean, sharp mask + brightness-scaled scanlines"),
             PresetInfo(id: "retro-crisis-composite", displayName: "Retro Crisis Composite", description: "GDV-NTSC composite look — dot crawl, chroma fringe, mask + scanlines"),
             PresetInfo(id: "retro-crisis-rgb", displayName: "Retro Crisis RGB", description: "GDV clean RGB — crisp mask + scanlines, no composite noise"),
         ]),
@@ -70,6 +71,7 @@ enum PresetRegistry {
             PresetInfo(id: "vhs", displayName: "VHS", description: "VHS tape distortion + noise"),
             PresetInfo(id: "s-vhs", displayName: "S-VHS", description: "Degraded tape + dropouts"),
             PresetInfo(id: "vcr-tracking", displayName: "VCR Tracking", description: "Jitter + tracking lines + head noise"),
+            PresetInfo(id: "nlo-vhs-sp", displayName: "NLO VHS SP", description: "Real single-pass NTSC comb demod — dot crawl + cross-colour, gentle VHS"),
         ]),
         (.retro, [
             PresetInfo(id: "lcd-grid", displayName: "LCD Grid", description: "RGB subpixel grid"),

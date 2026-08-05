@@ -72,6 +72,8 @@ struct AboutTab: View {
         ("cinema-film", "Inspired by analog film processing", "Original"),
         ("joel-gdv-ntsc", "Joel (Special Thanks)", "Contributed"),
         ("retro-crisis", "Retro Crisis (inspired) — Guest.r, crt-guest-advanced-ntsc", "GPL-2.0"),
+        ("NLO VHS SP", "NTSC comb-demod + parameters from an ntsc-rs stock preset (valadaptive) — reference only", "MIT / Apache-2.0"),
+        ("crt-easymode", "EasyMode CRT (inspired) — Duimon / RetroArch slang-shaders", "GPL-2.0"),
     ]
 
     var body: some View {

@@ -11,7 +11,7 @@ struct WhatsNewView: View {
                     .padding(.top, 24)
                 Text("What's New in RetroMac \(currentAppVersion)")
                     .font(.title2.bold())
-                Text("NeXTSTEP joins the lineup")
+                Text("Windows Me joins the family — plus a Windows 7 Aero overhaul")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -21,38 +21,38 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "cube",
-                        color: .purple,
-                        title: "NeXTSTEP theme",
-                        description: "The full NeXT desktop, rebuilt natively: a vertical Workspace menu, a right-edge dock with a live clock/calendar and the Recycler, black title bars with the four-grey chiseled bevel, the MegaPixel wallpaper, and the NeXT cursor. Running apps float free as draggable icons."
-                    )
-
-                    featureRow(
-                        icon: "macwindow.on.rectangle",
-                        color: .gray,
-                        title: "The File Viewer",
-                        description: "The NeXT Workspace file browser is back: the shelf of drawers, a current-location path strip, a grid of your apps and TV streams, and the authentic left-side scroller. It opens on its own when the theme starts, just like it always did."
-                    )
-
-                    featureRow(
-                        icon: "square.grid.2x2",
-                        color: .orange,
-                        title: "Change any dock icon",
-                        description: "Right-click a dock or app tile and pick from 120 authentic NeXT \u{201C}Fleet\u{201D} icons or your own image. A \u{201C}fill the whole tile\u{201D} option chooses edge-to-edge or inset on the silver tile."
-                    )
-
-                    featureRow(
-                        icon: "tv",
+                        icon: "desktopcomputer",
                         color: .blue,
-                        title: "TV in themed windows",
-                        description: "The Classic Themed Window for TV streams now wears the NeXT window chrome too, alongside BeOS, Mac OS 9, Windows XP and System 6."
+                        title: "Windows Me theme",
+                        description: "Millennium Edition lands: the Me Start-menu banner in its brush-script logo, a 4K-remastered wallpaper, an authentic boot splash, and the Me shell icons (oval Recycle Bin, Media Player). \u{201C}Windows Update\u{201D} sits atop the Start menu, and it gets the full special-theme treatment — systray, taskbar auto-hide and the desktop pet."
                     )
 
                     featureRow(
-                        icon: "tag",
+                        icon: "macwindow",
+                        color: .cyan,
+                        title: "Windows 7 Aero, refined",
+                        description: "The Windows 7 Start menu now has its glass frame and the account picture that peeks above the top edge. The taskbar is real translucent Aero glass, and the notification area is finally authentic: a flat tray with an up-chevron, network + volume icons that open the matching macOS settings, and a two-line time/date clock."
+                    )
+
+                    featureRow(
+                        icon: "checkmark.seal.fill",
                         color: .green,
-                        title: "Stable theme identity",
-                        description: "Renaming or duplicating a theme now keeps its wallpaper, dock position and other settings, and two themes can share a name without clashing. Your existing settings migrate automatically."
+                        title: "100% themes",
+                        description: "The marker on the fully-realised themes is now a 100% badge, shown right after the theme name — and Futurama counts as 100% too."
+                    )
+
+                    featureRow(
+                        icon: "rectangle.grid.2x2",
+                        color: .orange,
+                        title: "Flyout upgrades",
+                        description: "Drag Quick Access tiles to reorder them in Edit mode, double-click the floating button to toggle your last theme, and the menu-bar Apple-logo cycle now includes the Futurama teal apple."
+                    )
+
+                    featureRow(
+                        icon: "wave.3.right",
+                        color: .purple,
+                        title: "New shaders",
+                        description: "NLO VHS SP — a real single-pass NTSC comb-demodulation with authentic dot crawl and cross-colour — and CRT EasyMode, a clean, sharp mask-and-scanline CRT."
                     )
                 }
                 .padding(.horizontal, 24)

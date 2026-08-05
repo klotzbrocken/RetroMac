@@ -3,6 +3,27 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 2.6
+
+- **Windows Me theme**: Millennium Edition joins the family — the Me Start-menu banner in its
+  brush-script logo, a 4K-remastered wallpaper, an authentic boot splash, and Me shell icons
+  (oval Recycle Bin, Media Player). "Windows Update" sits atop the Start menu, and it gets the
+  full special-theme treatment (systray, taskbar auto-hide, desktop pet).
+- **Windows 7 Aero, refined**: the Start menu now has its glass frame and the account picture that
+  peeks above the top edge; the taskbar is real translucent Aero glass; and the notification area
+  is authentic — a flat tray with an up-chevron, network + volume icons that open the matching
+  macOS settings, and a two-line time/date clock.
+- **100% themes**: the marker on the fully-realised themes is now a 100% badge shown after the
+  theme name (Futurama counts too).
+- **Flyout upgrades**: drag Quick Access tiles to reorder them in Edit mode, double-click the
+  floating button to toggle your last theme, and the menu-bar Apple-logo cycle now includes the
+  Futurama teal apple.
+- **New shaders**: NLO VHS SP — a real single-pass NTSC comb-demodulation with authentic dot crawl
+  and cross-colour — and CRT EasyMode, a clean, sharp mask-and-scanline CRT.
+- **Windows 98 / Me icon fixes**: Safari maps to the IE icon, and running Chrome/Firefox show their
+  real icons again instead of IE.
+- **Fix**: a pasted licence key is no longer white-on-white in the Activate field.
+
 ## 2.5
 
 - **Futurama theme**: a Planet Express take on the desktop. The dock is the show's riveted metal

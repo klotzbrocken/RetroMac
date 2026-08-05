@@ -87,6 +87,8 @@ enum BuiltinShaders {
         "vhs": vhsShader,
         "s-vhs": sVhsShader,
         "ntsc": ntscShader,
+        "nlo-vhs-sp": nloVhsSpShader,
+        "crt-easymode": crtEasymodeShader,
         "pal": palShader,
         "lcd-grid": lcdGridShader,
         "lcd3x": lcd3xShader,
@@ -756,6 +758,154 @@ enum BuiltinShaders {
         color = mix(original, clamp(color, 0.0, 1.0), intensity);
         color = applyVignette(color, uv, uniforms.vignetteIntensity);
 
+        return float4(color, sampleSourceAlpha(source, s, in.texCoord));
+    }
+    """
+
+    // MARK: - VHS Deluxe family — ntsc-rs–inspired composite/VHS artifacts
+    // Single-pass GPU approximation of the high-value passes from ntsc-rs
+    // (valadaptive/ntsc-rs, MIT/Apache-2.0): head switching, tracking noise, chroma
+    // delay + chroma loss, luma ringing, tape edge-wave, composite noise + snow, tape warp.
+    // One shared `vhsDeluxeEffect()`; each preset only differs in its parameter weights,
+    // mirroring ntsc-rs's stock presets (Semi-Sharp / VHS SP / Moldy Tape) + a Gristle look.
+
+    private static let vhsDeluxeCore = """
+    inline float vhsHash(float2 p) {
+        p = fract(p * float2(123.34, 456.21));
+        p += dot(p, p + 45.32);
+        return fract(p.x * p.y);
+    }
+    inline float3 vhsRgb2yiq(float3 c) {
+        return float3(dot(c, float3(0.299, 0.587, 0.114)),
+                      dot(c, float3(0.596, -0.274, -0.322)),
+                      dot(c, float3(0.211, -0.523, 0.312)));
+    }
+    inline float3 vhsYiq2rgb(float3 v) {
+        return float3(v.x + 0.956 * v.y + 0.621 * v.z,
+                      v.x - 0.272 * v.y - 0.647 * v.z,
+                      v.x - 1.106 * v.y + 1.703 * v.z);
+    }
+    // Weights calibrated from ntsc-rs stock presets: pNoise=composite grain (stock ≈ 0.07–0.11,
+    // NOT heavy), pHead=head-switch band, pTrack=tracking band, pChromaDelay=chroma delay (px),
+    // pSmear=horizontal luma smear, pRing=ringing/edge overshoot, pWobble=vhs edge-wave,
+    // pSat=chroma retention (1=full). Snow is ~0 in the stock presets, so it is not applied.
+    float3 vhsDeluxeEffect(texture2d<float> source, sampler s, float2 uv, float2 texSize,
+                           float time, float intensity, float pNoise, float pHead, float pTrack,
+                           float pChromaDelay, float pSmear, float pRing, float pWobble, float pSat) {
+        float vpx = 1.0 / 640.0;   // virtual NTSC pixel: artifacts scale to a ~640px signal so smear/
+                                   // chroma/wobble stay visible on hi-DPI (native px are sub-perceptual).
+        float line = floor(uv.y * texSize.y);
+        float lineRand = vhsHash(float2(line, floor(time * 60.0)));
+
+        // tape edge-wave wobble — the dominant "which VHS is this" cue, scaled by pWobble
+        // (ntsc-rs vhs_edge_wave ≈ 0.15 NLO / 0.8 Semi-Sharp / 2.1 Dry Basement).
+        float wob = sin(uv.y * 14.0 + time * 5.0) * 0.0020
+                  + sin(uv.y * 55.0 - time * 2.0) * 0.0008
+                  + (lineRand - 0.5) * 0.0012;
+        float shift = wob * pWobble;
+        // tracking band drifting up — taller/stronger with pTrack
+        float band = smoothstep(0.02 + 0.03 * pTrack, 0.0, abs(uv.y - fract(time * 0.08)));
+        shift += band * (lineRand - 0.5) * 0.02 * pTrack;
+        // head-switch tear confined to the very bottom (~3%)
+        float head = smoothstep(0.03, 0.0, uv.y);
+        shift += head * (0.008 + (lineRand - 0.5) * 0.010) * pHead;
+        uv.x += shift * (0.5 + 0.5 * intensity);
+
+        // ── real single-pass NTSC comb demodulation ────────────────────────────────────────
+        // Encode ~17 horizontal taps to a composite signal (luma + chroma modulated on the 3.58 MHz
+        // subcarrier), then luma = low-pass(composite), chroma = demod(composite). The residual
+        // subcarrier left in luma IS the dot crawl; luma leaking into the chroma band IS the
+        // rainbow/cross-colour — authentic NTSC artefacts, not a painted-on pattern.
+        float SIGW = 640.0;
+        float sx = uv.x * SIGW;
+        float sigmaY = mix(0.9, 2.4, clamp(pSmear, 0.0, 1.0));   // luma bandwidth: sharp <-> soft
+        float Y = 0.0, I = 0.0, Q = 0.0, wY = 0.0, wC = 0.0;
+        for (int t = -8; t <= 8; t++) {
+            float p = sx + float(t);
+            float3 yq = vhsRgb2yiq(source.sample(s, float2(p / SIGW, uv.y)).rgb);
+            float ph = p * 1.5707963 + line * 3.14159265;       // pi/2 per sample, pi per scanline
+            float comp = yq.x + yq.y * cos(ph) + yq.z * sin(ph);
+            float wy = exp(-float(t * t) / (2.0 * sigmaY * sigmaY));
+            float wc = exp(-float(t * t) / 18.0);               // narrower chroma band
+            Y += comp * wy; wY += wy;
+            I += comp * cos(ph) * wc; Q += comp * sin(ph) * wc; wC += wc;
+        }
+        Y /= wY; I *= 2.0 / wC; Q *= 2.0 / wC;
+        float3 color = vhsYiq2rgb(float3(Y, I * pSat, Q * pSat));   // pChromaDelay unused in this path
+
+        // ringing / edge overshoot
+        float3 blur = (source.sample(s, uv - float2(vpx * 2.0, 0.0)).rgb
+                     + source.sample(s, uv + float2(vpx * 2.0, 0.0)).rgb + color) / 3.0;
+        color += (color - blur) * pRing * intensity;
+
+        float n = vhsHash(uv * texSize + time * 60.0) - 0.5;
+        color += n * (0.035 + band * 0.05 + head * 0.12) * pNoise * intensity;
+
+        float scan = 1.0 - 0.08 * intensity + 0.08 * intensity * sin(uv.y * texSize.y * M_PI_F);
+        color *= scan;
+        color *= float3(1.02, 1.0, 0.97);
+        return clamp(color, 0.0, 1.0);
+    }
+    """
+
+    /// Thin fragment wrapper: run the shared VHS effect with `params` (the 8 weights) and finish.
+    private static func vhsMain(_ params: String) -> String {
+        return vhsDeluxeCore + """
+        fragment float4 fragment_main(
+            VertexOut in [[stage_in]],
+            constant Uniforms& uniforms [[buffer(0)]],
+            texture2d<float> source [[texture(0)]],
+            sampler s [[sampler(0)]]
+        ) {
+            float2 uv = in.texCoord;
+            float in_t = uniforms.intensity;
+            float3 original = source.sample(s, uv).rgb;
+            float3 color = vhsDeluxeEffect(source, s, uv, uniforms.sourceSize.xy,
+                float(uniforms.frameCount) / 60.0, in_t, \(params));
+            color = mix(original, color, in_t);
+            color = applyVignette(color, in.texCoord, uniforms.vignetteIntensity);
+            return float4(color, sampleSourceAlpha(source, s, in.texCoord));
+        }
+        """
+    }
+
+    //                                 noise head track  —   lumaBW ring  wob   chroma  (real NTSC comb demod)
+    private static let nloVhsSpShader = vhsMain("0.8, 0.9, 0.8, 0.0, 0.60, 0.2, 0.10, 1.15") // NLO VHS SP
+
+    // MARK: - CRT EasyMode — clean, sharp mask + brightness-scaled scanlines (RetroArch, GPL-2.0)
+    // A crisp CRT to complement the soft/glowy ones: soft phosphor mask + scanlines whose
+    // beam widens with luma, plus a brightness boost to offset mask/scanline darkening.
+
+    private static let crtEasymodeShader = """
+    fragment float4 fragment_main(
+        VertexOut in [[stage_in]],
+        constant Uniforms& uniforms [[buffer(0)]],
+        texture2d<float> source [[texture(0)]],
+        sampler s [[sampler(0)]]
+    ) {
+        float2 uv = in.texCoord;
+        float2 texSize = uniforms.sourceSize.xy;
+        float intensity = uniforms.intensity;
+        float3 original = source.sample(s, uv).rgb;
+        float3 color = original;
+
+        // Scanline: the beam gets fatter where the image is bright (classic EasyMode look).
+        float luma = dot(color, float3(0.299, 0.587, 0.114));
+        float f = fract(uv.y * texSize.y);
+        float dist = abs(f - 0.5) * 2.0;                 // 0 at line centre → 1 at the gap
+        float beam = mix(1.2, 2.8, luma);                // min..max beam width by brightness
+        float scan = exp(-pow(dist, beam) * 2.2);
+        color *= mix(1.0, scan, 0.55 * intensity);
+
+        // Soft phosphor-triad mask (shared header helper).
+        color *= crtPhosphorMask(uv.x * texSize.x * 3.0, 0.55 * intensity);
+
+        // Brightness compensation so the masked image doesn't go dim.
+        color *= mix(1.0, 1.35, intensity);
+
+        color = clamp(color, 0.0, 1.0);
+        color = mix(original, color, intensity);
+        color = applyVignette(color, in.texCoord, uniforms.vignetteIntensity);
         return float4(color, sampleSourceAlpha(source, s, in.texCoord));
     }
     """
