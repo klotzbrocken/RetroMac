@@ -143,6 +143,30 @@ final class StartMenuPanel: NSPanel {
         positionAndShow(size: size, at: point, in: parentView, startButtonRect: startButtonRect)
     }
 
+    /// Windows 7 Aero two-column menu (frosted glass behind translucent content).
+    func showWin7(data: XPMenuData, at point: NSPoint, in parentView: NSView, startButtonRect: NSRect = .zero) {
+        let content = Win7StartMenuContentView(data: data)
+        content.onDismiss = { [weak self] in self?.dismiss() }
+        self.menuContentView = content
+
+        let size = content.fittingSize
+        let container = NSView(frame: NSRect(origin: .zero, size: size))
+        let blur = NSVisualEffectView(frame: container.bounds)
+        blur.autoresizingMask = [.width, .height]
+        blur.blendingMode = .behindWindow
+        blur.material = .fullScreenUI
+        blur.state = .active
+        blur.appearance = NSAppearance(named: .aqua)
+        blur.maskImage = Win7StartMenuContentView.bodyMask(size: size)   // only the body, not the avatar overhang
+        container.addSubview(blur)
+        content.frame = container.bounds
+        content.autoresizingMask = [.width, .height]
+        container.addSubview(content)
+        self.contentView = container
+
+        positionAndShow(size: size, at: point, in: parentView, startButtonRect: startButtonRect)
+    }
+
     private func positionAndShow(size: NSSize, at point: NSPoint, in parentView: NSView, startButtonRect: NSRect = .zero) {
         guard let parentWindow = parentView.window else { return }
         self.dockWindow = parentWindow
@@ -771,6 +795,234 @@ private final class XPStartMenuContentView: NSView {
             at: NSPoint(x: shutDownStartX + shutDownIconSize + 4, y: btnY - shutDownSize.height / 2),
             withAttributes: shutDownAttrs
         )
+    }
+}
+
+// MARK: - Windows 7 Aero Start Menu
+
+/// Authentic Win7 two-column Aero menu: white program list (left) + frosted-glass places
+/// column (right) with the account picture, "All Programs", a search field, and a single
+/// "Shut down" split-button. Reuses `XPMenuData` (leftItems = programs w/ icons, rightItems =
+/// places, title only). Frosted glass comes from an NSVisualEffectView placed behind this view
+/// by `StartMenuPanel.showWin7`; the right column is painted translucent so the blur shows.
+private final class Win7StartMenuContentView: NSView {
+    private let data: StartMenuPanel.XPMenuData
+    var onDismiss: (() -> Void)?
+
+    private let menuWidth: CGFloat = 420
+    private let leftColW: CGFloat = 244
+    private let topPad: CGFloat = 12
+    private let progH: CGFloat = 38
+    private let placeH: CGFloat = 26
+    private let avatarSize: CGFloat = 48
+    private let nameH: CGFloat = 18
+    private let searchH: CGFloat = 32
+    private let allProgH: CGFloat = 30
+    private let shutH: CGFloat = 30
+    private var radius: CGFloat { Self.radiusConst }
+    private var overhang: CGFloat { Self.overhangConst }   // account picture sticks out above the top edge
+    private let frameGutter: CGFloat = 8                    // dark glass border around the inset white panel
+    private var rightColW: CGFloat { menuWidth - leftColW }
+
+    private enum Hover: Equatable { case left(Int), right(Int), allPrograms, search, shutDown }
+    private var hovered: Hover?
+    private var tracking: NSTrackingArea?
+
+    init(data: StartMenuPanel.XPMenuData) { self.data = data; super.init(frame: .zero); wantsLayer = true }
+    @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
+
+    private var programs: [StartMenuPanel.MenuItem] { data.leftItems.filter { !$0.isSeparator } }
+    private var places: [StartMenuPanel.MenuItem] { data.rightItems.filter { !$0.isSeparator } }
+
+    private var bodyHeight: CGFloat {
+        let left = topPad + CGFloat(programs.count) * progH + 8 + 1 + allProgH + 8 + searchH + 10
+        let right = topPad + avatarSize * 0.55 + 6 + nameH + 10 + CGFloat(places.count) * placeH + 12 + shutH + 10
+        return ceil(max(left, right))
+    }
+    // Total view = the menu body + the top overhang strip the avatar sticks out into.
+    override var fittingSize: NSSize { NSSize(width: menuWidth, height: bodyHeight + overhang) }
+
+    static let overhangConst: CGFloat = 20
+    static let radiusConst: CGFloat = 8
+    /// Blur mask covering only the rounded menu body — the top `overhang` strip (where the account
+    /// picture sticks out over the desktop) stays clear.
+    static func bodyMask(size: NSSize) -> NSImage {
+        let img = NSImage(size: size)
+        img.lockFocus()
+        NSColor.black.setFill()
+        NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: size.width, height: size.height - overhangConst),
+                     xRadius: radiusConst, yRadius: radiusConst).fill()
+        img.unlockFocus()
+        return img
+    }
+
+    private struct Layout {
+        var body = NSRect.zero, white = NSRect.zero
+        var programs: [NSRect] = []
+        var places: [NSRect] = []
+        var avatar = NSRect.zero, name = NSRect.zero
+        var allPrograms = NSRect.zero, search = NSRect.zero, shutDown = NSRect.zero
+    }
+    private func computeRects() -> Layout {
+        var L = Layout()
+        // The menu body sits below the transparent overhang strip; the avatar straddles its top edge.
+        let body = NSRect(x: bounds.minX, y: bounds.minY, width: menuWidth, height: bounds.height - overhang)
+        L.body = body
+        // White program panel, inset by the glass gutter (right edge meets the column divider).
+        let white = NSRect(x: body.minX + frameGutter, y: body.minY + frameGutter,
+                           width: leftColW - frameGutter, height: body.height - frameGutter * 2)
+        L.white = white
+        var y = white.maxY - 6
+        for _ in programs { L.programs.append(NSRect(x: white.minX, y: y - progH, width: white.width, height: progH)); y -= progH }
+        L.search = NSRect(x: white.minX + 8, y: white.minY + 8, width: white.width - 16, height: searchH)
+        L.allPrograms = NSRect(x: white.minX, y: L.search.maxY + 8, width: white.width, height: allProgH)
+        // Avatar centered over the right (dark) column, centered on the body's top edge (~40% above).
+        let avX = body.minX + leftColW + (rightColW - avatarSize) / 2
+        let avY = body.maxY - avatarSize * 0.6
+        L.avatar = NSRect(x: avX, y: avY, width: avatarSize, height: avatarSize)
+        L.name = NSRect(x: body.minX + leftColW, y: avY - nameH - 2, width: rightColW, height: nameH)
+        var ry = L.name.minY - 10
+        for _ in places { L.places.append(NSRect(x: body.minX + leftColW, y: ry - placeH, width: rightColW, height: placeH)); ry -= placeH }
+        L.shutDown = NSRect(x: body.minX + leftColW + 12, y: body.minY + 8, width: rightColW - 24, height: shutH)
+        return L
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let t = tracking { removeTrackingArea(t) }
+        let t = NSTrackingArea(rect: bounds, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways], owner: self, userInfo: nil)
+        addTrackingArea(t); tracking = t
+    }
+    override func mouseMoved(with event: NSEvent) {
+        let h = sectionAt(convert(event.locationInWindow, from: nil))
+        if h != hovered { hovered = h; needsDisplay = true }
+    }
+    override func mouseExited(with event: NSEvent) { hovered = nil; needsDisplay = true }
+
+    private func sectionAt(_ p: NSPoint) -> Hover? {
+        let L = computeRects()
+        for (i, r) in L.programs.enumerated() where r.contains(p) { return .left(i) }
+        for (i, r) in L.places.enumerated() where r.contains(p) { return .right(i) }
+        if L.allPrograms.contains(p) { return .allPrograms }
+        if L.search.contains(p) { return .search }
+        if L.shutDown.contains(p) { return .shutDown }
+        return nil
+    }
+    override func mouseDown(with event: NSEvent) {
+        guard let h = sectionAt(convert(event.locationInWindow, from: nil)) else { return }
+        switch h {
+        case .left(let i): programs[i].action?(); onDismiss?()
+        case .right(let i): places[i].action?(); onDismiss?()
+        case .allPrograms: data.allProgramsAction?()          // may open a submenu → don't dismiss
+        case .search:
+            if let f = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder") { NSWorkspace.shared.open(f) }
+            onDismiss?()
+        case .shutDown: data.shutDownAction?(); onDismiss?()
+        }
+    }
+    override func rightMouseDown(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        guard case let .left(i)? = sectionAt(p), let bid = programs[i].bundleID else { return }
+        CustomIconPicker.present(for: bid, in: self, at: p) { [weak self] in self?.onDismiss?() }
+    }
+
+    private func font(_ sz: CGFloat, _ bold: Bool) -> NSFont {
+        NSFont(name: bold ? "Segoe UI Bold" : "Segoe UI", size: sz)
+            ?? NSFont(name: bold ? "Tahoma Bold" : "Tahoma", size: sz)
+            ?? NSFont.systemFont(ofSize: sz, weight: bold ? .semibold : .regular)
+    }
+    private func text(_ s: String, _ p: NSPoint, _ f: NSFont, _ c: NSColor) {
+        (s as NSString).draw(at: p, withAttributes: [.font: f, .foregroundColor: c])
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let L = computeRects()
+        let body = L.body, white = L.white
+        func rr(_ r: NSRect, _ rad: CGFloat) -> NSBezierPath { NSBezierPath(roundedRect: r, xRadius: rad, yRadius: rad) }
+        let darkText = NSColor(white: 0.1, alpha: 1)
+
+        // Outer glow, then clip to the menu body (the top overhang strip stays clear for the avatar).
+        NSColor(white: 1, alpha: 0.35).setStroke()
+        let glow = rr(body.insetBy(dx: -1, dy: -1), radius + 1); glow.lineWidth = 1.5; glow.stroke()
+        NSGraphicsContext.current?.saveGraphicsState()
+        rr(body, radius).addClip()
+
+        // Dark translucent glass = the whole body (frosted by the blur behind); this is the frame.
+        NSColor(srgbRed: 0.14, green: 0.17, blue: 0.22, alpha: 0.80).setFill(); body.fill()
+        NSColor(white: 1, alpha: 0.12).setFill(); NSRect(x: body.minX, y: body.maxY - 1.5, width: body.width, height: 1.5).fill()
+        // Inset white program panel (glass gutter shows around its left/top/bottom).
+        NSColor.white.setFill(); rr(white, 3).fill()
+
+        // Left: programs
+        for (i, r) in L.programs.enumerated() {
+            if hovered == .left(i) {
+                NSColor(srgbRed: 0.82, green: 0.90, blue: 0.99, alpha: 1).setFill(); rr(r.insetBy(dx: 2, dy: 1), 3).fill()
+                NSColor(srgbRed: 0.55, green: 0.75, blue: 0.95, alpha: 1).setStroke(); let hp = rr(r.insetBy(dx: 2, dy: 1), 3); hp.lineWidth = 1; hp.stroke()
+            }
+            let it = programs[i]
+            if let icon = it.icon { icon.draw(in: NSRect(x: r.minX + 8, y: r.midY - 13, width: 26, height: 26)) }
+            text(it.title, NSPoint(x: r.minX + 42, y: r.midY - 7), font(12, it.isBold), darkText)
+        }
+        // All Programs + separator
+        NSColor(white: 0.82, alpha: 1).setFill(); NSRect(x: white.minX + 6, y: L.allPrograms.maxY, width: white.width - 12, height: 1).fill()
+        if hovered == .allPrograms { NSColor(srgbRed: 0.82, green: 0.90, blue: 0.99, alpha: 1).setFill(); rr(L.allPrograms.insetBy(dx: 2, dy: 1), 3).fill() }
+        let ar = NSBezierPath()
+        ar.move(to: NSPoint(x: white.minX + 8, y: L.allPrograms.midY - 5))
+        ar.line(to: NSPoint(x: white.minX + 16, y: L.allPrograms.midY))
+        ar.line(to: NSPoint(x: white.minX + 8, y: L.allPrograms.midY + 5)); ar.close()
+        NSColor(srgbRed: 0.30, green: 0.60, blue: 0.20, alpha: 1).setFill(); ar.fill()
+        text("All Programs", NSPoint(x: white.minX + 24, y: L.allPrograms.midY - 8), font(12, true), darkText)
+
+        // Search field
+        let sp = rr(L.search, 3)
+        NSColor.white.setFill(); sp.fill()
+        NSColor(white: 0.55, alpha: 1).setStroke(); sp.lineWidth = 1; sp.stroke()
+        text("Search programs and files", NSPoint(x: L.search.minX + 8, y: L.search.midY - 7), font(11, false), NSColor(white: 0.5, alpha: 1))
+        NSColor(srgbRed: 0.20, green: 0.45, blue: 0.75, alpha: 1).setStroke()
+        let mp = NSBezierPath(ovalIn: NSRect(x: L.search.maxX - 19, y: L.search.midY - 5, width: 9, height: 9)); mp.lineWidth = 1.5; mp.stroke()
+
+        // Right: user name + places (text only, white; hover = translucent white pill)
+        let nm = data.userName
+        let nmW = (nm as NSString).size(withAttributes: [.font: font(13, false)]).width
+        text(nm, NSPoint(x: body.minX + leftColW + (rightColW - nmW) / 2, y: L.name.minY), font(13, false), .white)
+        for (i, r) in L.places.enumerated() {
+            if hovered == .right(i) {
+                NSColor(white: 1, alpha: 0.16).setFill(); rr(r.insetBy(dx: 6, dy: 1), 3).fill()
+                NSColor(white: 1, alpha: 0.30).setStroke(); let hp = rr(r.insetBy(dx: 6, dy: 1), 3); hp.lineWidth = 1; hp.stroke()
+            }
+            text(places[i].title, NSPoint(x: r.minX + 16, y: r.midY - 8), font(12, places[i].isBold), .white)
+            if i < places.count - 1 { NSColor(white: 1, alpha: 0.08).setFill(); NSRect(x: r.minX + 12, y: r.minY, width: rightColW - 24, height: 1).fill() }
+        }
+
+        // Shut down split-button
+        let sd = L.shutDown
+        NSGradient(colors: [NSColor(white: hovered == .shutDown ? 0.82 : 0.74, alpha: 1), NSColor(white: 0.54, alpha: 1)])!.draw(in: rr(sd, 3), angle: 90)
+        NSColor(white: 0.32, alpha: 1).setStroke(); let sdp = rr(sd, 3); sdp.lineWidth = 1; sdp.stroke()
+        text("Shut down", NSPoint(x: sd.minX + 10, y: sd.midY - 8), font(12, false), darkText)
+        NSColor(white: 0.35, alpha: 1).setFill(); NSRect(x: sd.maxX - 20, y: sd.minY + 3, width: 1, height: sd.height - 6).fill()
+        let sar = NSBezierPath()
+        sar.move(to: NSPoint(x: sd.maxX - 14, y: sd.midY - 3))
+        sar.line(to: NSPoint(x: sd.maxX - 9, y: sd.midY))
+        sar.line(to: NSPoint(x: sd.maxX - 14, y: sd.midY + 3)); sar.close()
+        NSColor(white: 0.2, alpha: 1).setFill(); sar.fill()
+
+        NSGraphicsContext.current?.restoreGraphicsState()
+
+        // Avatar LAST, outside the body clip so it straddles (sticks out above) the top edge.
+        let av = L.avatar
+        NSColor(white: 0.85, alpha: 0.95).setFill(); rr(av.insetBy(dx: -3, dy: -3), 6).fill()   // glossy light frame
+        let avPath = rr(av, 4)
+        NSGraphicsContext.current?.saveGraphicsState(); avPath.addClip()
+        if let pic = StartMenuPanel.macUserPicture() {
+            pic.draw(in: av, from: .zero, operation: .sourceOver, fraction: 1)
+        } else {
+            NSColor(srgbRed: 0.95, green: 0.6, blue: 0.2, alpha: 1).setFill(); av.fill()
+            if let sym = NSImage(systemSymbolName: "person.fill", accessibilityDescription: nil) {
+                sym.draw(in: av.insetBy(dx: 10, dy: 10), from: .zero, operation: .sourceOver, fraction: 0.9)
+            }
+        }
+        NSGraphicsContext.current?.restoreGraphicsState()
+        NSColor.white.setStroke(); avPath.lineWidth = 1.5; avPath.stroke()
     }
 }
 

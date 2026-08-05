@@ -33,6 +33,8 @@ final class DockView: NSView {
     private var diskFreeValue: String = ""   // e.g. "150"
     private var diskFreeUnit: String = ""    // e.g. "GB Free"
     private var trayIconFrame: NSRect = .zero  // ICQ tray icon (right of clock)
+    private var win7NetFrame: NSRect = .zero   // Win7 systray WLAN/network glyph (→ Network settings)
+    private var win7VolFrame: NSRect = .zero   // Win7 systray volume glyph (→ Sound settings)
     private var magnificationTrackingArea: NSTrackingArea?
     private var startMenuPanel: StartMenuPanel?
     private var trashMonitorSource: DispatchSourceFileSystemObject?
@@ -614,6 +616,7 @@ final class DockView: NSView {
                         clockWidth += max(14, iconSize * 0.55) * 0.9 + 2
                     }
                 }
+                if RetroFrameTheme.key() == "win7" { clockWidth += 34 }
                 let isSunkenClock = theme.dock.startButtonStyle == "sunken"
                 if isXP || isSunkenClock {
                     clockFrame = NSRect(x: rightEdge - clockWidth, y: 0, width: clockWidth, height: barRect.height)
@@ -973,6 +976,7 @@ final class DockView: NSView {
                         clockWidth += max(14, iconSize * 0.55) * 0.9 + 2
                     }
                 }
+                if RetroFrameTheme.key() == "win7" { clockWidth += 34 }
                 let isSunkenClock = theme.dock.startButtonStyle == "sunken"
                 if isXP || isSunkenClock {
                     clockFrame = NSRect(x: rightEdge - clockWidth, y: 0, width: clockWidth, height: barRect.height)
@@ -2172,7 +2176,10 @@ final class DockView: NSView {
         let scale = CGFloat(AppSettings.shared.dockIconScale)
         // The real Windows XP Luna start bar and the classic Mac Control Strip are fully
         // opaque — never apply the transparency slider to them.
-        let bgAlpha = (theme.isXPStartMenu || theme.isControlStrip) ? 1.0 : CGFloat(AppSettings.shared.dockTransparency)
+        let isWin7 = RetroFrameTheme.key() == "win7"
+        // XP Luna and the Mac Control Strip are fully opaque; Win7 Aero is glass, so it keeps its
+        // baked translucency (× the transparency slider) instead of being forced opaque.
+        let bgAlpha = ((theme.isXPStartMenu && !isWin7) || theme.isControlStrip) ? 1.0 : CGFloat(AppSettings.shared.dockTransparency)
 
         let rect = currentBarRect  // Draw background — expands during magnification
         let cr = theme.dock.cornerRadius * scale
@@ -2270,10 +2277,18 @@ final class DockView: NSView {
         if theme.isXPStartMenu && !theme.isVertical {
             ctx.saveGState()
             bgPath.addClip()
-            NSColor(srgbRed: 0.62, green: 0.82, blue: 1.0, alpha: 0.9 * bgAlpha).setFill()
-            ctx.fill(NSRect(x: rect.minX, y: rect.maxY - 1, width: rect.width, height: 1))
-            NSColor.white.withAlphaComponent(0.16 * bgAlpha).setFill()
-            ctx.fill(NSRect(x: rect.minX, y: rect.maxY - 4, width: rect.width, height: 3))
+            if isWin7 {
+                // Aero: a soft white highlight along the top edge (no bright Luna-blue line).
+                NSColor.white.withAlphaComponent(0.45 * bgAlpha).setFill()
+                ctx.fill(NSRect(x: rect.minX, y: rect.maxY - 1, width: rect.width, height: 1))
+                NSColor.white.withAlphaComponent(0.10 * bgAlpha).setFill()
+                ctx.fill(NSRect(x: rect.minX, y: rect.maxY - 5, width: rect.width, height: 4))
+            } else {
+                NSColor(srgbRed: 0.62, green: 0.82, blue: 1.0, alpha: 0.9 * bgAlpha).setFill()
+                ctx.fill(NSRect(x: rect.minX, y: rect.maxY - 1, width: rect.width, height: 1))
+                NSColor.white.withAlphaComponent(0.16 * bgAlpha).setFill()
+                ctx.fill(NSRect(x: rect.minX, y: rect.maxY - 4, width: rect.width, height: 3))
+            }
             ctx.restoreGState()
         }
 
@@ -2714,9 +2729,12 @@ final class DockView: NSView {
 
         // Clock / System tray
         if hasClock && !clockFrame.isEmpty {
-            let isXPClock = theme.isXPStartMenu
+            let isWin7Tray = RetroFrameTheme.key() == "win7"
+            let isXPClock = theme.isXPStartMenu && !isWin7Tray
 
-            if isXPClock {
+            if isWin7Tray {
+                drawWin7Systray(clockFrame: clockFrame, scale: scale, theme: theme)
+            } else if isXPClock {
                 // XP Luna system tray: lighter blue gradient background
                 let trayGradTop = NSColor(red: 0.16, green: 0.48, blue: 0.87, alpha: 1.0)
                 let trayGradBottom = NSColor(red: 0.08, green: 0.33, blue: 0.73, alpha: 1.0)
@@ -2926,8 +2944,9 @@ final class DockView: NSView {
             (diskFreeUnit as NSString).draw(at: NSPoint(x: curX, y: textY), withAttributes: blackAttrs)
         }
 
-        // ICQ tray icon (right of clock, for Windows 98 / Windows XP)
-        if !trayIconFrame.isEmpty, let icqImg = startMenuIcon("icq.png") {
+        // ICQ tray icon (right of clock, for Windows 98 / Windows XP). Win7 draws its own
+        // network/volume glyphs in drawWin7Systray instead, so skip the ICQ there.
+        if !trayIconFrame.isEmpty, RetroFrameTheme.key() != "win7", let icqImg = startMenuIcon("icq.png") {
             icqImg.size = trayIconFrame.size
             icqImg.draw(in: trayIconFrame,
                         from: .zero,
@@ -3249,10 +3268,21 @@ final class DockView: NSView {
         // Control Strip: left cap click → collapse/expand
         if handleControlStripCollapseClick(at: local) { return }
 
-        // ICQ tray icon → open iMessages
-        if !trayIconFrame.isEmpty && trayIconFrame.insetBy(dx: -4, dy: -4).contains(local) {
+        // ICQ tray icon → open iMessages (Win98/XP only; Win7 uses the network/volume glyphs below).
+        if RetroFrameTheme.key() != "win7",
+           !trayIconFrame.isEmpty && trayIconFrame.insetBy(dx: -4, dy: -4).contains(local) {
             AppLauncher.launchOrActivate(bundleID: "com.apple.MobileSMS")
             return
+        }
+
+        // Win7 systray glyphs: WLAN → Network settings, speaker → Sound settings.
+        if RetroFrameTheme.key() == "win7" {
+            if !win7NetFrame.isEmpty && win7NetFrame.insetBy(dx: -4, dy: -4).contains(local) {
+                openSettingsPane("com.apple.Network-Settings.extension"); return
+            }
+            if !win7VolFrame.isEmpty && win7VolFrame.insetBy(dx: -4, dy: -4).contains(local) {
+                openSettingsPane("com.apple.Sound-Settings.extension"); return
+            }
         }
 
         // Taskbar clock → open the themed analog-clock widget. Use a generous hit region
@@ -3769,11 +3799,72 @@ final class DockView: NSView {
         startButtonImages = (normal: slice(at: 0), hover: slice(at: 1), pressed: slice(at: 2))
     }
 
+    /// Open a System Settings pane by its extension id (e.g. Network / Sound).
+    private func openSettingsPane(_ id: String) {
+        if let url = URL(string: "x-apple.systempreferences:\(id)") { NSWorkspace.shared.open(url) }
+    }
+
+    /// Tint an SF Symbol to a flat colour (SF Symbols draw as templates that `draw(in:)` won't tint).
+    private func tintedSymbol(_ name: String, color: NSColor, pointSize: CGFloat) -> NSImage? {
+        let cfg = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .regular)
+        guard let base = NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(cfg) else { return nil }
+        let img = NSImage(size: base.size)
+        img.lockFocus()
+        base.draw(at: .zero, from: .zero, operation: .sourceOver, fraction: 1)
+        color.set()
+        NSRect(origin: .zero, size: base.size).fill(using: .sourceAtop)
+        img.unlockFocus()
+        return img
+    }
+
+    /// Windows 7 Aero notification area: flat glass tray with a "show hidden icons" up-chevron,
+    /// small network + volume glyphs, and a two-line time/date clock in dark ink.
+    private func drawWin7Systray(clockFrame: NSRect, scale: CGFloat, theme: DockThemeConfig) {
+        let ink = NSColor(white: 0.16, alpha: 1)
+        NSColor(white: 1, alpha: 0.30).setStroke()
+        let sep = NSBezierPath()
+        sep.move(to: NSPoint(x: clockFrame.minX + 0.5, y: clockFrame.minY + 5))
+        sep.line(to: NSPoint(x: clockFrame.minX + 0.5, y: clockFrame.maxY - 5))
+        sep.lineWidth = 1; sep.stroke()
+
+        let cy = clockFrame.midY
+        var x = clockFrame.minX + 9
+        // "Show hidden icons" up-chevron
+        let chev = NSBezierPath()
+        chev.move(to: NSPoint(x: x, y: cy - 2.5)); chev.line(to: NSPoint(x: x + 4, y: cy + 2.5)); chev.line(to: NSPoint(x: x + 8, y: cy - 2.5))
+        chev.lineWidth = 1.6; chev.lineCapStyle = .round; chev.lineJoinStyle = .round; ink.setStroke(); chev.stroke()
+        x += 8 + 9
+        // Network + volume glyphs (clickable → Network / Sound settings)
+        win7NetFrame = .zero; win7VolFrame = .zero
+        for (idx, name) in ["wifi", "speaker.wave.2.fill"].enumerated() {
+            if let g = tintedSymbol(name, color: ink, pointSize: 12) {
+                let r = NSRect(x: x, y: cy - g.size.height / 2, width: g.size.width, height: g.size.height)
+                g.draw(in: r, from: .zero, operation: .sourceOver, fraction: 1)
+                if idx == 0 { win7NetFrame = r } else { win7VolFrame = r }
+                x += g.size.width + 6
+            }
+        }
+        // Two-line time / date clock, right-aligned, dark ink on the light glass bar.
+        let df = DateFormatter(); df.dateFormat = "M/d/yyyy"
+        let dateStr = df.string(from: Date())
+        let timeFont = NSFont.systemFont(ofSize: max(10, theme.dock.iconSize * scale * 0.34))
+        let dateFont = NSFont.systemFont(ofSize: max(9, theme.dock.iconSize * scale * 0.30))
+        let tAttr: [NSAttributedString.Key: Any] = [.font: timeFont, .foregroundColor: ink]
+        let dAttr: [NSAttributedString.Key: Any] = [.font: dateFont, .foregroundColor: ink]
+        let tW = (clockString as NSString).size(withAttributes: tAttr).width
+        let dW = (dateStr as NSString).size(withAttributes: dAttr).width
+        let rx = clockFrame.maxX - 8
+        (clockString as NSString).draw(at: NSPoint(x: rx - tW, y: cy + 0.5), withAttributes: tAttr)
+        (dateStr as NSString).draw(at: NSPoint(x: rx - dW, y: cy - dateFont.pointSize - 1.5), withAttributes: dAttr)
+    }
+
     private func showStartMenu() {
         let theme = ThemeManager.shared.activeTheme
         let isXP = theme?.config.isXPStartMenu == true
 
-        if isXP {
+        if RetroFrameTheme.key() == "win7" {
+            showWin7StartMenu()          // Win7 is also isXPStartMenu — check it first
+        } else if isXP {
             showXPStartMenu()
         } else {
             // Defer to the next runloop tick so the opening click fully completes before
@@ -3888,6 +3979,53 @@ final class DockView: NSView {
         startMenuPanel = panel
         let pt = NSPoint(x: startButtonFrame.minX, y: startButtonFrame.maxY + 2)
         panel.showXP(data: data, at: pt, in: self, startButtonRect: startButtonFrame)
+    }
+
+    /// Windows 7 Aero two-column menu: pinned programs (left, with icons) + text-only places
+    /// (right), avatar from the macOS account picture, All Programs, search, and Shut down.
+    private func showWin7StartMenu() {
+        typealias MI = StartMenuPanel.MenuItem
+        let home = FileManager.default.homeDirectoryForCurrentUser
+
+        // Left: pinned apps (max 10), like the Win7 frequent-programs list.
+        var leftItems: [MI] = []
+        for app in AppManager.shared.apps.prefix(10) {
+            let bid = app.bundleID
+            guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) else { continue }
+            let name = FileManager.default.displayName(atPath: appURL.path).replacingOccurrences(of: ".app", with: "")
+            let icon = ThemeManager.shared.icon(for: bid, size: 32)
+            leftItems.append(MI(title: name, icon: icon, action: { AppLauncher.launchOrActivate(bundleID: bid) }, bundleID: bid))
+        }
+
+        // Right: places (text only — Win7's right column has no icons).
+        func open(_ url: URL) -> () -> Void { { NSWorkspace.shared.open(url) } }
+        func settings(_ s: String) -> () -> Void { { if let u = URL(string: s) { NSWorkspace.shared.open(u) } } }
+        let rightItems: [MI] = [
+            MI(title: "Documents", action: open(home.appendingPathComponent("Documents"))),
+            MI(title: "Pictures",  action: open(home.appendingPathComponent("Pictures"))),
+            MI(title: "Music",     action: open(home.appendingPathComponent("Music"))),
+            MI(title: "Computer",  action: open(URL(fileURLWithPath: "/")), isBold: true),
+            MI(title: "Control Panel", action: settings("x-apple.systempreferences:")),
+            MI(title: "Devices and Printers", action: settings("x-apple.systempreferences:com.apple.preference.printfax")),
+            MI(title: "Default Programs", action: { NSApp.sendAction(Selector(("openSettings")), to: nil, from: nil) }),
+            MI(title: "Help and Support", action: { if let u = URL(string: "https://support.microsoft.com/windows") { NSWorkspace.shared.open(u) } }),
+        ]
+
+        let data = StartMenuPanel.XPMenuData(
+            leftItems: leftItems,
+            rightItems: rightItems,
+            allProgramsAction: open(URL(fileURLWithPath: "/Applications")),
+            logOffAction: { NSAppleScript(source: "tell application \"System Events\" to log out")?.executeAndReturnError(nil) },
+            shutDownAction: { NSAppleScript(source: "tell application \"System Events\" to shut down")?.executeAndReturnError(nil) },
+            userName: NSFullUserName(),
+            logOffIcon: nil,
+            shutDownIcon: nil
+        )
+
+        let panel = StartMenuPanel()
+        startMenuPanel = panel
+        let pt = NSPoint(x: startButtonFrame.minX, y: startButtonFrame.maxY + 2)
+        panel.showWin7(data: data, at: pt, in: self, startButtonRect: startButtonFrame)
     }
 
     private func showClassicStartMenu() {
