@@ -15,6 +15,31 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.6</title>
+      <pubDate>Thu, 06 Aug 2026 02:15:00 +0000</pubDate>
+      <sparkle:version>2.6</sparkle:version>
+      <sparkle:shortVersionString>2.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.6 &mdash; Windows Me joins the family</h2>
+        <ul>
+          <li><b>Windows Me theme:</b> Millennium Edition &mdash; the brush-script Start-menu banner, a 4K-remastered wallpaper, an authentic boot splash, Me shell icons (oval Recycle Bin, Media Player), and &ldquo;Windows Update&rdquo; atop the Start menu, with the full special-theme treatment (system tray, taskbar auto-hide, desktop pet).</li>
+          <li><b>Windows 7 Aero, rebuilt:</b> a proper glass Start menu with the account picture peeking over the top edge, a real translucent Aero taskbar, and an authentic notification area &mdash; a show-hidden-icons chevron, network and volume icons that open the matching macOS settings, and a two-line time/date clock.</li>
+          <li><b>100% themes:</b> the marker on the fully-realised themes is now a 100% badge shown after the theme name (Futurama counts too).</li>
+          <li><b>Flyout upgrades:</b> drag Quick Access tiles to reorder them in Edit mode, double-click the floating button to toggle your last theme, and the menu-bar Apple-logo cycle now includes the Futurama teal apple.</li>
+          <li><b>New shaders:</b> NLO VHS SP &mdash; a real single-pass NTSC comb-demodulation with authentic dot crawl and cross-colour &mdash; and CRT EasyMode, a clean, sharp mask-and-scanline CRT.</li>
+          <li><b>Fixes:</b> Windows 98/Me map Safari to the IE icon and show real Chrome/Firefox icons again; the Activate licence field is no longer white-on-white.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.6/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="6aHoQjBju17tgA+uqzcUgI7DlUkxNJAe1Drih0u+DxYzFJrsiNPpefEUFsqmXEOnXPyJRoiotEV/q6x7IRr7Cw=="
+        length="69152972"
+      />
+    </item>
+
+    <item>
       <title>Version 2.5</title>
       <pubDate>Tue, 28 Jul 2026 15:15:29 +0000</pubDate>
       <sparkle:version>2.5</sparkle:version>
