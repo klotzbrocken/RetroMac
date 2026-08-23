@@ -15,6 +15,31 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.7</title>
+      <pubDate>Sun, 23 Aug 2026 18:23:47 +0000</pubDate>
+      <sparkle:version>2.7</sparkle:version>
+      <sparkle:shortVersionString>2.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.7 &mdash; Windows 95 and the Fun Stuff CD-ROM</h2>
+        <ul>
+          <li><b>Windows 95 theme:</b> the one that started it all &mdash; solid navy title bars, the silver 3D chrome, the clouds wallpaper, an authentic boot screen and Win95 shell icons. The Start menu is period-correct: large icons in a narrow first level, small ones in the wider submenus, and neither Windows Update nor Log Off, because Windows 95 had neither.</li>
+          <li><b>Fun Stuff (D:):</b> the CD-ROM is back on the desktop. Browse FUNSTUFF into HOVER, VIDEOS and PICTURES &mdash; music videos play in a bare title-bar window, and Clouds.exe / WINBMP.EXE set your wallpaper the way a 1995 CD-ROM would.</li>
+          <li><b>Hover! plays again:</b> the Microsoft HTML5 remake, self-hosted and fully offline in its classic pixel-graphics mode. No Wine, no emulator, no internet needed.</li>
+          <li><b>Authentic Win95/98 details:</b> scrollbars with a single arrow at each end, raised bevels and a dithered track; the status bar below its own scrollbar row; the program icon back in the title bar; and no running-app dots on 98/Me/XP, whose taskbars already show what is running.</li>
+          <li><b>Readmes overhauled:</b> every theme&rsquo;s About This Theme is closable again, fills its window edge-to-edge, sizes itself so it needs no scrolling, and shows its artwork. Futurama finally has one too.</li>
+          <li><b>Start into your theme:</b> a new opt-in setting activates your last theme right at launch instead of the clean desktop.</li>
+          <li><b>Fixes:</b> Windows 95 title bars no longer showed the Windows 98 gradient (which also repaired every Windows 98 Plus! colour scheme); file lists are white instead of grey; desktop icon labels stop colliding; boot videos are no longer cropped; sheep.exe works on Windows 95; Classic Teal is the canonical #008080.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.7/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="ZGhhRhNeJW35pbHgyUPnEyFgIfGmWUsM+6PWFXjZFG03Vi2dAE0KH7m9QsO5nfCLCtxCQuDY6b42gvUDqaucAg=="
+        length="92168418"
+      />
+    </item>
+    <item>
       <title>Version 2.6</title>
       <pubDate>Thu, 06 Aug 2026 02:15:00 +0000</pubDate>
       <sparkle:version>2.6</sparkle:version>
