@@ -144,7 +144,7 @@ final class ThemeManager {
     static func isCrowned(_ name: String) -> Bool {
         let n = name.lowercased()
         return isMacOSTheme(name)
-            || n.contains("windows xp") || n.contains("windows 98") || n.contains("windows me")
+            || n.contains("windows xp") || n.contains("windows 98") || n.contains("windows 95") || n.contains("windows me")
             || (n.contains("beos") && n.contains("classic"))
             || n.contains("maiks favourite")
             || n.contains("nextstep")
@@ -536,6 +536,17 @@ final class ThemeManager {
             defaults.set(dict, forKey: wallpaperBackupKey)
         }
         defaults.synchronize()   // flush so a crash/restart can still restore the user's wallpaper
+    }
+
+    /// A `data:` URL for one of the active theme's `icons/` files, so a sandboxed widget WebView
+    /// (which only has read access to its own `Widgets/` folder) can show a theme icon in its
+    /// title bar. Returns nil when the icon is missing.
+    func iconDataURL(_ name: String?) -> String? {
+        guard let url = activeTheme?.iconResource(name),
+              let data = try? Data(contentsOf: url) else { return nil }
+        let ext = url.pathExtension.lowercased()
+        let mime = (ext == "jpg" || ext == "jpeg") ? "image/jpeg" : (ext == "gif" ? "image/gif" : "image/png")
+        return "data:\(mime);base64,\(data.base64EncodedString())"
     }
 
     func icon(for bundleID: String, size: CGFloat) -> NSImage {

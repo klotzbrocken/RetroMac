@@ -175,7 +175,7 @@ final class LauncherModel: ObservableObject {
     /// Special themes (full retro chrome/widgets) shown in the grid; the rest go in a dropdown.
     static func isSpecial(_ name: String) -> Bool {
         let tn = name.lowercased()
-        return tn.contains("windows xp") || tn.contains("windows 98") || tn.contains("windows me")
+        return tn.contains("windows xp") || tn.contains("windows 98") || tn.contains("windows 95") || tn.contains("windows me")
             || (tn.contains("mac os 9") && tn.contains("classic"))
             || (tn.contains("beos") && tn.contains("classic"))
             || tn.contains("maiks favourite") || tn == "mac os x"

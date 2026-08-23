@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Hover!</title>
+    <link rel="shortcut icon" type="image/ico" href="images/ui/favicon.ceb3714b.ico">
+    <meta name="viewport" content="initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no,width=device-width" />
+    <link href="css/game.7024c47d.css" rel="stylesheet" type="text/css">
+    <meta name="application-name" content="Hover!" />
+</head>
+<body>
+    <div id="main-bg"></div>
+
+    <div id="background">
+        <canvas id="starsCanvas"></canvas>
+        <div class="lightaccent lightaccent-topleft"></div>
+        <div class="lightaccent lightaccent-bottomleft"></div>
+        <div class="lightaccent lightaccent-topright"></div>
+        <div class="lightaccent lightaccent-bottomright"></div>
+        <div class="spotaccent spotaccent-topleft"></div>
+        <div class="spotaccent spotaccent-center"></div>
+        <div id="linesaccent"></div>
+    </div>
+
+    <div id="main"></div>
+    <div id="dd"></div>
+
+    <ul id="footer">
+        <li>© 2013 Microsoft</li>
+    </ul>
+
+    <div id="ief"></div>
+
+    <script src="scripts/jquery.min.js"></script>
+    <!-- Stub for the removed external IE promo flyout bar (game.js calls ieFlyout.init). -->
+    <script>window.ieFlyout={init:function(){},show:function(){},hide:function(){},update:function(){}};</script>
+    <script src="scripts/game-libs.922bbe8e.js"></script>
+    <script src="scripts/three.min.065c49d8.js"></script>
+    <script src="scripts/mazes.c3a2bdf0.js"></script>
+    <script src="scripts/cdn-files.da0f1ca5.js"></script>
+    <script src="scripts/game.cbbb14d7.js"></script>
+    <!--
+      Classic mode: the game hides its original pixel-graphics ("retro") version behind an easter
+      egg — typing "bambi" on the menu calls router.retro(). Opening this page with ?retro starts
+      that classic version directly (RetroMac's "Hover Classic" entry).
+    -->
+    <script>
+    (function(){
+      function wantsRetro(){
+        return /(^|[?&])retro\b/.test(location.search || '') ||
+               /(^|[?&])retro\b/.test(window.__rmQuery || '');
+      }
+      var started = false;
+      function startRetro(){
+        if (started || !wantsRetro()) return;
+        var tries = 0;
+        var iv = setInterval(function(){
+          try {
+            var H = window.Hover;
+            if (H && H.router && typeof H.router.retro === 'function') {
+              clearInterval(iv); started = true; H.router.retro(); return;
+            }
+          } catch (e) {}
+          if (++tries > 80) clearInterval(iv);
+        }, 250);
+      }
+      // The host (RetroMac) may hand us the query after load via window.__rmQuery.
+      window.addEventListener('rmquery', startRetro);
+      startRetro();
+    })();
+    </script>
+</body>
+</html>

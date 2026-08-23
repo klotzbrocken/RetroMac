@@ -203,6 +203,12 @@ struct DockSettingsTab: View {
                         .tint(.rmAccent)
                         .labelsHidden()
                 }
+                RMRow(label: "Activate theme on launch", hint: "Start straight into the last theme instead of the clean desktop.") {
+                    Toggle("", isOn: $settings.activateThemeOnLaunch)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                }
                 RMRow(label: "Show only when system dock is hidden", hint: "Auto-shows when macOS dock auto-hides.") {
                     Toggle("", isOn: $settings.dockAutoHide)
                         .toggleStyle(.switch)

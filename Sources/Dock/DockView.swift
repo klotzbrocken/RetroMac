@@ -591,7 +591,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows XP" || tn == "Windows 7") {
+               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows XP" || tn == "Windows 7") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -689,19 +689,22 @@ final class DockView: NSView {
             if winTaskbar {
                 // Authentic Win98/XP layout: Start | Quick Launch (pinned apps as small icon
                 // tiles) | separator | task buttons (one elongated button per open window).
+                // Windows 95 had no Quick Launch bar (it arrived with IE4/Win98) → skip it entirely.
                 let quickLaunchStart = x
-                if hasShowDesktop {
-                    addShowDesktopItem(frame: NSRect(x: x, y: (barRect.height - iconSize) / 2,
-                                                     width: iconSize, height: iconSize),
-                                       theme: theme, iconSize: iconSize)
-                    x += iconSize + spacing
-                }
-                for app in apps {
-                    let y = (barRect.height - iconSize) / 2
-                    addItem(bundleID: app.bundleID,
-                            frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                            theme: theme, iconSize: iconSize)
-                    x += iconSize + spacing
+                if theme.showQuickLaunch {
+                    if hasShowDesktop {
+                        addShowDesktopItem(frame: NSRect(x: x, y: (barRect.height - iconSize) / 2,
+                                                         width: iconSize, height: iconSize),
+                                           theme: theme, iconSize: iconSize)
+                        x += iconSize + spacing
+                    }
+                    for app in apps {
+                        let y = (barRect.height - iconSize) / 2
+                        addItem(bundleID: app.bundleID,
+                                frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                theme: theme, iconSize: iconSize)
+                        x += iconSize + spacing
+                    }
                 }
                 if x > quickLaunchStart {           // had quick-launch icons → divider before tasks
                     separatorX = x - spacing / 2
@@ -951,7 +954,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows XP" || tn == "Windows 7") {
+               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows XP" || tn == "Windows 7") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -2177,9 +2180,12 @@ final class DockView: NSView {
         // The real Windows XP Luna start bar and the classic Mac Control Strip are fully
         // opaque — never apply the transparency slider to them.
         let isWin7 = RetroFrameTheme.key() == "win7"
-        // XP Luna and the Mac Control Strip are fully opaque; Win7 Aero is glass, so it keeps its
-        // baked translucency (× the transparency slider) instead of being forced opaque.
-        let bgAlpha = ((theme.isXPStartMenu && !isWin7) || theme.isControlStrip) ? 1.0 : CGFloat(AppSettings.shared.dockTransparency)
+        // Win7 Aero is the only translucent Windows taskbar. Classic Windows (95/98/Me → "win98"
+        // chrome), XP Luna and the Mac Control Strip are fully opaque and ignore the slider.
+        let opaqueBar = theme.isControlStrip
+            || RetroFrameTheme.key() == "win98"
+            || (theme.isXPStartMenu && !isWin7)
+        let bgAlpha = opaqueBar ? 1.0 : CGFloat(AppSettings.shared.dockTransparency)
 
         let rect = currentBarRect  // Draw background — expands during magnification
         let cr = theme.dock.cornerRadius * scale
@@ -4125,38 +4131,45 @@ final class DockView: NSView {
             }),
         ]
 
-        // Build top-level items. The classic Windows Start menu opens with "Windows Update" at the
-        // very top, set off by a separator from Programs/Favorites/… below.
-        let items: [MI] = [
-            MI(title: "Windows Update", icon: win98Icon("menu-windows-update.png"), action: {
+        // Build top-level items. Windows Update, Favorites and Log Off all arrived with IE4/Win98 (or
+        // networked profiles) — the default Windows 95 Start menu had none of them, so they are
+        // omitted for Win95 (which shows Programs, Documents, Settings, Find, Help, Run, Shut Down).
+        let isWin95 = ThemeManager.shared.activeTheme?.config.name == "Windows 95"
+        var items: [MI] = []
+        if !isWin95 {
+            items.append(MI(title: "Windows Update", icon: win98Icon("menu-windows-update.png"), action: {
                 NSApp.sendAction(Selector(("windowsUpdate")), to: nil, from: nil)
-            }),
-            MI(separator: true),
-            MI(title: "Programs", icon: win98Icon("menu-programs.png"), submenuItems: programItems),
-            MI(title: "Favorites", icon: win98Icon("menu-favorites.png"), submenuItems: favItems),
-            MI(title: "Documents", icon: win98Icon("menu-documents.png"), submenuItems: docItems),
-            MI(title: "Settings", icon: win98Icon("menu-settings.png"), submenuItems: settingsSubItems),
-            MI(title: "Find…", icon: win98Icon("menu-find.png"), action: {
-                if let finderURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder") {
-                    NSWorkspace.shared.open(finderURL)
-                }
-            }),
-            MI(title: "Help", icon: win98Icon("menu-help.png"), action: {
-                NSApp.sendAction(Selector(("showAbout")), to: nil, from: nil)
-            }),
-            MI(title: "Run…", icon: win98Icon("menu-run.png"), action: {
-                NSWorkspace.shared.launchApplication("Terminal")
-            }),
-            MI(separator: true),
-            MI(title: "Log Off \(NSFullUserName())…", icon: win98Icon("menu-logoff.png"), action: {
+            }))
+            items.append(MI(separator: true))
+        }
+        items.append(MI(title: "Programs", icon: win98Icon("menu-programs.png"), submenuItems: programItems))
+        if !isWin95 {
+            items.append(MI(title: "Favorites", icon: win98Icon("menu-favorites.png"), submenuItems: favItems))
+        }
+        items.append(MI(title: "Documents", icon: win98Icon("menu-documents.png"), submenuItems: docItems))
+        items.append(MI(title: "Settings", icon: win98Icon("menu-settings.png"), submenuItems: settingsSubItems))
+        items.append(MI(title: "Find…", icon: win98Icon("menu-find.png"), action: {
+            if let finderURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder") {
+                NSWorkspace.shared.open(finderURL)
+            }
+        }))
+        items.append(MI(title: "Help", icon: win98Icon("menu-help.png"), action: {
+            NSApp.sendAction(Selector(("showAbout")), to: nil, from: nil)
+        }))
+        items.append(MI(title: "Run…", icon: win98Icon("menu-run.png"), action: {
+            NSWorkspace.shared.launchApplication("Terminal")
+        }))
+        items.append(MI(separator: true))
+        if !isWin95 {
+            items.append(MI(title: "Log Off \(NSFullUserName())…", icon: win98Icon("menu-logoff.png"), action: {
                 let src = "tell application \"System Events\" to log out"
                 NSAppleScript(source: src)?.executeAndReturnError(nil)
-            }),
-            MI(title: "Shut Down…", icon: win98Icon("menu-shutdown.png"), action: {
-                let src = "tell application \"System Events\" to shut down"
-                NSAppleScript(source: src)?.executeAndReturnError(nil)
-            }),
-        ]
+            }))
+        }
+        items.append(MI(title: "Shut Down…", icon: win98Icon("menu-shutdown.png"), action: {
+            let src = "tell application \"System Events\" to shut down"
+            NSAppleScript(source: src)?.executeAndReturnError(nil)
+        }))
 
         let bannerText = ThemeManager.shared.activeTheme?.config.name ?? "Windows 98"
         let panel = StartMenuPanel()

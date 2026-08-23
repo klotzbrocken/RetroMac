@@ -102,7 +102,7 @@ final class SplashController {
         let pv = AVPlayerView(frame: NSRect(origin: .zero, size: frame.size))
         pv.player = player
         pv.controlsStyle = .none
-        pv.videoGravity = .resizeAspectFill   // fill the display edge-to-edge (no black letterbox bars)
+        pv.videoGravity = .resizeAspect   // fit the whole frame (4:3 boot videos keep their bottom animation; black bars on the sides read as authentic)
         let dv = dismissView(NSRect(origin: .zero, size: frame.size), content: pv)
         win.contentView = dv
         self.player = player

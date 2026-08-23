@@ -419,6 +419,11 @@ final class AppSettings: ObservableObject {
     @Published var dockEnabled: Bool {
         didSet { defaults.set(dockEnabled, forKey: "dockEnabled") }
     }
+    /// Opt-in: re-activate the remembered theme (dock + desktop) automatically on launch, instead
+    /// of the default clean start. Off by default so the clean-start behaviour is unchanged.
+    @Published var activateThemeOnLaunch: Bool {
+        didSet { defaults.set(activateThemeOnLaunch, forKey: "activateThemeOnLaunch") }
+    }
     @Published var dockHideSystemDock: Bool {
         didSet { defaults.set(dockHideSystemDock, forKey: "dockHideSystemDock") }
     }
@@ -873,6 +878,7 @@ final class AppSettings: ObservableObject {
 
         // Dock
         dockEnabled = defaults.bool(forKey: "dockEnabled")
+        activateThemeOnLaunch = defaults.bool(forKey: "activateThemeOnLaunch")
         dockHideSystemDock = defaults.object(forKey: "dockHideSystemDock") as? Bool ?? true
         themeWindowBorders = defaults.bool(forKey: "themeWindowBorders")
         win98Scheme = defaults.string(forKey: "win98Scheme") ?? ""
@@ -971,7 +977,7 @@ final class AppSettings: ObservableObject {
         screenshotHotkeyCode = defaults.object(forKey: "screenshotHotkeyCode") as? UInt32 ?? 0
         screenshotHotkeyModifiers = defaults.object(forKey: "screenshotHotkeyModifiers") as? UInt32 ?? 0
         showHotkeyConflictTips = defaults.object(forKey: "showHotkeyConflictTips") as? Bool ?? true
-        showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? false
+        showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true   // boot screen on by default (per-theme toggle still applies)
 
         // Per-app rules (migrate from old perAppPresets if needed)
         if let data = defaults.data(forKey: "perAppRules"),

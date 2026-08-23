@@ -280,6 +280,8 @@
   body.theme-macosx .be-grid .be-item.sel .lbl,body.theme-macosx .be-grid.list .be-item.sel{background:#3a72c8;color:#fff;}
 
   /* ===== Windows 98 — SPEC-Farben/-Bevels, leicht skaliert für Lesbarkeit ===== */
+  .w98-ico{width:16px;height:16px;flex:0 0 auto;margin-right:3px;image-rendering:pixelated;image-rendering:-webkit-optimize-contrast;}
+  .w98-ico:not([src]),.w98-ico[src=""]{display:none;}
   .w98-cap{color:#fff;font:700 12px Tahoma,"Microsoft Sans Serif",sans-serif;
     flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .w98-btn{width:20px;height:18px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
@@ -322,14 +324,39 @@
   body.theme-win98 .be-content{background:#fff;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
   body.theme-win98 .be-status{background:#c4c4c4;color:#000;border:none;margin:0 3px 3px;
     box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
-  body.theme-win98 .vsb,body.theme-win98 .hsb{background:#c4c4c4;border-color:#808080;}
-  body.theme-win98 .sb-btn{background:#c4c4c4;border:none;
-    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
-  body.theme-win98 .sb-trough{background:repeating-conic-gradient(#fff 0% 25%,#c4c4c4 0% 50%) 0 0/2px 2px;}
-  body.theme-win98 .sb-thumb{background:#c4c4c4;border:none;border-radius:0;
-    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
+  body.theme-win98 .vsb,body.theme-win98 .hsb{background:#c0c0c0;border-color:#808080;}
+  /* Authentic Win95/98 raised bevel: white outer top-left, black outer bottom-right, #dfdfdf/#808080 inner. */
+  body.theme-win98 .sb-btn{background:#c0c0c0;border:none;
+    box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
+  body.theme-win98 .sb-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080;}
+  body.theme-win98 .sb-btn:active svg{transform:translate(1px,1px);}
+  body.theme-win98 .sb-btn svg polygon{fill:#000;}
+  /* Classic 1px white/silver dithered track (checkerboard). */
+  body.theme-win98 .sb-trough{background-color:#fff;box-shadow:none;
+    background-image:linear-gradient(45deg,#c0c0c0 25%,transparent 0,transparent 75%,#c0c0c0 0,#c0c0c0),linear-gradient(45deg,#c0c0c0 25%,transparent 0,transparent 75%,#c0c0c0 0,#c0c0c0);
+    background-position:0 0,1px 1px;background-size:2px 2px;}
+  body.theme-win98 .sb-thumb{background:#c0c0c0;border:none;border-radius:0;
+    box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
   body.theme-win98 .sb-thumb .grip{display:none;}
-  body.theme-win98 .be-item .lbl{border-bottom:none;font:12px Tahoma,"Microsoft Sans Serif",sans-serif;}
+  /* Win95/98 scrollbars have a SINGLE arrow at each end (not the BeOS paired-arrow clusters).
+     Top keeps only up, bottom only down; left end only left, right end only right. */
+  body.theme-win98 .vsb .sb-arrows:first-child .sb-btn[data-v="1"],
+  body.theme-win98 .vsb .sb-arrows:last-child  .sb-btn[data-v="-1"],
+  body.theme-win98 .hsb .sb-arrows:first-child .sb-btn[data-h="1"],
+  body.theme-win98 .hsb .sb-arrows:last-child  .sb-btn[data-h="-1"]{display:none;}
+  /* Win95/98: the horizontal scrollbar is its OWN full-width row directly under the content; the
+     status bar ("N items") is a SEPARATE full-width sunken panel beneath it — never side-by-side. */
+  body.theme-win98 .be-status{flex-direction:column;height:auto;padding:0;margin:0 3px 3px;background:transparent;box-shadow:none;border:none;}
+  body.theme-win98 .be-status .hsb{order:0;width:100%;margin:0;}
+  body.theme-win98 .be-status .be-count{order:1;width:100%;min-width:0;height:18px;margin-top:2px;padding:0 6px;
+    background:#c0c0c0;color:#000;border:none;
+    box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
+  body.theme-win98 .be-status .be-resize{display:none;}
+  /* Win95/98: folder icons match the Start menu's first-column size (32px), not the 64px
+     BeOS/Mac grid — keeps Fun Stuff / Programs / TV consistent with the rest of the shell. */
+  body.theme-win98 .be-item{width:72px;padding-top:6px;gap:2px;}
+  body.theme-win98 .be-item .ic{width:32px;height:32px;}
+  body.theme-win98 .be-item .lbl{border-bottom:none;font:12px Tahoma,"Microsoft Sans Serif",sans-serif;max-width:70px;}
   body.theme-win98 .be-grid.list .be-item.sel,body.theme-win98 .be-item.sel .lbl{background:#000080;color:#fff;}
   /* ===== Windows 7 (Aero glass) — inherits XP structure via dual class (theme-win7 theme-winxp) ===== */
   body.theme-win7 #win{border-radius:6px 6px 2px 2px;background:rgba(69,128,196,0.34);
@@ -435,6 +462,7 @@
     </div>
     <!-- Windows 98 classic title bar (shown only in theme-win98) -->
     <div class="w98-title" id="w98title">
+      <img class="w98-ico" id="w98ico" alt="">
       <span class="w98-cap" id="w98cap">Applications</span>
       <span class="w98-btn w98-dis" id="w98min">_</span>
       <span class="w98-btn" id="w98max">□</span>
@@ -484,7 +512,9 @@
   const post=o=>{ if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.appfolder) window.webkit.messageHandlers.appfolder.postMessage(o); };
 
   function buildGrid(){
-    const v=VIEW[viewMode];
+    let v=VIEW[viewMode];
+    // Win95/98 icon view uses the smaller 32px Start-menu icon size → tighter cells.
+    if (viewMode==='icon' && document.body.classList.contains('theme-win98')) v={CW:76,CH:78};
     grid.className='be-grid'+(viewMode==='mini'?' mini':'')+(viewMode==='list'?' list':'');
     const list = viewMode==='list';
     const cols = list ? 1 : Math.max(1, Math.floor((content.clientWidth - PAD*2)/v.CW));
@@ -537,6 +567,9 @@
     document.querySelectorAll('.be-title,.xp-caption,.mf-caption,.mx-caption,.w98-cap').forEach(e=>e.textContent=t);
     const pl=document.querySelector('.m9-plaque span:last-child'); if(pl) pl.textContent=t;
   };
+  // Host sets the Win95/98 title-bar program icon (data: URL from the theme bundle).
+  window.setWinIcon=function(u){ const e=document.getElementById('w98ico'); if(!e) return;
+    if(u){ e.src=u; } else { e.removeAttribute('src'); } };
   (function(){
     const c=document.getElementById('w98close'), m=document.getElementById('w98max');
     const fire=(el,act)=>{ if(!el) return; ['click','pointerup'].forEach(ev=>
@@ -568,6 +601,15 @@
   }
   function updateScroll(){
     clampScroll();
+    // Windows themes (95/98/Me/XP/7) show a scrollbar only when its axis actually overflows;
+    // classic Mac/BeOS keep theirs always visible (authentic), so only toggle for Windows.
+    const winStyle = document.body.classList.contains('theme-win98') || document.body.classList.contains('theme-winxp');
+    if(winStyle){
+      const vsbEl=win.querySelector('.vsb'), hsbEl=win.querySelector('.hsb');
+      if(vsbEl) vsbEl.style.display = st.maxY>0 ? '' : 'none';
+      if(hsbEl) hsbEl.style.display = st.maxX>0 ? '' : 'none';
+      clampScroll();   // re-clamp: hiding a bar widens/heightens the viewport
+    }
     grid.style.transform=`translate(${-st.x}px,${-st.y}px)`;
     const v=viewSize();
     const vt=win.querySelector('.sb-trough[data-trough="v"]'), vthumb=win.querySelector('.sb-thumb[data-thumb="v"]');

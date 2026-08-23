@@ -112,6 +112,11 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
         webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
+        // Win95/98 title-bar program icon (this widget's matching desktop icon).
+        let icoName = ThemeManager.shared.activeTheme?.config.desktopIcons?.first(where: { $0.type == "calculator" })?.icon
+        if let dataURL = ThemeManager.shared.iconDataURL(icoName) {
+            webView.evaluateJavaScript("window.setWinIcon && window.setWinIcon('\(dataURL)')")
+        }
         webView.evaluateJavaScript("window.widgetSize ? window.widgetSize() : [236,240]") { [weak self] result, _ in
             guard let self = self, let panel = self.panel,
                   let a = (result as? [NSNumber])?.map({ CGFloat(truncating: $0) }), a.count == 2, a[0] > 20 else { return }

@@ -196,6 +196,7 @@ struct DockThemeConfig: Codable {
         var showLabels: Bool?        // show the app name above the magnified icon (Aqua dock)
         var showGrip: Bool?      // show grip dots handle (BeOS deskbar style)
         var startMenuStyle: String?  // "classic" (Win98-style), "xp" (Luna Blue two-column)
+        var showQuickLaunch: Bool?   // Windows Quick Launch (pinned tiles + Show Desktop); false = Win95, which had none
         var startButtonColor: String?
         var startButtonGradientTop: String?
         var startButtonGradientBottom: String?
@@ -268,7 +269,7 @@ extension DockThemeConfig {
 
     /// Themes whose real-world dock/taskbar supported auto-hide.
     var supportsAutoHide: Bool {
-        ["Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows Me", "Windows 7", "OS/2 Warp 4"].contains(name)
+        ["Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows 95", "Windows Me", "Windows 7", "OS/2 Warp 4"].contains(name)
     }
     var dockAutoHideEnabled: Bool {
         supportsAutoHide && (AppSettings.shared.themeDockAutoHide[settingsKey] ?? false)
@@ -297,6 +298,7 @@ extension DockThemeConfig {
     var hasUrlLauncher: Bool { dock.showUrlLauncher == true }
     var hasGrip: Bool { dock.showGrip == true }
     var startMenuStyle: String { dock.startMenuStyle ?? "classic" }
+    var showQuickLaunch: Bool { dock.showQuickLaunch ?? true }
     var isXPStartMenu: Bool { startMenuStyle == "xp" }
     var hasDiskFree: Bool { dock.showDiskFree == true }
     var isControlStrip: Bool { dock.dockStyle == "controlStrip" }

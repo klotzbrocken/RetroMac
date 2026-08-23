@@ -79,7 +79,7 @@
     "hoverAnimationDuration": 0.08
   },
   "indicator": {
-    "style": "highlight",
+    "style": "none",
     "color": "#5B9BD5",
     "size": 3,
     "offset": 2

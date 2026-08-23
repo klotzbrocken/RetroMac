@@ -6,7 +6,7 @@ private final class PetPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 }
 
-/// Desktop pet — the classic eSheep look for the Windows XP / 98 themes.
+/// Desktop pet — the classic eSheep look for the Windows 95 / 98 / Me / XP themes.
 /// The ENGINE is original (Pet.html, no third-party code); the classic sheep artwork is
 /// fetched at RUNTIME from the open-source desktopPet project and cached (same pattern as
 /// the GZDoom/shareware downloads — the GPL-licensed asset is never bundled with the app).
@@ -65,7 +65,8 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
     private var enabledForActiveTheme: Bool {
         guard AppSettings.shared.desktopPetEnabled else { return false }
         let n = (ThemeManager.shared.activeTheme?.config.name ?? "").lowercased()
-        return n.contains("windows xp") || n.contains("windows 98") || n.contains("windows me")
+        return n.contains("windows 95") || n.contains("windows xp")
+            || n.contains("windows 98") || n.contains("windows me")
     }
 
     func applyForCurrentTheme() {

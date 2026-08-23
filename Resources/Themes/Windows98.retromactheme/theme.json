@@ -61,11 +61,11 @@
     "renderStyle": "pixelated",
     "reflectionEnabled": false,
     "reflectionOpacity": 0,
-    "hoverScale": 1.05,
+    "hoverScale": 1.0,
     "hoverAnimationDuration": 0.05
   },
   "indicator": {
-    "style": "square",
+    "style": "none",
     "color": "#000080",
     "size": 4,
     "offset": 3
