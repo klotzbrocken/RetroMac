@@ -40,6 +40,10 @@ enum DesktopLauncher {
         case "tvfolder":
             AppFolderController.tv.show()
 
+        case "funstuff":
+            // Windows 95 CD-ROM "Fun Stuff" explorer (videos, wallpapers, Hover game).
+            AppFolderController.funStuff.show()
+
         case "cpumonitor":
             CPUMonitorController.shared.show()
 
@@ -64,7 +68,7 @@ enum DesktopLauncher {
                 let a = entry.args ?? []
                 let w = CGFloat(Int(a.count > 0 ? a[0] : "") ?? 800)
                 let h = CGFloat(Int(a.count > 1 ? a[1] : "") ?? 600)
-                WebAppController.open(name: entry.name, url: urlString, width: w, height: h)
+                WebAppController.open(name: entry.name, url: urlString, width: w, height: h, icon: entry.icon)
             }
 
         case "readme":

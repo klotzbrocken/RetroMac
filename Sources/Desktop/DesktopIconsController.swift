@@ -32,8 +32,8 @@ final class DesktopIconsController {
         let bs = NSScreen.main?.backingScaleFactor ?? 2.0
         return (bs >= 2.0 ? 64 : 48) * scale
     }
-    private var cellWidth: CGFloat { iconSize + 32 }      // breathing room between columns
-    private var cellHeight: CGFloat { iconSize + 52 }     // … and between rows
+    private var cellWidth: CGFloat { iconSize + 46 }      // breathing room between columns (fits longer labels like "My Computer")
+    private var cellHeight: CGFloat { iconSize + 66 }     // … and between rows (2-line labels + a comfortable gap)
     private var marginX: CGFloat { 16 }
     private var marginY: CGFloat { 8 }
     private var scaleObserver: AnyCancellable?

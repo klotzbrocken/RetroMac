@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows 95</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:transparent; font-family:"Tahoma","MS Sans Serif","Helvetica Neue",sans-serif; color:#000; -webkit-font-smoothing:antialiased; margin:0; padding:0; }
+  .win { width:100%; min-height:100vh; margin:0; background:#c0c0c0; border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #808080;border-bottom:2px solid #808080; box-shadow:none; }
+  .titlebar { background:#000080;color:#fff;padding:3px 3px 3px 4px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px;user-select:none; }
+  .titlebar .tb-ico { width:16px; height:16px; image-rendering:-webkit-optimize-contrast; }
+  .titlebar .tb-title { flex:1; }
+  .tb-btns { display:flex; gap:2px; }
+  .tb-btn { width:16px; height:14px; background:#c0c0c0; border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #404040;border-bottom:1px solid #404040; box-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; display:flex;align-items:center;justify-content:center; padding:0; cursor:default; }
+  .tb-btn:active { border-top:1px solid #404040;border-left:1px solid #404040;border-right:1px solid #fff;border-bottom:1px solid #fff; box-shadow:inset 1px 1px 0 #808080; }
+  .tb-btn svg { display:block; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border:2px solid #808080; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#000; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#333; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#000080; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #808080; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#000080; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#cfcfcf; border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#000080; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #808080; font-size:11px; color:#333; line-height:1.6; }
+  footer a { color:#000080; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar">
+      <img class="tb-ico" src="appIcon.png" alt="">
+      <span class="tb-title">Windows 95</span>
+      <span class="tb-btns">
+        <button class="tb-btn" aria-label="Minimize"><svg width="8" height="8" viewBox="0 0 8 8"><rect x="1" y="6" width="6" height="1.5" fill="#000"/></svg></button>
+        <button class="tb-btn" aria-label="Maximize"><svg width="9" height="9" viewBox="0 0 9 9"><rect x="0.5" y="0.5" width="8" height="8" fill="none" stroke="#000" stroke-width="1"/><rect x="0.5" y="0.5" width="8" height="2" fill="#000"/></svg></button>
+        <button class="tb-btn" id="tbClose" data-readme-close aria-label="Close"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 1 L7 7 M7 1 L1 7" stroke="#000" stroke-width="1.3"/></svg></button>
+      </span>
+    </div>
+    <div class="body">
+      <div class="hero">
+        <img src="appIcon.png" alt="Windows 95">
+        <div><h1>Windows 95</h1><p class="sub">Microsoft &middot; 24 August 1995</p></div>
+      </div>
+      <p>Windows 95 is the release that set the shape of the desktop for the next 25 years: the <b>Start button</b>, the <b>taskbar</b>, the <b>Recycle Bin</b>, and windows with the grey 3D chrome and solid navy title bars. It fused MS-DOS and a 32-bit, pre-emptively multitasking shell into one consumer system.</p>
+      <p>It also brought <b>Plug and Play</b>, <b>long file names</b> (goodbye 8.3), and a launch so big it turned an operating system into a pop-culture event.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li>The <b>Start menu</b> and <b>taskbar</b> &mdash; the template every desktop still follows.</li><li><b>Plug and Play</b> hardware and <b>long file names</b>.</li><li>A 32-bit shell over MS-DOS, with the <b>Recycle Bin</b> and My Computer.</li><li>Grey 3D window chrome with solid navy title bars.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>The midnight launch.</b> On 24 August 1995 people queued outside shops at midnight to buy an operating system &mdash; something that had never really happened before.</div><div class="item"><b>A rock anthem for a Start button.</b> Microsoft licensed The Rolling Stones&rsquo; &ldquo;Start Me Up&rdquo; for the launch campaign, built around the brand-new Start button.</div><div class="item"><b>Hidden on the CD.</b> The Windows 95 CD-ROM tucked a &ldquo;Fun Stuff&rdquo; folder onto the disc &mdash; music tracks and the Weezer &ldquo;Buddy Holly&rdquo; music video.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+  <script>
+    document.getElementById('tbClose').addEventListener('click', function(){
+      try { window.webkit.messageHandlers.readmeClose.postMessage(1); } catch(e) {}
+    });
+  </script>
+</body></html>

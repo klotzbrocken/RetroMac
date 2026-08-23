@@ -380,6 +380,17 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Link("trapd00r/win95-winxp_icons on GitHub",
+                         destination: URL(string: "https://github.com/trapd00r/win95-winxp_icons")!)
+                        .font(.caption)
+                    Text("Windows 95 shell/desktop icons used by the Windows 95 theme.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("Windows 95 “Clouds” wallpaper: remastered by ZaDarkSide0, licensed under CC BY-NC-SA 3.0.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("robertventurini/FlyingToasters on GitHub",
                          destination: URL(string: "https://github.com/robertventurini/FlyingToasters")!)
                         .font(.caption)

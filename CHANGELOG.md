@@ -3,6 +3,31 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 2.7
+
+- **Windows 95 theme**: the one that started it all. Solid navy title bars, the silver
+  `#C0C0C0` chrome, the clouds wallpaper, an authentic boot screen, and Win95 shell icons
+  throughout. The Start menu is period-correct: large icons in a narrow first level, small
+  ones in the wider submenus, and no Windows Update or Log Off (Windows 95 had neither).
+- **Fun Stuff (D:)**: the CD-ROM is back on the desktop. Open it and browse `FUNSTUFF` into
+  `HOVER`, `VIDEOS` and `PICTURES` — music videos play in a bare title-bar window, and
+  `Clouds.exe` / `WINBMP.EXE` set your wallpaper the way a 1995 CD-ROM would.
+- **Hover! plays again**: the Microsoft HTML5 remake, self-hosted and fully offline in its
+  classic pixel-graphics mode. No Wine, no emulator, no internet.
+- **Authentic Win95/98 details**: scrollbars with a single arrow at each end, raised bevels
+  and a dithered track; the status bar below its own scrollbar row; the program icon back in
+  the title bar; and no running-app dots under quick-launch icons on 98/Me/XP, where the
+  taskbar already shows running programs.
+- **Readmes overhauled**: every theme's "About This Theme" is closable again, fills its
+  window edge-to-edge, sizes itself so it needs no scrolling, and shows its hero artwork.
+  Futurama finally has one too.
+- **Start into your theme**: a new opt-in setting activates your last theme right at launch
+  instead of the clean desktop.
+- **Fixes**: Windows 95 title bars no longer showed the Windows 98 gradient (which also
+  repaired every Windows 98 Plus! colour scheme), file lists are white instead of grey,
+  desktop icon labels stop colliding, boot videos are no longer cropped at the bottom,
+  `sheep.exe` works on Windows 95, and the Classic Teal wallpaper is the canonical `#008080`.
+
 ## 2.6
 
 - **Windows Me theme**: Millennium Edition joins the family — the Me Start-menu banner in its

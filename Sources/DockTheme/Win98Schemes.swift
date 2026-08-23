@@ -101,7 +101,11 @@ struct Win98Scheme {
     /// small `#w98scheme` override `<style>` (no per-widget HTML edits, and self-clearing for the
     /// default scheme). Every widget controller runs this right after `setTheme`.
     static func widgetOverrideJS() -> String {
-        let remove = "var e=document.getElementById('w98scheme'); if(e) e.remove();"
+        // IMPORTANT: wrap in an IIFE. WKWebView `evaluateJavaScript` runs each script in the page's
+        // shared global scope, so a bare top-level `var st`/`var e` collides with the widget page's
+        // own globals ("SyntaxError: Can't create duplicate variable"), which silently aborted the
+        // whole injection — the reason Windows 95 title bars kept showing the static gradient.
+        let remove = "(function(){var e=document.getElementById('w98scheme'); if(e) e.remove();})();"
         guard RetroFrameTheme.key() == "win98" else { return remove }
         // Win98 Plus! scheme (Windows 98 only), else the active theme's own palette (e.g. Windows Me).
         let c: DockThemeConfig.ChromeColors?
@@ -112,12 +116,18 @@ struct Win98Scheme {
         let b = colors.activeTitleEnd ?? a
         let tt = colors.titleText ?? "#ffffff"
         let face = colors.face ?? "#c4c4c4"
+        // The CONTENT area (file list / document) uses the scheme's `window` colour (white by
+        // default) — NOT the grey ButtonFace used for the window frame and buttons. Painting it
+        // with `face` turned the Fun Stuff / Programs / TV list backgrounds grey.
+        let win = colors.window ?? "#ffffff"
+        let winText = colors.windowText ?? "#000000"
         let css = """
         body.theme-win98 .w98-title,body.theme-win98 .w98-dlg-tb{background:linear-gradient(90deg,\(a),\(b))!important;}
         body.theme-win98 .w98-cap,body.theme-win98 .w98-dlg-tb{color:\(tt)!important;}
-        body.theme-win98 #win,body.theme-win98 .body,body.theme-win98 .w98-btn,body.theme-win98 .be-win,body.theme-win98 .be-content,body.theme-win98 .window{background:\(face)!important;}
+        body.theme-win98 #win,body.theme-win98 .body,body.theme-win98 .w98-btn,body.theme-win98 .be-win,body.theme-win98 .window{background:\(face)!important;}
+        body.theme-win98 .be-content{background:\(win)!important;color:\(winText)!important;}
         """
-        return "\(remove) var st=document.createElement('style'); st.id='w98scheme'; st.textContent=`\(css)`; document.head.appendChild(st);"
+        return "(function(){var e=document.getElementById('w98scheme'); if(e) e.remove(); var st=document.createElement('style'); st.id='w98scheme'; st.textContent=`\(css)`; document.head.appendChild(st);})();"
     }
 
     /// All picker options including the built-in default (empty id).

@@ -108,6 +108,9 @@ final class DockItemView: NSView {
         indicatorLayer = nil
 
         guard visible else { return }
+        // `indicator.style: "none"` suppresses the running-app dot entirely (e.g. Windows 98/Me/XP,
+        // where the taskbar shows running programs as buttons — a dot under the icon isn't authentic).
+        guard theme.indicator.style != "none" else { return }
 
         let dot = CALayer()
         let sz = theme.indicator.size

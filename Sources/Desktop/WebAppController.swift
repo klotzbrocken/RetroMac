@@ -14,13 +14,13 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 
     private static var openWindows: [String: WebAppController] = [:]
 
-    static func open(name: String, url: String, width: CGFloat, height: CGFloat) {
+    static func open(name: String, url: String, width: CGFloat, height: CGFloat, icon: String? = nil, titleOnly: Bool = false) {
         if let existing = openWindows[url], existing.panel?.isVisible == true {
             existing.panel?.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let c = WebAppController(name: name, url: url, size: NSSize(width: width, height: height))
+        let c = WebAppController(name: name, url: url, size: NSSize(width: width, height: height), icon: icon, titleOnly: titleOnly)
         openWindows[url] = c
         c.show()
     }
@@ -51,6 +51,9 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 
     private let appName: String
     private let appURL: String
+    private let appIcon: String?
+    private let titleOnly: Bool   // force just a title bar + close (no nav chrome), e.g. video/game windows
+    private var localQuery: String?   // query string for a local file URL (loadFileURL can't carry one)
     private let size: NSSize
     private var panel: WebAppPanel?
     private var preZoomFrame: NSRect?
@@ -68,8 +71,8 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     private weak var webView: WKWebView?
     private var bridgeActive = false   // true only for trusted 98.js windows (native Save/Print)
 
-    private init(name: String, url: String, size: NSSize) {
-        self.appName = name; self.appURL = url; self.size = size
+    private init(name: String, url: String, size: NSSize, icon: String? = nil, titleOnly: Bool = false) {
+        self.appName = name; self.appURL = url; self.size = size; self.appIcon = icon; self.titleOnly = titleOnly
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(themeChanged),
                                                name: .dockThemeChanged, object: nil)
@@ -84,13 +87,25 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         // github.io.evil.com or example.com/?github.io). Trusted apps get the native
         // Save/Print bridge and no nav chrome; everything else is a plain browser window.
         let isTrusted98 = Self.isTrusted98App(appURL)
-        let showNav = !isTrusted98
+        // titleOnly windows (Fun Stuff videos / Hover) get just a caption bar — no nav chrome and
+        // no Save/Print bridge (the bridge stays gated to the real trusted-98 apps).
+        let showNav = titleOnly ? false : !isTrusted98
         bridgeActive = isTrusted98
-        let chrome = WebAppChromeView(frame: frame, title: appName, showNav: showNav)
+        // Resolve the launching desktop icon from the active theme bundle for the title bar.
+        let iconImage: NSImage? = ThemeManager.shared.activeTheme?.iconResource(appIcon)
+            .flatMap { NSImage(contentsOf: $0) }
+        let chrome = WebAppChromeView(frame: frame, title: appName, showNav: showNav, iconImage: iconImage)
         chrome.onClose = { [weak self] in self?.close() }
 
         let cfg = WKWebViewConfiguration()
         cfg.preferences.javaScriptCanOpenWindowsAutomatically = true
+        if titleOnly { cfg.mediaTypesRequiringUserActionForPlayback = [] }   // autoplay Fun Stuff videos
+        if appURL.hasPrefix("/") || appURL.hasPrefix("file://") {
+            // Local bundled web apps (e.g. the offline Hover game) load sounds/data via XHR, which
+            // WKWebView blocks for file:// origins by default → enable file-URL access.
+            cfg.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+            cfg.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
+        }
         // Bridge the hosted apps' File/Print menus to native macOS: window.print() and
         // <a download> clicks (how Notepad/Paint "Save"/"Save As" fall back when the
         // File System Access API is unavailable, as it is in WKWebView) are routed to Swift.
@@ -98,7 +113,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         // SECURITY: only install the bridge for the self-contained 98.js app windows — NOT
         // for the IE/browser windows (`showNav`), which load arbitrary websites. And only in
         // the main frame, so embedded ad iframes can never trigger a native save/print dialog.
-        if !showNav {
+        if bridgeActive {
             let ucc = WKUserContentController()
             ucc.add(self, name: "webapp")
             ucc.addUserScript(WKUserScript(source: Self.bridgeJS, injectionTime: .atDocumentStart,
@@ -111,13 +126,34 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
                                                forMainFrameOnly: true))
             }
             cfg.userContentController = ucc
+        } else if titleOnly, appURL.lowercased().contains("youtube.com") {
+            // YouTube watch pages open behind an EU cookie-consent wall; auto-dismiss it so the
+            // video plays without the user having to click through (these clips have embedding
+            // disabled by their owners, so the full watch page is the only way to play them).
+            let ucc = WKUserContentController()
+            ucc.addUserScript(WKUserScript(source: Self.youTubeConsentJS, injectionTime: .atDocumentEnd,
+                                           forMainFrameOnly: true))
+            cfg.userContentController = ucc
         }
 
         let wv = WKWebView(frame: chrome.contentRect(), configuration: cfg)
         wv.autoresizingMask = [.width, .height]
         wv.navigationDelegate = self
         wv.uiDelegate = self
-        if let u = URL(string: appURL) { wv.load(URLRequest(url: u)) }
+        if appURL.hasPrefix("/") || appURL.hasPrefix("file://") {
+            // Local file (e.g. a bundled Fun Stuff video, or the offline Hover game) — WKWebView
+            // plays/serves it directly. `loadFileURL` needs a bare file path, so a query string
+            // (e.g. "?retro") is split off and re-attached via loadSimulatedRequest-style reload.
+            let raw = appURL.hasPrefix("file://") ? (URL(string: appURL) ?? URL(fileURLWithPath: appURL)) : URL(fileURLWithPath: appURL)
+            var comps = URLComponents(url: raw, resolvingAgainstBaseURL: false)
+            let query = comps?.query
+            comps?.query = nil
+            let fileURL = comps?.url ?? raw
+            // A query string (e.g. "?retro") can't ride along with loadFileURL — remember it and
+            // hand it to the page as `window.__rmQuery` once it has loaded (see didFinish).
+            localQuery = (query?.isEmpty == false) ? query : nil
+            wv.loadFileURL(fileURL, allowingReadAccessTo: fileURL.deletingLastPathComponent())
+        } else if let u = URL(string: appURL) { wv.load(URLRequest(url: u)) }
         chrome.embed(wv)
         self.webView = wv
         chrome.onBack = { [weak wv] in if wv?.canGoBack == true { wv?.goBack() } }
@@ -197,6 +233,14 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         return nil
     }
 
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // A local page opened with a query (e.g. Hover's "?retro" classic mode) can't get it via
+        // loadFileURL — expose it as `window.__rmQuery` and let the page act on it.
+        guard let q = localQuery else { return }
+        let esc = q.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+        webView.evaluateJavaScript("(function(){window.__rmQuery='\(esc)';window.dispatchEvent(new Event('rmquery'));})();")
+    }
+
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         if navigationAction.shouldPerformDownload { decisionHandler(.download); return }
@@ -242,6 +286,48 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     // MARK: - JS bridge (Save / Save As / Print / Page Setup)
 
     /// Injected at document start. Routes the hosted apps' save/print actions to native macOS.
+    /// Best-effort auto-dismiss of YouTube's "Before you continue" EU consent wall so a watch
+    /// page plays straight away (injected only into title-only YouTube video windows).
+    /// For title-only YouTube video windows: dismiss the EU cookie-consent wall AND strip the watch
+    /// page down to just the video player filling the window (no masthead, sidebar, comments or
+    /// branding). Lets an embed-restricted clip stream cleanly, "without the YouTube stuff", with no
+    /// bundled file needed.
+    private static let youTubeConsentJS = """
+    (function(){
+      function clickConsent(){
+        var els = document.querySelectorAll('button,[role="button"],a,span,div');
+        for (var i=0;i<els.length;i++){
+          if (els[i].children.length) continue;
+          var t = (els[i].textContent || '').trim();
+          if (/^(Alle ablehnen|Reject all|Alle akzeptieren|Accept all|Ich stimme zu|I agree)$/i.test(t)) {
+            (els[i].closest('button,[role="button"],a,form') || els[i]).click();
+            return true;
+          }
+        }
+        return false;
+      }
+      function strip(){
+        if (document.getElementById('rm-clean')) return true;
+        if (!document.getElementById('movie_player')) return false;
+        // Size only the player CONTAINER and let YouTube's own layout size the <video> inside it
+        // (forcing the <video> element's size makes the picture go black while audio keeps playing).
+        var s = document.createElement('style'); s.id = 'rm-clean';
+        s.textContent =
+          'ytd-masthead,#masthead-container,#secondary,#secondary-inner,#below,#comments,ytd-watch-metadata,tp-yt-app-drawer,#chat,ytd-merch-shelf-renderer,ytd-watch-next-secondary-results-renderer,#related,#chips-wrapper,ytd-popup-container,tp-yt-iron-overlay-backdrop,#masthead-ad{display:none!important}' +
+          'html,body{margin:0!important;overflow:hidden!important;background:#000!important}' +
+          'ytd-app,#content,#page-manager,ytd-watch-flexy,ytd-watch-flexy #columns,ytd-watch-flexy #primary,ytd-watch-flexy #primary-inner{margin:0!important;padding:0!important;background:#000!important;max-width:none!important;width:100vw!important}' +
+          '#page-manager{margin-top:0!important}' +
+          '#player,#player-container,#player-container-inner,#player-container-outer,#ytd-player,#movie_player{width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;left:0!important;top:0!important}' +
+          '.html5-video-player{width:100%!important;height:100%!important}';
+        (document.head || document.documentElement).appendChild(s);
+        window.dispatchEvent(new Event('resize'));
+        return true;
+      }
+      var n = 0;
+      var iv = setInterval(function(){ clickConsent(); strip(); window.dispatchEvent(new Event('resize')); if (++n > 40) clearInterval(iv); }, 350);
+    })();
+    """
+
     /// Save paths covered: real <a download> clicks (jspaint), programmatic a.click(), and
     /// FileSaver.js / blob saveAs() which dispatch a click on a *detached* anchor (Notepad).
     private static let bridgeJS = """
@@ -370,6 +456,7 @@ final class WebAppChromeView: NSView {
     var onForward: (() -> Void)?
     var onZoom: (() -> Void)?
     private let title: String
+    private let iconImage: NSImage?
     private let style: Style
     private let showNav: Bool
     private var closeHit: CGRect = .zero
@@ -383,8 +470,9 @@ final class WebAppChromeView: NSView {
     private let chromeStyle: ChromeStyle?
     private var tracker = ChromeButtonTracker()
 
-    init(frame: NSRect, title: String, showNav: Bool = false) {
+    init(frame: NSRect, title: String, showNav: Bool = false, iconImage: NSImage? = nil) {
         self.title = title
+        self.iconImage = iconImage
         self.showNav = showNav
         switch RetroFrameTheme.key() {
         case "win98":  style = .win98;      chromeStyle = ChromeStyleFactory.win98()
@@ -628,11 +716,18 @@ final class WebAppChromeView: NSView {
         x.stroke()
         closeHit = .zero   // Win98 close is tracked via `tracker`, not the legacy hit rect
 
-        // optional navigation (browser windows): ◀ ▶ raised buttons left in the caption
+        // program icon at the far left of the caption (Win95/98 title bars always show one)
         var titleX = cap.minX + 6
+        if let ic = iconImage {
+            let s: CGFloat = 16
+            let ir = NSRect(x: cap.minX + 3, y: cap.minY + (titleH - s) / 2, width: s, height: s)
+            ic.draw(in: ir, from: .zero, operation: .sourceOver, fraction: 1,
+                    respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
+            titleX = ir.maxX + 5
+        }
         backHit = .zero; fwdHit = .zero
         if showNav {
-            let backR = NSRect(x: cap.minX + 3, y: by, width: bw, height: bh)
+            let backR = NSRect(x: titleX, y: by, width: bw, height: bh)
             let fwdR  = NSRect(x: backR.maxX + 2, y: by, width: bw, height: bh)
             for r in [backR, fwdR] { drawW98Button(ctx, r) }
             NSColor.black.setFill()

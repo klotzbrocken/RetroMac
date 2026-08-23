@@ -1032,10 +1032,21 @@ private final class ClassicStartMenuContentView: NSView {
     private let items: [StartMenuPanel.MenuItem]
     private let bannerText: String
     private let bannerWidth: CGFloat = 24
-    private let itemHeight: CGFloat = 28
+    private let itemHeight: CGFloat = 34         // taller top-level rows for the large (32px) icons
+    private let iconSize: CGFloat = 32           // Win95: first-level icons are large; submenus use 16
     private let separatorHeight: CGFloat = 9
-    private let menuWidth: CGFloat = 200
     private let bevelWidth: CGFloat = 2
+    /// First-level menu width fits its (short) titles snugly → narrower than the submenus.
+    private var menuWidth: CGFloat {
+        let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
+        var w: CGFloat = 0
+        for item in items where !item.isSeparator {
+            let tw = (item.title as NSString).size(withAttributes: [.font: font]).width
+            let arrow: CGFloat = (item.submenuItems?.isEmpty == false) ? 24 : 12
+            w = max(w, 6 + iconSize + 8 + tw + arrow + 8)
+        }
+        return max(150, ceil(w))
+    }
     private var hoveredIndex: Int? = nil
     private var trackingArea: NSTrackingArea?
     /// The currently visible submenu panel (exposed for parent event monitor)
@@ -1117,24 +1128,45 @@ private final class ClassicStartMenuContentView: NSView {
     }
 
     private func showSubmenu(for index: Int, subItems: [StartMenuPanel.MenuItem]) {
-        let panel = StartMenuPanel()
-        let content = ClassicStartMenuContentView(items: subItems, bannerText: "")
-        content.onDismiss = { [weak self] in self?.onDismiss?() }
-        let size = NSSize(
-            width: menuWidth + bevelWidth * 2,
-            height: content.fittingSize.height
-        )
-        let subContent = SubmenuContentView(items: subItems, itemHeight: itemHeight, menuWidth: menuWidth, bevelWidth: bevelWidth)
+        // Submenus use small (taskbar-size) icons and shorter rows, with a width that fits their
+        // (longer) titles — so a submenu ends up WIDER than the narrow first-level menu.
+        let subItemHeight: CGFloat = 22
+        let subIconSize: CGFloat = 16
+        let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
+        var contentW: CGFloat = 0
+        for it in subItems where !it.isSeparator {
+            let tw = (it.title as NSString).size(withAttributes: [.font: font]).width
+            let arrow: CGFloat = (it.submenuItems?.isEmpty == false) ? 24 : 12
+            contentW = max(contentW, 6 + subIconSize + 8 + tw + arrow + 8)
+        }
+        let subMenuWidth = max(150, ceil(contentW))
+        var height: CGFloat = bevelWidth * 2 + 2
+        for it in subItems { height += it.isSeparator ? separatorHeight : subItemHeight }
+        let size = NSSize(width: subMenuWidth + bevelWidth * 2, height: height)
+
+        let subContent = SubmenuContentView(items: subItems, itemHeight: subItemHeight,
+                                            menuWidth: subMenuWidth, bevelWidth: bevelWidth, iconSize: subIconSize)
         subContent.onDismiss = { [weak self] in self?.onDismiss?() }
         subContent.frame = NSRect(origin: .zero, size: size)
+        let panel = StartMenuPanel()
         panel.contentView = subContent
 
         guard let window = self.window else { return }
         let itemRect = rectForItem(at: index)
-        let topRight = NSPoint(x: bounds.maxX, y: itemRect.midY)
-        let screenPoint = window.convertPoint(toScreen: convert(topRight, to: nil))
-        let panelOrigin = NSPoint(x: screenPoint.x - 2, y: screenPoint.y - size.height + itemHeight)
-        panel.setFrame(NSRect(origin: panelOrigin, size: size), display: true)
+        // Align the submenu's top with the parent item's top, opening to the right.
+        let itemTopRight = window.convertPoint(toScreen: convert(NSPoint(x: bounds.maxX, y: itemRect.maxY), to: nil))
+        var originX = itemTopRight.x - 2
+        var originY = itemTopRight.y - size.height
+        if let vf = (window.screen ?? NSScreen.main)?.visibleFrame {
+            // Flip to the LEFT of the parent menu if opening right would overflow the screen edge.
+            if originX + size.width > vf.maxX {
+                let leftEdge = window.convertPoint(toScreen: convert(NSPoint(x: bounds.minX + bevelWidth, y: 0), to: nil))
+                originX = leftEdge.x - size.width + 2
+            }
+            originX = min(max(originX, vf.minX), vf.maxX - size.width)
+            originY = min(max(originY, vf.minY), vf.maxY - size.height)   // keep fully on screen
+        }
+        panel.setFrame(NSRect(origin: NSPoint(x: originX, y: originY), size: size), display: true)
         panel.orderFrontRegardless()
         submenuPanel = panel
     }
@@ -1197,7 +1229,13 @@ private final class ClassicStartMenuContentView: NSView {
 
         let bannerRect = NSRect(x: bw, y: bw + 1, width: bannerWidth, height: bounds.height - bw * 2 - 2)
         let isMe = bannerText.lowercased().contains("windows me")
-        if isMe {
+        let isWin95 = bannerText.lowercased().contains("windows 95")
+        if isWin95 {
+            // Windows 95 side banner: a grey gradient (darker grey at the bottom → lighter up), NOT
+            // the Win98 blue. "Windows 95" is drawn white over it (via the shared text path below).
+            NSGradient(starting: NSColor(white: 0.40, alpha: 1), ending: NSColor(white: 0.62, alpha: 1))?
+                .draw(in: bannerRect, angle: 90)
+        } else if isMe {
             // Windows Me banner: a vivid royal-blue → navy → black gradient running UP the strip, with
             // a big white "Windows" + italic "Me" over the blue at the bottom and a small "Millennium
             // Edition" fading into the black above. Colour stops sampled from the original screenshot
@@ -1298,14 +1336,13 @@ private final class ClassicStartMenuContentView: NSView {
 
             let textColor: NSColor = hoveredIndex == i ? .white : .black
             let iconX = itemRect.minX + 6
-            let iconSize: CGFloat = 20
             let iconY = itemRect.midY - iconSize / 2
 
             if let icon = item.icon {
                 icon.draw(in: NSRect(x: iconX, y: iconY, width: iconSize, height: iconSize))
             }
 
-            let textX = iconX + iconSize + 6
+            let textX = iconX + iconSize + 8
             let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
             let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textColor]
             let textSize = (item.title as NSString).size(withAttributes: attrs)
@@ -1334,16 +1371,18 @@ private final class SubmenuContentView: NSView {
     private let itemHeight: CGFloat
     private let menuWidth: CGFloat
     private let bevelWidth: CGFloat
+    private let iconSize: CGFloat
     private var hoveredIndex: Int? = nil
     private var trackingArea: NSTrackingArea?
 
     var onDismiss: (() -> Void)?
 
-    init(items: [StartMenuPanel.MenuItem], itemHeight: CGFloat, menuWidth: CGFloat, bevelWidth: CGFloat) {
+    init(items: [StartMenuPanel.MenuItem], itemHeight: CGFloat, menuWidth: CGFloat, bevelWidth: CGFloat, iconSize: CGFloat) {
         self.items = items
         self.itemHeight = itemHeight
         self.menuWidth = menuWidth
         self.bevelWidth = bevelWidth
+        self.iconSize = iconSize
         super.init(frame: .zero)
         wantsLayer = true
     }
@@ -1459,19 +1498,25 @@ private final class SubmenuContentView: NSView {
 
             let textColor: NSColor = hoveredIndex == i ? .white : .black
             let iconX = itemRect.minX + 6
-            let iconSize: CGFloat = 20
             let iconY = itemRect.midY - iconSize / 2
 
             if let icon = item.icon {
                 icon.draw(in: NSRect(x: iconX, y: iconY, width: iconSize, height: iconSize))
             }
 
-            let textX = iconX + iconSize + 6
+            let textX = iconX + iconSize + 8
             let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
             let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textColor]
             let textSize = (item.title as NSString).size(withAttributes: attrs)
             let textY = itemRect.midY - textSize.height / 2
             (item.title as NSString).draw(at: NSPoint(x: textX, y: textY), withAttributes: attrs)
+
+            if item.submenuItems?.isEmpty == false {
+                let arrowAttrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 10), .foregroundColor: textColor]
+                let arrow = "▸" as NSString
+                let asz = arrow.size(withAttributes: arrowAttrs)
+                arrow.draw(at: NSPoint(x: itemRect.maxX - asz.width - 8, y: itemRect.midY - asz.height / 2), withAttributes: arrowAttrs)
+            }
         }
     }
 }

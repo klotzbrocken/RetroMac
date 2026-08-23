@@ -218,13 +218,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.dockEnabled = false
         isActive = false
 
-        // Test/QA hook: with RETROMAC_AUTOACTIVATE_THEME set, immediately turn on the remembered
-        // theme on launch (mirrors selecting it from the menu). Never set in production, so the
-        // clean-start behaviour above is unchanged for real users.
-        if ProcessInfo.processInfo.environment["RETROMAC_AUTOACTIVATE_THEME"] != nil {
+        // Opt-in "start into the last theme": the user setting (Settings ▸ Dock) or the QA env
+        // hook RETROMAC_AUTOACTIVATE_THEME immediately turns the remembered theme on at launch
+        // (mirrors selecting it from the menu). Default off → clean start is unchanged.
+        let autoActivateTheme = settings.activateThemeOnLaunch
+            || ProcessInfo.processInfo.environment["RETROMAC_AUTOACTIVATE_THEME"] != nil
+        if autoActivateTheme {
             DispatchQueue.main.async {
                 ThemeManager.shared.setActiveTheme(name: settings.dockTheme)
                 if !settings.dockEnabled { settings.dockEnabled = true; DockController.shared.start() }
+                self.isActive = true
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_APPS"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         CPUMonitorController.shared.show()

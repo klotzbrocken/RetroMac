@@ -11,7 +11,7 @@ struct WhatsNewView: View {
                     .padding(.top, 24)
                 Text("What's New in RetroMac \(currentAppVersion)")
                     .font(.title2.bold())
-                Text("Windows Me joins the family — plus a Windows 7 Aero overhaul")
+                Text("Windows 95 arrives, with the Fun Stuff CD-ROM and Hover!")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -23,37 +23,38 @@ struct WhatsNewView: View {
                     featureRow(
                         icon: "desktopcomputer",
                         color: .blue,
-                        title: "Windows Me theme",
-                        description: "Millennium Edition lands: the Me Start-menu banner in its brush-script logo, a 4K-remastered wallpaper, an authentic boot splash, and the Me shell icons (oval Recycle Bin, Media Player). \u{201C}Windows Update\u{201D} sits atop the Start menu, and it gets the full special-theme treatment — systray, taskbar auto-hide and the desktop pet."
+                        title: "Windows 95 theme",
+                        description: "The one that started it all: solid navy title bars, the silver 3D chrome, the clouds wallpaper and an authentic boot screen. The Start menu is period-correct too \u{2014} large icons in a narrow first level, small ones in the wider submenus, and neither Windows Update nor Log Off, because Windows 95 had neither."
                     )
 
                     featureRow(
-                        icon: "macwindow",
-                        color: .cyan,
-                        title: "Windows 7 Aero, refined",
-                        description: "The Windows 7 Start menu now has its glass frame and the account picture that peeks above the top edge. The taskbar is real translucent Aero glass, and the notification area is finally authentic: a flat tray with an up-chevron, network + volume icons that open the matching macOS settings, and a two-line time/date clock."
+                        icon: "opticaldisc",
+                        color: .indigo,
+                        title: "Fun Stuff (D:)",
+                        description: "The CD-ROM is back on the desktop. Browse FUNSTUFF into HOVER, VIDEOS and PICTURES: music videos play in a bare title-bar window, and Clouds.exe / WINBMP.EXE set your wallpaper the way a 1995 CD-ROM would."
                     )
 
                     featureRow(
-                        icon: "checkmark.seal.fill",
+                        icon: "gamecontroller.fill",
                         color: .green,
-                        title: "100% themes",
-                        description: "The marker on the fully-realised themes is now a 100% badge, shown right after the theme name — and Futurama counts as 100% too."
+                        title: "Hover! plays again",
+                        description: "The Microsoft HTML5 remake of the Windows 95 classic, self-hosted and fully offline in its original pixel-graphics mode. No Wine, no emulator, no internet needed."
                     )
 
                     featureRow(
-                        icon: "rectangle.grid.2x2",
+                        icon: "slider.horizontal.below.rectangle",
                         color: .orange,
-                        title: "Flyout upgrades",
-                        description: "Drag Quick Access tiles to reorder them in Edit mode, double-click the floating button to toggle your last theme, and the menu-bar Apple-logo cycle now includes the Futurama teal apple."
+                        title: "Authentic Win95/98 details",
+                        description: "Scrollbars with a single arrow at each end, raised bevels and a dithered track. The status bar sits below its own scrollbar row, the program icon is back in the title bar, and 98/Me/XP drop the running-app dots \u{2014} their taskbars already show what is running."
                     )
 
                     featureRow(
-                        icon: "wave.3.right",
+                        icon: "doc.text.fill",
                         color: .purple,
-                        title: "New shaders",
-                        description: "NLO VHS SP — a real single-pass NTSC comb-demodulation with authentic dot crawl and cross-colour — and CRT EasyMode, a clean, sharp mask-and-scanline CRT."
+                        title: "Readmes overhauled",
+                        description: "Every theme\u{2019}s About This Theme is closable again, fills its window edge-to-edge, sizes itself so it needs no scrolling, and shows its artwork. Futurama finally has one too. Plus: a new setting starts you straight into your last theme."
                     )
+
                 }
                 .padding(.horizontal, 24)
             }

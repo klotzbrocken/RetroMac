@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Futurama</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#0d1a24; font-family:"Helvetica Neue",Arial,sans-serif; color:#12242c; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#eaf4f0; border:1px solid #2f6f61; border-radius:12px; box-shadow:0 10px 34px rgba(0,0,0,.45); overflow:hidden; }
+  .titlebar { background:linear-gradient(180deg,#7fc9b4,#4f9e8a 55%,#3c8574);color:#052019;padding:8px 14px;font-size:13px;font-weight:800;letter-spacing:.3px;
+    border-bottom:1px solid #2f6f61;text-shadow:0 1px 0 rgba(255,255,255,.35);display:flex;align-items:center;gap:8px; }
+  .titlebar .tb-orb { width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d6ffee,#39d29a 60%,#0f7a56);box-shadow:0 0 6px #39d29a; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:auto; border-radius:12px; background:#0d1a24; padding:6px; }
+  .hero h1 { margin:0; font-size:29px; font-weight:800; letter-spacing:-.4px; color:#12503f; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#4a6a62; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#1e7a63; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #bfe0d6; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; color:#12242c; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25B8"; position:absolute; left:3px; top:3px; color:#2aa07f; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#dcefe8; border:1px solid #b6d8cc; border-radius:8px; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#1e7a63; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #bfe0d6; font-size:11px; color:#4a6a62; line-height:1.6; }
+  footer a { color:#1e7a63; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-orb"></span><span class="tb-title">Futurama</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="icons/bender.png" alt="Futurama">
+        <div><h1>Futurama</h1><p class="sub">Screen &amp; Sci-Fi &middot; 1999</p></div>
+      </div>
+      <p>Futurama is RetroMac's tribute theme &mdash; it reimagines your Mac as a cheerful desktop from the world of tomorrow. Soft rounded chrome, a glowing dock and a set of apps renamed for the year 3000 turn the everyday desktop into a friendly piece of retro-future kit.</p>
+      <p>It's a nod to the animated sci-fi comedy that first aired in 1999 (created by Matt Groening and David X. Cohen) and imagined life a thousand years from now &mdash; optimistic, ridiculous and full of blinking machines.</p>
+      <h2>What's in the theme</h2>
+      <ul class="facts"><li>Rounded, glowing window chrome and a soft teal desktop.</li><li>A dock of world-of-tomorrow apps: <b>OmniBrowser</b>, <b>ZapMail</b>, <b>SqueakiTunes</b>, <b>ChronoCalendar</b>.</li><li>The <b>Bender-O-Meter</b> and <b>Noted-O-Matic</b> desk accessories.</li><li>A robot-friendly icon set drawn just for this theme.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>The year 3000.</b> The show is set a full millennium in the future, so a "retro" future desktop is really a very, very forward-dated one.</div><div class="item"><b>Smart writers' room.</b> The series is famous for a writing staff stacked with maths and science degrees, sneaking real theorems into the background gags.</div><div class="item"><b>Cancelled, then not.</b> After its original run it came back more than once &mdash; proof that good ideas, like good desktops, are hard to switch off.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>

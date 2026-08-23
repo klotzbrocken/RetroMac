@@ -102,6 +102,9 @@
   body.theme-macosx .k:active{background:linear-gradient(180deg,#d6e6ff,#a9c8f5);}
 
   /* ===== Windows 98 ===== */
+  .w98-ico{display:none;}
+  body.theme-win98 .w98-ico,body.theme-winxp .w98-ico{display:block;width:16px;height:16px;flex:0 0 auto;margin-right:3px;image-rendering:pixelated;image-rendering:-webkit-optimize-contrast;}
+  body.theme-win98 .w98-ico:not([src]),body.theme-winxp .w98-ico:not([src]){display:none;}
   .w98-cap{color:#fff;font:700 12px Tahoma,"Microsoft Sans Serif",sans-serif;
     flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .w98-btn{width:20px;height:18px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
@@ -161,7 +164,7 @@
       <span class="mx-cap">Calculator</span>
     </div>
     <!-- Windows 98 -->
-    <div class="w98-title" id="w98title"><span class="w98-cap">Calculator</span><span class="w98-btn w98-close" id="w98close">×</span></div>
+    <div class="w98-title" id="w98title"><img class="w98-ico" id="w98ico" alt=""><span class="w98-cap">Calculator</span><span class="w98-btn w98-close" id="w98close">×</span></div>
     <div class="w98-menubar" id="w98menu"><span><u>E</u>dit</span><span><u>V</u>iew</span><span><u>H</u>elp</span></div>
     <div class="body">
       <div class="disp" id="disp">0</div>
@@ -262,6 +265,7 @@
   show();
 
   window.setTheme=function(k){ theme=k||'beos'; document.body.className='theme-'+theme+(k==='win7'?' theme-winxp':''); };
+  window.setWinIcon=function(u){ const e=document.getElementById('w98ico'); if(!e) return; if(u){ e.src=u; } else { e.removeAttribute('src'); } };
   window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
 
   function postClose(){ if(window.webkit&&webkit.messageHandlers&&webkit.messageHandlers.calculator) webkit.messageHandlers.calculator.postMessage('close'); }

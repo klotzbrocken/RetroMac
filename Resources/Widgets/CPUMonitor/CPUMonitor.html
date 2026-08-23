@@ -393,6 +393,9 @@
   body.theme-win98 .body{border:none;box-shadow:none;margin:0 8px 8px;}
   body.theme-win98 .w98-title{display:flex;align-items:center;gap:3px;height:37px;margin:7px 7px 4px;padding:0 3px 0 10px;
     background:linear-gradient(90deg,#00007b,#1085d2);}
+  .w98-ico{display:none;}
+  body.theme-win98 .w98-ico,body.theme-winxp .w98-ico{display:block;width:26px;height:26px;flex:0 0 auto;margin-right:5px;image-rendering:pixelated;image-rendering:-webkit-optimize-contrast;}
+  body.theme-win98 .w98-ico:not([src]),body.theme-winxp .w98-ico:not([src]){display:none;}
   .w98-cap{color:#fff;font:700 20px Tahoma,"Microsoft Sans Serif",sans-serif;
     flex:1 1 auto;text-align:left;white-space:nowrap;}
   .w98-btn{width:33px;height:30px;background:#c4c4c4;cursor:pointer;flex:0 0 auto;
@@ -543,6 +546,7 @@
         </div>
         <!-- Windows 98 classic title bar (theme-win98 only) -->
         <div class="w98-title" id="w98title">
+          <img class="w98-ico" id="w98ico" alt="">
           <span class="w98-cap">CPU Monitor</span>
           <span class="w98-btn w98-dis" id="w98min">_</span>
           <span class="w98-btn" id="w98max">□</span>
@@ -654,6 +658,7 @@
 
   // Host sets the chrome theme: 'beos' (yellow tab, default) · 'macos9' (Platinum window).
   window.setTheme = function(k){ var t=k||'beos'; document.body.className = 'theme-'+t+(t==='win7'?' theme-winxp':''); };
+  window.setWinIcon = function(u){ var e=document.getElementById('w98ico'); if(!e) return; if(u){ e.src=u; } else { e.removeAttribute('src'); } };
   window.setHover = function(h){ document.body.classList.toggle('hovering', !!h); };
 
   // Mac OS 9 title controls — return new widget size so the host can resize its window.
