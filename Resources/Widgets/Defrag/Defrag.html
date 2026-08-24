@@ -27,17 +27,20 @@
   /* ---- Cluster-Anzeige ---- */
   .grid-wrap{display:flex;margin:3px;background:#c0c0c0;
              box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dfdfdf;}
-  #grid{display:block;background:#000;margin:2px;}
-  /* dekorative Scrollleiste rechts, wie im Original */
-  .vsb{width:16px;flex:0 0 16px;display:flex;flex-direction:column;margin:2px 2px 2px 0;background:
-       linear-gradient(45deg,#c0c0c0 25%,#fff 0,#fff 75%,#c0c0c0 0) 0 0/2px 2px;}
-  .sb-btn{height:16px;flex:0 0 16px;background:#c0c0c0;position:relative;
+  #grid{display:block;background:#000;margin:2px 0 2px 2px;}
+  /* Scrollleiste: im versenkten Rahmen rechts, volle Hoehe der Clusteranzeige (wie im Original) */
+  .vsb{width:16px;flex:0 0 16px;display:flex;flex-direction:column;margin:2px;}
+  .sb-btn{height:16px;flex:0 0 16px;background:#c0c0c0;position:relative;cursor:default;
           box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
-  .sb-btn::before{content:"";position:absolute;left:50%;top:50%;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent;}
+  .sb-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080;}
+  .sb-btn::before{content:"";position:absolute;left:50%;top:50%;width:0;height:0;
+                  border-left:3px solid transparent;border-right:3px solid transparent;}
   .sb-up::before{transform:translate(-50%,-60%);border-bottom:4px solid #000;}
   .sb-dn::before{transform:translate(-50%,-40%);border-top:4px solid #000;}
-  .sb-track{flex:1 1 auto;}
-  .sb-thumb{height:34px;background:#c0c0c0;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
+  .sb-track{flex:1 1 auto;position:relative;
+            background:linear-gradient(45deg,#c0c0c0 25%,#fff 0,#fff 75%,#c0c0c0 0) 0 0/2px 2px;}
+  .sb-thumb{position:absolute;left:0;right:0;top:0;height:40px;background:#c0c0c0;cursor:default;
+            box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
 
   /* ---- Unterer Bereich ---- */
   .bottom{display:flex;gap:10px;margin:2px 6px 8px;align-items:flex-start;}
@@ -124,15 +127,17 @@
 
 <script>
 (function(){
-  var CELL = 9, GAP = 1, COLS = 62, ROWS = 27;
+  var CELL = 9, GAP = 1, COLS = 62, VIEW_ROWS = 27, ROWS = 54;   // Platte ist groesser als das Fenster
   var cv = document.getElementById('grid'), ctx = cv.getContext('2d');
-  cv.width = COLS*CELL; cv.height = ROWS*CELL;
+  cv.width = COLS*CELL; cv.height = VIEW_ROWS*CELL;
+  var scrollRow = 0;                                             // oberste sichtbare Zeile
 
-  var FREE=0, DATA=1, FIXED=2, WRITE=3, READ=4;
+  var FREE=0, DATA=1, FIXED=2, WRITE=3, READ=4, OPT=5;
   var COLORS = {};
   COLORS[FREE]='#ffffff'; COLORS[DATA]='#00ffff'; COLORS[FIXED]='#808080';
-  COLORS[WRITE]='#ff0000'; COLORS[READ]='#00c000';
+  COLORS[WRITE]='#ff0000'; COLORS[READ]='#00c000'; COLORS[OPT]='#000080';
   var LEGEND = [
+    ['#000080','Optimized data'],
     ['#00ffff','Unoptimized data'],
     ['#ffffff','Free space'],
     ['#808080','Data that will not be moved'],
@@ -149,30 +154,32 @@
     }
     draw();
   }
-  function cellRect(i){ return [(i%COLS)*CELL, ((i/COLS)|0)*CELL]; }
   function drawCell(i){
-    var p = cellRect(i);
+    var row = (i/COLS)|0, vis = row - scrollRow;
+    if (vis < 0 || vis >= VIEW_ROWS) return;                     // ausserhalb des Sichtfensters
     ctx.fillStyle = COLORS[flash[i] ? flash[i] : cells[i]];
-    ctx.fillRect(p[0]+GAP, p[1]+GAP, CELL-GAP, CELL-GAP);
+    ctx.fillRect((i%COLS)*CELL+GAP, vis*CELL+GAP, CELL-GAP, CELL-GAP);
   }
   function draw(){
     ctx.fillStyle = '#000'; ctx.fillRect(0,0,cv.width,cv.height);
-    for (var i=0;i<N;i++) drawCell(i);
+    var from = scrollRow*COLS, to = Math.min(N, (scrollRow+VIEW_ROWS)*COLS);
+    for (var i=from;i<to;i++) drawCell(i);
   }
 
   // ---- Defrag-Lauf ----
   var timer=null, paused=false, running=false, writeQ=[];
-  function nextFree(from){ for (var i=from;i<N;i++) if (cells[i]===FREE) return i; return -1; }
+  function isData(v){ return v===DATA || v===OPT; }
+  // Nur noch unoptimierte Cluster wandern nach vorn; bereits konsolidierte bleiben liegen.
   function lastData(before){ for (var i=before;i>=0;i--) if (cells[i]===DATA) return i; return -1; }
   var head = 0;
 
   // Fortschritt = Anteil der Datencluster, die bereits im gepackten Bereich vor `head` liegen.
   var dataTotal = 0;
-  function countData(){ var n=0; for (var i=0;i<N;i++) if (cells[i]===DATA) n++; return n; }
+  function countData(){ var n=0; for (var i=0;i<N;i++) if (isData(cells[i])) n++; return n; }
   function progress(){
     if (!dataTotal) return 100;
     var packed = 0;
-    for (var i=0;i<head && i<N;i++) if (cells[i]===DATA) packed++;
+    for (var i=0;i<head && i<N;i++) if (isData(cells[i])) packed++;
     return Math.min(100, Math.round(packed/dataTotal*100));
   }
 
@@ -184,12 +191,12 @@
       if (writeQ[k].t<=0){ flash[writeQ[k].i]=0; drawCell(writeQ[k].i); writeQ.splice(k,1); }
     }
     var moved=0;
-    while (moved < 3){
+    while (moved < 1){
       while (head < N && cells[head] !== FREE) head++;
       if (head >= N){ finish(); return; }
       var src = lastData(N-1);
       if (src < 0 || src <= head){ finish(); return; }
-      cells[src] = FREE; cells[head] = DATA;
+      cells[src] = FREE; cells[head] = OPT;                       // konsolidiert = dunkelblau
       flash[src] = READ; flash[head] = WRITE;
       writeQ.push({i:src,t:2},{i:head,t:3});
       drawCell(src); drawCell(head);
@@ -210,7 +217,7 @@
     document.getElementById('lbl').textContent = 'Defragmenting file system…';
     btn('bStart',true); btn('bPause',true);
     document.getElementById('bStart').querySelector('span').textContent = 'Stop';
-    timer = setInterval(step, 60);
+    timer = setInterval(step, 95);
   }
   function stop(){
     if (!running) return;
@@ -277,7 +284,41 @@
   };
   window.widgetSize = function(){ var w=document.getElementById('win'); return [w.offsetWidth, w.offsetHeight]; };
 
-  seed();
+  // ---- Scrollleiste ----
+  var track = document.querySelector('.sb-track'), thumb = document.querySelector('.sb-thumb');
+  function maxScroll(){ return Math.max(0, ROWS - VIEW_ROWS); }
+  function syncThumb(){
+    var th = track.clientHeight, ratio = VIEW_ROWS / ROWS;
+    var h = Math.max(16, Math.round(th * ratio));
+    thumb.style.height = h + 'px';
+    var ms = maxScroll();
+    thumb.style.top = (ms ? Math.round((th - h) * (scrollRow / ms)) : 0) + 'px';
+  }
+  function setScroll(r){
+    var v = Math.max(0, Math.min(maxScroll(), Math.round(r)));
+    if (v === scrollRow) return;
+    scrollRow = v; draw(); syncThumb();
+  }
+  document.querySelector('.sb-up').addEventListener('mousedown', function(){ setScroll(scrollRow - 1); });
+  document.querySelector('.sb-dn').addEventListener('mousedown', function(){ setScroll(scrollRow + 1); });
+  track.addEventListener('mousedown', function(e){
+    if (e.target === thumb) return;
+    var t = thumb.getBoundingClientRect();
+    setScroll(scrollRow + (e.clientY < t.top ? -VIEW_ROWS : VIEW_ROWS));   // seitenweise
+  });
+  thumb.addEventListener('mousedown', function(e){
+    e.preventDefault();
+    var startY = e.clientY, startTop = thumb.offsetTop, th = track.clientHeight, h = thumb.offsetHeight;
+    function mv(ev){
+      var top = Math.max(0, Math.min(th - h, startTop + (ev.clientY - startY)));
+      setScroll((th - h) ? (top / (th - h)) * maxScroll() : 0);
+    }
+    function up(){ window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); }
+    window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
+  });
+  cv.addEventListener('wheel', function(e){ e.preventDefault(); setScroll(scrollRow + (e.deltaY > 0 ? 1 : -1)); }, {passive:false});
+
+  seed(); syncThumb();
 })();
 </script>
 </body></html>
