@@ -53,6 +53,20 @@ final class RetroRenderer {
         didSet { bloomFilter?.threshold = bloomThreshold }
     }
 
+    // Phosphor persistence (afterglow across frames)
+    private(set) var phosphorFilter: PhosphorPersistence?
+    /// 0 = off, 1 = maximum afterglow. Needs the previous frame, so it lives in the renderer
+    /// rather than in a (single-pass) shader preset.
+    var phosphorPersistence: Float = 0 {
+        didSet {
+            guard phosphorPersistence != oldValue else { return }
+            if phosphorPersistence > 0.001, phosphorFilter == nil {
+                phosphorFilter = try? PhosphorPersistence(device: device)
+            }
+            phosphorFilter?.persistence = phosphorPersistence
+        }
+    }
+
     // Recording
     var recorder: ShaderRecorder?
 
@@ -95,6 +109,7 @@ final class RetroRenderer {
         desc.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
 
         let pipeline = try device.makeRenderPipelineState(descriptor: desc)
+        phosphorFilter?.reset()   // a new effect must not inherit the old one's afterglow
         pipelineCache[name] = pipeline
         currentPipeline = pipeline
     }
@@ -171,6 +186,10 @@ final class RetroRenderer {
         if bloomEnabled, let bloom = bloomFilter {
             bloom.apply(source: drawable.texture, drawable: drawable, commandBuffer: commandBuffer, viewportSize: viewportSize)
         }
+
+        // Pass 5: Phosphor afterglow. Last, so the trail carries the finished picture
+        // (mask, scanlines and bloom included) rather than a half-built frame.
+        phosphorFilter?.apply(drawable: drawable, commandBuffer: commandBuffer)
 
         gpuSampleCounter &+= 1
         let shouldSample = gpuSampleCounter % 30 == 0

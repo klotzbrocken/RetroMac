@@ -161,6 +161,10 @@ final class RetroViewport: NSObject, MTKViewDelegate, SCStreamOutput, SCStreamDe
         mtkView.enableSetNeedsDisplay = false
         mtkView.preferredFramesPerSecond = 30
         mtkView.colorPixelFormat = .bgra8Unorm
+        // The drawable is read back, not just written: bloom samples it, the recorder blits from
+        // it, and phosphor persistence blits into it. All of that is invalid while the drawable is
+        // framebuffer-only, so opt out explicitly.
+        mtkView.framebufferOnly = false
         mtkView.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 1)
         mtkView.layer?.isOpaque = true
         mtkView.delegate = self
