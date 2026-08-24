@@ -5,7 +5,7 @@
   html,body{margin:0;height:100%;}
   body{font-family:Tahoma,"MS Sans Serif",sans-serif;font-size:11px;background:transparent;
        overflow:hidden;-webkit-font-smoothing:none;user-select:none;}
-  #win{position:relative;width:604px;background:#c0c0c0;display:flex;flex-direction:column;
+  #win{position:relative;width:584px;background:#c0c0c0;display:flex;flex-direction:column;
        box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dfdfdf;}
 
   /* ---- Titelleiste (Win95/98) ---- */
@@ -25,11 +25,11 @@
   #dfclose::after{content:"";position:absolute;transform:translate(-50%,-50%) rotate(-45deg);}
 
   /* ---- Cluster-Anzeige ---- */
-  .grid-wrap{display:flex;margin:3px;background:#c0c0c0;
+  .grid-wrap{display:flex;margin:3px;padding:2px;background:#c0c0c0;
              box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dfdfdf;}
-  #grid{display:block;background:#000;margin:2px 0 2px 2px;}
+  #grid{display:block;background:#000;flex:0 0 auto;}
   /* Scrollleiste: im versenkten Rahmen rechts, volle Hoehe der Clusteranzeige (wie im Original) */
-  .vsb{width:16px;flex:0 0 16px;display:flex;flex-direction:column;margin:2px;}
+  .vsb{width:16px;flex:0 0 16px;display:flex;flex-direction:column;}
   .sb-btn{height:16px;flex:0 0 16px;background:#c0c0c0;position:relative;cursor:default;
           box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
   .sb-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080;}
