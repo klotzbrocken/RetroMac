@@ -599,11 +599,11 @@ struct DockSettingsTab: View {
                     }
                 }
                 RMRow(label: "Target display") {
-                    Picker("", selection: $settings.dockTargetDisplayID) {
-                        Text("Main Display").tag(CGDirectDisplayID(0))
+                    Picker("", selection: $settings.dockTargetDisplayUUID) {
+                        Text("Main Display").tag("")
                         ForEach(Array(NSScreen.screens.enumerated()), id: \.offset) { _, screen in
                             let res = "\(Int(screen.frame.width))\u{00D7}\(Int(screen.frame.height))"
-                            Text("\(screen.localizedName) (\(res))").tag(screen.displayID)
+                            Text("\(screen.localizedName) (\(res))").tag(screen.displayUUID ?? "")
                         }
                     }
                     .pickerStyle(.menu)

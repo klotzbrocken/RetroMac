@@ -444,9 +444,10 @@ final class DockController {
     }
 
     private func targetScreen() -> NSScreen {
-        let displayID = AppSettings.shared.dockTargetDisplayID
-        if displayID != 0,
-           let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) {
+        // Pinned display, resolved by its STABLE uuid. If that monitor is not attached right
+        // now, fall through to the primary instead of guessing at a reassigned display ID.
+        let uuid = AppSettings.shared.dockTargetDisplayUUID
+        if !uuid.isEmpty, let screen = NSScreen.screen(withUUID: uuid) {
             return screen
         }
         // The stable hardware primary — NOT NSScreen.main, which flips to whichever screen
@@ -863,7 +864,7 @@ final class DockController {
             self?.dockView?.needsDisplay = true
         }.store(in: &settingsObservers)
 
-        s.$dockTargetDisplayID.dropFirst().sink { [weak self] _ in
+        s.$dockTargetDisplayUUID.dropFirst().sink { [weak self] _ in
             self?.repositionWindow()
         }.store(in: &settingsObservers)
 

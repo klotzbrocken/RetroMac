@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import ServiceManagement
 import Carbon.HIToolbox
@@ -529,6 +530,11 @@ final class AppSettings: ObservableObject {
         desktopIconScaleLinked = defaults.object(forKey: iconScaleKey("linked")) as? Bool ?? true
         suppressIconScaleSave = false
     }
+    /// Stable identity of the pinned dock display (empty = follow the primary). Display IDs are
+    /// reassigned across reboots and cable swaps, so the UUID is what gets persisted.
+    @Published var dockTargetDisplayUUID: String {
+        didSet { defaults.set(dockTargetDisplayUUID, forKey: "dockTargetDisplayUUID") }
+    }
     @Published var dockTargetDisplayID: CGDirectDisplayID {
         didSet { defaults.set(dockTargetDisplayID, forKey: "dockTargetDisplayID") }
     }
@@ -905,6 +911,20 @@ final class AppSettings: ObservableObject {
         desktopIconScale = defaults.object(forKey: "desktopIconScale") as? Float ?? 1.0
         desktopIconScaleLinked = defaults.object(forKey: "desktopIconScaleLinked") as? Bool ?? true
         dockTargetDisplayID = defaults.object(forKey: "dockTargetDisplayID") as? CGDirectDisplayID ?? 0
+        // One-time migration: a previously pinned display was stored by its unstable ID. Resolve
+        // it to a UUID while that ID still points at the intended screen, then stop using the ID.
+        // (Uses locals only — `self` is not fully initialized yet at this point.)
+        let storedUUID = defaults.string(forKey: "dockTargetDisplayUUID")
+        let storedID = defaults.object(forKey: "dockTargetDisplayID") as? CGDirectDisplayID ?? 0
+        if let storedUUID {
+            dockTargetDisplayUUID = storedUUID
+        } else if storedID != 0,
+                  let migrated = NSScreen.screens.first(where: { $0.displayID == storedID })?.displayUUID {
+            dockTargetDisplayUUID = migrated
+            defaults.set(migrated, forKey: "dockTargetDisplayUUID")
+        } else {
+            dockTargetDisplayUUID = ""
+        }
         dockMagnification = defaults.object(forKey: "dockMagnification") as? Bool ?? true
         dockAutoHide = defaults.bool(forKey: "dockAutoHide")
         dockFix = defaults.bool(forKey: "dockFix")
