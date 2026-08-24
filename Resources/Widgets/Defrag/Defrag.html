@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Disk Defragmenter</title>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{font-family:Tahoma,"MS Sans Serif",sans-serif;font-size:11px;background:transparent;
+       overflow:hidden;-webkit-font-smoothing:none;user-select:none;}
+  #win{position:relative;width:604px;background:#c0c0c0;display:flex;flex-direction:column;
+       box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dfdfdf;}
+
+  /* ---- Titelleiste (Win95/98) ---- */
+  .w98-title{display:flex;align-items:center;gap:3px;height:20px;flex:0 0 20px;margin:3px 3px 0;padding:0 2px 0 3px;
+             background:linear-gradient(90deg,#00007b,#1085d2);}
+  .w98-ico{width:16px;height:16px;flex:0 0 auto;image-rendering:pixelated;}
+  .w98-ico:not([src]){display:none;}
+  .w98-cap{flex:1 1 auto;color:#fff;font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;}
+  .w98-btn{width:16px;height:14px;flex:0 0 auto;background:#c0c0c0;cursor:default;position:relative;
+           box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
+  .w98-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080;}
+  .w98-btn::before{content:"";position:absolute;background:#000;}
+  #dfmin::before{left:3px;bottom:3px;width:7px;height:2px;}
+  #dfmax::before{left:3px;top:3px;width:9px;height:8px;border:1px solid #000;border-top-width:2px;background:transparent;}
+  #dfclose::before,#dfclose::after{left:50%;top:50%;width:9px;height:1.5px;background:#000;}
+  #dfclose::before{transform:translate(-50%,-50%) rotate(45deg);}
+  #dfclose::after{content:"";position:absolute;transform:translate(-50%,-50%) rotate(-45deg);}
+
+  /* ---- Cluster-Anzeige ---- */
+  .grid-wrap{display:flex;margin:3px;background:#c0c0c0;
+             box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dfdfdf;}
+  #grid{display:block;background:#000;margin:2px;}
+  /* dekorative Scrollleiste rechts, wie im Original */
+  .vsb{width:16px;flex:0 0 16px;display:flex;flex-direction:column;margin:2px 2px 2px 0;background:
+       linear-gradient(45deg,#c0c0c0 25%,#fff 0,#fff 75%,#c0c0c0 0) 0 0/2px 2px;}
+  .sb-btn{height:16px;flex:0 0 16px;background:#c0c0c0;position:relative;
+          box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
+  .sb-btn::before{content:"";position:absolute;left:50%;top:50%;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent;}
+  .sb-up::before{transform:translate(-50%,-60%);border-bottom:4px solid #000;}
+  .sb-dn::before{transform:translate(-50%,-40%);border-top:4px solid #000;}
+  .sb-track{flex:1 1 auto;}
+  .sb-thumb{height:34px;background:#c0c0c0;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
+
+  /* ---- Unterer Bereich ---- */
+  .bottom{display:flex;gap:10px;margin:2px 6px 8px;align-items:flex-start;}
+  .status{flex:1 1 auto;padding-top:2px;}
+  .status .lbl{margin-bottom:5px;color:#000;}
+  .bar{height:15px;background:#c0c0c0;padding:2px;
+       box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dfdfdf;}
+  .bar-fill{height:100%;background:repeating-linear-gradient(90deg,#000080 0 9px,#c0c0c0 9px 11px);width:0;}
+  .pct{margin-top:5px;color:#000;}
+  .btns{display:grid;grid-template-columns:repeat(2,96px);gap:6px;flex:0 0 auto;}
+  .btn{height:23px;background:#c0c0c0;color:#000;font:11px Tahoma,"MS Sans Serif",sans-serif;cursor:default;
+       display:flex;align-items:center;justify-content:center;
+       box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #000,inset 2px 2px 0 #dfdfdf,inset -2px -2px 0 #808080;}
+  .btn:active:not(.dis){box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080;}
+  .btn:active:not(.dis) span{position:relative;top:1px;left:1px;}
+  .btn.dis{color:#808080;text-shadow:1px 1px 0 #fff;}
+
+  /* ---- Details ausgeblendet ---- */
+  body.compact .grid-wrap{display:none;}
+  body.compact #win{width:400px;}
+  body.compact .btns{grid-template-columns:repeat(2,96px);}
+
+  /* ---- Dialoge (Legende / fertig) ---- */
+  .dlg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;background:#c0c0c0;
+       min-width:230px;display:none;
+       box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dfdfdf,3px 3px 6px rgba(0,0,0,.4);}
+  .dlg.on{display:block;}
+  .dlg-tb{display:flex;align-items:center;height:18px;margin:3px 3px 0;padding:0 2px 0 5px;
+          background:linear-gradient(90deg,#00007b,#1085d2);color:#fff;font-weight:700;font-size:11px;}
+  .dlg-tb .sp{flex:1 1 auto;}
+  .dlg-bd{padding:10px 12px;}
+  .lg-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .sw{width:14px;height:14px;flex:0 0 14px;border:1px solid #000;}
+  .dlg-ft{display:flex;justify-content:center;padding:0 12px 10px;}
+  .dlg-ft .btn{width:76px;}
+</style></head>
+<body class="theme-win98">
+  <div id="win">
+    <div class="w98-title" id="dftitle">
+      <img class="w98-ico" id="dfico" alt="">
+      <span class="w98-cap" id="dfcap">Disk Defragmenter</span>
+      <span class="w98-btn" id="dfmin"></span>
+      <span class="w98-btn" id="dfmax"></span>
+      <span class="w98-btn" id="dfclose"></span>
+    </div>
+
+    <div class="grid-wrap" id="gridwrap">
+      <canvas id="grid" width="558" height="243"></canvas>
+      <div class="vsb">
+        <div class="sb-btn sb-up"></div>
+        <div class="sb-track"><div class="sb-thumb"></div></div>
+        <div class="sb-btn sb-dn"></div>
+      </div>
+    </div>
+
+    <div class="bottom">
+      <div class="status">
+        <div class="lbl" id="lbl">Idle</div>
+        <div class="bar"><div class="bar-fill" id="fill"></div></div>
+        <div class="pct" id="pct">0% Complete</div>
+      </div>
+      <div class="btns">
+        <div class="btn" id="bStart"><span>Start</span></div>
+        <div class="btn dis" id="bPause"><span>Pause</span></div>
+        <div class="btn" id="bLegend"><span>Legend</span></div>
+        <div class="btn" id="bDetails"><span>Hide Details</span></div>
+      </div>
+    </div>
+
+    <!-- Legende -->
+    <div class="dlg" id="legend">
+      <div class="dlg-tb"><span class="sp">Defrag Legend</span></div>
+      <div class="dlg-bd" id="legendBody"></div>
+      <div class="dlg-ft"><div class="btn" id="legendOK"><span>OK</span></div></div>
+    </div>
+
+    <!-- Fertig -->
+    <div class="dlg" id="done">
+      <div class="dlg-tb"><span class="sp">Defragmentation Complete</span></div>
+      <div class="dlg-bd">Defragmentation of drive C is complete.</div>
+      <div class="dlg-ft"><div class="btn" id="doneOK"><span>OK</span></div></div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  var CELL = 9, GAP = 1, COLS = 62, ROWS = 27;
+  var cv = document.getElementById('grid'), ctx = cv.getContext('2d');
+  cv.width = COLS*CELL; cv.height = ROWS*CELL;
+
+  var FREE=0, DATA=1, FIXED=2, WRITE=3, READ=4;
+  var COLORS = {};
+  COLORS[FREE]='#ffffff'; COLORS[DATA]='#00ffff'; COLORS[FIXED]='#808080';
+  COLORS[WRITE]='#ff0000'; COLORS[READ]='#00c000';
+  var LEGEND = [
+    ['#00ffff','Unoptimized data'],
+    ['#ffffff','Free space'],
+    ['#808080','Data that will not be moved'],
+    ['#ff0000','Cluster being written'],
+    ['#00c000','Cluster being read']
+  ];
+  var N = COLS*ROWS, cells = new Uint8Array(N), flash = new Uint8Array(N);
+
+  function seed(){
+    for (var i=0;i<N;i++){
+      var r = Math.random();
+      cells[i] = r < 0.62 ? DATA : (r < 0.985 ? FREE : FIXED);
+      flash[i] = 0;
+    }
+    draw();
+  }
+  function cellRect(i){ return [(i%COLS)*CELL, ((i/COLS)|0)*CELL]; }
+  function drawCell(i){
+    var p = cellRect(i);
+    ctx.fillStyle = COLORS[flash[i] ? flash[i] : cells[i]];
+    ctx.fillRect(p[0]+GAP, p[1]+GAP, CELL-GAP, CELL-GAP);
+  }
+  function draw(){
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,cv.width,cv.height);
+    for (var i=0;i<N;i++) drawCell(i);
+  }
+
+  // ---- Defrag-Lauf ----
+  var timer=null, paused=false, running=false, writeQ=[];
+  function nextFree(from){ for (var i=from;i<N;i++) if (cells[i]===FREE) return i; return -1; }
+  function lastData(before){ for (var i=before;i>=0;i--) if (cells[i]===DATA) return i; return -1; }
+  var head = 0;
+
+  // Fortschritt = Anteil der Datencluster, die bereits im gepackten Bereich vor `head` liegen.
+  var dataTotal = 0;
+  function countData(){ var n=0; for (var i=0;i<N;i++) if (cells[i]===DATA) n++; return n; }
+  function progress(){
+    if (!dataTotal) return 100;
+    var packed = 0;
+    for (var i=0;i<head && i<N;i++) if (cells[i]===DATA) packed++;
+    return Math.min(100, Math.round(packed/dataTotal*100));
+  }
+
+  function step(){
+    if (paused) return;
+    // abgelaufene Schreib-/Lese-Markierungen loeschen
+    for (var k=writeQ.length-1;k>=0;k--){
+      writeQ[k].t--;
+      if (writeQ[k].t<=0){ flash[writeQ[k].i]=0; drawCell(writeQ[k].i); writeQ.splice(k,1); }
+    }
+    var moved=0;
+    while (moved < 3){
+      while (head < N && cells[head] !== FREE) head++;
+      if (head >= N){ finish(); return; }
+      var src = lastData(N-1);
+      if (src < 0 || src <= head){ finish(); return; }
+      cells[src] = FREE; cells[head] = DATA;
+      flash[src] = READ; flash[head] = WRITE;
+      writeQ.push({i:src,t:2},{i:head,t:3});
+      drawCell(src); drawCell(head);
+      moved++;
+    }
+    var p = progress();
+    document.getElementById('fill').style.width = p + '%';
+    document.getElementById('pct').textContent = p + '% Complete';
+  }
+
+  function setCap(t){ document.getElementById('dfcap').textContent = t; }
+  function btn(id,on){ document.getElementById(id).classList.toggle('dis', !on); }
+
+  function start(){
+    if (running) return;
+    running = true; paused = false; head = 0; dataTotal = countData();
+    setCap('Defragmenting Drive C');
+    document.getElementById('lbl').textContent = 'Defragmenting file system…';
+    btn('bStart',true); btn('bPause',true);
+    document.getElementById('bStart').querySelector('span').textContent = 'Stop';
+    timer = setInterval(step, 60);
+  }
+  function stop(){
+    if (!running) return;
+    clearInterval(timer); timer=null; running=false; paused=false;
+    for (var i=0;i<N;i++) if (flash[i]) flash[i]=0;
+    writeQ=[]; draw();
+    setCap('Disk Defragmenter');
+    document.getElementById('lbl').textContent = 'Idle';
+    document.getElementById('bStart').querySelector('span').textContent = 'Start';
+    document.getElementById('bPause').querySelector('span').textContent = 'Pause';
+    btn('bStart',true); btn('bPause',false);
+  }
+  function finish(){
+    clearInterval(timer); timer=null; running=false;
+    for (var i=0;i<N;i++) if (flash[i]) flash[i]=0;
+    writeQ=[]; draw();
+    document.getElementById('fill').style.width='100%';
+    document.getElementById('pct').textContent='100% Complete';
+    document.getElementById('lbl').textContent='Defragmentation complete';
+    setCap('Disk Defragmenter');
+    document.getElementById('bStart').querySelector('span').textContent='Start';
+    btn('bStart',true); btn('bPause',false);
+    document.getElementById('done').classList.add('on');
+  }
+
+  document.getElementById('bStart').addEventListener('click', function(){
+    if (running) stop(); else { seed(); start(); }
+  });
+  document.getElementById('bPause').addEventListener('click', function(){
+    if (!running || this.classList.contains('dis')) return;
+    paused = !paused;
+    this.querySelector('span').textContent = paused ? 'Resume' : 'Pause';
+    document.getElementById('lbl').textContent = paused ? 'Paused' : 'Defragmenting file system…';
+  });
+
+  // Legende
+  var lb = document.getElementById('legendBody');
+  LEGEND.forEach(function(e){
+    var row=document.createElement('div'); row.className='lg-row';
+    var sw=document.createElement('span'); sw.className='sw'; sw.style.background=e[0];
+    var tx=document.createElement('span'); tx.textContent=e[1];
+    row.appendChild(sw); row.appendChild(tx); lb.appendChild(row);
+  });
+  document.getElementById('bLegend').addEventListener('click',function(){ document.getElementById('legend').classList.add('on'); });
+  document.getElementById('legendOK').addEventListener('click',function(){ document.getElementById('legend').classList.remove('on'); });
+  document.getElementById('doneOK').addEventListener('click',function(){ document.getElementById('done').classList.remove('on'); });
+
+  // Details ein-/ausblenden (wie im Original)
+  document.getElementById('bDetails').addEventListener('click', function(){
+    var c = document.body.classList.toggle('compact');
+    this.querySelector('span').textContent = c ? 'Show Details' : 'Hide Details';
+    post('resize');
+  });
+
+  // ---- Host-Bruecke ----
+  function post(m){ try{ window.webkit.messageHandlers.defrag.postMessage(m); }catch(e){} }
+  document.getElementById('dfclose').addEventListener('click', function(e){ e.stopPropagation(); post('close'); });
+  window.setWinIcon = function(u){ var e=document.getElementById('dfico'); if(!e)return; if(u){e.src=u;}else{e.removeAttribute('src');} };
+  window.setTheme = function(k){ /* dieses Widget ist bewusst immer Win95/98-Chrome */ };
+  window.setHover = function(h){ document.body.classList.toggle('hovering', !!h); };
+  window.regions = function(){
+    var R=function(id){var e=document.getElementById(id);if(!e)return[0,0,0,0];var b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
+    return R('dftitle').concat(R('dfclose'));
+  };
+  window.widgetSize = function(){ var w=document.getElementById('win'); return [w.offsetWidth, w.offsetHeight]; };
+
+  seed();
+})();
+</script>
+</body></html>

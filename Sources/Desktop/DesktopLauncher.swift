@@ -40,6 +40,10 @@ enum DesktopLauncher {
         case "tvfolder":
             AppFolderController.tv.show()
 
+        case "defrag":
+            // Disk Defragmenter simulation (Windows 95/98 nostalgia; touches no real files).
+            DefragController.shared.show()
+
         case "funstuff":
             // Windows 95 CD-ROM "Fun Stuff" explorer (videos, wallpapers, Hover game).
             AppFolderController.funStuff.show()

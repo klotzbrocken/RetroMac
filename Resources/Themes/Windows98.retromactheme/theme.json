@@ -231,6 +231,13 @@
       "type": "tvfolder",
       "gridX": 0,
       "gridY": 8
+    },
+    {
+      "name": "Defrag",
+      "icon": "defrag.png",
+      "type": "defrag",
+      "gridX": 1,
+      "gridY": 7
     }
   ],
   "desktopIconSize": 40,
@@ -239,7 +246,19 @@
   "appearance": "light",
   "accentColor": "blue",
   "systemTweaks": [
-    { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "2", "refresh": "Finder" },
-    { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "2", "refresh": "Finder" }
+    {
+      "domain": "-g",
+      "key": "NSConvolutionOverride1",
+      "type": "float",
+      "value": "2",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "-g",
+      "key": "NSSplitViewItemGlassMinimumCornerRadius",
+      "type": "float",
+      "value": "2",
+      "refresh": "Finder"
+    }
   ]
 }
