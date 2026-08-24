@@ -2413,8 +2413,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func applyPhosphorToRenderers() {
-        // Metal renderer only — the Lite overlay has no frame history to decay.
-        overlayController?.renderer.phosphorPersistence = AppSettings.shared.phosphorPersistence
+        // Both Metal overlay paths (whole-screen and wallpaper-only). The Lite overlay is
+        // deliberately absent: it has no frame history to decay.
+        let v = AppSettings.shared.phosphorPersistence
+        overlayController?.renderer.phosphorPersistence = v
+        wallpaperShaderController?.renderer.phosphorPersistence = v
     }
 
     // MARK: - Bloom (MPS Glow)
