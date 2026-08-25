@@ -115,10 +115,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         metalView.enableSetNeedsDisplay = false
         metalView.preferredFramesPerSecond = fps
         metalView.colorPixelFormat = .bgra8Unorm
-        // Read-back of the drawable is required by bloom (samples it), the recorder (blits from
-        // it) and phosphor persistence (blits into it) — none of which is legal on a
-        // framebuffer-only drawable.
-        metalView.framebufferOnly = false
         metalView.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         metalView.layer?.isOpaque = false
         metalView.presentsWithTransaction = false
