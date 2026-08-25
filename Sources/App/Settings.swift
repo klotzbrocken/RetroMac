@@ -99,8 +99,25 @@ final class AppSettings: ObservableObject {
     @Published var hotkeyModifiers: UInt32 {
         didSet { defaults.set(hotkeyModifiers, forKey: "hotkeyModifiers") }
     }
-    @Published var targetDisplayID: CGDirectDisplayID {
-        didSet { defaults.set(targetDisplayID, forKey: "targetDisplayID") }
+    /// Stable identity of the display the shader is pinned to ("" = all displays / main).
+    /// Display IDs are handed out fresh on reboot and cable swaps, so the UUID is persisted.
+    @Published var targetDisplayUUID: String {
+        didSet { defaults.set(targetDisplayUUID, forKey: "targetDisplayUUID") }
+    }
+    /// The pinned display's CURRENT id (0 = all displays), resolved from the UUID on every read.
+    /// Kept as an id-shaped API because the overlay works in `CGDirectDisplayID`, but nothing
+    /// stores a raw id any more: after an id reshuffle a stale one silently points at the wrong
+    /// monitor, which is exactly how the shader ended up rendering on the second screen.
+    var targetDisplayID: CGDirectDisplayID {
+        get {
+            guard !targetDisplayUUID.isEmpty else { return 0 }
+            return NSScreen.screen(withUUID: targetDisplayUUID)?.displayID ?? 0
+        }
+        set {
+            targetDisplayUUID = (newValue == 0)
+                ? ""
+                : (NSScreen.screens.first { $0.displayID == newValue }?.displayUUID ?? "")
+        }
     }
     @Published var performanceProfile: PerformanceProfile {
         didSet {
@@ -779,7 +796,16 @@ final class AppSettings: ObservableObject {
         enableOnLaunch = defaults.bool(forKey: "enableOnLaunch")
         hotkeyCode = defaults.object(forKey: "hotkeyCode") as? UInt32 ?? Self.defaultHotkeyCode
         hotkeyModifiers = defaults.object(forKey: "hotkeyModifiers") as? UInt32 ?? Self.defaultHotkeyModifiers
-        targetDisplayID = defaults.object(forKey: "targetDisplayID") as? CGDirectDisplayID ?? 0
+        // One-time migration of the old raw-id setting, resolved while that id still means what
+        // the user picked. (Locals only — `self` is not fully initialized here yet.)
+        if let stored = defaults.string(forKey: "targetDisplayUUID") {
+            targetDisplayUUID = stored
+        } else {
+            let oldID = defaults.object(forKey: "targetDisplayID") as? CGDirectDisplayID ?? 0
+            let migrated = (oldID == 0) ? "" : (NSScreen.screens.first { $0.displayID == oldID }?.displayUUID ?? "")
+            targetDisplayUUID = migrated
+            defaults.set(migrated, forKey: "targetDisplayUUID")
+        }
         let profile = PerformanceProfile(rawValue: defaults.string(forKey: "performanceProfile") ?? "") ?? .balanced
         performanceProfile = profile
         lowLatencyMode = defaults.bool(forKey: "lowLatencyMode")
