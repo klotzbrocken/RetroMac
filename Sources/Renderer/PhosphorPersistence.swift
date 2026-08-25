@@ -3,6 +3,11 @@ import AppKit
 
 /// Phosphor persistence — the afterglow a real CRT leaves behind.
 ///
+/// Applied to the SIGNAL, before the mask/scanline shader — never after it. On a real tube the
+/// beam only ever excites the phosphor dots at their fixed positions, so the glow decays behind
+/// a mask that never moves. Accumulating the finished picture instead lets `max` fill in the dark
+/// scanline rows the moment the image shifts by a pixel, and the mask washes out within seconds.
+///
 /// A shader can fake a phosphor *mask* within a single frame, but genuine persistence is a
 /// property of TIME: excited phosphor keeps emitting after the beam has moved on, decaying
 /// exponentially. That needs the previous frame, which a single-pass shader never sees.
@@ -55,16 +60,17 @@ final class PhosphorPersistence {
         lastFrameTime = 0
     }
 
-    /// Fold the drawable's current contents into the phosphor history and write the glowing
-    /// result back to the drawable. Call AFTER the shader/scanline/bloom passes.
-    func apply(drawable: CAMetalDrawable, commandBuffer: MTLCommandBuffer) {
+    /// Fold the incoming frame into the phosphor history and return the glowing signal to feed
+    /// the CRT shader. Call BEFORE the main pass; returns `source` untouched when disabled.
+    @discardableResult
+    func accumulate(source: MTLTexture, commandBuffer: MTLCommandBuffer) -> MTLTexture {
         guard persistence > 0.001 else {
             if lastWidth != 0 { reset() }   // turned off: forget the trail
-            return
+            return source
         }
-        let tex = drawable.texture
-        ensureTextures(width: tex.width, height: tex.height, format: tex.pixelFormat)
-        guard let pipeline, let history = accum[writeIndex ^ 1], let target = accum[writeIndex] else { return }
+        guard source.pixelFormat == .bgra8Unorm else { return source }
+        ensureTextures(width: source.width, height: source.height, format: source.pixelFormat)
+        guard let pipeline, let history = accum[writeIndex ^ 1], let target = accum[writeIndex] else { return source }
 
         // Frame-rate independent decay: convert the persistence slider into a half-life and work
         // out how much of the previous frame survives THIS frame's actual delta.
@@ -81,22 +87,18 @@ final class PhosphorPersistence {
         desc.colorAttachments[0].texture = target
         desc.colorAttachments[0].loadAction = .dontCare
         desc.colorAttachments[0].storeAction = .store
-        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: desc) else { return }
+        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: desc) else { return source }
         encoder.setRenderPipelineState(pipeline)
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        encoder.setFragmentTexture(tex, index: 0)       // this frame
+        encoder.setFragmentTexture(source, index: 0)    // this frame's signal
         encoder.setFragmentTexture(history, index: 1)   // what the phosphor still holds
         encoder.setFragmentSamplerState(sampler, index: 0)
         encoder.setFragmentBytes(&decay, length: MemoryLayout<SIMD3<Float>>.size, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
 
-        // Show the accumulated result.
-        if let blit = commandBuffer.makeBlitCommandEncoder() {
-            blit.copy(from: target, to: tex)
-            blit.endEncoding()
-        }
         writeIndex ^= 1
+        return target       // the shader now draws the glowing signal, mask still crisp
     }
 
     // MARK: - Setup
@@ -105,7 +107,7 @@ final class PhosphorPersistence {
         guard width != lastWidth || height != lastHeight || accum[0] == nil else { return }
         let desc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format, width: width,
                                                             height: height, mipmapped: false)
-        desc.usage = [.renderTarget, .shaderRead, .shaderWrite]
+        desc.usage = [.renderTarget, .shaderRead]
         desc.storageMode = .private
         accum = [device.makeTexture(descriptor: desc), device.makeTexture(descriptor: desc)]
         lastWidth = width; lastHeight = height

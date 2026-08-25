@@ -137,6 +137,10 @@ final class RetroRenderer {
             vignetteIntensity: vignetteIntensity
         )
 
+        // Phosphor afterglow acts on the SIGNAL, ahead of the mask: the shader then draws a
+        // glowing image through a mask that stays razor sharp. Returns `sourceTexture` when off.
+        let shaderInput = phosphorFilter?.accumulate(source: sourceTexture, commandBuffer: commandBuffer) ?? sourceTexture
+
         let renderDesc = MTLRenderPassDescriptor()
         renderDesc.colorAttachments[0].texture = drawable.texture
         renderDesc.colorAttachments[0].loadAction = .clear
@@ -150,7 +154,7 @@ final class RetroRenderer {
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 1)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 0)
-        encoder.setFragmentTexture(sourceTexture, index: 0)
+        encoder.setFragmentTexture(shaderInput, index: 0)
         encoder.setFragmentSamplerState(sampler, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
@@ -186,10 +190,6 @@ final class RetroRenderer {
         if bloomEnabled, let bloom = bloomFilter {
             bloom.apply(source: drawable.texture, drawable: drawable, commandBuffer: commandBuffer, viewportSize: viewportSize)
         }
-
-        // Pass 5: Phosphor afterglow. Last, so the trail carries the finished picture
-        // (mask, scanlines and bloom included) rather than a half-built frame.
-        phosphorFilter?.apply(drawable: drawable, commandBuffer: commandBuffer)
 
         gpuSampleCounter &+= 1
         let shouldSample = gpuSampleCounter % 30 == 0
