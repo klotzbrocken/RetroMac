@@ -1174,6 +1174,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bloomItem.submenu = bloomMenu
         shaderOptionsMenu.addItem(bloomItem)
 
+        // Phosphor afterglow — persistence across frames (renderer feature, not a shader preset)
+        let phosItem = NSMenuItem(title: "Phosphor Glow", action: nil, keyEquivalent: "")
+        phosItem.image = sfIcon("light.max")
+        phosItem.title = "Phosphor Glow \u{2014} \(isLitePreset ? "n/a" : phosphorValueString())"
+        phosItem.isEnabled = !isLitePreset
+        let phosMenu = NSMenu()
+        let phosOff = NSMenuItem(title: settings.phosphorPersistence <= 0.001 ? "\u{2713} Off" : "Off",
+                                 action: #selector(setPhosphorPersistence(_:)), keyEquivalent: "")
+        phosOff.target = self; phosOff.tag = 0
+        phosMenu.addItem(phosOff)
+        phosMenu.addItem(.separator())
+        for pct in [15, 30, 50, 75, 100] {
+            let item = NSMenuItem(title: "\(pct)%", action: #selector(setPhosphorPersistence(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = pct
+            if abs(Float(pct) / 100.0 - settings.phosphorPersistence) < 0.01 { item.state = .on }
+            phosMenu.addItem(item)
+        }
+        phosItem.submenu = phosMenu
+        shaderOptionsMenu.addItem(phosItem)
+
         // Display submenu with value chip
         let displayItem = NSMenuItem(title: "Display", action: nil, keyEquivalent: "")
         displayItem.image = sfIcon("display")
@@ -1713,6 +1734,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let settings = AppSettings.shared
             controller.renderer.bloomEnabled = settings.bloomEnabled
             controller.renderer.bloomIntensity = settings.bloomIntensity
+            controller.renderer.phosphorPersistence = settings.phosphorPersistence
             controller.renderer.bloomRadius = settings.bloomRadius
             controller.start()
             wallpaperShaderController = controller
@@ -1879,6 +1901,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if let renderer = controller.renderer {
                     renderer.bloomEnabled = bloomSettings.bloomEnabled
                     renderer.bloomIntensity = bloomSettings.bloomIntensity
+                    renderer.phosphorPersistence = bloomSettings.phosphorPersistence
                     renderer.bloomRadius = bloomSettings.bloomRadius
                 }
 
@@ -2374,6 +2397,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ClassicMacMode.activate()
             rebuildMenu()
         }
+    }
+
+    private func phosphorValueString() -> String {
+        let v = AppSettings.shared.phosphorPersistence
+        return v <= 0.001 ? "Off" : "\(Int(v * 100))%"
+    }
+
+    /// Phosphor afterglow strength. Applied live to every active renderer.
+    @objc private func setPhosphorPersistence(_ sender: NSMenuItem) {
+        let settings = AppSettings.shared
+        settings.phosphorPersistence = Float(sender.tag) / 100.0
+        applyPhosphorToRenderers()
+        rebuildMenu()
+    }
+
+    private func applyPhosphorToRenderers() {
+        // Both Metal overlay paths (whole-screen and wallpaper-only). The Lite overlay is
+        // deliberately absent: it has no frame history to decay.
+        let v = AppSettings.shared.phosphorPersistence
+        overlayController?.renderer.phosphorPersistence = v
+        wallpaperShaderController?.renderer.phosphorPersistence = v
     }
 
     // MARK: - Bloom (MPS Glow)
