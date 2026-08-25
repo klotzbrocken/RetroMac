@@ -666,11 +666,6 @@ final class AppSettings: ObservableObject {
     @Published var bloomIntensity: Float {
         didSet { defaults.set(bloomIntensity, forKey: "bloomIntensity") }
     }
-    /// Phosphor afterglow (0 = off, 1 = maximum). Handled by the renderer, not a shader preset:
-    /// persistence needs the previous frame, which a single-pass shader cannot see.
-    @Published var phosphorPersistence: Float {
-        didSet { defaults.set(phosphorPersistence, forKey: "phosphorPersistence") }
-    }
     @Published var bloomRadius: Float {
         didSet { defaults.set(bloomRadius, forKey: "bloomRadius") }
     }
@@ -985,7 +980,6 @@ final class AppSettings: ObservableObject {
         // Bloom
         bloomEnabled = defaults.bool(forKey: "bloomEnabled")
         bloomIntensity = defaults.object(forKey: "bloomIntensity") as? Float ?? 0.3
-        phosphorPersistence = defaults.object(forKey: "phosphorPersistence") as? Float ?? 0
         bloomRadius = defaults.object(forKey: "bloomRadius") as? Float ?? 8.0
 
         // Viewport

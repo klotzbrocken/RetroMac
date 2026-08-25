@@ -53,20 +53,6 @@ final class RetroRenderer {
         didSet { bloomFilter?.threshold = bloomThreshold }
     }
 
-    // Phosphor persistence (afterglow across frames)
-    private(set) var phosphorFilter: PhosphorPersistence?
-    /// 0 = off, 1 = maximum afterglow. Needs the previous frame, so it lives in the renderer
-    /// rather than in a (single-pass) shader preset.
-    var phosphorPersistence: Float = 0 {
-        didSet {
-            guard phosphorPersistence != oldValue else { return }
-            if phosphorPersistence > 0.001, phosphorFilter == nil {
-                phosphorFilter = try? PhosphorPersistence(device: device)
-            }
-            phosphorFilter?.persistence = phosphorPersistence
-        }
-    }
-
     // Recording
     var recorder: ShaderRecorder?
 
@@ -109,7 +95,6 @@ final class RetroRenderer {
         desc.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
 
         let pipeline = try device.makeRenderPipelineState(descriptor: desc)
-        phosphorFilter?.reset()   // a new effect must not inherit the old one's afterglow
         pipelineCache[name] = pipeline
         currentPipeline = pipeline
     }
@@ -137,10 +122,6 @@ final class RetroRenderer {
             vignetteIntensity: vignetteIntensity
         )
 
-        // Phosphor afterglow acts on the SIGNAL, ahead of the mask: the shader then draws a
-        // glowing image through a mask that stays razor sharp. Returns `sourceTexture` when off.
-        let shaderInput = phosphorFilter?.accumulate(source: sourceTexture, commandBuffer: commandBuffer) ?? sourceTexture
-
         let renderDesc = MTLRenderPassDescriptor()
         renderDesc.colorAttachments[0].texture = drawable.texture
         renderDesc.colorAttachments[0].loadAction = .clear
@@ -154,7 +135,7 @@ final class RetroRenderer {
         encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 1)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 0)
-        encoder.setFragmentTexture(shaderInput, index: 0)
+        encoder.setFragmentTexture(sourceTexture, index: 0)
         encoder.setFragmentSamplerState(sampler, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
 
