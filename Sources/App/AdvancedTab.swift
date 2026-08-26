@@ -71,8 +71,9 @@ private struct PerformanceSection: View {
                             Picker("", selection: $settings.targetFPS) {
                                 Text("30 fps \u{2014} lower power").tag(30)
                                 Text("60 fps \u{2014} smoother").tag(60)
-                                // Only worth offering where a display can actually show it.
-                                if NSScreen.screens.contains(where: { $0.maximumFramesPerSecond > 60 }) {
+                                // Only where a display can actually show it: a 100 Hz panel would
+                                // silently cap 120, which looks like the setting does nothing.
+                                if NSScreen.screens.contains(where: { $0.maximumFramesPerSecond >= 120 }) {
                                     Text("120 fps \u{2014} ProMotion").tag(120)
                                 }
                             }
