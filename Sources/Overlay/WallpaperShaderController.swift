@@ -111,7 +111,7 @@ final class WallpaperShaderController: NSObject, MTKViewDelegate {
         wallpaperTextures.removeAll()
 
         let settings = AppSettings.shared
-        let fps = settings.lowLatencyMode ? 60 : settings.targetFPS
+        let fps = settings.targetFPS
 
         for screen in NSScreen.screens {
             createWindow(for: screen, fps: fps)

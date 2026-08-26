@@ -80,7 +80,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     @MainActor
     private func setupWindows() {
         let settings = AppSettings.shared
-        let fps = settings.lowLatencyMode ? 60 : settings.targetFPS
+        let fps = settings.targetFPS
 
         switch captureMode {
         case .fullScreen:
@@ -182,7 +182,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         loadOverlays()
 
         let settings = AppSettings.shared
-        let captureFPS = settings.lowLatencyMode ? 60 : settings.targetFPS
+        let captureFPS = settings.targetFPS
 
         let isFullscreenMode: Bool
         switch captureMode {
@@ -344,7 +344,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
             startWindowTracking()
         }
 
-        print("[Overlay] Active (fps=\(captureFPS), lowLatency=\(settings.lowLatencyMode)).")
+        print("[Overlay] Active (fps=\(captureFPS)).")
     }
 
     private func handleFirstFrame() {

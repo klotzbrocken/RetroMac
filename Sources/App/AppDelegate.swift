@@ -1762,16 +1762,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if VirtualCameraManager.shared.isRunning { VirtualCameraManager.shared.stop() }
             if retroViewport.isActive { retroViewport.hide() }
 
-            if isWallpaperOnlyScope {
-                startWallpaperShader(presetID: currentPresetName ?? AppSettings.shared.defaultPreset)
-            } else if Self.isLitePreset(currentPresetName) {
-                // Lite presets use transparent overlay — no screen recording needed
-                startCRTLite(mode: .fullScreen)
-            } else {
-                startOverlay(mode: .fullScreen)
-            }
+            startCurrentEffect()
             rememberShaderStateForActiveTheme(on: true)
         }
+    }
+
+    /// Start whichever effect the current settings call for (wallpaper-only, Lite, or the full
+    /// Metal overlay). Split out of `toggleOverlay` so a settings change can re-arm the same
+    /// path without duplicating the dispatch.
+    private func startCurrentEffect() {
+        if isWallpaperOnlyScope {
+            startWallpaperShader(presetID: currentPresetName ?? AppSettings.shared.defaultPreset)
+        } else if Self.isLitePreset(currentPresetName) {
+            // Lite presets use transparent overlay — no screen recording needed
+            startCRTLite(mode: .fullScreen)
+        } else {
+            startOverlay(mode: .fullScreen)
+        }
+    }
+
+    /// Re-arm the running effect so a changed capture setting (frame rate, quality) takes hold
+    /// straight away instead of at the next manual restart. No-op when nothing is running.
+    @objc func reapplyCaptureSettings() {
+        guard isActive else { return }
+        disableAll()
+        // Next runloop turn: let the old capture tear down before the new one claims the display.
+        DispatchQueue.main.async { [weak self] in self?.startCurrentEffect() }
     }
 
     /// Persist the shader on/off choice for the currently active theme, so switching away and

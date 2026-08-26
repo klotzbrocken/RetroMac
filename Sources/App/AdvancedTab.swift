@@ -65,11 +65,22 @@ private struct PerformanceSection: View {
                             .labelsHidden()
                             .frame(width: 180)
                         }
-                        RMRow(label: "Low-latency mode", hint: "Forces 60 fps. Less mouse lag, more GPU.", isLast: true) {
-                            Toggle("", isOn: $settings.lowLatencyMode)
-                                .toggleStyle(.switch)
-                                .tint(.rmAccent)
-                                .labelsHidden()
+                        RMRow(label: "Frame rate",
+                              hint: "How often the effect redraws. Higher is smoother while scrolling or dragging windows, and costs more GPU and battery.",
+                              isLast: true) {
+                            Picker("", selection: $settings.targetFPS) {
+                                Text("30 fps \u{2014} lower power").tag(30)
+                                Text("60 fps \u{2014} smoother").tag(60)
+                                // Only worth offering where a display can actually show it.
+                                if NSScreen.screens.contains(where: { $0.maximumFramesPerSecond > 60 }) {
+                                    Text("120 fps \u{2014} ProMotion").tag(120)
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(width: 180)
+                            .onChange(of: settings.targetFPS) { _, _ in
+                                (NSApp.delegate as? AppDelegate)?.reapplyCaptureSettings()
+                            }
                         }
                     }
                 }

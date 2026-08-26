@@ -810,7 +810,16 @@ final class AppSettings: ObservableObject {
         performanceProfile = profile
         lowLatencyMode = defaults.bool(forKey: "lowLatencyMode")
         halfResolution = defaults.object(forKey: "halfResolution") as? Bool ?? profile.halfResolution
-        targetFPS = defaults.object(forKey: "targetFPS") as? Int ?? profile.targetFPS
+        // The old "Low-latency mode" switch was a hidden 60 fps toggle. Fold it into the real
+        // frame-rate setting once, so the choice is visible instead of implied by a switch name.
+        let storedFPS = defaults.object(forKey: "targetFPS") as? Int
+        if defaults.bool(forKey: "lowLatencyMode") && (storedFPS ?? profile.targetFPS) < 60 {
+            targetFPS = 60
+            defaults.set(60, forKey: "targetFPS")
+            defaults.set(false, forKey: "lowLatencyMode")
+        } else {
+            targetFPS = storedFPS ?? profile.targetFPS
+        }
         stopOnSleep = defaults.object(forKey: "stopOnSleep") as? Bool ?? true
         resumeAfterSleep = defaults.bool(forKey: "resumeAfterSleep")
         resetOnWake = defaults.bool(forKey: "resetOnWake")
