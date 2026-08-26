@@ -21,6 +21,7 @@ struct AppInfo: Identifiable, Hashable {
 
 enum SettingsTab: String, CaseIterable {
     case dock = "dock"
+    case desktop = "desktop"
     case retroMode = "retroMode"
     case camera = "camera"
     case games = "games"
@@ -31,6 +32,7 @@ enum SettingsTab: String, CaseIterable {
     var label: String {
         switch self {
         case .dock: return "Themes"
+        case .desktop: return "Desktop"
         case .retroMode: return "Retro Mode"
         case .camera: return "Camera & Streaming"
         case .games: return "Games"
@@ -43,6 +45,7 @@ enum SettingsTab: String, CaseIterable {
     var icon: String {
         switch self {
         case .dock: return "paintpalette"
+        case .desktop: return "menubar.dock.rectangle"
         case .retroMode: return "wand.and.stars"
         case .camera: return "camera.fill"
         case .games: return "gamecontroller"
@@ -55,7 +58,7 @@ enum SettingsTab: String, CaseIterable {
     /// Section grouping: nil = Main, "Surfaces", "System"
     var section: String? {
         switch self {
-        case .dock, .retroMode: return nil
+        case .dock, .desktop, .retroMode: return nil
         case .camera, .games: return "Surfaces"
         case .advanced, .health, .about: return "System"
         }
@@ -65,6 +68,7 @@ enum SettingsTab: String, CaseIterable {
     var subtitle: String? {
         switch self {
         case .dock: return "Pick a theme and configure the retro dock."
+        case .desktop: return "Wallpaper, desktop icons and widgets for the active theme."
         case .advanced: return "Performance, hotkeys, per-app rules and timers."
         default: return nil
         }
@@ -351,6 +355,8 @@ struct SettingsDetailPane: View {
                 switch selectedTab {
                 case .dock:
                     DockThemesTab()
+                case .desktop:
+                    DesktopSettingsTab()
                 case .retroMode:
                     RetroModeTab()
                 case .camera:
