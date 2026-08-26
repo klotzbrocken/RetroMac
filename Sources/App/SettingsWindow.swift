@@ -118,7 +118,7 @@ struct SettingsSidebar: View {
     @ObservedObject private var settings = AppSettings.shared
 
     // Group tabs by section in order
-    private var mainTabs: [SettingsTab] { [.dock, .retroMode] }
+    private var mainTabs: [SettingsTab] { [.dock, .desktop, .retroMode] }
     private var surfacesTabs: [SettingsTab] { [.camera, .games] }
     private var systemTabs: [SettingsTab] { [.advanced, .health, .about] }
 
