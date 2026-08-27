@@ -1,4 +1,5 @@
 import AppKit
+import QuickLookThumbnailing
 
 // MARK: - Shared helpers
 
@@ -161,13 +162,30 @@ final class DockStackController {
 
     func show(folderPath: String, anchorScreenRect: NSRect) {
         let url = URL(fileURLWithPath: folderPath)
-        let files = recentFiles(in: url, limit: 16)   // 4×4 grid
+        // /Applications is the one stack that lists everything alphabetically; a Downloads-style
+        // stack shows what arrived last. That is what 10.6 does with each.
+        let isApplications = url.standardizedFileURL.path == "/Applications"
 
         let cfg = ThemeManager.shared.activeTheme?.config
-        let iconSize = min(max(cfg?.dock.iconSize ?? 56, 44), 64)
-        let cols = 4
-        let gap: CGFloat = 10, labelH: CGFloat = 13, headerH: CGFloat = 22, footerH: CGFloat = 24, pad: CGFloat = 10
-        let cellW = iconSize + 8, cellH = iconSize + labelH + 6
+        // 10.6's grid runs noticeably larger than a dock icon. The old 44...64 window made the
+        // tiles read as a shrunken copy of the dock rather than a browser of their own.
+        let iconSize = min(max(cfg?.dock.iconSize ?? 56, 56), 72)
+        let gap: CGFloat = 8, labelH: CGFloat = 14, headerH: CGFloat = 24
+        let footerH: CGFloat = 24, pad: CGFloat = 12
+        let cellW = iconSize + 42, cellH = iconSize + labelH + 6
+
+        let all = isApplications ? applications() : recentFiles(in: url, limit: 40)
+        let n = max(all.count, 1)
+        // Squarish, capped at the 7 columns the 10.6 grid uses.
+        let cols = min(7, max(4, Int(ceil((Double(n) * 1.4).squareRoot()))))
+
+        // Never build a panel taller than the screen: clampedAbove only repositions, it does not
+        // shrink, so an uncapped /Applications would run straight off the top.
+        let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchorScreenRect) }) ?? NSScreen.main
+        let room = (screen?.visibleFrame.height ?? 900) - anchorScreenRect.height - 40
+        let maxRows = max(1, Int((room - headerH - footerH - pad * 2 + gap) / (cellH + gap)))
+        let files = Array(all.prefix(cols * maxRows))
+
         let rows = max(1, Int(ceil(Double(max(files.count, 1)) / Double(cols))))
         let width = pad * 2 + CGFloat(cols) * cellW + CGFloat(cols - 1) * gap
         let height = headerH + pad + CGFloat(rows) * cellH + CGFloat(rows - 1) * gap + footerH + pad
@@ -178,6 +196,11 @@ final class DockStackController {
         let view = DockStackView(frame: NSRect(origin: .zero, size: frame.size))
         view.folderURL = url
         view.files = files
+        view.isApplications = isApplications
+        // Only meaningful for /Applications, which claims to list everything. A recent-files
+        // stack shows the newest by design, so "N more" there would be noise, and the number
+        // would be relative to the fetch limit rather than the folder anyway.
+        view.truncatedCount = isApplications ? all.count - files.count : 0
         view.iconSize = iconSize
         view.cols = cols; view.gap = gap; view.labelH = labelH
         view.headerH = headerH; view.footerH = footerH; view.pad = pad
@@ -212,6 +235,15 @@ final class DockStackController {
         }
     }
 
+    /// Everything installed, the way the 10.6 Applications stack lists it: by name, not by date.
+    private func applications() -> [URL] {
+        let items = (try? FileManager.default.contentsOfDirectory(
+            at: URL(fileURLWithPath: "/Applications"),
+            includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+        return items.filter { $0.pathExtension == "app" }
+            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
     private func recentFiles(in dir: URL, limit: Int) -> [URL] {
         let keys: [URLResourceKey] = [.contentModificationDateKey, .isHiddenKey]
         guard let items = try? FileManager.default.contentsOfDirectory(
@@ -227,6 +259,11 @@ final class DockStackController {
 private final class DockStackView: NSView, NSDraggingSource {
     var folderURL: URL?
     var files: [URL] = []
+    /// /Applications lists apps by name and wears their themed artwork; other folders list
+    /// recent files and get Quick Look previews.
+    var isApplications = false
+    /// How many entries did not fit on screen. Shown in the footer rather than dropped quietly.
+    var truncatedCount = 0
     var iconSize: CGFloat = 56
     var cols = 4
     var gap: CGFloat = 10
@@ -246,6 +283,10 @@ private final class DockStackView: NSView, NSDraggingSource {
     private var didDrag = false
     private var dropActive = false
     private let pixelize = ThemeManager.shared.activeTheme?.config.isPixelated == true
+    /// Quick Look previews, keyed by path + modification date so an edited file re-renders.
+    /// Static so reopening the stack does not regenerate what it already has.
+    private static var thumbs: [String: NSImage] = [:]
+    private var requested = Set<String>()
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -268,10 +309,66 @@ private final class DockStackView: NSView, NSDraggingSource {
     }
     private var footerRect: NSRect { NSRect(x: 0, y: bounds.height - footerH, width: bounds.width, height: footerH) }
 
+    private func thumbKey(_ url: URL) -> String {
+        let m = (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)?
+            .timeIntervalSince1970 ?? 0
+        return "\(url.path)|\(Int(m))|\(Int(iconSize))"
+    }
+
+    /// Ask Quick Look for a real preview. NSWorkspace only ever returns the generic icon for a
+    /// file type, which is why a folder of screenshots and PDFs came up as a wall of identical
+    /// placeholders. Async: the workspace icon is drawn until this arrives.
+    private func requestThumbnail(_ url: URL) {
+        let key = thumbKey(url)
+        guard !requested.contains(key), Self.thumbs[key] == nil else { return }
+        requested.insert(key)
+        let scale = window?.backingScaleFactor ?? 2
+        let req = QLThumbnailGenerator.Request(fileAt: url,
+                                               size: NSSize(width: iconSize, height: iconSize),
+                                               scale: scale,
+                                               representationTypes: .thumbnail)
+        QLThumbnailGenerator.shared.generateBestRepresentation(for: req) { [weak self] rep, _ in
+            guard let rep = rep else { return }
+            let img = NSImage(cgImage: rep.cgImage, size: NSSize(width: rep.cgImage.width, height: rep.cgImage.height))
+            DispatchQueue.main.async {
+                Self.thumbs[key] = img
+                self?.needsDisplay = true
+            }
+        }
+    }
+
     private func fileIcon(_ url: URL, size: CGFloat) -> NSImage {
+        // Apps wear whatever the dock would give them: theme mapping first, then a custom icon
+        // the user set, then the real one. Keeps the grid consistent with the dock beside it.
+        if url.pathExtension == "app", let bid = Bundle(url: url)?.bundleIdentifier {
+            return ThemeManager.shared.icon(for: bid, size: size)
+        }
+        if let t = Self.thumbs[thumbKey(url)] { return t }
+        requestThumbnail(url)
         let icon = NSWorkspace.shared.icon(forFile: url.path)
         icon.size = NSSize(width: size, height: size)
         return pixelize ? ThemeManager.shared.pixelatedIfNeeded(icon, size: size) : icon
+    }
+
+    /// Fit into the icon box without distorting: a Quick Look preview of a photo is not square.
+    private func iconDrawRect(_ img: NSImage, in box: NSRect) -> NSRect {
+        let s = img.size
+        guard s.width > 0, s.height > 0 else { return box }
+        let f = min(box.width / s.width, box.height / s.height)
+        let w = s.width * f, h = s.height * f
+        return NSRect(x: box.midX - w / 2, y: box.maxY - h, width: w, height: h)
+    }
+
+    /// Middle truncation, the way Finder and the real stacks shorten a long file name.
+    private func fitted(_ name: String, width: CGFloat, attrs: [NSAttributedString.Key: Any]) -> String {
+        guard name.size(withAttributes: attrs).width > width else { return name }
+        var head = Array(name), tail: [Character] = []
+        while head.count > 1 {
+            if head.count > tail.count { tail.insert(head.removeLast(), at: 0) } else { head.removeLast() }
+            let candidate = String(head) + "\u{2026}" + String(tail.dropFirst(max(0, tail.count - head.count)))
+            if candidate.size(withAttributes: attrs).width <= width { return candidate }
+        }
+        return "\u{2026}"
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -339,14 +436,13 @@ private final class DockStackView: NSView, NSDraggingSource {
             if i == hovered { (snowLeopard ? NSColor(calibratedWhite: 1, alpha: 0.20)
                                             : NSColor(calibratedRed: 0.20, green: 0.45, blue: 0.95, alpha: 0.18)).setFill()
                 NSBezierPath(roundedRect: c.insetBy(dx: 1, dy: 1), xRadius: 4, yRadius: 4).fill() }
-            fileIcon(url, size: iconSize).draw(in: iconRect(i), from: .zero, operation: .sourceOver,
-                                               fraction: 1, respectFlipped: true, hints: nil)
-            var label = url.lastPathComponent
-            let maxW = cellW - 2
-            while label.size(withAttributes: lAttrs).width > maxW && label.count > 1 { label = String(label.dropLast()) }
-            if label != url.lastPathComponent { label = String(label.dropLast()) + "…" }
+            let img = fileIcon(url, size: iconSize)
+            img.draw(in: iconDrawRect(img, in: iconRect(i)), from: .zero, operation: .sourceOver,
+                     fraction: 1, respectFlipped: true,
+                     hints: [.interpolation: NSImageInterpolation.high])
+            let label = fitted(url.lastPathComponent, width: cellW - 4, attrs: lAttrs)
             let ls = label.size(withAttributes: lAttrs)
-            label.draw(at: NSPoint(x: c.midX - ls.width / 2, y: c.minY + iconSize + 1), withAttributes: lAttrs)
+            label.draw(at: NSPoint(x: c.midX - ls.width / 2, y: c.minY + iconSize + 2), withAttributes: lAttrs)
         }
 
         let f = footerRect
@@ -363,7 +459,9 @@ private final class DockStackView: NSView, NSDraggingSource {
                .foregroundColor: NSColor(calibratedWhite: 1, alpha: 0.9)]
             : [.font: NSFont.systemFont(ofSize: 11, weight: .medium),
                .foregroundColor: NSColor(calibratedWhite: 0.15, alpha: 1)]
-        "Open in Finder".draw(at: NSPoint(x: 8, y: f.midY - 7), withAttributes: fAttrs)
+        // Say what did not fit rather than dropping it silently.
+        let footer = truncatedCount > 0 ? "Open in Finder  (\(truncatedCount) more)" : "Open in Finder"
+        footer.draw(at: NSPoint(x: 8, y: f.midY - 7), withAttributes: fAttrs)
     }
 
     override func updateTrackingAreas() {

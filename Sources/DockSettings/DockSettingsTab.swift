@@ -422,6 +422,12 @@ struct DockSettingsTab: View {
                             .tint(.rmAccent)
                             .labelsHidden()
                     }
+                    RMRow(label: "Show Applications folder", hint: "Pins /Applications to the dock; click it for a grid of everything installed.") {
+                        Toggle("", isOn: $settings.dockShowApplications)
+                            .toggleStyle(.switch)
+                            .tint(.rmAccent)
+                            .labelsHidden()
+                    }
                 }
                 if selectedThemeConfig?.isDeskbar == true {
                     RMRow(label: "Deskbar position") {

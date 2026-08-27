@@ -91,17 +91,24 @@ final class AppManager {
         NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
     }
 
-    /// Pin/unpin the user's Downloads folder automatically for themes that use folder stacks
-    /// (Maiks Favourite). Tracked with a flag so we don't fight a manual remove and so it's
-    /// taken back out when switching to a non-stack theme.
+    /// Pin/unpin the user's Downloads folder automatically for themes that use folder stacks.
     func syncAutoDownloads(active: Bool) {
-        let path = NSHomeDirectory() + "/Downloads"
+        syncAutoFolder(path: NSHomeDirectory() + "/Downloads", flag: "autoDownloadsAdded", active: active)
+    }
+
+    /// Same for /Applications, which Snow Leopard keeps in the dock as a grid stack.
+    func syncAutoApplications(active: Bool) {
+        syncAutoFolder(path: "/Applications", flag: "autoApplicationsAdded", active: active)
+    }
+
+    /// Pin/unpin a folder automatically for themes that use folder stacks (Maiks Favourite,
+    /// Snow Leopard). Tracked with a per-folder flag so we don't fight a manual remove and so
+    /// it's taken back out when switching to a non-stack theme.
+    private func syncAutoFolder(path: String, flag: String, active: Bool) {
         let id = "__folder__\(path)"
         let present = apps.contains { $0.bundleID == id }
-        let flag = "autoDownloadsAdded"
         let added = UserDefaults.standard.bool(forKey: flag)
         if active {
-            // Ensure the Downloads folder is present whenever a folder-stack theme is active.
             guard !present, FileManager.default.fileExists(atPath: path) else { return }
             apps.append(DockApp(bundleID: id, customIconPath: nil, order: apps.count, folderPath: path))
             UserDefaults.standard.set(true, forKey: flag)
