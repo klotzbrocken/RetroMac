@@ -9,17 +9,33 @@
 #   3. Developer ID provisioning profile for com.retromac.app
 #
 # Usage:
-#   ./package.sh              # build, package, notarize
+#   ./package.sh              # build, package, notarize  -> RetroMac.dmg
 #   ./package.sh --skip-build # package existing build
+#   ./package.sh --beta       # same, but named RetroMac-<version>-beta.dmg
+#
+# A beta MUST NOT be written to RetroMac.dmg: that is the name the appcast and the
+# GitHub release asset use, and a beta sitting under it is indistinguishable from the
+# shipped build (it happened once, with 2.8).
 set -e
 cd "$(dirname "$0")"
 
 SKIP_BUILD=false
-[ "$1" = "--skip-build" ] && SKIP_BUILD=true
+BETA=false
+for arg in "$@"; do
+    case "$arg" in
+        --skip-build) SKIP_BUILD=true ;;
+        --beta)       BETA=true ;;
+    esac
+done
 
 APP_NAME="RetroMac"
 APP_BUNDLE=".build/${APP_NAME}.app"
-DMG_NAME="${APP_NAME}.dmg"
+APP_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist 2>/dev/null || echo unknown)"
+if [ "$BETA" = true ]; then
+    DMG_NAME="${APP_NAME}-${APP_VERSION}-beta.dmg"
+else
+    DMG_NAME="${APP_NAME}.dmg"
+fi
 DMG_DIR=".build/dmg-staging"
 KEYCHAIN_PROFILE="Retromac"
 
@@ -78,4 +94,5 @@ xcrun stapler staple "$DMG_NAME"
 
 echo ""
 echo "✅ Done! Distributable DMG: $(pwd)/$DMG_NAME"
+echo "   Version: $APP_VERSION$([ "$BETA" = true ] && echo ' (beta)')"
 echo "   Size: $(du -h "$DMG_NAME" | cut -f1)"
