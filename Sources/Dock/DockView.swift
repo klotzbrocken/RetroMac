@@ -3749,6 +3749,8 @@ final class DockView: NSView {
     private func nameFor(_ bundleID: String) -> String {
         if bundleID == "__trash__" { return "Trash" }
         if bundleID == "__urllauncher__" { return "Link" }
+        if bundleID == "__dashboard__" { return "Dashboard" }
+        if bundleID == "__showdesktop__" { return "Show Desktop" }
         if let app = AppManager.shared.apps.first(where: { $0.bundleID == bundleID }) { return app.displayName }
         if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first {
             return app.localizedName ?? bundleID

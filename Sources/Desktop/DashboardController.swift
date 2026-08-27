@@ -23,11 +23,15 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         /// Widgets that draw their own window chrome for the desktop (Clock, Calculator) are
         /// told to drop it: Dashboard widgets are shapes on a sheet, not little windows.
         let stripChrome: Bool
+        /// Whether the page's `.body` plate goes too. True for the clock, whose body is just a
+        /// card behind the dial; false for the calculator and the CPU monitor, where the body IS
+        /// the casing and dropping it leaves the keys floating on nothing.
+        var transparentBody = false
     }
 
     static let catalogue: [Widget] = [
         Widget(id: "clock", name: "Clock", html: "Clock/Clock.html",
-               size: NSSize(width: 200, height: 200), stripChrome: true),
+               size: NSSize(width: 200, height: 200), stripChrome: true, transparentBody: true),
         Widget(id: "calculator", name: "Calculator", html: "Calculator/Calculator.html",
                size: NSSize(width: 236, height: 220), stripChrome: true),
         Widget(id: "weather", name: "Weather", html: "Weather/Weather.html",
@@ -236,10 +240,16 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
             let p = NSPointFromString(s)
             if p != .zero { return p }
         }
-        // First run: stack them down the left, the way a fresh Dashboard laid its defaults out.
+        // No stored position: drop it near the middle, nudged per widget so several do not land
+        // exactly on top of each other. The first version stepped 200pt down per catalogue entry,
+        // which put anything past the fourth below the bottom of the screen — the reason Search
+        // and the CPU monitor could be added and then not be anywhere.
         let index = Self.catalogue.firstIndex { $0.id == w.id } ?? 0
-        return NSPoint(x: 90 + CGFloat(index % 2) * 300,
-                       y: screen.frame.height - 160 - CGFloat(index) * 200)
+        let step = CGFloat(index) * 34
+        let x = screen.frame.width / 2 - w.size.width / 2 - 140 + step
+        let y = screen.frame.height / 2 - w.size.height / 2 + 120 - step
+        return NSPoint(x: min(max(x, 20), screen.frame.width - w.size.width - 20),
+                       y: min(max(y, 110), screen.frame.height - w.size.height - 40))
     }
 
     /// Injected before the page runs: preferences, the setter, the chrome strip for widgets that
@@ -262,8 +272,7 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
             + 'html,body{background:transparent!important}'
             + '.be-win,#win,.window{border:none!important;box-shadow:none!important;'
             + 'background:transparent!important;overflow:visible!important}'
-            + '.body,.be-mid,.be-content{background:transparent!important;border:none!important;'
-            + 'box-shadow:none!important}';
+            + '\(w.transparentBody ? ".body,.be-mid,.be-content{background:transparent!important;border:none!important;box-shadow:none!important}" : "")';
           document.head.appendChild(s);
         });
         """ : ""
