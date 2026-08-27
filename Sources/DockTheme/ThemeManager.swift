@@ -400,6 +400,13 @@ final class ThemeManager {
                let tiled = tiledWallpaperURL(tile: wpURL, for: screen, themeName: theme.name) {
                 finalURL = tiled
             }
+            // Menu-bar tint: paint the strip into the copy that actually gets set. Skipped when
+            // the menu bar is hidden (the Windows themes do that), where a grey band across the
+            // top of the wallpaper would just be a grey band.
+            if AppSettings.shared.menuBarTint, !AppSettings.shared.hideMenuBar,
+               let tinted = tintedWallpaperURL(source: finalURL, for: screen, themeName: theme.name) {
+                finalURL = tinted
+            }
             let screenKey = screenKey(for: screen)
             // Only capture the ORIGINAL once, and never capture one of OUR OWN wallpapers as the
             // "original" — not just the exact file we are about to set, but any theme file or
@@ -431,6 +438,60 @@ final class ThemeManager {
 
     /// Renders a small pattern tile edge-to-edge at the screen's pixel size (1 tile pixel
     /// = 1 point, crisp nearest-neighbour) and caches the PNG in Application Support.
+    /// The height of `screen`'s menu bar, or 0 when it is not showing (auto-hidden, or a
+    /// secondary display without one).
+    private func menuBarHeight(of screen: NSScreen) -> CGFloat {
+        let inset = screen.frame.maxY - screen.visibleFrame.maxY
+        return inset > 1 ? inset : 0
+    }
+
+    /// A copy of `source`, rendered to this screen's pixel size with a solid strip painted across
+    /// the top where the menu bar sits.
+    ///
+    /// macOS offers no way to colour the menu bar — it draws it itself. But it is translucent
+    /// over the desktop picture, so tinting what is behind it is the one lever there is. The
+    /// alternative would be Accessibility's "Reduce transparency", which is a system-wide setting
+    /// affecting every window, not a cosmetic per-theme one.
+    ///
+    /// Only the backdrop changes; the menu text and items stay modern.
+    private func tintedWallpaperURL(source: URL, for screen: NSScreen, themeName: String) -> URL? {
+        let barH = menuBarHeight(of: screen)
+        guard barH > 0, let img = NSImage(contentsOf: source) else { return nil }
+        let scale = screen.backingScaleFactor
+        let pxW = Int(screen.frame.width * scale), pxH = Int(screen.frame.height * scale)
+        guard pxW > 0, pxH > 0 else { return nil }
+        let stripPx = barH * scale
+
+        let dir = Self.tiledWallpaperDir
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let safe = themeName.replacingOccurrences(of: " ", with: "-")
+        let out = dir.appendingPathComponent(
+            "\(safe)-\(source.deletingPathExtension().lastPathComponent)-menubar\(Int(barH))-\(pxW)x\(pxH).png")
+        if FileManager.default.fileExists(atPath: out.path) { return out }
+
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pxW, pixelsHigh: pxH,
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+                                         isPlanar: false, colorSpaceName: .deviceRGB,
+                                         bytesPerRow: 0, bitsPerPixel: 0),
+              let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = ctx
+        ctx.imageInterpolation = .high
+        img.draw(in: NSRect(x: 0, y: 0, width: CGFloat(pxW), height: CGFloat(pxH)))
+        // Unflipped context: the menu bar is at the TOP, i.e. the high-y end.
+        let strip = NSRect(x: 0, y: CGFloat(pxH) - stripPx, width: CGFloat(pxW), height: stripPx)
+        NSGradient(colors: [NSColor(srgbRed: 0.863, green: 0.863, blue: 0.863, alpha: 1),
+                            NSColor(srgbRed: 0.965, green: 0.965, blue: 0.965, alpha: 1)])?
+            .draw(in: strip, angle: 90)
+        NSColor(srgbRed: 0.627, green: 0.627, blue: 0.627, alpha: 1).setFill()
+        NSRect(x: 0, y: strip.minY, width: CGFloat(pxW), height: max(1, scale)).fill()
+        NSGraphicsContext.restoreGraphicsState()
+
+        guard let png = rep.representation(using: .png, properties: [:]),
+              (try? png.write(to: out)) != nil else { return nil }
+        return out
+    }
+
     private func tiledWallpaperURL(tile: URL, for screen: NSScreen, themeName: String) -> URL? {
         guard let tileImg = NSImage(contentsOf: tile) else { return nil }
         let scale = screen.backingScaleFactor

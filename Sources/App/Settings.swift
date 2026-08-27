@@ -482,6 +482,12 @@ final class AppSettings: ObservableObject {
     @Published var win98Scheme: String {
         didSet { defaults.set(win98Scheme, forKey: "win98Scheme") }
     }
+    /// Paint a solid strip of menu-bar height into the top of the theme wallpaper. macOS gives
+    /// no way to colour the menu bar, but it is translucent over the desktop picture — and the
+    /// wallpaper is something RetroMac already owns and pre-renders per screen.
+    @Published var menuBarTint: Bool {
+        didSet { defaults.set(menuBarTint, forKey: "menuBarTint") }
+    }
     @Published var hideMenuBar: Bool {
         didSet {
             defaults.set(hideMenuBar, forKey: "hideMenuBar")
@@ -960,6 +966,7 @@ final class AppSettings: ObservableObject {
         themeWindowBorders = defaults.bool(forKey: "themeWindowBorders")
         win98Scheme = defaults.string(forKey: "win98Scheme") ?? ""
         hideMenuBar = defaults.bool(forKey: "hideMenuBar")
+        menuBarTint = defaults.bool(forKey: "menuBarTint")
         // Menu-bar Apple style (migrate the legacy menuBarRainbowApple bool: true → rainbow).
         if let style = defaults.object(forKey: "menuBarAppleStyle") as? Int {
             menuBarAppleStyle = style
