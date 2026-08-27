@@ -34,6 +34,14 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
                size: NSSize(width: 236, height: 160), stripChrome: false),
         Widget(id: "calendar", name: "Calendar", html: "Calendar/Calendar.html",
                size: NSSize(width: 200, height: 250), stripChrome: false),
+        Widget(id: "stickies", name: "Stickies", html: "Stickies/Stickies.html",
+               size: NSSize(width: 220, height: 200), stripChrome: false),
+        Widget(id: "search", name: "Search", html: "Search/Search.html",
+               size: NSSize(width: 324, height: 40), stripChrome: false),
+        // The CPU widget renders its content at SCALE 0.6, so its desktop panel is 560 wide for
+        // what lands as roughly 336 points on screen. Sized to the drawn result, not the page.
+        Widget(id: "cpu", name: "CPU", html: "CPUMonitor/CPUMonitor.html",
+               size: NSSize(width: 560, height: 220), stripChrome: true),
     ]
 
     private var windows: [NSWindow] = []
@@ -287,6 +295,13 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
             var p = prefs
             p[k] = v
             prefs = p
+        case "open":
+            // Only http(s), and only from our own bundled pages — a widget should not be able to
+            // hand the system an arbitrary scheme to launch.
+            guard let str = d["url"] as? String, let u = URL(string: str),
+                  u.scheme == "https" || u.scheme == "http" else { return }
+            hide()
+            NSWorkspace.shared.open(u)
         default: break
         }
     }

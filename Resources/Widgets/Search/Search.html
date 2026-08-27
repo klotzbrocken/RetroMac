@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Search</title>
+<style>
+  /* The Dashboard Google widget was a flat pill: logo on the left, a rounded field on the right.
+     Measured from the reference — 322x36, corner radius half its height, a white-to-#BCBCBC ramp. */
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;
+    font:13px "Lucida Grande",-apple-system,sans-serif;-webkit-user-select:none;cursor:default;}
+  .pill{display:flex;align-items:center;gap:9px;
+    width:322px;height:36px;box-sizing:border-box;padding:0 9px 0 11px;
+    border-radius:18px;
+    background:linear-gradient(180deg,#ffffff,#f2f1f2 40%,#d6d6d6 72%,#bcbcbc);
+    box-shadow:0 3px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.95);
+    border:1px solid rgba(0,0,0,.38);}
+  .logo{height:19px;flex:0 0 auto;}
+  /* The field is inset into the pill: a white bed with a blue rim, the way the original looked. */
+  .field{flex:1 1 auto;display:flex;align-items:center;gap:5px;height:22px;
+    background:linear-gradient(180deg,#e1ebf6,#ffffff 45%);
+    border:1px solid #7b9fc4;border-radius:11px;padding:0 9px 0 8px;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.16);}
+  .mag{width:12px;height:12px;flex:0 0 12px;opacity:.72;}
+  input{flex:1 1 auto;border:none;outline:none;background:transparent;
+    font:12px "Lucida Grande",-apple-system,sans-serif;color:#111;min-width:0;}
+  input::placeholder{color:#9aa3ad;}
+</style>
+</head>
+<body>
+<div class="pill">
+  <img class="logo" src="google.png" alt="Google" draggable="false">
+  <div class="field">
+    <svg class="mag" viewBox="0 0 16 16">
+      <circle cx="6.6" cy="6.6" r="4.4" fill="none" stroke="#4a5a6a" stroke-width="1.8"/>
+      <path d="M10 10l4.4 4.4" stroke="#4a5a6a" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <input id="q" type="text" placeholder="" autocomplete="off" spellcheck="false">
+  </div>
+</div>
+<script>
+(function(){
+  var q = document.getElementById('q');
+  q.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter') return;
+    var term = q.value.trim();
+    if (!term) return;
+    // Opened in the real browser rather than shown inline. The original listed results in the
+    // widget through a Google API that has not existed for years; the only way to do that today
+    // would be scraping the results page, which breaks their terms and breaks on any redesign.
+    var url = 'https://www.google.com/search?q=' + encodeURIComponent(term);
+    try { window.webkit.messageHandlers.dashboard.postMessage({a:'open', url:url}); }
+    catch(err) { window.open(url, '_blank'); }
+    q.value = '';
+    q.blur();
+  });
+  // The field is where you type, so it should not also start a widget drag.
+  q.setAttribute('data-nodrag', '');
+})();
+</script>
+</body>
+</html>

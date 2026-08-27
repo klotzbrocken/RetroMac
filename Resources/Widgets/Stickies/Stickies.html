@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Stickies</title>
+<style>
+  /* Dashboard's Stickies: a torn note you type straight onto, with the paper colour picked on
+     the back. Self-contained — no fonts, images, scripts or network. */
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;
+    font:13px "Marker Felt","Comic Sans MS","Lucida Grande",sans-serif;
+    -webkit-user-select:none;cursor:default;}
+  .card{position:relative;width:220px;height:200px;overflow:hidden;
+    box-shadow:0 6px 14px rgba(0,0,0,.42);
+    /* A hand-torn look: a slightly irregular edge rather than a rounded rectangle. */
+    clip-path:polygon(0 2%,3% 0,97% 1%,100% 3%,99.4% 97%,97% 100%,3% 99%,0.4% 96%);}
+  .face{position:absolute;inset:0;box-sizing:border-box;padding:12px 13px;
+    transition:transform .45s ease;backface-visibility:hidden;}
+  .back{transform:rotateY(180deg);background:#efefe6;}
+  .card.flipped .front{transform:rotateY(-180deg);}
+  .card.flipped .back{transform:rotateY(0);}
+  /* The paper itself, with the faint darker band along the top the real note had. */
+  .front{background:linear-gradient(180deg,rgba(0,0,0,.05) 0 14px,rgba(0,0,0,0) 14px);}
+  textarea{width:100%;height:100%;box-sizing:border-box;border:none;outline:none;resize:none;
+    background:transparent;color:#3a3327;line-height:1.42;
+    font:15px/1.42 "Marker Felt","Comic Sans MS","Lucida Grande",sans-serif;
+    -webkit-user-select:text;cursor:text;}
+  textarea::placeholder{color:rgba(0,0,0,.28);}
+  .info{position:absolute;right:8px;bottom:7px;width:15px;height:15px;border-radius:50%;
+    background:rgba(0,0,0,.16);border:1px solid rgba(0,0,0,.25);color:rgba(0,0,0,.6);
+    font:italic 700 10px Georgia,serif;line-height:14px;text-align:center;cursor:pointer;
+    opacity:0;transition:opacity .2s;}
+  .card:hover .info{opacity:1;}
+  .back h3{margin:0 0 9px;font:600 12px "Lucida Grande",sans-serif;color:#4a4a44;}
+  .swatches{display:flex;flex-wrap:wrap;gap:8px;}
+  .sw{width:34px;height:26px;border-radius:4px;border:1px solid rgba(0,0,0,.28);cursor:pointer;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.6);}
+  .sw.on{outline:2px solid #4a90d9;outline-offset:1px;}
+  .hint{margin-top:12px;font:11px "Lucida Grande",sans-serif;color:#7a7a72;line-height:1.4;}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="face front" id="front">
+    <textarea id="note" placeholder="Note" data-nodrag></textarea>
+    <div class="info" id="flip">i</div>
+  </div>
+  <div class="face back">
+    <h3>Paper</h3>
+    <div class="swatches" id="swatches"></div>
+    <div class="hint">Notes are kept with your other RetroMac settings, not in this window.</div>
+    <div class="info" id="flipBack">i</div>
+  </div>
+</div>
+<script>
+(function(){
+  // Preferences go through the host: the Dashboard's web views use a non-persistent data store,
+  // so anything left in localStorage would be gone at quit.
+  var prefs = window.dashPrefs || {};
+  function setPref(k, v){ try { window.dashSetPref && window.dashSetPref(k, v); } catch(e){} prefs[k] = v; }
+
+  var PAPERS = [
+    ['yellow', '#f8e77f'], ['blue', '#bfe0f5'], ['green', '#cfeaa8'],
+    ['pink',   '#f6c6d8'], ['grey', '#e2e2df'], ['white', '#fbfbf6']
+  ];
+
+  var card  = document.getElementById('card');
+  var front = document.getElementById('front');
+  var note  = document.getElementById('note');
+  var sw    = document.getElementById('swatches');
+
+  function paint(){
+    var found = PAPERS.filter(function(p){ return p[0] === prefs.stickyPaper; })[0] || PAPERS[0];
+    front.style.backgroundColor = found[1];
+    [].forEach.call(sw.children, function(el){
+      el.classList.toggle('on', el.dataset.paper === found[0]);
+    });
+  }
+
+  PAPERS.forEach(function(p){
+    var el = document.createElement('div');
+    el.className = 'sw';
+    el.dataset.paper = p[0];
+    el.style.background = p[1];
+    el.onclick = function(){ setPref('stickyPaper', p[0]); paint(); };
+    sw.appendChild(el);
+  });
+
+  document.getElementById('flip').onclick = function(){ card.classList.add('flipped'); };
+  document.getElementById('flipBack').onclick = function(){
+    card.classList.remove('flipped');
+    setTimeout(function(){ note.focus(); }, 300);
+  };
+
+  note.value = prefs.stickyText || '';
+  var pending;
+  note.addEventListener('input', function(){
+    // Debounced: a defaults write per keystroke would be silly.
+    clearTimeout(pending);
+    pending = setTimeout(function(){ setPref('stickyText', note.value); }, 400);
+  });
+  note.addEventListener('blur', function(){ clearTimeout(pending); setPref('stickyText', note.value); });
+
+  window.dashPrefsChanged = function(p){
+    prefs = p || {};
+    if (document.activeElement !== note) note.value = prefs.stickyText || '';
+    paint();
+  };
+  paint();
+})();
+</script>
+</body>
+</html>
