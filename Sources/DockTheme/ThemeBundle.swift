@@ -144,7 +144,16 @@ final class ThemeBundle {
     }
 
     func iconURL(for bundleID: String) -> URL? {
-        return iconResource(config.iconMappings[bundleID])
+        if let direct = iconResource(config.iconMappings[bundleID]) { return direct }
+        // Folder items in the dock carry a synthetic id built from an absolute path
+        // ("__folder__/Users/maik/Downloads"), which a shipped theme cannot know. Retry with
+        // the home directory folded to "~" so a manifest can write "__folder__~/Downloads".
+        let prefix = "__folder__"
+        guard bundleID.hasPrefix(prefix) else { return nil }
+        let path = String(bundleID.dropFirst(prefix.count))
+        let home = NSHomeDirectory()
+        guard path.hasPrefix(home) else { return nil }
+        return iconResource(config.iconMappings[prefix + "~" + path.dropFirst(home.count)])
     }
 
     func fallbackIconURL() -> URL? {

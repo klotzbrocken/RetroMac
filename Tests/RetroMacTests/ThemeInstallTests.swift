@@ -96,3 +96,50 @@ final class ThemeInstallTests: XCTestCase {
         XCTAssertTrue(stagingLeftovers.isEmpty)
     }
 }
+
+/// Dock folder items carry a synthetic id built from an absolute path, so a shipped theme cannot
+/// name the user's Downloads directly. `iconURL(for:)` folds the home directory to "~" — a
+/// silent-no-op risk worth pinning, since a miss just falls back to the system folder icon.
+final class FolderIconMappingTests: XCTestCase {
+
+    /// The repo's shipped themes — `Bundle.main` points at the test runner, not the app.
+    private var themesDir: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Resources/Themes")
+    }
+
+    private func snowLeopard() throws -> ThemeBundle {
+        try ThemeBundle(url: themesDir.appendingPathComponent("MacOSX-SnowLeopard.retromactheme"),
+                        isBuiltIn: true)
+    }
+
+    func testDownloadsFolderResolvesThroughTheTildeForm() throws {
+        let theme = try snowLeopard()
+        let id = "__folder__" + NSHomeDirectory() + "/Downloads"
+        let url = try XCTUnwrap(theme.iconURL(for: id), "the Downloads folder mapping did not resolve")
+        XCTAssertEqual(url.lastPathComponent, "downloads.png")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+    }
+
+    func testAnUnmappedFolderStillReturnsNil() throws {
+        let theme = try snowLeopard()
+        XCTAssertNil(theme.iconURL(for: "__folder__" + NSHomeDirectory() + "/Music"))
+    }
+
+    /// Only paths inside the home directory fold; anything else must not be rewritten.
+    func testFolderOutsideHomeIsNotFolded() throws {
+        let theme = try snowLeopard()
+        XCTAssertNil(theme.iconURL(for: "__folder__/Volumes/Extern/Downloads"))
+    }
+
+    func testTheNewAppMappingsPointAtFilesThatExist() throws {
+        let theme = try snowLeopard()
+        for id in ["com.google.Chrome", "com.apple.iWork.Numbers", "com.apple.iWork.Pages",
+                   "com.apple.iWork.Keynote", "com.anthropic.claudefordesktop",
+                   "com.openai.chat", "com.openai.codex"] {
+            let url = try XCTUnwrap(theme.iconURL(for: id), "\(id) is not mapped")
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), "\(id) -> missing file")
+        }
+    }
+}

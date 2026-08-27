@@ -1142,6 +1142,13 @@ final class DockView: NSView {
     }
 
     private func folderIcon(path: String, size: CGFloat) -> NSImage {
+        // Theme-mapped folder art. iconMappings is keyed by the dock's synthetic folder id, so
+        // a manifest can name any folder — see ThemeBundle.iconURL(for:) for the "~" folding.
+        if let url = ThemeManager.shared.activeTheme?.iconURL(for: "__folder__" + path),
+           let img = NSImage(contentsOf: url) {
+            img.size = NSSize(width: size, height: size)
+            return img
+        }
         // Themed Downloads icon (e.g. Maiks Favourite's retro folder.icns), shown crisp.
         if let downloads = try? FileManager.default.url(for: .downloadsDirectory, in: .userDomainMask, appropriateFor: nil, create: false),
            URL(fileURLWithPath: path).standardizedFileURL == downloads.standardizedFileURL,
