@@ -420,7 +420,14 @@ final class DockView: NSView {
         startButtonImages = nil
         diskFreeFrame = .zero
 
-        let apps = AppManager.shared.apps
+        let allApps = AppManager.shared.apps
+        // Folder stacks (Downloads, Applications) belong in the right-hand section beside the
+        // trash, the way macOS groups them, rather than sitting among the pinned apps. Layouts
+        // with no right-hand section — the Control Strip, the Windows taskbars — have no trash
+        // either, so there `stacks` is empty and everything stays inline as before.
+        let stacksOnRight = hasTrash && !isControlStrip
+        let stacks = stacksOnRight ? allApps.filter { $0.isFolder } : []
+        let apps = stacksOnRight ? allApps.filter { !$0.isFolder } : allApps
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         let scale = CGFloat(AppSettings.shared.dockIconScale) * dynamicScale
         let iconSize = theme.dock.iconSize * scale
@@ -456,6 +463,12 @@ final class DockView: NSView {
             }
             if hasUrlLauncher || hasTrash || hasDoomLauncher {
                 y -= spacing
+                for app in stacks {
+                    addItem(bundleID: app.bundleID,
+                            frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                            theme: theme, iconSize: iconSize)
+                    y -= iconSize + spacing
+                }
                 if hasUrlLauncher {
                     addURLLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                                        theme: theme, iconSize: iconSize)
@@ -747,6 +760,12 @@ final class DockView: NSView {
                     trashSeparatorX = x - spacing / 2
                     x += spacing
                     let y = (barRect.height - iconSize) / 2
+                    for app in stacks {
+                        addItem(bundleID: app.bundleID,
+                                frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                theme: theme, iconSize: iconSize)
+                        x += iconSize + spacing
+                    }
                     if hasUrlLauncher {
                         addURLLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                                            theme: theme, iconSize: iconSize)
@@ -772,11 +791,19 @@ final class DockView: NSView {
     }
 
     func relayoutItems() {
-        let apps = AppManager.shared.apps
+        let allApps = AppManager.shared.apps
+        // Folder stacks (Downloads, Applications) belong in the right-hand section beside the
+        // trash, the way macOS groups them, rather than sitting among the pinned apps. Layouts
+        // with no right-hand section — the Control Strip, the Windows taskbars — have no trash
+        // either, so there `stacks` is empty and everything stays inline as before.
+        let stacksOnRight = hasTrash && !isControlStrip
+        let stacks = stacksOnRight ? allApps.filter { $0.isFolder } : []
+        let apps = stacksOnRight ? allApps.filter { !$0.isFolder } : allApps
         let transientApps = runningAppsNotInDock()
         var currentIDs = apps.map { $0.bundleID }
         if hasShowDesktop { currentIDs.append("__showdesktop__") }
         currentIDs += transientApps
+        currentIDs += stacks.map { $0.bundleID }
         if hasUrlLauncher && !isControlStrip { currentIDs.append("__urllauncher__") }
         if hasTrash && !isControlStrip { currentIDs.append("__trash__") }
         if hasDoomLauncher && !isControlStrip { currentIDs.append("__doomlauncher__") }
@@ -820,6 +847,13 @@ final class DockView: NSView {
                     idx += 1
                     y -= iconSize + spacing
                 }
+            }
+            for _ in stacks {
+                guard idx < itemViews.count else { break }
+                y -= spacing
+                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                idx += 1
+                y -= iconSize
             }
             // Trash icon (always the last item) at the bottom of the stack.
             if hasUrlLauncher, idx < itemViews.count {
@@ -1070,6 +1104,12 @@ final class DockView: NSView {
                 trashSeparatorX = x - spacing / 2
                 x += spacing
                 let y = (barRect.height - iconSize) / 2
+                for _ in stacks {
+                    guard idx < itemViews.count else { break }
+                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                    idx += 1
+                    x += iconSize + spacing
+                }
                 if hasUrlLauncher, idx < itemViews.count {
                     itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                     idx += 1
