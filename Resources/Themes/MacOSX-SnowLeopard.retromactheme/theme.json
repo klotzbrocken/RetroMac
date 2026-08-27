@@ -107,6 +107,13 @@
       "type": "screensaver",
       "gridX": 0,
       "gridY": 4
+    },
+    {
+      "name": "Dashboard",
+      "icon": "dashboard.png",
+      "type": "dashboard",
+      "gridX": 0,
+      "gridY": 5
     }
   ],
   "wallpaper": "wallpaper.jpg",

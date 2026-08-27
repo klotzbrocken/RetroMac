@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Weather</title>
+<style>
+  /* Dashboard widgets carry no window chrome — they are free-floating shapes on the layer.
+     Everything here is self-contained: no fonts, images or scripts are fetched. */
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;
+    font:13px "Lucida Grande",-apple-system,sans-serif;-webkit-user-select:none;cursor:default;}
+  .card{position:relative;width:236px;height:160px;border-radius:16px;overflow:hidden;
+    background:linear-gradient(180deg,#4a90d9,#1d5fa8 55%,#17457a);
+    box-shadow:0 6px 16px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.35);
+    color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.45);}
+  .face{position:absolute;inset:0;padding:12px 14px;box-sizing:border-box;
+    display:flex;flex-direction:column;
+    transition:transform .45s ease;backface-visibility:hidden;}
+  .back{transform:rotateY(180deg);background:linear-gradient(180deg,#2c2c2c,#151515);}
+  .card.flipped .front{transform:rotateY(-180deg);}
+  .card.flipped .back{transform:rotateY(0);}
+  .city{font-size:12px;opacity:.9;letter-spacing:.02em;}
+  .now{display:flex;align-items:center;gap:10px;margin-top:2px;}
+  .temp{font-size:40px;font-weight:300;line-height:1;}
+  .cond{font-size:12px;opacity:.92;margin-top:1px;}
+  .hl{font-size:11px;opacity:.85;margin-top:auto;}
+  /* Right padding keeps the last day clear of the info button in the corner. */
+  .days{display:flex;justify-content:space-between;margin-top:6px;padding-right:18px;}
+  .day{text-align:center;font-size:10px;opacity:.9;width:30px;}
+  .day b{display:block;font-weight:500;font-size:10px;opacity:.75;margin-bottom:2px;}
+  .glyph{width:44px;height:44px;flex:0 0 44px;}
+  .mini{width:20px;height:20px;display:block;margin:0 auto;}
+  /* The little "i" that flips the widget over, exactly where Dashboard put it. */
+  .info{position:absolute;right:8px;bottom:8px;width:15px;height:15px;border-radius:50%;
+    background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.45);
+    font:italic 700 10px Georgia,serif;line-height:14px;text-align:center;cursor:pointer;
+    opacity:0;transition:opacity .2s;}
+  .card:hover .info{opacity:1;}
+  .back .info{background:rgba(255,255,255,.18);}
+  .back label{display:block;font-size:11px;opacity:.8;margin-bottom:4px;}
+  .back input{width:100%;box-sizing:border-box;font:12px "Lucida Grande",sans-serif;
+    padding:5px 7px;border-radius:5px;border:1px solid #000;background:#fff;color:#000;}
+  .hits{margin-top:6px;max-height:70px;overflow:auto;}
+  .hit{padding:3px 6px;border-radius:4px;font-size:11px;cursor:pointer;}
+  .hit:hover{background:rgba(255,255,255,.16);}
+  .note{font-size:10px;opacity:.55;margin-top:6px;}
+  .err{font-size:11px;opacity:.85;margin-top:auto;}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="face front">
+    <div class="city" id="city">—</div>
+    <div class="now">
+      <svg class="glyph" id="glyph" viewBox="0 0 64 64"></svg>
+      <div>
+        <div class="temp" id="temp">--°</div>
+        <div class="cond" id="cond"></div>
+      </div>
+    </div>
+    <div class="hl" id="hl"></div>
+    <div class="days" id="days"></div>
+    <div class="info" id="flip">i</div>
+  </div>
+  <div class="face back">
+    <label>City</label>
+    <input id="q" placeholder="Type a city and press Return" autocomplete="off">
+    <div class="hits" id="hits"></div>
+    <div class="note">Weather by Open-Meteo</div>
+    <div class="info" id="flipBack">i</div>
+  </div>
+</div>
+<script>
+(function(){
+  // Preferences live on the Swift side (the Dashboard web views use a non-persistent data
+  // store, so localStorage would not survive a quit). The host injects `dashPrefs` and
+  // provides `dashSetPref`; standalone in a browser both are simply absent.
+  var prefs = window.dashPrefs || {};
+  function setPref(k, v){ try { window.dashSetPref && window.dashSetPref(k, v); } catch(e){} prefs[k] = v; }
+
+  var card = document.getElementById('card');
+  document.getElementById('flip').onclick = function(){ card.classList.add('flipped');
+    setTimeout(function(){ document.getElementById('q').focus(); }, 300); };
+  document.getElementById('flipBack').onclick = function(){ card.classList.remove('flipped'); };
+
+  // WMO weather codes, grouped the way the forecast actually differs.
+  function describe(c){
+    if (c === 0) return ['Clear', 'sun'];
+    if (c <= 2)  return ['Partly Cloudy', 'partly'];
+    if (c === 3) return ['Cloudy', 'cloud'];
+    if (c <= 48) return ['Fog', 'fog'];
+    if (c <= 57) return ['Drizzle', 'rain'];
+    if (c <= 67) return ['Rain', 'rain'];
+    if (c <= 77) return ['Snow', 'snow'];
+    if (c <= 82) return ['Showers', 'rain'];
+    if (c <= 86) return ['Snow Showers', 'snow'];
+    return ['Thunderstorm', 'storm'];
+  }
+  // Drawn as SVG rather than shipped as images: no assets to load, scales cleanly.
+  function glyph(kind, size){
+    var s = '';
+    var sun = '<circle cx="24" cy="22" r="11" fill="#ffd45e" stroke="#e8a900" stroke-width="2"/>';
+    var cloud = '<path d="M18 44h26a9 9 0 0 0 0-18 13 13 0 0 0-25-3 8 8 0 0 0-1 21z" '
+              + 'fill="#f2f6fa" stroke="#c3d0dd" stroke-width="2"/>';
+    if (kind === 'sun')     s = '<circle cx="32" cy="32" r="14" fill="#ffd45e" stroke="#e8a900" stroke-width="2"/>';
+    if (kind === 'partly')  s = sun + cloud;
+    if (kind === 'cloud')   s = cloud;
+    if (kind === 'fog')     s = cloud + '<g stroke="#dbe4ec" stroke-width="3" stroke-linecap="round">'
+                              + '<path d="M14 52h36"/><path d="M20 58h24"/></g>';
+    if (kind === 'rain')    s = cloud + '<g stroke="#8ecbff" stroke-width="3" stroke-linecap="round">'
+                              + '<path d="M22 50l-3 8"/><path d="M32 50l-3 8"/><path d="M42 50l-3 8"/></g>';
+    if (kind === 'snow')    s = cloud + '<g fill="#eaf6ff">'
+                              + '<circle cx="21" cy="54" r="3"/><circle cx="32" cy="57" r="3"/><circle cx="43" cy="54" r="3"/></g>';
+    if (kind === 'storm')   s = cloud + '<path d="M30 48l-6 11h7l-4 9 13-14h-7l5-6z" fill="#ffd45e" stroke="#e8a900" stroke-width="1.5"/>';
+    return s;
+  }
+
+  function render(data, name){
+    document.getElementById('city').textContent = name;
+    var cur = data.current, day = data.daily;
+    var d = describe(cur.weather_code);
+    document.getElementById('temp').textContent = Math.round(cur.temperature_2m) + '°';
+    document.getElementById('cond').textContent = d[0];
+    document.getElementById('glyph').innerHTML = glyph(d[1]);
+    document.getElementById('hl').textContent =
+      'H ' + Math.round(day.temperature_2m_max[0]) + '°   L ' + Math.round(day.temperature_2m_min[0]) + '°';
+    var names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], out = '';
+    for (var i = 1; i < Math.min(5, day.time.length); i++){
+      var wd = names[new Date(day.time[i] + 'T12:00:00').getDay()];
+      out += '<div class="day"><b>' + wd + '</b>'
+           + '<svg class="mini" viewBox="0 0 64 64">' + glyph(describe(day.weather_code[i])[1]) + '</svg>'
+           + Math.round(day.temperature_2m_max[i]) + '°</div>';
+    }
+    document.getElementById('days').innerHTML = out;
+  }
+
+  function fail(msg){
+    document.getElementById('cond').textContent = '';
+    document.getElementById('hl').innerHTML = '<div class="err">' + msg + '</div>';
+  }
+
+  function load(){
+    var lat = prefs.wxLat, lon = prefs.wxLon, name = prefs.wxCity;
+    if (lat === undefined || lon === undefined){
+      document.getElementById('city').textContent = 'Pick a city';
+      fail('Click the i to choose one.');
+      return;
+    }
+    var u = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon
+          + '&current=temperature_2m,weather_code'
+          + '&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto'
+          + '&temperature_unit=' + (prefs.wxUnit === 'f' ? 'fahrenheit' : 'celsius');
+    fetch(u).then(function(r){ return r.json(); })
+      .then(function(d){ render(d, name || ''); })
+      .catch(function(){ fail('No connection.'); });
+  }
+
+  var q = document.getElementById('q'), hits = document.getElementById('hits');
+  q.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' || !q.value.trim()) return;
+    fetch('https://geocoding-api.open-meteo.com/v1/search?count=6&name=' + encodeURIComponent(q.value.trim()))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var rs = d.results || [];
+        if (!rs.length){ hits.innerHTML = '<div class="note">Nothing found.</div>'; return; }
+        hits.innerHTML = '';
+        rs.forEach(function(r){
+          var el = document.createElement('div');
+          el.className = 'hit';
+          el.textContent = r.name + (r.admin1 ? ', ' + r.admin1 : '') + ' — ' + r.country_code;
+          el.onclick = function(){
+            setPref('wxLat', r.latitude); setPref('wxLon', r.longitude); setPref('wxCity', r.name);
+            card.classList.remove('flipped');
+            load();
+          };
+          hits.appendChild(el);
+        });
+      })
+      .catch(function(){ hits.innerHTML = '<div class="note">No connection.</div>'; });
+  });
+
+  window.dashPrefsChanged = function(p){ prefs = p || {}; load(); };
+  load();
+  setInterval(load, 15 * 60 * 1000);   // the original refreshed on this sort of cadence
+})();
+</script>
+</body>
+</html>

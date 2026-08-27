@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Calendar</title>
+<style>
+  /* Dashboard widgets carry no window chrome. Self-contained: no fonts, images, scripts or
+     network access — the month grid is pure arithmetic. */
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;
+    font:12px "Lucida Grande",-apple-system,sans-serif;-webkit-user-select:none;cursor:default;}
+  .card{width:200px;border-radius:14px;overflow:hidden;
+    background:#f4f4f4;color:#222;
+    box-shadow:0 6px 16px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.9);
+    border:1px solid rgba(0,0,0,.35);}
+  /* The torn-off page: a deep red header with the weekday, the way the iCal widget looked. */
+  .head{background:linear-gradient(180deg,#d5493f,#a8241c 60%,#8d1a13);color:#fff;
+    text-align:center;padding:5px 0 4px;text-shadow:0 1px 1px rgba(0,0,0,.4);
+    border-bottom:1px solid #6d120c;}
+  .wd{font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.95;}
+  .dd{font-size:38px;line-height:1;font-weight:300;margin:1px 0 2px;}
+  .mo{font-size:11px;opacity:.95;}
+  .grid{padding:7px 8px 9px;}
+  .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+  .nav span{font-size:11px;font-weight:600;color:#444;}
+  .nav button{border:none;background:none;font:600 13px "Lucida Grande",sans-serif;color:#888;
+    cursor:pointer;padding:0 5px;line-height:1;}
+  .nav button:hover{color:#333;}
+  table{border-collapse:collapse;width:100%;}
+  th{font-size:9px;font-weight:600;color:#8a8a8a;padding-bottom:3px;text-transform:uppercase;}
+  td{text-align:center;font-size:11px;color:#333;padding:2px 0;width:14.28%;}
+  td.dim{color:#bcbcbc;}
+  td.today span{display:inline-block;min-width:17px;padding:1px 0;border-radius:9px;
+    background:linear-gradient(180deg,#d5493f,#a8241c);color:#fff;font-weight:600;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35);}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <div class="wd" id="wd">—</div>
+    <div class="dd" id="dd">—</div>
+    <div class="mo" id="mo">—</div>
+  </div>
+  <div class="grid">
+    <div class="nav"><button id="prev">&#9664;</button><span id="label"></span><button id="next">&#9654;</button></div>
+    <table><thead><tr id="wds"></tr></thead><tbody id="body"></tbody></table>
+  </div>
+</div>
+<script>
+(function(){
+  var WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var MO = ['January','February','March','April','May','June',
+            'July','August','September','October','November','December'];
+  var shown = new Date(), today = new Date();
+
+  document.getElementById('wds').innerHTML = WD.map(function(d){ return '<th>' + d[0] + '</th>'; }).join('');
+
+  function sameDay(a, b){
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function draw(){
+    today = new Date();
+    document.getElementById('wd').textContent = WD[today.getDay()].toUpperCase();
+    document.getElementById('dd').textContent = today.getDate();
+    document.getElementById('mo').textContent = MO[today.getMonth()];
+    document.getElementById('label').textContent = MO[shown.getMonth()] + ' ' + shown.getFullYear();
+
+    var first = new Date(shown.getFullYear(), shown.getMonth(), 1);
+    // Back up to the Sunday on or before the 1st, then run six weeks — a fixed height keeps
+    // the widget from jumping about as you page through months.
+    var cur = new Date(first);
+    cur.setDate(1 - first.getDay());
+    var html = '';
+    for (var w = 0; w < 6; w++){
+      html += '<tr>';
+      for (var d = 0; d < 7; d++){
+        var cls = [];
+        if (cur.getMonth() !== shown.getMonth()) cls.push('dim');
+        if (sameDay(cur, today)) cls.push('today');
+        html += '<td class="' + cls.join(' ') + '"><span>' + cur.getDate() + '</span></td>';
+        cur.setDate(cur.getDate() + 1);
+      }
+      html += '</tr>';
+    }
+    document.getElementById('body').innerHTML = html;
+  }
+
+  document.getElementById('prev').onclick = function(){ shown.setMonth(shown.getMonth() - 1); draw(); };
+  document.getElementById('next').onclick = function(){ shown.setMonth(shown.getMonth() + 1); draw(); };
+
+  draw();
+  // Roll over at midnight without a busy timer.
+  setInterval(function(){ if (!sameDay(new Date(), today)) { shown = new Date(); draw(); } }, 60000);
+})();
+</script>
+</body>
+</html>

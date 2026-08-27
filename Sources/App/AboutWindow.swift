@@ -234,7 +234,7 @@ struct AboutTab: View {
                 }
 
                 Section("Privacy & Offline") {
-                    Text("RetroMac works fully offline — every theme (dock, wallpaper, menu bar, icons, window chrome) is bundled and rendered locally; no constant internet connection is required. The network is only used for a few optional extras: the classic in-window web apps in the Windows themes (loaded on demand; the Hover! game is the one that ships bundled and needs no network), the retro TV browser, the desktop \u{201C}sheep\u{201D} pet sprites (fetched once, then cached), and checking for app updates. RetroMac does not track you or send personal data.")
+                    Text("RetroMac works fully offline — every theme (dock, wallpaper, menu bar, icons, window chrome) is bundled and rendered locally; no constant internet connection is required. The network is only used for a few optional extras: the classic in-window web apps in the Windows themes (loaded on demand; the Hover! game is the one that ships bundled and needs no network), the retro TV browser, the Dashboard weather widget (only once you pick a city), the desktop \u{201C}sheep\u{201D} pet sprites (fetched once, then cached), and checking for app updates. RetroMac does not track you or send personal data.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -402,6 +402,13 @@ struct AboutTab: View {
                          destination: URL(string: "https://github.com/mrdoob/three.js")!)
                         .font(.caption)
                     Text("three.js r61 (MIT) and jQuery 1.10.2 (MIT) — 3D and DOM libraries bundled inside the Hover! game.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("Open-Meteo",
+                         destination: URL(string: "https://open-meteo.com")!)
+                        .font(.caption)
+                    Text("Weather data for the Dashboard widget, free for non-commercial use under CC BY 4.0. No account or API key, and nothing is requested until you choose a city.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

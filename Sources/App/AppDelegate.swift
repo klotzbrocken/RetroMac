@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotKeyRef: EventHotKeyRef?
     private var screenshotHotKeyRef: EventHotKeyRef?
     private var menuBarHotKeyRef: EventHotKeyRef?
+    private var dashboardHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var menuBarHiddenByHotkey = false
     private(set) var currentIntensity: Float!
@@ -1479,6 +1480,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // 4. Dashboard layer (id: 8) — require at least one system modifier
+        if settings.dashboardHotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 8)
+            if RegisterEventHotKey(settings.dashboardHotkeyCode, settings.dashboardHotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                dashboardHotKeyRef = ref
+            }
+        }
+
         // Install event handler (once)
         if eventHandlerRef == nil {
             var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
@@ -1496,6 +1507,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     case 1: DispatchQueue.main.async { d.toggleOverlay() }
                     case 6: DispatchQueue.main.async { d.captureScreenshotWithShader() }
                     case 7: DispatchQueue.main.async { d.toggleMenuBar() }
+                    case 8: DispatchQueue.main.async { DashboardController.shared.toggle() }
                     default: return OSStatus(eventNotHandledErr)
                     }
                     return noErr
@@ -1506,6 +1518,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func unregisterHotkey() {
+        if let ref = dashboardHotKeyRef {
+            UnregisterEventHotKey(ref)
+            dashboardHotKeyRef = nil
+        }
         if let ref = hotKeyRef {
             UnregisterEventHotKey(ref)
             hotKeyRef = nil

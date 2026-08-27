@@ -81,6 +81,10 @@ enum DesktopLauncher {
         case "screensaver":
             ScreensaverController.shared.start()
 
+        case "dashboard":
+            // The Dashboard layer (Mac OS X / Snow Leopard / Mountain Lion).
+            DashboardController.shared.toggle()
+
         case "sheep":
             // sheep.exe: (re)start the desktop sheep — also re-enables it after Quit Sheep.
             AppSettings.shared.desktopPetEnabled = true

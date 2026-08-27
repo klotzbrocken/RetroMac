@@ -770,6 +770,14 @@ final class AppSettings: ObservableObject {
     @Published var screenshotHotkeyModifiers: UInt32 {
         didSet { defaults.set(screenshotHotkeyModifiers, forKey: "screenshotHotkeyModifiers") }
     }
+    /// Ctrl+F12 by default. The original was plain F12, but on a modern Mac that key is usually
+    /// volume, so the default carries a modifier; it is freely rebindable like the others.
+    @Published var dashboardHotkeyCode: UInt32 {
+        didSet { defaults.set(dashboardHotkeyCode, forKey: "dashboardHotkeyCode") }
+    }
+    @Published var dashboardHotkeyModifiers: UInt32 {
+        didSet { defaults.set(dashboardHotkeyModifiers, forKey: "dashboardHotkeyModifiers") }
+    }
     @Published var showHotkeyConflictTips: Bool {
         didSet { defaults.set(showHotkeyConflictTips, forKey: "showHotkeyConflictTips") }
     }
@@ -1076,6 +1084,9 @@ final class AppSettings: ObservableObject {
         menuBarToggleHotkeyModifiers = defaults.object(forKey: "menuBarToggleHotkeyModifiers") as? UInt32 ?? 0
         screenshotHotkeyCode = defaults.object(forKey: "screenshotHotkeyCode") as? UInt32 ?? 0
         screenshotHotkeyModifiers = defaults.object(forKey: "screenshotHotkeyModifiers") as? UInt32 ?? 0
+        // kVK_F12 = 0x6F, controlKey = 0x1000
+        dashboardHotkeyCode = defaults.object(forKey: "dashboardHotkeyCode") as? UInt32 ?? 0x6F
+        dashboardHotkeyModifiers = defaults.object(forKey: "dashboardHotkeyModifiers") as? UInt32 ?? 0x1000
         showHotkeyConflictTips = defaults.object(forKey: "showHotkeyConflictTips") as? Bool ?? true
         showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true   // boot screen on by default (per-theme toggle still applies)
 

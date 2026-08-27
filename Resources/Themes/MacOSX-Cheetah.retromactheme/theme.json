@@ -153,6 +153,13 @@
       "type": "tvfolder",
       "gridX": 0,
       "gridY": 7
+    },
+    {
+      "name": "Dashboard",
+      "icon": "dashboard.png",
+      "type": "dashboard",
+      "gridX": 0,
+      "gridY": 7
     }
   ],
   "iconMappings": {
