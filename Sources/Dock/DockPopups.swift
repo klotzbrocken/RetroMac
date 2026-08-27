@@ -276,7 +276,22 @@ private final class DockStackView: NSView, NSDraggingSource {
 
     override func draw(_ dirtyRect: NSRect) {
         let header = NSRect(x: 0, y: 0, width: bounds.width, height: headerH)
-        if RetroFrameTheme.key() == "maiksfav" {
+        let key = RetroFrameTheme.key()
+        let snowLeopard = key == "snowleopard"
+        if snowLeopard {
+            // 10.6 grid stack: a dark translucent rounded slab, white labels, no window chrome.
+            let panel = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 6, yRadius: 6)
+            NSColor(calibratedWhite: 0.11, alpha: 0.88).setFill(); panel.fill()
+            (dropActive ? NSColor(calibratedRed: 0.35, green: 0.62, blue: 1, alpha: 0.9)
+                        : NSColor(calibratedWhite: 1, alpha: 0.22)).setStroke()
+            panel.lineWidth = dropActive ? 2 : 1; panel.stroke()
+            let hAttrs: [NSAttributedString.Key: Any] = [
+                .font: NSFont(name: "Lucida Grande Bold", size: 11) ?? .systemFont(ofSize: 11, weight: .bold),
+                .foregroundColor: NSColor(calibratedWhite: 1, alpha: 0.92)]
+            let title = folderURL?.lastPathComponent ?? "Folder"
+            let ts = title.size(withAttributes: hAttrs)
+            title.draw(at: NSPoint(x: bounds.width / 2 - ts.width / 2, y: 5), withAttributes: hAttrs)
+        } else if key == "maiksfav" {
             // Pixel-art macOS window (matches the CPU widget / App Folder in this theme).
             NSColor(calibratedWhite: 0.925, alpha: 1).setFill(); bounds.fill()   // #ECECEC
             NSColor(calibratedWhite: 0.149, alpha: 1).setStroke()                 // #262626 outline
@@ -312,11 +327,17 @@ private final class DockStackView: NSView, NSDraggingSource {
                                                     .foregroundColor: NSColor.secondaryLabelColor]
             "Drop files here".draw(at: NSPoint(x: pad + 4, y: headerH + 12), withAttributes: a)
         }
-        let lAttrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 10),
-                                                     .foregroundColor: NSColor(calibratedWhite: 0.12, alpha: 1)]
+        let lAttrs: [NSAttributedString.Key: Any] = snowLeopard
+            ? [.font: NSFont(name: "Lucida Grande", size: 10) ?? .systemFont(ofSize: 10),
+               .foregroundColor: NSColor(calibratedWhite: 1, alpha: 0.95),
+               .shadow: { let sh = NSShadow(); sh.shadowColor = NSColor.black.withAlphaComponent(0.8)
+                          sh.shadowBlurRadius = 2; sh.shadowOffset = .zero; return sh }()]
+            : [.font: NSFont.systemFont(ofSize: 10),
+               .foregroundColor: NSColor(calibratedWhite: 0.12, alpha: 1)]
         for (i, url) in files.enumerated() {
             let c = cellRect(i)
-            if i == hovered { NSColor(calibratedRed: 0.20, green: 0.45, blue: 0.95, alpha: 0.18).setFill()
+            if i == hovered { (snowLeopard ? NSColor(calibratedWhite: 1, alpha: 0.20)
+                                            : NSColor(calibratedRed: 0.20, green: 0.45, blue: 0.95, alpha: 0.18)).setFill()
                 NSBezierPath(roundedRect: c.insetBy(dx: 1, dy: 1), xRadius: 4, yRadius: 4).fill() }
             fileIcon(url, size: iconSize).draw(in: iconRect(i), from: .zero, operation: .sourceOver,
                                                fraction: 1, respectFlipped: true, hints: nil)
@@ -329,11 +350,19 @@ private final class DockStackView: NSView, NSDraggingSource {
         }
 
         let f = footerRect
-        NSColor(calibratedWhite: 0.88, alpha: 1).setFill(); f.fill()
-        NSColor(calibratedWhite: 0.30, alpha: 1).setStroke()
+        if snowLeopard {
+            NSColor(calibratedWhite: 1, alpha: 0.06).setFill(); f.fill()
+            NSColor(calibratedWhite: 1, alpha: 0.14).setStroke()
+        } else {
+            NSColor(calibratedWhite: 0.88, alpha: 1).setFill(); f.fill()
+            NSColor(calibratedWhite: 0.30, alpha: 1).setStroke()
+        }
         let top = NSBezierPath(); top.move(to: NSPoint(x: 0, y: f.minY)); top.line(to: NSPoint(x: f.maxX, y: f.minY)); top.stroke()
-        let fAttrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 11, weight: .medium),
-                                                     .foregroundColor: NSColor(calibratedWhite: 0.15, alpha: 1)]
+        let fAttrs: [NSAttributedString.Key: Any] = snowLeopard
+            ? [.font: NSFont(name: "Lucida Grande", size: 11) ?? .systemFont(ofSize: 11),
+               .foregroundColor: NSColor(calibratedWhite: 1, alpha: 0.9)]
+            : [.font: NSFont.systemFont(ofSize: 11, weight: .medium),
+               .foregroundColor: NSColor(calibratedWhite: 0.15, alpha: 1)]
         "Open in Finder".draw(at: NSPoint(x: 8, y: f.midY - 7), withAttributes: fAttrs)
     }
 

@@ -12,7 +12,7 @@
   },
   "experienceLevel": "full",
   "chrome": {
-    "style": "macosx"
+    "style": "snowleopard"
   },
   "name": "Snow Leopard",
   "splashVideo": "boot.mp4",
@@ -53,6 +53,8 @@
     "shelfStyle": "3d",
     "magnification": true,
     "magnificationScale": 1.8,
+    "showLabels": true,
+    "folderStacks": true,
     "showTrash": true
   },
   "icon": {
@@ -146,7 +148,6 @@
     "com.apple.AppStore": "appstore.png",
     "com.apple.FaceTime": "facetime.png",
     "com.apple.AddressBook": "contacts.png",
-    "com.apple.reminders": "reminders.png",
     "com.apple.Preview": "preview_app.png",
     "com.apple.TextEdit": "textedit.png",
     "com.apple.calculator": "calculator.png",
@@ -169,10 +170,8 @@
     "com.apple.dashboard": "dashboard.png",
     "com.apple.MigrationUtility": "migration.png",
     "com.apple.backup.launcher": "timemachine.png",
-    "com.apple.launchpad.launcher": "launchpad.png",
     "com.apple.exposelauncher": "missioncontrol.png",
     "com.apple.DVDPlayer": "dvdplayer.png",
-    "com.apple.GameCenter": "gamecenter.png",
     "com.microsoft.Word": "word.png",
     "com.microsoft.Excel": "excel.png",
     "com.microsoft.Powerpoint": "powerpoint.png",
@@ -185,8 +184,6 @@
     "com.apple.NetworkUtility": "networkutility.png",
     "com.apple.SoftwareUpdate": "softwareupdate.png",
     "com.apple.installer": "installer.png",
-    "com.apple.notificationcenterui": "notifications.png",
-    "com.apple.clock": "clock.png",
     "com.apple.BluetoothFileExchange": "bluetooth.png"
   },
   "appearance": "light",

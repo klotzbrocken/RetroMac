@@ -7,7 +7,12 @@
   html, body { margin:0; padding:0; }
   body { background:#3a3f4a; font-family:"Lucida Grande","Helvetica Neue",Helvetica,sans-serif; color:#20242a; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
   .win { max-width:640px; margin:0 auto; background:#eceef2; border:1px solid #9aa0aa; border-radius:8px; box-shadow:0 10px 34px rgba(0,0,0,.38); border-radius:8px; overflow:hidden; }
-  .titlebar { background:linear-gradient(#f2f3f6,#cfd3da);color:#333;padding:7px 12px;font-size:13px;font-weight:600;text-align:center;border-bottom:1px solid #a6acb6; }
+  /* Measured 10.6 caption, same numbers as SnowLeopardChrome.swift and the widget CSS. */
+  .titlebar { height:22px;box-sizing:border-box;padding:0 12px;line-height:20px;
+    background:linear-gradient(to bottom,#cfcfcf,#a8a8a8);color:#3f3f3f;
+    font:600 13px 'Lucida Grande',sans-serif;text-align:center;border-bottom:none;
+    text-shadow:0 1px 0 rgba(255,255,255,.7);
+    box-shadow:inset 0 1px 0 #e3e3e3, inset 0 -1px 0 #525252; }
   .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
   .body { padding:22px 26px 26px; }
   .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }

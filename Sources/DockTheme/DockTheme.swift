@@ -23,8 +23,6 @@ struct DockThemeConfig: Codable {
     var release: Release? = nil
     /// How complete this theme's era illusion is: "full" | "partial" | "minimal".
     var experienceLevel: String? = nil
-    /// Refuse/warn if the running RetroMac is older than this (e.g. "2.4").
-    var minimumRetroMacVersion: String? = nil
     /// Declared window/widget chrome. `chrome.style` replaces the display-name heuristic in
     /// `RetroFrameTheme.key()` — see that file.
     var chrome: ChromeDecl? = nil
@@ -43,8 +41,8 @@ struct DockThemeConfig: Codable {
     }
 
     /// Declarative chrome selection. `style` is the key every chrome/border/widget renderer
-    /// already switches on ("win98", "winxp", "win7", "macos9", "macos6", "macosx", "win31",
-    /// "beos", "maiksfav", "default").
+    /// already switches on ("win98", "winxp", "win7", "macos9", "macos6", "macosx",
+    /// "snowleopard", "win31", "beos", "maiksfav", "default").
     struct ChromeDecl: Codable {
         var style: String? = nil
     }

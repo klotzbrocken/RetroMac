@@ -362,6 +362,10 @@ final class WindowBorderController {
             return .bevel(hiOuter: NSColor.fromHex("#FFFFFF"), hiInner: NSColor.fromHex("#AAAAAA"),
                           loInner: NSColor.fromHex("#555555"), loOuter: NSColor.fromHex("#000000"),
                           width: 2, radius: 0)
+        case "snowleopard":
+            // 10.6 windows have no bevel and no glow, just a hairline contour around the
+            // rounded frame. Anything thicker immediately reads as Leopard-era Aqua.
+            return .solid(color: NSColor.fromHex("#8A8A8A"), width: 1, topRadius: R, bottomRadius: R)
         case "winxp":
             return .solid(color: NSColor.fromHex("#2A63D8"), width: 4, topRadius: R, bottomRadius: R)
         case "win7":

@@ -37,7 +37,7 @@ index 4dc1fe9..5f5524e 100644
  
  /**
 diff --git a/engine/stratagus/src/video/sdl.cpp b/engine/stratagus/src/video/sdl.cpp
-index 1ca2bac..a0b28e9 100644
+index 1ca2bac..f63cb70 100644
 --- a/engine/stratagus/src/video/sdl.cpp
 +++ b/engine/stratagus/src/video/sdl.cpp
 @@ -88,6 +88,51 @@ SDL_Renderer *TheRenderer = nullptr; /// Internal screen
@@ -197,7 +197,7 @@ index 1ca2bac..a0b28e9 100644
  			InputMouseMove(callbacks, SDL_GetTicks(), event.motion.x, event.motion.y);
  			break;
  
-@@ -1037,6 +1131,121 @@ void WaitEventsOneFrame()
+@@ -1037,6 +1131,165 @@ void WaitEventsOneFrame()
  	}
  }
  
@@ -281,8 +281,52 @@ index 1ca2bac..a0b28e9 100644
 +		rmRect(r.x + 1, r.y, d - 2, d, 0xd5, 0x4f, 0x36);          // red (close)
 +		rmRect(9 + d + 6 + 1, cy, d - 2, d, 0xe6, 0xb2, 0x2e);     // yellow
 +		rmRect(9 + 2 * (d + 6) + 1, cy, d - 2, d, 0x3a, 0xa9, 0x0e); // green
++	} else if (is("snowleopard")) {
++		// Mac OS X 10.6 / 10.8: flat unified grey caption, matte traffic lights on the LEFT.
++		// Split out of "macosx" (Cheetah), which keeps the 2001 pinstripe-and-gel look.
++		rmVGrad(W, 0, H, 0xf6, 0xf6, 0xf6, 0xc6, 0xc6, 0xc6);
++		rmRect(0, H - 1, W, 1, 0x6b, 0x6b, 0x6b);
++		const int d = 12, cy = (H - d) / 2;
++		SDL_Rect r = { 8, cy, d, d };          RetroMacCloseBox = r;
++		rmRect(r.x + 1, r.y, d - 2, d, 0xff, 0x5f, 0x57);          // red (close)
++		rmRect(8 + d + 8 + 1, cy, d - 2, d, 0xfe, 0xbc, 0x2e);     // yellow
++		rmRect(8 + 2 * (d + 8) + 1, cy, d - 2, d, 0x28, 0xc8, 0x40); // green
++	} else if (is("win31")) {
++		// Windows 3.1: solid #0000A8 caption over the #C0C0C0 face, System-menu box on the LEFT
++		// (a bevelled grey square with a single black bar), matching Win31Chrome on the Swift side.
++		rmRect(0, 0, W, H, 0x00, 0x00, 0xa8);
++		rmRect(0, H - 1, W, 1, 0x80, 0x80, 0x80);
++		SDL_Rect c = { 4, (H - 16) / 2, 18, 16 };
++		RetroMacCloseBox = c;
++		rmRect(c.x, c.y, c.w, c.h, 0xc0, 0xc0, 0xc0);          // face
++		rmRect(c.x, c.y, c.w, 1, 0xff, 0xff, 0xff);            // top hilite
++		rmRect(c.x, c.y, 1, c.h, 0xff, 0xff, 0xff);            // left hilite
++		rmRect(c.x, c.y + c.h - 1, c.w, 1, 0x00, 0x00, 0x00);  // bottom shadow
++		rmRect(c.x + c.w - 1, c.y, 1, c.h, 0x00, 0x00, 0x00);  // right shadow
++		rmRect(c.x + 4, c.y + 7, c.w - 8, 2, 0x00, 0x00, 0x00);// the system-menu bar
++	} else if (is("nextstep")) {
++		// NeXTSTEP: black caption over the #AAA face, light bevelled close box on the RIGHT.
++		rmRect(0, 0, W, H, 0x00, 0x00, 0x00);
++		rmRect(0, H - 1, W, 1, 0xaa, 0xaa, 0xaa);
++		SDL_Rect c = { W - 20, (H - 14) / 2, 14, 14 };
++		RetroMacCloseBox = c;
++		rmRect(c.x, c.y, c.w, c.h, 0x55, 0x55, 0x55);
++		rmRect(c.x + 1, c.y + 1, c.w - 2, c.h - 2, 0xaa, 0xaa, 0xaa);
++		SDL_SetRenderDrawColor(TheRenderer, 0, 0, 0, 255);
++		SDL_RenderDrawLine(TheRenderer, c.x + 4, c.y + 4, c.x + c.w - 5, c.y + c.h - 5);
++		SDL_RenderDrawLine(TheRenderer, c.x + c.w - 5, c.y + 4, c.x + 4, c.y + c.h - 5);
++	} else if (is("futurama")) {
++		// Futurama: sage vertical gradient, cream hairline underneath, three round-ish lights
++		// on the LEFT with the red one as the close box (see WebAppController.drawFuturama).
++		rmVGrad(W, 0, H, 0xb8, 0xd1, 0xbd, 0x9e, 0xbd, 0xab);
++		rmRect(0, H - 1, W, 1, 0x66, 0x85, 0x75);
++		const int d = 12, cy = (H - d) / 2;
++		SDL_Rect r = { 10, cy, d, d };          RetroMacCloseBox = r;
++		rmRect(r.x + 1, r.y, d - 2, d, 0xf0, 0x54, 0x4f);          // red (close)
++		rmRect(10 + d + 8 + 1, cy, d - 2, d, 0xf5, 0xbd, 0x38);    // yellow
++		rmRect(10 + 2 * (d + 8) + 1, cy, d - 2, d, 0x5c, 0xc7, 0x5c); // green
 +	} else {
-+		// BeOS / Maiks Favourite / default: yellow tab strip, brown close box.
++		// BeOS / Maiks Favourite / SGI / OS/2 / Amiga ("default"): yellow tab strip, brown close box.
 +		rmRect(0, 0, W, H, 0xf2, 0xbd, 0x23);
 +		rmRect(0, H - 1, W, 1, 0x2a, 0x2a, 0x2a);
 +		rmRect(close.x, close.y, bs, bs, 0x6f, 0x5a, 0x10);
@@ -319,7 +363,7 @@ index 1ca2bac..a0b28e9 100644
  /**
  **  Realize video memory.
  */
-@@ -1081,16 +1290,18 @@ void RealizeVideoMemory()
+@@ -1081,16 +1334,18 @@ void RealizeVideoMemory()
  			SDL_RenderClear(TheRenderer);
  			//for (int i = 0; i < NumRects; i++)
  			//    SDL_UpdateTexture(TheTexture, &Rects[i], TheScreen->pixels, TheScreen->pitch);
@@ -342,7 +386,7 @@ index 1ca2bac..a0b28e9 100644
  	}
  }
  
-@@ -1181,6 +1392,20 @@ void ToggleFullScreen()
+@@ -1181,6 +1436,20 @@ void ToggleFullScreen()
  	Invalidate(); // Update display
  #endif
  	Video.FullScreen = (flags ^ SDL_WINDOW_FULLSCREEN_DESKTOP) != 0;

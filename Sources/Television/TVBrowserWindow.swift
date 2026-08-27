@@ -127,6 +127,9 @@ final class TVBrowserWindow: NSObject {
         // NeXTSTEP theme: wrap the content in the borderless NeXT window (black title bar,
         // miniaturize-left / close-right, chiseled grey frame).
         applyNextChrome(win, title: bookmark.name)
+        // Snow Leopard / Mountain Lion: flat unified grey caption. Without this the window kept
+        // `titleVisibility = .hidden` and no themed bar, i.e. an empty native title bar.
+        applySnowLeopardChrome(win, title: bookmark.name)
 
         // Double-click the video toggles full-screen (keeps the CRT shader + float level).
         if let cv = win.contentView {
@@ -341,12 +344,37 @@ final class TVBrowserWindow: NSObject {
         win.contentView = chrome
     }
 
+    private func applySnowLeopardChrome(_ win: NSWindow, title: String) {
+        guard RetroFrameTheme.key() == "snowleopard", let content = win.contentView else { return }
+        let bar = SnowLeopardTVChromeView.barH, b = SnowLeopardTVChromeView.border
+        let size = win.frame.size
+        win.styleMask = [.borderless, .resizable]
+        win.isOpaque = false
+        win.backgroundColor = .clear
+        win.hasShadow = true
+        content.frame = NSRect(x: b, y: b, width: size.width - 2 * b, height: size.height - bar - b)
+        content.autoresizingMask = [.width, .height]
+        let chrome = SnowLeopardTVChromeView(frame: NSRect(origin: .zero, size: size))
+        chrome.wantsLayer = true
+        chrome.title = title
+        chrome.onClose = { [weak self] in self?.window?.close() }
+        chrome.onMin = { [weak self] in self?.toggleMac9Collapse() }   // roll up (no taskbar here)
+        chrome.onMax = { [weak self] in self?.toggleTVFullscreen() }
+        chrome.addSubview(content)
+        win.contentView = chrome
+    }
+
     /// Mac OS 9 WindowShade: roll the TV window up to just the title bar, or restore.
     private func toggleMac9Collapse() {
         guard let win = window else { return }
         // Collapse to the ACTIVE chrome's title-bar height — XP's bar is taller than Mac 9's,
         // so always using Mac9TVChromeView.barH would clip the XP title bar on roll-up.
-        let bar = RetroFrameTheme.key() == "winxp" ? WinXPTVChromeView.barH : Mac9TVChromeView.barH
+        let bar: CGFloat
+        switch RetroFrameTheme.key() {
+        case "winxp":       bar = WinXPTVChromeView.barH
+        case "snowleopard": bar = SnowLeopardTVChromeView.barH
+        default:            bar = Mac9TVChromeView.barH
+        }
         if let h = mac9PreCollapseHeight {
             var f = win.frame; let top = f.maxY; f.size.height = h; f.origin.y = top - h
             win.setFrame(f, display: true, animate: true)

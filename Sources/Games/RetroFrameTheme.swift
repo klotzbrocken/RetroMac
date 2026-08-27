@@ -30,10 +30,11 @@ enum RetroFrameTheme {
         if name.contains("beos") { return "beos" }
         if name.contains("mac os 9") { return "macos9" }
         if name.contains("mac os 6") { return "macos6" }   // authentic 1-bit System 6 chrome (System6Chrome)
-        // The whole Aqua family shares the macOS X window chrome (traffic lights + grey title bar),
-        // so games / TV / widgets show Aqua under Snow Leopard and Mountain Lion too — not just the
-        // theme literally named "Mac OS X" (Cheetah).
-        if name.contains("mac os x") || name.contains("snow leopard") || name.contains("mountain lion") { return "macosx" }
+        // The Aqua family splits in two. "macosx" is Cheetah-era Aqua: pinstripes, gel controls,
+        // candy scrollbars. 10.6 dropped all of that for a flat unified grey title bar, and 10.8 kept
+        // it, so Snow Leopard and Mountain Lion share their own key instead of borrowing 2001's look.
+        if name.contains("snow leopard") || name.contains("mountain lion") { return "snowleopard" }
+        if name.contains("mac os x") { return "macosx" }
         if name.contains("windows 7") { return "win7" }   // Aero glass chrome (drawWin7)
         if name.contains("windows 98") { return "win98" }
         if name.contains("windows 95") { return "win98" }   // Win95 reuses the 98 chrome (solid navy via chromeColors)
@@ -45,6 +46,10 @@ enum RetroFrameTheme {
         if name.contains("futurama") { return "futurama" }
         return "default"
     }
+
+    /// True for any Mac OS X era theme, whichever Aqua generation it renders. Use this where the
+    /// question is "is this a Mac OS X theme at all"; switch on `key()` where the look differs.
+    static var isAquaFamily: Bool { key() == "macosx" || key() == "snowleopard" }
 
     /// Process environment to merge into a launched game so it can match the RetroMac theme.
     static func gameEnv() -> [String: String] {

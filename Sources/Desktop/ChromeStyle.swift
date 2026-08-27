@@ -128,6 +128,7 @@ enum ChromeStyleFactory {
         case "macos6": return system6()      // authentic 1-bit System 6 (System6Chrome)
         case "win98":  return win98()
         case "nextstep": return nextstep()
+        case "snowleopard": return snowLeopard()
         default:       return nil
         }
     }
@@ -144,6 +145,37 @@ enum ChromeStyleFactory {
             titleAlignment: .center,
             windowFill: NeXTChrome.face, captionGradient: nil, captionFill: NeXTChrome.black,
             buttons: [ ChromeButton(.close, interactive: true, render: .native) ])
+    }
+
+    // Mac OS X 10.6 Snow Leopard (and 10.8, whose title bar is the same flat grey). This is
+    // deliberately NOT the `macosx` Cheetah style: 10.6 dropped the pinstripes, the gel domes and
+    // the candy scrollbars for a flat unified caption. Traffic lights sit LEFT, small and matte,
+    // and their glyphs only appear while the pointer is over the cluster — `drawSnowLeopard`
+    // handles that, since the tracker is per-button and 10.6 lights up all three together.
+    static func snowLeopard() -> ChromeStyle {
+        let font = NSFont(name: "Lucida Grande Bold", size: 13)
+            ?? NSFont(name: "Lucida Grande", size: 13) ?? .boldSystemFont(ofSize: 13)
+        // Measured 10.6 caption: DARK at the top (#A8A8A8) falling to light (#CFCFCF).
+        // Drawing happens in SnowLeopardChrome; this is only for callers that read the model.
+        let caption = ChromeGradient(stops: [
+            (NSColor(srgbRed: 0.659, green: 0.659, blue: 0.659, alpha: 1), 0.0),
+            (NSColor(srgbRed: 0.812, green: 0.812, blue: 0.812, alpha: 1), 1.0),
+        ], angle: -90)
+        return ChromeStyle(
+            titleHeight: SnowLeopardChrome.barH, windowBorder: 1,
+            buttonSize: NSSize(width: SnowLeopardChrome.lightD, height: SnowLeopardChrome.lightD),
+            buttonSpacing: SnowLeopardChrome.lightGap, buttonInset: SnowLeopardChrome.lightInset,
+            cornerRadius: 5, buttonSide: .left,
+            titleFont: font,
+            titleColor: NSColor(srgbRed: 0.247, green: 0.247, blue: 0.247, alpha: 1),
+            titleShadow: true, titleAlignment: .center,
+            windowFill: NSColor(srgbRed: 0.929, green: 0.929, blue: 0.929, alpha: 1),
+            captionGradient: caption, captionFill: nil,
+            buttons: [
+                ChromeButton(.close, interactive: true, render: .native),
+                ChromeButton(.collapse, interactive: true, render: .native),
+                ChromeButton(.zoom, interactive: true, render: .native),
+            ])
     }
 
     // Windows 7 Aero glass. Values derived from 7.css (MIT, © Khang Nguyen Duy): the title bar

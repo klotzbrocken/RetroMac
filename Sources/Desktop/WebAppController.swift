@@ -449,7 +449,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
 final class WebAppChromeView: NSView {
 
-    enum Style { case win98, winxp, win7, macClassic, system6, nextstep, futurama, plain }
+    enum Style { case win98, winxp, win7, macClassic, system6, nextstep, snowLeopard, futurama, plain }
 
     var onClose: (() -> Void)?
     var onBack: (() -> Void)?
@@ -481,6 +481,7 @@ final class WebAppChromeView: NSView {
         case "macos9": style = .macClassic; chromeStyle = ChromeStyleFactory.macClassic()
         case "macos6": style = .system6;    chromeStyle = ChromeStyleFactory.system6()
         case "nextstep": style = .nextstep; chromeStyle = ChromeStyleFactory.nextstep()
+        case "snowleopard": style = .snowLeopard; chromeStyle = ChromeStyleFactory.snowLeopard()
         case "futurama": style = .futurama; chromeStyle = nil
         default:       style = .plain;      chromeStyle = nil
         }
@@ -492,6 +493,21 @@ final class WebAppChromeView: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     override var isFlipped: Bool { true }
+
+    /// 10.6 draws an unfocused window with a lighter caption and colourless traffic lights, so the
+    /// chrome has to know about key changes. Other styles ignore it; the extra redraw is harmless.
+    private var isActiveWindow: Bool { window?.isKeyWindow ?? true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        NotificationCenter.default.removeObserver(self)
+        guard let win = window else { return }
+        for n in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
+            NotificationCenter.default.addObserver(forName: n, object: win, queue: .main) { [weak self] _ in
+                self?.needsDisplay = true
+            }
+        }
+    }
 
     private var titleH: CGFloat {
         switch style { case .winxp, .win7: return 30; case .system6: return 20; case .nextstep: return 22; case .futurama: return 26; default: return 22 }
@@ -538,9 +554,69 @@ final class WebAppChromeView: NSView {
         case .macClassic: drawMacClassic(ctx, b)
         case .system6:    drawSystem6(ctx, b)
         case .nextstep:   drawNextstep(ctx, b)
+        case .snowLeopard: drawSnowLeopard(ctx, b)
         case .futurama:   drawFuturama(ctx, b)
         case .plain:      drawPlain(ctx, b)
         }
+    }
+
+    // ---- Mac OS X 10.6 Snow Leopard. Every measurement lives in `SnowLeopardChrome`, which
+    //      the TV window and the widget CSS mirror, so the four surfaces stay one design. ----
+    private func drawSnowLeopard(_ ctx: CGContext, _ b: NSRect) {
+        let cs = chromeStyle ?? ChromeStyleFactory.snowLeopard()
+        let active = isActiveWindow
+        let r = cs.cornerRadius
+
+        // Body: rounded at the top, square at the bottom (the window sits on the screen edge).
+        let body = NSBezierPath()
+        body.move(to: NSPoint(x: b.minX, y: b.maxY))
+        body.line(to: NSPoint(x: b.minX, y: b.minY + r))
+        body.appendArc(withCenter: NSPoint(x: b.minX + r, y: b.minY + r), radius: r, startAngle: 180, endAngle: 270)
+        body.line(to: NSPoint(x: b.maxX - r, y: b.minY))
+        body.appendArc(withCenter: NSPoint(x: b.maxX - r, y: b.minY + r), radius: r, startAngle: 270, endAngle: 360)
+        body.line(to: NSPoint(x: b.maxX, y: b.maxY))
+        body.close()
+        NSColor.white.setFill(); body.fill()
+
+        let bar = NSRect(x: 0, y: 0, width: b.width, height: SnowLeopardChrome.barH)
+        ctx.saveGState(); body.addClip()
+        SnowLeopardChrome.drawTitleBar(bar, active: active, flipped: true)
+        ctx.restoreGState()
+
+        let d = SnowLeopardChrome.lightD
+        let ly = (SnowLeopardChrome.barH - d) / 2
+        let xs = SnowLeopardChrome.lightOrigins()
+        let closeR    = NSRect(x: xs[0], y: ly, width: d, height: d)
+        let collapseR = NSRect(x: xs[1], y: ly, width: d, height: d)
+        let zoomR     = NSRect(x: xs[2], y: ly, width: d, height: d)
+        tracker.reset()
+        tracker.add(.close, closeR.insetBy(dx: -2, dy: -2), interactive: true)
+        tracker.add(.collapse, collapseR.insetBy(dx: -2, dy: -2), interactive: false)
+        tracker.add(.zoom, zoomR.insetBy(dx: -2, dy: -2), interactive: false)
+        // 10.6 reveals all three glyphs as soon as the pointer is over any of them.
+        let hovering = [ChromeButtonKind.close, .collapse, .zoom].contains { tracker.state(for: $0) == .hovered }
+
+        SnowLeopardChrome.drawLight(closeR, .close, active: active, flipped: true)
+        SnowLeopardChrome.drawLight(collapseR, .minimize, active: active, flipped: true)
+        SnowLeopardChrome.drawLight(zoomR, .zoom, active: active, flipped: true)
+        if active && hovering {
+            SnowLeopardChrome.drawGlyph(.close, in: closeR)
+            SnowLeopardChrome.drawGlyph(.minimize, in: collapseR)
+            SnowLeopardChrome.drawGlyph(.zoom, in: zoomR)
+        }
+
+        let inset = zoomR.maxX + 8
+        SnowLeopardChrome.drawTitle(title,
+                                    in: NSRect(x: inset, y: (SnowLeopardChrome.barH - 15) / 2,
+                                               width: max(0, b.width - inset * 2), height: 15),
+                                    active: active, flipped: true)
+
+        (active ? NSColor(white: 0.42, alpha: 1) : SnowLeopardChrome.borderInactive).setStroke()
+        let outline = NSBezierPath()
+        outline.appendRoundedRect(b.insetBy(dx: 0.5, dy: 0.5), xRadius: r, yRadius: r)
+        outline.lineWidth = 1; outline.stroke()
+
+        closeHit = .zero   // close is tracked via `tracker`
     }
 
     // ---- Futurama: cream body, sage-green rounded title bar, macOS traffic lights LEFT,

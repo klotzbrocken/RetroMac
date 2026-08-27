@@ -318,6 +318,115 @@ final class WinXPTVChromeView: NSView {
     }
 }
 
+/// Mac OS X 10.6 Snow Leopard chrome container: a flat unified grey caption with the three
+/// traffic lights on the LEFT, glyphs only while the cluster is hovered, and a hairline frame.
+/// Deliberately flatter than Cheetah Aqua — 10.6 dropped the pinstripes and the gel domes.
+final class SnowLeopardTVChromeView: NSView {
+    static let barH: CGFloat = SnowLeopardChrome.barH
+    static let border: CGFloat = 1
+    var title = ""
+    var onClose: (() -> Void)?
+    var onMin: (() -> Void)?
+    var onMax: (() -> Void)?
+    private let dotS: CGFloat = SnowLeopardChrome.lightD
+    private let gap: CGFloat = SnowLeopardChrome.lightGap
+    private var tracker = ChromeButtonTracker()
+
+    private var barRect: NSRect { NSRect(x: 0, y: bounds.height - Self.barH, width: bounds.width, height: Self.barH) }
+    private var dotY: CGFloat { bounds.height - Self.barH + (Self.barH - dotS) / 2 }
+    private var closeRect: NSRect { NSRect(x: SnowLeopardChrome.lightInset, y: dotY, width: dotS, height: dotS) }
+    private var minRect: NSRect { NSRect(x: closeRect.maxX + gap, y: dotY, width: dotS, height: dotS) }
+    private var maxRect: NSRect { NSRect(x: minRect.maxX + gap, y: dotY, width: dotS, height: dotS) }
+
+    override var isOpaque: Bool { false }
+    private var isActive: Bool { window?.isKeyWindow ?? true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        NotificationCenter.default.removeObserver(self)
+        guard let win = window else { return }
+        for n in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
+            NotificationCenter.default.addObserver(forName: n, object: win, queue: .main) { [weak self] _ in
+                self?.needsDisplay = true
+            }
+        }
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let active = isActive
+        // Hairline frame around the inset content.
+        (active ? NSColor(white: 0.42, alpha: 1) : SnowLeopardChrome.borderInactive).setFill()
+        NSBezierPath(rect: bounds).fill()
+
+        let bar = barRect
+        SnowLeopardChrome.drawTitleBar(bar, active: active, flipped: false)
+
+        tracker.reset()
+        tracker.add(.close, closeRect.insetBy(dx: -2, dy: -2), interactive: true)
+        tracker.add(.minimize, minRect.insetBy(dx: -2, dy: -2), interactive: true)
+        tracker.add(.maximize, maxRect.insetBy(dx: -2, dy: -2), interactive: true)
+        SnowLeopardChrome.drawLight(closeRect, .close, active: active, flipped: false)
+        SnowLeopardChrome.drawLight(minRect, .minimize, active: active, flipped: false)
+        SnowLeopardChrome.drawLight(maxRect, .zoom, active: active, flipped: false)
+        let hovering = [ChromeButtonKind.close, .minimize, .maximize].contains { tracker.state(for: $0) == .hovered }
+        if active && hovering {
+            SnowLeopardChrome.drawGlyph(.close, in: closeRect)
+            SnowLeopardChrome.drawGlyph(.minimize, in: minRect)
+            SnowLeopardChrome.drawGlyph(.zoom, in: maxRect)
+        }
+
+        let inset = maxRect.maxX + 8
+        SnowLeopardChrome.drawTitle(title,
+                                    in: NSRect(x: inset, y: bar.midY - 8,
+                                               width: max(0, bounds.width - inset * 2), height: 15),
+                                    active: active, flipped: false)
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard let sv = superview else { return super.hitTest(point) }
+        let p = convert(point, from: sv)
+        if barRect.contains(p) { return self }
+        return super.hitTest(point)
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
+            owner: self, userInfo: nil))
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        if tracker.mouseMoved(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+    override func mouseExited(with event: NSEvent) {
+        if tracker.mouseExited() { needsDisplay = true }
+    }
+    override func mouseDown(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        if tracker.hitTest(p) != nil {
+            if tracker.mouseDown(at: p) { needsDisplay = true }
+            return
+        }
+        if barRect.contains(p) { window?.performDrag(with: event); return }
+    }
+    override func mouseDragged(with event: NSEvent) {
+        if tracker.mouseDragged(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
+    }
+    override func mouseUp(with event: NSEvent) {
+        let r = tracker.mouseUp(at: convert(event.locationInWindow, from: nil))
+        if r.needsRedraw { needsDisplay = true }
+        switch r.fire {
+        case .close: onClose?()
+        case .maximize: onMax?()
+        case .minimize: onMin?()
+        default: break
+        }
+    }
+}
+
 /// Mac System 6 (authentic 1-bit B/W) chrome container: a white racing-stripe title bar with a
 /// hollow close box on the LEFT (no zoom/collapse), a thin black window frame, content below.
 final class System6TVChromeView: NSView {
