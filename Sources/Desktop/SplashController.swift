@@ -10,9 +10,18 @@ final class SplashController {
 
     static let shared = SplashController()
     private var windows: [NSWindow] = []          // main content window + black covers on other screens
+    /// Every boot screen is on screen for the same length of time, whether it is a still, a
+    /// native draw or a video. They used to run 2.5s, 3s, or however long the clip happened to
+    /// be — which ranged from 4.9s (Windows XP) to 23s (Mac OS X), a ninefold spread.
+    ///
+    /// Five seconds rather than four because three of the six clips already sit there: Mac OS 9
+    /// is 5.0s, Windows XP 4.9s, Windows 95 6.0s. Four would have clipped XP's closing pulse,
+    /// which runs from 4s to the end. The Windows 95/98 progress bars loop, so cutting them
+    /// mid-loop is invisible; Snow Leopard's clip is a still frame throughout.
+    static let duration: TimeInterval = 5.0
+
     private var dismissTimer: Timer?
     private var player: AVPlayer?
-    private var endObserver: NSObjectProtocol?
 
     private init() {}
 
@@ -110,35 +119,11 @@ final class SplashController {
         addCoverScreens(except: screen)
         present(win, dismissView: dv)
 
-        endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: .main
-        ) { [weak self] _ in self?.dismiss() }
-
+        // No dismiss-on-end observer: a clip shorter than `duration` holds its last frame so
+        // every boot screen lasts the same time, and a longer one is cut. Both are deliberate.
         player.play()
-        armSafetyDismiss(for: player.currentItem?.asset)
-    }
-
-    /// Backstop in case `.AVPlayerItemDidPlayToEndTime` never arrives — it is NOT a length
-    /// limit, though a flat 15s timer made it one and silently cut off anything longer (the
-    /// Mac OS X boot runs 23s). Starts at 15s, then re-arms to the clip's real length once
-    /// that's loaded; the duration has to be read asynchronously since macOS 13.
-    private func armSafetyDismiss(for asset: AVAsset?) {
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: false) { [weak self] _ in
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: Self.duration, repeats: false) { [weak self] _ in
             self?.dismiss()
-        }
-        guard let asset else { return }
-        // Reached through the singleton rather than captured, so this stays out of the
-        // Sendable-capture rules for a MainActor-only AppKit object.
-        Task { @MainActor in
-            guard let seconds = try? await asset.load(.duration).seconds,
-                  seconds.isFinite, seconds > 0 else { return }
-            let controller = SplashController.shared
-            guard controller.dismissTimer != nil else { return }   // nil once dismiss() ran
-            controller.dismissTimer?.invalidate()
-            controller.dismissTimer = Timer.scheduledTimer(withTimeInterval: seconds + 3.0,
-                                                           repeats: false) { _ in
-                SplashController.shared.dismiss()
-            }
         }
     }
 
@@ -170,7 +155,7 @@ final class SplashController {
         addCoverScreens(except: screen)
         present(win, dismissView: dv)
 
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: Self.duration, repeats: false) { [weak self] _ in
             self?.dismiss()
         }
     }
@@ -187,12 +172,11 @@ final class SplashController {
         win.contentView = dv
         addCoverScreens(except: screen)
         present(win, dismissView: dv)
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: false) { [weak self] _ in self?.dismiss() }
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: Self.duration, repeats: false) { [weak self] _ in self?.dismiss() }
     }
 
     func dismiss() {
         dismissTimer?.invalidate(); dismissTimer = nil
-        if let obs = endObserver { NotificationCenter.default.removeObserver(obs); endObserver = nil }
         player?.pause(); player = nil
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()

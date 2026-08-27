@@ -1,4 +1,5 @@
 import XCTest
+import AVFoundation
 @testable import RetroMac
 
 /// Installing an imported theme used to `removeItem` the existing bundle and only then copy,
@@ -193,5 +194,41 @@ final class IconContentExtentTests: XCTestCase {
             let extent = try contentExtent(iconsDir.appendingPathComponent("\(name).png"))
             XCTAssertGreaterThanOrEqual(extent, 0.90, "\(name).png is no longer a valid yardstick")
         }
+    }
+}
+
+/// Every boot screen is shown for `SplashController.duration`, so a clip longer than that is cut
+/// and whatever it had left is never seen. The Mac OS X boot used to run 23s for that reason.
+/// Clips are therefore authored to the display duration, and this pins that.
+final class BootVideoDurationTests: XCTestCase {
+
+    private var themesDir: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Resources/Themes")
+    }
+
+    func testShippedBootClipsAreAuthoredToTheDisplayDuration() async throws {
+        let fm = FileManager.default
+        let bundles = try fm.contentsOfDirectory(at: themesDir, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "retromactheme" }
+        XCTAssertFalse(bundles.isEmpty, "no themes found — check the path")
+
+        var checked = 0
+        for bundle in bundles {
+            let video = bundle.appendingPathComponent("boot.mp4")
+            guard fm.fileExists(atPath: video.path) else { continue }
+            let seconds = try await AVURLAsset(url: video).load(.duration).seconds
+            checked += 1
+            let name = bundle.deletingPathExtension().lastPathComponent
+            XCTAssertGreaterThan(seconds, 1.0, "\(name): boot.mp4 is suspiciously short")
+            // A little headroom over the display duration is fine — the tail is simply not shown,
+            // and the Windows progress bars loop, so where they stop does not matter.
+            XCTAssertLessThanOrEqual(
+                seconds, SplashController.duration + 2.0,
+                "\(name): boot.mp4 runs \(String(format: "%.1f", seconds))s but only "
+                + "\(SplashController.duration)s is ever shown — re-cut it instead of losing the rest")
+        }
+        XCTAssertGreaterThan(checked, 0, "no boot.mp4 found in any theme")
     }
 }
