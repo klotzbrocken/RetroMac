@@ -38,6 +38,10 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
 
     private var windows: [NSWindow] = []
     private var hosts: [String: DashboardWidgetView] = [:]
+    private weak var root: DashboardBackdropView?
+    private weak var bar: DashboardBarView?
+    private weak var plus: DashboardPlusView?
+    private var mainScreen: NSScreen?
     private var barOpen = false
     private(set) var isOpen = false
 
@@ -73,8 +77,12 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         barOpen = false
 
         for screen in NSScreen.screens {
-            let win = NSWindow(contentRect: screen.frame, styleMask: [.borderless],
-                               backing: .buffered, defer: false)
+            // KeyableWindow, not NSWindow: a borderless window returns canBecomeKey = false, so
+            // the web views could never receive a keystroke — the weather widget's city field was
+            // impossible to type into.
+            let win = KeyableWindow(contentRect: screen.frame, styleMask: [.borderless],
+                                    backing: .buffered, defer: false)
+            win.acceptsMouseMovedEvents = true
             // Below the retro dock (24) and the CRT overlay (25) on purpose: the Dock stayed
             // visible over Dashboard, and the shader should treat the layer like anything else.
             win.level = NSWindow.Level(rawValue: 23)
@@ -93,8 +101,19 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
 
             // Only the main screen carries the widgets; the others just dim, as they did.
             if screen == NSScreen.screens.first {
+                self.root = root
+                self.mainScreen = screen
                 for id in activeIDs { addWidget(id, to: root, on: screen) }
-                root.addSubview(makeBar(width: screen.frame.width))
+                // The bar starts off-screen and slides up from the + in the corner, the way
+                // Dashboard's widget bar did.
+                let b = makeBar(width: screen.frame.width)
+                b.frame.origin.y = -b.frame.height
+                root.addSubview(b)
+                self.bar = b
+                let p = DashboardPlusView(frame: NSRect(x: 14, y: 14, width: 30, height: 30))
+                p.onClick = { [weak self] in self?.setBarOpen(!(self?.barOpen ?? false)) }
+                root.addSubview(p)
+                self.plus = p
             }
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.22
@@ -103,6 +122,9 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
             win.makeKey()
             win.makeFirstResponder(root)
         }
+        // Without this the layer needs a click before it is interactive, which is why the info
+        // button only appeared after clicking rather than on hover.
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func hide() {
@@ -111,6 +133,7 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         let closing = windows
         windows.removeAll()
         hosts.removeAll()
+        root = nil; bar = nil; plus = nil; mainScreen = nil
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.18
             closing.forEach { $0.animator().alphaValue = 0 }
@@ -119,15 +142,18 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         }
     }
 
-    /// Rebuilt from scratch rather than patched: the layer is cheap to recreate and this keeps
-    /// add/remove from having to reason about half-torn-down state.
-    private func rebuild() {
-        guard isOpen else { return }
-        let wasBarOpen = barOpen
-        hide()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            self?.show()
-            self?.barOpen = wasBarOpen
+    /// Slides the widget bar in or out. While it is open every widget wears its remove badge,
+    /// which is exactly when Dashboard showed them — not on hover, which had the badge sitting
+    /// in the corner of a widget you were only trying to use.
+    private func setBarOpen(_ open: Bool) {
+        guard let bar = bar, let plus = plus else { return }
+        barOpen = open
+        hosts.values.forEach { $0.showBadge = open }
+        plus.isOpen = open
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.22
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            bar.animator().frame.origin.y = open ? 0 : -bar.frame.height
         }
     }
 
@@ -155,7 +181,17 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         host.onRemove = { [weak self] in
             guard let self = self else { return }
             self.activeIDs = self.activeIDs.filter { $0 != id }
-            self.rebuild()
+            self.hosts[id] = nil
+            self.bar?.activeIDs = Set(self.activeIDs)
+            // Suck it away rather than blink it out, the way Dashboard did.
+            host.wantsLayer = true
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.2
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                host.animator().alphaValue = 0
+                host.animator().frame = host.frame.insetBy(dx: host.frame.width * 0.35,
+                                                           dy: host.frame.height * 0.35)
+            }, completionHandler: { host.removeFromSuperview() })
         }
 
         let cfg = WKWebViewConfiguration()
@@ -257,16 +293,35 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
 
     // MARK: - Widget bar
 
-    private func makeBar(width: CGFloat) -> NSView {
+    private func makeBar(width: CGFloat) -> DashboardBarView {
         let bar = DashboardBarView(frame: NSRect(x: 0, y: 0, width: width, height: 92))
         bar.autoresizingMask = [.width]
         bar.items = Self.catalogue
         bar.activeIDs = Set(activeIDs)
         bar.onPick = { [weak self] id in
-            guard let self = self else { return }
+            guard let self = self, let root = self.root, let screen = self.mainScreen else { return }
             guard !self.activeIDs.contains(id) else { return }
             self.activeIDs = self.activeIDs + [id]
-            self.rebuild()
+            self.addWidget(id, to: root, on: screen)
+            self.hosts[id]?.showBadge = self.barOpen
+            bar.activeIDs = Set(self.activeIDs)
+            bar.needsDisplay = true
+            if let host = self.hosts[id] {
+                // Dashboard rippled the sheet where a widget landed. A single expanding ring is
+                // the honest approximation — the original was a water distortion of the backdrop,
+                // which needs a filter over live content rather than a drawn shape.
+                root.ripple(at: NSPoint(x: host.frame.midX, y: host.frame.midY))
+                host.wantsLayer = true
+                host.alphaValue = 0
+                let target = host.frame
+                host.frame = target.insetBy(dx: target.width * 0.25, dy: target.height * 0.25)
+                NSAnimationContext.runAnimationGroup { ctx in
+                    ctx.duration = 0.28
+                    ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    host.animator().alphaValue = 1
+                    host.animator().frame = target
+                }
+            }
         }
         return bar
     }
@@ -298,6 +353,81 @@ final class DashboardBackdropView: NSView {
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { onEscape?() } else { super.keyDown(with: event) }
     }
+
+    /// One expanding ring where a widget just landed.
+    func ripple(at point: NSPoint) {
+        wantsLayer = true
+        guard let host = layer else { return }
+        let ring = CAShapeLayer()
+        let r: CGFloat = 26
+        ring.path = CGPath(ellipseIn: CGRect(x: point.x - r, y: point.y - r, width: r * 2, height: r * 2),
+                           transform: nil)
+        ring.fillColor = NSColor.clear.cgColor
+        ring.strokeColor = NSColor(white: 1, alpha: 0.55).cgColor
+        ring.lineWidth = 2
+        host.addSublayer(ring)
+
+        let grow = CABasicAnimation(keyPath: "transform.scale")
+        grow.fromValue = 0.3
+        grow.toValue = 4.5
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 0.9
+        fade.toValue = 0
+        let group = CAAnimationGroup()
+        group.animations = [grow, fade]
+        group.duration = 0.55
+        group.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        group.isRemovedOnCompletion = false
+        group.fillMode = .forwards
+        // Scale about the ring's own centre rather than the layer origin.
+        ring.bounds = CGRect(x: 0, y: 0, width: r * 2, height: r * 2)
+        ring.position = point
+        ring.path = CGPath(ellipseIn: CGRect(x: 0, y: 0, width: r * 2, height: r * 2), transform: nil)
+        ring.add(group, forKey: "ripple")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { ring.removeFromSuperlayer() }
+    }
+}
+
+/// The + in the bottom-left corner that opens and closes the widget bar.
+final class DashboardPlusView: NSView {
+    var onClick: (() -> Void)?
+    var isOpen = false { didSet { needsDisplay = true } }
+    private var hot = false
+
+    override func draw(_ dirtyRect: NSRect) {
+        let r = bounds.insetBy(dx: 2, dy: 2)
+        NSColor(white: 0.1, alpha: hot ? 0.85 : 0.65).setFill()
+        NSBezierPath(ovalIn: r).fill()
+        NSColor(white: 1, alpha: 0.35).setStroke()
+        let ring = NSBezierPath(ovalIn: r.insetBy(dx: 0.5, dy: 0.5))
+        ring.lineWidth = 1
+        ring.stroke()
+
+        NSColor(white: 1, alpha: 0.95).setStroke()
+        let p = NSBezierPath()
+        p.lineWidth = 2.2
+        p.lineCapStyle = .round
+        let i = r.insetBy(dx: 8, dy: 8)
+        if isOpen {                       // an × once the bar is up, so the same button closes it
+            p.move(to: NSPoint(x: i.minX, y: i.minY)); p.line(to: NSPoint(x: i.maxX, y: i.maxY))
+            p.move(to: NSPoint(x: i.maxX, y: i.minY)); p.line(to: NSPoint(x: i.minX, y: i.maxY))
+        } else {
+            p.move(to: NSPoint(x: i.minX, y: i.midY)); p.line(to: NSPoint(x: i.maxX, y: i.midY))
+            p.move(to: NSPoint(x: i.midX, y: i.minY)); p.line(to: NSPoint(x: i.midX, y: i.maxY))
+        }
+        p.stroke()
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero,
+                                       options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                       owner: self, userInfo: nil))
+    }
+    override func mouseEntered(with event: NSEvent) { hot = true; needsDisplay = true }
+    override func mouseExited(with event: NSEvent) { hot = false; needsDisplay = true }
+    override func mouseDown(with event: NSEvent) { onClick?() }
 }
 
 /// Holds one widget's web view plus its remove badge.
@@ -308,10 +438,12 @@ final class DashboardWidgetView: NSView {
     var onRemove: (() -> Void)?
 
     private var badgeRect: NSRect { NSRect(x: -1, y: bounds.height - 17, width: 18, height: 18) }
-    private var hovering = false
+    /// Shown only while the widget bar is open. On hover it sat as a black blob in the corner of
+    /// a widget you were merely using — which is what it looked like, and not what Dashboard did.
+    var showBadge = false { didSet { needsDisplay = true } }
 
     override func draw(_ dirtyRect: NSRect) {
-        guard hovering else { return }
+        guard showBadge else { return }
         // The close badge Dashboard put on the widget's top-left corner.
         let r = badgeRect
         NSColor(white: 0.15, alpha: 0.92).setFill()
@@ -326,20 +458,10 @@ final class DashboardWidgetView: NSView {
         x.stroke()
     }
 
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: .zero,
-                                       options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-                                       owner: self, userInfo: nil))
-    }
-    override func mouseEntered(with event: NSEvent) { hovering = true; needsDisplay = true }
-    override func mouseExited(with event: NSEvent) { hovering = false; needsDisplay = true }
-
     override func hitTest(_ point: NSPoint) -> NSView? {
         // The badge sits above the web view, so claim its rect before the page sees the click.
         let p = convert(point, from: superview)
-        if hovering && badgeRect.contains(p) { return self }
+        if showBadge && badgeRect.contains(p) { return self }
         return super.hitTest(point)
     }
 

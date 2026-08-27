@@ -170,6 +170,12 @@ final class DockView: NSView {
     }
     private var hasShowDesktop: Bool { isClassicTaskbar && !isVertical && !isControlStrip }
 
+    /// Mac OS X put Dashboard in the Dock right after Finder. Driven off the theme's own desktop
+    /// icons so a theme that offers Dashboard at all offers it in both places.
+    private var hasDashboard: Bool {
+        ThemeManager.shared.activeTheme?.config.desktopIcons?.contains { $0.type == "dashboard" } == true
+    }
+
     private var hasDiskFree: Bool {
         ThemeManager.shared.activeTheme?.config.hasDiskFree ?? false
     }
@@ -444,11 +450,16 @@ final class DockView: NSView {
             let bar = barRect
             let x = bar.midX - iconSize / 2
             var y = bar.maxY - padding - gripHeight - iconSize
-            for app in apps {
+            for (i, app) in apps.enumerated() {
                 addItem(bundleID: app.bundleID,
                         frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                         theme: theme, iconSize: iconSize)
                 y -= iconSize + spacing
+                if i == 0 && hasDashboard {
+                    addDashboardItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                     theme: theme, iconSize: iconSize)
+                    y -= iconSize + spacing
+                }
             }
             let transientApps = runningAppsNotInDock()
             if !transientApps.isEmpty {
@@ -730,12 +741,17 @@ final class DockView: NSView {
                 if theme.isXPStartMenu { taskRightEdge -= max(14, iconSize * 0.55) * 0.9 + 4 }
                 addTaskButtonStrip(startX: x, rightEdge: taskRightEdge, barRect: barRect, theme: theme, iconSize: iconSize)
             } else {
-                for app in apps {
+                for (i, app) in apps.enumerated() {
                     let y = (barRect.height - iconSize) / 2
                     addItem(bundleID: app.bundleID,
                             frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                             theme: theme, iconSize: iconSize)
                     x += iconSize + spacing
+                    if i == 0 && hasDashboard {
+                        addDashboardItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                                         theme: theme, iconSize: iconSize)
+                        x += iconSize + spacing
+                    }
                 }
                 if hasShowDesktop {
                     addShowDesktopItem(frame: NSRect(x: x, y: (barRect.height - iconSize) / 2,
@@ -801,6 +817,7 @@ final class DockView: NSView {
         let apps = stacksOnRight ? allApps.filter { !$0.isFolder } : allApps
         let transientApps = runningAppsNotInDock()
         var currentIDs = apps.map { $0.bundleID }
+        if hasDashboard { currentIDs.insert("__dashboard__", at: min(1, currentIDs.count)) }
         if hasShowDesktop { currentIDs.append("__showdesktop__") }
         currentIDs += transientApps
         currentIDs += stacks.map { $0.bundleID }
@@ -832,11 +849,16 @@ final class DockView: NSView {
             let bar = dockBarRect
             let x = bar.midX - iconSize / 2
             var y = bar.maxY - padding - gripHeight - iconSize
-            for _ in apps {
+            for i in apps.indices {
                 guard idx < itemViews.count else { break }
                 itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                 idx += 1
                 y -= iconSize + spacing
+                if i == 0 && hasDashboard, idx < itemViews.count {
+                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                    idx += 1
+                    y -= iconSize + spacing
+                }
             }
             if !transientApps.isEmpty {
                 separatorY = y + iconSize + spacing / 2
@@ -1076,12 +1098,17 @@ final class DockView: NSView {
                 diskFreeFrame = .zero
             }
 
-            for _ in apps {
+            for i in apps.indices {
                 guard idx < itemViews.count else { break }
                 let y = (barRect.height - iconSize) / 2
                 itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                 idx += 1
                 x += iconSize + spacing
+                if i == 0 && hasDashboard, idx < itemViews.count {
+                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                    idx += 1
+                    x += iconSize + spacing
+                }
             }
             if hasShowDesktop, idx < itemViews.count {
                 let y = (barRect.height - iconSize) / 2
@@ -1405,6 +1432,22 @@ final class DockView: NSView {
         guard !showDesktopHidden.isEmpty else { return }
         for app in showDesktopHidden { app.unhide() }
         showDesktopHidden.removeAll()
+    }
+
+    private func addDashboardItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
+        let item = DockItemView(bundleID: "__dashboard__", frame: frame)
+        item.magnificationEnabled = theme.hasMagnification && AppSettings.shared.dockMagnification
+        if let dir = ThemeManager.shared.activeTheme?.iconsDirectory,
+           let img = NSImage(contentsOf: dir.appendingPathComponent("dashboard.png")) {
+            img.size = NSSize(width: iconSize, height: iconSize)
+            item.updateIcon(img)
+        }
+        item.updateTheme(theme)
+        item.toolTip = "Dashboard"
+        item.onLeftClick = { _ in DashboardController.shared.toggle() }
+        item.onRightClick = { [weak self] bid, point in self?.onContextMenu?(bid, point) }
+        addSubview(item)
+        itemViews.append(item)
     }
 
     private func addShowDesktopItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
