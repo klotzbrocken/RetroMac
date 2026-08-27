@@ -268,7 +268,10 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == "appfolder", let d = message.body as? [String: Any],
               let a = d["a"] as? String else { return }
-        let path = d["path"] as? String
+        // Only ever act on a path this window actually lists. The page is bundle-local, but
+        // the handler stays installed for the window's whole life and the file operations are
+        // real, so the path is re-derived rather than trusted.
+        let path = (d["path"] as? String).flatMap(Self.validatedAppPath)
         let name = (d["name"] as? String) ?? (path.map { ($0 as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "") } ?? "App")
         switch a {
         case "open":
@@ -278,7 +281,9 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
                 } else if id.hasPrefix("tv:") {
                     // TV folder entry → open the stream via AppDelegate's retained TV window.
                     NotificationCenter.default.post(name: .init("openTVBookmark"), object: String(id.dropFirst(3)))
-                } else if id.hasPrefix("/") { NSWorkspace.shared.open(URL(fileURLWithPath: id)) }
+                } else if id.hasPrefix("/") {
+                    if let p = Self.validatedAppPath(id) { NSWorkspace.shared.open(URL(fileURLWithPath: p)) }
+                }
                 else { AppLauncher.launchOrActivate(bundleID: id) }
             }
         case "close":   close()
@@ -432,7 +437,12 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     }
 
     private func getInfo(_ path: String) {
-        let src = "tell application \"Finder\"\nactivate\nopen information window of (POSIX file \"\(path)\" as alias)\nend tell"
+        // Escape before interpolating: an app name may legally contain a quote or a backslash,
+        // which would otherwise terminate the AppleScript string literal early.
+        let escaped = path
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let src = "tell application \"Finder\"\nactivate\nopen information window of (POSIX file \"\(escaped)\" as alias)\nend tell"
         var e: NSDictionary?; NSAppleScript(source: src)?.executeAndReturnError(&e)
     }
     private func editName(_ path: String, current: String) {
@@ -616,13 +626,30 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         }
     }
 
+    /// The directories `installedApps()` scans. Anything the web page hands back has to be a
+    /// direct `.app` child of one of them, or it is not something this window put on screen.
+    private static var appSearchDirs: [String] {
+        ["/Applications", "/Applications/Utilities",
+         "/System/Applications", "/System/Applications/Utilities",
+         NSHomeDirectory() + "/Applications"]
+    }
+
+    /// Returns the canonical path if it is an existing app inside a scanned directory, else nil.
+    private static func validatedAppPath(_ path: String) -> String? {
+        let std = URL(fileURLWithPath: path).standardizedFileURL
+        guard std.pathExtension == "app" else { return nil }
+        let parent = std.deletingLastPathComponent().path
+        guard appSearchDirs.contains(parent) else { return nil }
+        guard FileManager.default.fileExists(atPath: std.path) else { return nil }
+        return std.path
+    }
+
     private static func installedApps() -> [[String: String]] {
         let k = RetroFrameTheme.key()
-        let themed = (k == "macos6" || k == "macos9" || k == "winxp" || k == "maiksfav" || k == "macosx" || k == "win98")
+        let themed = (k == "macos6" || k == "macos9" || k == "winxp" || k == "maiksfav"
+                      || k == "macosx" || k == "snowleopard" || k == "win98")
         let fm = FileManager.default
-        var dirs = ["/Applications", "/Applications/Utilities",
-                    "/System/Applications", "/System/Applications/Utilities"]
-        dirs.append(NSHomeDirectory() + "/Applications")
+        let dirs = appSearchDirs
         var seen = Set<String>()
         var out: [[String: String]] = []
         for dir in dirs {
