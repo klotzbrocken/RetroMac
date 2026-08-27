@@ -71,6 +71,11 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
             win.ignoresMouseEvents = true
 
             let cfg = WKWebViewConfiguration()
+            // Non-persistent: a bundled file: page with no state worth keeping. The default store
+            // caches it across launches by URL, and since the path never changes an edited widget
+            // kept rendering the previous build. (Notepad is deliberately NOT on this list — it
+            // keeps the user's notes in localStorage.)
+            cfg.websiteDataStore = .nonPersistent()
             // Strip the 98.js program chrome (menu/controls/fullscreen buttons) and make the
             // saver canvas fill the screen — otherwise Pipes shows its on-screen control UI.
             cfg.userContentController.addUserScript(

@@ -50,6 +50,11 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         if panel == nil {
             let initial = NSRect(x: 0, y: 0, width: 700, height: 484)
             let cfg = WKWebViewConfiguration()
+            // Non-persistent: the widget is a bundled file: page with no state worth keeping, and
+            // the default store caches it across launches by URL. Since the path never changes,
+            // an edited AppFolder.html kept rendering the previous build — the same trap that made
+            // the traffic-light sprites go stale until they were inlined.
+            cfg.websiteDataStore = .nonPersistent()
             cfg.userContentController.add(self, name: "appfolder")
             let wv = WKWebView(frame: initial, configuration: cfg)
             wv.navigationDelegate = self

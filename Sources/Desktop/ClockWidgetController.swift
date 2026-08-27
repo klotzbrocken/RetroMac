@@ -85,6 +85,11 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
         if panel == nil {
             let initial = NSRect(x: 0, y: 0, width: 200, height: 224)
             let cfg = WKWebViewConfiguration()
+            // Non-persistent: a bundled file: page with no state worth keeping. The default store
+            // caches it across launches by URL, and since the path never changes an edited widget
+            // kept rendering the previous build. (Notepad is deliberately NOT on this list — it
+            // keeps the user's notes in localStorage.)
+            cfg.websiteDataStore = .nonPersistent()
             cfg.userContentController.add(self, name: "clock")
             let wv = WKWebView(frame: initial, configuration: cfg)
             wv.navigationDelegate = self

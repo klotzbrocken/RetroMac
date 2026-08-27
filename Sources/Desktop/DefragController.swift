@@ -68,6 +68,11 @@ final class DefragController: NSObject, WKScriptMessageHandler, WKNavigationDele
         if panel == nil {
             let initial = NSRect(x: 0, y: 0, width: 604, height: 360)
             let cfg = WKWebViewConfiguration()
+            // Non-persistent: a bundled file: page with no state worth keeping. The default store
+            // caches it across launches by URL, and since the path never changes an edited widget
+            // kept rendering the previous build. (Notepad is deliberately NOT on this list — it
+            // keeps the user's notes in localStorage.)
+            cfg.websiteDataStore = .nonPersistent()
             cfg.userContentController.add(self, name: "defrag")
             let wv = WKWebView(frame: initial, configuration: cfg)
             wv.navigationDelegate = self
