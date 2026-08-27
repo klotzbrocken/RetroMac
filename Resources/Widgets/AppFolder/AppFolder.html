@@ -869,10 +869,11 @@ body.theme-macos6 .be-status{background:#fff;color:#000;border:none;border-top:2
   body.theme-snowleopard .hsb .sb-thumb::before{
     top:1.5px;left:3px;right:3px;height:7px;
     background:linear-gradient(180deg,#eefaff,#bfe6f4);}
-  /* Nothing to scroll on this axis: 10.6 keeps the bar but greys the knob out, the way AquaUI
-     desaturates its inactive scroller. A full-length blue knob would claim the view scrolls. */
-  body.theme-snowleopard .sb-idle .sb-thumb{filter:grayscale(1);opacity:.5;}
-  body.theme-snowleopard .sb-idle .sb-thumb::before{opacity:.35;}
+  /* Nothing to scroll on this axis: Mac OS X keeps the bar and its arrows but shows NO knob at
+     all — an empty trough. Greying the knob out instead (AquaUI's inactive scroller) leaves a
+     full-length grey slab, because with nothing to scroll the knob's ratio is 1 and it fills the
+     whole trough. That is what "not blue and too long" was. */
+  body.theme-snowleopard .sb-idle .sb-thumb{display:none;}
   body.theme-snowleopard .sb-btn{color:#4a4a4a;border:1px solid #c4c4c4;
     background:linear-gradient(180deg,#fbfbfb,#e4e4e4);}
   body.theme-snowleopard .sb-idle .sb-btn{color:#a8a8a8;}
