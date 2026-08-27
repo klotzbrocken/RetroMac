@@ -1,0 +1,61 @@
+Hover! — bundled with RetroMac (Windows 95 theme, "Fun Stuff (D:)" CD-ROM)
+==========================================================================
+
+Hover! is a game created by Microsoft Corporation, originally shipped on the
+Windows 95 CD-ROM in 1995. The files in this directory are the HTML5 remake
+that Microsoft published at http://hover.ie/ in 2013.
+
+    Hover! (c) 1995, 2013 Microsoft Corporation.
+
+The game is included in RetroMac as a fan tribute for personal, non-commercial
+use, to recreate the contents of the original Windows 95 "Fun Stuff" folder.
+RetroMac is not affiliated with, sponsored by, or endorsed by Microsoft.
+Microsoft, Windows and Hover! are trademarks of Microsoft Corporation.
+
+Modifications made for RetroMac
+-------------------------------
+  * Asset paths rewritten from absolute to relative so the game runs from a
+    local file:// URL with no web server.
+  * The external Internet Explorer promo flyout was removed and replaced with
+    an inert stub in index.html.
+  * All @font-face rules pointing at hover.ie and i.s-microsoft.com were
+    removed and the font stacks replaced with locally available faces, so the
+    game makes no network requests.
+  * The "Fun Stuff" header button's link to a Microsoft OneDrive shortlink
+    (sdrv.ms) was removed for the same reason.
+  * Only the single-player "classic" (?retro) mode is reachable from RetroMac.
+    The multiplayer, scoreboard and social-sharing code paths are unused.
+
+Third-party libraries bundled inside this directory
+---------------------------------------------------
+
+three.js r61 — scripts/three.min.065c49d8.js
+jQuery 1.10.2 — scripts/jquery.min.js
+jQuery.signalR — part of scripts/game-libs.922bbe8e.js (unused at runtime)
+
+Both three.js and jQuery are distributed under the MIT License. Their licence
+headers were stripped by the original minification; the licence text is
+reproduced here to satisfy the attribution requirement.
+
+    The MIT License
+
+    Copyright (c) 2010-2013 three.js authors
+    Copyright (c) 2005, 2013 jQuery Foundation, Inc. and other contributors
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.

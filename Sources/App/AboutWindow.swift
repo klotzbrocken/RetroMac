@@ -234,7 +234,7 @@ struct AboutTab: View {
                 }
 
                 Section("Privacy & Offline") {
-                    Text("RetroMac works fully offline — every theme (dock, wallpaper, menu bar, icons, window chrome) is bundled and rendered locally; no constant internet connection is required. The network is only used for a few optional extras: the classic in-window web apps in the Windows themes (loaded on demand, nothing bundled), the retro TV browser, the desktop \u{201C}sheep\u{201D} pet sprites (fetched once, then cached), and checking for app updates. RetroMac does not track you or send personal data.")
+                    Text("RetroMac works fully offline — every theme (dock, wallpaper, menu bar, icons, window chrome) is bundled and rendered locally; no constant internet connection is required. The network is only used for a few optional extras: the classic in-window web apps in the Windows themes (loaded on demand; the Hover! game is the one that ships bundled and needs no network), the retro TV browser, the desktop \u{201C}sheep\u{201D} pet sprites (fetched once, then cached), and checking for app updates. RetroMac does not track you or send personal data.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -388,6 +388,20 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
 
                     Text("Windows 95 “Clouds” wallpaper: remastered by ZaDarkSide0, licensed under CC BY-NC-SA 3.0.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("Hover! — the Microsoft HTML5 remake",
+                         destination: URL(string: "http://hover.ie/")!)
+                        .font(.caption)
+                    Text("Hover! © 1995, 2013 Microsoft Corporation. The HTML5 remake is bundled with the Windows 95 theme\u{2019}s Fun Stuff CD-ROM and runs entirely offline. Included as a fan tribute for personal, non-commercial use; RetroMac is not affiliated with or endorsed by Microsoft.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("three.js on GitHub",
+                         destination: URL(string: "https://github.com/mrdoob/three.js")!)
+                        .font(.caption)
+                    Text("three.js r61 (MIT) and jQuery 1.10.2 (MIT) — 3D and DOM libraries bundled inside the Hover! game.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
