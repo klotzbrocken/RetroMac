@@ -399,6 +399,14 @@ final class DockController {
         return (width, height, magOverflow, effectiveHMagOverflow, dynScale)
     }
 
+    /// The retro dock's frame on `screen` while it is actually on screen, else nil. Overlays
+    /// that draw their own controls near an edge need this so they do not end up underneath it.
+    func visibleDockFrame(on screen: NSScreen) -> NSRect? {
+        guard let win = window, win.isVisible, win.alphaValue > 0.01 else { return nil }
+        guard win.frame.intersects(screen.frame) else { return nil }
+        return win.frame
+    }
+
     private func dockFrame(screen: NSScreen, width: CGFloat, height: CGFloat) -> NSRect {
         let visible = screen.visibleFrame
         let config = ThemeManager.shared.activeTheme?.config

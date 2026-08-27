@@ -114,11 +114,16 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
                 for id in activeIDs { addWidget(id, to: root, on: screen) }
                 // The bar starts off-screen and slides up from the + in the corner, the way
                 // Dashboard's widget bar did.
+                // Clear the retro dock. It sits one level above this layer — deliberately, so it
+                // stays visible as it did in Dashboard — which means the bar and the + have to be
+                // lifted above it rather than sliding underneath.
+                let inset = self.bottomInset(on: screen)
                 let b = makeBar(width: screen.frame.width)
+                b.bottomInset = inset
                 b.frame.origin.y = -b.frame.height
                 root.addSubview(b)
                 self.bar = b
-                let p = DashboardPlusView(frame: NSRect(x: 14, y: 14, width: 30, height: 30))
+                let p = DashboardPlusView(frame: NSRect(x: 14, y: 14 + inset, width: 30, height: 30))
                 p.onClick = { [weak self] in self?.setBarOpen(!(self?.barOpen ?? false)) }
                 root.addSubview(p)
                 self.plus = p
@@ -150,6 +155,14 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         }
     }
 
+    /// How much of the bottom of `screen` the retro dock occupies, so nothing is laid out under
+    /// it. Zero when the dock is hidden or sits on another edge.
+    private func bottomInset(on screen: NSScreen) -> CGFloat {
+        guard let dock = DockController.shared.visibleDockFrame(on: screen) else { return 0 }
+        guard dock.minY <= screen.frame.minY + 2 else { return 0 }   // only a dock along the bottom
+        return dock.height
+    }
+
     /// Slides the widget bar in or out. While it is open every widget wears its remove badge,
     /// which is exactly when Dashboard showed them — not on hover, which had the badge sitting
     /// in the corner of a widget you were only trying to use.
@@ -161,7 +174,7 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.22
             ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            bar.animator().frame.origin.y = open ? 0 : -bar.frame.height
+            bar.animator().frame.origin.y = open ? bar.bottomInset : -bar.frame.height
         }
     }
 
@@ -488,6 +501,8 @@ final class DashboardWidgetView: NSView {
 
 /// The strip along the bottom that adds widgets, standing in for Dashboard's widget bar.
 final class DashboardBarView: NSView {
+    /// How far up from the bottom the bar rests, so it clears the retro dock.
+    var bottomInset: CGFloat = 0
     var items: [DashboardController.Widget] = []
     var activeIDs: Set<String> = []
     var onPick: ((String) -> Void)?
