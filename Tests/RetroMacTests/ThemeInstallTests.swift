@@ -143,3 +143,55 @@ final class FolderIconMappingTests: XCTestCase {
         }
     }
 }
+
+/// An icon whose artwork sits inside a wide transparent margin renders visibly smaller than its
+/// neighbours even though the file is the right size. That is invisible in review and only shows
+/// up in the dock, so it is pinned here: the first pass at the new Snow Leopard icons shipped
+/// Claude at 77% and ChatGPT at 75% while Safari and Mail measure 98%.
+final class IconContentExtentTests: XCTestCase {
+
+    private var iconsDir: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Resources/Themes/MacOSX-SnowLeopard.retromactheme/icons")
+    }
+
+    /// Longer side of the opaque bounding box, as a fraction of the canvas.
+    private func contentExtent(_ url: URL) throws -> CGFloat {
+        let img = try XCTUnwrap(NSImage(contentsOf: url), "unreadable: \(url.lastPathComponent)")
+        let cg = try XCTUnwrap(img.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        let w = cg.width, h = cg.height
+        var px = [UInt8](repeating: 0, count: w * h * 4)
+        let ctx = try XCTUnwrap(CGContext(data: &px, width: w, height: h, bitsPerComponent: 8,
+                                          bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+        var minX = w, maxX = -1, minY = h, maxY = -1
+        for y in 0..<h {
+            for x in 0..<w where px[(y * w + x) * 4 + 3] > 24 {
+                minX = min(minX, x); maxX = max(maxX, x)
+                minY = min(minY, y); maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= 0 else { return 0 }
+        return max(CGFloat(maxX - minX + 1) / CGFloat(w), CGFloat(maxY - minY + 1) / CGFloat(h))
+    }
+
+    func testNewIconsFillTheCanvasLikeTheShippedOnes() throws {
+        // Safari, Mail and Preview sit at 97-98%; Finder, the loosest, at 91%.
+        let floor: CGFloat = 0.88
+        for name in ["chrome", "numbers", "pages", "keynote", "downloads", "claude", "chatgpt"] {
+            let extent = try contentExtent(iconsDir.appendingPathComponent("\(name).png"))
+            XCTAssertGreaterThanOrEqual(
+                extent, floor,
+                "\(name).png only fills \(Int(extent * 100))% of its canvas — it will look shrunken in the dock")
+        }
+    }
+
+    func testTheReferenceIconsStillSetThatBar() throws {
+        for name in ["safari", "mail", "preview_app"] {
+            let extent = try contentExtent(iconsDir.appendingPathComponent("\(name).png"))
+            XCTAssertGreaterThanOrEqual(extent, 0.90, "\(name).png is no longer a valid yardstick")
+        }
+    }
+}
