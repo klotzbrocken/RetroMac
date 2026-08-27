@@ -1,68 +1,124 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<style>
-  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
-  canvas { display: block; }
-</style>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+
+    <title>Flurry for WebGL</title>
+    <link href="css/index.css" rel="stylesheet"/>
+
+    <!-- Courtesy of http://realfavicongenerator.net/ -->
+    <meta name="apple-mobile-web-app-title" content="Flurry">
+    <meta name="application-name" content="Flurry">
 </head>
+
 <body>
-<canvas id="c"></canvas>
-<script>
-/* Flurry — homage to the classic Mac OS X default screensaver. Flowing, colour-shifting
-   particle streamers radiating from a slowly drifting attractor. Original canvas engine. */
-const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-function resize(){ cv.width = innerWidth; cv.height = innerHeight; }
-resize(); addEventListener('resize', resize);
-
-const N = 900;
-const parts = [];
-function reset(p){
-  const a = Math.random() * Math.PI * 2;
-  p.x = cv.width / 2; p.y = cv.height / 2;
-  p.a = a;
-  p.spd = 0.6 + Math.random() * 2.2;
-  p.life = 0; p.max = 60 + Math.random() * 120;
-  p.spin = (Math.random() - 0.5) * 0.06;
-  p.hueOff = Math.random() * 40 - 20;
-}
-for (let i = 0; i < N; i++){ const p = {}; reset(p); p.life = Math.random() * p.max; parts.push(p); }
-
-let t = 0;
-let cx = 0, cy = 0;                 // attractor offset, drifts slowly
-function step(){
-  t += 0.01;
-  // gentle fade instead of full clear → trails
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = 'rgba(0,0,0,0.10)';
-  ctx.fillRect(0, 0, cv.width, cv.height);
-
-  cx = Math.cos(t * 0.7) * cv.width * 0.18;
-  cy = Math.sin(t * 0.9) * cv.height * 0.18;
-  const ox = cv.width / 2 + cx, oy = cv.height / 2 + cy;
-  const baseHue = (t * 30) % 360;
-
-  ctx.globalCompositeOperation = 'lighter';
-  for (const p of parts){
-    p.a += p.spin + Math.sin(t + p.life * 0.05) * 0.03;
-    const r = p.life * p.spd;
-    p.x = ox + Math.cos(p.a) * r;
-    p.y = oy + Math.sin(p.a) * r;
-    p.life++;
-    if (p.life > p.max || p.x < -50 || p.x > cv.width + 50 || p.y < -50 || p.y > cv.height + 50) reset(p);
-
-    const k = 1 - p.life / p.max;
-    const hue = (baseHue + p.hueOff + r * 0.4) % 360;
-    const size = 1 + k * 2.5;
-    ctx.fillStyle = 'hsla(' + hue + ',100%,' + (55 + k * 20) + '%,' + (0.5 * k) + ')';
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  requestAnimationFrame(step);
-}
-step();
-</script>
+    <canvas id="renderer" class="uiVisible"></canvas>
 </body>
+
+<shaders>
+    <!-- These are very basic shaders; perhaps the closest to legacy fixed-function
+         OpenGL shading.
+
+         All the vertex shader is concerned about is applying the typical projection
+         matricies and passing on the color and UV arrays to the fragment shader.
+
+         All the fragment shader is concerned about is drawing each quad's spotlight
+         texture, according to a given color and alpha value for each point. It also
+         handles coloring the full-screen quad that fades all previously drawn
+         elements by being drawn in a single translucent color.
+    -->
+    <script id="vertexShader" type="x-shader/x-vertex">
+        precision highp float;
+        precision highp int;
+
+        attribute vec2 position;
+        attribute vec4 color;
+        attribute vec2 uv;
+
+        uniform mat4 modelViewMatrix;
+        uniform mat4 projectionMatrix;
+
+        varying vec4 vColor;
+        varying vec2 vUv;
+
+        void main()
+        {
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 0, 1.0);
+
+            vColor = color;
+            vUv    = uv;
+        }
+    </script>
+
+    <script id="fragShader" type="x-shader/x-fragment">
+        precision highp float;
+        precision highp int;
+
+        varying vec4 vColor;
+        varying vec2 vUv;
+
+        uniform bool drawingRect;
+
+        uniform sampler2D uSampler;
+
+        void main()
+        {
+            if (drawingRect)
+                gl_FragColor = vColor;
+            else
+            {
+                vec4 texel = texture2D(uSampler, vec2(vUv.s, vUv.t));
+
+                gl_FragColor = vec4(texel) * vColor;
+                if (gl_FragColor.a < 0.0)
+                    discard;
+            }
+        }
+    </script>
+</shaders>
+
+<scripts>
+    <!-- gl-matrix is used for matrix operations, such as creating blank ones -->
+    <script src="js/vendor/gl-matrix-2.1.0.js"></script>
+    <!-- dat.gui provides the floating GUI for setting changing and presets -->
+    <script src="js/vendor/dat.gui-0.5.js"></script>
+    <!-- Stats provides an FPS meter for performance measuring -->
+    <script src="js/vendor/Stats-r11.js"></script>
+
+    <script src="js/Flurry.js"></script>
+
+    <script src="js/enums/BlendModes.js"></script>
+    <script src="js/enums/ColorModes.js"></script>
+
+    <script src="js/data/Config.js"></script>
+    <script src="js/data/Presets.js"></script>
+
+    <script src="js/util/ArrayOf.js"></script>
+    <script src="js/util/Colors.js"></script>
+    <script src="js/util/Math.js"></script>
+    <script src="js/util/Vectors.js"></script>
+
+    <script src="js/Renderer.js"></script>
+    <script src="js/Smoke.js"></script>
+    <script src="js/SmokeParticle.js"></script>
+    <script src="js/Spark.js"></script>
+    <script src="js/Star.js"></script>
+    <script src="js/Texture.js"></script>
+    <script src="js/GLSaver.js"></script>
+
+    <script type="application/javascript">
+        try { Flurry.main(); }
+        catch(e)
+        {
+            document.body.innerHTML = "<div class='error'>"
+            + "Flurry crashed; please visit "
+            + "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>"
+            + " for more information. <sup>"
+            + e.name + "::" + e.message
+            + "</sup></div>";
+            throw e;
+        }
+    </script>
+</scripts>
 </html>

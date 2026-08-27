@@ -132,6 +132,10 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
     (function(){
       var css = "html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;background:#000!important;overflow:hidden!important;cursor:none!important}"
         + ".controls,.ui-container,.toggle-controls,.fullscreen-button,nav,.menu-bar,.menus{display:none!important}"
+        // Flurry ships dat.GUI and shows its settings panel by default (its normal page lets you
+        // toggle it with a click). A screensaver must never show it, and RetroMac dismisses on
+        // any input anyway, so the panel could not be used even if it appeared.
+        + ".dg,.dg.ac,.dg.main,#stats{display:none!important}"
         + ".canvas-container{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important}"
         + "canvas{width:100vw!important;height:100vh!important;display:block!important}";
       var s = document.createElement('style'); s.textContent = css;

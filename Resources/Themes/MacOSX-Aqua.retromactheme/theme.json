@@ -132,6 +132,7 @@
   },
   "appearance": "light",
   "accentColor": "blue",
+  "screensaver": "flurry",
   "desktopIcons": [
     {
       "name": "TV",
@@ -153,6 +154,12 @@
       "type": "cpumonitor",
       "gridX": 0,
       "gridY": 2
-    }
-  ]
+    },
+    {
+      "name": "Screen Saver",
+      "icon": "screensaver.png",
+      "type": "screensaver",
+      "gridX": 0,
+      "gridY": 3
+    }]
 }

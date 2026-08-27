@@ -405,6 +405,13 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Link("RoyCurtis/Flurry-WebGL on GitHub",
+                         destination: URL(string: "https://github.com/RoyCurtis/Flurry-WebGL")!)
+                        .font(.caption)
+                    Text("Flurry screensaver (MIT) \u{2014} Roy Adrian Curtis' WebGL port of Calum Robinson's original, used with his permission. Bundled for the Mac OS X, Snow Leopard and Mountain Lion themes.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("robertventurini/FlyingToasters on GitHub",
                          destination: URL(string: "https://github.com/robertventurini/FlyingToasters")!)
                         .font(.caption)
