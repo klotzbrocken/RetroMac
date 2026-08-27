@@ -145,16 +145,6 @@ struct ShortcutsTab: View {
                         .tint(.rmAccent)
                         .labelsHidden()
                 }
-                RMRow(label: "Tint the menu bar to match the theme",
-                      hint: "macOS cannot recolour the menu bar, but it is translucent over the desktop picture. This paints a solid strip into the top of the theme's wallpaper, so the bar reads as opaque grey instead of showing the wallpaper through it. Only affects RetroMac's own wallpapers.") {
-                    Toggle("", isOn: $settings.menuBarTint)
-                        .toggleStyle(.switch)
-                        .tint(.rmAccent)
-                        .labelsHidden()
-                        .onChange(of: settings.menuBarTint) { _, _ in
-                            ThemeManager.shared.applyWallpaper()
-                        }
-                }
                 RMRow(label: "Hide desktop icons when overlay is on") {
                     Toggle("", isOn: $settings.hideDesktopIcons)
                         .toggleStyle(.switch)
