@@ -41,7 +41,7 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         Widget(id: "stickies", name: "Stickies", html: "Stickies/Stickies.html",
                size: NSSize(width: 220, height: 200), stripChrome: false),
         Widget(id: "search", name: "Search", html: "Search/Search.html",
-               size: NSSize(width: 324, height: 40), stripChrome: false),
+               size: NSSize(width: 452, height: 54), stripChrome: false),
         // The CPU widget renders its content at SCALE 0.6, so its desktop panel is 560 wide for
         // what lands as roughly 336 points on screen. Sized to the drawn result, not the page.
         Widget(id: "cpu", name: "CPU", html: "CPUMonitor/CPUMonitor.html",
@@ -56,6 +56,10 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
     private var mainScreen: NSScreen?
     private var barOpen = false
     private(set) var isOpen = false
+    /// Feeds the CPU widget while the layer is up. Its page is driven from this side — hosting
+    /// the HTML alone gives an empty graph, which is what it did at first.
+    private var cpuTimer: Timer?
+    private let cpuSampler = CPUSampler()
 
     private override init() { super.init() }
 
@@ -150,6 +154,7 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         let closing = windows
         windows.removeAll()
         hosts.removeAll()
+        stopCPUFeed()
         root = nil; bar = nil; plus = nil; mainScreen = nil
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.18
@@ -207,6 +212,7 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
             guard let self = self else { return }
             self.activeIDs = self.activeIDs.filter { $0 != id }
             self.hosts[id] = nil
+            if id == "cpu" { self.stopCPUFeed() }
             self.bar?.activeIDs = Set(self.activeIDs)
             // Suck it away rather than blink it out, the way Dashboard did.
             host.wantsLayer = true
@@ -233,6 +239,38 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
 
         root.addSubview(host)
         hosts[id] = host
+        if id == "cpu" { startCPUFeed() }
+    }
+
+    private func startCPUFeed() {
+        guard cpuTimer == nil else { return }
+        cpuSampler.reset()
+        let push: () -> Void = { [weak self] in
+            guard let self = self, let wv = self.hosts["cpu"]?.webView else { return }
+            if let load = self.cpuSampler.next() {
+                wv.evaluateJavaScript(
+                    String(format: "window.setLoad && window.setLoad(%.1f, %.1f)", load.system, load.user))
+            }
+        }
+        push()   // prime, so the first real sample has something to diff against
+        let t = Timer(timeInterval: 1.0, repeats: true) { _ in push() }
+        RunLoop.main.add(t, forMode: .common)
+        cpuTimer = t
+        // The chip name only needs saying once, after the page is up.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            guard let wv = self?.hosts["cpu"]?.webView else { return }
+            let (silicon, model, clock) = CPUMonitorController.cpuInfo()
+            func esc(_ s: String) -> String {
+                s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+            }
+            wv.evaluateJavaScript(
+                "window.setCPUInfo && window.setCPUInfo('\(esc(silicon))','\(esc(model))','\(esc(clock))')")
+        }
+    }
+
+    private func stopCPUFeed() {
+        cpuTimer?.invalidate()
+        cpuTimer = nil
     }
 
     private func storedOrigin(for w: Widget, on screen: NSScreen) -> NSPoint {

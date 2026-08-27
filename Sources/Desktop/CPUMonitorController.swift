@@ -14,7 +14,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
     private var dragOverlay: DragOverlayView?
     private var timer: Timer?
     private var moveObserver: NSObjectProtocol?
-    private var prev: (user: Double, system: Double, idle: Double, nice: Double)?
+    private let sampler = CPUSampler()
 
     private override init() {
         super.init()
@@ -94,7 +94,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
     func close() {
         saveOrigin()
         timer?.invalidate(); timer = nil
-        prev = nil
+        sampler.reset()
         panel?.orderOut(nil)
     }
 
@@ -102,7 +102,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
     func destroy() {
         saveOrigin()
         timer?.invalidate(); timer = nil
-        prev = nil
+        sampler.reset()
         if let mo = moveObserver { NotificationCenter.default.removeObserver(mo); moveObserver = nil }
         if let wv = webView {
             wv.stopLoading()
@@ -220,7 +220,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
 
     private func startSampling() {
         timer?.invalidate()
-        prev = nil
+        sampler.reset()
         sampleAndPush()   // prime
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.sampleAndPush() }
         RunLoop.main.add(t, forMode: .common)
@@ -228,19 +228,12 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
     }
 
     private func sampleAndPush() {
-        guard let cur = Self.cpuTicks() else { return }
-        defer { prev = cur }
-        guard let p = prev else { return }   // need two samples
-        let du = cur.user - p.user, dn = cur.nice - p.nice
-        let ds = cur.system - p.system, di = cur.idle - p.idle
-        let total = du + dn + ds + di
-        guard total > 0 else { return }
-        let userPct = (du + dn) / total * 100.0
-        let systemPct = ds / total * 100.0
-        webView?.evaluateJavaScript(String(format: "window.setLoad && window.setLoad(%.1f, %.1f)", systemPct, userPct))
+        guard let load = sampler.next() else { return }
+        webView?.evaluateJavaScript(
+            String(format: "window.setLoad && window.setLoad(%.1f, %.1f)", load.system, load.user))
     }
 
-    private static func cpuTicks() -> (user: Double, system: Double, idle: Double, nice: Double)? {
+    static func cpuTicks() -> (user: Double, system: Double, idle: Double, nice: Double)? {
         var count = mach_msg_type_number_t(MemoryLayout<host_cpu_load_info_data_t>.stride / MemoryLayout<integer_t>.stride)
         var info = host_cpu_load_info_data_t()
         let kr = withUnsafeMutablePointer(to: &info) { ptr -> kern_return_t in
@@ -261,7 +254,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
         webView?.evaluateJavaScript("window.setCPUInfo && window.setCPUInfo('\(esc(silicon))','\(esc(model))','\(esc(clock))')")
     }
 
-    private static func cpuInfo() -> (silicon: String, model: String, clock: String) {
+    static func cpuInfo() -> (silicon: String, model: String, clock: String) {
         let brand = sysctlString("machdep.cpu.brand_string") ?? "CPU"
         let phys = sysctlInt32("hw.physicalcpu") ?? 0
         let logical = sysctlInt32("hw.logicalcpu") ?? 0
@@ -399,5 +392,27 @@ final class DragOverlayView: NSView {
         pressed = nil
         hovered = hit ? pr : nil
         if hit { fire(pr) }
+    }
+}
+
+
+/// Turns the host's cumulative CPU tick counters into a per-interval load. Held per owner: the
+/// desktop widget and the Dashboard each read at their own cadence, and a shared previous sample
+/// would give both of them wrong deltas.
+final class CPUSampler {
+    private var prev: (user: Double, system: Double, idle: Double, nice: Double)?
+
+    func reset() { prev = nil }
+
+    /// System and user load in percent since the previous call, or nil on the first one.
+    func next() -> (system: Double, user: Double)? {
+        guard let cur = CPUMonitorController.cpuTicks() else { return nil }
+        defer { prev = cur }
+        guard let p = prev else { return nil }   // need two samples
+        let du = cur.user - p.user, dn = cur.nice - p.nice
+        let ds = cur.system - p.system, di = cur.idle - p.idle
+        let total = du + dn + ds + di
+        guard total > 0 else { return nil }
+        return (system: ds / total * 100.0, user: (du + dn) / total * 100.0)
     }
 }
