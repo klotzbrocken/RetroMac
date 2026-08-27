@@ -74,7 +74,7 @@
   "desktopIcons": [
     {
       "name": "Macintosh HD",
-      "icon": "",
+      "icon": "machd.png",
       "type": "folder",
       "path": "/",
       "gridX": 0,
