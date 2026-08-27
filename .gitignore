@@ -16,3 +16,6 @@ DerivedData/
 # Archives
 *.zip
 *.dmg
+
+# Local scratch/experiment files (contains build products)
+scratch/

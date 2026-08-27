@@ -916,19 +916,27 @@ struct PerAppRuleRow: View {
 
                 Spacer()
 
-                // USES label + preset chip
+                // USES label + preset picker. This used to be a read-only chip, which pinned
+                // every rule to whatever the default preset happened to be when it was added.
                 HStack(spacing: 6) {
                     Text("USES")
                         .font(.rmMono(size: 10.5, weight: .semibold))
                         .tracking(0.5)
                         .foregroundColor(.rmTextTertiary)
 
-                    let presetName = PresetRegistry.availablePresets.first(where: { $0.id == rule.presetID })?.displayName ?? rule.presetID
-                    if rule.presetID.isEmpty {
-                        RMChip(text: "None \u{2014} overlay off", tone: .neutral, showDot: false)
-                    } else {
-                        RMChip(text: presetName, tone: .info, showDot: false)
+                    Picker("", selection: Binding(
+                        get: { rule.presetID },
+                        set: { newID in
+                            settings.perAppRules[bundleID] = .init(presetID: newID, reason: rule.reason)
+                            settings.perAppPresets[bundleID] = newID   // keep the legacy model in sync
+                        })) {
+                        Text("None \u{2014} overlay off").tag("")
+                        ForEach(PresetRegistry.availablePresets, id: \.id) { preset in
+                            Text(preset.displayName).tag(preset.id)
+                        }
                     }
+                    .labelsHidden()
+                    .frame(width: 190)
                 }
 
                 // Delete button

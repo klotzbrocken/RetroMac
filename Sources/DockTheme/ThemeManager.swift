@@ -849,10 +849,33 @@ final class ThemeManager {
     }
 
     private func installThemeBundle(_ src: URL) throws {
+        // Replace the bundle that carries the same theme id, not merely the same file name:
+        // a renamed .retromactheme must still update the theme it *is*, and an unrelated theme
+        // that happens to share a file name must not be clobbered.
+        let incomingID = try? ThemeBundle(url: src).stableID
+        let existing = availableThemes.first { !$0.isBuiltIn && $0.stableID == incomingID }
+        try Self.install(bundleAt: src, into: userThemesDir, replacing: existing?.url)
+    }
+
+    /// Copy-then-swap install. Staging lives inside `themesDir` so it is on the same volume and
+    /// `replaceItemAt` can do an atomic exchange: a copy that fails half-way (bad archive, full
+    /// disk, denied permission) leaves the previously installed theme completely untouched.
+    static func install(bundleAt src: URL, into themesDir: URL, replacing existing: URL?) throws {
         let fm = FileManager.default
-        let destURL = userThemesDir.appendingPathComponent(src.lastPathComponent)
-        if fm.fileExists(atPath: destURL.path) { try fm.removeItem(at: destURL) }
-        try fm.copyItem(at: src, to: destURL)
+        let destURL = existing ?? themesDir.appendingPathComponent(src.lastPathComponent)
+
+        let staging = themesDir.appendingPathComponent(".staging-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: staging, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: staging) }
+
+        let staged = staging.appendingPathComponent(destURL.lastPathComponent)
+        try fm.copyItem(at: src, to: staged)
+
+        if fm.fileExists(atPath: destURL.path) {
+            _ = try fm.replaceItemAt(destURL, withItemAt: staged)
+        } else {
+            try fm.moveItem(at: staged, to: destURL)
+        }
     }
 
     /// Locate a *.retromactheme bundle at the archive root or one level deep (skips __MACOSX).

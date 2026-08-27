@@ -51,10 +51,13 @@ enum PerformanceProfile: String, CaseIterable, Identifiable {
 
     var lowLatencyMode: Bool { false }  // 60fps only via manual override
 
+    /// Frame rate a profile falls back to. Every value here MUST also be a tag of the
+    /// frame-rate picker in AdvancedTab, otherwise the control renders with no selection.
+    /// (.low used to return 24 for that reason; it saves power through halfResolution and
+    /// disableOverlays instead.)
     var targetFPS: Int {
         switch self {
-        case .high, .balanced: return 30
-        case .low: return 24
+        case .high, .balanced, .low: return 30
         }
     }
 
@@ -132,7 +135,29 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(halfResolution, forKey: "halfResolution") }
     }
     @Published var targetFPS: Int {
-        didSet { defaults.set(targetFPS, forKey: "targetFPS") }
+        didSet {
+            // Assigning inside didSet does not re-enter it, so this is a plain clamp.
+            let clamped = Self.clampFPS(targetFPS)
+            if clamped != targetFPS { targetFPS = clamped; return }
+            defaults.set(targetFPS, forKey: "targetFPS")
+        }
+    }
+    /// True once the user picked a frame rate themselves. Keeps applyPerformanceProfile()
+    /// from silently resetting a deliberate 60/120 fps choice when the quality picker changes.
+    @Published var targetFPSUserSet: Bool {
+        didSet { defaults.set(targetFPSUserSet, forKey: "targetFPSUserSet") }
+    }
+
+    static func clampFPS(_ fps: Int) -> Int { min(max(fps, 15), 240) }
+
+    /// One-time resolution of the frame rate at launch, split out of `init` so it can be tested.
+    /// `lowLatencyMode` was a hidden 60 fps switch; anyone who had it on gets 60 and counts as
+    /// having chosen a frame rate deliberately.
+    static func resolveFPS(stored: Int?, lowLatency: Bool, userSet: Bool,
+                           profileFPS: Int) -> (fps: Int, userSet: Bool) {
+        let storedClamped = stored.map(clampFPS)
+        if lowLatency && (storedClamped ?? profileFPS) < 60 { return (60, true) }
+        return (storedClamped ?? profileFPS, userSet)
     }
     @Published var stopOnSleep: Bool {
         didSet { defaults.set(stopOnSleep, forKey: "stopOnSleep") }
@@ -812,13 +837,16 @@ final class AppSettings: ObservableObject {
         halfResolution = defaults.object(forKey: "halfResolution") as? Bool ?? profile.halfResolution
         // The old "Low-latency mode" switch was a hidden 60 fps toggle. Fold it into the real
         // frame-rate setting once, so the choice is visible instead of implied by a switch name.
-        let storedFPS = defaults.object(forKey: "targetFPS") as? Int
-        if defaults.bool(forKey: "lowLatencyMode") && (storedFPS ?? profile.targetFPS) < 60 {
-            targetFPS = 60
-            defaults.set(60, forKey: "targetFPS")
+        let resolved = Self.resolveFPS(stored: defaults.object(forKey: "targetFPS") as? Int,
+                                       lowLatency: defaults.bool(forKey: "lowLatencyMode"),
+                                       userSet: defaults.bool(forKey: "targetFPSUserSet"),
+                                       profileFPS: profile.targetFPS)
+        targetFPS = resolved.fps
+        targetFPSUserSet = resolved.userSet
+        if defaults.bool(forKey: "lowLatencyMode") {
+            defaults.set(resolved.fps, forKey: "targetFPS")
+            defaults.set(resolved.userSet, forKey: "targetFPSUserSet")
             defaults.set(false, forKey: "lowLatencyMode")
-        } else {
-            targetFPS = storedFPS ?? profile.targetFPS
         }
         stopOnSleep = defaults.object(forKey: "stopOnSleep") as? Bool ?? true
         resumeAfterSleep = defaults.bool(forKey: "resumeAfterSleep")
@@ -1056,7 +1084,14 @@ final class AppSettings: ObservableObject {
     }
 
     func presetForApp(bundleID: String) -> String? {
-        perAppPresets[bundleID]
+        Self.preset(for: bundleID, rules: perAppRules, legacy: perAppPresets)
+    }
+
+    /// perAppRules is the current model; perAppPresets is the older one it was migrated from and
+    /// is still written alongside it. Rules win, the legacy dictionary is the fallback.
+    static func preset(for bundleID: String, rules: [String: PerAppRule],
+                       legacy: [String: String]) -> String? {
+        rules[bundleID]?.presetID ?? legacy[bundleID]
     }
 
     /// Returns the preset for a theme: user override > theme.json default > nil
@@ -1109,7 +1144,7 @@ final class AppSettings: ObservableObject {
     func applyPerformanceProfile() {
         let profile = performanceProfile
         halfResolution = profile.halfResolution
-        targetFPS = profile.targetFPS
+        if !targetFPSUserSet { targetFPS = profile.targetFPS }
 
         if profile.disableOverlays {
             scanlineOverlayName = ""

@@ -80,6 +80,9 @@ private struct PerformanceSection: View {
                             .labelsHidden()
                             .frame(width: 180)
                             .onChange(of: settings.targetFPS) { _, _ in
+                                // Mark it as a deliberate choice so the Quality picker stops
+                                // resetting it (see AppSettings.applyPerformanceProfile).
+                                settings.targetFPSUserSet = true
                                 (NSApp.delegate as? AppDelegate)?.reapplyCaptureSettings()
                             }
                         }
