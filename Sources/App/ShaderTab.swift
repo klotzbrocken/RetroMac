@@ -2,19 +2,22 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
-/// Advanced settings — power-user options collected behind one tab so the rest of the
-/// Settings window stays simple. A segmented control switches between sub-sections; only
-/// one is shown at a time (each reuses an existing view with its own scroll region).
-struct AdvancedTab: View {
-    @State private var section: AdvSection = .performance
+/// Everything about the shader itself, in one place.
+///
+/// This was the "Advanced" tab, which is how the app's own centrepiece ended up with no home:
+/// four of its six sections were shader topics, while the on/off state, the per-theme choice and
+/// the launch behaviour sat in three other places. Hotkeys and system setup moved out to tabs of
+/// their own; what stays is the effect, from the preset down to when it runs.
+struct ShaderTab: View {
+    @State private var section: ShaderSection = .preset
 
-    enum AdvSection: String, CaseIterable, Identifiable {
-        case performance = "Performance"
-        case presets = "Presets"
-        case effects = "Effects"
-        case hotkeys = "Hotkeys"
+    enum ShaderSection: String, CaseIterable, Identifiable {
+        case preset = "Preset"
+        case look = "Look"
+        case scope = "Where"
         case rules = "Per-App"
-        case system = "System"
+        case performance = "Performance"
+        case when = "When"
         var id: String { rawValue }
     }
 
@@ -23,7 +26,7 @@ struct AdvancedTab: View {
             HStack(spacing: 8) {
                 Text("Section").font(.rmSecondary).foregroundColor(.rmTextSecondary)
                 Picker("", selection: $section) {
-                    ForEach(AdvSection.allCases) { Text($0.rawValue).tag($0) }
+                    ForEach(ShaderSection.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .labelsHidden().pickerStyle(.menu).frame(width: 180)
                 Spacer()
@@ -35,12 +38,12 @@ struct AdvancedTab: View {
 
             Group {
                 switch section {
-                case .performance: PerformanceSection()
-                case .presets:     CustomPresetsSection()
-                case .effects:     EffectsSection()
-                case .hotkeys:     ShortcutsTab()
+                case .preset:      CustomPresetsSection()
+                case .look:        LookSection()
+                case .scope:       ScopeSection()
                 case .rules:       PerAppRulesTab()
-                case .system:      SystemSettingsTab()
+                case .performance: PerformanceSection()
+                case .when:        WhenSection()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -95,9 +98,8 @@ private struct PerformanceSection: View {
     }
 }
 
-/// Overlay effects layered on top of the active shader — scanline overlay + glass
-/// reflection (restored from the former Effect tab; selection lives only here now).
-private struct EffectsSection: View {
+/// Where the effect draws: over everything, or only on the wallpaper.
+private struct ScopeSection: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var license = LicenseManager.shared
 
@@ -106,8 +108,8 @@ private struct EffectsSection: View {
             VStack(spacing: RMSpacing.section) {
                 RMCard(title: "Effect scope",
                        subtitle: license.isLicensed
-                            ? "Draw the effect over everything, or only on the wallpaper — animated, behind your icons and windows."
-                            : "Draw the effect over everything, or only on the wallpaper (Pro) — animated, behind your icons and windows.",
+                            ? "Draw the effect over everything, or only on the wallpaper \u{2014} animated, behind your icons and windows."
+                            : "Draw the effect over everything, or only on the wallpaper (Pro) \u{2014} animated, behind your icons and windows.",
                        bodyPadding: 0) {
                     VStack(spacing: 0) {
                         RMRow(label: "Apply to", isLast: true) {
@@ -121,13 +123,27 @@ private struct EffectsSection: View {
                                     }
                                 })) {
                                 Text("Whole screen").tag(false)
-                                Text(license.isLicensed ? "Wallpaper only" : "Wallpaper only 🔒").tag(true)
+                                Text(license.isLicensed ? "Wallpaper only" : "Wallpaper only \u{1F512}").tag(true)
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden().frame(width: 240)
                         }
                     }
                 }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+        }
+    }
+}
+
+/// Extra layers drawn on top of whichever preset is running.
+private struct LookSection: View {
+    @ObservedObject private var settings = AppSettings.shared
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: RMSpacing.section) {
                 RMCard(title: "Overlay effects",
                        subtitle: "Extra layers drawn on top of the shader.",
                        bodyPadding: 0) {
@@ -158,6 +174,111 @@ private struct EffectsSection: View {
                             Slider(value: $settings.reflectionIntensity, in: 0...1)
                                 .frame(width: 180)
                                 .disabled(settings.reflectionName.isEmpty)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+        }
+    }
+}
+
+/// Mirrors the shader's on/off state into SwiftUI. The overlay can start asynchronously, so the
+/// switch follows `.overlayStateChanged` rather than reading once and going stale.
+private final class ShaderRunState: ObservableObject {
+    @Published var isOn = AppDelegate.shared?.launcherShaderActive ?? false
+    private var observer: NSObjectProtocol?
+
+    init() {
+        observer = NotificationCenter.default.addObserver(
+            forName: .overlayStateChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.isOn = AppDelegate.shared?.launcherShaderActive ?? false
+        }
+    }
+    deinit { if let o = observer { NotificationCenter.default.removeObserver(o) } }
+}
+
+/// When the shader runs: right now, at launch, for this theme, and around sleep.
+///
+/// These four lived in three different places, which is how the app came to remember "off for
+/// this theme" and then switch the shader back on at the next launch without anyone noticing.
+private struct WhenSection: View {
+    @ObservedObject private var settings = AppSettings.shared
+    @StateObject private var run = ShaderRunState()
+
+    private var themeKey: String { ThemeManager.shared.activeTheme?.config.settingsKey ?? settings.dockTheme }
+    private var themeName: String { ThemeManager.shared.activeTheme?.config.name ?? "" }
+    private var disabledForTheme: Bool { settings.themeShaderDisabled[themeKey] == true }
+    private var presetDisplayName: String {
+        PresetRegistry.availablePresets.first(where: { $0.id == settings.defaultPreset })?.displayName
+            ?? settings.defaultPreset
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: RMSpacing.section) {
+                RMCard(title: "Running", bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Shader",
+                              hint: "The same switch as the one in the menu-bar popover.") {
+                            Toggle("", isOn: Binding(get: { run.isOn },
+                                                     set: { _ in AppDelegate.shared?.launcherToggleShader() }))
+                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        }
+                        RMRow(label: "Turn the shader on when RetroMac launches", isLast: true) {
+                            Toggle("", isOn: $settings.enableOnLaunch)
+                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        }
+                    }
+                }
+
+                if settings.dockEnabled && !themeName.isEmpty {
+                    RMCard(title: "For \u{201C}\(themeName)\u{201D}",
+                           subtitle: "Switching the shader off here is remembered for this theme, and it outranks the launch switch above.",
+                           bodyPadding: 0) {
+                        VStack(spacing: 0) {
+                            RMRow(label: "Shader") {
+                                Toggle("", isOn: Binding(
+                                    get: { !disabledForTheme },
+                                    set: { on in settings.themeShaderDisabled[themeKey] = on ? nil : true }))
+                                    .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                            }
+                            RMRow(label: "Preset",
+                                  hint: "Kept even while the shader is off for this theme.",
+                                  isLast: true) {
+                                Picker("", selection: Binding(
+                                    get: { settings.themePresetOverrides[themeKey]
+                                            ?? ThemeManager.shared.activeTheme?.config.defaultPreset ?? "" },
+                                    set: { settings.themePresetOverrides[themeKey] = $0 })) {
+                                    ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
+                                        Text(preset.displayName).tag(preset.id)
+                                    }
+                                }
+                                .labelsHidden().frame(width: 180)
+                                .disabled(disabledForTheme)
+                            }
+                        }
+                    }
+                }
+
+                RMCard(title: "When my Mac sleeps", bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Stop overlay on sleep or lock") {
+                            Toggle("", isOn: $settings.stopOnSleep)
+                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        }
+                        RMRow(label: "Resume overlay after wake") {
+                            Toggle("", isOn: $settings.resumeAfterSleep)
+                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .disabled(!settings.stopOnSleep)
+                        }
+                        RMRow(label: "Reset to default preset after wake",
+                              hint: "Restores \(presetDisplayName) regardless of last-used preset.",
+                              isLast: true) {
+                            Toggle("", isOn: $settings.resetOnWake)
+                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .disabled(!settings.stopOnSleep || !settings.resumeAfterSleep)
                         }
                     }
                 }

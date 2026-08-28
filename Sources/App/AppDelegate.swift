@@ -245,6 +245,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Rainbow Apple is theme-independent — show it on launch if the user enabled it.
         RainbowAppleController.shared.update()
 
+        // QA hook: open Settings straight away. The app has no menu bar of its own, so there is
+        // otherwise no way to reach the panel without a human clicking the status item.
+        if ProcessInfo.processInfo.environment["RETROMAC_OPEN_SETTINGS"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { self.openSettings() }
+        }
+
         // QA hook: force the onboarding coach marks (bypasses the one-time gate).
         if ProcessInfo.processInfo.environment["RETROMAC_FORCE_COACH"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { CoachMarkController.shared.forceShow() }

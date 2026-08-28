@@ -20,14 +20,22 @@ struct AppInfo: Identifiable, Hashable {
 // MARK: - Settings Tab
 
 enum SettingsTab: String, CaseIterable {
+    case shader = "shader"
     case dock = "dock"
     case desktop = "desktop"
     case retroMode = "retroMode"
     case camera = "camera"
     case games = "games"
-    case advanced = "advanced"
+    case shortcuts = "shortcuts"
+    case general = "general"
     case health = "health"
     case about = "about"
+
+    /// The shader tab used to be called Advanced, and its raw value is persisted as the last
+    /// open tab. Map the old value rather than dumping anyone back on Themes.
+    static func resolve(_ raw: String) -> SettingsTab? {
+        raw == "advanced" ? .shader : SettingsTab(rawValue: raw)
+    }
 
     var label: String {
         switch self {
@@ -36,7 +44,9 @@ enum SettingsTab: String, CaseIterable {
         case .retroMode: return "Retro Mode"
         case .camera: return "Camera & Streaming"
         case .games: return "Games"
-        case .advanced: return "Advanced"
+        case .shader: return "Shader"
+        case .shortcuts: return "Shortcuts"
+        case .general: return "General"
         case .health: return "Health Check"
         case .about: return "About"
         }
@@ -49,7 +59,9 @@ enum SettingsTab: String, CaseIterable {
         case .retroMode: return "wand.and.stars"
         case .camera: return "camera.fill"
         case .games: return "gamecontroller"
-        case .advanced: return "slider.horizontal.3"
+        case .shader: return "tv"
+        case .shortcuts: return "keyboard"
+        case .general: return "gearshape"
         case .health: return "stethoscope"
         case .about: return "info.circle"
         }
@@ -58,9 +70,10 @@ enum SettingsTab: String, CaseIterable {
     /// Section grouping: nil = Main, "Surfaces", "System"
     var section: String? {
         switch self {
-        case .dock, .desktop, .retroMode: return nil
+        // The shader leads: it is the product, and it had no home of its own until now.
+        case .shader, .dock, .desktop, .retroMode: return nil
         case .camera, .games: return "Surfaces"
-        case .advanced, .health, .about: return "System"
+        case .shortcuts, .general, .health, .about: return "System"
         }
     }
 
@@ -69,7 +82,9 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         case .dock: return "Pick a theme and configure the retro dock."
         case .desktop: return "Wallpaper, desktop icons and widgets for the active theme."
-        case .advanced: return "Performance, hotkeys, per-app rules and timers."
+        case .shader: return "Everything about the effect itself: preset, look, where it draws and when it runs."
+        case .shortcuts: return "Global hotkeys and menu-bar behaviour."
+        case .general: return "Setup, startup and the permissions RetroMac needs."
         default: return nil
         }
     }
@@ -85,7 +100,7 @@ struct SettingsView: View {
     init(updater: SPUUpdater) {
         self.updater = updater
         let saved = AppSettings.shared.lastSettingsTab
-        _selectedTab = State(initialValue: SettingsTab(rawValue: saved) ?? .dock)
+        _selectedTab = State(initialValue: SettingsTab.resolve(saved) ?? .dock)
     }
 
     var body: some View {
@@ -118,9 +133,9 @@ struct SettingsSidebar: View {
     @ObservedObject private var settings = AppSettings.shared
 
     // Group tabs by section in order
-    private var mainTabs: [SettingsTab] { [.dock, .desktop, .retroMode] }
+    private var mainTabs: [SettingsTab] { [.shader, .dock, .desktop, .retroMode] }
     private var surfacesTabs: [SettingsTab] { [.camera, .games] }
-    private var systemTabs: [SettingsTab] { [.advanced, .health, .about] }
+    private var systemTabs: [SettingsTab] { [.shortcuts, .general, .health, .about] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -363,8 +378,12 @@ struct SettingsDetailPane: View {
                     CameraStreamingTab()
                 case .games:
                     GamesSettingsTab()
-                case .advanced:
-                    AdvancedTab()
+                case .shader:
+                    ShaderTab()
+                case .shortcuts:
+                    ShortcutsTab()
+                case .general:
+                    SystemSettingsTab()
                 case .health:
                     HealthCheckTab()
                 case .about:

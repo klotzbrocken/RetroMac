@@ -733,35 +733,38 @@ struct DockSettingsTab: View {
                 }
             }
 
-            // Shader preset
-            RMCard(title: "Shader preset", subtitle: "Activated when switching to \u{201C}\(themeDisplayName)\u{201D}.", bodyPadding: 0) {
-                RMRow(label: "Preset", isLast: true) {
-                    Picker("", selection: Binding(
-                        get: {
-                            // "None" is the shader being off for this theme, which is now its own
-                            // flag rather than an empty preset.
-                            if settings.themeShaderDisabled[settings.dockTheme] == true { return "" }
-                            if let override = settings.themePresetOverrides[settings.dockTheme] {
-                                return override
-                            }
-                            return selectedThemeConfig?.defaultPreset ?? ""
-                        },
-                        set: {
-                            if $0.isEmpty {
-                                settings.themeShaderDisabled[settings.dockTheme] = true
-                            } else {
-                                settings.themeShaderDisabled[settings.dockTheme] = nil
-                                settings.themePresetOverrides[settings.dockTheme] = $0
-                            }
-                        }
-                    )) {
-                        Text("None").tag("")
-                        ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
-                            Text(preset.displayName).tag(preset.id)
-                        }
+            // Shader for this theme. Two rows rather than one picker with a hidden "None":
+            // whether the shader runs and which preset it runs are separate choices now, and
+            // burying "off" inside the preset list is what used to make switching it off
+            // discard the preset.
+            RMCard(title: "Shader",
+                   subtitle: "Applied when switching to \u{201C}\(themeDisplayName)\u{201D}. Off here outranks \u{201C}turn the shader on at launch\u{201D}.",
+                   bodyPadding: 0) {
+                VStack(spacing: 0) {
+                    RMRow(label: "Shader") {
+                        Toggle("", isOn: Binding(
+                            get: { settings.themeShaderDisabled[settings.dockTheme] != true },
+                            set: { on in settings.themeShaderDisabled[settings.dockTheme] = on ? nil : true }))
+                            .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 170)
+                    RMRow(label: "Preset",
+                          hint: "Kept even while the shader is off for this theme.",
+                          isLast: true) {
+                        Picker("", selection: Binding(
+                            get: {
+                                settings.themePresetOverrides[settings.dockTheme]
+                                    ?? selectedThemeConfig?.defaultPreset ?? ""
+                            },
+                            set: { settings.themePresetOverrides[settings.dockTheme] = $0 }
+                        )) {
+                            ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in
+                                Text(preset.displayName).tag(preset.id)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 170)
+                        .disabled(settings.themeShaderDisabled[settings.dockTheme] == true)
+                    }
                 }
             }
 

@@ -1,9 +1,9 @@
 import SwiftUI
 import ScreenCaptureKit
 
-/// System sub-section (lives under Advanced): permission status + sleep/wake behaviour.
-/// Replaces the former Overview tab — overlay status and the active preset are shown in
-/// the status-bar menu, so they no longer need a Settings home.
+/// General: getting RetroMac set up and letting it start. Its own tab now that Advanced has
+/// become Shader — everything about the effect, including when it runs and what happens around
+/// sleep, moved there, so what is left here is genuinely about the app rather than the effect.
 struct SystemSettingsTab: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var screenRecordingGranted: Bool?
@@ -28,7 +28,6 @@ struct SystemSettingsTab: View {
                 setupCard
                 startupCard
                 permissionsCard
-                sleepCard
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
@@ -52,12 +51,10 @@ struct SystemSettingsTab: View {
     private var startupCard: some View {
         RMCard(title: "Startup", bodyPadding: 0) {
             VStack(spacing: 0) {
-                RMRow(label: "Start RetroMac at login") {
+                // "Turn the shader on when RetroMac launches" lives in Shader ▸ When now, next
+                // to the per-theme switch it has to agree with.
+                RMRow(label: "Start RetroMac at login", isLast: true) {
                     Toggle("", isOn: $settings.launchAtLogin)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
-                }
-                RMRow(label: "Turn the shader on when RetroMac launches", isLast: true) {
-                    Toggle("", isOn: $settings.enableOnLaunch)
                         .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
                 }
             }
@@ -105,31 +102,6 @@ struct SystemSettingsTab: View {
                 )
             }
             .padding(.vertical, 4)
-        }
-    }
-
-    private var sleepCard: some View {
-        RMCard(title: "When my Mac sleeps", bodyPadding: 0) {
-            VStack(spacing: 0) {
-                RMRow(label: "Stop overlay on sleep or lock") {
-                    Toggle("", isOn: $settings.stopOnSleep)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
-                }
-                RMRow(label: "Resume overlay after wake") {
-                    Toggle("", isOn: $settings.resumeAfterSleep)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
-                        .disabled(!settings.stopOnSleep)
-                }
-                RMRow(
-                    label: "Reset to default preset after wake",
-                    hint: "Restores \(presetDisplayName) regardless of last-used preset.",
-                    isLast: true
-                ) {
-                    Toggle("", isOn: $settings.resetOnWake)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
-                        .disabled(!settings.stopOnSleep || !settings.resumeAfterSleep)
-                }
-            }
         }
     }
 
