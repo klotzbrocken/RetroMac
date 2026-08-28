@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var screenshotHotKeyRef: EventHotKeyRef?
     private var menuBarHotKeyRef: EventHotKeyRef?
     private var dashboardHotKeyRef: EventHotKeyRef?
+    private var exposeHotKeyRef: EventHotKeyRef?
+    private var exposeAppHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var menuBarHiddenByHotkey = false
     private(set) var currentIntensity: Float!
@@ -1490,6 +1492,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // 5. Exposé, all windows (id: 9) and the frontmost app's windows (id: 10)
+        if settings.exposeHotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 9)
+            if RegisterEventHotKey(settings.exposeHotkeyCode, settings.exposeHotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                exposeHotKeyRef = ref
+            }
+        }
+        if settings.exposeAppHotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 10)
+            if RegisterEventHotKey(settings.exposeAppHotkeyCode, settings.exposeAppHotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                exposeAppHotKeyRef = ref
+            }
+        }
+
         // Install event handler (once)
         if eventHandlerRef == nil {
             var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
@@ -1508,6 +1528,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     case 6: DispatchQueue.main.async { d.captureScreenshotWithShader() }
                     case 7: DispatchQueue.main.async { d.toggleMenuBar() }
                     case 8: DispatchQueue.main.async { DashboardController.shared.toggle() }
+                    case 9: DispatchQueue.main.async { ExposeController.shared.toggle(.allWindows) }
+                    case 10: DispatchQueue.main.async { ExposeController.shared.toggle(.applicationWindows) }
                     default: return OSStatus(eventNotHandledErr)
                     }
                     return noErr
@@ -1518,6 +1540,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func unregisterHotkey() {
+        if let ref = exposeHotKeyRef {
+            UnregisterEventHotKey(ref)
+            exposeHotKeyRef = nil
+        }
+        if let ref = exposeAppHotKeyRef {
+            UnregisterEventHotKey(ref)
+            exposeAppHotKeyRef = nil
+        }
         if let ref = dashboardHotKeyRef {
             UnregisterEventHotKey(ref)
             dashboardHotKeyRef = nil

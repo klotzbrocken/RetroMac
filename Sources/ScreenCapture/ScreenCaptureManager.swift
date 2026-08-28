@@ -169,6 +169,30 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
         }
     }
 
+    /// A still of one window, for Exposé's thumbnails.
+    ///
+    /// `SCScreenshotManager` rather than the old `CGWindowListCreateImage`: that one is deprecated
+    /// and has been progressively defanged, and we already hold the Screen Recording permission
+    /// this needs. Returns nil rather than throwing — a window that refuses to be captured should
+    /// cost one placeholder card, not the whole Exposé.
+    static func captureThumbnail(_ window: SCWindow, maxDimension: CGFloat) async -> NSImage? {
+        let w = window.frame.width, h = window.frame.height
+        guard w > 1, h > 1 else { return nil }
+        let scale = min(1, maxDimension / max(w, h))
+        let cfg = SCStreamConfiguration()
+        cfg.width  = max(1, Int((w * scale).rounded()))
+        cfg.height = max(1, Int((h * scale).rounded()))
+        cfg.showsCursor = false
+        cfg.scalesToFit = true
+        do {
+            let filter = SCContentFilter(desktopIndependentWindow: window)
+            let img = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: cfg)
+            return NSImage(cgImage: img, size: NSSize(width: img.width, height: img.height))
+        } catch {
+            return nil
+        }
+    }
+
     func updateStreamSize(width: Int, height: Int) {
         guard let stream = stream else { return }
         let config = SCStreamConfiguration()

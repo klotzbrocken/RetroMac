@@ -778,6 +778,20 @@ final class AppSettings: ObservableObject {
     @Published var dashboardHotkeyModifiers: UInt32 {
         didSet { defaults.set(dashboardHotkeyModifiers, forKey: "dashboardHotkeyModifiers") }
     }
+    /// Ctrl+F9 and Ctrl+F10 by default. 10.6 used bare F9/F10, but those are media keys on a
+    /// modern Mac unless the function-key setting is flipped, so the defaults carry a modifier.
+    @Published var exposeHotkeyCode: UInt32 {
+        didSet { defaults.set(exposeHotkeyCode, forKey: "exposeHotkeyCode") }
+    }
+    @Published var exposeHotkeyModifiers: UInt32 {
+        didSet { defaults.set(exposeHotkeyModifiers, forKey: "exposeHotkeyModifiers") }
+    }
+    @Published var exposeAppHotkeyCode: UInt32 {
+        didSet { defaults.set(exposeAppHotkeyCode, forKey: "exposeAppHotkeyCode") }
+    }
+    @Published var exposeAppHotkeyModifiers: UInt32 {
+        didSet { defaults.set(exposeAppHotkeyModifiers, forKey: "exposeAppHotkeyModifiers") }
+    }
     @Published var showHotkeyConflictTips: Bool {
         didSet { defaults.set(showHotkeyConflictTips, forKey: "showHotkeyConflictTips") }
     }
@@ -1087,6 +1101,11 @@ final class AppSettings: ObservableObject {
         // kVK_F12 = 0x6F, controlKey = 0x1000
         dashboardHotkeyCode = defaults.object(forKey: "dashboardHotkeyCode") as? UInt32 ?? 0x6F
         dashboardHotkeyModifiers = defaults.object(forKey: "dashboardHotkeyModifiers") as? UInt32 ?? 0x1000
+        // kVK_F9 = 0x65, kVK_F10 = 0x6D, controlKey = 0x1000
+        exposeHotkeyCode = defaults.object(forKey: "exposeHotkeyCode") as? UInt32 ?? 0x65
+        exposeHotkeyModifiers = defaults.object(forKey: "exposeHotkeyModifiers") as? UInt32 ?? 0x1000
+        exposeAppHotkeyCode = defaults.object(forKey: "exposeAppHotkeyCode") as? UInt32 ?? 0x6D
+        exposeAppHotkeyModifiers = defaults.object(forKey: "exposeAppHotkeyModifiers") as? UInt32 ?? 0x1000
         showHotkeyConflictTips = defaults.object(forKey: "showHotkeyConflictTips") as? Bool ?? true
         showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true   // boot screen on by default (per-theme toggle still applies)
 

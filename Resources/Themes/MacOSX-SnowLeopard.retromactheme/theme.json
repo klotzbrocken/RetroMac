@@ -114,6 +114,13 @@
       "type": "dashboard",
       "gridX": 0,
       "gridY": 5
+    },
+    {
+      "name": "Expose",
+      "icon": "missioncontrol.png",
+      "type": "expose",
+      "gridX": 0,
+      "gridY": 6
     }
   ],
   "wallpaper": "wallpaper.jpg",

@@ -85,6 +85,11 @@ enum DesktopLauncher {
             // The Dashboard layer (Mac OS X / Snow Leopard / Mountain Lion).
             DashboardController.shared.toggle()
 
+        case "expose":
+            // Exposé (Mac OS X 10.3 to 10.6). `args[0] == "app"` is the old F10, this app's
+            // windows only; anything else is F9, everything on the desktop.
+            ExposeController.shared.toggle((entry.args?.first == "app") ? .applicationWindows : .allWindows)
+
         case "sheep":
             // sheep.exe: (re)start the desktop sheep — also re-enables it after Quit Sheep.
             AppSettings.shared.desktopPetEnabled = true
