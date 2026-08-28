@@ -20,7 +20,8 @@ enum ThemeIdentityMigration {
 
     /// Dictionary defaults whose KEYS are theme identifiers.
     private static let dictionaryKeys = [
-        "themePresetOverrides", "themeOrientationOverrides", "themeDockPositionOverride",
+        "themePresetOverrides", "themeShaderDisabled", "themeOrientationOverrides",
+        "themeDockPositionOverride",
         "themeDockAutoHide", "themeWallpaperOverrides", "themeCustomWallpaper",
         "themeBootscreenEnabled", "themeScreensaverOverrides", "dockThemeIconOverrides",
     ]

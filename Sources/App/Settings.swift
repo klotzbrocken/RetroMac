@@ -425,6 +425,23 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(themePresetOverrides, forKey: "themePresetOverrides") }
     }
 
+    /// Themes the user has explicitly switched the shader off for.
+    ///
+    /// Kept apart from `themePresetOverrides` on purpose. "Off" used to be stored as an empty
+    /// preset in that map, so switching the shader off in the flyout silently threw away which
+    /// preset the theme was assigned, and switching it back on gave you the global default
+    /// rather than what the theme had.
+    @Published var themeShaderDisabled: [String: Bool] {
+        didSet { defaults.set(themeShaderDisabled, forKey: "themeShaderDisabled") }
+    }
+
+    /// Has the user turned the shader off for the theme that is active right now?
+    var shaderDisabledForActiveTheme: Bool {
+        guard dockEnabled else { return false }
+        let key = ThemeManager.shared.activeTheme?.config.settingsKey ?? dockTheme
+        return themeShaderDisabled[key] == true
+    }
+
     // Per-theme orientation overrides (theme name → "vertical" or "horizontal")
     @Published var themeOrientationOverrides: [String: String] {
         didSet { defaults.set(themeOrientationOverrides, forKey: "themeOrientationOverrides") }
@@ -938,7 +955,23 @@ final class AppSettings: ObservableObject {
         clockUse24Hour = defaults.object(forKey: "clockUse24Hour") as? Bool ?? false
 
         // Per-theme preset overrides
-        themePresetOverrides = defaults.dictionary(forKey: "themePresetOverrides") as? [String: String] ?? [:]
+        var overrides = defaults.dictionary(forKey: "themePresetOverrides") as? [String: String] ?? [:]
+        var disabled  = defaults.dictionary(forKey: "themeShaderDisabled") as? [String: Bool] ?? [:]
+        // One-shot: lift the old "" entries out of the preset map into the new flag. Anyone who
+        // ever switched the shader off in the flyout has a "" for that theme, which also wiped
+        // its preset — dropping the "" hands the theme's own defaultPreset back. Written straight
+        // to defaults here because didSet does not run during init.
+        if !defaults.bool(forKey: "didSplitThemeShaderOff") {
+            for (k, v) in overrides where v.isEmpty {
+                disabled[k] = true
+                overrides[k] = nil
+            }
+            defaults.set(overrides, forKey: "themePresetOverrides")
+            defaults.set(disabled, forKey: "themeShaderDisabled")
+            defaults.set(true, forKey: "didSplitThemeShaderOff")
+        }
+        themePresetOverrides = overrides
+        themeShaderDisabled = disabled
         themeOrientationOverrides = defaults.dictionary(forKey: "themeOrientationOverrides") as? [String: String] ?? [:]
         themeDockPositionOverride = defaults.dictionary(forKey: "themeDockPositionOverride") as? [String: String] ?? [:]
         controlStripSide = defaults.string(forKey: "controlStripSide") ?? "left"
@@ -1140,7 +1173,10 @@ final class AppSettings: ObservableObject {
     func presetForTheme(name: String) -> String? {
         let key = ThemeManager.shared.theme(for: name)?.stableID ?? name
         if let override = themePresetOverrides[key] {
-            return override.isEmpty ? nil : override  // empty = "None"
+            // An empty entry is a leftover from when "off" was stored here; whether the shader
+            // runs is `themeShaderDisabled` now. Kept so a defaults file that skipped the
+            // migration still reads sensibly.
+            return override.isEmpty ? nil : override
         }
         // Fall back to theme.json defaultPreset
         return ThemeManager.shared.theme(for: name)?.config.defaultPreset

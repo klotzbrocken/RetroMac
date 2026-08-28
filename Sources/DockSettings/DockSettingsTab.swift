@@ -738,12 +738,22 @@ struct DockSettingsTab: View {
                 RMRow(label: "Preset", isLast: true) {
                     Picker("", selection: Binding(
                         get: {
+                            // "None" is the shader being off for this theme, which is now its own
+                            // flag rather than an empty preset.
+                            if settings.themeShaderDisabled[settings.dockTheme] == true { return "" }
                             if let override = settings.themePresetOverrides[settings.dockTheme] {
                                 return override
                             }
                             return selectedThemeConfig?.defaultPreset ?? ""
                         },
-                        set: { settings.themePresetOverrides[settings.dockTheme] = $0 }
+                        set: {
+                            if $0.isEmpty {
+                                settings.themeShaderDisabled[settings.dockTheme] = true
+                            } else {
+                                settings.themeShaderDisabled[settings.dockTheme] = nil
+                                settings.themePresetOverrides[settings.dockTheme] = $0
+                            }
+                        }
                     )) {
                         Text("None").tag("")
                         ForEach(PresetRegistry.builtinPresets, id: \.id) { preset in

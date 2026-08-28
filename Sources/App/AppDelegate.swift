@@ -269,7 +269,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // above leaves the shader off; this opts back in for users who asked for it. Only
             // auto-start when it won't pop the Screen-Recording dialog on every launch — i.e. Lite
             // presets / wallpaper scope / already-granted capture. First-time grant stays manual.
-            if AppSettings.shared.enableOnLaunch && !self.isActive {
+            // "off for this theme" outranks the launch switch. The app remembered that choice
+            // and then contradicted itself on the next launch, which is what made the setting
+            // look as though it were not being saved at all.
+            if AppSettings.shared.enableOnLaunch && !self.isActive
+                && !AppSettings.shared.shaderDisabledForActiveTheme {
                 let preset = self.currentPresetName ?? AppSettings.shared.defaultPreset
                 let needsCapture = !Self.isLitePreset(preset) && !self.isWallpaperOnlyScope
                 if !needsCapture || CGPreflightScreenCaptureAccess() {
@@ -1837,13 +1841,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Persist the shader on/off choice for the currently active theme, so switching away and
-    /// back restores it (empty override = "None" = off; a preset id = on). No-op when no theme
-    /// is active. Mirrors the per-theme preset override used by theme activation.
+    /// back restores it. No-op when no theme is active.
+    ///
+    /// Off sets a flag and leaves the theme's preset assignment alone. It used to write an empty
+    /// preset instead, which meant "off" and "no preset assigned" were the same stored value, so
+    /// switching off in the flyout quietly discarded the theme's preset.
     private func rememberShaderStateForActiveTheme(on: Bool) {
         guard AppSettings.shared.dockEnabled,
               let name = ThemeManager.shared.activeTheme?.config.settingsKey else { return }
-        AppSettings.shared.themePresetOverrides[name] =
-            on ? (currentPresetName ?? AppSettings.shared.defaultPreset) : ""
+        if on {
+            AppSettings.shared.themeShaderDisabled[name] = nil
+            // The preset picked while this theme was up stays with it, as before.
+            AppSettings.shared.themePresetOverrides[name] =
+                currentPresetName ?? AppSettings.shared.defaultPreset
+        } else {
+            AppSettings.shared.themeShaderDisabled[name] = true
+        }
     }
 
     private func startOverlay(mode: CaptureMode, presetOverride: String? = nil, parentWindow: NSWindow? = nil) {
@@ -2604,7 +2617,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // The menu hands us a DISPLAY name; per-theme settings are keyed by stable id.
         let themeKey = ThemeManager.shared.theme(for: name)?.stableID ?? name
-        if settings.themePresetOverrides[themeKey]?.isEmpty == true {
+        if settings.themeShaderDisabled[themeKey] == true {
             // Explicit per-theme "off" (user toggled the shader off here, or picked "None"):
             // force the shader off so switching back to this theme restores that choice.
             if isActive { disableAll() }
@@ -2686,7 +2699,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard settings.dockEnabled else { return }
         let themeName = settings.dockTheme
 
-        if settings.themePresetOverrides[themeName]?.isEmpty == true {
+        if settings.themeShaderDisabled[themeName] == true {
             // Explicit per-theme "off" (remembered toggle / "None") — force the shader off.
             if isActive { disableAll() }
             rebuildMenu()
