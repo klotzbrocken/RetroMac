@@ -1577,6 +1577,13 @@ final class DockView: NSView {
         let futCaps = futuramaCapWidths()
         width += futCaps.left + futCaps.right
 
+        if hasDashboard {
+            // Mac OS X put Dashboard in the Dock right after Finder, and the layout advances a
+            // full tile for it. Leaving it out here made the bar exactly one tile too narrow, so
+            // the last item — the trash — was drawn outside it, and only snapped back in when
+            // magnification reflowed the row on hover.
+            width += iconSize + spacing
+        }
         if hasShowDesktop {
             width += iconSize + spacing + 4   // tile + start-button groove allowance
         }
