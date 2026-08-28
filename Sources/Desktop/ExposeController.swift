@@ -85,7 +85,10 @@ final class ExposeController {
             let root = ExposeBackdropView(frame: NSRect(origin: .zero, size: screen.frame.size))
             root.onBackgroundClick = { [weak self] in self?.hide() }
             root.onEscape = { [weak self] in self?.hide() }
-            root.isEmpty = mine.isEmpty
+            // Only when there is nothing anywhere. With a second display attached, the screen
+            // that happens to hold no windows used to announce "No windows" while the other one
+            // was showing them all.
+            root.isEmpty = items.isEmpty
             win.contentView = root
             win.alphaValue = 0
             win.orderFrontRegardless()
@@ -203,7 +206,6 @@ final class ExposeController {
     private func currentWindows() -> [Item] {
         let info = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements],
                                               kCGNullWindowID) as? [[String: Any]] ?? []
-        let ownPID = ProcessInfo.processInfo.processIdentifier
         // The system's own furniture is not a window anybody wants to Exposé to.
         let shells: Set<String> = ["Dock", "Window Manager", "Control Center",
                                    "Notification Center", "Spotlight", "SystemUIServer"]
@@ -212,9 +214,15 @@ final class ExposeController {
         var out: [Item] = []
         var icons: [pid_t: NSImage?] = [:]
         for w in info {
+            // Our own windows are NOT skipped, and skipping them was the bug: on a retro desktop
+            // a good share of what you see — Television, the CPU monitor, Notepad, Calculator, an
+            // App Folder — belongs to RetroMac, and Exposé reported "No windows" over a screen
+            // full of them. Nothing of ours leaks in as a result: every piece of theme furniture
+            // (dock 24, Dashboard and this sheet 23, the pet 25, menus 26, desktop icons at the
+            // desktop-icon level) sits above layer 0 and is dropped here, and the sheet's own
+            // windows do not exist yet when this list is taken.
             guard (w[kCGWindowLayer as String] as? Int) == 0,
                   let pidValue = w[kCGWindowOwnerPID as String] as? pid_t,
-                  pidValue != ownPID,
                   let id = w[kCGWindowNumber as String] as? CGWindowID,
                   let b = w[kCGWindowBounds as String] as? [String: CGFloat],
                   let x = b["X"], let y = b["Y"], let width = b["Width"], let height = b["Height"],
