@@ -3,6 +3,15 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 2.8.2
+
+- **The trash sat outside the dock** on Snow Leopard and Mac OS X, and only snapped into place
+  while the pointer was over the dock. The bar's width is worked out by listing every tile it will
+  hold, and that list had no entry for the Dashboard icon, which was added to the dock later. The
+  bar came out exactly one tile too narrow, so the last item — the trash — was drawn beside it;
+  hovering hid the symptom because magnification reflows the row inside the bar. Mountain Lion was
+  a tile short too, but has no trash, so nothing showed.
+
 ## 2.8.1
 
 - **Exposé no longer hides RetroMac's own windows.** The window list skipped anything owned by
