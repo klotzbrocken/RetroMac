@@ -8,8 +8,9 @@ enum WelcomePage: Equatable {
     case setupAccessibility
     case coffee
 
-    /// Window height this page wants. Measured against its content: the What's-New list runs
-    /// to roughly 660pt, while the setup pages are a heading, two paragraphs and a button.
+    /// Window height this page wants. The setup pages are a heading, two paragraphs and a
+    /// button. What's New is taller than anything sensible now that it carries the previous
+    /// release along, so it is capped here and scrolls the rest.
     var preferredHeight: CGFloat {
         switch self {
         case .whatsNew:                            return 700
@@ -115,20 +116,37 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Windows 7 Aero, Windows 98 Plus!, and a sharper System 9").font(.subheadline).foregroundStyle(.secondary)
+                Text("Snow Leopard, properly \u{2014} with Dashboard and Expos\u{00E9}").font(.subheadline).foregroundStyle(.secondary)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("macwindow", .blue, "Windows 7 Aero",
-                            "The Superbar taskbar with the Start orb, translucent glass title bars and the Aero wallpaper. Windows 7 joins the lineup.")
-                    feature("paintpalette", .orange, "Windows 98 Plus! themes",
-                            "Pick a scheme under Settings, Dock, Scheme: Dangerous Creatures, Leonardo da Vinci or More Windows. Each recolours the whole Windows 98 look and swaps the wallpaper, icons and cursors.")
-                    feature("square.grid.3x3", .gray, "Mac OS System 9",
-                            "Pixel-accurate Platinum title bars, proxy icons, a Finder info bar and WindowShade collapse. The Control Strip now docks to the left or right edge, just like the original.")
-                    feature("shield.lefthalf.filled", .red, "Warcraft in a real window",
-                            "Warcraft I and II now run inside a themed window with a matching title bar, so the game sits on your retro desktop with the dock beside it (hidden only in fullscreen).")
-                    feature("wrench.and.screwdriver", .indigo, "Setup and polish",
-                            "A new Setup Assistant Games step points RetroMac at your Doom, Quake, Duke Nukem and Warcraft files. Plus a Calculator widget, more classic wallpapers and desktop icons, tighter window borders and hardened theme imports.")
+                    feature("macwindow", .blue, "Snow Leopard has its own chrome",
+                            "10.6 no longer borrows Cheetah\u{2019}s early-Aqua look. The title bar is measured off the original \u{2014} unified grey, flat traffic lights, the separator along the bottom \u{2014} and it comes with blue gel scrollers, period-correct icons for Chrome, iWork, Claude and ChatGPT, and the striped Macintosh HD.")
+                    feature("square.grid.2x2.fill", .indigo, "Dashboard is back",
+                            "The widget layer macOS dropped in Catalina, rebuilt. \u{2303}F12 brings up Clock, Calculator, Weather, Calendar, Stickies, a Google search pill and a CPU monitor. Add and remove them from the bar, drag them where you like, and they stay put.")
+                    feature("rectangle.3.group.fill", .teal, "Expos\u{00E9}",
+                            "Every window on the desktop, shrunk so none overlap, each card travelling from where its window actually sits. \u{2303}F9 for all of them, \u{2303}F10 for the front app \u{2014} or hold a dock icon, the way 10.6 changed that gesture to work.")
+                    feature("square.stack.3d.up.fill", .orange, "Stacks, drawn the way 10.6 drew them",
+                            "Applications and Downloads open as a grid with real Quick Look previews, sitting next to the Trash where they belong, and hanging from the callout nose that points back at the dock icon.")
+                    feature("sparkles.tv.fill", .purple, "Desktop extras",
+                            "The real Flurry screensaver, five more wallpapers (Rocks, Earth, Aurora Blue, Zebra, Stones), and an optional tint for the menu bar so a modern translucent one stops fighting the theme.")
+                    feature("waveform.path.ecg", .pink, "Phosphor persistence",
+                            "Afterglow across frames, applied to the signal ahead of the mask, in every Metal renderer. Bright things trail the way a real tube trails.")
+                    feature("gearshape.fill", .gray, "Settings, sorted out",
+                            "A Desktop tab that is actually listed in the sidebar, a frame-rate choice that offers 120 only on panels that reach it and stops being reset by the Quality picker, hotkey rows for Expos\u{00E9} and Dashboard, and a theme import that can no longer lose the theme it replaces.")
+
+                    sectionHeader("Also in 2.7")
+
+                    feature("desktopcomputer", .blue, "Windows 95 theme",
+                            "The one that started it all: solid navy title bars, the silver 3D chrome, the clouds wallpaper and an authentic boot screen. The Start menu is period-correct too \u{2014} large icons in a narrow first level, small ones in the wider submenus, and neither Windows Update nor Log Off, because Windows 95 had neither.")
+                    feature("opticaldisc", .indigo, "Fun Stuff (D:)",
+                            "The CD-ROM is back on the desktop. Browse FUNSTUFF into HOVER, VIDEOS and PICTURES: music videos play in a bare title-bar window, and Clouds.exe / WINBMP.EXE set your wallpaper the way a 1995 CD-ROM would.")
+                    feature("gamecontroller.fill", .green, "Hover! plays again",
+                            "The Microsoft HTML5 remake of the Windows 95 classic, self-hosted and fully offline in its original pixel-graphics mode. No Wine, no emulator, no internet needed.")
+                    feature("slider.horizontal.below.rectangle", .orange, "Authentic Win95/98 details",
+                            "Scrollbars with a single arrow at each end, raised bevels and a dithered track. The status bar sits below its own scrollbar row, the program icon is back in the title bar, and 98/Me/XP drop the running-app dots \u{2014} their taskbars already show what is running.")
+                    feature("doc.text.fill", .purple, "Readmes overhauled",
+                            "Every theme\u{2019}s About This Theme is closable again, fills its window edge-to-edge, sizes itself so it needs no scrolling, and shows its artwork. Futurama finally has one too. Plus: a setting that starts you straight into your last theme.")
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
         }
@@ -136,6 +154,16 @@ struct WelcomeFlowView: View {
 
     private var whatsNewVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.3"
+    }
+
+    /// Divider between this release's entries and the ones carried over from the last. 2.7 was
+    /// short-lived, so anyone updating from 2.6 would otherwise never be told what it brought.
+    private func sectionHeader(_ text: String) -> some View {
+        HStack(spacing: 8) {
+            Text(text).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Rectangle().fill(Color.secondary.opacity(0.25)).frame(height: 1)
+        }
+        .padding(.top, 2)
     }
 
     private func feature(_ icon: String, _ color: Color, _ title: String, _ desc: String) -> some View {
