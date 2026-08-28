@@ -130,7 +130,7 @@
       "file": "wallpaper.jpg"
     },
     {
-      "name": "Snow Leopard Alt",
+      "name": "Snow Leopard",
       "file": "wallpaper-alt.jpg"
     },
     {
@@ -146,12 +146,24 @@
       "file": "wallpaper-horizon.jpg"
     },
     {
-      "name": "Leopard",
-      "file": "wallpaper-leopard.jpg"
+      "name": "Rocks",
+      "file": "wallpaper-rocks.jpg"
     },
     {
-      "name": "Lion",
-      "file": "wallpaper-lion.jpg"
+      "name": "Earth",
+      "file": "wallpaper-earth.jpg"
+    },
+    {
+      "name": "Aurora Blue",
+      "file": "wallpaper-aurora-blue.jpg"
+    },
+    {
+      "name": "Zebra",
+      "file": "wallpaper-zebra.jpg"
+    },
+    {
+      "name": "Stones",
+      "file": "wallpaper-stones.jpg"
     }
   ],
   "fallbackIcon": "generic.png",

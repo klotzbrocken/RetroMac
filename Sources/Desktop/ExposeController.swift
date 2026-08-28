@@ -21,6 +21,8 @@ final class ExposeController {
         case allWindows
         /// Only the frontmost app's windows, the old F10.
         case applicationWindows
+        /// One named app's windows — what 10.6 showed when you held its dock icon.
+        case application(pid_t)
     }
 
     /// One window, in Cocoa screen coordinates.
@@ -54,8 +56,10 @@ final class ExposeController {
         let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
 
         var items = currentWindows()
-        if mode == .applicationWindows, let pid = frontPID {
-            items = items.filter { $0.pid == pid }
+        switch mode {
+        case .allWindows: break
+        case .applicationWindows: if let pid = frontPID { items = items.filter { $0.pid == pid } }
+        case .application(let pid): items = items.filter { $0.pid == pid }
         }
 
         isOpen = true

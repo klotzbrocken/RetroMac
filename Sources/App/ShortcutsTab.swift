@@ -118,7 +118,6 @@ struct ShortcutsTab: View {
                     hint: "Captures the screen including the active CRT effect.",
                     hotkeyCode: settings.screenshotHotkeyCode,
                     hotkeyModifiers: settings.screenshotHotkeyModifiers,
-                    isLast: true,
                     onSet: { code, mods in
                         settings.screenshotHotkeyCode = code
                         settings.screenshotHotkeyModifiers = mods
@@ -127,6 +126,62 @@ struct ShortcutsTab: View {
                     onClear: {
                         settings.screenshotHotkeyCode = 0
                         settings.screenshotHotkeyModifiers = 0
+                        AppDelegate.shared?.registerHotkey()
+                    }
+                )
+
+                // 7. Dashboard — listed here at last. It has had a hotkey since the layer was
+                // built, but no row, so the only way to change it was a defaults write.
+                HotkeyRow(
+                    label: "Dashboard",
+                    hint: "The widget layer. \u{2303}F12 by default \u{2014} the original was plain F12.",
+                    hotkeyCode: settings.dashboardHotkeyCode,
+                    hotkeyModifiers: settings.dashboardHotkeyModifiers,
+                    onSet: { code, mods in
+                        settings.dashboardHotkeyCode = code
+                        settings.dashboardHotkeyModifiers = mods
+                        AppDelegate.shared?.registerHotkey()
+                    },
+                    onClear: {
+                        settings.dashboardHotkeyCode = 0
+                        settings.dashboardHotkeyModifiers = 0
+                        AppDelegate.shared?.registerHotkey()
+                    }
+                )
+
+                // 8. Exposé, everything on this desktop
+                HotkeyRow(
+                    label: "Expos\u{00E9} \u{2014} all windows",
+                    hint: "Every window on this desktop, shrunk so none overlap. \u{2303}F9 by default.",
+                    hotkeyCode: settings.exposeHotkeyCode,
+                    hotkeyModifiers: settings.exposeHotkeyModifiers,
+                    onSet: { code, mods in
+                        settings.exposeHotkeyCode = code
+                        settings.exposeHotkeyModifiers = mods
+                        AppDelegate.shared?.registerHotkey()
+                    },
+                    onClear: {
+                        settings.exposeHotkeyCode = 0
+                        settings.exposeHotkeyModifiers = 0
+                        AppDelegate.shared?.registerHotkey()
+                    }
+                )
+
+                // 9. Exposé, the frontmost app only
+                HotkeyRow(
+                    label: "Expos\u{00E9} \u{2014} application windows",
+                    hint: "Only the frontmost app\u{2019}s windows. \u{2303}F10 by default.",
+                    hotkeyCode: settings.exposeAppHotkeyCode,
+                    hotkeyModifiers: settings.exposeAppHotkeyModifiers,
+                    isLast: true,
+                    onSet: { code, mods in
+                        settings.exposeAppHotkeyCode = code
+                        settings.exposeAppHotkeyModifiers = mods
+                        AppDelegate.shared?.registerHotkey()
+                    },
+                    onClear: {
+                        settings.exposeAppHotkeyCode = 0
+                        settings.exposeAppHotkeyModifiers = 0
                         AppDelegate.shared?.registerHotkey()
                     }
                 )

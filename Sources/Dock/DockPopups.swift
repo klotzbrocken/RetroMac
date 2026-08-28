@@ -173,6 +173,9 @@ final class DockStackController {
         let gap: CGFloat = 8, labelH: CGFloat = 14, headerH: CGFloat = 24
         let footerH: CGFloat = 24, pad: CGFloat = 12
         let cellW = iconSize + 42, cellH = iconSize + labelH + 6
+        // 10.6 hung the grid off a callout nose pointing back at the dock icon. Only this theme
+        // draws one; everything else keeps its own window chrome.
+        let noseH: CGFloat = RetroFrameTheme.key() == "snowleopard" ? 13 : 0
 
         let all = isApplications ? applications() : recentFiles(in: url, limit: 40)
         let n = max(all.count, 1)
@@ -182,14 +185,16 @@ final class DockStackController {
         // Never build a panel taller than the screen: clampedAbove only repositions, it does not
         // shrink, so an uncapped /Applications would run straight off the top.
         let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchorScreenRect) }) ?? NSScreen.main
-        let room = (screen?.visibleFrame.height ?? 900) - anchorScreenRect.height - 40
+        let room = (screen?.visibleFrame.height ?? 900) - anchorScreenRect.height - 40 - noseH
         let maxRows = max(1, Int((room - headerH - footerH - pad * 2 + gap) / (cellH + gap)))
         let files = Array(all.prefix(cols * maxRows))
 
         let rows = max(1, Int(ceil(Double(max(files.count, 1)) / Double(cols))))
         let width = pad * 2 + CGFloat(cols) * cellW + CGFloat(cols - 1) * gap
-        let height = headerH + pad + CGFloat(rows) * cellH + CGFloat(rows - 1) * gap + footerH + pad
-        let frame = clampedAbove(anchorScreenRect, size: NSSize(width: width, height: height), gap: 10)
+        let height = headerH + pad + CGFloat(rows) * cellH + CGFloat(rows - 1) * gap + footerH + pad + noseH
+        // The nose fills most of the old gap, so the tip ends up where the panel edge used to be.
+        let frame = clampedAbove(anchorScreenRect, size: NSSize(width: width, height: height),
+                                 gap: noseH > 0 ? 6 : 10)
 
         let p = panel ?? makePanel()
         p.setFrame(frame, display: false)
@@ -205,9 +210,14 @@ final class DockStackController {
         view.cols = cols; view.gap = gap; view.labelH = labelH
         view.headerH = headerH; view.footerH = footerH; view.pad = pad
         view.cellW = cellW; view.cellH = cellH
+        // No room above means the panel sat below the icon instead, and a nose would then point
+        // away from what it is supposed to be attached to.
+        view.noseH = frame.minY >= anchorScreenRect.maxY ? noseH : 0
+        view.noseCenterX = anchorScreenRect.midX - frame.minX
         view.onPick = { [weak self] picked in NSWorkspace.shared.open(picked); self?.hide() }
         view.onOpenFolder = { [weak self] in NSWorkspace.shared.open(url); self?.hide() }
         p.contentView = view
+        p.invalidateShadow()      // the outline changes shape between folders
         p.orderFrontRegardless()
         panel = p
         installDismissMonitor()
@@ -265,6 +275,10 @@ private final class DockStackView: NSView, NSDraggingSource {
     /// How many entries did not fit on screen. Shown in the footer rather than dropped quietly.
     var truncatedCount = 0
     var iconSize: CGFloat = 56
+    /// How far the callout nose hangs below the slab. 0 draws none.
+    var noseH: CGFloat = 0
+    /// Where the nose points, in this view's coordinates — the centre of the dock icon.
+    var noseCenterX: CGFloat = 0
     var cols = 4
     var gap: CGFloat = 10
     var labelH: CGFloat = 13
@@ -307,7 +321,34 @@ private final class DockStackView: NSView, NSDraggingSource {
         let c = cellRect(i)
         return NSRect(x: c.midX - iconSize / 2, y: c.minY, width: iconSize, height: iconSize)
     }
-    private var footerRect: NSRect { NSRect(x: 0, y: bounds.height - footerH, width: bounds.width, height: footerH) }
+    /// The slab proper, without the strip the nose hangs down into.
+    private var slab: NSRect { NSRect(x: 0, y: 0, width: bounds.width, height: bounds.height - noseH) }
+    private var footerRect: NSRect { NSRect(x: 0, y: slab.height - footerH, width: bounds.width, height: footerH) }
+
+    /// A rounded slab with a triangular nose on its bottom edge, as one path — filling a rect and
+    /// then a triangle separately leaves the outline drawing a line straight across the nose's base.
+    private func slabPath(_ r: NSRect, radius rad: CGFloat) -> NSBezierPath {
+        let p = NSBezierPath()
+        p.move(to: NSPoint(x: r.minX, y: r.minY + rad))
+        p.appendArc(from: NSPoint(x: r.minX, y: r.minY), to: NSPoint(x: r.minX + rad, y: r.minY), radius: rad)
+        p.line(to: NSPoint(x: r.maxX - rad, y: r.minY))
+        p.appendArc(from: NSPoint(x: r.maxX, y: r.minY), to: NSPoint(x: r.maxX, y: r.minY + rad), radius: rad)
+        p.line(to: NSPoint(x: r.maxX, y: r.maxY - rad))
+        p.appendArc(from: NSPoint(x: r.maxX, y: r.maxY), to: NSPoint(x: r.maxX - rad, y: r.maxY), radius: rad)
+        if noseH > 0 {
+            // Measured off the 10.6 reference: about twice as wide as it is tall, tip softened.
+            let half = noseH
+            let cx = min(max(noseCenterX, r.minX + rad + half + 2), r.maxX - rad - half - 2)
+            p.line(to: NSPoint(x: cx + half, y: r.maxY))
+            p.appendArc(from: NSPoint(x: cx, y: r.maxY + noseH),
+                        to: NSPoint(x: cx - half, y: r.maxY), radius: 2.5)
+            p.line(to: NSPoint(x: cx - half, y: r.maxY))
+        }
+        p.line(to: NSPoint(x: r.minX + rad, y: r.maxY))
+        p.appendArc(from: NSPoint(x: r.minX, y: r.maxY), to: NSPoint(x: r.minX, y: r.maxY - rad), radius: rad)
+        p.close()
+        return p
+    }
 
     private func thumbKey(_ url: URL) -> String {
         let m = (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)?
@@ -377,7 +418,7 @@ private final class DockStackView: NSView, NSDraggingSource {
         let snowLeopard = key == "snowleopard"
         if snowLeopard {
             // 10.6 grid stack: a dark translucent rounded slab, white labels, no window chrome.
-            let panel = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 6, yRadius: 6)
+            let panel = slabPath(slab.insetBy(dx: 0.5, dy: 0.5), radius: 6)
             NSColor(calibratedWhite: 0.11, alpha: 0.88).setFill(); panel.fill()
             (dropActive ? NSColor(calibratedRed: 0.35, green: 0.62, blue: 1, alpha: 0.9)
                         : NSColor(calibratedWhite: 1, alpha: 0.22)).setStroke()

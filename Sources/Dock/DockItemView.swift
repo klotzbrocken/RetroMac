@@ -19,9 +19,15 @@ final class DockItemView: NSView {
     private var indicatorH: CGFloat = 0
     private var indicatorYOrigin: CGFloat = 0
     private var previewTimer: Timer?
+    private var holdTimer: Timer?
+    private var didLongPress = false
 
     var onLeftClick: ((String) -> Void)?
     var onRightClick: ((String, NSPoint) -> Void)?
+    /// Set only where holding the icon means something (10.6 showed that app's windows). Its
+    /// presence also moves the plain click from mouse-down to mouse-up, because a press cannot
+    /// be both an immediate click and the start of a hold.
+    var onLongPress: ((String) -> Void)?
     var magnificationEnabled = false
 
     init(bundleID: String, frame: NSRect) {
@@ -314,7 +320,23 @@ final class DockItemView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         cancelWindowPreview()
-        onLeftClick?(bundleID)
+        // Themes without a long press keep firing on mouse-down, so nothing else in the dock
+        // changes feel over this.
+        guard onLongPress != nil else { onLeftClick?(bundleID); return }
+        didLongPress = false
+        holdTimer?.invalidate()
+        holdTimer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: false) { [weak self] _ in
+            guard let self = self else { return }
+            self.didLongPress = true
+            self.onLongPress?(self.bundleID)
+        }
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        holdTimer?.invalidate(); holdTimer = nil
+        guard onLongPress != nil else { return }
+        if !didLongPress { onLeftClick?(bundleID) }
+        didLongPress = false
     }
 
     override func rightMouseDown(with event: NSEvent) {

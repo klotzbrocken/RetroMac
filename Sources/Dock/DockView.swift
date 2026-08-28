@@ -1201,6 +1201,16 @@ final class DockView: NSView {
                 self?.updateRunningIndicators()
             }
         }
+        // 10.6 changed what holding a dock icon does: instead of the contextual menu it ran
+        // Expose for that application. Only this theme, since only this theme is 10.6.
+        if RetroFrameTheme.key() == "snowleopard",
+           AppManager.shared.apps.contains(where: { $0.bundleID == bundleID }) {
+            itemView.onLongPress = { bid in
+                guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bid).first
+                else { return }
+                ExposeController.shared.show(.application(app.processIdentifier))
+            }
+        }
         itemView.onRightClick = { [weak self] bid, point in
             self?.onContextMenu?(bid, point)
         }
