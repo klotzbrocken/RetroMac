@@ -3,6 +3,44 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 2.8
+
+- **Snow Leopard has its own chrome**: 10.6 no longer borrows Cheetah's early-Aqua look. Three
+  themes used to share one chrome key, so a 2009 desktop wore a 2001 window. The title bar is
+  measured off the original — unified grey, flat traffic lights, the separator along the bottom —
+  and it comes with blue gel scrollers, period-correct icons for Chrome, iWork, Claude and
+  ChatGPT, and the striped Macintosh HD.
+- **Dashboard is back**: the widget layer macOS dropped in Catalina, rebuilt. Ctrl+F12 brings up
+  Clock, Calculator, Weather (Open-Meteo, no key, no account), Calendar, Stickies, a Google search
+  pill and a CPU monitor. Add and remove them from the bar, drag them where you like, and they
+  stay put.
+- **Exposé**: every window on the desktop, shrunk so none overlap, each card travelling from where
+  its window actually sits. Ctrl+F9 for all of them, Ctrl+F10 for the front app — or hold a dock
+  icon, the way 10.6 changed that gesture to work.
+- **Stacks, drawn the way 10.6 drew them**: Applications and Downloads open as a grid with real
+  Quick Look previews, sitting next to the Trash where they belong, and hanging from the callout
+  nose that points back at the dock icon.
+- **Disk Defragmenter**: the Windows 95 and 98 themes get the defrag widget, with its authentic
+  icon, a working scrollbar and a period-correct pace.
+- **Desktop extras**: the real Flurry screensaver for the Mac OS X themes, five more Snow Leopard
+  wallpapers (Rocks, Earth, Aurora Blue, Zebra, Stones), and an optional tint for the menu bar so
+  a modern translucent one stops fighting the theme.
+- **Phosphor persistence**: afterglow across frames, applied to the signal ahead of the mask, in
+  every Metal renderer.
+- **Settings have a Shader tab**: what was "Advanced" is now Shader, and it leads the sidebar.
+  The effect's settings used to be spread over three tabs and five sections; they are in one place
+  now — Preset, Look, Where, Per-App, Performance and When. Hotkeys and system setup moved to tabs
+  of their own.
+- **Fixes**: the shader's per-theme on/off is no longer overruled at launch, and switching it off
+  no longer discards which preset the theme was assigned; the Quality picker stops resetting a
+  frame rate you chose, and 120 fps is offered only on panels that reach it; a failed theme import
+  can no longer lose the theme it was replacing; Hover! is genuinely offline (its last two remote
+  references are gone); the shader and the dock pin their display by UUID rather than by display
+  id, so they stay put across a reconnect; widgets stop rendering a cached copy of themselves
+  after an update; every readme window can be dragged; file paths coming from the App Folder web
+  view are validated; every boot screen shows for the same five seconds; and beta disk images are
+  named after their version, so a beta can never again be shipped as the release.
+
 ## 2.7
 
 - **Windows 95 theme**: the one that started it all. Solid navy title bars, the silver

@@ -128,6 +128,8 @@ struct WelcomeFlowView: View {
                             "Every window on the desktop, shrunk so none overlap, each card travelling from where its window actually sits. \u{2303}F9 for all of them, \u{2303}F10 for the front app \u{2014} or hold a dock icon, the way 10.6 changed that gesture to work.")
                     feature("square.stack.3d.up.fill", .orange, "Stacks, drawn the way 10.6 drew them",
                             "Applications and Downloads open as a grid with real Quick Look previews, sitting next to the Trash where they belong, and hanging from the callout nose that points back at the dock icon.")
+                    feature("internaldrive.fill", .brown, "Disk Defragmenter",
+                            "The Windows 95 and 98 themes get the defrag widget, with its authentic icon, a working scrollbar and a period-correct pace. It takes its time, as it should.")
                     feature("sparkles.tv.fill", .purple, "Desktop extras",
                             "The real Flurry screensaver, five more wallpapers (Rocks, Earth, Aurora Blue, Zebra, Stones), and an optional tint for the menu bar so a modern translucent one stops fighting the theme.")
                     feature("waveform.path.ecg", .pink, "Phosphor persistence",
