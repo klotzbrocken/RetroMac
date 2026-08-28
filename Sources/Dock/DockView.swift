@@ -164,9 +164,33 @@ final class DockView: NSView {
         return a
     }
     private func doomTileWidth(_ iconSize: CGFloat) -> CGFloat { iconSize * doomLogoAspect }
+
+    /// `DockView.iconDockTiles` with this dock's own state filled in. The pure function lives in
+    /// DockTiles.swift so the sizing/layout invariant can be tested without a running dock.
+    private func iconDockTiles(iconSize: CGFloat, spacing: CGFloat) -> [DockTile] {
+        Self.iconDockTiles(taskbar: isWindowsTaskbar,
+                           showQuickLaunch: ThemeManager.shared.activeTheme?.config.showQuickLaunch ?? false,
+                           apps: AppManager.shared.apps,
+                           transients: runningAppsNotInDock(),
+                           stacksOnRight: hasTrash && !isControlStrip,
+                           hasDashboard: hasDashboard,
+                           hasShowDesktop: hasShowDesktop,
+                           hasUrlLauncher: hasUrlLauncher && !isControlStrip,
+                           hasTrash: hasTrash && !isControlStrip,
+                           hasDoomLauncher: hasDoomLauncher && !isControlStrip,
+                           iconSize: iconSize,
+                           spacing: spacing,
+                           doomWidth: doomTileWidth(iconSize))
+    }
     /// Win98-style taskbar (classic start menu): etched groove separators + Show Desktop.
     private var isClassicTaskbar: Bool {
         ThemeManager.shared.activeTheme?.config.dock.startMenuStyle == "classic"
+    }
+    /// Win98/XP-style taskbar: Quick Launch icons plus one elongated button per open window,
+    /// rather than a row of dock tiles.
+    private var isWindowsTaskbar: Bool {
+        guard let t = ThemeManager.shared.activeTheme?.config else { return false }
+        return t.dock.startMenuStyle == "classic" || t.isXPStartMenu
     }
     private var hasShowDesktop: Bool { isClassicTaskbar && !isVertical && !isControlStrip }
 
@@ -426,14 +450,6 @@ final class DockView: NSView {
         startButtonImages = nil
         diskFreeFrame = .zero
 
-        let allApps = AppManager.shared.apps
-        // Folder stacks (Downloads, Applications) belong in the right-hand section beside the
-        // trash, the way macOS groups them, rather than sitting among the pinned apps. Layouts
-        // with no right-hand section — the Control Strip, the Windows taskbars — have no trash
-        // either, so there `stacks` is empty and everything stays inline as before.
-        let stacksOnRight = hasTrash && !isControlStrip
-        let stacks = stacksOnRight ? allApps.filter { $0.isFolder } : []
-        let apps = stacksOnRight ? allApps.filter { !$0.isFolder } : allApps
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         let scale = CGFloat(AppSettings.shared.dockIconScale) * dynamicScale
         let iconSize = theme.dock.iconSize * scale
@@ -442,58 +458,29 @@ final class DockView: NSView {
         let vertical = isVertical
         let barRect = dockBarRect
 
+        // The row, enumerated once — see DockTiles.swift. relayoutItems() and requiredWidth()
+        // read the same list.
+        let tiles = iconDockTiles(iconSize: iconSize, spacing: spacing)
+        // The Control Strip and the Windows taskbar have their own geometry below and take the
+        // apps directly; everything else is driven by `tiles`.
+        let apps = AppManager.shared.apps
+
         setupMagnificationTracking()
 
         if vertical {
-            // Top→bottom, centered on the bar thickness, trash at the bottom — must
-            // match relayoutItems() exactly so the resting layout and magnifier agree.
+            // Top→bottom, centred on the bar thickness, trash at the bottom. Same list and same
+            // arithmetic as relayoutItems(), which is the point: the two used to space the stack
+            // group differently, so a relayout quietly moved the icons rebuild had just placed.
             let bar = barRect
             let x = bar.midX - iconSize / 2
-            var y = bar.maxY - padding - gripHeight - iconSize
-            for (i, app) in apps.enumerated() {
-                addItem(bundleID: app.bundleID,
-                        frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+            var y = bar.maxY - padding - gripHeight
+            for t in tiles {
+                y -= t.gapBefore
+                if t.separator == .transients { separatorY = y + spacing / 2 }
+                y -= iconSize
+                addTile(t, frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                         theme: theme, iconSize: iconSize)
-                y -= iconSize + spacing
-                if i == 0 && hasDashboard {
-                    addDashboardItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                     theme: theme, iconSize: iconSize)
-                    y -= iconSize + spacing
-                }
-            }
-            let transientApps = runningAppsNotInDock()
-            if !transientApps.isEmpty {
-                separatorY = y + iconSize + spacing / 2
                 y -= spacing
-                for bid in transientApps {
-                    addItem(bundleID: bid,
-                            frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                            theme: theme, iconSize: iconSize, isTransient: true)
-                    y -= iconSize + spacing
-                }
-            }
-            if hasUrlLauncher || hasTrash || hasDoomLauncher {
-                y -= spacing
-                for app in stacks {
-                    addItem(bundleID: app.bundleID,
-                            frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                            theme: theme, iconSize: iconSize)
-                    y -= iconSize + spacing
-                }
-                if hasUrlLauncher {
-                    addURLLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                       theme: theme, iconSize: iconSize)
-                    y -= iconSize + spacing
-                }
-                if hasTrash {
-                    addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                 theme: theme, iconSize: iconSize)
-                    y -= iconSize + spacing
-                }
-                if hasDoomLauncher {
-                    addDoomLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                        theme: theme, iconSize: iconSize)
-                }
             }
         } else if isControlStrip {
             // Mac OS 9 Control Strip layout: left cap PNG + icon modules + right cap PNG
@@ -741,61 +728,19 @@ final class DockView: NSView {
                 if theme.isXPStartMenu { taskRightEdge -= max(14, iconSize * 0.55) * 0.9 + 4 }
                 addTaskButtonStrip(startX: x, rightEdge: taskRightEdge, barRect: barRect, theme: theme, iconSize: iconSize)
             } else {
-                for (i, app) in apps.enumerated() {
-                    let y = (barRect.height - iconSize) / 2
-                    addItem(bundleID: app.bundleID,
-                            frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
+                // One pass over the shared list — same order and same arithmetic as
+                // relayoutItems(). The two used to be separate if-chains; when Dashboard was
+                // added to the dock it reached three of the four places that enumerate the row
+                // and not the fourth, so the bar came out a tile too narrow and the trash was
+                // drawn beside it.
+                let y = (barRect.height - iconSize) / 2
+                for t in tiles {
+                    if t.separator == .transients { separatorX = x + t.gapBefore - spacing / 2 }
+                    if t.separator == .rightGroup { trashSeparatorX = x + t.gapBefore - spacing / 2 }
+                    x += t.gapBefore
+                    addTile(t, frame: NSRect(x: x, y: y, width: t.width, height: iconSize),
                             theme: theme, iconSize: iconSize)
-                    x += iconSize + spacing
-                    if i == 0 && hasDashboard {
-                        addDashboardItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                         theme: theme, iconSize: iconSize)
-                        x += iconSize + spacing
-                    }
-                }
-                if hasShowDesktop {
-                    addShowDesktopItem(frame: NSRect(x: x, y: (barRect.height - iconSize) / 2,
-                                                     width: iconSize, height: iconSize),
-                                       theme: theme, iconSize: iconSize)
-                    x += iconSize + spacing
-                }
-                let transientApps = runningAppsNotInDock()
-                if !transientApps.isEmpty {
-                    separatorX = x - spacing / 2
-                    x += spacing
-                    for bid in transientApps {
-                        let y = (barRect.height - iconSize) / 2
-                        addItem(bundleID: bid,
-                                frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                theme: theme, iconSize: iconSize, isTransient: true)
-                        x += iconSize + spacing
-                    }
-                }
-
-                if hasUrlLauncher || hasTrash || hasDoomLauncher {
-                    trashSeparatorX = x - spacing / 2
-                    x += spacing
-                    let y = (barRect.height - iconSize) / 2
-                    for app in stacks {
-                        addItem(bundleID: app.bundleID,
-                                frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                theme: theme, iconSize: iconSize)
-                        x += iconSize + spacing
-                    }
-                    if hasUrlLauncher {
-                        addURLLauncherItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                           theme: theme, iconSize: iconSize)
-                        x += iconSize + spacing
-                    }
-                    if hasTrash {
-                        addTrashItem(frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
-                                     theme: theme, iconSize: iconSize)
-                        x += iconSize + spacing
-                    }
-                    if hasDoomLauncher {
-                        addDoomLauncherItem(frame: NSRect(x: x, y: y, width: doomTileWidth(iconSize), height: iconSize),
-                                            theme: theme, iconSize: iconSize)
-                    }
+                    x += t.width + spacing
                 }
             }
         }
@@ -807,33 +752,25 @@ final class DockView: NSView {
     }
 
     func relayoutItems() {
-        let allApps = AppManager.shared.apps
-        // Folder stacks (Downloads, Applications) belong in the right-hand section beside the
-        // trash, the way macOS groups them, rather than sitting among the pinned apps. Layouts
-        // with no right-hand section — the Control Strip, the Windows taskbars — have no trash
-        // either, so there `stacks` is empty and everything stays inline as before.
-        let stacksOnRight = hasTrash && !isControlStrip
-        let stacks = stacksOnRight ? allApps.filter { $0.isFolder } : []
-        let apps = stacksOnRight ? allApps.filter { !$0.isFolder } : allApps
-        let transientApps = runningAppsNotInDock()
-        var currentIDs = apps.map { $0.bundleID }
-        if hasDashboard { currentIDs.insert("__dashboard__", at: min(1, currentIDs.count)) }
-        if hasShowDesktop { currentIDs.append("__showdesktop__") }
-        currentIDs += transientApps
-        currentIDs += stacks.map { $0.bundleID }
-        if hasUrlLauncher && !isControlStrip { currentIDs.append("__urllauncher__") }
-        if hasTrash && !isControlStrip { currentIDs.append("__trash__") }
-        if hasDoomLauncher && !isControlStrip { currentIDs.append("__doomlauncher__") }
-        if currentIDs != lastItemBundleIDs {
-            rebuildItems()
-            return
-        }
-
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         let scale = CGFloat(AppSettings.shared.dockIconScale) * dynamicScale
         let iconSize = theme.dock.iconSize * scale
         let spacing = theme.dock.spacing * scale
         let padding = theme.dock.padding * scale
+
+        // Same list rebuildItems() built the views from — if it no longer matches, the row's
+        // contents changed and the views have to be made again.
+        let tiles = iconDockTiles(iconSize: iconSize, spacing: spacing)
+        if tiles.map({ $0.id }) != lastItemBundleIDs {
+            rebuildItems()
+            return
+        }
+        // A Windows taskbar places its Quick Launch icons, its divider and its task buttons in
+        // one go; there is no second implementation of that here, so re-run the first one.
+        if isWindowsTaskbar && !isControlStrip {
+            rebuildItems()
+            return
+        }
         let vertical = isVertical
         let barRect = dockBarRect
 
@@ -844,58 +781,20 @@ final class DockView: NSView {
 
         var idx = 0
         if vertical {
-            // Icons are centered in the bar thickness and stacked top→bottom
-            // (Finder on top, Trash at the bottom — like a real vertical dock).
+            // Icons are centred in the bar thickness and stacked top→bottom (Finder on top,
+            // Trash at the bottom). One pass over the shared list, so this cannot drift from
+            // rebuildItems() again — it had, spacing the stacks differently in each.
             let bar = dockBarRect
             let x = bar.midX - iconSize / 2
-            var y = bar.maxY - padding - gripHeight - iconSize
-            for i in apps.indices {
+            var y = bar.maxY - padding - gripHeight
+            for tile in tiles {
                 guard idx < itemViews.count else { break }
-                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                idx += 1
-                y -= iconSize + spacing
-                if i == 0 && hasDashboard, idx < itemViews.count {
-                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                    idx += 1
-                    y -= iconSize + spacing
-                }
-            }
-            if !transientApps.isEmpty {
-                separatorY = y + iconSize + spacing / 2
-                y -= spacing
-                for _ in transientApps {
-                    guard idx < itemViews.count else { break }
-                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                    idx += 1
-                    y -= iconSize + spacing
-                }
-            }
-            for _ in stacks {
-                guard idx < itemViews.count else { break }
-                y -= spacing
-                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                idx += 1
+                y -= tile.gapBefore
+                if tile.separator == .transients { separatorY = y + spacing / 2 }
                 y -= iconSize
-            }
-            // Trash icon (always the last item) at the bottom of the stack.
-            if hasUrlLauncher, idx < itemViews.count {
-                y -= spacing
-                trashSeparatorX = nil
                 itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                 idx += 1
-                y -= iconSize
-            }
-            if hasTrash, idx < itemViews.count {
                 y -= spacing
-                trashSeparatorX = nil
-                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                idx += 1
-                y -= iconSize
-            }
-            if hasDoomLauncher, idx < itemViews.count {
-                y -= spacing
-                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                idx += 1
             }
             // Snapshot resting Y-centres for the frame-based magnifier (see restCentersY).
             restCentersY = itemViews.map { $0.frame.midY }
@@ -911,6 +810,9 @@ final class DockView: NSView {
             trayIconFrame = .zero
             diskFreeFrame = .zero
 
+            // The Control Strip has no right-hand section, so nothing moves out of the row and
+            // every pinned entry stays inline — it does not use the shared tile list.
+            let apps = AppManager.shared.apps
             let transientApps = runningAppsNotInDock()
             let totalCount = apps.count + transientApps.count
             for i in 0..<apps.count {
@@ -1098,59 +1000,19 @@ final class DockView: NSView {
                 diskFreeFrame = .zero
             }
 
-            for i in apps.indices {
+            // One pass over the shared list. The Windows taskbar is not laid out here at all —
+            // its Quick Launch group, divider and task-button strip are placed together in
+            // rebuildItems(), and having a second, subtly different implementation here is what
+            // made Show Desktop jump from the front of the group to the back after a relayout.
+            let y = (barRect.height - iconSize) / 2
+            for tile in tiles {
                 guard idx < itemViews.count else { break }
-                let y = (barRect.height - iconSize) / 2
-                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
+                if tile.separator == .transients { separatorX = x + tile.gapBefore - spacing / 2 }
+                if tile.separator == .rightGroup { trashSeparatorX = x + tile.gapBefore - spacing / 2 }
+                x += tile.gapBefore
+                itemViews[idx].frame = NSRect(x: x, y: y, width: tile.width, height: iconSize)
                 idx += 1
-                x += iconSize + spacing
-                if i == 0 && hasDashboard, idx < itemViews.count {
-                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                    idx += 1
-                    x += iconSize + spacing
-                }
-            }
-            if hasShowDesktop, idx < itemViews.count {
-                let y = (barRect.height - iconSize) / 2
-                itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                idx += 1
-                x += iconSize + spacing
-            }
-            if !transientApps.isEmpty {
-                separatorX = x - spacing / 2
-                x += spacing
-                for _ in transientApps {
-                    guard idx < itemViews.count else { break }
-                    let y = (barRect.height - iconSize) / 2
-                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                    idx += 1
-                    x += iconSize + spacing
-                }
-            }
-            if (hasUrlLauncher || hasTrash || hasDoomLauncher) && idx < itemViews.count {
-                trashSeparatorX = x - spacing / 2
-                x += spacing
-                let y = (barRect.height - iconSize) / 2
-                for _ in stacks {
-                    guard idx < itemViews.count else { break }
-                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                    idx += 1
-                    x += iconSize + spacing
-                }
-                if hasUrlLauncher, idx < itemViews.count {
-                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                    idx += 1
-                    x += iconSize + spacing
-                }
-                if hasTrash, idx < itemViews.count {
-                    itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
-                    idx += 1
-                    x += iconSize + spacing
-                }
-                if hasDoomLauncher, idx < itemViews.count {
-                    itemViews[idx].frame = NSRect(x: x, y: y, width: doomTileWidth(iconSize), height: iconSize)
-                    idx += 1
-                }
+                x += tile.width + spacing
             }
         }
 
@@ -1449,6 +1311,21 @@ final class DockView: NSView {
         showDesktopHidden.removeAll()
     }
 
+    /// Create the view for one tile of the shared row. The only place a `DockTile.Kind` turns
+    /// into a view, so adding a kind forces you through here.
+    private func addTile(_ tile: DockTile, frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
+        switch tile.kind {
+        case let .app(bundleID, transient):
+            addItem(bundleID: bundleID, frame: frame, theme: theme,
+                    iconSize: iconSize, isTransient: transient)
+        case .dashboard:    addDashboardItem(frame: frame, theme: theme, iconSize: iconSize)
+        case .showDesktop:  addShowDesktopItem(frame: frame, theme: theme, iconSize: iconSize)
+        case .urlLauncher:  addURLLauncherItem(frame: frame, theme: theme, iconSize: iconSize)
+        case .trash:        addTrashItem(frame: frame, theme: theme, iconSize: iconSize)
+        case .doomLauncher: addDoomLauncherItem(frame: frame, theme: theme, iconSize: iconSize)
+        }
+    }
+
     private func addDashboardItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
         let item = DockItemView(bundleID: "__dashboard__", frame: frame)
         item.magnificationEnabled = theme.hasMagnification && AppSettings.shared.dockMagnification
@@ -1570,36 +1447,15 @@ final class DockView: NSView {
             return controlStripFullWidth
         }
 
-        let pinnedCount = CGFloat(AppManager.shared.apps.count)
-        var width = padding * 2 + pinnedCount * iconSize + max(0, pinnedCount - 1) * spacing
+        // One list, shared with rebuildItems() and relayoutItems() — see DockTiles.swift. Adding
+        // a tile in one place and forgetting the other is what put the trash outside the bar.
+        var width = padding * 2 + Self.iconDockRunLength(iconDockTiles(iconSize: iconSize,
+                                                                      spacing: spacing),
+                                                         spacing: spacing)
 
         // Futurama: reserve room for the gauge panel (left) and grille end cap (right).
         let futCaps = futuramaCapWidths()
         width += futCaps.left + futCaps.right
-
-        if hasDashboard {
-            // Mac OS X put Dashboard in the Dock right after Finder, and the layout advances a
-            // full tile for it. Leaving it out here made the bar exactly one tile too narrow, so
-            // the last item — the trash — was drawn outside it, and only snapped back in when
-            // magnification reflowed the row on hover.
-            width += iconSize + spacing
-        }
-        if hasShowDesktop {
-            width += iconSize + spacing + 4   // tile + start-button groove allowance
-        }
-        let transientApps = runningAppsNotInDock()
-        if !transientApps.isEmpty {
-            width += spacing + CGFloat(transientApps.count) * (iconSize + spacing)
-        }
-        if hasUrlLauncher {
-            width += spacing + iconSize
-        }
-        if hasTrash {
-            width += spacing + iconSize + spacing
-        }
-        if hasDoomLauncher {
-            width += spacing + doomTileWidth(iconSize)   // trailing padding is symmetric with the leading edge
-        }
 
         // For vertical docks with grip, add grip height
         if isVertical && hasGrip {
