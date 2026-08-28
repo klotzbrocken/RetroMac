@@ -1202,9 +1202,14 @@ final class DockView: NSView {
             }
         }
         // 10.6 changed what holding a dock icon does: instead of the contextual menu it ran
-        // Expose for that application. Only this theme, since only this theme is 10.6.
-        if RetroFrameTheme.key() == "snowleopard",
-           AppManager.shared.apps.contains(where: { $0.bundleID == bundleID }) {
+        // Expose for that application.
+        //
+        // Attached to every real app tile, not only the ones AppManager knows: a running app that
+        // is not pinned reaches the dock through runningAppsNotInDock(), so it is by definition
+        // absent from that list — and those are the tiles you most want to hold. Whether the app
+        // is running, and whether this theme is the one with the gesture, are both decided when
+        // the press happens.
+        if !bundleID.hasPrefix("__") {
             itemView.onLongPress = { bid in
                 guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: bid).first
                 else { return }

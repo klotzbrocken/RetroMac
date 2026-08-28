@@ -24,10 +24,11 @@ final class DockItemView: NSView {
 
     var onLeftClick: ((String) -> Void)?
     var onRightClick: ((String, NSPoint) -> Void)?
-    /// Set only where holding the icon means something (10.6 showed that app's windows). Its
-    /// presence also moves the plain click from mouse-down to mouse-up, because a press cannot
-    /// be both an immediate click and the start of a hold.
+    /// Holding this icon shows that app's windows, the way 10.6 did. Only armed while the theme
+    /// that had the gesture is active — which is checked when the press happens, not when the
+    /// tile is built, because the dock outlives a theme switch.
     var onLongPress: ((String) -> Void)?
+    private var holdArmed: Bool { onLongPress != nil && RetroFrameTheme.key() == "snowleopard" }
     var magnificationEnabled = false
 
     init(bundleID: String, frame: NSRect) {
@@ -322,19 +323,24 @@ final class DockItemView: NSView {
         cancelWindowPreview()
         // Themes without a long press keep firing on mouse-down, so nothing else in the dock
         // changes feel over this.
-        guard onLongPress != nil else { onLeftClick?(bundleID); return }
+        guard holdArmed else { onLeftClick?(bundleID); return }
         didLongPress = false
         holdTimer?.invalidate()
-        holdTimer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: false) { [weak self] _ in
+        let t = Timer(timeInterval: 0.45, repeats: false) { [weak self] _ in
             guard let self = self else { return }
             self.didLongPress = true
             self.onLongPress?(self.bundleID)
         }
+        // .common, not the default mode scheduledTimer would give it: the moment the pointer
+        // twitches under a held button AppKit runs in event-tracking mode, and a default-mode
+        // timer simply stops existing for the duration of the hold.
+        RunLoop.current.add(t, forMode: .common)
+        holdTimer = t
     }
 
     override func mouseUp(with event: NSEvent) {
         holdTimer?.invalidate(); holdTimer = nil
-        guard onLongPress != nil else { return }
+        guard holdArmed else { return }
         if !didLongPress { onLeftClick?(bundleID) }
         didLongPress = false
     }
