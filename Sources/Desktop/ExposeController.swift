@@ -136,6 +136,7 @@ final class ExposeController {
         for (item, slot) in zip(sorted, slots) {
             let card = ExposeCardView(frame: slot)
             card.item = item
+            card.targetSize = card.contentRect.size   // frame is still the slot at this point
             card.onPick = { [weak self] in
                 self?.hide()
                 self?.raise(item)
@@ -251,8 +252,12 @@ final class ExposeController {
             // card can take its own image the moment that one is ready.
             await withTaskGroup(of: (CGWindowID, NSImage?).self) { group in
                 for win in targets {
+                    let card = self.cards[win.windowID]
+                    let points = card?.targetSize ?? NSSize(width: 480, height: 300)
+                    let scale = card?.window?.backingScaleFactor ?? 2
                     group.addTask {
-                        (win.windowID, await ScreenCaptureManager.captureThumbnail(win, maxDimension: 900))
+                        (win.windowID,
+                         await ScreenCaptureManager.captureThumbnail(win, points: points, scale: scale))
                     }
                 }
                 for await (id, img) in group {
@@ -319,6 +324,7 @@ final class ExposeBackdropView: NSView {
     var isEmpty = false
 
     override var acceptsFirstResponder: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override var isFlipped: Bool { false }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -348,6 +354,15 @@ final class ExposeCardView: NSView {
     var item: ExposeController.Item!
     var image: NSImage? { didSet { needsDisplay = true } }
     var onPick: (() -> Void)?
+    /// How large the thumbnail ends up on screen, so it can be captured at exactly that.
+    /// Taken from `contentRect` rather than restated, so it cannot drift from what draw uses.
+    var targetSize: NSSize = .zero
+    /// The thumbnail's rect. The margin is where the hover rim goes.
+    var contentRect: NSRect { bounds.insetBy(dx: 3, dy: 3) }
+
+    // Without this the first click into the sheet is spent making its window key and the pick
+    // needs a second one — which is what a hold-opened Exposé did every single time.
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     private var hot = false { didSet { needsDisplay = true } }
     private var tracker: NSTrackingArea?
@@ -362,7 +377,7 @@ final class ExposeCardView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        let content = bounds.insetBy(dx: 3, dy: 3)
+        let content = contentRect
         guard content.width > 4, content.height > 4 else { return }
 
         NSGraphicsContext.saveGraphicsState()

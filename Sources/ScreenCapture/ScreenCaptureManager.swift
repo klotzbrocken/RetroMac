@@ -175,19 +175,27 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
     /// and has been progressively defanged, and we already hold the Screen Recording permission
     /// this needs. Returns nil rather than throwing — a window that refuses to be captured should
     /// cost one placeholder card, not the whole Exposé.
-    static func captureThumbnail(_ window: SCWindow, maxDimension: CGFloat) async -> NSImage? {
-        let w = window.frame.width, h = window.frame.height
+    /// `points` is how large the thumbnail will actually be drawn and `scale` the display's
+    /// backing factor, so the capture comes back at exactly the pixels the card needs.
+    static func captureThumbnail(_ window: SCWindow, points: NSSize, scale: CGFloat) async -> NSImage? {
+        // Never ask for more than the window has; a card is never drawn larger than life size.
+        let w = min(points.width, window.frame.width), h = min(points.height, window.frame.height)
         guard w > 1, h > 1 else { return nil }
-        let scale = min(1, maxDimension / max(w, h))
         let cfg = SCStreamConfiguration()
         cfg.width  = max(1, Int((w * scale).rounded()))
         cfg.height = max(1, Int((h * scale).rounded()))
         cfg.showsCursor = false
         cfg.scalesToFit = true
+        // .automatic is free to hand back a nominal-resolution frame, which on a Retina display
+        // is half the pixels and looks exactly as soft as that sounds.
+        cfg.captureResolution = .best
         do {
             let filter = SCContentFilter(desktopIndependentWindow: window)
             let img = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: cfg)
-            return NSImage(cgImage: img, size: NSSize(width: img.width, height: img.height))
+            // Sized in POINTS, not in its own pixel count. Passing the pixel count made a 2x
+            // capture claim to be a 2x-larger 1x image, so AppKit resampled it down into the card
+            // instead of mapping its pixels one to one onto the backing store.
+            return NSImage(cgImage: img, size: NSSize(width: w, height: h))
         } catch {
             return nil
         }
