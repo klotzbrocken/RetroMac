@@ -15,6 +15,28 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.8.1</title>
+      <pubDate>Fri, 28 Aug 2026 07:49:35 +0000</pubDate>
+      <sparkle:version>2.8.1</sparkle:version>
+      <sparkle:shortVersionString>2.8.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.8.1</h2>
+        <p>A fix for Expos&eacute;, which shipped in 2.8 yesterday.</p>
+        <ul>
+          <li><b>Expos&eacute; no longer hides RetroMac&rsquo;s own windows.</b> The window list skipped anything owned by RetroMac itself &mdash; which on a theme desktop is a large share of what you see, since Television, the CPU monitor, Notepad, Calculator and App Folder windows are all ours. With only those open, Expos&eacute; reported &ldquo;No windows&rdquo; over a screen full of them. Nothing unwanted appears as a result: the dock, Dashboard, the Expos&eacute; sheet itself, the desktop pet, menus and desktop icons all sit above the window layer Expos&eacute; reads and were already excluded.</li>
+          <li>With a second display attached, the screen that happened to hold no windows announced &ldquo;No windows&rdquo; while the other one was showing them all. That message now means what it says &mdash; nothing anywhere.</li>
+        </ul>
+        <p>Everything new in 2.8 &mdash; Snow Leopard&rsquo;s own chrome, Dashboard, Expos&eacute;, the 10.6 stacks, the Disk Defragmenter, Flurry and phosphor persistence &mdash; is included.</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.8.1/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="A97lZRePULF1SUyBuqCPUIoDo06YRH+R4NfabXbane8Zro+WBjLEbJV2XwCCQGix7uFHwDWFWFTlvjzEaOYpDw=="
+        length="94251712"
+      />
+    </item>
+    <item>
       <title>Version 2.8</title>
       <pubDate>Fri, 28 Aug 2026 06:57:44 +0000</pubDate>
       <sparkle:version>2.8</sparkle:version>
