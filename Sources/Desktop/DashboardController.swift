@@ -236,6 +236,7 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         wv.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
         host.webView = wv
         host.addSubview(wv)
+        host.installBadge()
 
         root.addSubview(host)
         hosts[id] = host
@@ -274,20 +275,45 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
     }
 
     private func storedOrigin(for w: Widget, on screen: NSScreen) -> NSPoint {
-        if let s = UserDefaults.standard.string(forKey: posKey(w.id)) {
-            let p = NSPointFromString(s)
+        if let str = UserDefaults.standard.string(forKey: posKey(w.id)) {
+            let p = NSPointFromString(str)
             if p != .zero { return p }
         }
-        // No stored position: drop it near the middle, nudged per widget so several do not land
-        // exactly on top of each other. The first version stepped 200pt down per catalogue entry,
-        // which put anything past the fourth below the bottom of the screen — the reason Search
-        // and the CPU monitor could be added and then not be anywhere.
-        let index = Self.catalogue.firstIndex { $0.id == w.id } ?? 0
-        let step = CGFloat(index) * 34
-        let x = screen.frame.width / 2 - w.size.width / 2 - 140 + step
-        let y = screen.frame.height / 2 - w.size.height / 2 + 120 - step
-        return NSPoint(x: min(max(x, 20), screen.frame.width - w.size.width - 20),
-                       y: min(max(y, 110), screen.frame.height - w.size.height - 40))
+        return freeOrigin(for: w, on: screen)
+    }
+
+    /// First spot where this widget does not sit on top of one already placed.
+    ///
+    /// The first two attempts were both wrong: stepping 200pt down per catalogue entry pushed
+    /// anything past the fourth off the bottom of the screen, and centring them all put the
+    /// three defaults straight on top of each other.
+    private func freeOrigin(for w: Widget, on screen: NSScreen) -> NSPoint {
+        let margin: CGFloat = 40
+        let gap: CGFloat = 18
+        let bottom = bottomInset(on: screen) + 110      // clear the dock and the widget bar
+        let taken = hosts.values.map { $0.frame.insetBy(dx: -gap, dy: -gap) }
+
+        let maxX = screen.frame.width - w.size.width - margin
+        let maxY = screen.frame.height - w.size.height - margin
+        guard maxX >= margin, maxY >= bottom else {
+            return NSPoint(x: margin, y: max(bottom, margin))
+        }
+        // Reading order, top-left first, in coarse steps — enough to pack tidily without
+        // pretending to be a real layout engine.
+        var y = maxY
+        while y >= bottom {
+            var x = margin
+            while x <= maxX {
+                let candidate = NSRect(origin: NSPoint(x: x, y: y), size: w.size)
+                if !taken.contains(where: { $0.intersects(candidate) }) {
+                    return candidate.origin
+                }
+                x += 24
+            }
+            y -= 24
+        }
+        // Everything is full: drop it top-left and let the user sort it out by dragging.
+        return NSPoint(x: margin, y: maxY)
     }
 
     /// Injected before the page runs: preferences, the setter, the chrome strip for widgets that
@@ -375,7 +401,15 @@ final class DashboardController: NSObject, WKScriptMessageHandler {
         bar.activeIDs = Set(activeIDs)
         bar.onPick = { [weak self] id in
             guard let self = self, let root = self.root, let screen = self.mainScreen else { return }
-            guard !self.activeIDs.contains(id) else { return }
+            // A second click takes it off again. The original bar only ever added — but it also
+            // showed its close badges the whole time the bar was open, and ours were invisible
+            // under the web view until now. Two ways to remove is the safer end of that mistake.
+            if self.activeIDs.contains(id) {
+                self.hosts[id]?.onRemove?()
+                bar.activeIDs = Set(self.activeIDs)
+                bar.needsDisplay = true
+                return
+            }
             self.activeIDs = self.activeIDs + [id]
             self.addWidget(id, to: root, on: screen)
             self.hosts[id]?.showBadge = self.barOpen
@@ -512,38 +546,51 @@ final class DashboardWidgetView: NSView {
     var onMove: ((CGPoint) -> Void)?
     var onRemove: (() -> Void)?
 
-    private var badgeRect: NSRect { NSRect(x: -1, y: bounds.height - 17, width: 18, height: 18) }
     /// Shown only while the widget bar is open. On hover it sat as a black blob in the corner of
     /// a widget you were merely using — which is what it looked like, and not what Dashboard did.
-    var showBadge = false { didSet { needsDisplay = true } }
+    var showBadge = false { didSet { badge?.isHidden = !showBadge } }
+
+    /// A real subview rather than something this view draws.
+    ///
+    /// It used to be drawn in `draw(_:)`, and a view draws BEFORE its subviews — so the web view
+    /// painted straight over it. The only place it showed through was where the page happened to
+    /// be transparent, which is why the Weather and Calendar cards looked like they had a black
+    /// top-left corner: that was this badge, half-covered.
+    private weak var badge: DashboardCloseBadge?
+
+    func installBadge() {
+        let b = DashboardCloseBadge(frame: NSRect(x: -1, y: bounds.height - 17, width: 18, height: 18))
+        b.autoresizingMask = [.minYMargin]
+        b.isHidden = !showBadge
+        b.onClick = { [weak self] in self?.onRemove?() }
+        addSubview(b)
+        badge = b
+    }
+}
+
+/// The close badge Dashboard put on a widget's top-left corner while the bar was open.
+final class DashboardCloseBadge: NSView {
+    var onClick: (() -> Void)?
 
     override func draw(_ dirtyRect: NSRect) {
-        guard showBadge else { return }
-        // The close badge Dashboard put on the widget's top-left corner.
-        let r = badgeRect
+        let r = bounds.insetBy(dx: 0.5, dy: 0.5)
         NSColor(white: 0.15, alpha: 0.92).setFill()
         NSBezierPath(ovalIn: r).fill()
         NSColor(white: 1, alpha: 0.9).setStroke()
         let x = NSBezierPath()
         x.lineWidth = 1.8
         x.lineCapStyle = .round
-        let i = r.insetBy(dx: 5.5, dy: 5.5)
+        let i = r.insetBy(dx: 5, dy: 5)
         x.move(to: NSPoint(x: i.minX, y: i.minY)); x.line(to: NSPoint(x: i.maxX, y: i.maxY))
         x.move(to: NSPoint(x: i.maxX, y: i.minY)); x.line(to: NSPoint(x: i.minX, y: i.maxY))
         x.stroke()
     }
 
+    // Claim the click before the page underneath sees it.
     override func hitTest(_ point: NSPoint) -> NSView? {
-        // The badge sits above the web view, so claim its rect before the page sees the click.
-        let p = convert(point, from: superview)
-        if showBadge && badgeRect.contains(p) { return self }
-        return super.hitTest(point)
+        isHidden ? nil : super.hitTest(point)
     }
-
-    override func mouseDown(with event: NSEvent) {
-        let p = convert(event.locationInWindow, from: nil)
-        if badgeRect.contains(p) { onRemove?() }
-    }
+    override func mouseDown(with event: NSEvent) { onClick?() }
 }
 
 /// The strip along the bottom that adds widgets, standing in for Dashboard's widget bar.
@@ -572,22 +619,27 @@ final class DashboardBarView: NSView {
         for (i, w) in items.enumerated() {
             let r = tileRect(i)
             let on = activeIDs.contains(w.id)
-            if i == hovered && !on {
+            let hot = i == hovered
+            if hot {
                 NSColor(white: 1, alpha: 0.12).setFill()
                 NSBezierPath(roundedRect: r.insetBy(dx: 6, dy: 4), xRadius: 8, yRadius: 8).fill()
             }
             let attrs: [NSAttributedString.Key: Any] = [
                 .font: NSFont(name: "Lucida Grande", size: 11) ?? .systemFont(ofSize: 11),
-                .foregroundColor: NSColor(white: 1, alpha: on ? 0.35 : 0.92)]
+                .foregroundColor: NSColor(white: 1, alpha: (on && !hot) ? 0.35 : 0.92)]
             let s = w.name.size(withAttributes: attrs)
             w.name.draw(at: NSPoint(x: r.midX - s.width / 2, y: r.minY + 8), withAttributes: attrs)
             // A plain plus for one that can still be added, a tick for one already on the sheet.
             let g = NSRect(x: r.midX - 13, y: r.minY + 28, width: 26, height: 26)
-            NSColor(white: 1, alpha: on ? 0.22 : 0.85).setStroke()
+            NSColor(white: 1, alpha: (on && !hot) ? 0.22 : 0.85).setStroke()
             let p = NSBezierPath()
             p.lineWidth = 2
             p.lineCapStyle = .round
-            if on {
+            if on && hot {
+                // Hovering something already on the sheet offers to take it off.
+                p.move(to: NSPoint(x: g.minX + 5, y: g.minY + 5)); p.line(to: NSPoint(x: g.maxX - 5, y: g.maxY - 5))
+                p.move(to: NSPoint(x: g.maxX - 5, y: g.minY + 5)); p.line(to: NSPoint(x: g.minX + 5, y: g.maxY - 5))
+            } else if on {
                 p.move(to: NSPoint(x: g.minX + 5, y: g.midY))
                 p.line(to: NSPoint(x: g.midX - 2, y: g.minY + 6))
                 p.line(to: NSPoint(x: g.maxX - 4, y: g.maxY - 6))
