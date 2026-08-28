@@ -3,6 +3,17 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 2.8.1
+
+- **Exposé no longer hides RetroMac's own windows.** The window list skipped anything owned by
+  RetroMac itself, which on a theme desktop is a large share of what you see: Television, the CPU
+  monitor, Notepad, Calculator and App Folder windows are all ours. With only those open, Exposé
+  reported "No windows" over a screen full of them. Nothing unwanted comes in as a result — the
+  dock, Dashboard, the Exposé sheet, the pet, menus and desktop icons all sit above the window
+  layer Exposé reads and were already excluded.
+- With a second display attached, the screen that happened to hold no windows announced "No
+  windows" while the other was showing them all. That message now means nothing anywhere.
+
 ## 2.8
 
 - **Snow Leopard has its own chrome**: 10.6 no longer borrows Cheetah's early-Aqua look. Three
