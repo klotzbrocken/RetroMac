@@ -15,6 +15,33 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.8</title>
+      <pubDate>Fri, 28 Aug 2026 06:57:44 +0000</pubDate>
+      <sparkle:version>2.8</sparkle:version>
+      <sparkle:shortVersionString>2.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.8 &mdash; Snow Leopard, with Dashboard and Expos&eacute;</h2>
+        <ul>
+          <li><b>Snow Leopard has its own chrome:</b> 10.6 no longer borrows Cheetah&rsquo;s early-Aqua look &mdash; three themes used to share one window style, so a 2009 desktop wore a 2001 window. The title bar is measured off the original: unified grey, flat traffic lights, the separator along the bottom. With it come blue gel scrollers, period-correct icons for Chrome, iWork, Claude and ChatGPT, and the striped Macintosh HD.</li>
+          <li><b>Dashboard is back:</b> the widget layer macOS dropped in Catalina, rebuilt. &#8963;F12 brings up Clock, Calculator, Weather, Calendar, Stickies, a Google search pill and a CPU monitor. Add and remove them from the bar, drag them where you like, and they stay put.</li>
+          <li><b>Expos&eacute;:</b> every window on the desktop, shrunk so none overlap, each card travelling from where its window actually sits. &#8963;F9 for all of them, &#8963;F10 for the front app &mdash; or hold a dock icon, the way 10.6 changed that gesture to work.</li>
+          <li><b>Stacks, drawn the way 10.6 drew them:</b> Applications and Downloads open as a grid with real Quick Look previews, sitting next to the Trash where they belong, and hanging from the callout nose that points back at the dock icon.</li>
+          <li><b>Disk Defragmenter:</b> the Windows 95 and 98 themes get the defrag widget, with its authentic icon, a working scrollbar and a period-correct pace.</li>
+          <li><b>Desktop extras:</b> the real Flurry screensaver for the Mac OS X themes, five more Snow Leopard wallpapers (Rocks, Earth, Aurora Blue, Zebra, Stones), and an optional tint for the menu bar so a modern translucent one stops fighting the theme.</li>
+          <li><b>Phosphor persistence:</b> afterglow across frames, applied to the signal ahead of the mask, in every Metal renderer.</li>
+          <li><b>Settings have a Shader tab:</b> what was &ldquo;Advanced&rdquo; is now Shader, and it leads the sidebar. The effect&rsquo;s settings were spread over three tabs and five sections; they are in one place now &mdash; Preset, Look, Where, Per-App, Performance and When.</li>
+          <li><b>Fixes:</b> the shader&rsquo;s per-theme on/off is no longer overruled at launch, and switching it off no longer discards the theme&rsquo;s preset; the Quality picker stops resetting a frame rate you chose, and 120 fps is offered only on panels that reach it; a failed theme import can no longer lose the theme it was replacing; Hover! is genuinely offline; the shader and the dock pin their display by UUID, so they stay put across a reconnect; widgets stop rendering a cached copy of themselves; every readme window can be dragged; and every boot screen shows for the same five seconds.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.8/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="QuMBVBprX8gnhmm6UDH+11HzeWMzjXG9bgQigjDnfWDtNHl0NhhSC7E1CIZFPBhEUOwLWOr46XtNEvJqbbwXCA=="
+        length="94808489"
+      />
+    </item>
+    <item>
       <title>Version 2.7</title>
       <pubDate>Sun, 23 Aug 2026 18:23:47 +0000</pubDate>
       <sparkle:version>2.7</sparkle:version>
