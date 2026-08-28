@@ -15,6 +15,26 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.8.2</title>
+      <pubDate>Fri, 28 Aug 2026 11:48:17 +0000</pubDate>
+      <sparkle:version>2.8.2</sparkle:version>
+      <sparkle:shortVersionString>2.8.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.8.2</h2>
+        <ul>
+          <li><b>The trash sat outside the dock</b> on Snow Leopard and Mac OS X, snapping into place only while the pointer was over the dock. The bar&rsquo;s width is worked out by listing every tile it will hold, and that list had no entry for the Dashboard icon, which joined the dock later. The bar came out exactly one tile too narrow, so the last item &mdash; the trash &mdash; was drawn beside it. Hovering hid the symptom, because magnification reflows the row inside the bar.</li>
+        </ul>
+        <p>Everything new in 2.8 &mdash; Snow Leopard&rsquo;s own chrome, Dashboard, Expos&eacute;, the 10.6 stacks, the Disk Defragmenter, Flurry and phosphor persistence &mdash; is included.</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.8.2/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="dLxxVouh3b/Azm/AMN231UeUK65q0zR/7Jr2cLwt0sfEWDM1pgkiIJOiYk3hQnrCqElzBHwyHCxiDPLRkXx/BQ=="
+        length="94251333"
+      />
+    </item>
+    <item>
       <title>Version 2.8.1</title>
       <pubDate>Fri, 28 Aug 2026 07:49:35 +0000</pubDate>
       <sparkle:version>2.8.1</sparkle:version>
