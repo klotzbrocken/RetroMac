@@ -1231,10 +1231,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         displayItem.submenu = displayMenu
         menu.addItem(displayItem)
 
+        // Where the effect is drawn. Both entries are listed and the active one is ticked:
+        // only the window entry existed, so once a customer had picked a window there was no
+        // visible way back to the whole screen, and nothing said which mode they were in.
+        let isWindowMode: Bool
+        if case .singleWindow = overlayController?.captureMode { isWindowMode = true } else { isWindowMode = false }
+
+        let fullScreenItem = NSMenuItem(title: "Apply to Full Screen", action: #selector(applyFullScreen), keyEquivalent: "")
+        fullScreenItem.target = self
+        fullScreenItem.image = sfIcon("display")
+        fullScreenItem.state = (isActive && !isWindowMode) ? .on : .off
+        menu.addItem(fullScreenItem)
+
         // Window picker
         let pickItem = NSMenuItem(title: "Apply to Window\u{2026}", action: #selector(pickWindowVisual), keyEquivalent: "")
         pickItem.target = self
         pickItem.image = sfIcon("macwindow")
+        pickItem.state = (isActive && isWindowMode) ? .on : .off
         menu.addItem(pickItem)
 
         menu.addItem(NSMenuItem.separator())
@@ -2214,11 +2227,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowPicker.pick { [weak self] scWindow in
             guard let self = self, let window = scWindow else { return }
             self.startOverlay(mode: .singleWindow(window))
+            self.rebuildMenu()      // move the tick onto "Apply to Window"
         }
     }
 
     @objc private func applyFullScreen() {
-        startOverlay(mode: .fullScreen)
+        // Reachable from the menu now, so it has to cope with being chosen while a single-window
+        // overlay is up, or while nothing is running at all.
+        if isActive { disableAll() }
+        startCurrentEffect()
+        rememberShaderStateForActiveTheme(on: true)
+        rebuildMenu()
     }
 
     @objc private func openSettings() {
