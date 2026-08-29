@@ -10,10 +10,21 @@ import ImageIO
 ///      bump + reset-to-Arrow); the old CoreCursor refresh hooks were removed and the
 ///      hardware cursor otherwise keeps the cached image.
 ///
-/// The user's ORIGINAL cursors are captured once (via `CGSCopyRegisteredCursorImages` —
-/// full image frames + size + hotspot + duration) before the first override and persisted
-/// to Application Support, so they can always be restored exactly, even after a crash (a
-/// leftover flag on the next launch triggers a restore).
+/// The user's ORIGINAL cursors are captured once (via `CGSCopyRegisteredCursorImages`: full
+/// image frames + size + hotspot + duration) and persisted to Application Support as a
+/// self-describing snapshot, so they can always be put back exactly, even after a crash.
+///
+/// Three rules make the snapshot trustworthy, learned from MaCursor (GPL-3.0, by writronic),
+/// whose restore is reliable where ours was not:
+///   1. It is a FACTORY snapshot and is never deleted. Restore used to erase it, so the next
+///      apply re-captured from whatever was on screen; after one imperfect restore the theme's
+///      own cursors became the "originals" and the real ones were gone for good.
+///   2. It is captured per IDENTIFIER, not per logical slot. macOS draws different artwork for
+///      `com.apple.cursor.7`, `.8` and `.20`, so replaying one image across a whole alias group
+///      puts back something plausible but wrong.
+///   3. Restore tears the old state down first (`CoreCursorUnregisterAll` + re-seeding every
+///      core cursor) and finishes with the dock-cursor override OFF. Registering on top of
+///      whatever was there, and staying in overridden mode forever, is what went stale.
 enum CursorSlot: String, CaseIterable {
     case arrow, ibeam, wait, pointingHand, crosshair, move, notAllowed, help
     case resizeEW, resizeNS, resizeNWSE, resizeNESW
@@ -44,6 +55,8 @@ final class CursorThemeManager {
     private typealias SetScaleFn = @convention(c) (Int32, CGFloat) -> Int32
     private typealias DockOvFn   = @convention(c) (Int32, Bool) -> Void
     private typealias SysCurFn   = @convention(c) (Int32, Int32) -> Int32
+    private typealias CCUnregFn  = @convention(c) (Int32) -> Int32
+    private typealias CCSetFn    = @convention(c) (Int32, Int32) -> Int32
     private typealias CopyFn     = @convention(c) (Int32, UnsafePointer<CChar>, UnsafeMutablePointer<CGSize>, UnsafeMutablePointer<CGPoint>, UnsafeMutablePointer<Int>, UnsafeMutablePointer<CGFloat>, UnsafeMutablePointer<Unmanaged<CFArray>?>) -> Int32
 
     private static func sym<T>(_ name: String, _ type: T.Type) -> T? {
@@ -57,6 +70,8 @@ final class CursorThemeManager {
     private lazy var _dockOv   = Self.sym("CGSSetDockCursorOverride", DockOvFn.self)
     private lazy var _sysCur   = Self.sym("CGSSetSystemDefinedCursor", SysCurFn.self)
     private lazy var _copy     = Self.sym("CGSCopyRegisteredCursorImages", CopyFn.self)
+    private lazy var _ccUnreg  = Self.sym("CoreCursorUnregisterAll", CCUnregFn.self)
+    private lazy var _ccSet    = Self.sym("CoreCursorSet", CCSetFn.self)
 
     var isSupported: Bool { _main != nil && _reg != nil && _set != nil && _dockOv != nil }
     private var cid: Int32 { _main?() ?? 0 }
@@ -80,14 +95,34 @@ final class CursorThemeManager {
 
     private let d = UserDefaults.standard
     private let appliedKey = "cursorThemeApplied"
-    private let snapKey = "cursorOriginalsCaptured"
-    private let legacyKeys = ["cursorSnapshotTaken", "cursorThemeApplied"]
+    /// Pre-snapshot bookkeeping. Only read now, to restore anyone still carrying the old format.
+    private let legacySnapKey = "cursorOriginalsCaptured"
+
+    /// Core cursor ids the window server knows, 0...43. Re-seeding the whole range is what
+    /// clears a stuck registration; MaCursor's `MC_MAX_CORE_CURSOR_ID`.
+    private let maxCoreCursorID: Int32 = 43
 
     private var backupDir: URL {
         let u = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("RetroMac/CursorBackup", isDirectory: true)
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
         return u
+    }
+    /// The snapshot describes itself, so losing the preferences cannot orphan the images.
+    private var manifestURL: URL { backupDir.appendingPathComponent("snapshot.json") }
+    private var haveSnapshot: Bool { FileManager.default.fileExists(atPath: manifestURL.path) }
+
+    /// One captured identifier.
+    private struct Captured: Codable {
+        var width: Double, height: Double
+        var hotX: Double, hotY: Double
+        var frameCount: Int
+        var frameDuration: Double
+        var files: [String]
+    }
+    private struct Snapshot: Codable {
+        var version = 1
+        var cursors: [String: Captured]
     }
 
     // MARK: - Public entry points (mirror AppearanceAdapter)
@@ -97,64 +132,88 @@ final class CursorThemeManager {
               let set = Self.cursorSet(for: config.name) else { restore(); return }
         captureOriginalsIfNeeded()
         for (slot, frames) in set { registerGroup(slot, frames) }
-        finalize()
+        finalizeApply()
         d.set(true, forKey: appliedKey)
         d.synchronize()   // survive a force-quit right after applying, so next launch can auto-restore
         print("[Cursor] Applied \(set.count)-cursor set for \(config.name)")
     }
 
-    /// Put the user's ORIGINAL cursors back by re-registering the captured images. Turning
-    /// the override off doesn't reveal the built-ins on Tahoe, so restore re-registers the
-    /// originals and keeps the override on (visually identical to before). Falls back to a
-    /// drawn default arrow if nothing was captured.
-    /// `force: true` restores unconditionally (the manual "Restore system cursor" button), even
-    /// if every flag was somehow lost while a themed cursor is still stuck on screen.
+    /// Put the user's ORIGINAL cursors back, identifier by identifier, from the factory
+    /// snapshot. The snapshot is KEPT: it is the only copy of the real cursors that exists.
+    /// `force: true` restores even when no flag says a theme is applied, for the manual
+    /// "Restore system cursor" button.
     func restore(force: Bool = false) {
-        let flagged = d.bool(forKey: appliedKey) || d.bool(forKey: snapKey)
-            || legacyKeys.contains(where: { d.bool(forKey: $0) })
+        let flagged = d.bool(forKey: appliedKey) || d.bool(forKey: legacySnapKey)
         guard isSupported, force || flagged else { return }
-        var restoredAny = false
-        for slot in CursorSlot.allCases {
-            guard let frames = loadCaptured(slot) else { continue }
-            registerGroup(slot, frames)
-            restoredAny = true
+
+        // Tear down before rebuilding. Without this we registered on top of whatever state was
+        // there, so a wedged registration could never be cleared.
+        _ = _ccUnreg?(cid)
+        for x in 0...maxCoreCursorID { _ = _ccSet?(cid, x) }
+
+        var restored = 0
+        if let snap = loadSnapshot() {
+            for (id, cap) in snap.cursors {
+                guard let frames = frames(from: cap) else { continue }
+                register(id: id, frames)
+                restored += 1
+            }
+        } else if let legacy = loadLegacySnapshot() {
+            // Pre-snapshot format: one image per slot, replayed across its alias group. Less
+            // faithful, but it is what that install has, and it beats a drawn arrow.
+            for (slot, frames) in legacy { registerGroup(slot, frames); restored += 1 }
         }
-        if !restoredAny, let fallback = Self.fallbackArrow() {
-            registerGroup(.arrow, fallback)
+        // With originals back, hand control to the system. With nothing to hand back, keep the
+        // override on so the drawn arrow is at least visible — the old safety net, unchanged.
+        if restored > 0 {
+            finalizeRestore()
+        } else {
+            if let fallback = Self.fallbackArrow() { registerGroup(.arrow, fallback) }
+            finalizeApply()
         }
-        finalize()
         d.removeObject(forKey: appliedKey)
-        d.removeObject(forKey: snapKey)
-        legacyKeys.forEach { d.removeObject(forKey: $0) }
-        try? FileManager.default.removeItem(at: backupDir)
-        print("[Cursor] Restored original cursors")
+        d.removeObject(forKey: legacySnapKey)
+        print("[Cursor] Restored \(restored) original cursor(s)"
+              + (haveSnapshot ? "" : " — no snapshot on disk, drew a default arrow"))
     }
 
-    /// Crash / force-quit recovery, run at launch. Delegates to `restore()`, whose guard also
-    /// covers `snapKey` — that flag IS synchronised the moment originals are captured, so it
-    /// survives a force-quit even if `appliedKey` didn't flush, and the stuck cursor still resets.
-    func restoreIfNeeded() {
-        restore()
+    /// Crash / force-quit recovery, run at launch.
+    func restoreIfNeeded() { restore() }
+
+    /// Discard the factory snapshot so the next apply captures a fresh one. Only for the case
+    /// where the stored originals are known to be wrong; there is no way back afterwards.
+    func forgetCapturedOriginals() {
+        try? FileManager.default.removeItem(at: backupDir)
+        d.removeObject(forKey: legacySnapKey)
+        print("[Cursor] Dropped the captured originals")
     }
 
     // MARK: - CGS plumbing
 
     private func registerGroup(_ slot: CursorSlot, _ f: CursorFrames) {
-        guard let ids = idGroups[slot], let reg = _reg, let set = _set, !f.images.isEmpty else { return }
-        let arr = f.images as CFArray
-        for id in ids {
-            var seed: Int32 = 0
-            _ = id.withCString { reg(cid, $0, true, true, f.size, f.hotspot, UInt(f.frameCount), f.frameDuration, arr, &seed) }
-            var activate: Int32 = 0
-            _ = id.withCString { set(cid, $0, &activate) }
-        }
+        guard let ids = idGroups[slot] else { return }
+        for id in ids { register(id: id, f) }
     }
 
-    /// The Tahoe refresh dance. The hard-won detail: the hardware cursor only re-uploads on
-    /// a dock-cursor-override STATE TRANSITION, so we force one (false→true) and finish with
-    /// a scale bump + reset-to-Arrow. The override is left ON — that is what makes any
-    /// registered image (themed OR the restored originals) actually display.
-    private func finalize() {
+    private func register(id: String, _ f: CursorFrames) {
+        guard let reg = _reg, let set = _set, !f.images.isEmpty else { return }
+        let arr = f.images as CFArray
+        var seed: Int32 = 0
+        _ = id.withCString { reg(cid, $0, true, true, f.size, f.hotspot, UInt(f.frameCount), f.frameDuration, arr, &seed) }
+        var activate: Int32 = 0
+        _ = id.withCString { set(cid, $0, &activate) }
+    }
+
+    /// The Tahoe refresh dance. The hard-won detail: the hardware cursor only re-uploads on a
+    /// dock-cursor-override STATE TRANSITION, so force one. Applying a theme leaves the override
+    /// ON, which is what makes our registered images display at all.
+    private func finalizeApply() { bumpCursor(leaveOverrideOn: true) }
+
+    /// Restoring leaves it OFF. The genuine images are registered again by then, so the system
+    /// draws its own cursors; staying in overridden mode forever is what let the state go stale.
+    private func finalizeRestore() { bumpCursor(leaveOverrideOn: false) }
+
+    private func bumpCursor(leaveOverrideOn: Bool) {
         _dockOv?(cid, false)
         _dockOv?(cid, true)
         if let get = _getScale, let set = _setScale {
@@ -163,59 +222,104 @@ final class CursorThemeManager {
             _ = set(cid, scale + 0.25)
             _ = set(cid, scale)
         }
+        if !leaveOverrideOn { _dockOv?(cid, false) }
         _ = _sysCur?(cid, 0)
     }
 
-    // MARK: - Capture / persist the user's real cursors (once, before first override)
+    // MARK: - Capture / persist the user's real cursors (once, while they are still real)
 
+    /// Capture every identifier we will ever overwrite — which is exactly the alias groups —
+    /// and write a self-describing snapshot.
+    ///
+    /// Runs only when there is no snapshot AND no theme is applied. That second condition is the
+    /// one that was missing: capturing while our own cursors were on screen recorded the theme
+    /// as the "originals".
     private func captureOriginalsIfNeeded() {
-        guard !d.bool(forKey: snapKey), let copy = _copy else { return }
-        for slot in CursorSlot.allCases {
-            guard let ids = idGroups[slot] else { continue }
+        guard !haveSnapshot, !d.bool(forKey: appliedKey), !d.bool(forKey: legacySnapKey),
+              let copy = _copy else { return }
+        var cursors: [String: Captured] = [:]
+        for ids in idGroups.values {
             for id in ids {
                 var size = CGSize.zero, hot = CGPoint.zero, count = 0, dur: CGFloat = 0
                 var arr: Unmanaged<CFArray>?
                 let err = id.withCString { copy(cid, $0, &size, &hot, &count, &dur, &arr) }
                 let images = (arr?.takeRetainedValue() as? [CGImage]) ?? []
                 guard err == 0, !images.isEmpty, size.width > 0 else { continue }
-                for (i, img) in images.enumerated() { savePNG(img, "\(slot.rawValue)_f\(i)") }
-                d.set([Double(size.width), Double(size.height)], forKey: "cursorCapSize_\(slot.rawValue)")
-                d.set([Double(hot.x), Double(hot.y)], forKey: "cursorCapHot_\(slot.rawValue)")
-                d.set([Double(dur)], forKey: "cursorCapDur_\(slot.rawValue)")
-                d.set(images.count, forKey: "cursorCapImages_\(slot.rawValue)")   // scale reps
-                d.set(max(1, count), forKey: "cursorCapFrames_\(slot.rawValue)")  // real frame count
-                break
+                var files: [String] = []
+                for (i, img) in images.enumerated() {
+                    let name = "\(fileStem(id))_\(i).png"
+                    if savePNG(img, name) { files.append(name) }
+                }
+                guard !files.isEmpty else { continue }
+                cursors[id] = Captured(width: Double(size.width), height: Double(size.height),
+                                       hotX: Double(hot.x), hotY: Double(hot.y),
+                                       frameCount: max(1, count), frameDuration: Double(dur),
+                                       files: files)
             }
         }
-        d.set(true, forKey: snapKey)
-        d.synchronize()
+        guard !cursors.isEmpty else {
+            print("[Cursor] Captured nothing — leaving the originals unclaimed rather than "
+                  + "writing an empty snapshot")
+            return
+        }
+        guard let data = try? JSONEncoder().encode(Snapshot(cursors: cursors)),
+              (try? data.write(to: manifestURL, options: .atomic)) != nil else { return }
+        print("[Cursor] Captured \(cursors.count) original cursor(s)")
     }
 
-    private func loadCaptured(_ slot: CursorSlot) -> CursorFrames? {
-        let imgCount = d.integer(forKey: "cursorCapImages_\(slot.rawValue)")
-        guard imgCount > 0,
-              let sz = d.array(forKey: "cursorCapSize_\(slot.rawValue)") as? [Double], sz.count == 2 else { return nil }
-        var images: [CGImage] = []
-        for i in 0..<imgCount { if let img = loadPNG("\(slot.rawValue)_f\(i)") { images.append(img) } }
+    private func loadSnapshot() -> Snapshot? {
+        guard let data = try? Data(contentsOf: manifestURL) else { return nil }
+        return try? JSONDecoder().decode(Snapshot.self, from: data)
+    }
+
+    private func frames(from c: Captured) -> CursorFrames? {
+        let images = c.files.compactMap { loadPNG($0) }
         guard !images.isEmpty else { return nil }
-        let fc = max(1, d.integer(forKey: "cursorCapFrames_\(slot.rawValue)"))
-        let hot = (d.array(forKey: "cursorCapHot_\(slot.rawValue)") as? [Double]) ?? [0, 0]
-        let dur = (d.array(forKey: "cursorCapDur_\(slot.rawValue)") as? [Double])?.first ?? 0
-        return CursorFrames(images: images, frameCount: fc, size: CGSize(width: sz[0], height: sz[1]),
-                            hotspot: CGPoint(x: hot.first ?? 0, y: hot.count > 1 ? hot[1] : 0),
-                            frameDuration: CGFloat(dur))
+        return CursorFrames(images: images, frameCount: max(1, c.frameCount),
+                            size: CGSize(width: c.width, height: c.height),
+                            hotspot: CGPoint(x: c.hotX, y: c.hotY),
+                            frameDuration: CGFloat(c.frameDuration))
+    }
+
+    /// The pre-snapshot layout: per-slot metadata in the preferences, images named `<slot>_f<i>`.
+    private func loadLegacySnapshot() -> [(CursorSlot, CursorFrames)]? {
+        var out: [(CursorSlot, CursorFrames)] = []
+        for slot in CursorSlot.allCases {
+            let imgCount = d.integer(forKey: "cursorCapImages_\(slot.rawValue)")
+            guard imgCount > 0,
+                  let sz = d.array(forKey: "cursorCapSize_\(slot.rawValue)") as? [Double],
+                  sz.count == 2 else { continue }
+            let images = (0..<imgCount).compactMap { loadPNG("\(slot.rawValue)_f\($0).png") }
+            guard !images.isEmpty else { continue }
+            let hot = (d.array(forKey: "cursorCapHot_\(slot.rawValue)") as? [Double]) ?? [0, 0]
+            let dur = (d.array(forKey: "cursorCapDur_\(slot.rawValue)") as? [Double])?.first ?? 0
+            out.append((slot, CursorFrames(
+                images: images,
+                frameCount: max(1, d.integer(forKey: "cursorCapFrames_\(slot.rawValue)")),
+                size: CGSize(width: sz[0], height: sz[1]),
+                hotspot: CGPoint(x: hot.first ?? 0, y: hot.count > 1 ? hot[1] : 0),
+                frameDuration: CGFloat(dur))))
+        }
+        return out.isEmpty ? nil : out
+    }
+
+    /// Identifiers carry dots; keep them out of the filename so the extension stays meaningful.
+    private func fileStem(_ id: String) -> String {
+        id.replacingOccurrences(of: ".", with: "_")
     }
 
     // MARK: - PNG helpers
 
-    private func savePNG(_ img: CGImage, _ name: String) {
-        let url = backupDir.appendingPathComponent("\(name).png")
-        guard let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else { return }
+    @discardableResult
+    private func savePNG(_ img: CGImage, _ name: String) -> Bool {
+        let url = backupDir.appendingPathComponent(name)
+        guard let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil)
+        else { return false }
         CGImageDestinationAddImage(dest, img, nil)
-        CGImageDestinationFinalize(dest)
+        return CGImageDestinationFinalize(dest)
     }
     private func loadPNG(_ name: String) -> CGImage? {
-        let url = backupDir.appendingPathComponent("\(name).png")
+        let url = backupDir.appendingPathComponent(name)
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         return CGImageSourceCreateImageAtIndex(src, 0, nil)
     }
