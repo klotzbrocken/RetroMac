@@ -4,20 +4,20 @@ import ScreenCaptureKit
 /// Pages that can appear in the unified welcome flow.
 enum WelcomePage: Equatable {
     case whatsNew
+    case getMore
     case setupScreenRecording
     case setupAccessibility
     case coffee
 
-    /// Window height this page wants. The setup pages are a heading, two paragraphs and a
-    /// button. What's New is taller than anything sensible now that it carries the previous
-    /// release along, so it is capped here and scrolls the rest.
-    var preferredHeight: CGFloat {
-        switch self {
-        case .whatsNew:                            return 700
-        case .setupScreenRecording, .setupAccessibility: return 460
-        case .coffee:                              return 600
-        }
-    }
+    /// One size for every page here AND for the Setup Assistant, taken from What's New because
+    /// that is the tallest and the least willing to shrink. The two wizards run back to back on
+    /// a first launch, and they used to resize between and between each other, which read as two
+    /// unrelated windows rather than one flow. The sparse pages have more air now; that is the
+    /// trade.
+    static let windowWidth: CGFloat = 460
+    static let windowHeight: CGFloat = 700
+
+    var preferredHeight: CGFloat { Self.windowHeight }
 }
 
 /// One window, multiple pages: What's New → Setup → Coffee/Unlock, shown conditionally.
@@ -58,6 +58,7 @@ struct WelcomeFlowView: View {
                 case .whatsNew: whatsNewPage
                 case .setupScreenRecording: screenRecordingPage
                 case .setupAccessibility: accessibilityPage
+                case .getMore: GetMoreView()
                 case .coffee: coffeePage
                 }
             }
@@ -422,6 +423,10 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
         var pages: [WelcomePage] = []
         if newVersion || firstRun { pages.append(.whatsNew) }
         if needSetup { pages += [.setupScreenRecording, .setupAccessibility] }
+        // What the unlock buys, before the page that asks for the money.
+        if !LicenseManager.shared.isLicensed, newVersion || firstRun || needSetup {
+            pages.append(.getMore)
+        }
         // Coffee: always on setup/version events (if unlicensed); otherwise honor 30-day ack
         if !lm.isLicensed {
             if needSetup || newVersion || firstRun || lm.shouldShowCoffee { pages.append(.coffee) }

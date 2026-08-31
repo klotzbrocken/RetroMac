@@ -11,10 +11,12 @@ import ScreenCaptureKit
 private enum WizardPage: Int, CaseIterable {
     case intro
     case appearance
+    case desktop
     case games
     case system
     case permissions
     case theme
+    case getMore
     case done
 }
 
@@ -40,6 +42,7 @@ struct SetupWizardView: View {
     @State private var addShortcut: [String: Bool] = [:]   // shortcut type → create a themed desktop icon
     @State private var wcStatus: [String: String] = [:]    // Warcraft extraction status per title
     @State private var dataTick = 0                        // bump to re-read folder settings after a pick
+    @State private var desktopTick = 0                     // ditto for the desktop shortcut list
 
     // Theme page — which theme to switch to on finish ("" = keep current)
     @State private var selectedTheme: String = ThemeManager.shared.activeTheme?.config.name ?? ""
@@ -63,7 +66,9 @@ struct SetupWizardView: View {
                 .padding(.horizontal, 22)
                 .padding(.vertical, 12)
         }
-        .frame(width: 460, height: 500)
+        // Same window as the What's New flow, which runs straight after this one on a first
+        // launch. Two sizes made them read as two unrelated windows instead of one flow.
+        .frame(width: WelcomePage.windowWidth, height: WelcomePage.windowHeight)
         .onAppear { refreshPermissions() }
     }
 
@@ -73,9 +78,11 @@ struct SetupWizardView: View {
         switch page {
         case .intro:       introPage
         case .appearance:  appearancePage
+        case .desktop:     desktopPage
         case .games:       gamesPage
         case .system:      systemPage
         case .permissions: permissionsPage
+        case .getMore:     GetMoreView()
         case .theme:       themePage
         case .done:        donePage
         }
@@ -201,6 +208,91 @@ struct SetupWizardView: View {
             return true
         }
         return hasPak(base)
+    }
+
+    /// Which of the active theme's desktop shortcuts are on. Writes to the same per-theme store
+    /// the desktop itself reads (`DesktopStore.removed`), so a choice here is the same choice as
+    /// hiding an icon on the desktop later.
+    private var desktopPage: some View {
+        pageScaffold(icon: "square.grid.2x2.fill", tint: .green, title: "Desktop",
+                     subtitle: themeForDesktop == nil
+                        ? "Activate a theme first and its shortcuts will be listed here."
+                        : "Which shortcuts \(themeForDesktop?.config.name ?? "") puts on your desktop.") {
+            if let theme = themeForDesktop, !(theme.config.desktopIcons ?? []).isEmpty {
+                ForEach(Array((theme.config.desktopIcons ?? []).enumerated()), id: \.offset) { i, icon in
+                    if i > 0 { Divider() }
+                    toggleRow(icon: desktopSymbol(for: icon.type), tint: .green,
+                              title: icon.name,
+                              subtitle: desktopHint(for: icon.type),
+                              isOn: Binding(
+                                get: { !desktopRemoved.contains(icon.name) },
+                                set: { on in
+                                    var c = DesktopStore.load(theme: theme.config.settingsKey)
+                                    c.removed.removeAll { $0 == icon.name }
+                                    if !on { c.removed.append(icon.name) }
+                                    DesktopStore.save(c, theme: theme.config.settingsKey)
+                                    desktopTick += 1
+                                    DesktopIconsController.shared.update()
+                                }))
+                }
+            } else {
+                Text("Nothing to configure yet.").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var themeForDesktop: ThemeBundle? { ThemeManager.shared.activeTheme }
+    private var desktopRemoved: [String] {
+        _ = desktopTick   // re-read after a toggle
+        guard let t = themeForDesktop else { return [] }
+        return DesktopStore.load(theme: t.config.settingsKey).removed
+    }
+
+    /// Covers every `type` the shipped manifests use; anything new falls back to a plain tile
+    /// rather than pretending to know what it is.
+    private func desktopSymbol(for type: String) -> String {
+        switch type {
+        case "folder", "appfolder", "funstuff": return "folder.fill"
+        case "tvfolder":            return "play.tv.fill"
+        case "trash":               return "trash.fill"
+        case "clock":               return "clock.fill"
+        case "cpumonitor":          return "chart.bar.fill"
+        case "calculator":          return "plusminus.circle.fill"
+        case "notepad":             return "note.text"
+        case "defrag":              return "internaldrive.fill"
+        case "screensaver":         return "sparkles.tv.fill"
+        case "dashboard":           return "square.grid.2x2.fill"
+        case "expose":              return "rectangle.3.group.fill"
+        case "readme":              return "doc.text.fill"
+        case "sheep":               return "hare.fill"
+        case "pacman", "tictactoe", "nyanochrome": return "gamecontroller.fill"
+        case "webapp", "localapp":  return "macwindow"
+        case "url":                 return "globe"
+        case "app":                 return "app.fill"
+        default:                    return "square.dashed"
+        }
+    }
+
+    private func desktopHint(for type: String) -> String {
+        switch type {
+        case "folder", "appfolder", "funstuff": return "Opens a folder window."
+        case "tvfolder":            return "The theme's TV window."
+        case "trash":               return "The theme's wastebasket."
+        case "clock":               return "A desktop clock."
+        case "cpumonitor":          return "A live CPU meter."
+        case "calculator":          return "A period calculator."
+        case "notepad":             return "A period notepad."
+        case "defrag":              return "The disk defragmenter."
+        case "screensaver":         return "Starts the theme's screensaver."
+        case "dashboard":           return "The widget layer."
+        case "expose":              return "Shows every window at once."
+        case "readme":              return "About this theme."
+        case "sheep":               return "The desktop pet."
+        case "pacman", "tictactoe", "nyanochrome": return "A little game."
+        case "webapp", "localapp":  return "Opens in a themed window."
+        case "url":                 return "Opens a web page."
+        default:                    return "A desktop shortcut."
+        }
     }
 
     private var gamesPage: some View {
@@ -528,7 +620,8 @@ final class SetupWizardWindowController: NSObject, NSWindowDelegate {
         let view = SetupWizardView(onFinish: { [weak self] in self?.finish() })
         let hosting = NSHostingView(rootView: view)
         let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 500),
+            contentRect: NSRect(x: 0, y: 0, width: WelcomePage.windowWidth,
+                                height: WelcomePage.windowHeight),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
         win.title = "RetroMac Setup Assistant"
