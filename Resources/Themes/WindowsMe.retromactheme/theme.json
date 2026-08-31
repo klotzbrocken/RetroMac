@@ -36,13 +36,25 @@
   "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",
-  "splashScreen": "splash.png",
+  "splashScreen": "boot.gif",
   "splashFullscreen": true,
   "wallpaper": "wallpaper.jpg",
   "wallpapers": [
     {
       "name": "Windows Me",
       "file": "wallpaper.jpg"
+    },
+    {
+      "name": "Gold Petals",
+      "file": "wallpaper-goldpetals.jpg"
+    },
+    {
+      "name": "Snow Trees",
+      "file": "wallpaper-snowtrees.jpg"
+    },
+    {
+      "name": "Paradise",
+      "file": "wallpaper-paradise.jpg"
     }
   ],
   "dock": {
@@ -117,6 +129,7 @@
     "com.apple.clock": "clock.png",
     "com.apple.podcasts": "podcasts.png"
   },
+  "desktopIconsSide": "left",
   "desktopIcons": [
     {
       "name": "My Computer",
@@ -232,6 +245,13 @@
       "type": "trash",
       "gridX": 1,
       "gridY": 3
+    },
+    {
+      "name": "Defrag",
+      "icon": "defrag.png",
+      "type": "defrag",
+      "gridX": 0,
+      "gridY": 16
     },
     {
       "name": "Screen Saver",

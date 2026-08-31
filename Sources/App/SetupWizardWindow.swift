@@ -11,11 +11,14 @@ import ScreenCaptureKit
 private enum WizardPage: Int, CaseIterable {
     case intro
     case appearance
+    // Theme first, then its shortcuts: the Desktop page lists what the ACTIVE theme puts on the
+    // desktop, and every theme puts something different there. Asking before the theme is picked
+    // showed the outgoing theme's list, or nothing at all.
+    case theme
     case desktop
     case games
     case system
     case permissions
-    case theme
     case getMore
     case done
 }
@@ -241,7 +244,13 @@ struct SetupWizardView: View {
         }
     }
 
-    private var themeForDesktop: ThemeBundle? { ThemeManager.shared.activeTheme }
+    /// The theme picked on the previous page, not the one currently running. The chosen theme is
+    /// only applied when the assistant finishes, so reading the active one here would have listed
+    /// the outgoing theme's shortcuts however the pages were ordered.
+    private var themeForDesktop: ThemeBundle? {
+        if !selectedTheme.isEmpty, let t = ThemeManager.shared.theme(for: selectedTheme) { return t }
+        return ThemeManager.shared.activeTheme
+    }
     private var desktopRemoved: [String] {
         _ = desktopTick   // re-read after a toggle
         guard let t = themeForDesktop else { return [] }

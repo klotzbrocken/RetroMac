@@ -1036,16 +1036,21 @@ private final class ClassicStartMenuContentView: NSView {
     private let iconSize: CGFloat = 32           // Win95: first-level icons are large; submenus use 16
     private let separatorHeight: CGFloat = 9
     private let bevelWidth: CGFloat = 2
-    /// First-level menu width fits its (short) titles snugly → narrower than the submenus.
+    /// Space between a first-level item's icon and its label. Measured off the original, where
+    /// the gap is about a third of the icon's width rather than the quarter this used to leave.
+    /// Submenus keep their own tighter spacing: their icons are half the size.
+    private let iconTextGap: CGFloat = 12
+    /// First-level menu width. Snug against its (short) titles, then widened to the proportions
+    /// of the real Me menu, which carries noticeably more empty space right of its labels.
     private var menuWidth: CGFloat {
         let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
         var w: CGFloat = 0
         for item in items where !item.isSeparator {
             let tw = (item.title as NSString).size(withAttributes: [.font: font]).width
             let arrow: CGFloat = (item.submenuItems?.isEmpty == false) ? 24 : 12
-            w = max(w, 6 + iconSize + 8 + tw + arrow + 8)
+            w = max(w, 6 + iconSize + iconTextGap + tw + arrow + 8)
         }
-        return max(150, ceil(w))
+        return max(150, ceil(w * 1.15))
     }
     private var hoveredIndex: Int? = nil
     private var trackingArea: NSTrackingArea?
@@ -1265,14 +1270,19 @@ private final class ClassicStartMenuContentView: NSView {
                 // bold) so it stays a script on Macs without Office.
                 let big: CGFloat = 17
                 let bold = NSFont(name: "Tahoma-Bold", size: big) ?? NSFont.boldSystemFont(ofSize: big)
+                // Not bold: the logotype's "Me" is a light brush script, and the Snell fallback
+                // was reaching for its Bold cut, which read as a heavy slab beside "Windows".
                 let script = NSFont(name: "BrushScriptMT", size: big + 6)
-                    ?? NSFont(name: "SnellRoundhand-Bold", size: big + 5)
-                    ?? NSFontManager.shared.convert(bold, toHaveTrait: .italicFontMask)
+                    ?? NSFont(name: "SnellRoundhand", size: big + 5)
+                    ?? NSFontManager.shared.convert(NSFont(name: "Tahoma", size: big)
+                        ?? NSFont.systemFont(ofSize: big), toHaveTrait: .italicFontMask)
                 let main = NSMutableAttributedString()
                 main.append(NSAttributedString(string: "Windows ", attributes: [.font: bold, .foregroundColor: NSColor.white]))
                 main.append(NSAttributedString(string: "Me", attributes: [.font: script, .foregroundColor: NSColor.white, .baselineOffset: -3]))
+                // Same size as "Windows": in the original the two read as one lockup, not a
+                // heading with a caption under it.
                 let sub = NSAttributedString(string: "Millennium Edition",
-                    attributes: [.font: NSFont(name: "Tahoma", size: 12.5) ?? NSFont.systemFont(ofSize: 12.5),
+                    attributes: [.font: NSFont(name: "Tahoma", size: big) ?? NSFont.systemFont(ofSize: big),
                                  .foregroundColor: NSColor.white])
                 func drawRot(_ s: NSAttributedString, up: CGFloat) {
                     ctx.saveGState()
@@ -1342,7 +1352,7 @@ private final class ClassicStartMenuContentView: NSView {
                 icon.draw(in: NSRect(x: iconX, y: iconY, width: iconSize, height: iconSize))
             }
 
-            let textX = iconX + iconSize + 8
+            let textX = iconX + iconSize + iconTextGap
             let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
             let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: textColor]
             let textSize = (item.title as NSString).size(withAttributes: attrs)

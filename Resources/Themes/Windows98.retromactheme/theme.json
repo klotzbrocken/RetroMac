@@ -103,6 +103,7 @@
     "com.apple.clock": "clock.png",
     "com.apple.podcasts": "podcasts.png"
   },
+  "desktopIconsSide": "left",
   "desktopIcons": [
     {
       "name": "My Computer",

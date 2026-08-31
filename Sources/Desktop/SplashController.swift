@@ -149,6 +149,7 @@ final class SplashController {
         let iv = NSImageView(frame: NSRect(origin: .zero, size: frame.size))
         iv.image = image
         iv.imageScaling = .scaleProportionallyUpOrDown
+        iv.animates = true      // boot screens may be animated GIFs (Windows Me is)
         let dv = dismissView(NSRect(origin: .zero, size: frame.size), content: iv)
         win.contentView = dv
 

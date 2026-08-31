@@ -33,6 +33,10 @@ final class DesktopIconsController {
         return (bs >= 2.0 ? 64 : 48) * scale
     }
     private var cellWidth: CGFloat { iconSize + 46 }      // breathing room between columns (fits longer labels like "My Computer")
+    /// Windows stacks its desktop icons down the left edge, the Mac down the right.
+    private var iconsFromLeft: Bool {
+        ThemeManager.shared.activeTheme?.config.desktopIconsSide == "left"
+    }
     private var cellHeight: CGFloat { iconSize + 66 }     // … and between rows (2-line labels + a comfortable gap)
     private var marginX: CGFloat { 16 }
     private var marginY: CGFloat { 8 }
@@ -190,7 +194,9 @@ final class DesktopIconsController {
             } else {
                 let col = entry.gridX ?? 0
                 let row = entry.gridY ?? index
-                let x = visibleFrame.maxX - marginX - cw - (CGFloat(col) * cw) - screenFrame.origin.x
+                let x = iconsFromLeft
+                    ? visibleFrame.minX + marginX + (CGFloat(col) * cw) - screenFrame.origin.x
+                    : visibleFrame.maxX - marginX - cw - (CGFloat(col) * cw) - screenFrame.origin.x
                 let y = visibleFrame.maxY - marginY - ch - (CGFloat(row) * ch) - screenFrame.origin.y
                 view.frame = NSRect(x: x, y: y, width: cw, height: ch)
             }
@@ -359,12 +365,16 @@ final class DesktopIconsController {
         let visibleFrame = screen.visibleFrame
         let screenFrame = screen.frame
         let cw = cellWidth, ch = cellHeight
-        let baseX = visibleFrame.maxX - marginX - cw - screenFrame.origin.x   // x of column 0
+        let baseX = iconsFromLeft
+            ? visibleFrame.minX + marginX - screenFrame.origin.x
+            : visibleFrame.maxX - marginX - cw - screenFrame.origin.x   // x of column 0
         let baseY = visibleFrame.maxY - marginY - ch - screenFrame.origin.y   // y of row 0
         for v in iconViews {
-            let col = max(0, ((baseX - v.frame.minX) / cw).rounded())
+            let dx = iconsFromLeft ? (v.frame.minX - baseX) : (baseX - v.frame.minX)
+            let col = max(0, (dx / cw).rounded())
             let row = max(0, ((baseY - v.frame.minY) / ch).rounded())
-            custom.positions[v.entry.name] = [baseX - col * cw, baseY - row * ch]
+            custom.positions[v.entry.name] = [iconsFromLeft ? baseX + col * cw : baseX - col * cw,
+                                              baseY - row * ch]
         }
         persist()
         update()

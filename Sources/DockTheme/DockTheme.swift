@@ -61,6 +61,10 @@ struct DockThemeConfig: Codable {
     var sgiDesktop: SGIDesktopConfig? = nil
     var menuBarApple: String? = nil   // default menu-bar Apple cover for this theme: off|rainbow|aqua|aqua-classic
     var hideMenuBarDefault: Bool? = nil   // when set, activating this theme applies it to Settings.hideMenuBar (Win 95/XP hide it)
+    /// Which edge the desktop icons start from: "left" or "right" (default). Windows has always
+    /// stacked them down the LEFT; the Mac stacks them down the right, and everything here used
+    /// to do it the Mac way regardless of what it was imitating.
+    var desktopIconsSide: String? = nil
     var appearance: String? = nil     // system appearance to match when "Match appearance" is on: light|dark
     var accentColor: String? = nil    // system accent to match: graphite|blue|red|orange|yellow|green|purple|pink
     var splashScreen: String? = nil   // boot splash image shown briefly on theme activation

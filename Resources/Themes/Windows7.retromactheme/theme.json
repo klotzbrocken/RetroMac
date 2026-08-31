@@ -80,6 +80,7 @@
     "size": 3,
     "offset": 2
   },
+  "desktopIconsSide": "left",
   "desktopIcons": [
     {
       "name": "Computer",
