@@ -276,6 +276,7 @@ struct SetupWizardView: View {
         case "sheep":               return "hare.fill"
         case "pacman", "tictactoe", "nyanochrome": return "gamecontroller.fill"
         case "webapp", "localapp":  return "macwindow"
+        case "network":             return "network"
         case "url":                 return "globe"
         case "app":                 return "app.fill"
         default:                    return "square.dashed"
@@ -299,6 +300,7 @@ struct SetupWizardView: View {
         case "sheep":               return "The desktop pet."
         case "pacman", "tictactoe", "nyanochrome": return "A little game."
         case "webapp", "localapp":  return "Opens in a themed window."
+        case "network":             return "Jumps to Network in the Finder."
         case "url":                 return "Opens a web page."
         default:                    return "A desktop shortcut."
         }

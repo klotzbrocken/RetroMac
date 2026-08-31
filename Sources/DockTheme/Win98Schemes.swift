@@ -121,10 +121,21 @@ struct Win98Scheme {
         // with `face` turned the Fun Stuff / Programs / TV list backgrounds grey.
         let win = colors.window ?? "#ffffff"
         let winText = colors.windowText ?? "#000000"
+        // Every grey surface, not just the window body. The widgets hardcode #C0C0C0 or #C4C4C4
+        // on their menu bars, toolbars, status strips and scrollbars; recolouring only #win left
+        // those cold-grey strips sitting inside a #D6CFC6 window, which reads as "the title bar is
+        // still grey" even though the title itself was right.
         let css = """
         body.theme-win98 .w98-title,body.theme-win98 .w98-dlg-tb{background:linear-gradient(90deg,\(a),\(b))!important;}
         body.theme-win98 .w98-cap,body.theme-win98 .w98-dlg-tb{color:\(tt)!important;}
-        body.theme-win98 #win,body.theme-win98 .body,body.theme-win98 .w98-btn,body.theme-win98 .be-win,body.theme-win98 .window{background:\(face)!important;}
+        body.theme-win98 #win,body.theme-win98 .body,body.theme-win98 .w98-btn,body.theme-win98 .be-win,body.theme-win98 .window,
+        body.theme-win98 .w98-menubar,body.theme-win98 .np-toolbar,body.theme-win98 .np-status,
+        body.theme-win98 #npedit,body.theme-win98 .memind,body.theme-win98 .k,
+        body.theme-win98 .w98-toolbar,body.theme-win98 .w98-addr,body.theme-win98 .be-status,
+        body.theme-win98 .w98-statusrow .be-count,body.theme-win98 .w98-statusrow .w98-pane,
+        body.theme-win98 .vsb,body.theme-win98 .hsb,body.theme-win98 .sb-btn{background:\(face)!important;}
+        body.theme-win98 #pad::-webkit-scrollbar-thumb,body.theme-win98 #pad::-webkit-scrollbar-button,
+        body.theme-win98 #pad::-webkit-scrollbar-corner{background:\(face)!important;}
         body.theme-win98 .be-content{background:\(win)!important;color:\(winText)!important;}
         """
         return "(function(){var e=document.getElementById('w98scheme'); if(e) e.remove(); var st=document.createElement('style'); st.id='w98scheme'; st.textContent=`\(css)`; document.head.appendChild(st);})();"

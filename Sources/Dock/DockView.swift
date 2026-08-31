@@ -620,9 +620,13 @@ final class DockView: NSView {
                 let clockFont = NSFont.monospacedDigitSystemFont(ofSize: clockFontSize, weight: .regular)
                 let clockTextWidth = (clockString as NSString).size(withAttributes: [.font: clockFont]).width
                 var clockWidth = clockTextWidth + (isXP ? 20 : 16)
-                // Widen systray to include ICQ tray icon
+                // Widen systray for the tray icons. Adding the speaker without widening here is
+                // what put it on top of the clock's first digit.
                 if hasTrayIcon {
                     clockWidth += traySize + trayPad * 2 + 2
+                    if RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable {
+                        clockWidth += traySize + trayPad
+                    }
                     // On XP the ICQ icon is shifted right past the systray chevron, so
                     // reserve the extra clearance too (chevron half-width + gap).
                     if isXP {
@@ -937,9 +941,13 @@ final class DockView: NSView {
                 let clockFont = NSFont.monospacedDigitSystemFont(ofSize: clockFontSize, weight: .regular)
                 let clockTextWidth = (clockString as NSString).size(withAttributes: [.font: clockFont]).width
                 var clockWidth = clockTextWidth + (isXP ? 20 : 16)
-                // Widen systray to include ICQ tray icon
+                // Widen systray for the tray icons. Adding the speaker without widening here is
+                // what put it on top of the clock's first digit.
                 if hasTrayIcon {
                     clockWidth += traySize + trayPad * 2 + 2
+                    if RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable {
+                        clockWidth += traySize + trayPad
+                    }
                     // On XP the ICQ icon is shifted right past the systray chevron, so
                     // reserve the extra clearance too (chevron half-width + gap).
                     if isXP {
@@ -2821,7 +2829,11 @@ final class DockView: NSView {
                     // Classic Win98 style: gray sunken bevel
                     let bw: CGFloat = theme.dock.bevelWidth > 0 ? theme.dock.bevelWidth : 2
 
-                    NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1).setFill()
+                    // The theme's own face colour, not a fixed grey: Windows Me's taskbar is
+                    // #D6CFC6, so a hardcoded #BFBFBF made the systray read as a foreign panel
+                    // dropped into the bar.
+                    (Win98Scheme.activeFaceColor() ?? theme.parsedBackgroundColor.withAlphaComponent(1))
+                        .setFill()
                     NSBezierPath(rect: clockFrame).fill()
 
                     NSColor(white: 0.5, alpha: 1).setStroke()

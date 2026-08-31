@@ -150,8 +150,7 @@
     {
       "name": "My Network Places",
       "icon": "network.png",
-      "type": "folder",
-      "path": "/Volumes",
+      "type": "network",
       "gridX": 0,
       "gridY": 2
     },

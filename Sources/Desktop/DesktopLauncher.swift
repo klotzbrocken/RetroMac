@@ -29,6 +29,23 @@ enum DesktopLauncher {
                 NSWorkspace.shared.open(URL(fileURLWithPath: expanded))
             }
 
+        case "network":
+            // Finder's Network has no path any more: /Network was an autofs trigger and is gone
+            // from modern macOS, and opening file:///Network silently lands on the Desktop. The
+            // Go menu still has the item, so drive it by its key equivalent (Shift-Cmd-K) rather
+            // than by its title, which is localised. Falls back to the mounted volumes.
+            let goNetwork = """
+            tell application "Finder" to activate
+            delay 0.3
+            tell application "System Events" to keystroke "k" using {command down, shift down}
+            """
+            if AXIsProcessTrusted(), let script = NSAppleScript(source: goNetwork) {
+                var err: NSDictionary?
+                script.executeAndReturnError(&err)
+                if err == nil { break }
+            }
+            NSWorkspace.shared.open(URL(fileURLWithPath: "/Volumes"))
+
         case "url":
             if let urlString = entry.url, let url = URL(string: urlString) {
                 NSWorkspace.shared.open(url)
