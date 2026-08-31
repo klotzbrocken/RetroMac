@@ -137,6 +137,9 @@ struct WelcomeFlowView: View {
                     feature("gearshape.fill", .gray, "Settings, sorted out",
                             "A Desktop tab that is actually listed in the sidebar, a frame-rate choice that offers 120 only on panels that reach it and stops being reset by the Quality picker, hotkey rows for Expos\u{00E9} and Dashboard, and a theme import that can no longer lose the theme it replaces.")
 
+                    feature("wrench.and.screwdriver.fill", .gray, "Bugfixing",
+                            "The trash sits on the dock again, Expos\u{00E9} no longer hides RetroMac\u{2019}s own windows, putting your system cursors back is reliable, and the menu bar can send the effect back to full screen.")
+
                     sectionHeader("Also in 2.7")
 
                     feature("desktopcomputer", .blue, "Windows 95 theme",

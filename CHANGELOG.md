@@ -3,6 +3,23 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 2.8.3
+
+- **Putting your system cursors back is reliable now.** Restoring used to delete its own backup,
+  so the next themed cursor re-captured whatever was on screen; after one imperfect restore the
+  theme's cursors became the stored "originals" and the real ones were gone. The backup is kept
+  for good now, capture refuses to run while a theme is applied, and restore tears the old state
+  down before putting the originals back. It also restores per cursor identifier rather than per
+  logical slot, which matters more than it sounds: five of the twelve slots have variants whose
+  artwork genuinely differs, and the spinner alone is a 24x24 image of 24 frames under one name
+  and a 28x40 image of 15 frames under another.
+- **"Apply to Full Screen" is in the menu bar.** Only "Apply to Window..." had an entry, so once
+  you had put the effect on a single window there was no visible way back. Both entries now sit
+  together and the active one is ticked.
+- Under the hood: the dock works out its row once instead of in four separate places that had to
+  be kept in step by hand. That is what let the trash escape the bar in 2.8, and it had quietly
+  caused two more mismatches nobody had noticed.
+
 ## 2.8.2
 
 - **The trash sat outside the dock** on Snow Leopard and Mac OS X, and only snapped into place
