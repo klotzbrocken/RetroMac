@@ -2935,8 +2935,15 @@ final class DockView: NSView {
 
         // Tray speaker, for the Windows themes that are not Win7 (which draws its own pair).
         if !traySpeakerFrame.isEmpty {
-            let name = SystemVolume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill"
-            if let img = NSImage(systemSymbolName: name, accessibilityDescription: "Volume") {
+            if let img = startMenuIcon("volume.png") {
+                // Period artwork from the theme; dimmed while muted, which is how the tray
+                // showed it before the crossed-out speaker existed.
+                img.draw(in: traySpeakerFrame, from: .zero, operation: .sourceOver,
+                         fraction: SystemVolume.isMuted ? 0.4 : 1.0,
+                         respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
+            } else if let img = NSImage(systemSymbolName:
+                        SystemVolume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
+                        accessibilityDescription: "Volume") {
                 let cfg = NSImage.SymbolConfiguration(pointSize: traySpeakerFrame.height * 0.85,
                                                       weight: .regular)
                 img.withSymbolConfiguration(cfg)?.draw(in: traySpeakerFrame, from: .zero,

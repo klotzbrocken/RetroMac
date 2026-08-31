@@ -25,17 +25,21 @@
   /* Top row: the memory indicator sits in the memory column, then Backspace, CE and C share the
      remaining five. The fr units add up to 6 so it lines up with the keypad underneath. */
   .toprow{display:grid;grid-template-columns:1fr 2fr 1.5fr 1.5fr;gap:5px;margin-bottom:5px;}
-  .memind{height:26px;background:#c4c4c4;
+  .memind{height:26px;background:#d4d0c8;
     box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb;
     display:flex;align-items:center;justify-content:center;
     font:700 12px Tahoma,"Segoe UI",sans-serif;color:#c00000;}
-  .k{height:26px;font:700 13px Tahoma,"Segoe UI",sans-serif;cursor:pointer;color:#000;
-    background:#c4c4c4;border:none;box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;
+  /* Colours sampled from the original: face #D4D0C8, highlight #FFFFFF, shadows #808080 and
+     #404040. The labels are a thin bitmap face, not bold Tahoma — smoothing off keeps the
+     strokes one pixel wide the way the real thing looked. */
+  .k{height:26px;font:400 13px Tahoma,"MS Sans Serif",Geneva,sans-serif;cursor:pointer;color:#000;
+    -webkit-font-smoothing:none;
+    background:#d4d0c8;border:none;box-shadow:inset -1px -1px 0 #404040,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #d4d0c8;
     display:flex;align-items:center;justify-content:center;line-height:1;padding:0;}
   .k:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080,inset -2px -2px 0 #dbdbdb;}
   /* Measured off the original: digits and the function keys (sqrt, %, 1/x, +/-) are blue;
      memory, the clear row and the operators are red. */
-  .k.dig,.k.fn{color:#0000d0;} .k.op,.k.mem,.k.clr{color:#c00000;}
+  .k.dig,.k.fn{color:#0000ff;} .k.op,.k.mem,.k.clr{color:#ff0000;}
 
   /* ===== hidden title bars by default ===== */
   .m9-title,.xp-title,.mf-title,.mx-title,.w98-title{display:none;}

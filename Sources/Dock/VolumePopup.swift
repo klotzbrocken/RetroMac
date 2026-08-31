@@ -60,9 +60,17 @@ private final class VolumePopupView: NSView {
     private var level = CGFloat(SystemVolume.level ?? 0.5)
     private var dragging = false
 
-    private let face = NSColor(srgbRed: 0.769, green: 0.769, blue: 0.769, alpha: 1)   // #C4C4C4
+    /// #D4D0C8, the "3D Objects" grey sampled from the original Windows dialogs.
+    private let face = NSColor(srgbRed: 0.831, green: 0.816, blue: 0.784, alpha: 1)
     private var trackRect: NSRect { NSRect(x: bounds.midX - 2, y: 40, width: 4, height: bounds.height - 66) }
     private var muteRect: NSRect { NSRect(x: 8, y: 12, width: 13, height: 13) }
+    /// The box AND its label. Only the box itself used to count, so a click on the word "Mute"
+    /// fell through to the slider and set the volume to zero instead — which looks exactly like
+    /// muting that does not stick.
+    private var muteHitRect: NSRect { NSRect(x: 0, y: 4, width: bounds.width, height: 28) }
+    /// Where a click counts as grabbing the slider. Anything outside is ignored rather than
+    /// being clamped to one end of the track.
+    private var trackHitRect: NSRect { trackRect.insetBy(dx: -22, dy: -8) }
 
     override var isFlipped: Bool { false }
 
@@ -108,13 +116,15 @@ private final class VolumePopupView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        if muteRect.insetBy(dx: -4, dy: -4).contains(p) {
+        if muteHitRect.contains(p) {
             muted.toggle()
             SystemVolume.isMuted = muted
+            muted = SystemVolume.isMuted        // trust the device, not our guess
             level = CGFloat(SystemVolume.level ?? Float(level))
             needsDisplay = true
             return
         }
+        guard trackHitRect.contains(p) else { return }
         dragging = true
         setLevel(at: p)
     }

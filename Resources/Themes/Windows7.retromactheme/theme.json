@@ -71,7 +71,7 @@
     "renderStyle": "smooth",
     "reflectionEnabled": false,
     "reflectionOpacity": 0,
-    "hoverScale": 1.05,
+    "hoverScale": 1.0,
     "hoverAnimationDuration": 0.08
   },
   "indicator": {

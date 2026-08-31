@@ -330,7 +330,35 @@
   body.theme-win98 .w98-tb:hover{box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #808080;}
   body.theme-win98 .w98-tb:active{box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
   body.theme-win98 .w98-tb.w98-dim{color:#808080;text-shadow:1px 1px 0 #fff;}
-  body.theme-win98 .w98-gl{font-style:normal;font-size:12px;line-height:1;}
+  body.theme-win98 .w98-ic{width:16px;height:16px;flex:0 0 16px;}
+  /* The ribbed handle at the left of every Explorer bar. */
+  body.theme-win98 .w98-grip{width:3px;height:16px;margin:0 4px 0 1px;flex:0 0 3px;
+    box-shadow:inset 1px 0 0 #fff,inset 2px 0 0 #808080;}
+  body.theme-win98 .w98-chev{width:0;height:0;margin-left:3px;
+    border-left:3px solid transparent;border-right:3px solid transparent;border-top:3px solid #000;}
+  body.theme-win98 .w98-tb.w98-dim .w98-chev{border-top-color:#808080;}
+  /* The logo box Explorer parked in the corner. */
+  body.theme-win98 .w98-logo{margin-left:auto;width:26px;height:24px;flex:0 0 26px;background:#000;
+    background-image:linear-gradient(135deg,#e04040 0 45%,#40a040 45% 100%);
+    box-shadow:inset 0 0 0 2px #000;}
+  body.theme-win98 .w98-drop{margin-left:auto;width:15px;height:15px;flex:0 0 15px;background:#c4c4c4;
+    box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #404040,inset 2px 2px 0 #d4d0c8,inset -2px -2px 0 #808080;
+    position:relative;}
+  body.theme-win98 .w98-drop::after{content:"";position:absolute;left:4px;top:6px;
+    border-left:3.5px solid transparent;border-right:3.5px solid transparent;border-top:4px solid #000;}
+  /* Status bar: a wide pane, a narrow one, then the location — the three sunken fields of the
+     original. They live in their own ROW because the Windows status bar is laid out as a column
+     (horizontal scrollbar above, status below), so siblings of the count would stack vertically. */
+  .w98-statusrow{display:none;}
+  body.theme-win98 .be-status .w98-statusrow{display:flex;order:1;width:100%;gap:2px;margin-top:2px;}
+  body.theme-win98 .be-status .w98-statusrow .be-count{order:0;flex:1 1 auto;width:auto;margin-top:0;}
+  body.theme-win98 .be-status .w98-statusrow .be-count,
+  body.theme-win98 .be-status .w98-statusrow .w98-pane{display:flex;align-items:center;height:18px;
+    padding:0 5px;background:#d4d0c8;
+    box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;
+    font:11px Tahoma,"MS Sans Serif",sans-serif;color:#000;}
+  body.theme-win98 .be-status .w98-statusrow .w98-pane{order:1;flex:0 0 auto;width:56px;}
+  body.theme-win98 .be-status .w98-statusrow .w98-pane3{order:2;width:118px;}
   body.theme-win98 .w98-tbsep{width:0;height:18px;margin:0 3px;
     box-shadow:inset 1px 0 0 #808080,inset 2px 0 0 #fff;}
   body.theme-win98 .w98-addr{display:flex;align-items:center;gap:4px;height:22px;flex:0 0 22px;
@@ -512,20 +540,33 @@
     <!-- Windows Explorer furniture (theme-win98 only): toolbar, address bar and the info panel
          down the left. Everything here is hidden by default and switched on by the theme. -->
     <div class="w98-toolbar" id="w98toolbar">
-      <span class="w98-tb"><i class="w98-gl">&#9664;</i>Back</span>
-      <span class="w98-tb w98-dim"><i class="w98-gl">&#9654;</i></span>
-      <span class="w98-tb w98-dim"><i class="w98-gl">&#8593;</i></span>
+      <span class="w98-grip"></span>
+      <span class="w98-tb"><svg class="w98-ic" viewBox="0 0 16 16"><path d="M7 3 2 8l5 5V9.5h7v-3H7z" fill="#2f6e2f"/></svg>Back<i class="w98-chev"></i></span>
+      <span class="w98-tb w98-dim"><svg class="w98-ic" viewBox="0 0 16 16"><path d="M9 3l5 5-5 5V9.5H2v-3h7z" fill="#7a7a7a"/></svg><i class="w98-chev"></i></span>
+      <span class="w98-tb w98-dim"><svg class="w98-ic" viewBox="0 0 16 16"><rect x="2" y="4" width="12" height="10" fill="#e8d090" stroke="#8a7a40"/><path d="M8 5.5l3 3H9v3H7v-3H5z" fill="#5a5a5a"/></svg></span>
       <span class="w98-tbsep"></span>
-      <span class="w98-tb"><i class="w98-gl">&#128269;</i>Search</span>
-      <span class="w98-tb"><i class="w98-gl">&#128193;</i>Folders</span>
-      <span class="w98-tb"><i class="w98-gl">&#128340;</i>History</span>
+      <span class="w98-tb"><svg class="w98-ic" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.2" fill="#bfe4ff" stroke="#1b4f7a"/><path d="M10 10l4 4" stroke="#1b4f7a" stroke-width="2" fill="none"/></svg>Search</span>
+      <span class="w98-tb"><svg class="w98-ic" viewBox="0 0 16 16"><path d="M1.5 4h5l1.5 2h6.5v7.5h-13z" fill="#e8d090" stroke="#8a7a40"/></svg>Folders</span>
+      <span class="w98-tb"><svg class="w98-ic" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="#cfe8cf" stroke="#2f6e2f"/><path d="M8 4.5V8l2.5 1.5" stroke="#2f6e2f" stroke-width="1.4" fill="none"/></svg>History</span>
       <span class="w98-tbsep"></span>
-      <span class="w98-tb"><i class="w98-gl">&#9636;</i></span>
+      <span class="w98-tb w98-dim"><svg class="w98-ic" viewBox="0 0 16 16"><path d="M1.5 4h5l1.5 2h6.5v7.5h-13z" fill="#e8d090" stroke="#8a7a40"/><path d="M11 8.5l3 2-3 2z" fill="#1b4f7a"/></svg></span>
+      <span class="w98-tb w98-dim"><svg class="w98-ic" viewBox="0 0 16 16"><path d="M1.5 4h5l1.5 2h6.5v7.5h-13z" fill="#e8d090" stroke="#8a7a40"/><rect x="9" y="8" width="5" height="5" fill="#fff" stroke="#1b4f7a"/></svg></span>
+      <span class="w98-tb w98-dim"><svg class="w98-ic" viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13" stroke="#a02020" stroke-width="2" fill="none"/></svg></span>
+      <span class="w98-tb w98-dim"><svg class="w98-ic" viewBox="0 0 16 16"><path d="M13 12a5 5 0 0 0-9-3M4 5v4h4" stroke="#2f4f8a" stroke-width="1.6" fill="none"/></svg></span>
+      <span class="w98-tbsep"></span>
+      <span class="w98-tb"><svg class="w98-ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" fill="#fff" stroke="#5a5a5a"/><path d="M2 6h12M6 6v7" stroke="#5a5a5a"/></svg><i class="w98-chev"></i></span>
+      <!-- The animated logo box Explorer kept in its top-right corner. -->
+      <span class="w98-logo" id="w98logo"></span>
     </div>
     <div class="w98-addr" id="w98addr">
-      <span class="w98-addrlabel">Address</span>
-      <div class="w98-addrfield"><i class="w98-gl">&#128193;</i><span id="w98addrtext">Applications</span></div>
-      <span class="w98-go"><i class="w98-gl">&#8618;</i>Go</span>
+      <span class="w98-grip"></span>
+      <span class="w98-addrlabel"><u>A</u>ddress</span>
+      <div class="w98-addrfield">
+        <svg class="w98-ic" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="8" fill="#bfe4ff" stroke="#1b4f7a"/><rect x="5" y="11" width="6" height="2" fill="#8a8a8a"/></svg>
+        <span id="w98addrtext">Applications</span>
+        <span class="w98-drop"></span>
+      </div>
+      <span class="w98-go"><svg class="w98-ic" viewBox="0 0 16 16"><path d="M3 10a5 5 0 0 1 9-3" stroke="#2f6e2f" stroke-width="1.6" fill="none"/><path d="M13 4v4h-4z" fill="#2f6e2f"/></svg>Go</span>
     </div>
     <div class="be-mid">
       <!-- The web-view panel Explorer put down the left in Windows Me. -->
@@ -549,7 +590,11 @@
       </div>
     </div>
     <div class="be-status">
-      <div class="be-count" id="count">0 items</div>
+      <div class="w98-statusrow">
+        <div class="be-count" id="count">0 items</div>
+        <div class="w98-pane" id="w98pane2"></div>
+        <div class="w98-pane w98-pane3"><span id="w98pane3text">Applications</span></div>
+      </div>
       <div class="hsb">
         <div class="sb-arrows"><div class="sb-btn" data-h="-1"></div><div class="sb-btn" data-h="1"></div></div>
         <div class="sb-trough" data-trough="h"><div class="sb-thumb" data-thumb="h"></div></div>
