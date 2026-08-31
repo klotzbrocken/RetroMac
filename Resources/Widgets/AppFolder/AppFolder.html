@@ -320,6 +320,46 @@
   body.theme-win98 .menu .mi.disabled{color:#808080;text-shadow:1px 1px 0 #fff;}
   body.theme-win98 .menu .mi:not(.disabled):hover{background:#000080;color:#fff;}
   body.theme-win98 .menu .sep{background:#808080;border-bottom:1px solid #fff;height:0;margin:3px 1px;}
+  /* Explorer furniture: off everywhere, on for the Windows themes. */
+  .w98-toolbar,.w98-addr,.w98-side{display:none;}
+  body.theme-win98 .w98-toolbar{display:flex;align-items:center;gap:2px;height:26px;flex:0 0 26px;
+    margin:1px 3px 0;padding:0 3px;background:#c4c4c4;
+    box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 #808080;
+    font:11px Tahoma,"MS Sans Serif",sans-serif;color:#000;}
+  body.theme-win98 .w98-tb{display:flex;align-items:center;gap:3px;padding:3px 5px;cursor:default;}
+  body.theme-win98 .w98-tb:hover{box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #808080;}
+  body.theme-win98 .w98-tb:active{box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
+  body.theme-win98 .w98-tb.w98-dim{color:#808080;text-shadow:1px 1px 0 #fff;}
+  body.theme-win98 .w98-gl{font-style:normal;font-size:12px;line-height:1;}
+  body.theme-win98 .w98-tbsep{width:0;height:18px;margin:0 3px;
+    box-shadow:inset 1px 0 0 #808080,inset 2px 0 0 #fff;}
+  body.theme-win98 .w98-addr{display:flex;align-items:center;gap:4px;height:22px;flex:0 0 22px;
+    margin:0 3px;padding:0 3px;background:#c4c4c4;
+    font:11px Tahoma,"MS Sans Serif",sans-serif;color:#000;}
+  body.theme-win98 .w98-addrlabel{padding:0 3px;}
+  body.theme-win98 .w98-addrfield{flex:1 1 auto;display:flex;align-items:center;gap:4px;
+    height:17px;padding:0 4px;background:#fff;
+    box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000;}
+  body.theme-win98 .w98-go{display:flex;align-items:center;gap:3px;padding:2px 5px;cursor:default;}
+  /* The info panel. Its banner is the gradient wash Explorer drew behind the folder name. */
+  body.theme-win98 .w98-side{display:block;flex:0 0 40%;max-width:210px;min-width:120px;
+    background:#fff;overflow:hidden;
+    box-shadow:inset 1px 1px 0 #808080,inset -1px 0 0 #fff;
+    font:11px Tahoma,"MS Sans Serif",sans-serif;color:#000;}
+  /* The wash Explorer drew across the top of the panel: teal-blue into gold, fading to the
+     page white on the right. The folder's name sits UNDER it in black, over a blue rule. */
+  body.theme-win98 .w98-banner{height:46px;
+    background:linear-gradient(90deg,#2c5c96 0%,#6f9ac6 34%,#e8b95a 66%,#fff 100%);}
+  body.theme-win98 .w98-sidebody{padding:6px 8px 8px;}
+  body.theme-win98 .w98-sidetitle{margin:0 0 6px;padding:0 0 4px;
+    font:700 14px Tahoma,sans-serif;color:#000;border-bottom:1px solid #2c5c96;}
+  body.theme-win98 .w98-hint{margin:0 0 10px;}
+  body.theme-win98 .w98-desc{margin:0 0 12px;display:inline-block;padding:1px 3px;
+    background:#ffffc0;box-shadow:0 0 0 1px #c0b060;}
+  body.theme-win98 .w98-seealso{margin:0 0 4px;}
+  body.theme-win98 .w98-link{display:block;color:#0000c0;text-decoration:underline;
+    cursor:pointer;margin:2px 0;}
+  body.theme-win98 .w98-link:hover{color:#c00000;}
   body.theme-win98 .be-mid{margin:0 3px;}
   body.theme-win98 .be-content{background:#fff;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
   body.theme-win98 .be-status{background:#c4c4c4;color:#000;border:none;margin:0 3px 3px;
@@ -469,7 +509,38 @@
       <span class="w98-btn" id="w98close">×</span>
     </div>
     <div class="be-menubar"><span>File</span><span>Window</span></div>
+    <!-- Windows Explorer furniture (theme-win98 only): toolbar, address bar and the info panel
+         down the left. Everything here is hidden by default and switched on by the theme. -->
+    <div class="w98-toolbar" id="w98toolbar">
+      <span class="w98-tb"><i class="w98-gl">&#9664;</i>Back</span>
+      <span class="w98-tb w98-dim"><i class="w98-gl">&#9654;</i></span>
+      <span class="w98-tb w98-dim"><i class="w98-gl">&#8593;</i></span>
+      <span class="w98-tbsep"></span>
+      <span class="w98-tb"><i class="w98-gl">&#128269;</i>Search</span>
+      <span class="w98-tb"><i class="w98-gl">&#128193;</i>Folders</span>
+      <span class="w98-tb"><i class="w98-gl">&#128340;</i>History</span>
+      <span class="w98-tbsep"></span>
+      <span class="w98-tb"><i class="w98-gl">&#9636;</i></span>
+    </div>
+    <div class="w98-addr" id="w98addr">
+      <span class="w98-addrlabel">Address</span>
+      <div class="w98-addrfield"><i class="w98-gl">&#128193;</i><span id="w98addrtext">Applications</span></div>
+      <span class="w98-go"><i class="w98-gl">&#8618;</i>Go</span>
+    </div>
     <div class="be-mid">
+      <!-- The web-view panel Explorer put down the left in Windows Me. -->
+      <div class="w98-side" id="w98side">
+        <div class="w98-banner"></div>
+        <div class="w98-sidebody">
+          <h1 class="w98-sidetitle" id="w98bannertitle">Applications</h1>
+          <p class="w98-hint">Select an item to view its description.</p>
+          <p class="w98-desc" id="w98desc">Displays the contents of this folder.</p>
+          <p class="w98-seealso">See also:</p>
+          <a class="w98-link" data-open="__docs__">My Documents</a>
+          <a class="w98-link" data-open="__net__">My Network Places</a>
+          <a class="w98-link" data-open="__dial__">Dial-Up Networking</a>
+        </div>
+      </div>
       <div class="be-content"><div class="be-grid" id="grid"></div></div>
       <div class="vsb">
         <div class="sb-arrows"><div class="sb-btn" data-v="-1"></div><div class="sb-btn" data-v="1"></div></div>
@@ -553,7 +624,10 @@
       el.addEventListener('dblclick',()=>{ post({a:'open',id:it.id,path:it.path,name:it.name}); });
       grid.appendChild(el);
     });
-    document.getElementById('count').textContent=apps.length+' items';
+    // Explorer says "object(s)"; the BeOS/Platinum shells say "items".
+    const isWin = document.body.classList.contains('theme-win98');
+    document.getElementById('count').textContent =
+      apps.length + (isWin ? ' object(s)' : ' items');
     const m9=document.getElementById('m9info'); if(m9) m9.textContent=apps.length+' items'+(availSpace?', '+availSpace:'');
     updateScroll();
   }
