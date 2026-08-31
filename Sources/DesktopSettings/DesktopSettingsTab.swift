@@ -83,8 +83,12 @@ struct DesktopSettingsTab: View {
                 // Lives with the wallpaper because that is literally what it changes: the tint is
                 // painted into the top of the rendered wallpaper. It sat under Advanced > Hotkeys
                 // next to the menu-bar hiding switch at first, where nobody found it.
+                                // Only where the era actually had a Mac menu bar. The Windows themes hide it,
+                // and every other family draws a bar of its own, so the control was offering to
+                // paint a grey band across the top of a wallpaper for no reason.
+                if let cfg = themeConfig, ThemeManager.menuBarStyle(for: cfg) != nil {
                 RMRow(label: "Tint the menu bar",
-                      hint: "macOS cannot recolour the menu bar, but it is translucent over the desktop picture. This paints a strip of menu-bar height into the top of the wallpaper, so the bar reads as opaque grey. Only RetroMac's own wallpapers are touched, and it is skipped for themes that hide the menu bar.") {
+                      hint: "macOS cannot recolour the menu bar, but it is translucent over the desktop picture. This paints a strip of menu-bar height into the top of the wallpaper, matched to how \(themeName) drew its bar.") {
                     Toggle("", isOn: $settings.menuBarTint)
                         .toggleStyle(.switch)
                         .tint(.rmAccent)
@@ -92,6 +96,7 @@ struct DesktopSettingsTab: View {
                         .onChange(of: settings.menuBarTint) { _, _ in
                             ThemeManager.shared.applyWallpaper()
                         }
+                }
                 }
                 RMRow(label: "Reset to theme default", isLast: true) {
                     Button("Reset") {

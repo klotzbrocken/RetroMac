@@ -400,11 +400,12 @@ final class ThemeManager {
                let tiled = tiledWallpaperURL(tile: wpURL, for: screen, themeName: theme.name) {
                 finalURL = tiled
             }
-            // Menu-bar tint: paint the strip into the copy that actually gets set. Skipped when
-            // the menu bar is hidden (the Windows themes do that), where a grey band across the
-            // top of the wallpaper would just be a grey band.
+            // Menu-bar tint: paint the strip into the copy that actually gets set. Only Apple
+            // themes get one — see `menuBarStyle(for:)` — and never while the bar is hidden.
             if AppSettings.shared.menuBarTint, !AppSettings.shared.hideMenuBar,
-               let tinted = tintedWallpaperURL(source: finalURL, for: screen, themeName: theme.name) {
+               let style = Self.menuBarStyle(for: theme.config),
+               let tinted = tintedWallpaperURL(source: finalURL, for: screen,
+                                               themeName: theme.name, style: style) {
                 finalURL = tinted
             }
             let screenKey = screenKey(for: screen)
@@ -454,7 +455,47 @@ final class ThemeManager {
     /// affecting every window, not a cosmetic per-theme one.
     ///
     /// Only the backdrop changes; the menu text and items stay modern.
-    private func tintedWallpaperURL(source: URL, for screen: NSScreen, themeName: String) -> URL? {
+    /// How a theme's era drew the menu bar, or nil if it should not be painted at all.
+    ///
+    /// Only the Apple family gets a strip. Every other family either hides the macOS menu bar
+    /// outright (the Windows themes do) or draws a bar of its own — the Amiga screen bar, the
+    /// BeOS Deskbar, the NeXT menu — so painting an Aqua-grey band across the top of their
+    /// wallpaper was noise at best. And a single grey was wrong even for Apple: System 6's bar
+    /// was white with a hard black rule, Platinum was flat grey, Aqua was pinstriped.
+    struct MenuBarStyle {
+        let bottom: NSColor       // at the bar's lower edge
+        let top: NSColor          // at the screen's very top
+        let rule: NSColor         // the hairline that closes the bar off
+        var ruleHeight: CGFloat = 1
+        var pinstripe: NSColor?   // Aqua's fine stripes, drawn over the fill
+    }
+
+    static func menuBarStyle(for theme: DockThemeConfig) -> MenuBarStyle? {
+        guard theme.family?.id == "apple", theme.hideMenuBarDefault != true else { return nil }
+        func c(_ v: CGFloat) -> NSColor { NSColor(srgbRed: v, green: v, blue: v, alpha: 1) }
+        switch theme.name {
+        case "Mac OS 6 classic":
+            // System 6: plain white, closed off by a hard black rule.
+            return MenuBarStyle(bottom: c(1), top: c(1), rule: c(0), ruleHeight: 1)
+        case "Mac OS 9.2 Classic":
+            // Platinum: flat grey with a white highlight along the top edge.
+            return MenuBarStyle(bottom: c(0.867), top: c(0.902), rule: c(0.333))
+        case "Mac OS X":
+            // Aqua 10.0 to 10.4: near-white, finely pinstriped.
+            return MenuBarStyle(bottom: c(0.937), top: c(0.976), rule: c(0.588),
+                                pinstripe: NSColor(srgbRed: 0.898, green: 0.910, blue: 0.937, alpha: 1))
+        case "Mountain Lion":
+            return MenuBarStyle(bottom: c(0.894), top: c(0.969), rule: c(0.651))
+        default:
+            // Snow Leopard and any future Apple theme: the 10.6 bar.
+            return MenuBarStyle(bottom: c(0.863), top: c(0.965), rule: c(0.627))
+        }
+    }
+
+    private func stripe(_ s: MenuBarStyle) -> NSColor? { s.pinstripe }
+
+    private func tintedWallpaperURL(source: URL, for screen: NSScreen, themeName: String,
+                                    style: MenuBarStyle) -> URL? {
         let barH = menuBarHeight(of: screen)
         guard barH > 0, let img = NSImage(contentsOf: source) else { return nil }
         let scale = screen.backingScaleFactor
@@ -467,6 +508,7 @@ final class ThemeManager {
         let safe = themeName.replacingOccurrences(of: " ", with: "-")
         let out = dir.appendingPathComponent(
             "\(safe)-\(source.deletingPathExtension().lastPathComponent)-menubar\(Int(barH))-\(pxW)x\(pxH).png")
+        // `safe` carries the theme name, so two eras never share a cached strip.
         if FileManager.default.fileExists(atPath: out.path) { return out }
 
         guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pxW, pixelsHigh: pxH,
@@ -480,11 +522,24 @@ final class ThemeManager {
         img.draw(in: NSRect(x: 0, y: 0, width: CGFloat(pxW), height: CGFloat(pxH)))
         // Unflipped context: the menu bar is at the TOP, i.e. the high-y end.
         let strip = NSRect(x: 0, y: CGFloat(pxH) - stripPx, width: CGFloat(pxW), height: stripPx)
-        NSGradient(colors: [NSColor(srgbRed: 0.863, green: 0.863, blue: 0.863, alpha: 1),
-                            NSColor(srgbRed: 0.965, green: 0.965, blue: 0.965, alpha: 1)])?
-            .draw(in: strip, angle: 90)
-        NSColor(srgbRed: 0.627, green: 0.627, blue: 0.627, alpha: 1).setFill()
-        NSRect(x: 0, y: strip.minY, width: CGFloat(pxW), height: max(1, scale)).fill()
+        if style.bottom == style.top {
+            style.bottom.setFill()
+            strip.fill()
+        } else {
+            NSGradient(colors: [style.bottom, style.top])?.draw(in: strip, angle: 90)
+        }
+        if let stripe = stripe(style) {
+            stripe.setFill()
+            // Aqua's pinstripe: one tinted line every four device pixels, scaled with the display.
+            let period = max(2, 4 * scale)
+            var y = strip.minY
+            while y < strip.maxY {
+                NSRect(x: 0, y: y, width: CGFloat(pxW), height: max(1, scale)).fill()
+                y += period
+            }
+        }
+        style.rule.setFill()
+        NSRect(x: 0, y: strip.minY, width: CGFloat(pxW), height: max(1, style.ruleHeight * scale)).fill()
         NSGraphicsContext.restoreGraphicsState()
 
         guard let png = rep.representation(using: .png, properties: [:]),
