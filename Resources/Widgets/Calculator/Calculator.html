@@ -22,12 +22,20 @@
     font:600 20px "Lucida Console","DejaVu Sans Mono",monospace;color:#000;background:#fff;
     border:1px solid #808080;box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #dbdbdb;overflow:hidden;}
   .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;}
+  /* Top row: the memory indicator sits in the memory column, then Backspace, CE and C share the
+     remaining five. The fr units add up to 6 so it lines up with the keypad underneath. */
+  .toprow{display:grid;grid-template-columns:1fr 2fr 1.5fr 1.5fr;gap:5px;margin-bottom:5px;}
+  .memind{height:26px;background:#c4c4c4;
+    box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb;
+    display:flex;align-items:center;justify-content:center;
+    font:700 12px Tahoma,"Segoe UI",sans-serif;color:#c00000;}
   .k{height:26px;font:700 13px Tahoma,"Segoe UI",sans-serif;cursor:pointer;color:#000;
     background:#c4c4c4;border:none;box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;
     display:flex;align-items:center;justify-content:center;line-height:1;padding:0;}
   .k:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080,inset -2px -2px 0 #dbdbdb;}
-  .k.wide{grid-column:span 2;}
-  .k.dig{color:#0000d0;} .k.op,.k.fn,.k.mem,.k.clr{color:#c00000;}
+  /* Measured off the original: digits and the function keys (sqrt, %, 1/x, +/-) are blue;
+     memory, the clear row and the operators are red. */
+  .k.dig,.k.fn{color:#0000d0;} .k.op,.k.mem,.k.clr{color:#c00000;}
 
   /* ===== hidden title bars by default ===== */
   .m9-title,.xp-title,.mf-title,.mx-title,.w98-title{display:none;}
@@ -195,11 +203,13 @@
     <div class="w98-menubar" id="w98menu"><span><u>E</u>dit</span><span><u>V</u>iew</span><span><u>H</u>elp</span></div>
     <div class="body">
       <div class="disp" id="disp">0</div>
+      <div class="toprow">
+        <div class="memind" id="memind"></div>
+        <button class="k clr" data-k="back">Backspace</button>
+        <button class="k clr" data-k="ce">CE</button>
+        <button class="k clr" data-k="c">C</button>
+      </div>
       <div class="grid">
-        <button class="k clr wide" data-k="back">Backspace</button>
-        <button class="k clr wide" data-k="ce">CE</button>
-        <button class="k clr wide" data-k="c">C</button>
-
         <button class="k mem" data-k="mc">MC</button>
         <button class="k dig" data-k="7">7</button>
         <button class="k dig" data-k="8">8</button>
@@ -233,6 +243,9 @@
 <script>
   const disp = document.getElementById('disp');
   let acc = null, op = null, cur = '0', fresh = true, mem = 0;
+  // Windows put an M in the little box whenever anything was stored.
+  const memind = document.getElementById('memind');
+  function showMem(){ if (memind) memind.textContent = mem ? 'M' : ''; }
 
   function show(){ let s = cur; if (s.length > 16) s = String(Number(s)); disp.textContent = s; }
   function num(){ return parseFloat(cur) || 0; }
@@ -272,10 +285,10 @@
       case 'sqrt': setNum(Math.sqrt(num())); show(); return;
       case 'inv': setNum(num()===0?NaN:1/num()); show(); return;
       case 'pct': setNum(acc!==null ? acc*num()/100 : 0); show(); return;
-      case 'mc': mem = 0; return;
+      case 'mc': mem = 0; showMem(); return;
       case 'mr': setNum(mem); show(); return;
-      case 'ms': mem = num(); return;
-      case 'mp': mem += num(); return;
+      case 'ms': mem = num(); showMem(); return;
+      case 'mp': mem += num(); showMem(); return;
     }
   }
 

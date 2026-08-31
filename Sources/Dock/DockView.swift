@@ -33,6 +33,8 @@ final class DockView: NSView {
     private var diskFreeValue: String = ""   // e.g. "150"
     private var diskFreeUnit: String = ""    // e.g. "GB Free"
     private var trayIconFrame: NSRect = .zero  // ICQ tray icon (right of clock)
+    /// The tray speaker for the classic Windows themes. Win7 has its own pair of glyphs.
+    private var traySpeakerFrame: NSRect = .zero
     private var win7NetFrame: NSRect = .zero   // Win7 systray WLAN/network glyph (→ Network settings)
     private var win7VolFrame: NSRect = .zero   // Win7 systray volume glyph (→ Sound settings)
     private var magnificationTrackingArea: NSTrackingArea?
@@ -660,8 +662,14 @@ final class DockView: NSView {
                     width: traySize,
                     height: traySize
                 )
+                // The speaker sat beside the other tray icons on every Windows of this era.
+                // Skipped when the machine has no output whose volume we can actually move.
+                traySpeakerFrame = (RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable)
+                    ? trayIconFrame.offsetBy(dx: traySize + trayPad, dy: 0)
+                    : .zero
             } else {
                 trayIconFrame = .zero
+                traySpeakerFrame = .zero
             }
 
             if hasDiskFree {
@@ -808,6 +816,7 @@ final class DockView: NSView {
             startButtonFrame = .zero
             clockFrame = .zero
             trayIconFrame = .zero
+            traySpeakerFrame = .zero
             diskFreeFrame = .zero
 
             // The Control Strip has no right-hand section, so nothing moves out of the row and
@@ -970,8 +979,14 @@ final class DockView: NSView {
                     width: traySize,
                     height: traySize
                 )
+                // The speaker sat beside the other tray icons on every Windows of this era.
+                // Skipped when the machine has no output whose volume we can actually move.
+                traySpeakerFrame = (RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable)
+                    ? trayIconFrame.offsetBy(dx: traySize + trayPad, dy: 0)
+                    : .zero
             } else {
                 trayIconFrame = .zero
+                traySpeakerFrame = .zero
             }
 
             if hasDiskFree {
@@ -2918,6 +2933,17 @@ final class DockView: NSView {
             (diskFreeUnit as NSString).draw(at: NSPoint(x: curX, y: textY), withAttributes: blackAttrs)
         }
 
+        // Tray speaker, for the Windows themes that are not Win7 (which draws its own pair).
+        if !traySpeakerFrame.isEmpty {
+            let name = SystemVolume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill"
+            if let img = NSImage(systemSymbolName: name, accessibilityDescription: "Volume") {
+                let cfg = NSImage.SymbolConfiguration(pointSize: traySpeakerFrame.height * 0.85,
+                                                      weight: .regular)
+                img.withSymbolConfiguration(cfg)?.draw(in: traySpeakerFrame, from: .zero,
+                                                       operation: .sourceOver, fraction: 1)
+            }
+        }
+
         // ICQ tray icon (right of clock, for Windows 98 / Windows XP). Win7 draws its own
         // network/volume glyphs in drawWin7Systray instead, so skip the ICQ there.
         if !trayIconFrame.isEmpty, RetroFrameTheme.key() != "win7", let icqImg = startMenuIcon("icq.png") {
@@ -3241,6 +3267,19 @@ final class DockView: NSView {
 
         // Control Strip: left cap click → collapse/expand
         if handleControlStripCollapseClick(at: local) { return }
+
+        // Tray speaker. Single click opens the little slider, double click opens the mixer —
+        // which is what Windows did, and not the "click to mute" people remember.
+        if !traySpeakerFrame.isEmpty, traySpeakerFrame.insetBy(dx: -4, dy: -4).contains(local) {
+            if event.clickCount >= 2 {
+                VolumePopup.shared.close()
+                openSettingsPane("com.apple.Sound-Settings.extension")
+            } else {
+                VolumePopup.shared.toggle(
+                    anchor: window?.convertToScreen(convert(traySpeakerFrame, to: nil)) ?? traySpeakerFrame)
+            }
+            return
+        }
 
         // ICQ tray icon → open iMessages (Win98/XP only; Win7 uses the network/volume glyphs below).
         if RetroFrameTheme.key() != "win7",
