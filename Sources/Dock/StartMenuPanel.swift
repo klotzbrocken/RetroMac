@@ -41,10 +41,20 @@ final class StartMenuPanel: NSPanel {
         }
     }
 
+    /// A menu view that can hang a flyout off one of its rows. The panel needs this to keep
+    /// itself open while the pointer is inside that flyout, and to take it down with itself.
+    protocol SubmenuHost: AnyObject {
+        var submenuPanel: StartMenuPanel? { get }
+        func dismissSubmenu()
+    }
+
     /// XP-style start menu uses separate left/right column items
     struct XPMenuData {
         let leftItems: [MenuItem]    // pinned apps (white panel)
         let rightItems: [MenuItem]   // system folders (blue panel)
+        /// The Programs flyout. When set, "All Programs" opens it instead of running
+        /// `allProgramsAction` — the same list the classic Start menu hangs off Programs.
+        var allProgramsItems: [MenuItem]? = nil
         let allProgramsAction: (() -> Void)?
         let logOffAction: (() -> Void)?
         let shutDownAction: (() -> Void)?
@@ -200,8 +210,8 @@ final class StartMenuPanel: NSPanel {
             guard let self = self else { return event }
             if event.window == self { return event }
             // Allow clicks on submenu panels (Favorites, Programs, etc.)
-            if let classic = self.menuContentView as? ClassicStartMenuContentView,
-               let subPanel = classic.submenuPanel,
+            if let host = self.menuContentView as? StartMenuPanel.SubmenuHost,
+               let subPanel = host.submenuPanel,
                event.window == subPanel {
                 return event
             }
@@ -220,18 +230,79 @@ final class StartMenuPanel: NSPanel {
     }
 
     func dismiss() {
-        if let classic = menuContentView as? ClassicStartMenuContentView {
-            classic.dismissSubmenu()
-        }
+        (menuContentView as? StartMenuPanel.SubmenuHost)?.dismissSubmenu()
         orderOut(nil)
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor); globalMonitor = nil }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor); localMonitor = nil }
     }
 }
 
+// MARK: - Programs flyout (XP / Windows 7)
+
+/// Build and place Windows XP's All Programs list.
+///
+/// XP does not hang this off the side of the menu: the list is superimposed on the Start menu as
+/// a third column in a second layer, its bottom sitting on the All Programs row and its left edge
+/// at the right edge of the left column — so it covers the "My Documents" pane while it is open.
+/// That is the original behaviour, not a placement accident. (Windows XP Pro: The Missing Manual,
+/// "Start → All Programs".) `bottomLeft` is that corner, in the caller's coordinates.
+///
+/// The list is capped to what fits on the screen: a Mac with forty apps in the dock would
+/// otherwise produce a panel taller than the display, and this menu has no scrolling. Whatever is
+/// cut off is reachable through the last row.
+private func makeProgramsFlyout(items: [StartMenuPanel.MenuItem],
+                                style: SubmenuContentView.Style,
+                                bottomLeft: NSPoint,
+                                in view: NSView,
+                                onDismiss: (() -> Void)?) -> StartMenuPanel? {
+    guard !items.isEmpty, let window = view.window else { return nil }
+    let itemHeight: CGFloat = 24
+    let iconSize: CGFloat = 16
+    let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
+
+    let visible = (window.screen ?? NSScreen.main)?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+    var shown = items
+    let maxRows = max(6, Int((visible.height - 60) / itemHeight) - 1)
+    if shown.count > maxRows {
+        shown = Array(shown.prefix(maxRows - 1))
+        shown.append(StartMenuPanel.MenuItem(title: "More Programs…", action: {
+            NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications"))
+        }))
+    }
+
+    var contentW: CGFloat = 0
+    for it in shown where !it.isSeparator {
+        let tw = (it.title as NSString).size(withAttributes: [.font: font]).width
+        contentW = max(contentW, 6 + iconSize + 8 + tw + 16)
+    }
+    let width = min(360, max(170, ceil(contentW)))
+    var height: CGFloat = 4
+    for it in shown { height += it.isSeparator ? 9 : itemHeight }
+
+    let content = SubmenuContentView(items: shown, itemHeight: itemHeight, menuWidth: width,
+                                     bevelWidth: 1, iconSize: iconSize, style: style)
+    content.onDismiss = onDismiss
+    let size = NSSize(width: width, height: height)
+    content.frame = NSRect(origin: .zero, size: size)
+    let panel = StartMenuPanel()
+    panel.contentView = content
+
+    // The corner the caller nominated: over the menu, sitting on the All Programs row.
+    let corner = window.convertPoint(toScreen: view.convert(bottomLeft, to: nil))
+    var x = corner.x
+    var y = corner.y
+    // Only when it would run off the screen does it move; it never flips to the other side,
+    // because on this menu the other side is the desktop.
+    x = min(max(x, visible.minX), visible.maxX - size.width)
+    y = min(max(y, visible.minY), visible.maxY - size.height)
+    panel.setFrame(NSRect(origin: NSPoint(x: x, y: y), size: size), display: true)
+    panel.orderFrontRegardless()
+    return panel
+}
+
 // MARK: - XP Luna Blue Start Menu
 
-private final class XPStartMenuContentView: NSView {
+private final class XPStartMenuContentView: NSView, StartMenuPanel.SubmenuHost {
     private let data: StartMenuPanel.XPMenuData
     var onDismiss: (() -> Void)?
 
@@ -260,6 +331,7 @@ private final class XPStartMenuContentView: NSView {
 
     private var hoveredSection: HoverSection? = nil
     private var trackingArea: NSTrackingArea?
+    private(set) var submenuPanel: StartMenuPanel?
 
     private enum HoverSection: Equatable {
         case left(Int)
@@ -358,8 +430,12 @@ private final class XPStartMenuContentView: NSView {
             item.action?()
             onDismiss?()
         case .allPrograms:
-            data.allProgramsAction?()
-            // Don't dismiss — might open a submenu
+            // Don't dismiss: the flyout is part of this menu, not a way out of it.
+            if let items = data.allProgramsItems, !items.isEmpty {
+                toggleProgramsFlyout(items)
+            } else {
+                data.allProgramsAction?()
+            }
         case .logOff:
             data.logOffAction?()
             onDismiss?()
@@ -380,6 +456,29 @@ private final class XPStartMenuContentView: NSView {
         }
         guard let it = item, let bid = it.bundleID else { return }
         CustomIconPicker.present(for: bid, in: self, at: local) { [weak self] in self?.onDismiss?() }
+    }
+
+    func dismissSubmenu() {
+        submenuPanel?.dismiss()
+        submenuPanel = nil
+    }
+
+    private func toggleProgramsFlyout(_ items: [StartMenuPanel.MenuItem]) {
+        if submenuPanel != nil { dismissSubmenu(); return }
+        // Third column: left edge where the left column ends, bottom on the All Programs row.
+        let row = allProgramsRect()
+        submenuPanel = makeProgramsFlyout(items: items, style: .xp,
+                                          bottomLeft: NSPoint(x: row.maxX, y: row.minY),
+                                          in: self, onDismiss: { [weak self] in self?.onDismiss?() })
+    }
+
+    /// The "All Programs" row, walked the same way `hitSection` walks it so the flyout is
+    /// anchored to the row the user actually clicked.
+    private func allProgramsRect() -> NSRect {
+        var y = borderWidth + footerHeight + contentHeight
+        for item in data.leftItems { y -= item.isSeparator ? separatorHeight : largeItemHeight }
+        return NSRect(x: borderWidth, y: y - largeItemHeight,
+                      width: leftColumnWidth, height: largeItemHeight)
     }
 
     private func hitSection(at point: NSPoint) -> HoverSection? {
@@ -805,7 +904,7 @@ private final class XPStartMenuContentView: NSView {
 /// "Shut down" split-button. Reuses `XPMenuData` (leftItems = programs w/ icons, rightItems =
 /// places, title only). Frosted glass comes from an NSVisualEffectView placed behind this view
 /// by `StartMenuPanel.showWin7`; the right column is painted translucent so the blur shows.
-private final class Win7StartMenuContentView: NSView {
+private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost {
     private let data: StartMenuPanel.XPMenuData
     var onDismiss: (() -> Void)?
 
@@ -831,7 +930,30 @@ private final class Win7StartMenuContentView: NSView {
     init(data: StartMenuPanel.XPMenuData) { self.data = data; super.init(frame: .zero); wantsLayer = true }
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
 
-    private var programs: [StartMenuPanel.MenuItem] { data.leftItems.filter { !$0.isSeparator } }
+    /// Windows 7 has no All Programs flyout. Clicking the row swaps the left pane for the
+    /// program list in place and turns the row into "Back" — the pane navigates, it does not
+    /// spawn a second menu. (Windows XP was the one with the cascading third column.)
+    private var showingAllPrograms = false
+
+    private var programs: [StartMenuPanel.MenuItem] {
+        let source = showingAllPrograms ? (data.allProgramsItems ?? []) : data.leftItems
+        let list = source.filter { !$0.isSeparator }
+        // The real pane scrolls; this one cannot, so it shows what fits and offers the rest
+        // through the last row rather than drawing past its own edge.
+        guard showingAllPrograms, list.count > maxProgramRows else { return list }
+        var capped = Array(list.prefix(maxProgramRows - 1))
+        capped.append(StartMenuPanel.MenuItem(title: "More Programs…", action: {
+            NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications"))
+        }))
+        return capped
+    }
+
+    /// How many rows the left pane holds without growing: the pane keeps the height it was
+    /// opened with, exactly like the real one.
+    private var maxProgramRows: Int {
+        max(4, data.leftItems.filter { !$0.isSeparator }.count)
+    }
+
     private var places: [StartMenuPanel.MenuItem] { data.rightItems.filter { !$0.isSeparator } }
 
     private var bodyHeight: CGFloat {
@@ -913,7 +1035,15 @@ private final class Win7StartMenuContentView: NSView {
         switch h {
         case .left(let i): programs[i].action?(); onDismiss?()
         case .right(let i): places[i].action?(); onDismiss?()
-        case .allPrograms: data.allProgramsAction?()          // may open a submenu → don't dismiss
+        case .allPrograms:
+            // Navigate in place; never dismiss — Back has to stay reachable.
+            if let items = data.allProgramsItems, !items.isEmpty {
+                showingAllPrograms.toggle()
+                hovered = nil
+                needsDisplay = true
+            } else {
+                data.allProgramsAction?()
+            }
         case .search:
             if let f = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder") { NSWorkspace.shared.open(f) }
             onDismiss?()
@@ -924,6 +1054,12 @@ private final class Win7StartMenuContentView: NSView {
         let p = convert(event.locationInWindow, from: nil)
         guard case let .left(i)? = sectionAt(p), let bid = programs[i].bundleID else { return }
         CustomIconPicker.present(for: bid, in: self, at: p) { [weak self] in self?.onDismiss?() }
+    }
+
+    private(set) var submenuPanel: StartMenuPanel?
+    func dismissSubmenu() {
+        submenuPanel?.dismiss()
+        submenuPanel = nil
     }
 
     private func font(_ sz: CGFloat, _ bold: Bool) -> NSFont {
@@ -966,12 +1102,22 @@ private final class Win7StartMenuContentView: NSView {
         // All Programs + separator
         NSColor(white: 0.82, alpha: 1).setFill(); NSRect(x: white.minX + 6, y: L.allPrograms.maxY, width: white.width - 12, height: 1).fill()
         if hovered == .allPrograms { NSColor(srgbRed: 0.82, green: 0.90, blue: 0.99, alpha: 1).setFill(); rr(L.allPrograms.insetBy(dx: 2, dy: 1), 3).fill() }
+        // The triangle points into the list on the way in and back out on the way home, and the
+        // label changes with it: in Windows 7 this row IS the navigation.
         let ar = NSBezierPath()
-        ar.move(to: NSPoint(x: white.minX + 8, y: L.allPrograms.midY - 5))
-        ar.line(to: NSPoint(x: white.minX + 16, y: L.allPrograms.midY))
-        ar.line(to: NSPoint(x: white.minX + 8, y: L.allPrograms.midY + 5)); ar.close()
+        if showingAllPrograms {
+            ar.move(to: NSPoint(x: white.minX + 16, y: L.allPrograms.midY - 5))
+            ar.line(to: NSPoint(x: white.minX + 8, y: L.allPrograms.midY))
+            ar.line(to: NSPoint(x: white.minX + 16, y: L.allPrograms.midY + 5))
+        } else {
+            ar.move(to: NSPoint(x: white.minX + 8, y: L.allPrograms.midY - 5))
+            ar.line(to: NSPoint(x: white.minX + 16, y: L.allPrograms.midY))
+            ar.line(to: NSPoint(x: white.minX + 8, y: L.allPrograms.midY + 5))
+        }
+        ar.close()
         NSColor(srgbRed: 0.30, green: 0.60, blue: 0.20, alpha: 1).setFill(); ar.fill()
-        text("All Programs", NSPoint(x: white.minX + 24, y: L.allPrograms.midY - 8), font(12, true), darkText)
+        text(showingAllPrograms ? "Back" : "All Programs",
+             NSPoint(x: white.minX + 24, y: L.allPrograms.midY - 8), font(12, true), darkText)
 
         // Search field
         let sp = rr(L.search, 3)
@@ -1028,7 +1174,7 @@ private final class Win7StartMenuContentView: NSView {
 
 // MARK: - Classic Win98-Style Content View
 
-private final class ClassicStartMenuContentView: NSView {
+private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuHost {
     private let items: [StartMenuPanel.MenuItem]
     private let bannerText: String
     private let bannerWidth: CGFloat = 24
@@ -1377,22 +1523,30 @@ private final class ClassicStartMenuContentView: NSView {
 // MARK: - Submenu Content View (no blue banner)
 
 private final class SubmenuContentView: NSView {
+    /// Which era's flyout to draw. The Win9x bevel would look like a visitor from another
+    /// operating system hanging off an XP Luna menu. (Windows 7 needs no case here: its
+    /// All Programs list replaces the left pane instead of opening a flyout.)
+    enum Style { case classic, xp }
+
     private let items: [StartMenuPanel.MenuItem]
     private let itemHeight: CGFloat
     private let menuWidth: CGFloat
     private let bevelWidth: CGFloat
     private let iconSize: CGFloat
+    private let style: Style
     private var hoveredIndex: Int? = nil
     private var trackingArea: NSTrackingArea?
 
     var onDismiss: (() -> Void)?
 
-    init(items: [StartMenuPanel.MenuItem], itemHeight: CGFloat, menuWidth: CGFloat, bevelWidth: CGFloat, iconSize: CGFloat) {
+    init(items: [StartMenuPanel.MenuItem], itemHeight: CGFloat, menuWidth: CGFloat,
+         bevelWidth: CGFloat, iconSize: CGFloat, style: Style = .classic) {
         self.items = items
         self.itemHeight = itemHeight
         self.menuWidth = menuWidth
         self.bevelWidth = bevelWidth
         self.iconSize = iconSize
+        self.style = style
         super.init(frame: .zero)
         wantsLayer = true
     }
@@ -1453,7 +1607,52 @@ private final class SubmenuContentView: NSView {
         return nil
     }
 
+    /// XP and Windows 7 flyouts: a plain white list with a thin border and a coloured
+    /// selection bar, in each era's own blue.
+    private func drawModern() {
+        let border = NSColor(red: 0.51, green: 0.58, blue: 0.71, alpha: 1)
+        let selection = NSColor(red: 0.19, green: 0.42, blue: 0.77, alpha: 1)
+        let selectedText = NSColor.white
+        let textFont = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
+
+        let body = bounds.insetBy(dx: 0.5, dy: 0.5)
+        let path = NSBezierPath(rect: body)
+        NSColor.white.setFill(); path.fill()
+        border.setStroke(); path.lineWidth = 1; path.stroke()
+
+        var y = bounds.height - bevelWidth - 1
+        for (i, item) in items.enumerated() {
+            if item.isSeparator {
+                y -= 9
+                NSColor(white: 0.85, alpha: 1).setStroke()
+                let line = NSBezierPath()
+                line.move(to: NSPoint(x: 8, y: y + 4.5))
+                line.line(to: NSPoint(x: bounds.width - 8, y: y + 4.5))
+                line.lineWidth = 1; line.stroke()
+                continue
+            }
+            let r = NSRect(x: 2, y: y - itemHeight, width: bounds.width - 4, height: itemHeight)
+            y -= itemHeight
+            if hoveredIndex == i {
+                selection.setFill()
+                NSBezierPath(rect: r).fill()
+            }
+            if let icon = item.icon {
+                icon.draw(in: NSRect(x: r.minX + 6, y: r.midY - iconSize / 2,
+                                     width: iconSize, height: iconSize))
+            }
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: textFont,
+                .foregroundColor: hoveredIndex == i ? selectedText : NSColor.black]
+            let size = (item.title as NSString).size(withAttributes: attrs)
+            (item.title as NSString).draw(at: NSPoint(x: r.minX + 6 + iconSize + 8,
+                                                     y: r.midY - size.height / 2),
+                                          withAttributes: attrs)
+        }
+    }
+
     override func draw(_ dirtyRect: NSRect) {
+        if style != .classic { drawModern(); return }
         let gray = Win98Scheme.activeFaceColor() ?? NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)
         let bw = bevelWidth
 

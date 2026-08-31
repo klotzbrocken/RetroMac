@@ -249,8 +249,8 @@
       "name": "Defrag",
       "icon": "defrag.png",
       "type": "defrag",
-      "gridX": 0,
-      "gridY": 16
+      "gridX": 1,
+      "gridY": 7
     },
     {
       "name": "Screen Saver",

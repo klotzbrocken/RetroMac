@@ -611,6 +611,12 @@ final class DockView: NSView {
                 hasTrayIcon = false
                 traySize = 0
             }
+            // XP's tray is roomier than Win98's — it also carries the hidden-icons chevron —
+            // and its speaker artwork is smaller in the frame than the ICQ badge next to it.
+            // At Win98's 3pt gap and equal size the two read as one smudge.
+            let isXPTray = theme.isXPStartMenu
+            let speakerSize = isXPTray ? traySize * 1.2 : traySize
+            let speakerGap = isXPTray ? trayPad + 6 : trayPad
 
             if hasClock {
                 updateClockString()
@@ -625,7 +631,7 @@ final class DockView: NSView {
                 if hasTrayIcon {
                     clockWidth += traySize + trayPad * 2 + 2
                     if RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable {
-                        clockWidth += traySize + trayPad
+                        clockWidth += speakerSize + speakerGap
                     }
                     // On XP the ICQ icon is shifted right past the systray chevron, so
                     // reserve the extra clearance too (chevron half-width + gap).
@@ -669,7 +675,9 @@ final class DockView: NSView {
                 // The speaker sat beside the other tray icons on every Windows of this era.
                 // Skipped when the machine has no output whose volume we can actually move.
                 traySpeakerFrame = (RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable)
-                    ? trayIconFrame.offsetBy(dx: traySize + trayPad, dy: 0)
+                    ? NSRect(x: trayIconFrame.maxX + speakerGap,
+                             y: clockFrame.midY - speakerSize / 2,
+                             width: speakerSize, height: speakerSize)
                     : .zero
             } else {
                 trayIconFrame = .zero
@@ -932,6 +940,12 @@ final class DockView: NSView {
                 hasTrayIcon = false
                 traySize = 0
             }
+            // XP's tray is roomier than Win98's — it also carries the hidden-icons chevron —
+            // and its speaker artwork is smaller in the frame than the ICQ badge next to it.
+            // At Win98's 3pt gap and equal size the two read as one smudge.
+            let isXPTray = theme.isXPStartMenu
+            let speakerSize = isXPTray ? traySize * 1.2 : traySize
+            let speakerGap = isXPTray ? trayPad + 6 : trayPad
 
             if hasClock {
                 updateClockString()
@@ -946,7 +960,7 @@ final class DockView: NSView {
                 if hasTrayIcon {
                     clockWidth += traySize + trayPad * 2 + 2
                     if RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable {
-                        clockWidth += traySize + trayPad
+                        clockWidth += speakerSize + speakerGap
                     }
                     // On XP the ICQ icon is shifted right past the systray chevron, so
                     // reserve the extra clearance too (chevron half-width + gap).
@@ -990,7 +1004,9 @@ final class DockView: NSView {
                 // The speaker sat beside the other tray icons on every Windows of this era.
                 // Skipped when the machine has no output whose volume we can actually move.
                 traySpeakerFrame = (RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable)
-                    ? trayIconFrame.offsetBy(dx: traySize + trayPad, dy: 0)
+                    ? NSRect(x: trayIconFrame.maxX + speakerGap,
+                             y: clockFrame.midY - speakerSize / 2,
+                             width: speakerSize, height: speakerSize)
                     : .zero
             } else {
                 trayIconFrame = .zero
@@ -2950,9 +2966,15 @@ final class DockView: NSView {
             if let img = startMenuIcon("volume.png") {
                 // Period artwork from the theme; dimmed while muted, which is how the tray
                 // showed it before the crossed-out speaker existed.
+                // Nearest-neighbour only where the theme asks for it. The speaker used to be
+                // hardcoded to it, so on XP a 32px icon scaled to ~21pt lost whole rows of
+                // pixels and looked ragged beside the smoothly drawn ICQ badge.
+                let pixelated = ThemeManager.shared.activeTheme?.config.isPixelated ?? true
                 img.draw(in: traySpeakerFrame, from: .zero, operation: .sourceOver,
                          fraction: SystemVolume.isMuted ? 0.4 : 1.0,
-                         respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
+                         respectFlipped: true,
+                         hints: pixelated ? [.interpolation: NSImageInterpolation.none]
+                                          : [.interpolation: NSImageInterpolation.high])
             } else if let img = NSImage(systemSymbolName:
                         SystemVolume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                         accessibilityDescription: "Volume") {
@@ -3992,8 +4014,9 @@ final class DockView: NSView {
         let data = StartMenuPanel.XPMenuData(
             leftItems: leftItems,
             rightItems: rightItems,
+            allProgramsItems: startMenuProgramItems(),
             allProgramsAction: {
-                // Open Finder's Applications folder
+                // Fallback only: with a Programs list present, the row opens the flyout instead.
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications"))
             },
             logOffAction: {
@@ -4048,6 +4071,7 @@ final class DockView: NSView {
         let data = StartMenuPanel.XPMenuData(
             leftItems: leftItems,
             rightItems: rightItems,
+            allProgramsItems: startMenuProgramItems(),
             allProgramsAction: open(URL(fileURLWithPath: "/Applications")),
             logOffAction: { NSAppleScript(source: "tell application \"System Events\" to log out")?.executeAndReturnError(nil) },
             shutDownAction: { NSAppleScript(source: "tell application \"System Events\" to shut down")?.executeAndReturnError(nil) },
@@ -4062,21 +4086,16 @@ final class DockView: NSView {
         panel.showWin7(data: data, at: pt, in: self, startButtonRect: startButtonFrame)
     }
 
-    private func showClassicStartMenu() {
+    /// The Programs list — every dock app, then whatever else is running, then Re:Amp.
+    /// Shared by all three Start menus: the classic Programs submenu and the XP and
+    /// Windows 7 "All Programs" flyouts show the same list.
+    private func startMenuProgramItems() -> [StartMenuPanel.MenuItem] {
         typealias MI = StartMenuPanel.MenuItem
-
-        // Win98 start-menu icon loader (mirrors the XP `xpIcon` pattern): loads a
-        // 16px glyph from the active theme's icons directory.
-        let win98Icon = { (filename: String) -> NSImage? in
-            self.startMenuIcon(filename)
-        }
-
-        // Programs submenu items
         var programItems: [MI] = []
         for app in AppManager.shared.apps {
             let bid = app.bundleID
             // Use the THEME-mapped icon (same as the dock), not the raw macOS app icon,
-            // so the Programs submenu matches the Win98 look.
+            // so the list matches whichever Windows the theme is.
             let icon = ThemeManager.shared.icon(for: bid, size: 20)
             if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
                 let name = FileManager.default.displayName(atPath: appURL.path)
@@ -4118,6 +4137,19 @@ final class DockView: NSView {
             programItems.append(MI(separator: true))
             programItems.append(reampItem)
         }
+        return programItems
+    }
+
+    private func showClassicStartMenu() {
+        typealias MI = StartMenuPanel.MenuItem
+
+        // Win98 start-menu icon loader (mirrors the XP `xpIcon` pattern): loads a
+        // 16px glyph from the active theme's icons directory.
+        let win98Icon = { (filename: String) -> NSImage? in
+            self.startMenuIcon(filename)
+        }
+
+        let programItems = startMenuProgramItems()
 
         // Favorites submenu items
         var favItems: [MI] = []
