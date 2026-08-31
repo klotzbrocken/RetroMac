@@ -15,6 +15,28 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.8.3</title>
+      <pubDate>Mon, 31 Aug 2026 02:44:15 +0000</pubDate>
+      <sparkle:version>2.8.3</sparkle:version>
+      <sparkle:shortVersionString>2.8.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.8.3</h2>
+        <ul>
+          <li><b>Putting your system cursors back is reliable now.</b> Restoring used to delete its own backup, so the next themed cursor captured whatever was on screen &mdash; after one imperfect restore the theme&rsquo;s cursors became the stored &ldquo;originals&rdquo; and the real ones were gone. The backup is kept for good, capture refuses to run while a theme is applied, and restore clears the old state before putting the originals back. It also restores per cursor identifier rather than per logical slot, which matters more than it sounds: the spinner alone is a 24&times;24 image of 24 frames under one name and a 28&times;40 image of 15 frames under another.</li>
+          <li><b>&ldquo;Apply to Full Screen&rdquo; is in the menu bar.</b> Only &ldquo;Apply to Window&hellip;&rdquo; had an entry, so once the effect was on a single window there was no visible way back. Both sit together now, with the active one ticked.</li>
+          <li>Under the hood: the dock works out its row once instead of in four separate places kept in step by hand. That is what let the trash escape the bar in 2.8, and it had quietly caused two more mismatches nobody had noticed.</li>
+        </ul>
+        <p>Everything new in 2.8 &mdash; Snow Leopard&rsquo;s own chrome, Dashboard, Expos&eacute;, the 10.6 stacks, the Disk Defragmenter, Flurry and phosphor persistence &mdash; is included.</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.8.3/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="5BOHiAM6BEtgYemm5bUn83orjEpsfRK+OZ2ZxHlAp70ikdvl53sCUqlKtzpwIpUUR626YPjyN7yl4dOgN7f0AA=="
+        length="94176875"
+      />
+    </item>
+    <item>
       <title>Version 2.8.2</title>
       <pubDate>Fri, 28 Aug 2026 11:48:17 +0000</pubDate>
       <sparkle:version>2.8.2</sparkle:version>
