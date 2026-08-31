@@ -42,6 +42,12 @@ enum WarcraftGame {
     }
     static var engineURL: URL? { gamesDir?.appendingPathComponent("stratagus") }
     static var wartoolURL: URL? { gamesDir?.appendingPathComponent("wartool") }
+    static var war1toolURL: URL? { gamesDir?.appendingPathComponent("war1tool") }
+
+    /// The extractor for a title. Warcraft I has its own tool, built from war1gus.
+    static func extractorURL(_ title: Title) -> URL? {
+        title == .warcraft2 ? wartoolURL : war1toolURL
+    }
 
     /// True when the engine and this title's game logic are present in the bundle.
     static func isEngineAvailable(_ title: Title) -> Bool {
@@ -75,16 +81,26 @@ enum WarcraftGame {
     /// True when `dir` is a raw game installation — i.e. it holds the archives the extractor
     /// reads (maindat.war and friends), rather than data someone already extracted.
     static func looksLikeInstallation(at dir: URL, _ title: Title) -> Bool {
-        // Only Warcraft II for now: extracting Warcraft I needs war1tool, which this build
-        // does not produce (war1gus is vendored for its game logic only).
-        guard title == .warcraft2, canExtract(title) else { return false }
-        guard let items = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return false }
-        return items.contains { $0.lowercased() == "maindat.war" }
+        guard canExtract(title) else { return false }
+        let fm = FileManager.default
+        // Warcraft I's extractor reads data.war, and accepts it either loose or one level down
+        // in DATA/ — the same places war1tool itself looks.
+        let marker = title == .warcraft2 ? "maindat.war" : "data.war"
+        func holdsMarker(_ d: URL) -> Bool {
+            guard let items = try? fm.contentsOfDirectory(atPath: d.path) else { return false }
+            return items.contains { $0.lowercased() == marker }
+        }
+        if holdsMarker(dir) { return true }
+        guard title == .warcraft1 else { return false }
+        return ["DATA", "data", "FDATA", "fdata"]
+            .contains { holdsMarker(dir.appendingPathComponent($0)) }
     }
 
     /// Whether RetroMac can extract this title itself (i.e. the matching tool is bundled).
+    /// Warcraft I needs war1tool, which older builds did not produce — hence the check rather
+    /// than an assumption that both are always there.
     static func canExtract(_ title: Title) -> Bool {
-        guard title == .warcraft2, let tool = wartoolURL else { return false }
+        guard let tool = extractorURL(title) else { return false }
         return FileManager.default.isExecutableFile(atPath: tool.path)
     }
 
@@ -100,7 +116,7 @@ enum WarcraftGame {
     /// Off the main thread; `completion` lands back on the main queue.
     static func extract(_ title: Title, from source: URL,
                         completion: @escaping (Result<URL, ExtractionFailure>) -> Void) {
-        guard let tool = wartoolURL, FileManager.default.isExecutableFile(atPath: tool.path) else {
+        guard let tool = extractorURL(title), FileManager.default.isExecutableFile(atPath: tool.path) else {
             completion(.failure(ExtractionFailure(message: "The extraction tool is not bundled with this build.")))
             return
         }

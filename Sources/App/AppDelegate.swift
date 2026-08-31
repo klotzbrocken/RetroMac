@@ -251,6 +251,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { self.openSettings() }
         }
 
+        // QA hook: open the Game Library, same reason as the Settings hook above.
+        if ProcessInfo.processInfo.environment["RETROMAC_OPEN_GAME_LIBRARY"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { self.openGameLibrary() }
+        }
+
         // QA hook: force the onboarding coach marks (bypasses the one-time gate).
         if ProcessInfo.processInfo.environment["RETROMAC_FORCE_COACH"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { CoachMarkController.shared.forceShow() }
@@ -1312,75 +1317,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // (Television submenu removed — channels live in the TV Tube toggle + its
         // right-click menu; the dock/start-menu entries start the Tube directly.)
 
-        // Games submenu with value chip
-        let gamesItem = NSMenuItem(title: "Games", action: nil, keyEquivalent: "")
+        // Games: one click, straight into the Library. It used to be a submenu, but since the
+        // individual "Play …" entries moved into the Library window there was nothing else in it
+        // — a submenu whose only job was to hold a single item.
+        let gamesItem = NSMenuItem(title: "Game Library\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
+        gamesItem.target = self
         gamesItem.image = sfIcon("gamecontroller")
-        gamesItem.attributedTitle = menuTitle("Games", value: "Auto")
-        let gamesMenu = NSMenu()
+        menu.addItem(gamesItem)
 
-        let doomItem = NSMenuItem(title: "Play Doom", action: #selector(launchDoom), keyEquivalent: "")
-        doomItem.target = self
-        doomItem.image = sfIcon("flame")
-        gamesMenu.addItem(doomItem)
-
-        let duke3dItem = NSMenuItem(title: "Play Duke Nukem 3D", action: #selector(launchDuke3D), keyEquivalent: "")
-        duke3dItem.target = self
-        duke3dItem.image = sfIcon("bolt.fill")
-        gamesMenu.addItem(duke3dItem)
-
-        gamesMenu.addItem(NSMenuItem.separator())
-
-        let hereticItem = NSMenuItem(title: "Play Heretic", action: #selector(launchHeretic), keyEquivalent: "")
-        hereticItem.target = self
-        hereticItem.image = sfIcon("wand.and.stars")
-        gamesMenu.addItem(hereticItem)
-
-        let swItem = NSMenuItem(title: "Play Shadow Warrior", action: #selector(launchShadowWarrior), keyEquivalent: "")
-        swItem.target = self
-        swItem.image = sfIcon("figure.martial.arts")
-        gamesMenu.addItem(swItem)
-
-        let freedoomItem = NSMenuItem(title: "Play Freedoom", action: #selector(launchFreedoom), keyEquivalent: "")
-        freedoomItem.target = self
-        freedoomItem.image = sfIcon("shield.fill")
-        gamesMenu.addItem(freedoomItem)
-
-        gamesMenu.addItem(NSMenuItem.separator())
-
-        let quakeItem = NSMenuItem(title: "Play Quake", action: #selector(launchQuake), keyEquivalent: "")
-        quakeItem.target = self
-        quakeItem.image = sfIcon("bolt.horizontal.fill")
-        gamesMenu.addItem(quakeItem)
-
-        let quake2Item = NSMenuItem(title: "Play Quake II", action: #selector(launchQuake2), keyEquivalent: "")
-        quake2Item.target = self
-        quake2Item.image = sfIcon("bolt.horizontal.fill")
-        gamesMenu.addItem(quake2Item)
-
-        // Warcraft I + II (bundled Stratagus engine) — only listed once the user has
-        // pointed RetroMac at their own game data.
-        let warcraftTitles: [WarcraftGame.Title] = [.warcraft1, .warcraft2]
-            .filter { WarcraftGame.isPlayable($0) }
-        if !warcraftTitles.isEmpty {
-            gamesMenu.addItem(NSMenuItem.separator())
-            for title in warcraftTitles {
-                let item = NSMenuItem(title: "Play \(title.displayName)",
-                                      action: #selector(launchWarcraft(_:)), keyEquivalent: "")
-                item.target = self
-                item.image = sfIcon("shield.lefthalf.filled")
-                item.representedObject = title.rawValue
-                gamesMenu.addItem(item)
-            }
-        }
-
-        // Retro Games from ROM library
+        // Imported ROMs are a different thing from the Library — the user's own files, played
+        // through RetroArch — so they keep their own submenu, and only when there are any.
         let romEntries = ROMLibrary.shared.entries
         if !romEntries.isEmpty {
-            gamesMenu.addItem(NSMenuItem.separator())
-            let retroHeader = NSMenuItem(title: "Retro Games", action: nil, keyEquivalent: "")
-            retroHeader.isEnabled = false
-            gamesMenu.addItem(retroHeader)
-
+            let retroItem = NSMenuItem(title: "Retro Games", action: nil, keyEquivalent: "")
+            retroItem.image = sfIcon("gamecontroller.fill")
+            let retroMenu = NSMenu()
             for rom in romEntries.prefix(15) {
                 let romItem = NSMenuItem(
                     title: "\(rom.displayName)  (\(rom.system.shortName))",
@@ -1391,12 +1342,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 romItem.representedObject = rom.id
                 romItem.image = sfIcon(rom.system.sfSymbol)
                 romItem.isEnabled = rom.system.emulator.isInstalled
-                gamesMenu.addItem(romItem)
+                retroMenu.addItem(romItem)
             }
+            retroItem.submenu = retroMenu
+            menu.addItem(retroItem)
         }
-
-        gamesItem.submenu = gamesMenu
-        menu.addItem(gamesItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -2979,16 +2929,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - Warcraft Launcher
-
-    /// Play Warcraft I / II on the bundled Stratagus engine (menu item's representedObject
-    /// carries the title). The CRT look is applied inside the engine — see WarcraftGame.
-    @objc private func launchWarcraft(_ sender: NSMenuItem) {
-        guard let raw = sender.representedObject as? String,
-              let title = WarcraftGame.Title(rawValue: raw) else { return }
-        WarcraftGame.launch(title)
-    }
-
     // MARK: - Doom Launcher
 
     @objc private func launchDoom() {
@@ -3237,6 +3177,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Heretic Launcher (GZDoom)
+
+    @objc func openGameLibrary() {
+        GameLibraryWindowController.shared.show()
+    }
 
     @objc private func launchHeretic() {
         guard FileManager.default.fileExists(atPath: "/Applications/GZDoom.app") else {
@@ -3621,14 +3565,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let vkQuakePath = "/Applications/vkQuake.app"
 
         guard fm.fileExists(atPath: vkQuakePath) else {
-            let alert = NSAlert()
-            alert.messageText = "vkQuake Not Installed"
-            alert.informativeText = "Please install vkQuake to play Quake.\n\nYou can download it from the vkQuake GitHub releases page."
-            alert.addButton(withTitle: "Open Download Page")
-            alert.addButton(withTitle: "Cancel")
-            if alert.runModal() == .alertFirstButtonReturn {
-                NSWorkspace.shared.open(URL(string: "https://github.com/Novum/vkQuake/releases")!)
-            }
+            ensureEngineApp(named: "vkQuake", gameName: "Quake", size: "~11 MB",
+                            source: "github.com/MacSourcePorts/vkQuake",
+                            install: installVkQuake) { [weak self] in self?.launchQuake() }
             return
         }
 
@@ -3678,20 +3617,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func launchQuake2() {
         let fm = FileManager.default
-        let yamagiPath = "/Applications/quake2.app"
-        let yamagiAltPath = "/Applications/Yamagi Quake II.app"
-        let actualPath = fm.fileExists(atPath: yamagiPath) ? yamagiPath :
-                         fm.fileExists(atPath: yamagiAltPath) ? yamagiAltPath : nil
+        // `yquake2.app` first: that is what the notarized macOS build is called. Only the two
+        // older spellings were checked before, so even a hand-installed engine went unseen.
+        let actualPath = InternetArchive.Engine.yquake2.appPaths.first { fm.fileExists(atPath: $0) }
 
         guard let appPath = actualPath else {
-            let alert = NSAlert()
-            alert.messageText = "Yamagi Quake II Not Installed"
-            alert.informativeText = "Please install Yamagi Quake II to play Quake II.\n\nYou can download it from the official website or install via Homebrew:\nbrew install yamagi-quake2"
-            alert.addButton(withTitle: "Open Download Page")
-            alert.addButton(withTitle: "Cancel")
-            if alert.runModal() == .alertFirstButtonReturn {
-                NSWorkspace.shared.open(URL(string: "https://www.yamagi.org/quake2/")!)
-            }
+            ensureEngineApp(named: "Yamagi Quake II", gameName: "Quake II", size: "~7 MB",
+                            source: "github.com/MacSourcePorts/yquake2",
+                            install: installYQuake2) { [weak self] in self?.launchQuake2() }
             return
         }
 
@@ -3713,8 +3646,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func launchYamagiQuake2(appPath: String, basePath: String) {
         let appURL = URL(fileURLWithPath: appPath)
         let config = NSWorkspace.OpenConfiguration()
+        // `basePath` was only ever TESTED for baseq2/pak0.pak and never handed to the engine,
+        // unlike launchVkQuake. Anything installed outside the engine's own default folder was
+        // therefore found by the check and then ignored at launch.
+        //
+        // The flag is `-datadir`, NOT the `-basedir` vkQuake takes: yquake2 documents `-datadir`
+        // as the unicode-safe replacement for the old `+set basedir`, and does not accept a bare
+        // `-basedir` at all.
+        config.arguments = ["-datadir", basePath]
         let preset = AppSettings.shared.quake2LitePreset
-        print("[Quake2] Launching Yamagi Quake II with preset=\(preset)")
+        print("[Quake2] Launching Yamagi Quake II with preset=\(preset) datadir=\(basePath)")
 
         NSWorkspace.shared.openApplication(at: appURL, configuration: config) { [weak self] app, error in
             if let error = error {
@@ -4094,17 +4035,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installZDoomApp(repo: "ZDoom/gzdoom", appName: "GZDoom", label: "Doom", completion: completion)
     }
 
+    /// Download and install vkQuake.app — the MacSourcePorts build, which is what the launcher
+    /// has always expected (`com.macsourceports.vkQuake`). Novum/vkQuake itself ships no macOS
+    /// binary, so the old "open the releases page" dialog sent people somewhere with nothing to
+    /// download for their machine.
+    private func installVkQuake(completion: @escaping (Bool) -> Void) {
+        installReleaseApp(repo: "MacSourcePorts/vkQuake", appName: "vkQuake", label: "Quake",
+                          expectedBundleID: "com.macsourceports.vkQuake", completion: completion)
+    }
+
+    /// Download and install yquake2.app (Yamagi Quake II), same publisher as vkQuake.
+    private func installYQuake2(completion: @escaping (Bool) -> Void) {
+        installReleaseApp(repo: "MacSourcePorts/yquake2", appName: "yquake2", label: "Quake2",
+                          expectedBundleID: "com.macsourceports.yquake2", completion: completion)
+    }
+
     /// Generic installer for a ZDoom-family macOS app (Raze / GZDoom): fetch the latest
     /// GitHub release, pick the macOS .dmg/.zip asset, and install <appName>.app to
     /// /Applications. `label` is only a log prefix.
     private func installZDoomApp(repo: String, appName: String, label: String,
                                  completion: @escaping (Bool) -> Void) {
+        // ZDoom names its assets "…macos…"; MacSourcePorts just names them after the app.
+        installReleaseApp(repo: repo, appName: appName, label: label,
+                          matches: { $0.contains("macos") && ($0.hasSuffix(".dmg") || $0.hasSuffix(".zip")) },
+                          completion: completion)
+    }
+
+    /// Fetch the latest GitHub release of `repo`, pick a macOS asset and install <appName>.app
+    /// into /Applications. `expectedBundleID` is enforced where the signed identity is known.
+    private func installReleaseApp(repo: String, appName: String, label: String,
+                                   matches: @escaping (String) -> Bool = { $0.hasSuffix(".dmg") || $0.hasSuffix(".zip") },
+                                   expectedBundleID: String? = nil,
+                                   completion: @escaping (Bool) -> Void) {
         let progressWindow = createProgressWindow(title: "Installing \(appName)…", detail: "Fetching latest release from GitHub…")
 
-        // Prefer .dmg, then .zip (Raze ships DMG, GZDoom ships ZIP).
-        TrustedDownloadInstaller.latestReleaseAsset(repo: repo, matches: { name in
-            name.contains("macos") && (name.hasSuffix(".dmg") || name.hasSuffix(".zip"))
-        }) { [weak self] result in
+        TrustedDownloadInstaller.latestReleaseAsset(repo: repo, matches: matches) { [weak self] result in
             switch result {
             case .failure(.fetchFailed(let message)):
                 DispatchQueue.main.async {
@@ -4160,13 +4125,98 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         DispatchQueue.main.async { progressWindow.close(); completion(success) }
                     }
                     if isDMG {
-                        self?.installAppFromDMG(dmgPath: tempURL.path, tempDir: tempDir, appName: appName, label: label, completion: finish)
+                        self?.installAppFromDMG(dmgPath: tempURL.path, tempDir: tempDir, appName: appName,
+                                                label: label, expectedBundleID: expectedBundleID, completion: finish)
                     } else {
-                        self?.installAppFromZip(zipPath: tempURL.path, tempDir: tempDir, appName: appName, label: label, completion: finish)
+                        self?.installAppFromZip(zipPath: tempURL.path, tempDir: tempDir, appName: appName,
+                                                label: label, expectedBundleID: expectedBundleID, completion: finish)
                     }
                 }.resume()
             }
         }
+    }
+
+    /// Ask once, then install the engine and carry on into the game. The Quake engines used to
+    /// stop here with a link to a web page, which for vkQuake did not even offer a macOS build.
+    private func ensureEngineApp(named engineName: String, gameName: String, size: String,
+                                 source: String,
+                                 install: (@escaping (Bool) -> Void) -> Void,
+                                 launch: @escaping () -> Void) {
+        let alert = NSAlert()
+        alert.messageText = "\(engineName) Required"
+        alert.informativeText = "\(gameName) runs on \(engineName), which isn't installed yet.\n\nDownload and install it now? (\(size) from \(source))"
+        alert.addButton(withTitle: "Install \(engineName)")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        install { success in
+            if success { launch() }
+        }
+    }
+
+    /// Install whatever a Game Library title needs, if it is missing. The gallery calls this so
+    /// engine and game data arrive in one go instead of the data landing next to a dead end.
+    func ensureEngine(_ engine: InternetArchive.Engine, completion: @escaping (Bool) -> Void) {
+        // Always back on the main queue: the installers finish on a URLSession thread, and the
+        // gallery updates SwiftUI state in here.
+        let done: (Bool) -> Void = { ok in
+            if Thread.isMainThread { completion(ok) } else { DispatchQueue.main.async { completion(ok) } }
+        }
+        guard !engine.isInstalled else { done(true); return }
+        switch engine {
+        case .gzdoom:  installGZDoom(completion: done)
+        case .raze:    installRaze(completion: done)
+        case .vkQuake: installVkQuake(completion: done)
+        case .yquake2: installYQuake2(completion: done)
+        case .bundled: done(false)   // ships with RetroMac; nothing to fetch
+        }
+    }
+
+    /// Fetch a title whose data does not come from the Internet Archive: Freedoom from its own
+    /// GitHub release, Shadow Warrior's shareware episode. Both already had a downloader here.
+    func fetchBuiltInGame(_ kind: InternetArchive.BuiltIn, completion: @escaping (Bool) -> Void) {
+        let done: (Bool) -> Void = { ok in
+            if Thread.isMainThread { completion(ok) } else { DispatchQueue.main.async { completion(ok) } }
+        }
+        switch kind {
+        case .freedoom:      downloadFreedoom(completion: done)
+        case .shadowWarrior: downloadSWShareware { done($0 != nil) }
+        }
+    }
+
+    /// Start a Game Library title, using the same launchers the menu and desktop icons use.
+    func launchGame(id: String) {
+        switch id {
+        case "doom":      launchDoom1()
+        case "doom2":     launchDoom2()
+        case "heretic":   launchHeretic()
+        case "duke3d":    launchDuke3D()
+        case "quake":     launchQuake()
+        case "quake2":    launchQuake2()
+        case "freedoom":  launchFreedoom()
+        case "shadowwarrior": launchShadowWarrior()
+        case "warcraft1": WarcraftGame.launch(.warcraft1)
+        case "warcraft2": WarcraftGame.launch(.warcraft2)
+        default:          break
+        }
+    }
+
+    /// Doom and Doom II are separate games sharing one WAD folder, so the Library needs to start
+    /// one specific IWAD. `launchDoom` picks the "best" WAD it can find, which is Doom II when
+    /// both are installed — right for a single menu entry, wrong for two cards.
+    @objc private func launchDoom1() { launchDoomIWAD(id: "doom", gameName: "Doom") }
+    @objc private func launchDoom2() { launchDoomIWAD(id: "doom2", gameName: "Doom II") }
+
+    private func launchDoomIWAD(id: String, gameName: String) {
+        guard FileManager.default.fileExists(atPath: "/Applications/GZDoom.app") else {
+            ensureGZDoom(gameName: gameName) { [weak self] in self?.launchDoomIWAD(id: id, gameName: gameName) }
+            return
+        }
+        guard let t = InternetArchive.title(id: id),
+              let wad = InternetArchive.installedFiles(t).first else {
+            launchDoom()   // nothing specific found: fall back to the old broad search
+            return
+        }
+        launchGZDoomGame(wadPath: wad.path, gameName: gameName)
     }
 
     /// Ensure GZDoom is installed, offering a one-click auto-download (like Raze) if not,
@@ -4188,7 +4238,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Extract <appName>.app from a ZIP and install to /Applications
-    private func installAppFromZip(zipPath: String, tempDir: String, appName: String, label: String, completion: @escaping (Bool) -> Void) {
+    private func installAppFromZip(zipPath: String, tempDir: String, appName: String, label: String,
+                                   expectedBundleID: String? = nil, completion: @escaping (Bool) -> Void) {
         guard runUnzip(zipPath, into: tempDir) else {
             print("[\(label)] Unzip failed (non-zero exit)")
             completion(false)
@@ -4209,11 +4260,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        copyAppToApplications(appPath: appPath, targetName: "\(appName).app", completion: completion)
+        copyAppToApplications(appPath: appPath, targetName: "\(appName).app",
+                              expectedBundleID: expectedBundleID, completion: completion)
     }
 
     /// Mount a DMG, find <appName>.app, copy it out, install to /Applications.
-    private func installAppFromDMG(dmgPath: String, tempDir: String, appName: String, label: String, completion: @escaping (Bool) -> Void) {
+    private func installAppFromDMG(dmgPath: String, tempDir: String, appName: String, label: String,
+                                   expectedBundleID: String? = nil, completion: @escaping (Bool) -> Void) {
         // Copy the app OUT of the read-only volume before it is detached.
         let localApp: URL? = TrustedDownloadInstaller.withMountedDMG(URL(fileURLWithPath: dmgPath)) { mount in
             guard let app = TrustedDownloadInstaller.findAppBundle(named: appName, in: mount) else { return nil }
@@ -4235,7 +4288,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             completion(false)
             return
         }
-        copyAppToApplications(appPath: app.path, targetName: "\(appName).app", completion: completion)
+        copyAppToApplications(appPath: app.path, targetName: "\(appName).app",
+                              expectedBundleID: expectedBundleID, completion: completion)
     }
 
     private func findAppBundle(named name: String, in directory: String) -> String? {

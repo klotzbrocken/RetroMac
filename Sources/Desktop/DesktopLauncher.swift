@@ -116,10 +116,14 @@ enum DesktopLauncher {
 
         // Native PC games launched from a themed desktop shortcut (added by the Setup Assistant).
         // Doom/Duke3D/Quake go through the AppDelegate's @objc launchers; Warcraft is static.
-        case "doom":       (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchDoom")))
+        case "doom":       (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchDoom1")))
+        case "doom2":      (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchDoom2")))
         case "duke3d":     (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchDuke3D")))
         case "quake":      (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchQuake")))
         case "quake2":     (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchQuake2")))
+        // Heretic already had an icon and a place in the icon list; only the launch was missing,
+        // so a Heretic desktop icon drew correctly and did nothing when opened.
+        case "heretic":    (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchHeretic")))
         case "warcraft2":  WarcraftGame.launch(.warcraft2)
         case "warcraft1":  WarcraftGame.launch(.warcraft1)
 

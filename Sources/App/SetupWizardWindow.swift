@@ -45,6 +45,8 @@ struct SetupWizardView: View {
     @State private var addShortcut: [String: Bool] = [:]   // shortcut type → create a themed desktop icon
     @State private var wcStatus: [String: String] = [:]    // Warcraft extraction status per title
     @State private var dataTick = 0                        // bump to re-read folder settings after a pick
+    @State private var dlActive: String?                   // title id currently downloading
+    @State private var dlStatus: String = ""               // its progress line
     @State private var desktopTick = 0                     // ditto for the desktop shortcut list
 
     // Theme page — which theme to switch to on finish ("" = keep current)
@@ -319,6 +321,8 @@ struct SetupWizardView: View {
                 }
                 Text("RetroMac only ships the open-source engines / game logic — the games themselves must come from your own copy. Doom and Duke Nukem also need GZDoom / Raze installed (Settings ▸ Games).")
                     .font(.caption2).foregroundStyle(.secondary)
+                Button("Browse the Game Library…") { GameLibraryWindowController.shared.show() }
+                    .buttonStyle(.link).font(.caption)
             }
         }
     }
@@ -333,13 +337,55 @@ struct SetupWizardView: View {
                 Text(has ? "Game data set." : g.dataHint).font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let s = wcStatus[g.id] { Text(s).font(.caption2).foregroundStyle(.orange) }
+                if dlActive == g.id {
+                    Text(dlStatus).font(.caption2).foregroundStyle(.secondary)
+                }
                 Toggle("Add desktop shortcut", isOn: Binding(
                     get: { addShortcut[g.id] ?? false }, set: { addShortcut[g.id] = $0 }))
                     .font(.caption).toggleStyle(.checkbox)
             }
             Spacer()
-            Button(has ? "Change…" : "Choose…") { g.choose() }
+            VStack(alignment: .trailing, spacing: 4) {
+                Button(has ? "Change…" : "Choose…") { g.choose() }
+                // Second source: the same data from the Internet Archive, for people who no longer
+                // have the discs. The gallery carries the licence caveat in full.
+                if let t = InternetArchive.title(id: g.id) {
+                    Button(dlActive == g.id ? "Cancel" : "Download \(InternetArchive.sizeText(t.bytes))") {
+                        dlActive == g.id ? GameDownloader.shared.cancel() : startDownload(t)
+                    }
+                    .disabled(dlActive != nil && dlActive != g.id)
+                    .font(.caption)
+                }
+            }
         }
+    }
+
+    /// Downloads a title straight from the Games page, reporting into the row.
+    private func startDownload(_ t: InternetArchive.Title) {
+        wcStatus[t.id] = nil
+        dlActive = t.id
+        dlStatus = "Starting…"
+        GameDownloader.shared.fetch(t, progress: { p in
+            let done = ByteCountFormatter.string(fromByteCount: p.received, countStyle: .file)
+            let all = ByteCountFormatter.string(fromByteCount: p.expected, countStyle: .file)
+            dlStatus = p.memberCount > 1
+                ? "\(done) of \(all) — file \(p.memberIndex + 1) of \(p.memberCount)"
+                : "\(done) of \(all)"
+        }, status: { s in
+            dlStatus = s
+        }, completion: { result in
+            dlActive = nil
+            dlStatus = ""
+            if case .failure(let e) = result, !isCancel(e) {
+                wcStatus[t.id] = e.errorDescription ?? "Download failed."
+            }
+            dataTick += 1
+        })
+    }
+
+    private func isCancel(_ e: GameDownloader.Failure) -> Bool {
+        if case .cancelled = e { return true }
+        return false
     }
 
     private func chooseFolder(_ message: String, _ apply: @escaping (String) -> Void) {

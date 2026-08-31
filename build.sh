@@ -247,6 +247,25 @@ if [ -x "$WC_BUILD/stratagus" ]; then
     rm -rf "$WC_DIR"; mkdir -p "$WC_DIR"
     cp "$WC_BUILD/stratagus" "$WC_DIR/stratagus"
     [ -x "$WC_BUILD/wargus/wartool" ] && cp "$WC_BUILD/wargus/wartool" "$WC_DIR/wartool"
+
+    # war1tool — the Warcraft I extractor. war1gus' own CMake wants system libpng/zlib, which
+    # would drag in Homebrew; the Stratagus build already produced both as static libs, so the
+    # three sources are compiled straight against those and the engine's game headers. Result
+    # links against libc++/libSystem only, exactly like wartool. Cached like the engine.
+    W1_PNG="$WC_BUILD/wargus/png/src/png-build"
+    W1_ZLIB="$WC_BUILD/wargus/zlib/src/zlib-build"
+    if [ ! -x "$WC_BUILD/war1tool" ] \
+       && [ -f "vendor/war1gus/war1tool.cpp" ] \
+       && [ -f "$W1_PNG/libpng16.a" ] && [ -f "$W1_ZLIB/libz.a" ]; then
+        clang++ -std=c++17 -O2 -w \
+            -I"$W1_PNG" -I"$W1_ZLIB" -Ivendor/war1gus \
+            -Ivendor/peonpad/engine/stratagus/gameheaders \
+            vendor/war1gus/war1tool.cpp vendor/war1gus/xmi2mid.cpp vendor/war1gus/scale2x.cpp \
+            "$W1_PNG/libpng16.a" "$W1_ZLIB/libz.a" \
+            -o "$WC_BUILD/war1tool" 2>/dev/null \
+          || echo "  ⚠ war1tool build failed — Warcraft I extraction unavailable"
+    fi
+    [ -x "$WC_BUILD/war1tool" ] && cp "$WC_BUILD/war1tool" "$WC_DIR/war1tool"
     # Ship the GPL game logic only; the media half always comes from the user's own copy
     # of the game. The engine's OWN scripts must be used — some distributions (e.g. the
     # PS Vita release) ship scripts patched for engine functions this build doesn't have.
@@ -263,6 +282,7 @@ if [ -x "$WC_BUILD/stratagus" ]; then
     done
     codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$WC_DIR/stratagus"
     [ -f "$WC_DIR/wartool" ] && codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$WC_DIR/wartool"
+    [ -f "$WC_DIR/war1tool" ] && codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$WC_DIR/war1tool"
     echo "  ✓ Warcraft engine (Stratagus) + WC1/WC2 game logic embedded"
 else
     echo "  ⚠ Stratagus not built — Warcraft I/II not bundled (needs: brew install cmake pkg-config)"

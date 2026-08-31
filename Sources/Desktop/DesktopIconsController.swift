@@ -304,8 +304,10 @@ final class DesktopIconsController {
 
         // Native-game shortcut types (Setup Assistant): use the bundled per-game icon, else a
         // game-controller glyph.
-        if ["doom", "duke3d", "quake", "quake2", "warcraft2", "warcraft1", "heretic", "pacman"].contains(entry.type) {
-            if let url = Bundle.main.resourceURL?.appendingPathComponent("GameIcons/\(entry.type).png"),
+        if ["doom", "doom2", "duke3d", "quake", "quake2", "warcraft2", "warcraft1", "heretic", "pacman"].contains(entry.type) {
+            // Doom II rides on Doom's icon: the box art differs, the shell icon never did.
+            let art = entry.type == "doom2" ? "doom" : entry.type
+            if let url = Bundle.main.resourceURL?.appendingPathComponent("GameIcons/\(art).png"),
                let img = NSImage(contentsOf: url) {
                 img.size = NSSize(width: size, height: size)
                 return img

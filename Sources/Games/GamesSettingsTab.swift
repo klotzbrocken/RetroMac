@@ -1,17 +1,17 @@
 import SwiftUI
 
+/// Settings that the Game Library window cannot show.
+///
+/// This tab used to carry a collapsible section per game — Doom, Duke Nukem 3D, Heretic, Shadow
+/// Warrior, Freedoom, Quake, Quake II and both Warcrafts — each with an engine status line, a
+/// folder picker and a Play button. The Library does all of that now, with cover art, download
+/// sizes and a tick on what is installed, so those nine sections were a worse second copy of one
+/// window. What is left here is what the Library has no place for: the CRT switches, where the
+/// game data lives on disk, ROMs and emulators.
 struct GamesSettingsTab: View {
     @ObservedObject private var settings = AppSettings.shared
     @State private var wadFiles: [String] = []
-    @State private var gzdoomInstalled = false
     @State private var grpFiles: [String] = []
-    @State private var razeInstalled = false
-    @State private var vkQuakeInstalled = false
-    @State private var yamagiQ2Installed = false
-    /// Per-title message from the last folder pick / extraction (keyed by Title.rawValue).
-    @State private var wcStatus: [String: String] = [:]
-    /// Title.rawValue of the extraction currently running, if any.
-    @State private var wcExtracting: String? = nil
 
     /// Every CRT preset, grouped as the registry orders them ("" = None).
     private var allPresets: [(String, String)] {
@@ -24,14 +24,20 @@ struct GamesSettingsTab: View {
 
     var body: some View {
         Form {
+            librarySection
+
             // One global CRT switch for all bundled PC games (replaces per-game toggles).
             Section("Game effects") {
                 Toggle("Apply CRT effect to games", isOn: $settings.gamesCRTEnabled)
                     .toggleStyle(.switch)
                     .tint(.rmAccent)
-                Text("Master switch. Doom, Duke Nukem 3D, Heretic, Shadow Warrior and Freedoom load a shader mod into the game engine itself. Warcraft and console ROMs can't do that, so RetroMac lays its own CRT over their window instead — which needs Screen Recording permission. Pick the preset per game below.")
+                Text("Master switch. Doom, Duke Nukem 3D, Heretic, Shadow Warrior and Freedoom load a shader mod into the game engine itself. Warcraft, Quake and console ROMs can't do that, so RetroMac lays its own CRT over their window instead — which needs Screen Recording permission.")
                     .font(.caption).foregroundStyle(.secondary)
+
+                overlayPickers
             }
+
+            dataFoldersSection
 
             // Retro Console ROMs (drop zone + library)
             Section("Retro Games") {
@@ -42,328 +48,154 @@ struct GamesSettingsTab: View {
             // Bundled arcade demo
             pacmanSection
 
-            // Warcraft I + II on the bundled Stratagus engine (user supplies game data)
-            warcraftSection(.warcraft2)
-            warcraftSection(.warcraft1)
-
-            // PC Games (existing — each is its own collapsible section)
-            doomSection
-            razeSection
-            hereticSection
-            shadowWarriorSection
-            freedoomSection
-            quakeSection
-            quake2Section
-
             // Emulators at bottom
             EmulatorStatusSection()
         }
         .formStyle(.grouped)
         .padding(.top, 8)
         .onAppear {
-            gzdoomInstalled = FileManager.default.fileExists(atPath: "/Applications/GZDoom.app")
-            razeInstalled = FileManager.default.fileExists(atPath: "/Applications/Raze.app")
-            vkQuakeInstalled = FileManager.default.fileExists(atPath: "/Applications/vkQuake.app")
-            yamagiQ2Installed = FileManager.default.fileExists(atPath: "/Applications/quake2.app")
-                || FileManager.default.fileExists(atPath: "/Applications/Yamagi Quake II.app")
             refreshWadFiles()
             refreshGrpFiles()
         }
     }
 
-    // MARK: - Warcraft I + II (bundled Stratagus engine)
+    // MARK: - The Library
 
-    /// Engine ships with RetroMac; the media comes from the user's own copy of the game.
-    /// Mirrors the Doom WAD-folder section: pick a folder, see whether it was recognised.
+    private var librarySection: some View {
+        Section("Games") {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 18)).foregroundStyle(.secondary).frame(width: 24)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Game Library").font(.headline)
+                    Text("Every game RetroMac can run: what is installed, what still has to be downloaded, its engine, and where to point it at your own files.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Button("Open…") { GameLibraryWindowController.shared.show() }
+            }
+        }
+    }
+
+    // MARK: - Overlays
+
+    /// Three games cannot load a shader into their own engine, so RetroMac lays one over the
+    /// window instead. That choice has nowhere to live in the Library, so it stays here.
     @ViewBuilder
-    private func warcraftSection(_ title: WarcraftGame.Title) -> some View {
-        let engineOK = WarcraftGame.isEngineAvailable(title)
-        let dataOK = WarcraftGame.hasExtractedData(title)
+    private var overlayPickers: some View {
+        HStack {
+            Text("Warcraft I + II")
+            Spacer()
+            Picker("", selection: $settings.warcraftPresetID) {
+                Text("Follow current preset").tag("")
+                Text("Off").tag("off")
+                Divider()
+                ForEach(allPresets.filter { !$0.0.isEmpty }, id: \.0) { id, name in
+                    Text(name).tag(id)
+                }
+            }
+            .labelsHidden().pickerStyle(.menu).frame(width: 200)
+            .disabled(!settings.gamesCRTEnabled)
+        }
+        HStack {
+            Text("Quake")
+            Spacer()
+            LiteShaderPicker(selection: $settings.quakeLitePreset)
+                .frame(width: 200)
+                .disabled(!settings.gamesCRTEnabled)
+        }
+        HStack {
+            Text("Quake II")
+            Spacer()
+            LiteShaderPicker(selection: $settings.quake2LitePreset)
+                .frame(width: 200)
+                .disabled(!settings.gamesCRTEnabled)
+        }
+        if !settings.gamesCRTEnabled {
+            Text("Turn “Apply CRT effect to games” on to use these.")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        Text("With a theme active the games open in a borderless window — just the picture, so the CRT sits on the game and not on a title bar. Fullscreen and quitting are in the game's own menu.")
+            .font(.caption2).foregroundStyle(.secondary)
+    }
+
+    // MARK: - Where the game data lives
+
+    /// The folders themselves, not the games in them: which game is installed is the Library's
+    /// business, but "where does RetroMac put a download" belongs in settings.
+    private var dataFoldersSection: some View {
+        Section("Game data folders") {
+            folderRow(title: "Doom WADs", path: settings.doomWadFolder,
+                      detail: wadFiles.isEmpty ? "No WAD or PK3 files here"
+                                               : "\(wadFiles.count) file\(wadFiles.count == 1 ? "" : "s") — also used by Heretic and Freedoom",
+                      choose: chooseWadFolder)
+            folderRow(title: "Duke Nukem GRPs", path: settings.razeGrpFolder,
+                      detail: grpFiles.isEmpty ? "No GRP files here"
+                                               : "\(grpFiles.count) file\(grpFiles.count == 1 ? "" : "s") — also used by Shadow Warrior",
+                      choose: chooseGrpFolder)
+            folderRow(title: "Quake", path: settings.quakeBasePath,
+                      detail: "Base folder, holds id1/pak0.pak",
+                      choose: chooseQuakeBasePath)
+            folderRow(title: "Quake II", path: settings.quake2BasePath,
+                      detail: "Base folder, holds baseq2/pak0.pak",
+                      choose: chooseQuake2BasePath)
+
+            // Warcraft is read-only here: its folder is either data the extractor produced or a
+            // folder the user picked, and both of those routes run through the Library.
+            warcraftFolderRow(.warcraft1)
+            warcraftFolderRow(.warcraft2)
+
+            Text("Point a game at files you already have with “Use My Own Files…” in the Game Library.")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+
+    private func folderRow(title: String, path: String, detail: String,
+                           choose: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title)
+                Spacer()
+                Button("Choose…", action: choose)
+                Button("Open in Finder") {
+                    NSWorkspace.shared.open(URL(fileURLWithPath: path))
+                }
+                .disabled(path.isEmpty || !FileManager.default.fileExists(atPath: path))
+            }
+            Text(path.isEmpty ? "Not set" : abbreviatePath(path))
+                .font(.caption).foregroundStyle(.secondary)
+                .lineLimit(1).truncationMode(.middle)
+            Text(detail).font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func warcraftFolderRow(_ title: WarcraftGame.Title) -> some View {
         let folder = WarcraftGame.dataFolder(title)
-
-        Section {
-            DisclosureGroup(title.displayName) {
-                HStack {
-                    Image(systemName: engineOK ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundStyle(engineOK ? .green : .red)
-                    Text("Stratagus engine")
-                    Spacer()
-                    Text(engineOK ? "Bundled" : "Not bundled").foregroundStyle(.secondary)
-                }
-                if !engineOK {
-                    Text("The engine is built from the vendored submodules on first build. Requires cmake and pkg-config (brew install cmake pkg-config), then rebuild RetroMac.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Game data")
-                        Spacer()
-                        if wcExtracting == title.rawValue {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Button(folder.isEmpty ? "Choose Game…" : "Change…") { chooseWarcraftFolder(title) }
-                            if !folder.isEmpty {
-                                Button("Clear") {
-                                    setWarcraftFolder(title, "")
-                                    wcStatus[title.rawValue] = nil
-                                }
-                            }
-                        }
-                    }
-                    Text(folder.isEmpty ? "Not set" : abbreviatePath(folder))
-                        .font(.caption).foregroundStyle(.secondary)
-                        .lineLimit(1).truncationMode(.middle)
-
-                    if let message = wcStatus[title.rawValue] {
-                        HStack(spacing: 4) {
-                            let busy = (wcExtracting == title.rawValue)
-                            Image(systemName: busy ? "arrow.triangle.2.circlepath" : "exclamationmark.triangle.fill")
-                                .font(.caption2)
-                                .foregroundStyle(busy ? Color.secondary : Color.orange)
-                            Text(message).font(.caption)
-                                .foregroundStyle(busy ? Color.secondary : Color.orange)
-                        }
-                    } else if folder.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "info.circle").font(.caption2).foregroundStyle(.secondary)
-                            Text(WarcraftGame.canExtract(title)
-                                 ? "Pick your \(title.displayName) folder — the original game or data you already extracted. RetroMac works out which it is."
-                                 : "Pick a folder holding your extracted \(title.displayName) data.")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    } else if dataOK {
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark.circle.fill").font(.caption2).foregroundStyle(.green)
-                            Text("Game data ready").font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-
-                    // One setting for both Warcraft titles — shown once, on the WC2 section.
-                    if title == .warcraft2 {
-                        Divider().padding(.vertical, 2)
-                        Text("With a theme active the game opens in a borderless window — just the picture, so the CRT sits on the game and not on a title bar. Fullscreen and quitting are in the game's own menu.")
-                            .font(.caption2).foregroundStyle(.secondary)
-
-                        // The engine can't load a shader itself (its GLSL layer is compiled out
-                        // on Apple), so this picks what RetroMac lays over the window.
-                        HStack {
-                            Text("CRT preset")
-                            Spacer()
-                            Picker("", selection: $settings.warcraftPresetID) {
-                                Text("Follow current preset").tag("")
-                                Text("Off").tag("off")
-                                Divider()
-                                ForEach(allPresets.filter { !$0.0.isEmpty }, id: \.0) { id, name in
-                                    Text(name).tag(id)
-                                }
-                            }
-                            .labelsHidden().pickerStyle(.menu).frame(width: 200)
-                            .disabled(!settings.gamesCRTEnabled)
-                        }
-                        if !settings.gamesCRTEnabled {
-                            Text("Turn “Apply CRT effect to games” on to use this.")
-                                .font(.caption2).foregroundStyle(.secondary)
-                        }
-                    }
-
-                    if WarcraftGame.isPlayable(title) {
-                        Button("Play \(title.displayName)") { WarcraftGame.launch(title) }
-                            .font(.caption)
-                    }
-                    Text("RetroMac ships the open-source engine and game logic only. The game itself must come from your own copy — it is never bundled.")
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    private func setWarcraftFolder(_ title: WarcraftGame.Title, _ path: String) {
-        if title == .warcraft2 { settings.warcraft2DataFolder = path }
-        else { settings.warcraft1DataFolder = path }
-    }
-
-    /// One picker for both cases: hand it either an original game installation — which is
-    /// extracted automatically — or a folder someone already extracted. The user shouldn't
-    /// have to know which of the two they have, or that an extraction step exists at all.
-    private func chooseWarcraftFolder(_ title: WarcraftGame.Title) {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.message = "Choose your \(title.displayName) folder — the original game or already-extracted data"
-        panel.prompt = "Use Folder"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        if WarcraftGame.hasExtractedData(at: url, title) {
-            setWarcraftFolder(title, url.path)
-            wcStatus[title.rawValue] = nil
-        } else if WarcraftGame.looksLikeInstallation(at: url, title) {
-            wcExtracting = title.rawValue
-            wcStatus[title.rawValue] = "Extracting game data — this takes a moment…"
-            WarcraftGame.extract(title, from: url) { result in
-                wcExtracting = nil
-                switch result {
-                case .success(let dest):
-                    setWarcraftFolder(title, dest.path)
-                    wcStatus[title.rawValue] = nil
-                case .failure(let error):
-                    wcStatus[title.rawValue] = "Extraction failed: \(error.message)"
-                }
-            }
-        } else {
-            wcStatus[title.rawValue] = WarcraftGame.canExtract(title)
-                ? "No Warcraft data there. Pick the game's own folder (the one with maindat.war) or an extracted data folder."
-                : "That folder holds no extracted \(title.displayName) data. RetroMac can't extract this title itself yet — use the Wargus tools to extract it first."
-        }
-    }
-
-    // MARK: - Doom
-
-    private var doomSection: some View {
-        Section {
-            DisclosureGroup("Doom") {
-            // GZDoom status
+        let engineOK = WarcraftGame.isEngineAvailable(title)
+        VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Image(systemName: gzdoomInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(gzdoomInstalled ? .green : .red)
-                Text("GZDoom")
+                Text(title.displayName)
                 Spacer()
-                Text(gzdoomInstalled ? "Installed" : "Not Installed")
-                    .foregroundStyle(.secondary)
-            }
-
-            if !gzdoomInstalled {
-                Text("Install GZDoom from zdoom.org to play Doom.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            // WAD Folder
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("WAD Folder")
-                    Spacer()
-                    Button("Choose...") {
-                        chooseWadFolder()
-                    }
-                }
-
-                Text(abbreviatePath(settings.doomWadFolder))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-
-                if !wadFiles.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "doc.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text("\(wadFiles.count) WAD file\(wadFiles.count == 1 ? "" : "s") found")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                        Text("No WAD files found in this folder")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
-                }
-
                 Button("Open in Finder") {
-                    let url = URL(fileURLWithPath: settings.doomWadFolder)
-                    NSWorkspace.shared.open(url)
+                    NSWorkspace.shared.open(URL(fileURLWithPath: folder))
                 }
-                .font(.caption)
+                .disabled(folder.isEmpty || !FileManager.default.fileExists(atPath: folder))
             }
-
+            Text(folder.isEmpty ? "Not set" : abbreviatePath(folder))
+                .font(.caption).foregroundStyle(.secondary)
+                .lineLimit(1).truncationMode(.middle)
+            if !engineOK {
+                // Build-level, not per-game: without the engine neither Warcraft can run at all.
+                Text("The Stratagus engine is not in this build. It is compiled from the vendored submodules on first build and needs cmake and pkg-config.")
+                    .font(.caption2).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 
-    // MARK: - Duke Nukem 3D (Raze)
-
-    private var razeSection: some View {
-        Section {
-            DisclosureGroup("Duke Nukem 3D") {
-            // Raze status
-            HStack {
-                Image(systemName: razeInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(razeInstalled ? .green : .red)
-                Text("Raze")
-                Spacer()
-                Text(razeInstalled ? "Installed" : "Not Installed")
-                    .foregroundStyle(.secondary)
-            }
-
-            if !razeInstalled {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Install Raze to play Duke Nukem 3D.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Button("Download Raze") {
-                        if let url = URL(string: "https://github.com/ZDoom/Raze/releases") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                    .font(.caption)
-                }
-            }
-
-            // GRP Folder
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("GRP Folder")
-                    Spacer()
-                    Button("Choose...") {
-                        chooseGrpFolder()
-                    }
-                }
-
-                Text(abbreviatePath(settings.razeGrpFolder))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-
-                if !grpFiles.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "doc.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text("\(grpFiles.count) GRP file\(grpFiles.count == 1 ? "" : "s") found")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                } else {
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                        Text("No GRP files found — Shareware will be downloaded on first play")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
-                }
-
-                Button("Open in Finder") {
-                    let url = URL(fileURLWithPath: settings.razeGrpFolder)
-                    try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-                    NSWorkspace.shared.open(url)
-                }
-                .font(.caption)
-            }
-
-            }
-        }
-    }
-
-    // MARK: - Heretic
+    // MARK: - Bundled arcade demo
 
     private var pacmanSection: some View {
         Section {
@@ -383,255 +215,64 @@ struct GamesSettingsTab: View {
         }
     }
 
-    private var hereticSection: some View {
-        Section {
-            DisclosureGroup("Heretic") {
-            // GZDoom status (reused from Doom)
-            HStack {
-                Image(systemName: gzdoomInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(gzdoomInstalled ? .green : .red)
-                Text("GZDoom")
-                Spacer()
-                Text(gzdoomInstalled ? "Installed" : "Not Installed")
-                    .foregroundStyle(.secondary)
-            }
-
-            Text("Uses GZDoom engine and WAD folder from Doom settings.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            }
-        }
-    }
-
-    // MARK: - Shadow Warrior
-
-    private var shadowWarriorSection: some View {
-        Section {
-            DisclosureGroup("Shadow Warrior") {
-            // Raze status (reused from Duke3D)
-            HStack {
-                Image(systemName: razeInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(razeInstalled ? .green : .red)
-                Text("Raze")
-                Spacer()
-                Text(razeInstalled ? "Installed" : "Not Installed")
-                    .foregroundStyle(.secondary)
-            }
-
-            Text("Uses Raze engine and GRP folder from Duke Nukem 3D settings.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    // MARK: - Freedoom
-
-    private var freedoomSection: some View {
-        Section {
-            DisclosureGroup("Freedoom") {
-            // GZDoom status (shared with Doom/Heretic)
-            HStack {
-                Image(systemName: gzdoomInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(gzdoomInstalled ? .green : .red)
-                Text("GZDoom")
-                Spacer()
-                Text(gzdoomInstalled ? "Installed" : "Not Installed")
-                    .foregroundStyle(.secondary)
-            }
-
-            Text("Freedoom is a free, open-source replacement for Doom. Auto-downloads on first launch.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    // MARK: - Quake
-
-    private var quakeSection: some View {
-        Section {
-            DisclosureGroup("Quake") {
-            // vkQuake status
-            HStack {
-                Image(systemName: vkQuakeInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(vkQuakeInstalled ? .green : .red)
-                Text("vkQuake")
-                Spacer()
-                if vkQuakeInstalled {
-                    Text("Installed")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Button("Get vkQuake") {
-                        NSWorkspace.shared.open(URL(string: "https://github.com/Novum/vkQuake/releases")!)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.mini)
-                }
-            }
-
-            // Lite shader picker
-            HStack {
-                Text("Overlay Shader")
-                Spacer()
-                LiteShaderPicker(selection: $settings.quakeLitePreset)
-                    .frame(width: 160)
-            }
-
-            // Base path
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Base Path")
-                    Spacer()
-                    Button("Choose...") {
-                        chooseQuakeBasePath()
-                    }
-                }
-
-                Text(abbreviatePath(settings.quakeBasePath))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            }
-        }
-    }
-
-    // MARK: - Quake II
-
-    private var quake2Section: some View {
-        Section {
-            DisclosureGroup("Quake II") {
-            // Yamagi Quake II status
-            HStack {
-                Image(systemName: yamagiQ2Installed ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    .foregroundStyle(yamagiQ2Installed ? .green : .red)
-                Text("Yamagi Quake II")
-                Spacer()
-                if yamagiQ2Installed {
-                    Text("Installed")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Button("Get Yamagi Q2") {
-                        NSWorkspace.shared.open(URL(string: "https://www.yamagi.org/quake2/")!)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.mini)
-                }
-            }
-
-            // Lite shader picker
-            HStack {
-                Text("Overlay Shader")
-                Spacer()
-                LiteShaderPicker(selection: $settings.quake2LitePreset)
-                    .frame(width: 160)
-            }
-
-            // Base path
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Base Path")
-                    Spacer()
-                    Button("Choose...") {
-                        chooseQuake2BasePath()
-                    }
-                }
-
-                Text(abbreviatePath(settings.quake2BasePath))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            }
-        }
-    }
-
     // MARK: - Helpers
 
     private func chooseQuakeBasePath() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.directoryURL = URL(fileURLWithPath: settings.quakeBasePath)
-        panel.message = "Select Quake base directory (should contain id1/PAK0.PAK)"
-        panel.prompt = "Choose"
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        settings.quakeBasePath = url.path
+        pickFolder(start: settings.quakeBasePath,
+                   message: "Select Quake base directory (should contain id1/PAK0.PAK)") {
+            settings.quakeBasePath = $0
+        }
     }
 
     private func chooseQuake2BasePath() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.directoryURL = URL(fileURLWithPath: settings.quake2BasePath)
-        panel.message = "Select Quake II base directory (should contain baseq2/pak0.pak)"
-        panel.prompt = "Choose"
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        settings.quake2BasePath = url.path
+        pickFolder(start: settings.quake2BasePath,
+                   message: "Select Quake II base directory (should contain baseq2/pak0.pak)") {
+            settings.quake2BasePath = $0
+        }
     }
 
     private func chooseGrpFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.directoryURL = URL(fileURLWithPath: settings.razeGrpFolder)
-        panel.message = "Select folder containing Duke Nukem 3D GRP files"
-        panel.prompt = "Choose"
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        settings.razeGrpFolder = url.path
-        refreshGrpFiles()
-    }
-
-    private func refreshGrpFiles() {
-        let fm = FileManager.default
-        let folder = settings.razeGrpFolder
-        guard let contents = try? fm.contentsOfDirectory(atPath: folder) else {
-            grpFiles = []
-            return
+        pickFolder(start: settings.razeGrpFolder,
+                   message: "Select folder containing Duke Nukem 3D GRP files") {
+            settings.razeGrpFolder = $0
+            refreshGrpFiles()
         }
-        grpFiles = contents
-            .filter { $0.lowercased().hasSuffix(".grp") }
-            .sorted()
     }
 
     private func chooseWadFolder() {
+        pickFolder(start: settings.doomWadFolder,
+                   message: "Select folder containing Doom WAD files") {
+            settings.doomWadFolder = $0
+            refreshWadFiles()
+        }
+    }
+
+    private func pickFolder(start: String, message: String, apply: (String) -> Void) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.directoryURL = URL(fileURLWithPath: settings.doomWadFolder)
-        panel.message = "Select folder containing Doom WAD files"
+        panel.directoryURL = URL(fileURLWithPath: start)
+        panel.message = message
         panel.prompt = "Choose"
-
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        settings.doomWadFolder = url.path
-        refreshWadFiles()
+        apply(url.path)
+    }
+
+    private func refreshGrpFiles() {
+        grpFiles = files(in: settings.razeGrpFolder) { $0.hasSuffix(".grp") }
     }
 
     private func refreshWadFiles() {
-        let fm = FileManager.default
-        let folder = settings.doomWadFolder
-        guard let contents = try? fm.contentsOfDirectory(atPath: folder) else {
-            wadFiles = []
-            return
-        }
-        wadFiles = contents
-            .filter { $0.lowercased().hasSuffix(".wad") || $0.lowercased().hasSuffix(".pk3") }
-            .sorted()
+        wadFiles = files(in: settings.doomWadFolder) { $0.hasSuffix(".wad") || $0.hasSuffix(".pk3") }
+    }
+
+    private func files(in folder: String, matching: (String) -> Bool) -> [String] {
+        guard let contents = try? FileManager.default.contentsOfDirectory(atPath: folder) else { return [] }
+        return contents.filter { matching($0.lowercased()) }.sorted()
     }
 
     private func abbreviatePath(_ path: String) -> String {
         path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
     }
-
 }
