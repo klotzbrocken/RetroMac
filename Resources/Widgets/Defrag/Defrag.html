@@ -107,6 +107,7 @@
         <div class="btn dis" id="bPause"><span>Pause</span></div>
         <div class="btn" id="bLegend"><span>Legend</span></div>
         <div class="btn" id="bDetails"><span>Hide Details</span></div>
+        <div class="btn" id="bSound"><span>Sound On</span></div>
       </div>
     </div>
 
@@ -200,11 +201,134 @@
       flash[src] = READ; flash[head] = WRITE;
       writeQ.push({i:src,t:2},{i:head,t:3});
       drawCell(src); drawCell(head);
+      // The head just crossed from `src` to `head`; that distance IS the sound.
+      seekSound(Math.min(1, Math.abs(src - head) / N), progress() / 100);
+      writeSound();
       moved++;
     }
     var p = progress();
     document.getElementById('fill').style.width = p + '%';
     document.getElementById('pct').textContent = p + '% Complete';
+  }
+
+  // ---- Drive noise -------------------------------------------------------
+  //
+  // Synthesised, not sampled: the same three ingredients a real drive made, and generated so
+  // they can follow what the display is actually doing rather than loop over it.
+  //
+  //  * the spindle: a low hum that spins up when defragmenting starts and coasts down when it
+  //    stops, with a slight wobble because a platter is never perfectly balanced,
+  //  * the seek: a burst of filtered noise whose length and loudness follow how far the head
+  //    has to travel — which is the distance between the two cells the step just touched, so a
+  //    freshly fragmented disk clatters and a nearly finished one only ticks,
+  //  * the write: a short, higher tick as the cluster lands.
+  var audio = null, spindle = null, spindleGain = null, soundOn = true, noiseBuf = null;
+
+  function audioReady(){
+    if (!soundOn) return false;
+    if (!audio){
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      audio = new AC();
+      // One second of white noise, reused for every seek — cheaper than generating each time.
+      noiseBuf = audio.createBuffer(1, audio.sampleRate, audio.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+    }
+    if (audio.state === 'suspended') audio.resume();
+    return true;
+  }
+
+  function spinUp(){
+    if (!audioReady() || spindle) return;
+    var osc = audio.createOscillator(), sub = audio.createOscillator();
+    var g = audio.createGain(), wobble = audio.createOscillator(), wobbleGain = audio.createGain();
+    osc.type = 'sine'; sub.type = 'sine';
+    osc.frequency.setValueAtTime(42, audio.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(118, audio.currentTime + 1.6);   // spin-up
+    sub.frequency.setValueAtTime(59, audio.currentTime);
+    sub.frequency.exponentialRampToValueAtTime(236, audio.currentTime + 1.6);
+    wobble.frequency.value = 3.1; wobbleGain.gain.value = 1.4;                  // unbalanced platter
+    wobble.connect(wobbleGain); wobbleGain.connect(osc.frequency);
+    g.gain.setValueAtTime(0.0001, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.06, audio.currentTime + 1.2);
+    var subGain = audio.createGain(); subGain.gain.value = 0.35;
+    sub.connect(subGain); subGain.connect(g);
+    osc.connect(g); g.connect(audio.destination);
+    osc.start(); sub.start(); wobble.start();
+    spindle = [osc, sub, wobble]; spindleGain = g;
+  }
+
+  function spinDown(){
+    if (!spindle || !audio) return;
+    var t = audio.currentTime;
+    spindleGain.gain.cancelScheduledValues(t);
+    spindleGain.gain.setValueAtTime(spindleGain.gain.value, t);
+    spindleGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    spindle[0].frequency.exponentialRampToValueAtTime(38, t + 1.1);             // coasting down
+    var dying = spindle;
+    setTimeout(function(){ dying.forEach(function(n){ try{ n.stop(); }catch(e){} }); }, 1400);
+    spindle = null; spindleGain = null;
+  }
+
+  // `distance` is 0…1: how far across the disk the head just travelled. `done` is the progress
+  // shown on the bar, 0…1.
+  //
+  // Both matter, and for different reasons. The distance gives each seek its texture — a long
+  // haul stutters, a short hop ticks once. But the gap between the two ends of the disk closes
+  // by two clusters a step out of several thousand, so on its own it would barely change over a
+  // whole session. The progress term is what makes the drive audibly calm down as the bar fills,
+  // which is the thing the person is actually watching.
+  function seekSound(distance, done){
+    if (!audioReady()) return;
+    var t = audio.currentTime;
+    var ticks = 1 + Math.round(distance * 4);
+    var calm = 1 - (done || 0) * 0.55;
+    for (var k=0;k<ticks;k++){
+      var src = audio.createBufferSource(), g = audio.createGain(), bp = audio.createBiquadFilter();
+      src.buffer = noiseBuf;
+      bp.type = 'bandpass';
+      bp.frequency.value = 1400 + Math.random()*900;
+      bp.Q.value = 1.4;
+      var at = t + k * 0.016;
+      var peak = (0.05 + distance * 0.16) * calm;
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(peak, at + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.020);
+      src.connect(bp); bp.connect(g); g.connect(audio.destination);
+      src.start(at); src.stop(at + 0.03);
+    }
+  }
+
+  function writeSound(){
+    if (!audioReady()) return;
+    var t = audio.currentTime;
+    var osc = audio.createOscillator(), g = audio.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(2100, t);
+    osc.frequency.exponentialRampToValueAtTime(1500, t + 0.012);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.020, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.030);
+    osc.connect(g); g.connect(audio.destination);
+    osc.start(t); osc.stop(t + 0.04);
+  }
+
+  // The two-note chime the era used when a long job finished.
+  function doneSound(){
+    if (!audioReady()) return;
+    var t = audio.currentTime;
+    [[880, 0], [1320, 0.13]].forEach(function(n){
+      var osc = audio.createOscillator(), g = audio.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = n[0];
+      var at = t + n[1];
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.05, at + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+      osc.connect(g); g.connect(audio.destination);
+      osc.start(at); osc.stop(at + 0.25);
+    });
   }
 
   function setCap(t){ document.getElementById('dfcap').textContent = t; }
@@ -218,10 +342,12 @@
     btn('bStart',true); btn('bPause',true);
     document.getElementById('bStart').querySelector('span').textContent = 'Stop';
     timer = setInterval(step, 95);
+    spinUp();
   }
   function stop(){
     if (!running) return;
     clearInterval(timer); timer=null; running=false; paused=false;
+    spinDown();
     for (var i=0;i<N;i++) if (flash[i]) flash[i]=0;
     writeQ=[]; draw();
     setCap('Disk Defragmenter');
@@ -232,6 +358,7 @@
   }
   function finish(){
     clearInterval(timer); timer=null; running=false;
+    spinDown(); doneSound();
     for (var i=0;i<N;i++) if (flash[i]) flash[i]=0;
     writeQ=[]; draw();
     document.getElementById('fill').style.width='100%';
@@ -251,6 +378,17 @@
     paused = !paused;
     this.querySelector('span').textContent = paused ? 'Resume' : 'Pause';
     document.getElementById('lbl').textContent = paused ? 'Paused' : 'Defragmenting file system…';
+    // A paused defrag is a drive that has stopped working, not one that has stopped spinning:
+    // the platter keeps turning, the head stops seeking. Which is exactly what you hear.
+    if (paused) {
+      if (spindleGain && audio) {
+        spindleGain.gain.setTargetAtTime(0.025, audio.currentTime, 0.2);
+      }
+    } else if (spindleGain && audio) {
+      spindleGain.gain.setTargetAtTime(0.06, audio.currentTime, 0.2);
+    } else {
+      spinUp();
+    }
   });
 
   // Legende
@@ -261,6 +399,20 @@
     var tx=document.createElement('span'); tx.textContent=e[1];
     row.appendChild(sw); row.appendChild(tx); lb.appendChild(row);
   });
+  document.getElementById('bSound').addEventListener('click', function(){
+    soundOn = !soundOn;
+    this.querySelector('span').textContent = soundOn ? 'Sound On' : 'Sound Off';
+    if (!soundOn) { spinDown(); }
+    else if (running && !paused) { spinUp(); }
+    try { localStorage.setItem('defragSound', soundOn ? '1' : '0'); } catch(e){}
+  });
+  try {
+    if (localStorage.getItem('defragSound') === '0'){
+      soundOn = false;
+      document.getElementById('bSound').querySelector('span').textContent = 'Sound Off';
+    }
+  } catch(e){}
+
   document.getElementById('bLegend').addEventListener('click',function(){ document.getElementById('legend').classList.add('on'); });
   document.getElementById('legendOK').addEventListener('click',function(){ document.getElementById('legend').classList.remove('on'); });
   document.getElementById('doneOK').addEventListener('click',function(){ document.getElementById('done').classList.remove('on'); });
@@ -274,7 +426,14 @@
 
   // ---- Host-Bruecke ----
   function post(m){ try{ window.webkit.messageHandlers.defrag.postMessage(m); }catch(e){} }
-  document.getElementById('dfclose').addEventListener('click', function(e){ e.stopPropagation(); post('close'); });
+  document.getElementById('dfclose').addEventListener('click', function(e){
+    e.stopPropagation();
+    // Silence first: a window that is gone but still humming is the kind of bug people
+    // remember. Closing the AudioContext releases the hardware as well.
+    spinDown();
+    if (audio) { try { audio.close(); } catch(err){} audio = null; }
+    post('close');
+  });
   window.setWinIcon = function(u){ var e=document.getElementById('dfico'); if(!e)return; if(u){e.src=u;}else{e.removeAttribute('src');} };
   window.setTheme = function(k){ /* dieses Widget ist bewusst immer Win95/98-Chrome */ };
   window.setHover = function(h){ document.body.classList.toggle('hovering', !!h); };

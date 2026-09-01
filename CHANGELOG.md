@@ -5,6 +5,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Defrag has the drive to go with it.** The spindle spins up when you press Start and coasts
+  down when the job stops, the head clatters across the platter on every cluster it moves, and a
+  short tick lands as each one is written — all of it tied to what the window is showing rather
+  than looped underneath it. A seek's texture follows how far the head just travelled, so a
+  freshly fragmented disk stutters and a nearly sorted one only ticks, and the whole thing calms
+  down as the progress bar fills. Pause leaves the platter turning and stops the seeking, because
+  that is what a paused job sounded like. Nothing is sampled: it is three synthesised ingredients,
+  so no recording of somebody else's drive ships under an unclear licence. There is a Sound button
+  in the toolbar, and it remembers what you chose.
+
 - **Retro Crashes.** Simulated system failures in period: the Windows 9x blue screen ("An error
   has occurred", the fatal exception, Windows protection error), the illegal-operation dialog, and
   the NT Stop screen with its memory dump for Windows XP and 7. A crash freezes the desktop —
