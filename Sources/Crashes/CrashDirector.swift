@@ -50,6 +50,10 @@ final class CrashDirector {
     private var liveness: Timer?
     private var countdownTimer: Timer?
     private var observers: [NSObjectProtocol] = []
+    /// Kept apart from `observers` because they were vended by a DIFFERENT notification centre.
+    /// Handing a workspace token to `NotificationCenter.default.removeObserver` is a silent
+    /// no-op, so the sleep observer used to survive every teardown and pile up one per crash.
+    private var workspaceObservers: [NSObjectProtocol] = []
     private var armedForResign = false
     private var dumpCounter = 0
     /// What was shown last, so the next pick can avoid it — by name and by shape.
@@ -473,6 +477,13 @@ final class CrashDirector {
             guard let theme = ThemeManager.shared.activeTheme else { self.teardown(.finished); return }
             // The boot screen comes up BEFORE our windows go away, so there is never a frame in
             // which the real desktop shows through the "reboot".
+            // Captured BEFORE the splash starts. `playForced` calls its completion
+            // SYNCHRONOUSLY when the theme has no boot screen at all — Mountain Lion is such a
+            // theme and is a crash era — and that completion presents the restored still and
+            // assigns it to `self.session`. Reading `self.session` in the block below would then
+            // close the new session instead of the blackout, and the restored beat would live
+            // two frames instead of its 0.9 s.
+            let blackout = self.session
             SplashController.shared.playForced(for: theme) { [weak self] in
                 guard let self else { return }
                 // The desktop was never touched, so it is already back. Holding the still for a
@@ -493,8 +504,8 @@ final class CrashDirector {
                     self?.teardown(.finished)
                 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-                self?.session?.close()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                blackout?.close()
             }
         }
     }
@@ -529,6 +540,9 @@ final class CrashDirector {
 
         for token in observers { NotificationCenter.default.removeObserver(token) }
         observers.removeAll()
+        let wsnc = NSWorkspace.shared.notificationCenter
+        for token in workspaceObservers { wsnc.removeObserver(token) }
+        workspaceObservers.removeAll()
 
         session?.close()
         session = nil
@@ -556,8 +570,8 @@ final class CrashDirector {
             self?.abort(.screensChanged)
         })
         let wsnc = NSWorkspace.shared.notificationCenter
-        observers.append(wsnc.addObserver(forName: NSWorkspace.willSleepNotification,
-                                          object: nil, queue: .main) { [weak self] _ in
+        workspaceObservers.append(wsnc.addObserver(forName: NSWorkspace.willSleepNotification,
+                                                   object: nil, queue: .main) { [weak self] _ in
             self?.abort(.willSleep)
         })
     }

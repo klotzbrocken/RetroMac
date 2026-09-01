@@ -240,13 +240,13 @@ struct AboutTab: View {
                 }
 
                 Section("Theme Disclaimer") {
-                    Text("Theme icons and wallpapers depicting macOS and Windows interfaces are trademarks and copyrighted material of Apple Inc. and Microsoft Corporation respectively. They are included for personal, non-commercial use to recreate the look and feel of classic operating systems. RetroMac is not affiliated with or endorsed by Apple or Microsoft.")
+                    Text("Theme icons and wallpapers depicting macOS and Windows interfaces are trademarks and copyrighted material of Apple Inc. and Microsoft Corporation respectively. They are included to recreate the look and feel of classic operating systems, and no ownership of them is claimed. RetroMac is not affiliated with, sponsored by, or endorsed by Apple or Microsoft.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 Section("DOOM Theme Credits") {
-                    Text("DOOM® and DOOM® II are trademarks of id Software LLC, a ZeniMax Media company. The “Maiks Favourite II” theme uses DOOM character sprites (Doom Slayer, Lost Soul) and is a fan-made tribute, included for personal, non-commercial use. RetroMac is not affiliated with, sponsored by, or endorsed by id Software, Bethesda Softworks, or ZeniMax Media.")
+                    Text("DOOM® and DOOM® II are trademarks of id Software LLC, a ZeniMax Media company. The “Maiks Favourite II” theme uses DOOM character sprites (Doom Slayer, Lost Soul) and is an unofficial fan-made tribute. No ownership of the DOOM name or artwork is claimed. RetroMac is not affiliated with, sponsored by, or endorsed by id Software, Bethesda Softworks, or ZeniMax Media.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -260,7 +260,7 @@ struct AboutTab: View {
                 }
 
                 Section("Futurama Theme Credits") {
-                    Text("Futurama™ is a registered trademark of Twentieth Century Fox Film Corporation (20th Television, a division of The Walt Disney Company). The “Futurama” theme is an unofficial fan-made homage, included for personal, non-commercial use to celebrate the show’s look and feel. RetroMac is not affiliated with, sponsored by, or endorsed by The Walt Disney Company, 20th Television, Matt Groening, or any rights holder, and no ownership of the Futurama name or artwork is claimed.")
+                    Text("Futurama™ is a registered trademark of Twentieth Century Fox Film Corporation (20th Television, a division of The Walt Disney Company). The “Futurama” theme is an unofficial fan-made homage that celebrates the show’s look and feel. RetroMac is not affiliated with, sponsored by, or endorsed by The Walt Disney Company, 20th Television, Matt Groening, or any rights holder, and no ownership of the Futurama name or artwork is claimed.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -286,7 +286,7 @@ struct AboutTab: View {
 
                     Link("siddhartha77/os9", destination: URL(string: "https://github.com/siddhartha77/os9")!)
                         .font(.caption)
-                    Text("Mac OS 9 theme: Platinum desktop, folder, drive, trash and document icons reconstructed by the os9.ca project. Original Platinum artwork © Apple Computer, Inc.; used for a non-commercial retro tribute.")
+                    Text("Mac OS 9 theme: Platinum desktop, folder, drive, trash and document icons reconstructed by the os9.ca project. Original Platinum artwork © Apple Computer, Inc.; used for an unofficial retro tribute, with no ownership claimed.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -332,11 +332,11 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Text("The Macintosh system-error bomb in Retro Crashes was traced from a screenshot of the original System error alert. Original artwork © Apple Computer, Inc.; used here for a non-commercial retro tribute, on the same basis as the cursors below.")
+                    Text("The Macintosh system-error bomb in Retro Crashes was traced from a screenshot of the original System error alert. Original artwork © Apple Computer, Inc.; used here for an unofficial retro tribute, with no ownership claimed, on the same basis as the cursors below.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    Text("Apple System 6 & 9 theme cursors reconstructed from the classic Mac OS System 7.0.1 and Mac OS 9.2.1 CURS resources (arrow, I-beam, crosshair, wristwatch, the animated Mac OS 9 spinner, HyperCard finger). Original cursor artwork © Apple Computer, Inc.; used here for a non-commercial retro tribute. RetroMac is not affiliated with or endorsed by Apple.")
+                    Text("Apple System 6 & 9 theme cursors reconstructed from the classic Mac OS System 7.0.1 and Mac OS 9.2.1 CURS resources (arrow, I-beam, crosshair, wristwatch, the animated Mac OS 9 spinner, HyperCard finger). Original cursor artwork © Apple Computer, Inc.; used here for an unofficial retro tribute, with no ownership claimed. RetroMac is not affiliated with, sponsored by, or endorsed by Apple.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -405,7 +405,7 @@ struct AboutTab: View {
                     Link("Hover! — the Microsoft HTML5 remake",
                          destination: URL(string: "http://hover.ie/")!)
                         .font(.caption)
-                    Text("Hover! © 1995, 2013 Microsoft Corporation. The HTML5 remake is bundled with the Windows 95 theme\u{2019}s Fun Stuff CD-ROM and runs entirely offline. Included as a fan tribute for personal, non-commercial use; RetroMac is not affiliated with or endorsed by Microsoft.")
+                    Text("Hover! © 1995, 2013 Microsoft Corporation. The HTML5 remake is bundled with the Windows 95 theme\u{2019}s Fun Stuff CD-ROM and runs entirely offline. Included as an unofficial fan tribute, with no ownership claimed; RetroMac is not affiliated with, sponsored by, or endorsed by Microsoft.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -419,7 +419,7 @@ struct AboutTab: View {
                     Link("Open-Meteo",
                          destination: URL(string: "https://open-meteo.com")!)
                         .font(.caption)
-                    Text("Weather data for the Dashboard widget, free for non-commercial use under CC BY 4.0. No account or API key, and nothing is requested until you choose a city.")
+                    Text("Weather data for the Dashboard widget, published under CC BY 4.0 and used through Open-Meteo’s free API tier. No account or API key, and nothing is requested until you choose a city.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -498,6 +498,15 @@ struct AboutTab: View {
                     Text("Optional external engines RetroMac can launch with CRT shaders.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                Section("Shareware Episodes") {
+                    Text("The Game Library can fetch the free episodes their publishers released for copying: Doom (Knee-Deep in the Dead) and Heretic (The City of the Damned) from id Software and Raven, Duke Nukem 3D (L.A. Meltdown) and Shadow Warrior from 3D Realms and Apogee, Quake (Dimension of the Doomed) from id Software, and the official Quake II 3.14 demo. Each is distributed under the shareware licence that ships beside it, which permits copying without charge; the trademarks remain their owners\u{2019}. RetroMac does not distribute the full commercial versions of these games and is not affiliated with, sponsored by, or endorsed by their publishers.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Link("id Software file archive (Quake II demo)",
+                         destination: URL(string: "https://ftp.gwdg.de/pub/misc/ftp.idsoftware.com/idstuff/")!)
+                        .font(.caption)
                 }
 
                 Section("Open Source") {

@@ -70,6 +70,12 @@ final class GameDownloader: NSObject {
     private(set) var activeTitleID: String?
     var isBusy: Bool { activeTitleID != nil }
 
+    /// Set by `cancel`, cleared by `fetch`. Without it a cancel arriving after
+    /// `didFinishDownloadingTo` has already dispatched `onMemberDone` was simply ignored: that
+    /// block installed its member and called `next(i + 1)`, so a 40-file title carried on
+    /// downloading with `activeTitleID` already nil and a card stuck on "downloading" forever.
+    private var cancelled = false
+
     // MARK: - Public entry point
 
     /// Downloads every member of `title` in turn, then finishes the title off (Warcraft II needs a
@@ -90,6 +96,7 @@ final class GameDownloader: NSObject {
             completion(.failure(.noDestination(title.name))); return
         }
         activeTitleID = title.id
+        cancelled = false
         memberCount = title.members.count
         titleTotal = title.bytes
         bytesBefore = 0
@@ -103,6 +110,7 @@ final class GameDownloader: NSObject {
 
         // One member after another, each into the staging dance.
         func next(_ i: Int) {
+            guard !self.cancelled else { finish(.failure(.cancelled)); return }
             guard i < title.members.count else {
                 DispatchQueue.main.async { status("Finishing up…") }
                 self.finalise(title, stagedIn: folder) { finish($0) }
@@ -131,6 +139,7 @@ final class GameDownloader: NSObject {
     }
 
     func cancel() {
+        cancelled = true
         task?.cancel()
         task = nil
         activeTitleID = nil
@@ -143,7 +152,12 @@ final class GameDownloader: NSObject {
                           completion: @escaping (Result<Void, Failure>) -> Void) {
         onProgress = progress
         onFailure = { completion(.failure($0)) }
-        onMemberDone = { temp in
+        onMemberDone = { [weak self] temp in
+            if self?.cancelled == true {
+                try? FileManager.default.removeItem(at: temp)
+                completion(.failure(.cancelled))
+                return
+            }
             do {
                 try Self.install(temp, into: folder, as: name)
                 completion(.success(()))
@@ -201,11 +215,21 @@ final class GameDownloader: NSObject {
 
 // MARK: - URLSessionDownloadDelegate
 
+/// Every method here first checks that the callback belongs to the task the downloader is
+/// currently running, because the per-job state (`onProgress`, `onMemberDone`, `onFailure`,
+/// `bytesBefore`, `titleTotal`) lives on the instance and is overwritten by the next job.
+///
+/// A cancelled task still delivers its callbacks afterwards, and `cancel()` frees the downloader
+/// immediately, so without this guard a second title could already be running when they arrive.
+/// The failure case merely produced a wrong error; the finish case was worse — the first title's
+/// bytes were handed to the second title's install closure and written into ITS folder under ITS
+/// filename, so a cancelled Heretic member could replace a perfectly good DOOM2.WAD.
 extension GameDownloader: URLSessionDownloadDelegate {
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                     didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
                     totalBytesExpectedToWrite: Int64) {
+        guard downloadTask === self.task else { return }   // see the note above this extension
         // `totalBytesExpectedToWrite` is -1 for members the Archive extracts on the fly, which is
         // most of them, so the catalogue's measured total carries the bar. Earlier members are
         // counted in, otherwise Warcraft's 40 files would restart the bar forty times.
@@ -216,6 +240,7 @@ extension GameDownloader: URLSessionDownloadDelegate {
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                     didFinishDownloadingTo location: URL) {
+        guard downloadTask === self.task else { return }   // see the note above this extension
         if let http = downloadTask.response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             let code = http.statusCode
             DispatchQueue.main.async { self.onFailure?(.http(code)) }
@@ -248,6 +273,7 @@ extension GameDownloader: URLSessionDownloadDelegate {
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        guard task === self.task else { return }              // see the note above this extension
         guard let error = error as NSError? else { return }   // success already handled above
         let f: Failure = error.code == NSURLErrorCancelled ? .cancelled : .transport(error.localizedDescription)
         DispatchQueue.main.async { self.onFailure?(f) }

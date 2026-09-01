@@ -5,6 +5,50 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **The shareware episodes are in the Game Library.** Doom, Heretic, Duke Nukem 3D, Quake and
+  Quake II each shipped a free episode that its publisher wrote a licence for: Duke's says in
+  capitals that individuals are encouraged to give copies away. Those episodes now have a button
+  on the card, beside what the game needs and what was found on your Mac. Four of the five were
+  already in RetroMac — they are what happens today when you start one of those games with no data
+  at all, which used to arrive as a surprise in the middle of launching. None of them overwrites a
+  full game that is already there.
+
+- **Quake II's demo download works again.** It pointed at an Internet Archive item that has since
+  been taken down, so it had been failing silently. It now comes from id Software's own file
+  archive: the original 1998 installer, unchanged, whose pak0.pak is byte-for-byte the one in the
+  official demo. Doom's shareware episode is new; it is the one game here that never had a
+  download at all.
+
+- **The Game Library brings its own copy no more.** RetroMac downloads two games and only two:
+  Freedoom, which is free software, and Shadow Warrior's shareware episode, which its publisher
+  released for free distribution. The other eight are commercial games, and not one of the Archive
+  items holding them states a licence, so RetroMac stops handing them out. Those cards still do
+  the useful half of the job: they install the engine, name the exact file the engine wants, and
+  look through your Steam and GOG libraries for the copy you already own — one press adopts it.
+  Otherwise, point the card at your own files as before.
+
+- **Cancelling a download now cancels it.** A cancelled multi-file title used to carry on
+  downloading in the background with its card stuck on "downloading" forever, and a cancelled
+  transfer could deliver its bytes into the NEXT title's folder under the next title's name — a
+  half-finished Heretic replacing a working DOOM2.WAD. Both are fixed.
+
+- **"Forget" no longer meant "delete".** Game data in a folder whose name merely began with
+  "RetroMac", such as `RetroMac Backup`, was mistaken for RetroMac's own and would have been
+  erased recursively by a sheet that promised only to forget the path.
+
+- **Retro Crashes: fixes.** The sleep observer was removed from the wrong notification centre and
+  piled up one per simulated crash. On a theme with no boot screen — Mountain Lion is one — the
+  restored desktop after a simulated reboot flashed for two frames instead of holding its beat.
+  And the list of apps that hold a crash back now looks at conferencing apps while they are merely
+  running, not only while they are in front: OBS streams from the background, and sharing a screen
+  in Zoom or Teams puts the shared window in front, never Zoom. Several explanations in the
+  Crashes tab claimed more than the code checked and now say what they mean.
+
+- **Credits say what is true.** Artwork borrowed for the themes was credited "for personal,
+  non-commercial use", which is not what RetroMac is. Those passages now say what they actually
+  are: unofficial fan tributes, with no ownership claimed and no affiliation with the rights
+  holders.
+
 - **Defrag has the drive to go with it.** The spindle spins up when you press Start and coasts
   down when the job stops, the head clatters across the platter on every cluster it moves, and a
   short tick lands as each one is written — all of it tied to what the window is showing rather

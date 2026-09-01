@@ -3325,18 +3325,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func downloadHereticShareware() {
+    /// Fetch the Heretic shareware WAD.
+    ///
+    /// `startWhenDone` is what the two callers differ in: launching Heretic without data has
+    /// always downloaded and then started the game, which is right there and wrong in the Game
+    /// Library, where the press meant "get me the data" and starting a game unasked would be a
+    /// surprise. The default keeps the launcher's behaviour.
+    private func downloadHereticShareware(startWhenDone: Bool = true,
+                                          completion: ((Bool) -> Void)? = nil) {
         let targetDir = AppSettings.shared.doomWadFolder
         let targetWAD = targetDir + "/HERETIC1.WAD"
         let fm = FileManager.default
         try? fm.createDirectory(atPath: targetDir, withIntermediateDirectories: true, attributes: nil)
 
-        if fm.fileExists(atPath: targetWAD) { launchHeretic(); return }
+        // Never overwrites: a retail HERETIC.WAD and this one live side by side, and a second
+        // press must not spend five megabytes to replace a file with itself.
+        if fm.fileExists(atPath: targetWAD) {
+            if startWhenDone { launchHeretic() }
+            completion?(true)
+            return
+        }
 
         let progressWindow = createProgressWindow(title: "Downloading Heretic…", detail: "Downloading Heretic Shareware…")
 
         guard let url = URL(string: "https://archive.org/download/hereticsw/hereticsw.zip") else {
-            progressWindow.close(); return
+            progressWindow.close(); completion?(false); return
         }
 
         URLSession.shared.downloadTask(with: url) { [weak self] tempURL, _, error in
@@ -3348,6 +3361,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     alert.informativeText = error?.localizedDescription ?? "Download failed."
                     alert.addButton(withTitle: "OK")
                     alert.runModal()
+                    completion?(false)
                 }
                 return
             }
@@ -3380,13 +3394,88 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 progressWindow.close()
                 if fm.fileExists(atPath: targetWAD) {
-                    self?.launchHeretic()
+                    if startWhenDone { self?.launchHeretic() }
+                    completion?(true)
                 } else {
                     let alert = NSAlert()
                     alert.messageText = "Extraction Failed"
                     alert.informativeText = "HERETIC1.WAD not found in archive."
                     alert.addButton(withTitle: "OK")
                     alert.runModal()
+                    completion?(false)
+                }
+            }
+        }.resume()
+    }
+
+    /// Fetch the Doom shareware episode.
+    ///
+    /// The whole 1995 shareware package, `doom.ZIP`, is a plain file in the item rather than a
+    /// member to be extracted on the fly, so it arrives with a real Content-Length and one
+    /// unzip gets DOOM1.WAD out of it. 2,431,248 bytes in, a 4,196,020-byte IWAD out; both
+    /// measured.
+    ///
+    /// DOOM1.WAD and a retail DOOM.WAD live side by side, and `launchDoomIWAD` sorts its
+    /// candidates, so "doom.wad" is still chosen ahead of "doom1.wad" where both are present.
+    private func downloadDoomShareware(completion: @escaping (Bool) -> Void) {
+        let targetDir = AppSettings.shared.doomWadFolder
+        let targetWAD = targetDir + "/DOOM1.WAD"
+        let fm = FileManager.default
+        try? fm.createDirectory(atPath: targetDir, withIntermediateDirectories: true, attributes: nil)
+        if fm.fileExists(atPath: targetWAD) { completion(true); return }
+
+        let progressWindow = createProgressWindow(title: "Downloading Doom…",
+                                                  detail: "Downloading Shareware Episode 1: Knee-Deep in the Dead…")
+        guard let url = URL(string: "https://archive.org/download/DoomsharewareEpisode/doom.ZIP") else {
+            progressWindow.close(); completion(false); return
+        }
+
+        URLSession.shared.downloadTask(with: url) { tempURL, _, error in
+            guard let tempURL, error == nil else {
+                DispatchQueue.main.async {
+                    progressWindow.close()
+                    let alert = NSAlert()
+                    alert.messageText = "Download Failed"
+                    alert.informativeText = error?.localizedDescription ?? "Could not download the Doom shareware episode."
+                    alert.addButton(withTitle: "OK")
+                    alert.runModal()
+                    completion(false)
+                }
+                return
+            }
+
+            let tempDir = NSTemporaryDirectory() + "doom_extract_\(ProcessInfo.processInfo.processIdentifier)"
+            try? fm.removeItem(atPath: tempDir)
+            try? fm.createDirectory(atPath: tempDir, withIntermediateDirectories: true, attributes: nil)
+
+            let unzip = Process()
+            unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+            unzip.arguments = ["-o", "-j", tempURL.path, "-d", tempDir]
+            unzip.standardOutput = FileHandle.nullDevice
+            unzip.standardError = FileHandle.nullDevice
+            try? unzip.run()
+            unzip.waitUntilExit()
+
+            // The package also carries DOOM.EXE and the order form, so the WAD is picked by name
+            // rather than by taking whatever came out first.
+            if let contents = try? fm.contentsOfDirectory(atPath: tempDir),
+               let wad = contents.first(where: { $0.lowercased() == "doom1.wad" }) {
+                try? fm.copyItem(atPath: tempDir + "/" + wad, toPath: targetWAD)
+                print("[Doom] Shareware WAD installed to \(targetWAD)")
+            }
+            try? fm.removeItem(atPath: tempDir)
+
+            DispatchQueue.main.async {
+                progressWindow.close()
+                if fm.fileExists(atPath: targetWAD) {
+                    completion(true)
+                } else {
+                    let alert = NSAlert()
+                    alert.messageText = "Extraction Failed"
+                    alert.informativeText = "DOOM1.WAD not found in the archive."
+                    alert.addButton(withTitle: "OK")
+                    alert.runModal()
+                    completion(false)
                 }
             }
         }.resume()
@@ -3796,7 +3885,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if fm.fileExists(atPath: targetPAK) { completion(true); return }
 
         let progressWindow = createProgressWindow(title: "Downloading Quake II…", detail: "Downloading Quake II Demo…")
-        guard let url = URL(string: "https://archive.org/download/quake-ii-demo/q2-314-demo-x86.exe") else {
+        // id Software's own FTP tree, mirrored at the GWDG in Göttingen. The `quake-ii-demo`
+        // Archive item this used to point at has been taken down — its metadata API returns
+        // nothing and the file answers 503 — so this download had stopped working. The mirror
+        // serves the original `q2-314-demo-x86.exe`, 39,015,499 bytes, Last-Modified March 1998,
+        // and its baseq2/pak0.pak is byte-identical to the one in the official demo installer.
+        guard let url = URL(string: "https://ftp.gwdg.de/pub/misc/ftp.idsoftware.com/idstuff/quake2/q2-314-demo-x86.exe") else {
             progressWindow.close(); completion(false); return
         }
 
@@ -4242,15 +4336,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Fetch a title whose data does not come from the Internet Archive: Freedoom from its own
-    /// GitHub release, Shadow Warrior's shareware episode. Both already had a downloader here.
+    /// Fetch data that does not come out of the Internet Archive catalogue: Freedoom from its own
+    /// GitHub release, and the publishers' shareware and demo episodes.
+    ///
+    /// Every one of these already had a downloader here — they are what happens today when you
+    /// start Heretic or Quake with no data at all. Nothing new is downloaded from anywhere; the
+    /// Game Library simply gets a way to reach them before the game is started rather than as a
+    /// surprise in the middle of launching it.
+    ///
+    /// Each of them also refuses to overwrite data that is already in place, which is what makes
+    /// it safe to offer the shareware Duke GRP and Quake pak beside the retail ones: they carry
+    /// the same filenames.
     func fetchBuiltInGame(_ kind: InternetArchive.BuiltIn, completion: @escaping (Bool) -> Void) {
         let done: (Bool) -> Void = { ok in
             if Thread.isMainThread { completion(ok) } else { DispatchQueue.main.async { completion(ok) } }
         }
         switch kind {
-        case .freedoom:      downloadFreedoom(completion: done)
-        case .shadowWarrior: downloadSWShareware { done($0 != nil) }
+        case .freedoom:          downloadFreedoom(completion: done)
+        case .shadowWarrior:     downloadSWShareware { done($0 != nil) }
+        case .doomShareware:     downloadDoomShareware(completion: done)
+        case .hereticShareware:  downloadHereticShareware(startWhenDone: false) { done($0) }
+        case .duke3dShareware:   downloadDuke3DShareware { done($0 != nil) }
+        case .quakeShareware:    downloadQuakeShareware(completion: done)
+        case .quake2Demo:        downloadQuake2Demo(completion: done)
         }
     }
 

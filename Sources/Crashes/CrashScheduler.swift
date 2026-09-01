@@ -69,14 +69,13 @@ final class CrashScheduler {
         case streaming
         case recording
         case screenLocked
-        case displayCaptured
+        case fullscreenApp
         case presenting(String)
         case alreadyRunning
         case settingsOpen
         case justLaunched
         case tooSoon
         case budgetSpent
-        case noScreenRecordingPermission
 
         var explanation: String {
             switch self {
@@ -86,25 +85,37 @@ final class CrashScheduler {
             case .partyMode:        return "Party mode never fires on its own."
             case .noTheme:          return "No theme is active."
             case .noScenarios:      return "This theme has no crashes yet."
-            case .streaming:        return "Paused — the virtual camera is running, so you may be on a call."
-            case .recording:        return "Paused — a recording is in progress."
+            case .streaming:        return "Paused — RetroMac's virtual camera is running."
+            case .recording:        return "Paused — RetroMac is recording shader video."
             case .screenLocked:     return "The screen is locked."
-            case .displayCaptured:  return "Something has taken over the display."
-            case .presenting(let app): return "Paused — \(app) is in front."
+            case .fullscreenApp:    return "Paused — an app is running full screen."
+            case .presenting(let app): return "Paused — \(app) is running."
             case .alreadyRunning:   return "A crash is already on screen."
-            case .settingsOpen:     return "Paused while a RetroMac window is in front."
+            case .settingsOpen:     return "Paused while a RetroMac dialog is open."
             case .justLaunched:     return "Warming up — nothing fires in the first ten minutes."
             case .tooSoon:          return "Too soon after the last one."
             case .budgetSpent:      return "Today's crashes are used up."
-            case .noScreenRecordingPermission:
-                return "Screen Recording is off, so the desktop will not appear to freeze first."
             }
         }
     }
 
-    /// Apps where a fake system failure would land in front of an audience.
-    private static let audienceApps: Set<String> = [
+    /// Two lists, because the two cases are not the same question.
+    ///
+    /// A deck is only an audience while it is on screen, so these are checked FRONTMOST. Merely
+    /// having Preview open is not a reason to disarm the feature for the rest of the day.
+    private static let presentingApps: Set<String> = [
         "com.apple.iWork.Keynote", "com.microsoft.Powerpoint", "com.apple.Preview",
+    ]
+
+    /// These are checked while merely RUNNING, and that is the fix rather than a precaution:
+    /// OBS streams from the background, and sharing a screen in Zoom, Teams or Webex puts the
+    /// SHARED application in front, never the conferencing app. Testing only the frontmost app
+    /// meant this list could not fire in the one situation it exists for.
+    ///
+    /// The cost is a false positive when one of them is open but idle. For a feature whose whole
+    /// failure mode is a fake blue screen in front of somebody else's meeting, that is the right
+    /// way round.
+    private static let broadcastApps: Set<String> = [
         "com.obsproject.obs-studio", "us.zoom.xos", "com.microsoft.teams", "com.microsoft.teams2",
         "com.cisco.webexmeetingsapp", "com.google.Chrome.app.kjgfgldnnfoeklkmfkjfagphfepbbdan",
     ]
@@ -166,11 +177,16 @@ final class CrashScheduler {
         if (NSApp.delegate as? AppDelegate)?.isRecordingShaderVideo == true { return .recording }
         if ScreensaverController.shared.active { return .screenLocked }
         if isScreenLocked() { return .screenLocked }
-        if isSomeoneFullScreen() { return .displayCaptured }
-        if let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
-           Self.audienceApps.contains(front) {
-            let name = NSWorkspace.shared.frontmostApplication?.localizedName ?? "That app"
-            return .presenting(name)
+        if isSomeoneFullScreen() { return .fullscreenApp }
+        if let app = NSWorkspace.shared.runningApplications.first(where: {
+            guard let id = $0.bundleIdentifier else { return false }
+            return Self.broadcastApps.contains(id)
+        }) {
+            return .presenting(app.localizedName ?? "A conferencing app")
+        }
+        if let front = NSWorkspace.shared.frontmostApplication,
+           let id = front.bundleIdentifier, Self.presentingApps.contains(id) {
+            return .presenting(front.localizedName ?? "That app")
         }
         if NSApp.modalWindow != nil { return .settingsOpen }
 

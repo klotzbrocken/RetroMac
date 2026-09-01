@@ -159,21 +159,140 @@ final class GameLibraryTests: XCTestCase {
             XCTAssertTrue(seen.insert(t.id).inserted, "duplicate id \(t.id)")
             XCTAssertGreaterThan(t.bytes, 0, "\(t.id) has no size to show")
             if t.builtIn == nil {
+                // The catalogue still has to KNOW where the data lives and what it is called,
+                // even for the titles RetroMac will not fetch: that is what the card tells the
+                // user to go and find.
                 XCTAssertFalse(t.item.isEmpty, "\(t.id) has no Archive item")
-                XCTAssertFalse(t.members.isEmpty, "\(t.id) has nothing to download")
-                for m in t.members {
-                    XCTAssertNotNil(InternetArchive.downloadURL(t, member: m), "\(t.id): \(m)")
-                }
+                XCTAssertFalse(t.members.isEmpty, "\(t.id) names no files")
             }
         }
     }
 
-    /// The Doom archive's name contains a `+`, which `.urlPathAllowed` leaves alone and the
-    /// Archive then reads as a space — a 404. It has to arrive percent-encoded.
+    // MARK: - What RetroMac may fetch
+
+    /// The one that matters. Eight of the ten titles are commercial games sitting in Archive
+    /// items that state no licence at all, and RetroMac must not hand them out however the UI is
+    /// later rearranged. `downloadURL` is the single gate, so this is the test that guards it.
+    func testOnlyFreelyDistributableTitlesCanProduceADownloadURL() {
+        for t in InternetArchive.catalogue {
+            let urls = (t.members.isEmpty ? [""] : t.members)
+                .compactMap { InternetArchive.downloadURL(t, member: $0) }
+            if t.freelyDistributable {
+                XCTAssertEqual(t.builtIn != nil, true, "\(t.id) should come from its own project")
+            } else {
+                XCTAssertTrue(urls.isEmpty, "\(t.id) must not be downloadable: \(urls)")
+            }
+        }
+        XCTAssertEqual(InternetArchive.freelyDistributableIDs, ["freedoom", "shadowwarrior"])
+    }
+
+    func testTheFreeTitlesAreTheOnlyOnesThatOfferASize() {
+        let paid = InternetArchive.catalogue.filter { !$0.freelyDistributable }
+        XCTAssertEqual(paid.count, 8)
+        for t in paid {
+            XCTAssertFalse(InternetArchive.neededFilesText(t).isEmpty, "\(t.id) says nothing about what it needs")
+        }
+    }
+
+    /// The `+` in "Doom + Doom II Collection WAD files.7z" is read as a space by the Archive and
+    /// answers 404, so it has to arrive percent-encoded. No shipped title can build a URL any
+    /// more, so the escaping is exercised through a stand-in that can.
     func testArchiveNamesWithAPlusAreEscaped() throws {
-        let doom = try title("doom")
-        let url = try XCTUnwrap(InternetArchive.downloadURL(doom, member: "doom.wad"))
+        let t = InternetArchive.Title(
+            id: "freedoom", name: "Stand-in", year: "1993",
+            item: "an+item", archive: "A + B.7z", members: ["a+b.wad"], bytes: 1,
+            cover: "", coverItem: nil, destination: .flat(folder: .doomWadFolder),
+            engine: .gzdoom, builtIn: nil, caveat: nil)
+        let url = try XCTUnwrap(InternetArchive.downloadURL(t, member: "a+b.wad"))
         XCTAssertTrue(url.absoluteString.contains("%2B"), url.absoluteString)
         XCTAssertFalse(url.absoluteString.contains("+"), url.absoluteString)
+    }
+
+    // MARK: - Shareware
+
+    /// Shareware is the one thing RetroMac fetches for a commercial game, so the entries have to
+    /// stay pinned to that meaning: never on a title that is already free (there is nothing to
+    /// be a sample of), and never pointing at the two full free downloads by mistake.
+    func testSharewareOnlySitsOnTheCommercialTitles() {
+        let full: Set<InternetArchive.BuiltIn> = [.freedoom, .shadowWarrior]
+        var withShareware: [String] = []
+        for t in InternetArchive.catalogue {
+            guard let sw = t.shareware else { continue }
+            withShareware.append(t.id)
+            XCTAssertFalse(t.freelyDistributable, "\(t.id) is already free in full")
+            XCTAssertFalse(full.contains(sw.source), "\(t.id) points at a full download")
+            XCTAssertFalse(sw.episode.isEmpty, "\(t.id) does not say what you get")
+            XCTAssertFalse(sw.sizeNote.isEmpty, "\(t.id) does not say how big it is")
+        }
+        // Doom II never had a shareware release, and Warcraft's demos are not redistributable,
+        // so this list is the whole of it. Every entry was verified by downloading it and
+        // checking the extracted file's size and magic bytes.
+        XCTAssertEqual(Set(withShareware), ["doom", "heretic", "duke3d", "quake", "quake2"])
+    }
+
+    /// Each shareware source has to be reachable through `fetchBuiltInGame`, which switches
+    /// exhaustively — so a new case that nobody wired up would not compile. This pins the other
+    /// direction: no two titles quietly sharing one download.
+    func testEverySharewareSourceIsUsedOnce() {
+        let sources = InternetArchive.catalogue.compactMap { $0.shareware?.source }
+        XCTAssertEqual(sources.count, Set(sources.map(\.rawValue)).count)
+    }
+
+    // MARK: - Finding the copy you already own
+
+    /// The walk and the matcher together, against a Steam library laid out the way Steam lays
+    /// one out. Doom and Doom II sit in sibling folders under different spellings, which is the
+    /// case that would go wrong if the search stopped at the first `.wad` it met.
+    func testFindsSteamCopiesWithoutMixingUpTheGames() throws {
+        let fm = FileManager.default
+        let common = tempDir.appendingPathComponent("Steam/steamapps/common")
+        func put(_ path: String) throws {
+            let url = common.appendingPathComponent(path)
+            try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            fm.createFile(atPath: url.path, contents: Data("x".utf8))
+        }
+        try put("Ultimate Doom/base/DOOM.WAD")
+        try put("Doom 2/base/DOOM2.WAD")
+        try put("Quake/id1/PAK0.PAK")
+        try put("Some Other Game/readme.txt")
+
+        let wanted = try ["doom", "doom2", "quake", "duke3d"].map { try title($0) }
+        let hits = InternetArchive.foundLocally(wanted, in: [common])
+
+        XCTAssertEqual(hits["doom"]?.lastPathComponent, "DOOM.WAD")
+        XCTAssertEqual(hits["doom2"]?.lastPathComponent, "DOOM2.WAD")
+        XCTAssertEqual(hits["quake"]?.lastPathComponent, "PAK0.PAK")
+        XCTAssertNil(hits["duke3d"], "nothing here is Duke")
+    }
+
+    /// Three levels and no further, so a deep tree cannot turn the gallery into a disk crawl.
+    func testTheSearchStopsAtThreeLevels() throws {
+        let fm = FileManager.default
+        let root = tempDir.appendingPathComponent("root")
+        let deep = root.appendingPathComponent("a/b/c/d")
+        try fm.createDirectory(at: deep, withIntermediateDirectories: true)
+        fm.createFile(atPath: deep.appendingPathComponent("doom.wad").path, contents: Data("x".utf8))
+        XCTAssertTrue(InternetArchive.foundLocally([try title("doom")], in: [root]).isEmpty)
+    }
+
+    // MARK: - Which folders are ours to delete
+
+    /// A prefix test says yes to "RetroMac Backup", and for Warcraft the thing being tested is
+    /// the data DIRECTORY, so "Forget" would have recursively erased the user's own folder.
+    func testOurSupportFolderIsMatchedByComponentNotByPrefix() {
+        let support = URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent("Library/Application Support")
+        let ours = support.appendingPathComponent("RetroMac")
+
+        XCTAssertTrue(InternetArchive.isInsideOurSupportFolder(ours.appendingPathComponent("Games/wc2")))
+        XCTAssertTrue(InternetArchive.isInsideOurSupportFolder(ours.appendingPathComponent("x")))
+
+        for sibling in ["RetroMac Backup", "RetroMac-old", "RetroMacGames", "RetroMac2"] {
+            let url = support.appendingPathComponent(sibling).appendingPathComponent("Warcraft II")
+            XCTAssertFalse(InternetArchive.isInsideOurSupportFolder(url), sibling)
+        }
+        // The folder itself is not "inside" it, so nothing can ever delete it wholesale.
+        XCTAssertFalse(InternetArchive.isInsideOurSupportFolder(ours))
+        XCTAssertFalse(InternetArchive.isInsideOurSupportFolder(URL(fileURLWithPath: "/tmp/x")))
     }
 }

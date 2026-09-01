@@ -347,9 +347,10 @@ struct SetupWizardView: View {
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
                 Button(has ? "Change…" : "Choose…") { g.choose() }
-                // Second source: the same data from the Internet Archive, for people who no longer
-                // have the discs. The gallery carries the licence caveat in full.
-                if let t = InternetArchive.title(id: g.id) {
+                // A download is offered only where RetroMac may actually distribute the data.
+                // For the commercial titles this row names the file it wants and takes the
+                // user's own copy; the gallery adds finding the one Steam or GOG already has.
+                if let t = InternetArchive.title(id: g.id), t.freelyDistributable {
                     Button(dlActive == g.id ? "Cancel" : "Download \(InternetArchive.sizeText(t.bytes))") {
                         dlActive == g.id ? GameDownloader.shared.cancel() : startDownload(t)
                     }

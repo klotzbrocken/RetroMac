@@ -37,8 +37,45 @@ enum InternetArchive {
         let builtIn: BuiltIn?
         /// Shown under the title where the download alone does not give the full experience.
         let caveat: String?
+        /// The publisher's shareware or demo episode, where one exists. A `var` with a default
+        /// so the entries that have none stay as they are.
+        var shareware: SharewareEpisode? = nil
+
+        /// Whether RetroMac may fetch this title's data at all. See `freelyDistributableIDs`.
+        var freelyDistributable: Bool { InternetArchive.freelyDistributableIDs.contains(id) }
 
         static func == (a: Title, b: Title) -> Bool { a.id == b.id }
+    }
+
+    /// The only titles RetroMac downloads. Everything else in the catalogue is a commercial game
+    /// whose data RetroMac names, recognises and points at, but never fetches.
+    ///
+    /// The reason is not caution, it is the facts: not one of the Archive items behind those
+    /// titles states a licence (`licenseurl` is absent from every single one), and a Download
+    /// button does not become lawful because a footnote underneath it says it might not be. What
+    /// the user needs from RetroMac is to know which file is wanted and where it goes, and that
+    /// is what those cards now do.
+    ///
+    /// This set is the single gate. `downloadURL` returns nil for anything outside it, so no
+    /// caller, present or future, can route around this by building a URL of its own.
+    static let freelyDistributableIDs: Set<String> = ["freedoom", "shadowwarrior"]
+
+    /// The free episode a publisher put out to sell the rest of the game.
+    ///
+    /// This is the one thing RetroMac fetches for a commercial title, and the reason is not a
+    /// loophole: shareware exists to be copied. Its licence says so in the file next to it, which
+    /// is exactly what the full versions on the Archive do not have.
+    ///
+    /// Each one names an existing downloader rather than a URL. Those routes have been in the app
+    /// for years — they are what happens today when you start Heretic with no data — so this adds
+    /// a way to reach them, not a new way to download things.
+    struct SharewareEpisode: Equatable {
+        let source: BuiltIn
+        /// What you actually get, in the publisher's own terms.
+        let episode: String
+        /// The DOWNLOAD size, measured, because that is what the user waits for. Duke's 5.9 MB
+        /// unpacks to an 11 MB GRP; saying 11 would be describing the wrong thing.
+        let sizeNote: String
     }
 
     enum Destination: Equatable {
@@ -54,7 +91,10 @@ enum InternetArchive {
     /// project, Shadow Warrior is the publisher's shareware. RetroMac already fetched both from
     /// their own sources, and the Library is the place for that now, so those routes are named
     /// here rather than left behind in a menu.
-    enum BuiltIn: String { case freedoom, shadowWarrior }
+    enum BuiltIn: String {
+        case freedoom, shadowWarrior
+        case doomShareware, hereticShareware, duke3dShareware, quakeShareware, quake2Demo
+    }
 
     /// The engine a title needs. Game data alone plays nothing, so the gallery treats the engine
     /// as part of the download rather than as a wall the user hits afterwards.
@@ -130,7 +170,10 @@ enum InternetArchive {
               bytes: 12_996_515,
               cover: "Doom-DoomII_Bundle_Boxart_900x506-01.jpg", coverItem: nil,
               destination: .flat(folder: .doomWadFolder), engine: .gzdoom, builtIn: nil,
-              caveat: nil),
+              caveat: nil,
+              shareware: SharewareEpisode(source: .doomShareware,
+                                          episode: "Episode 1: Knee-Deep in the Dead",
+                                          sizeNote: "2.4 MB")),
 
         // Two entries out of one archive: they are separate games with separate IWADs, and a
         // single "Doom" card could only ever install one of them.
@@ -150,7 +193,10 @@ enum InternetArchive {
               bytes: 14_189_976,
               cover: "00cover.jpg", coverItem: "msdos_Heretic_1994",
               destination: .flat(folder: .doomWadFolder), engine: .gzdoom, builtIn: nil,
-              caveat: nil),
+              caveat: nil,
+              shareware: SharewareEpisode(source: .hereticShareware,
+                                          episode: "Episode 1: The City of the Damned",
+                                          sizeNote: "2.8 MB")),
 
         Title(id: "duke3d", name: "Duke Nukem 3D", year: "1996",
               item: "duke-3-d",
@@ -159,7 +205,10 @@ enum InternetArchive {
               bytes: 26_524_524,
               cover: "DUKE3D.png", coverItem: nil,
               destination: .flat(folder: .razeGrpFolder), engine: .raze, builtIn: nil,
-              caveat: nil),
+              caveat: nil,
+              shareware: SharewareEpisode(source: .duke3dShareware,
+                                          episode: "Episode 1: L.A. Meltdown",
+                                          sizeNote: "5.9 MB")),
 
         Title(id: "quake", name: "Quake", year: "1996",
               item: "quake-complete",
@@ -168,7 +217,10 @@ enum InternetArchive {
               bytes: 179_618_935,
               cover: "Quake1cover.jpg", coverItem: nil,
               destination: .subfolder(folder: .quakeBasePath, name: "id1"), engine: .vkQuake, builtIn: nil,
-              caveat: nil),
+              caveat: nil,
+              shareware: SharewareEpisode(source: .quakeShareware,
+                                          episode: "Episode 1: Dimension of the Doomed",
+                                          sizeNote: "18 MB")),
 
         Title(id: "quake2", name: "Quake II", year: "1997",
               item: "quake-2-complete",
@@ -177,7 +229,10 @@ enum InternetArchive {
               bytes: 183_997_730,
               cover: "Quake2box.jpg", coverItem: nil,
               destination: .subfolder(folder: .quake2BasePath, name: "baseq2"), engine: .yquake2, builtIn: nil,
-              caveat: nil),
+              caveat: nil,
+              shareware: SharewareEpisode(source: .quake2Demo,
+                                          episode: "The official 3.14 demo",
+                                          sizeNote: "39 MB")),
 
         Title(id: "warcraft2", name: "Warcraft II", year: "1995",
               item: "msdos_Warcraft_II_-_Tides_of_Darkness_1995",
@@ -250,6 +305,7 @@ enum InternetArchive {
     /// Where a single member comes from. The Archive extracts it on the fly for archived members,
     /// which is why those responses carry no `Content-Length` — see `GameDownloader`.
     static func downloadURL(_ t: Title, member: String) -> URL? {
+        guard t.freelyDistributable else { return nil }
         var path = "https://archive.org/download/\(escape(t.item))/"
         if let archive = t.archive { path += "\(escape(archive))/" }
         path += member.split(separator: "/").map(escape).joined(separator: "/")
@@ -388,6 +444,71 @@ enum InternetArchive {
         return url
     }
 
+    // MARK: - Copies the user already has
+
+    /// Where other stores put games on this Mac. GOG's macOS builds are DOSBox or ScummVM
+    /// wrappers, so their data sits at a fixed depth inside the application bundle; those paths
+    /// are named rather than searched, which is why `/Applications` itself is not a root.
+    private static var searchRoots: [URL] {
+        let fm = FileManager.default
+        let home = URL(fileURLWithPath: NSHomeDirectory())
+        var roots = [
+            home.appendingPathComponent("Library/Application Support/Steam/steamapps/common"),
+            home.appendingPathComponent("Library/Application Support/GOG.com"),
+            home.appendingPathComponent("Games"),
+        ]
+        let apps = (try? fm.contentsOfDirectory(at: URL(fileURLWithPath: "/Applications"),
+                                                includingPropertiesForKeys: nil,
+                                                options: [.skipsHiddenFiles])) ?? []
+        for app in apps where app.pathExtension == "app" {
+            roots.append(app.appendingPathComponent("Contents/Resources/game"))
+        }
+        return roots.filter { fm.fileExists(atPath: $0.path) }
+    }
+
+    /// Copies of these titles that other stores already put on this Mac, keyed by title id.
+    ///
+    /// Nobody should have to go hunting through a Steam library for a WAD that sits in a fixed
+    /// place. The search is bounded on purpose: three directory levels below a handful of known
+    /// roots, plain listings, no enumeration of the disk and nothing hidden or packaged. Files are
+    /// recognised with `matches`, the same rule the cards already use, so `DOOM.WAD` and
+    /// `doom.wad` are both found and Doom II never answers for Doom.
+    ///
+    /// All the titles are walked together, because the expensive part is the traversal and there
+    /// is no reason to pay for it once per game. Still costs a few hundred directory listings on
+    /// a large Steam library, so call it off the main thread. It only reads; nothing is set,
+    /// copied or moved here.
+    static func foundLocally(_ titles: [Title], in roots: [URL]? = nil) -> [String: URL] {
+        let fm = FileManager.default
+        var hits: [String: URL] = [:]
+        var level = roots ?? searchRoots
+        for _ in 0..<3 where hits.count < titles.count {
+            var next: [URL] = []
+            for dir in level {
+                let items = (try? fm.contentsOfDirectory(at: dir,
+                                                         includingPropertiesForKeys: [.isDirectoryKey],
+                                                         options: [.skipsHiddenFiles])) ?? []
+                for item in items {
+                    let isDir = (try? item.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+                    guard isDir else {
+                        let name = item.lastPathComponent.lowercased()
+                        for t in titles where hits[t.id] == nil && matches(t, name) { hits[t.id] = item }
+                        continue
+                    }
+                    for t in titles where hits[t.id] == nil {
+                        guard case .warcraftInstall(let wc) = t.destination else { continue }
+                        if WarcraftGame.hasExtractedData(at: item, wc)
+                            || WarcraftGame.looksLikeInstallation(at: item, wc) { hits[t.id] = item }
+                    }
+                    // An application bundle below a root is a wrapper, not a game folder.
+                    if item.pathExtension != "app" { next.append(item) }
+                }
+            }
+            level = next
+        }
+        return hits
+    }
+
     /// Remove what a title installed, and report what went. Warcraft data that lives outside
     /// RetroMac's own folders is deliberately left alone — that is the user's own copy of the
     /// game sitting where they put it — and only the stored path is cleared.
@@ -396,10 +517,8 @@ enum InternetArchive {
         let files = installedFiles(t)
         guard !files.isEmpty else { return [] }
         if case .warcraftInstall(let wc) = t.destination {
-            let ours = URL(fileURLWithPath: NSHomeDirectory())
-                .appendingPathComponent("Library/Application Support/RetroMac").path
             var removed: [URL] = []
-            if let f = files.first, f.path.hasPrefix(ours) {
+            if let f = files.first, isInsideOurSupportFolder(f) {
                 try? FileManager.default.removeItem(at: f)
                 removed.append(f)
             }
@@ -414,9 +533,22 @@ enum InternetArchive {
     /// True when deleting this title would only forget a path rather than erase anything.
     static func deleteOnlyForgets(_ t: Title) -> Bool {
         guard case .warcraftInstall = t.destination, let f = installedFiles(t).first else { return false }
+        return !isInsideOurSupportFolder(f)
+    }
+
+    /// Whether a URL lies inside RetroMac's own Application Support folder.
+    ///
+    /// Compared component by component, not by string prefix. A prefix test says yes to
+    /// `~/Library/Application Support/RetroMac Backup`, and for Warcraft the URL being tested is
+    /// the data DIRECTORY, so the "delete" above would recursively erase a folder that merely
+    /// begins with the same eight letters — while the sheet that asked for it said "Forget".
+    static func isInsideOurSupportFolder(_ url: URL) -> Bool {
         let ours = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent("Library/Application Support/RetroMac").path
-        return !f.path.hasPrefix(ours)
+            .appendingPathComponent("Library/Application Support/RetroMac")
+            .standardizedFileURL.pathComponents
+        let theirs = url.standardizedFileURL.pathComponents
+        guard theirs.count > ours.count else { return false }
+        return Array(theirs.prefix(ours.count)) == ours
     }
 
     /// Point a title at a folder the user already has. Returns an error message when the folder
@@ -451,6 +583,20 @@ enum InternetArchive {
             return nil   // handled by the caller, which knows about extraction
         }
         return isInstalled(t) ? nil : "No \(t.name) data found in that folder."
+    }
+
+    /// What the user has to supply for a title RetroMac does not fetch. Naming the file is the
+    /// whole job here: the hard part of "bring your own data" has always been not knowing which
+    /// of the forty files on the disc the engine actually wants.
+    static func neededFilesText(_ t: Title) -> String {
+        switch t.destination {
+        case .warcraftInstall:
+            return "Point this at your \(t.name) folder — the DATA directory from the original install."
+        case .flat, .subfolder:
+            let names = Set(t.members.map { ($0 as NSString).lastPathComponent })
+            guard !names.isEmpty else { return "Point this at your own copy." }
+            return "Needs \(names.sorted().joined(separator: ", ")) from your own copy."
+        }
     }
 
     /// Human-readable size, for the gallery card.

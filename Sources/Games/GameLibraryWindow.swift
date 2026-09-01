@@ -1,8 +1,12 @@
 import SwiftUI
 import AppKit
 
-/// The cover gallery: every title RetroMac can fetch from the Internet Archive, with a tick on
-/// the ones whose data is already in place.
+/// The cover gallery: every game RetroMac can play, with a tick on the ones whose data is
+/// already in place.
+///
+/// It is deliberately not a shop. Two titles are free to distribute and RetroMac fetches those;
+/// for the other eight it installs the engine, names the file it wants, finds the copy Steam or
+/// GOG already put on this Mac, and otherwise waits for the user to point at their own.
 ///
 /// It is a window of its own rather than a wizard page, because the Setup Assistant is a
 /// first-run thing and this is not: people add a game months later. The Games page links into it,
@@ -34,7 +38,7 @@ struct GameLibraryView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Game Library").font(.title2.bold())
-            Text("One press gets everything a game needs: the engine from its own project, and the game data from the Internet Archive.")
+            Text("RetroMac installs the engine each game needs, downloads the free and shareware episodes, and finds the game data you already have. Full commercial games come from your own copy.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -58,8 +62,24 @@ struct GameLibraryView: View {
             }
             .allowsHitTesting(false)
             Text(t.name).font(.headline).lineLimit(1)
-            Text("\(t.year) · \(InternetArchive.sizeText(t.bytes))")
+            // The size is what the download costs, so it is only shown where there is one.
+            Text(t.freelyDistributable ? "\(t.year) · \(InternetArchive.sizeText(t.bytes))" : t.year)
                 .font(.caption).foregroundStyle(.secondary)
+            if !installed && !t.freelyDistributable {
+                Text(InternetArchive.neededFilesText(t))
+                    .font(.caption2).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let sw = t.shareware {
+                    Text("Shareware: \(sw.episode) (\(sw.sizeNote))")
+                        .font(.caption2).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if !installed, let f = model.found[t.id] {
+                Text("Found in \(Self.storeName(for: f)).")
+                    .font(.caption2).foregroundStyle(.green)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if !t.engine.isInstalled, t.engine != .bundled {
                 Text("Includes \(t.engine.name) (\(t.engine.sizeNote))")
                     .font(.caption2).foregroundStyle(.secondary)
@@ -74,12 +94,19 @@ struct GameLibraryView: View {
             }
 
             if busy {
-                // Real bytes, not a spinner: these are up to 184 MB.
-                ProgressView(value: model.fraction)
-                    .progressViewStyle(.linear)
+                // Real bytes where there are real bytes to count. The built-in downloaders bring
+                // their own progress window and cannot be stopped from here, so those get a
+                // spinner and no Cancel rather than a bar stuck at nought under a dead button.
+                if model.indeterminate {
+                    ProgressView().progressViewStyle(.linear)
+                } else {
+                    ProgressView(value: model.fraction).progressViewStyle(.linear)
+                }
                 Text(model.status).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                Button("Cancel") { model.cancel() }
-                    .buttonStyle(.link).font(.caption)
+                if !model.indeterminate {
+                    Button("Cancel") { model.cancel() }
+                        .buttonStyle(.link).font(.caption)
+                }
             } else {
                 HStack(spacing: 6) {
                     // One primary button per state. A card is 170pt wide, so "Download Again"
@@ -92,8 +119,8 @@ struct GameLibraryView: View {
                     if installed && t.engine.isInstalled {
                         Button("Play") { model.play(t) }
                             .lineLimit(1)
-                    } else {
-                        Button(buttonTitle(t, installed: installed)) { model.download(t) }
+                    } else if let action = primaryAction(t, installed: installed) {
+                        Button(action.title) { action.run() }
                             .disabled(model.activeID != nil)
                             .lineLimit(1)
                             .layoutPriority(0)
@@ -137,10 +164,21 @@ struct GameLibraryView: View {
             menu.addItem(item)
         }
 
-        if installed && t.engine.isInstalled {
+        if installed && t.engine.isInstalled && t.freelyDistributable {
             add("Download Again", enabled: model.activeID == nil) { model.download(t) }
         }
         add("Use My Own Files…") { model.chooseOwnFiles(t) }
+        if model.found[t.id] != nil {
+            add("Use the Copy Found on This Mac") { model.useFoundCopy(t) }
+        }
+        // Offered while the game is not installed. The shareware Duke GRP and Quake pak carry
+        // the same filenames as the retail ones, and the point of this entry is to try the game,
+        // not to put an episode where a full game already is.
+        if !installed, let sw = t.shareware {
+            add("Download Shareware — \(sw.episode)", enabled: model.activeID == nil) {
+                model.downloadShareware(t)
+            }
+        }
         add("Add Desktop Shortcut") { model.addShortcut(t) }
         if let u = InternetArchive.detailsURL(t) {
             add(t.builtIn == .freedoom ? "Show the project page" : "Show on archive.org") {
@@ -154,11 +192,34 @@ struct GameLibraryView: View {
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 
-    /// One button, one press: whatever is still missing. Downloading data next to an engine that
-    /// is not there just moves the dead end one step later.
-    private func buttonTitle(_ t: InternetArchive.Title, installed: Bool) -> String {
-        if !t.engine.isInstalled && t.engine != .bundled { return installed ? "Install \(t.engine.name)" : "Get Game" }
-        return installed ? "Download Again" : "Download"
+    /// One button, one press: whatever is still missing, in the order it is missing.
+    ///
+    /// The engine comes first because data next to an engine that is not there only moves the
+    /// dead end one step later. After that the two halves of the catalogue part ways: the free
+    /// titles download, the rest take the copy that was found or ask for one.
+    private func primaryAction(_ t: InternetArchive.Title, installed: Bool) -> (title: String, run: () -> Void)? {
+        if !t.engine.isInstalled && t.engine != .bundled {
+            let label = installed || !t.freelyDistributable ? "Install \(t.engine.name)" : "Get Game"
+            return (label, { model.download(t) })
+        }
+        if t.freelyDistributable {
+            return (installed ? "Download Again" : "Download", { model.download(t) })
+        }
+        // Your own copy first, then the free episode, then the file picker. Anything the user
+        // already owns beats anything that has to come down the wire.
+        if model.found[t.id] != nil { return ("Use Found Copy", { model.useFoundCopy(t) }) }
+        guard !installed else { return nil }
+        if t.shareware != nil { return ("Get Shareware", { model.downloadShareware(t) }) }
+        return ("Choose Files…", { model.chooseOwnFiles(t) })
+    }
+
+    /// Which store a found copy came out of, for the line on the card. Read from the path
+    /// because that is the only thing that actually knows.
+    private static func storeName(for url: URL) -> String {
+        let p = url.path
+        if p.contains("/Steam/steamapps/") { return "your Steam library" }
+        if p.contains("/GOG.com/") || p.contains("/Contents/Resources/game") { return "a GOG installation" }
+        return "\(url.deletingLastPathComponent().lastPathComponent)"
     }
 
     private func cover(_ t: InternetArchive.Title) -> some View {
@@ -183,16 +244,14 @@ struct GameLibraryView: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Freedoom and Shadow Warrior's shareware episode are free to distribute. Everything else is hosted by the Internet Archive, not by RetroMac, and none of those items states a licence: downloading them is your own decision and your own responsibility, and in most countries you need to own the game.")
+            Text("RetroMac downloads what its publisher released to be copied: Freedoom, which is free software, and the shareware and demo episodes of Doom, Heretic, Duke Nukem 3D, Quake, Quake II and Shadow Warrior. It does not download the full commercial games. For those, the copy you play has to be your own — bought, on a disc, or already in your Steam or GOG library, where RetroMac will look for it.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Link("archive.org", destination: URL(string: "https://archive.org")!)
-                    .font(.caption2)
-                Spacer()
-                Text("Total if you take everything: \(InternetArchive.sizeText(InternetArchive.catalogue.reduce(0) { $0 + $1.bytes }))")
-                    .font(.caption2).foregroundStyle(.secondary)
-            }
+            // No link here on purpose: every card already carries its own source in the "more"
+            // menu, as the project page for Freedoom and the item page for the rest. A single
+            // footer link could only ever point at one of ten titles.
+            Text("The engines are open source and come from their own projects.")
+                .font(.caption2).foregroundStyle(.secondary)
         }
         .padding(16)
     }
@@ -209,9 +268,28 @@ final class GameLibraryModel: ObservableObject {
     @Published var activeID: String?
     @Published var fraction: Double = 0
     @Published var status: String = ""
+    /// Copies of a title another store already put on this Mac, keyed by title id.
+    @Published var found: [String: URL] = [:]
+    /// True while a download runs that reports through its own progress window rather than
+    /// through this card. Those cannot be cancelled from here, so the card stops pretending:
+    /// a spinner instead of a bar frozen at nought, and no Cancel that does nothing.
+    @Published var indeterminate = false
 
     func refresh() {
         installed = Set(InternetArchive.catalogue.filter { InternetArchive.isInstalled($0) }.map(\.id))
+        scanForLocalCopies()
+    }
+
+    /// Look for Steam and GOG copies of everything not already in place. Off the main thread:
+    /// this is a few hundred directory listings on a large Steam library, and the gallery has to
+    /// draw immediately.
+    private func scanForLocalCopies() {
+        let wanted = InternetArchive.catalogue.filter { !installed.contains($0.id) }
+        guard !wanted.isEmpty else { found = [:]; return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let hits = InternetArchive.foundLocally(wanted)
+            DispatchQueue.main.async { self.found = hits }
+        }
     }
 
     /// Engine first, then the data, then the tick — the whole thing on one press.
@@ -220,12 +298,17 @@ final class GameLibraryModel: ObservableObject {
         errors[t.id] = nil
         activeID = t.id
         fraction = 0
+        indeterminate = false
         status = t.engine.isInstalled ? "Starting…" : "Installing \(t.engine.name)…"
 
         // "Install <engine>" is offered when only the engine is missing, so honour that: fetching
         // 184 MB of data that is already on disk would be a rude reading of one press. When the
         // engine is there, the press came from "Download Again" and means the data.
-        let needsData = !installed.contains(t.id) || t.engine.isInstalled
+        //
+        // For everything RetroMac does not distribute this press is ONLY ever the engine. The
+        // card offers "Choose Files…" for the data, and `InternetArchive.downloadURL` refuses to
+        // build a URL anyway, so routing here would end in a bewildering transport error.
+        let needsData = t.freelyDistributable && (!installed.contains(t.id) || t.engine.isInstalled)
 
         // If the downloader is somehow still holding a previous title, say so instead of
         // arming a card that can never finish.
@@ -272,52 +355,83 @@ final class GameLibraryModel: ObservableObject {
 
         // Warcraft is its own case: the picked folder is either extracted data or a DOS
         // installation that has to go through the extractor first.
-        if case .warcraftInstall(let wc) = t.destination {
+        if case .warcraftInstall = t.destination {
             guard let dir = panel.urls.first, dir.hasDirectoryPath else {
                 errors[t.id] = "Choose the \(t.name) folder, not a single file."
                 return
             }
-            if WarcraftGame.hasExtractedData(at: dir, wc) {
-                setWarcraftFolder(wc, dir.path)
-                refresh()
-            } else if WarcraftGame.looksLikeInstallation(at: dir, wc) {
-                activeID = t.id
-                status = "Extracting game data…"
-                WarcraftGame.extract(wc, from: dir) { [weak self] result in
-                    guard let self else { return }
-                    self.activeID = nil
-                    self.status = ""
-                    switch result {
-                    case .success(let dest): self.setWarcraftFolder(wc, dest.path)
-                    case .failure(let e):    self.errors[t.id] = "Extraction failed: \(e.message)"
-                    }
-                    self.refresh()
-                }
-            } else {
-                errors[t.id] = "No \(t.name) data found in that folder."
-            }
+            adoptWarcraft(t, dir)
             return
         }
 
         let dirs = panel.urls.filter { $0.hasDirectoryPath }
         let files = panel.urls.filter { !$0.hasDirectoryPath }
-
         if let dir = dirs.first, files.isEmpty {
             errors[t.id] = InternetArchive.useFolder(dir, for: t)
         } else if !files.isEmpty {
-            guard let dest = InternetArchive.destinationFolder(t) else {
-                errors[t.id] = "No folder is set for \(t.name)."
-                return
-            }
-            do {
-                for f in files {
-                    try FileManager.default.copyItem(at: f, to: dest.appendingPathComponent(f.lastPathComponent))
-                }
-            } catch {
-                errors[t.id] = error.localizedDescription
-            }
+            adoptFiles(t, files)
         }
         refresh()
+    }
+
+    /// Take a copy another store already has: the file is copied into the folder the engine
+    /// reads rather than the setting being repointed, because `doomWadFolder` is shared by Doom,
+    /// Doom II, Heretic and Freedoom — moving it to Steam's Doom folder would un-find the rest.
+    func useFoundCopy(_ t: InternetArchive.Title) {
+        guard let url = found[t.id] else { return }
+        errors[t.id] = nil
+        if case .warcraftInstall = t.destination {
+            adoptWarcraft(t, url)
+        } else {
+            adoptFiles(t, [url])
+            refresh()
+        }
+    }
+
+    /// Extracted data is adopted where it lies; an original DOS installation goes through the
+    /// extractor first, exactly as the Setup Assistant does it.
+    private func adoptWarcraft(_ t: InternetArchive.Title, _ dir: URL) {
+        guard case .warcraftInstall(let wc) = t.destination else { return }
+        if WarcraftGame.hasExtractedData(at: dir, wc) {
+            setWarcraftFolder(wc, dir.path)
+            refresh()
+        } else if WarcraftGame.looksLikeInstallation(at: dir, wc) {
+            activeID = t.id
+            status = "Extracting game data…"
+            WarcraftGame.extract(wc, from: dir) { [weak self] result in
+                guard let self else { return }
+                self.activeID = nil
+                self.status = ""
+                switch result {
+                case .success(let dest): self.setWarcraftFolder(wc, dest.path)
+                case .failure(let e):    self.errors[t.id] = "Extraction failed: \(e.message)"
+                }
+                self.refresh()
+            }
+        } else {
+            errors[t.id] = "No \(t.name) data found in that folder."
+        }
+    }
+
+    /// Copy the user's own files into the folder the engine reads. Never a move: those files
+    /// belong to whatever put them there, and a Steam library that loses its WAD fails a
+    /// verification the next time Steam looks.
+    private func adoptFiles(_ t: InternetArchive.Title, _ files: [URL]) {
+        guard let dest = InternetArchive.destinationFolder(t) else {
+            errors[t.id] = "No folder is set for \(t.name)."
+            return
+        }
+        do {
+            for f in files {
+                let to = dest.appendingPathComponent(f.lastPathComponent)
+                if FileManager.default.fileExists(atPath: to.path) {
+                    try FileManager.default.removeItem(at: to)
+                }
+                try FileManager.default.copyItem(at: f, to: to)
+            }
+        } catch {
+            errors[t.id] = error.localizedDescription
+        }
     }
 
     private func setWarcraftFolder(_ wc: WarcraftGame.Title, _ path: String) {
@@ -379,14 +493,7 @@ final class GameLibraryModel: ObservableObject {
         // Freedoom and Shadow Warrior come from their own projects, with their own downloader
         // and its own progress window — no member list to walk.
         if let kind = t.builtIn {
-            status = "Downloading \(t.name)…"
-            (NSApp.delegate as? AppDelegate)?.fetchBuiltInGame(kind) { [weak self] ok in
-                guard let self else { return }
-                self.activeID = nil
-                self.status = ""
-                if !ok { self.errors[t.id] = "The \(t.name) download did not finish." }
-                self.refresh()
-            }
+            runBuiltIn(kind, for: t, label: "Downloading \(t.name)…")
             return
         }
         status = "Starting…"
@@ -412,6 +519,51 @@ final class GameLibraryModel: ObservableObject {
             }
             self.refresh()
         })
+    }
+
+    /// Fetch the publisher's shareware or demo episode.
+    ///
+    /// Same route the launchers have always taken: these downloaders are what happens today when
+    /// a game is started with no data at all. The only difference here is that the press said
+    /// "get me the data", so the game is not started afterwards.
+    func downloadShareware(_ t: InternetArchive.Title) {
+        guard let sw = t.shareware, activeID == nil else { return }
+        errors[t.id] = nil
+        activeID = t.id
+        fraction = 0
+        indeterminate = true
+        status = t.engine.isInstalled ? "Downloading \(sw.episode)…" : "Installing \(t.engine.name)…"
+
+        guard let delegate = NSApp.delegate as? AppDelegate else { finishJob(); return }
+        delegate.ensureEngine(t.engine) { [weak self] ok in
+            guard let self else { return }
+            guard ok else {
+                self.finishJob()
+                self.errors[t.id] = "\(t.engine.name) is needed to play \(t.name), and was not installed."
+                return
+            }
+            self.runBuiltIn(sw.source, for: t, label: "Downloading \(sw.episode)…")
+        }
+    }
+
+    /// Everything that comes from its own downloader rather than from the Archive catalogue.
+    private func runBuiltIn(_ kind: InternetArchive.BuiltIn, for t: InternetArchive.Title, label: String) {
+        activeID = t.id
+        indeterminate = true
+        status = label
+        guard let delegate = NSApp.delegate as? AppDelegate else { finishJob(); return }
+        delegate.fetchBuiltInGame(kind) { [weak self] ok in
+            guard let self else { return }
+            self.finishJob()
+            if !ok { self.errors[t.id] = "The \(t.name) download did not finish." }
+            self.refresh()
+        }
+    }
+
+    private func finishJob() {
+        activeID = nil
+        status = ""
+        indeterminate = false
     }
 
     func cancel() { GameDownloader.shared.cancel() }
