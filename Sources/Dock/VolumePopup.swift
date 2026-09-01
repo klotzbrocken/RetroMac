@@ -60,8 +60,13 @@ private final class VolumePopupView: NSView {
     private var level = CGFloat(SystemVolume.level ?? 0.5)
     private var dragging = false
 
-    /// #D4D0C8, the "3D Objects" grey sampled from the original Windows dialogs.
-    private let face = NSColor(srgbRed: 0.831, green: 0.816, blue: 0.784, alpha: 1)
+    /// #D4D0C8, the "3D Objects" grey of the default Windows scheme — but only as a fallback.
+    /// The Plus! schemes and the themes that carry their own palette (Windows Me) repaint that
+    /// grey, and the taskbar follows them, so a hardcoded face made this popup the one control
+    /// on screen still wearing 1998's default colours.
+    private var face: NSColor {
+        Win98Scheme.activeFaceColor() ?? NSColor(srgbRed: 0.831, green: 0.816, blue: 0.784, alpha: 1)
+    }
     private var trackRect: NSRect { NSRect(x: bounds.midX - 2, y: 40, width: 4, height: bounds.height - 66) }
     private var muteRect: NSRect { NSRect(x: 8, y: 12, width: 13, height: 13) }
     /// The box AND its label. Only the box itself used to count, so a click on the word "Mute"
@@ -75,33 +80,34 @@ private final class VolumePopupView: NSView {
     override var isFlipped: Bool { false }
 
     override func draw(_ dirtyRect: NSRect) {
+        let bevel = Win98Scheme.activeBevelColors()
         face.setFill()
         bounds.fill()
-        Win98Bevel.raised(bounds)
+        Win98Bevel.raised(bounds, bevel)
 
         let label = "Volume" as NSString
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont(name: "Tahoma", size: 11) ?? NSFont.systemFont(ofSize: 11),
-            .foregroundColor: NSColor.black]
+            .foregroundColor: Win98Scheme.activeWindowTextColor() ?? NSColor.black]
         let ls = label.size(withAttributes: attrs)
         label.draw(at: NSPoint(x: bounds.midX - ls.width / 2, y: bounds.maxY - ls.height - 6),
                    withAttributes: attrs)
 
         // Slider track: a thin sunken channel.
         let t = trackRect
-        Win98Bevel.sunken(t.insetBy(dx: -1, dy: -1))
+        Win98Bevel.sunken(t.insetBy(dx: -1, dy: -1), bevel)
 
         // Thumb: a raised block, low volume at the bottom.
         let thumbH: CGFloat = 11, thumbW: CGFloat = 20
         let ty = t.minY + (t.height - thumbH) * level
         let thumb = NSRect(x: bounds.midX - thumbW / 2, y: ty, width: thumbW, height: thumbH)
         face.setFill(); thumb.fill()
-        Win98Bevel.raised(thumb)
+        Win98Bevel.raised(thumb, bevel)
 
         // Mute box + label.
         let m = muteRect
         NSColor.white.setFill(); m.fill()
-        Win98Bevel.sunken(m)
+        Win98Bevel.sunken(m, bevel)
         if muted {
             NSColor.black.setStroke()
             let tick = NSBezierPath()
@@ -146,8 +152,16 @@ private final class VolumePopupView: NSView {
 
 /// The two 3D edges every Windows 9x control is built from.
 enum Win98Bevel {
-    static func raised(_ r: NSRect) { edges(r, tl: NSColor.white, br: NSColor(white: 0.25, alpha: 1)) }
-    static func sunken(_ r: NSRect) { edges(r, tl: NSColor(white: 0.25, alpha: 1), br: NSColor.white) }
+    /// `scheme` is the active colour scheme's edges, when there is one. Passing nil keeps the
+    /// default white-on-grey of a stock Windows 98.
+    typealias Edges = (hilight: NSColor, light: NSColor, shadow: NSColor, dkShadow: NSColor)
+
+    static func raised(_ r: NSRect, _ scheme: Edges? = nil) {
+        edges(r, tl: scheme?.hilight ?? .white, br: scheme?.shadow ?? NSColor(white: 0.25, alpha: 1))
+    }
+    static func sunken(_ r: NSRect, _ scheme: Edges? = nil) {
+        edges(r, tl: scheme?.shadow ?? NSColor(white: 0.25, alpha: 1), br: scheme?.hilight ?? .white)
+    }
 
     private static func edges(_ r: NSRect, tl: NSColor, br: NSColor) {
         tl.setFill()

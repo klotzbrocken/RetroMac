@@ -54,6 +54,7 @@ final class LicenseManager: ObservableObject {
     static let premiumFeatures: [PremiumFeature] = [
         PremiumFeature(name: "Live Wallpaper", symbol: "photo.on.rectangle.angled"),
         PremiumFeature(name: "Virtual Camera", symbol: "camera.fill"),
+        PremiumFeature(name: "Retro Crashes", symbol: "exclamationmark.triangle.fill"),
     ]
 
     /// A feature's name, with a padlock appended while it's locked — e.g. "Live Camera 🔒".

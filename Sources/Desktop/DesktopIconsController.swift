@@ -175,8 +175,28 @@ final class DesktopIconsController {
         }
         let effective = entries.filter { !custom.removed.contains($0.name) } + custom.added.filter { !custom.removed.contains($0.name) }
 
+        // Where an icon with no grid position goes. `index` was the old answer, and it put the
+        // sixteenth icon on row sixteen — below the bottom of any screen. Added shortcuts now
+        // take the first cell nothing else claims, walking down column 0 and then across.
+        var taken = Set<[Int]>()
+        for e in effective {
+            if let y = e.gridY { taken.insert([e.gridX ?? 0, y]) }
+        }
+        let rowsPerColumn = max(4, Int((visibleFrame.height - marginY * 2) / cellHeight))
+        func firstFreeCell() -> (Int, Int) {
+            var col = 0
+            while col < 12 {
+                for row in 0..<rowsPerColumn where !taken.contains([col, row]) {
+                    taken.insert([col, row])
+                    return (col, row)
+                }
+                col += 1
+            }
+            return (0, 0)
+        }
+
         let cw = cellWidth, ch = cellHeight
-        for (index, entry) in effective.enumerated() {
+        for entry in effective {
             var iconImage = loadIconImage(for: entry, theme: theme, size: iSize)
             if let ov = custom.iconOverrides[entry.name], let o = NSImage(contentsOfFile: ov) { iconImage = o }
             let fullImage: NSImage? = (entry.type == "trash" && entry.iconFull != nil)
@@ -192,8 +212,15 @@ final class DesktopIconsController {
             if let pos = custom.positions[entry.name] {
                 view.frame = NSRect(x: pos[0], y: pos[1], width: cw, height: ch)
             } else {
-                let col = entry.gridX ?? 0
-                let row = entry.gridY ?? index
+                let placed: (col: Int, row: Int)
+                if let y = entry.gridY {
+                    placed = (entry.gridX ?? 0, y)
+                } else {
+                    let free = firstFreeCell()
+                    placed = (free.0, free.1)
+                }
+                let col = placed.col
+                let row = placed.row
                 let x = iconsFromLeft
                     ? visibleFrame.minX + marginX + (CGFloat(col) * cw) - screenFrame.origin.x
                     : visibleFrame.maxX - marginX - cw - (CGFloat(col) * cw) - screenFrame.origin.x

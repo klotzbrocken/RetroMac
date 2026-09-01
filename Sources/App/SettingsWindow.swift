@@ -26,6 +26,7 @@ enum SettingsTab: String, CaseIterable {
     case retroMode = "retroMode"
     case camera = "camera"
     case games = "games"
+    case crashes = "crashes"
     case shortcuts = "shortcuts"
     case general = "general"
     case health = "health"
@@ -44,6 +45,7 @@ enum SettingsTab: String, CaseIterable {
         case .retroMode: return "Retro Mode"
         case .camera: return "Camera & Streaming"
         case .games: return "Games"
+        case .crashes: return LicenseManager.shared.label("Crashes")
         case .shader: return "Shader"
         case .shortcuts: return "Shortcuts"
         case .general: return "General"
@@ -59,6 +61,7 @@ enum SettingsTab: String, CaseIterable {
         case .retroMode: return "wand.and.stars"
         case .camera: return "camera.fill"
         case .games: return "gamecontroller"
+        case .crashes: return "exclamationmark.triangle"
         case .shader: return "tv"
         case .shortcuts: return "keyboard"
         case .general: return "gearshape"
@@ -72,7 +75,7 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         // The shader leads: it is the product, and it had no home of its own until now.
         case .shader, .dock, .desktop, .retroMode: return nil
-        case .camera, .games: return "Surfaces"
+        case .camera, .games, .crashes: return "Surfaces"
         case .shortcuts, .general, .health, .about: return "System"
         }
     }
@@ -85,6 +88,7 @@ enum SettingsTab: String, CaseIterable {
         case .shader: return "Everything about the effect itself: preset, look, where it draws and when it runs."
         case .shortcuts: return "Global hotkeys and menu-bar behaviour."
         case .general: return "Setup, startup and the permissions RetroMac needs."
+        case .crashes: return "Simulated failures in period. Nothing ever really crashes."
         default: return nil
         }
     }
@@ -134,7 +138,7 @@ struct SettingsSidebar: View {
 
     // Group tabs by section in order
     private var mainTabs: [SettingsTab] { [.shader, .dock, .desktop, .retroMode] }
-    private var surfacesTabs: [SettingsTab] { [.camera, .games] }
+    private var surfacesTabs: [SettingsTab] { [.camera, .games, .crashes] }
     private var systemTabs: [SettingsTab] { [.shortcuts, .general, .health, .about] }
 
     var body: some View {
@@ -378,6 +382,8 @@ struct SettingsDetailPane: View {
                     CameraStreamingTab()
                 case .games:
                     GamesSettingsTab()
+                case .crashes:
+                    CrashesTab()
                 case .shader:
                     ShaderTab()
                 case .shortcuts:

@@ -318,10 +318,21 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Link("int10h.org — The Ultimate Oldschool PC Font Pack",
+                         destination: URL(string: "https://int10h.org/oldschool-pc-fonts/")!)
+                        .font(.caption)
+                    Text("Retro Crashes draws its Windows 9x blue screen in the real VGA text mode, so it uses the real VGA font: Px437 IBM VGA 9x16 by VileR, CC BY-SA 4.0, bundled unmodified. Full licence in the app.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("mdomlop/retrosmart-x11-cursors on GitHub",
                          destination: URL(string: "https://github.com/mdomlop/retrosmart-x11-cursors")!)
                         .font(.caption)
                     Text("Windows 3.1 theme cursors: “retrosmart” X11 cursor theme by Manuel Domínguez López (mdomlop), GPL-3.0 — converted to the macOS cursor format. Full licence bundled in the app.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("The Macintosh system-error bomb in Retro Crashes was traced from a screenshot of the original System error alert. Original artwork © Apple Computer, Inc.; used here for a non-commercial retro tribute, on the same basis as the cursors below.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

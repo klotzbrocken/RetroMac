@@ -78,6 +78,42 @@ struct Win98Scheme {
         return nil
     }
 
+    /// The scheme's text colour for a control face. Dangerous Creatures puts white text on a dark
+    /// face, where black would be unreadable.
+    static func activeWindowTextColor() -> NSColor? {
+        var colors: DockThemeConfig.ChromeColors?
+        if isWin98Active, let c = byID[AppSettings.shared.win98Scheme]?.colors {
+            colors = c
+        } else if RetroFrameTheme.key() == "win98" {
+            colors = ThemeManager.shared.activeTheme?.config.chromeColors
+        }
+        guard let hex = colors?.windowText, !hex.isEmpty else { return nil }
+        return NSColor.fromHex(hex)
+    }
+
+    /// The active scheme's bevel edges, lightest to darkest. Anything drawn with a Windows 9x
+    /// bevel has to ask for these rather than hardcode white and grey: Dangerous Creatures and
+    /// More Windows both change the face far enough that the default edges read as a foreign
+    /// control sitting on the taskbar.
+    static func activeBevelColors() -> (hilight: NSColor, light: NSColor,
+                                        shadow: NSColor, dkShadow: NSColor)? {
+        var colors: DockThemeConfig.ChromeColors?
+        if isWin98Active, let c = byID[AppSettings.shared.win98Scheme]?.colors {
+            colors = c
+        } else if RetroFrameTheme.key() == "win98" {
+            colors = ThemeManager.shared.activeTheme?.config.chromeColors
+        }
+        guard let c = colors else { return nil }
+        func colour(_ hex: String?, _ fallback: NSColor) -> NSColor {
+            guard let hex, !hex.isEmpty else { return fallback }
+            return NSColor.fromHex(hex)
+        }
+        return (colour(c.hilight, .white),
+                colour(c.light, NSColor(white: 0.87, alpha: 1)),
+                colour(c.shadow, NSColor(white: 0.50, alpha: 1)),
+                colour(c.dkShadow, .black))
+    }
+
     /// The active scheme's title-text colour (e.g. More Windows uses gold), or nil for default.
     static func activeTitleTextColor() -> NSColor? {
         guard isWin98Active,

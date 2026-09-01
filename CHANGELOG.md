@@ -3,6 +3,83 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+- **Retro Crashes.** Simulated system failures in period: the Windows 9x blue screen ("An error
+  has occurred", the fatal exception, Windows protection error), the illegal-operation dialog, and
+  the NT Stop screen with its memory dump for Windows XP and 7. A crash freezes the desktop —
+  by laying a photograph of it over itself, so nothing is actually frozen — shows the error, and
+  offers the recovery the machine of the day offered. Choose Ctrl+Alt+Delete and the screen goes
+  black and the theme's boot screen plays.
+
+  Nothing ever really crashes: no application is quit, no document closed, no restart issued, and
+  no system setting is changed. That last part is the recovery story rather than a detail — since
+  nothing global is touched, force-quitting RetroMac is itself a complete repair. Esc always ends
+  it, switching to another app ends it, and it ends by itself after a minute.
+
+  The Macintosh side is there too: the System 6 bomb with its always-dead Resume button, Mac OS 9's
+  bus error with the advice to restart holding Shift, Mac OS X 10.0's text-console panic, and the
+  grey "You need to restart your computer" curtain in its four languages for Snow Leopard and
+  Mountain Lion.
+
+  In Authentic mode a crash is a scene rather than a picture. For five or six seconds the pointer
+  falls behind and then sticks, the picture starts tearing, and a hard disk spins up and begins to
+  hunt — then the error arrives. Choose Restart and the screen goes black, the theme's boot screen
+  plays, and the desktop comes back exactly as it was, because it was never touched.
+
+  The drive is synthesised, not sampled: a spindle spinning up, the actuator seeking, and then the
+  slow regular click of a head that has hit the stop and is retrying. Nobody's recording is
+  shipped, and the sound can follow the length of the scene instead of being a fixed clip.
+
+  The graphics glitches are the ones these machines really produced. Redraw trails — a window
+  smeared across a desktop that has stopped repainting — only appear where they were possible:
+  drawing straight into the frame buffer, so every Windows up to XP and both classic Mac systems,
+  but not Windows 7 with its Desktop Window Manager and not Mac OS X, which composited from the
+  start. Where the desktop ran in 256 colours the palette goes wrong; where it ran in millions, a
+  colour channel arrives displaced instead.
+
+  Each era has several failures rather than one, and picks between them: the 9x blue screens, the
+  "System is busy" screen, and the invalid page fault blamed on whichever of EXPLORER, RUNDLL32,
+  MSGSRV32 or IEXPLORE was unlucky; XP's "has encountered a problem" with Send Error Report, and
+  Windows 7's "has stopped working"; the Macintosh bomb naming its fault the way each system
+  version did, from "Bus Error" to "error type 11", and the plainer "application has unexpectedly
+  quit" that did not take the machine with it; and on Mac OS X the panic plus the same news in
+  Aqua. Every screen also fills its own blanks — addresses, stop codes and module names differ
+  each time.
+
+  The Windows dialogs are laid out the way the originals were, down to the buttons stacked in a
+  column on the right and the register dump that unfolds behind "Details". Closing one does not
+  always let you off: a program that had just performed an illegal operation often took the
+  machine with it a moment later, so sometimes it does. There are two antivirus finds as well —
+  Norton on the 9x machines, Symantec's notification window on XP — which are not crashes at all:
+  nothing restarts, because nothing broke.
+
+  No two crashes in a row look alike. The picker avoids the last scenario and the last shape of
+  failure, so a blue screen is followed by a dialog or by the shell dying rather than by another
+  blue screen — half the Windows 9x catalogue is a blue screen with different words on it, which
+  is how a correct random pick can still feel like the same crash every time. The warning varies
+  too: sometimes the pointer falls behind, sometimes the picture comes apart, sometimes both in
+  turn, and sometimes the failure simply arrives.
+
+  Dialogs keep the mouse pointer. Blue screens still take it away, because the machine was not
+  answering, but a dialog you are meant to click needs something to aim with.
+
+  One of them is not a screen at all: Explorer stops responding, the taskbar and the desktop icons
+  disappear for a few seconds, and then the shell comes back. That was the most common Windows
+  failure of the era by a distance, and it needs no overlay — RetroMac simply takes its own
+  taskbar away and puts it back.
+
+  A red "simulated crash" sits in the corner, and can be switched off for a video.
+
+  Off by default. Set how often it may happen, from once a week to a demo mode, or leave it on
+  manual. It stays quiet while the virtual camera is running, while something is being recorded,
+  in front of Keynote, Zoom or Teams, and in the first ten minutes after launch. Part of the
+  licence.
+
+  The Windows 9x screen is drawn in the real 720x400 VGA text mode with the real VGA font
+  (Px437 IBM VGA by VileR, CC BY-SA 4.0, credited in About), scaled up whole-number so the pixels
+  stay square.
+
 ## 2.8.3
 
 - **Putting your system cursors back is reliable now.** Restoring used to delete its own backup,

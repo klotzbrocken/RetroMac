@@ -564,6 +564,21 @@ struct LauncherView: View {
                     .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }
 
+            // Crash Now: the Party-mode trigger where a demo can reach it in one click, without
+            // opening Settings. Only offered when the active theme actually has a failure to
+            // show, and locked like every other paid feature.
+            if CrashEra.current() != nil {
+                HStack {
+                    Label("Crash Now", systemImage: "exclamationmark.triangle")
+                    if !LicenseManager.shared.isLicensed {
+                        Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Crash") { AppDelegate.shared?.launcherCrashNow() }
+                        .controlSize(.small)
+                }
+            }
+
             appleCycleRow
         }
         .font(.system(size: 12))

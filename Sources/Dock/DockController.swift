@@ -17,6 +17,8 @@ final class DockController {
     /// engines like Stratagus use a borderless desktop-sized window instead, on our Space.
     /// The dock floats at level 24, so without this it draws straight over the game.
     private var suspendedForGame = false
+    /// The taskbar is hidden because a simulated Explorer crash is running.
+    private var suspendedForCrash = false
     private var manualToggle: Bool?
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
@@ -51,6 +53,8 @@ final class DockController {
         if !AppSettings.shared.dockOnly, let theme = ThemeManager.shared.activeTheme {
             SplashController.shared.showIfEnabled(for: theme)
         }
+        // Simulated crashes belong to the themed desktop, so they live and die with it.
+        CrashScheduler.shared.start()
         let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false
         if !hidesDock {
             createWindow()
@@ -114,6 +118,8 @@ final class DockController {
     /// completes before the process exits.
     func stop(synchronous: Bool = false) {
         print("[Dock] Stopping")
+        CrashScheduler.shared.stop()
+        CrashDirector.shared.teardown(.themeStopped)
         removeAutoHideMonitors()
         DockFix.shared.stop()
         MinimizedWindowTracker.shared.stop()
@@ -505,6 +511,12 @@ final class DockController {
             return
         }
 
+        if suspendedForCrash {
+            dockLog("evaluateVisibility: simulated shell crash → hide")
+            hide()
+            return
+        }
+
         if isFrontmostAppFullscreen() {
             dockLog("evaluateVisibility: fullscreen → hide (isOnActiveSpace=\(window?.isOnActiveSpace ?? false), isVisible=\(window?.isVisible ?? false), windowNum=\(window?.windowNumber ?? -1))")
             hide()
@@ -527,6 +539,15 @@ final class DockController {
     /// Step aside while a bundled game runs, then come back. Used by the game launchers, which
     /// know when their process starts and exits — the fullscreen detection above cannot help
     /// here (see `suspendedForGame`).
+    /// Take the taskbar away for a simulated Explorer crash, and put it back. Separate from the
+    /// game suspension so the two cannot cancel each other out, and safe to call redundantly:
+    /// the crash director calls it on every teardown path.
+    func setSuspendedForCrash(_ suspended: Bool) {
+        guard suspendedForCrash != suspended else { return }
+        suspendedForCrash = suspended
+        evaluateVisibility()
+    }
+
     func setSuspendedForGame(_ suspended: Bool) {
         guard suspendedForGame != suspended else { return }
         suspendedForGame = suspended
@@ -802,6 +823,10 @@ final class DockController {
             self?.autoHideAnimating = false
         })
     }
+
+    /// Read by CrashScheduler: a simulated crash must not fire behind a full-screen app, where
+    /// it would be invisible, nor over one, where it would be an ambush.
+    var isFrontmostFullscreen: Bool { isFrontmostAppFullscreen() }
 
     private func isFrontmostAppFullscreen() -> Bool {
         // When a fullscreen app is active it occupies its own Mission Control Space.

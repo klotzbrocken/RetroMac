@@ -58,6 +58,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Video recording with shader effects
     private var shaderRecorder: ShaderRecorder?
+    /// Read by CrashScheduler — a simulated crash must never land in a recording.
+    var isRecordingShaderVideo: Bool { shaderRecorder?.isRecording == true }
 
     // Save/restore state for TV window overlay
     var savedPreset: String?
@@ -249,6 +251,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // otherwise no way to reach the panel without a human clicking the status item.
         if ProcessInfo.processInfo.environment["RETROMAC_OPEN_SETTINGS"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { self.openSettings() }
+        }
+
+        // QA hook: stage one crash and take it away again, so a live check can never leave a
+        // blue screen sitting on somebody's desktop.
+        // RETROMAC_CRASH_NOW=<scenario-id>:<seconds on screen>:<delay before firing>
+        if let spec = ProcessInfo.processInfo.environment["RETROMAC_CRASH_NOW"] {
+            let parts = spec.split(separator: ":")
+            let id = parts.first.map(String.init) ?? ""
+            let seconds = parts.count > 1 ? Double(parts[1]) ?? 6 : 6
+            let delay = parts.count > 2 ? Double(parts[2]) ?? 2 : 2
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                CrashScheduler.shared.fire(scenarioID: id.isEmpty ? nil : id, source: .manual)
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                    CrashDirector.shared.teardown(.watchdog)
+                }
+            }
+        }
+
+        // QA hook: render every crash screen to PNGs and quit. The screens are pixel art on a
+        // fixed grid, so they can be checked against the original screenshots without taking a
+        // single pixel of the user's desktop.
+        if let dir = ProcessInfo.processInfo.environment["RETROMAC_CRASH_DUMP"] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                CrashDirector.dumpScreens(to: URL(fileURLWithPath: dir))
+                NSApp.terminate(nil)
+            }
+        }
+
+        // QA hook: print what the crash picker would choose, without showing anything.
+        if let spec = ProcessInfo.processInfo.environment["RETROMAC_CRASH_PICK"] {
+            let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
+            let count = Int(parts.first ?? "") ?? 10
+            let path = parts.count > 1 ? parts[1] : NSTemporaryDirectory() + "crashpicks.txt"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                let picks = CrashDirector.shared.dryRunPicks(count)
+                try? picks.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+            }
         }
 
         // QA hook: open the Game Library, same reason as the Settings hook above.
@@ -1316,6 +1355,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // (Television submenu removed — channels live in the TV Tube toggle + its
         // right-click menu; the dock/start-menu entries start the Tube directly.)
+
+        // Crash now — where a demo can reach it without opening Settings. Only offered when the
+        // active theme has crashes, and locked like every other paid feature.
+        if CrashEra.current() != nil {
+            let crashItem = NSMenuItem(title: LicenseManager.shared.label("Crash Now"),
+                                       action: #selector(crashNow), keyEquivalent: "")
+            crashItem.target = self
+            crashItem.image = sfIcon("exclamationmark.triangle")
+            menu.addItem(crashItem)
+        }
 
         // Games: one click, straight into the Library. It used to be a submenu, but since the
         // individual "Play …" entries moved into the Library window there was nothing else in it
@@ -3178,6 +3227,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Heretic Launcher (GZDoom)
 
+    /// Same as the menu entry, from the launcher flyout. The flyout has to close first: a crash
+    /// screen with a popover still floating over it looks like a bug, not a crash.
+    func launcherCrashNow() {
+        LauncherController.shared.close()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.crashNow() }
+    }
+
+    @objc private func crashNow() {
+        guard LicenseManager.shared.isLicensed else { presentUnlockScreen(); return }
+        let hold = CrashScheduler.shared.hold(ignoringSchedule: true)
+        guard hold == .ready else {
+            let alert = NSAlert()
+            alert.messageText = "Not right now"
+            alert.informativeText = hold.explanation
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+            return
+        }
+        let countdown = AppSettings.shared.crashMode == "party" ? AppSettings.shared.crashCountdown : 0
+        CrashScheduler.shared.fire(source: .manual, countdown: countdown)
+    }
+
     @objc func openGameLibrary() {
         GameLibraryWindowController.shared.show()
     }
@@ -4553,6 +4624,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func cleanupBeforeQuit() {
+        // First, before anything else can take time: never leave a simulated crash on screen.
+        CrashDirector.shared.teardown(.appQuit)
         let nc = NSWorkspace.shared.notificationCenter
         for obs in [appLaunchObserver, appTerminateObserver, sleepObserver, lockObserver, wakeObserver].compactMap({ $0 }) {
             nc.removeObserver(obs)

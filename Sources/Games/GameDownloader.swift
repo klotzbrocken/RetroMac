@@ -30,6 +30,8 @@ final class GameDownloader: NSObject {
 
     enum Failure: LocalizedError {
         case noDestination(String)
+        /// Another title is already downloading.
+        case busy(String)
         case http(Int)
         case transport(String)
         case install(String)
@@ -38,6 +40,7 @@ final class GameDownloader: NSObject {
         var errorDescription: String? {
             switch self {
             case .noDestination(let name): return "No folder is set for \(name)."
+            case .busy(let other):         return "Still downloading \(other)."
             case .http(let code):          return "The Internet Archive answered \(code)."
             case .transport(let m):        return m
             case .install(let m):          return m
@@ -75,7 +78,14 @@ final class GameDownloader: NSObject {
                progress: @escaping (Progress) -> Void,
                status: @escaping (String) -> Void,
                completion: @escaping (Result<Void, Failure>) -> Void) {
-        guard !isBusy else { return }
+        // Every exit from here must call `completion`. Returning silently left the caller
+        // believing a download was running: the card stayed busy, and every later press was
+        // swallowed by its own "one at a time" guard. That is what made a title impossible to
+        // download a second time.
+        guard !isBusy else {
+            completion(.failure(.busy(activeTitleID ?? "another title")))
+            return
+        }
         guard let folder = InternetArchive.destinationFolder(title) else {
             completion(.failure(.noDestination(title.name))); return
         }

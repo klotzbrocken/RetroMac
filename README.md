@@ -40,6 +40,10 @@ RetroMac has two core ideas:
 - **Television** — web and stream content inside a retro-shaded window, with fullscreen.
 - **Retro Games** — built-in Doom/Quake/Duke Nukem engines, Warcraft I + II natively on the
   bundled Stratagus engine with your own game data, plus an emulator installer + ROM library.
+- **Retro Crashes** — period-accurate failures: the Windows 95/98/Me blue screens, the XP and 7
+  Stop error, the System 6 and Mac OS 9 bomb, and the Mac OS X kernel panic. Rare and random, or
+  triggered for a demo. Nothing ever really crashes: no app is quit, no
+  document closed, no restart issued. Esc always ends it, and so does switching to another app.
 - **Retro Mode** — one click hides the Dock, menu bar and desktop icons, sets your favourite
   theme + shader, and restores everything on exit, quit or after a crash.
 - **Timer** — run the shader or Retro Mode during a daily time window or for X minutes.

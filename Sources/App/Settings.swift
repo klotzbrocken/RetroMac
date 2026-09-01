@@ -819,6 +819,61 @@ final class AppSettings: ObservableObject {
     @Published var themeBootscreenEnabled: [String: Bool] {
         didSet { defaults.set(themeBootscreenEnabled, forKey: "themeBootscreenEnabled") }
     }
+    // MARK: - Retro Crashes
+
+    /// "authentic" (rare, plausible) or "party" (manual triggers, countdowns, demos).
+    @Published var crashMode: String {
+        didSet { defaults.set(crashMode, forKey: "crashMode") }
+    }
+    /// off / veryRare / rare / authentic / chaotic / manual. Off by default, deliberately:
+    /// nobody should meet their first simulated blue screen without having asked for it.
+    @Published var crashIntensity: String {
+        didSet { defaults.set(crashIntensity, forKey: "crashIntensity") }
+    }
+    /// Scenario ids the user switched off, by id.
+    @Published var crashDisabledScenarios: [String] {
+        didSet { defaults.set(crashDisabledScenarios, forKey: "crashDisabledScenarios") }
+    }
+    /// Party mode: seconds of warning before the crash. 0 = immediately.
+    @Published var crashCountdown: Int {
+        didSet { defaults.set(crashCountdown, forKey: "crashCountdown") }
+    }
+    /// The failing-drive sound during the freeze. Synthesised, not sampled.
+    @Published var crashSoundEnabled: Bool {
+        didSet { defaults.set(crashSoundEnabled, forKey: "crashSoundEnabled") }
+    }
+    /// The red "simulated crash" badge. On by default and deliberately hard to argue with:
+    /// somebody walking past the desk should not think the machine has died.
+    @Published var crashShowBadge: Bool {
+        didSet { defaults.set(crashShowBadge, forKey: "crashShowBadge") }
+    }
+    /// The slow build-up: the pointer starts lagging and the drive starts working before the
+    /// error appears. Off makes a crash a single screen instead of a scene.
+    @Published var crashFullSequence: Bool {
+        didSet { defaults.set(crashFullSequence, forKey: "crashFullSequence") }
+    }
+    /// Corrupt the frozen desktop before the error — torn bands, colour separation, blocks of
+    /// stale video memory.
+    @Published var crashGlitches: Bool {
+        didSet { defaults.set(crashGlitches, forKey: "crashGlitches") }
+    }
+    /// Fill the whole screen instead of keeping whole pixels. A 4:3 signal on a wide panel is
+    /// period-correct in its own way, but it costs the square pixels.
+    @Published var crashStretchToFill: Bool {
+        didSet { defaults.set(crashStretchToFill, forKey: "crashStretchToFill") }
+    }
+    /// When the last simulated crash ran, and how many have run today. Persisted so relaunching
+    /// cannot be used — or happen by accident — as a way around the daily budget.
+    @Published var crashLastFiredAt: Double {
+        didSet { defaults.set(crashLastFiredAt, forKey: "crashLastFiredAt") }
+    }
+    @Published var crashesToday: Int {
+        didSet { defaults.set(crashesToday, forKey: "crashesToday") }
+    }
+    @Published var crashBudgetDay: Double {
+        didSet { defaults.set(crashBudgetDay, forKey: "crashBudgetDay") }
+    }
+
     /// Screensaver master switch.
     @Published var screensaverEnabled: Bool {
         didSet { defaults.set(screensaverEnabled, forKey: "screensaverEnabled") }
@@ -1141,6 +1196,18 @@ final class AppSettings: ObservableObject {
         exposeAppHotkeyModifiers = defaults.object(forKey: "exposeAppHotkeyModifiers") as? UInt32 ?? 0x1000
         showHotkeyConflictTips = defaults.object(forKey: "showHotkeyConflictTips") as? Bool ?? true
         showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true   // boot screen on by default (per-theme toggle still applies)
+        crashMode = defaults.string(forKey: "crashMode") ?? "authentic"
+        crashIntensity = defaults.string(forKey: "crashIntensity") ?? "off"
+        crashDisabledScenarios = defaults.stringArray(forKey: "crashDisabledScenarios") ?? []
+        crashCountdown = defaults.object(forKey: "crashCountdown") as? Int ?? 3
+        crashStretchToFill = defaults.bool(forKey: "crashStretchToFill")
+        crashSoundEnabled = defaults.object(forKey: "crashSoundEnabled") as? Bool ?? true
+        crashShowBadge = defaults.object(forKey: "crashShowBadge") as? Bool ?? true
+        crashFullSequence = defaults.object(forKey: "crashFullSequence") as? Bool ?? true
+        crashGlitches = defaults.object(forKey: "crashGlitches") as? Bool ?? true
+        crashLastFiredAt = defaults.double(forKey: "crashLastFiredAt")
+        crashesToday = defaults.integer(forKey: "crashesToday")
+        crashBudgetDay = defaults.double(forKey: "crashBudgetDay")
 
         // Per-app rules (migrate from old perAppPresets if needed)
         if let data = defaults.data(forKey: "perAppRules"),

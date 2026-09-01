@@ -10,7 +10,9 @@ import AppKit
 struct GameLibraryView: View {
 
     @StateObject private var model = GameLibraryModel()
-    private let columns = [GridItem(.adaptive(minimum: 176), spacing: 16)]
+    /// Wide enough for the longest button row a card can show — "Install Yamagi Quake II" plus
+    /// the menu button — so the row never has to overflow in the first place.
+    private let columns = [GridItem(.adaptive(minimum: 200), spacing: 16)]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,6 +56,7 @@ struct GameLibraryView: View {
                         .padding(6)
                 }
             }
+            .allowsHitTesting(false)
             Text(t.name).font(.headline).lineLimit(1)
             Text("\(t.year) · \(InternetArchive.sizeText(t.bytes))")
                 .font(.caption).foregroundStyle(.secondary)
@@ -78,43 +81,77 @@ struct GameLibraryView: View {
                 Button("Cancel") { model.cancel() }
                     .buttonStyle(.link).font(.caption)
             } else {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     // One primary button per state. A card is 170pt wide, so "Download Again"
                     // next to "Play" next to the menu simply truncated; the rare action moved
                     // into the menu instead of the label being shortened into nonsense.
+                    // The label is allowed to shrink; the menu button is not. At a narrow window
+                    // a long label ("Install Yamagi Quake II") pushed the menu button past the
+                    // edge of its own card, where the next column's cell took the clicks — which
+                    // is why it worked as soon as the window was made bigger.
                     if installed && t.engine.isInstalled {
                         Button("Play") { model.play(t) }
+                            .lineLimit(1)
                     } else {
                         Button(buttonTitle(t, installed: installed)) { model.download(t) }
                             .disabled(model.activeID != nil)
+                            .lineLimit(1)
+                            .layoutPriority(0)
                     }
-                    Menu {
-                        if installed && t.engine.isInstalled {
-                            Button("Download Again") { model.download(t) }
-                                .disabled(model.activeID != nil)
-                        }
-                        Button("Use My Own Files…") { model.chooseOwnFiles(t) }
-                        Button("Add Desktop Shortcut") { model.addShortcut(t) }
-                        if let u = InternetArchive.detailsURL(t) {
-                            Link(t.builtIn == .freedoom ? "Show the project page" : "Show on archive.org",
-                                 destination: u)
-                        }
-                        if installed {
-                            Divider()
-                            Button("Delete Game Data…", role: .destructive) { model.deleteData(t) }
-                        }
+                    // The menu button sits at the card's trailing edge, which is exactly where a
+                    // neighbouring cover used to overflow — see `cover`.
+                    Spacer(minLength: 0)
+                    // A plain button with its own NSMenu rather than SwiftUI's `Menu`: a
+                    // borderless menu is exactly as big as its glyph and takes clicks nowhere
+                    // else, which is why half the presses landed on the card instead. This one
+                    // has a real 28x22 target.
+                    Button {
+                        showMoreMenu(for: t, installed: installed)
                     } label: {
                         Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 14))
+                            .frame(width: 28, height: 22)
+                            .contentShape(Rectangle())
                     }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .frame(width: 22)
+                    .buttonStyle(.plain)
+                    .layoutPriority(1)
+                    .help("More actions for \(t.name)")
                 }
             }
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    /// The card's "more" menu, built as an NSMenu so the button that opens it can be any size.
+    private func showMoreMenu(for t: InternetArchive.Title, installed: Bool) {
+        let menu = NSMenu()
+        func add(_ title: String, enabled: Bool = true, _ action: @escaping () -> Void) {
+            let item = NSMenuItem(title: title, action: #selector(MenuActions.run(_:)), keyEquivalent: "")
+            let holder = MenuActions(action)
+            item.target = holder
+            item.representedObject = holder      // keeps the target alive while the menu is up
+            item.isEnabled = enabled
+            menu.addItem(item)
+        }
+
+        if installed && t.engine.isInstalled {
+            add("Download Again", enabled: model.activeID == nil) { model.download(t) }
+        }
+        add("Use My Own Files…") { model.chooseOwnFiles(t) }
+        add("Add Desktop Shortcut") { model.addShortcut(t) }
+        if let u = InternetArchive.detailsURL(t) {
+            add(t.builtIn == .freedoom ? "Show the project page" : "Show on archive.org") {
+                NSWorkspace.shared.open(u)
+            }
+        }
+        if installed {
+            menu.addItem(.separator())
+            add("Delete Game Data…") { model.deleteData(t) }
+        }
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 
     /// One button, one press: whatever is still missing. Downloading data next to an engine that
@@ -136,6 +173,11 @@ struct GameLibraryView: View {
         }
         .frame(height: 110)
         .clipped()
+        // `.clipped()` clips what you SEE, not what you can hit. A portrait box shot scaled to
+        // fill a 110pt-high box is far taller than that box, and the part hanging below it — over
+        // the title, the size and the buttons — still swallowed clicks. Nobody needs to click a
+        // cover, so it stops taking them at all.
+        .allowsHitTesting(false)
         .onAppear { model.loadCover(t) }
     }
 
@@ -184,6 +226,14 @@ final class GameLibraryModel: ObservableObject {
         // 184 MB of data that is already on disk would be a rude reading of one press. When the
         // engine is there, the press came from "Download Again" and means the data.
         let needsData = !installed.contains(t.id) || t.engine.isInstalled
+
+        // If the downloader is somehow still holding a previous title, say so instead of
+        // arming a card that can never finish.
+        if GameDownloader.shared.isBusy {
+            activeID = nil
+            errors[t.id] = "Another download is still running."
+            return
+        }
 
         let delegate = NSApp.delegate as? AppDelegate
         delegate?.ensureEngine(t.engine) { [weak self] ok in
@@ -277,19 +327,23 @@ final class GameLibraryModel: ObservableObject {
 
     /// Put the game on the themed desktop, the same entry the Setup Assistant writes.
     func addShortcut(_ t: InternetArchive.Title) {
-        guard let themeName = ThemeManager.shared.activeTheme?.config.name, !themeName.isEmpty else {
+        // `settingsKey`, not `name`: that is the key DesktopIconsController reads
+        // (DesktopIconsController.swift:21). Writing under the display name saved the shortcut
+        // somewhere nobody looks, so it was created and never appeared.
+        guard let key = ThemeManager.shared.activeTheme?.config.settingsKey, !key.isEmpty else {
             errors[t.id] = "Activate a theme first — desktop shortcuts belong to a theme."
             return
         }
-        var custom = DesktopStore.load(theme: themeName)
+        var custom = DesktopStore.load(theme: key)
         guard !custom.added.contains(where: { $0.type == t.id }) else {
             errors[t.id] = "\(t.name) is already on the desktop."
             return
         }
-        let nextRow = (custom.added.compactMap { $0.gridY }.max() ?? 6) + 1
-        custom.added.append(DockThemeConfig.DesktopIconEntry(
-            name: t.name, icon: "", type: t.id, gridX: 0, gridY: nextRow))
-        DesktopStore.save(custom, theme: themeName)
+        // No grid position: the desktop places it in the first free cell, which is the only
+        // place that knows what the theme's own icons already occupy.
+        custom.added.append(DockThemeConfig.DesktopIconEntry(name: t.name, icon: "", type: t.id))
+        custom.removed.removeAll { $0 == t.name }
+        DesktopStore.save(custom, theme: key)
         DesktopIconsController.shared.update()
         errors[t.id] = nil
     }
@@ -415,4 +469,12 @@ final class GameLibraryWindowController: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) { window = nil }
+}
+
+/// Carries a closure into an NSMenuItem. AppKit menu items need a target and a selector; this is
+/// the smallest honest way to give them one from SwiftUI.
+private final class MenuActions: NSObject {
+    private let action: () -> Void
+    init(_ action: @escaping () -> Void) { self.action = action }
+    @objc func run(_ sender: NSMenuItem) { action() }
 }

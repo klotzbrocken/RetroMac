@@ -12,7 +12,8 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
 
     private var windows: [NSWindow] = []
     private var timer: Timer?
-    private var active = false
+    /// Read by CrashScheduler: a simulated crash must not interrupt the screensaver.
+    private(set) var active = false
     private var shownAt: Date?
 
     private override init() { super.init() }

@@ -123,6 +123,18 @@ if [ -d "Resources/Chrome" ]; then
     rsync -a --delete Resources/Chrome/ "$CONTENTS/Resources/Chrome/"
 fi
 
+# The VGA text-mode font for Retro Crashes (Px437, CC BY-SA 4.0, credited in About).
+if [ -d "Resources/Fonts" ]; then
+    mkdir -p "$CONTENTS/Resources/Fonts"
+    rsync -a --delete Resources/Fonts/ "$CONTENTS/Resources/Fonts/"
+fi
+
+# Retro Crashes artwork (the Macintosh bomb).
+if [ -d "Resources/Crashes" ]; then
+    mkdir -p "$CONTENTS/Resources/Crashes"
+    rsync -a --delete Resources/Crashes/ "$CONTENTS/Resources/Crashes/"
+fi
+
 # Real .saver screensaver modules (built by scripts/build-savers.sh)
 if [ -d "Resources/Savers" ]; then
     mkdir -p "$CONTENTS/Resources/Savers"

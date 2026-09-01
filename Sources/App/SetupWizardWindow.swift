@@ -457,17 +457,17 @@ struct SetupWizardView: View {
             // do the same so the retro dock actually appears after the assistant. Idempotent.
             DockController.shared.start()
         }
-        let themeName = ThemeManager.shared.activeTheme?.config.name ?? selectedTheme
-        guard gamesSetup, !themeName.isEmpty else { return }
-        var custom = DesktopStore.load(theme: themeName)
-        var nextRow = (custom.added.compactMap { $0.gridY }.max() ?? 6) + 1
+        // The key the desktop reads is `settingsKey` (the theme's stable id), not its display
+        // name — saving under the name put these shortcuts where nothing would ever load them.
+        let key = ThemeManager.shared.activeTheme?.config.settingsKey ?? selectedTheme
+        guard gamesSetup, !key.isEmpty else { return }
+        var custom = DesktopStore.load(theme: key)
         for g in gamesList where (addShortcut[g.id] ?? false) && g.hasData() {
             guard !custom.added.contains(where: { $0.type == g.id }) else { continue }
-            custom.added.append(DockThemeConfig.DesktopIconEntry(
-                name: g.name, icon: "", type: g.id, gridX: 0, gridY: nextRow))
-            nextRow += 1
+            // No grid position: the desktop finds the first free cell.
+            custom.added.append(DockThemeConfig.DesktopIconEntry(name: g.name, icon: "", type: g.id))
         }
-        DesktopStore.save(custom, theme: themeName)
+        DesktopStore.save(custom, theme: key)
         DesktopIconsController.shared.update()
     }
 

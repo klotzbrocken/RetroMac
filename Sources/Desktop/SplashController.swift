@@ -33,28 +33,51 @@ final class SplashController {
 
     /// Show the boot screen for the active theme if enabled. No-op otherwise.
     func showIfEnabled(for theme: ThemeBundle) {
-        guard AppSettings.shared.showSplashScreen, let screen = NSScreen.main else { return }
+        guard AppSettings.shared.showSplashScreen else { return }
         let enabled = AppSettings.shared.themeBootscreenEnabled[theme.stableID] ?? bootscreenDefaultOn(theme)
         guard enabled else { return }
+        _ = present(theme: theme, completion: nil)
+    }
+
+    /// Play the boot screen whatever the settings say, and call back exactly once when it is
+    /// over — whether it timed out or the user clicked through it. Used by the simulated restart
+    /// in Retro Crashes, where the boot screen is part of the act rather than a preference.
+    func playForced(for theme: ThemeBundle, completion: @escaping () -> Void) {
+        if !present(theme: theme, completion: completion) { completion() }
+    }
+
+    /// True while a boot screen is on screen.
+    var isPresenting: Bool { !windows.isEmpty }
+
+    /// The old body of `showIfEnabled`, without the two gates. Returns false when the theme has
+    /// no boot screen at all, so a forced caller can carry on rather than wait for nothing.
+    @discardableResult
+    private func present(theme: ThemeBundle, completion: (() -> Void)?) -> Bool {
+        guard let screen = NSScreen.main else { return false }
+        onFinish = completion
 
         // Prefer a boot video (played fullscreen with sound) when present.
         if let videoFile = theme.config.splashVideo {
             let url = theme.url.appendingPathComponent(videoFile)
             if FileManager.default.fileExists(atPath: url.path) {
                 showVideo(url: url, on: screen)
-                return
+                return true
             }
         }
         // Classic "Welcome to Macintosh" boot screen (System 6), drawn natively.
         if theme.config.splashWelcome == true {
             showWelcome(on: screen)
-            return
+            return true
         }
         // Fall back to the image splash.
         guard let splashURL = theme.rootResource(theme.config.splashScreen),
-              let image = NSImage(contentsOf: splashURL) else { return }
+              let image = NSImage(contentsOf: splashURL) else { onFinish = nil; return false }
         show(image: image, on: screen, fullscreen: theme.config.splashFullscreen == true)
+        return true
     }
+
+    /// Called once when the boot screen ends, for callers that are waiting on it.
+    private var onFinish: (() -> Void)?
 
     /// Borderless boot window that can become key so keystrokes reach BootDismissView.
     private final class BootWindow: NSWindow {
@@ -177,10 +200,14 @@ final class SplashController {
     }
 
     func dismiss() {
+        // Nil first, then call: exactly once, and safe if the callback dismisses us again.
+        let finished = onFinish
+        onFinish = nil
         dismissTimer?.invalidate(); dismissTimer = nil
         player?.pause(); player = nil
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
+        finished?()
     }
 }
 
