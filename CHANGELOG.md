@@ -5,6 +5,18 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **The TV channel list gets a clean-out and six new channels.** Vevo's four streams had gone
+  dead at their old addresses; they come back on working ones as VEVO 90s, VEVO 80s and VEVO 2K,
+  joined by XITE 90s Throwback and XITE 80s Flashback in the slots the dead 90s and 80s channels
+  held. Vevo Retro Rock has no successor and is gone. New alongside them: Totally Turtles, RetroTV
+  and The Addams Family.
+
+  Existing channel lists are updated too, not just fresh installs. The swap matches on the stream
+  URL rather than the name, so it keeps each channel where it was along with the CRT preset chosen
+  for it, leaves a channel alone if you had already pointed it somewhere else, and never brings
+  back one you removed.
+
+
 - **The Mac menu bar matches the era again, without being asked.** macOS gives no way to recolour
   the menu bar, but it is translucent over the desktop picture, so RetroMac paints a strip of
   menu-bar height into the top of the wallpaper it renders anyway — System 6's white bar under its
