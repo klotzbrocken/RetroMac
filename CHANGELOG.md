@@ -5,6 +5,26 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Retro Crashes is on the Get More page.** It was gated behind the licence, wired to the unlock
+  screen and listed as a paid feature everywhere except the one page the Setup Assistant shows to
+  ask for the purchase. A test now checks that every paid feature is named there, and that the
+  page sells nothing that is not actually gated.
+
+
+- **"Chaotic" crashes now actually happen.** The setting named for demos was the one that could
+  not fire during a demo. Every tick asked whether the user was at the machine but between
+  actions, which it read as idle time between three seconds and two minutes — and somebody who
+  picks the demo setting then sits and watches stops touching the machine, sails past two minutes,
+  and from that moment fails the test forever. Ten minutes of silence after launch sat on top of
+  it. Chaotic now keeps only the lower bound, so a crash still never lands mid-keystroke, and its
+  warm-up is thirty seconds; the other levels are unchanged, because for those the point is to
+  catch you during a working day. The setting also says its cadence now, roughly every 25 minutes,
+  instead of only "for demos" — twenty-five minutes of nothing was often correct and there was no
+  way to tell. And the scheduler writes down what each tick decided, so "it is armed and nothing
+  happens" is answerable: until now the two steps that swallowed the tick left no trace while the
+  tab read "Armed".
+
+
 - **Windows 95/98/Me: the calculator's top strip was narrower than the rest of the window.** The
   title and menu bars were inset three pixels a side while the body beneath them spans the full
   window and paints over the frame, so the top sat four pixels narrower than everything under it.

@@ -23,7 +23,9 @@ final class CrashScheduler {
             case .veryRare:  return "Very rare — about once a week"
             case .rare:      return "Rare — every few days"
             case .authentic: return "Authentic — now and then in a long session"
-            case .chaotic:   return "Chaotic — for demos"
+            // Every other level names its cadence; this one said only "for demos", so there was
+            // nothing to notice when twenty-five minutes of nothing was in fact correct.
+            case .chaotic:   return "Chaotic — about every 25 minutes, for demos"
             case .manual:    return "Manual only"
             }
         }
@@ -46,6 +48,23 @@ final class CrashScheduler {
             case .chaotic:   return 8 * 60
             }
         }
+        /// How long after launch nothing may fire.
+        ///
+        /// Ten minutes is right for the settings meant to surprise you during a working day. It
+        /// is wrong for the demo setting, where the user has just chosen it, is sitting there,
+        /// and the first ten minutes of silence read as a broken feature.
+        var warmUp: TimeInterval {
+            self == .chaotic ? 30 : 10 * 60
+        }
+
+        /// Whether this setting waits for the user to be at the machine but between actions.
+        ///
+        /// False for chaotic, and that is the whole point of the fix: the idle window is capped
+        /// at two minutes, and a person waiting for a demo crash sits still, so their idle time
+        /// passes two minutes and never comes back. The setting called "for demos" could not
+        /// fire during a demo.
+        var waitsForAQuietMoment: Bool { self != .chaotic }
+
         var dailyBudget: Int {
             switch self {
             case .off, .manual: return 0
@@ -146,14 +165,30 @@ final class CrashScheduler {
     // MARK: - The decision
 
     private func tick() {
-        guard case .ready = hold() else { return }
-        guard let mean = intensity.meanInterval else { return }
+        let reason = hold()
+        guard case .ready = reason else { return note("held: \(reason.explanation)") }
+        let intensity = self.intensity
+        guard let mean = intensity.meanInterval else { return note("held: no interval") }
         // One Bernoulli trial a minute rather than a countdown: a crash you cannot predict is
         // the only kind worth simulating.
         let p = 60.0 / mean
-        guard Double.random(in: 0..<1, using: &rng) < p else { return }
-        guard plausibleMoment() else { return }
+        guard Double.random(in: 0..<1, using: &rng) < p else { return note("armed, dice said no") }
+        guard plausibleMoment(intensity) else { return note("armed, but not a plausible moment") }
+        note("firing")
         fire(source: .random)
+    }
+
+    /// What the last tick decided, printed only when it changes.
+    ///
+    /// Without this there was no way to answer "it is set to chaotic and nothing happens": the
+    /// settings tab shows `hold()`, which says "Armed", while the two steps that actually swallow
+    /// the tick — the dice and the quiet-moment test — left no trace at all. Once a minute for a
+    /// whole day would be 1,440 lines, so only changes are logged.
+    private var lastTickNote = ""
+    private func note(_ what: String) {
+        guard what != lastTickNote else { return }
+        lastTickNote = what
+        print("[Crash] scheduler \(what)")
     }
 
     /// Everything that must be true before a crash may appear on its own.
@@ -191,7 +226,7 @@ final class CrashScheduler {
         if NSApp.modalWindow != nil { return .settingsOpen }
 
         if !ignoringSchedule {
-            guard Date().timeIntervalSince(launchedAt) > 10 * 60 else { return .justLaunched }
+            guard Date().timeIntervalSince(launchedAt) > intensity.warmUp else { return .justLaunched }
             let last = Date(timeIntervalSince1970: AppSettings.shared.crashLastFiredAt)
             guard AppSettings.shared.crashLastFiredAt == 0
                     || Date().timeIntervalSince(last) > intensity.minimumGap else { return .tooSoon }
@@ -202,10 +237,17 @@ final class CrashScheduler {
 
     /// The user is at the machine, but between actions — not mid-sentence, not away. Idle time
     /// is the cheapest signal for that, and the screensaver already reads it the same way.
-    private func plausibleMoment() -> Bool {
+    ///
+    /// The two bounds do different jobs, so they are not both negotiable. The lower one keeps a
+    /// crash from landing in the middle of a keystroke and always applies. The upper one is what
+    /// says "still there", and chaotic drops it: somebody demonstrating the feature stares at the
+    /// screen without touching anything, sails past two minutes of idle, and from then on every
+    /// tick fails this test forever.
+    private func plausibleMoment(_ intensity: Intensity) -> Bool {
         let idle = CGEventSource.secondsSinceLastEventType(.combinedSessionState,
                                                            eventType: .init(rawValue: ~0)!)
-        return idle > 3 && idle < 120
+        guard idle > 3 else { return false }
+        return intensity.waitsForAQuietMoment ? idle < 120 : true
     }
 
     /// A full-screen app owns its own Mission Control Space, so a crash screen would either be

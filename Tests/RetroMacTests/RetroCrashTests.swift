@@ -399,6 +399,22 @@ final class RetroCrashTests: XCTestCase {
         }
     }
 
+    /// The demo setting has to be able to fire during a demo.
+    ///
+    /// It could not. Somebody who picks "chaotic" then sits and watches stops touching the
+    /// machine, their idle time passes the two-minute cap inside `plausibleMoment`, and from
+    /// then on every single tick fails that test — while the settings tab cheerfully reads
+    /// "Armed". Ten minutes of launch silence on top of that made it look dead for good.
+    func testTheDemoLevelDoesNotWaitForTheUserToFidget() {
+        XCTAssertFalse(CrashScheduler.Intensity.chaotic.waitsForAQuietMoment)
+        XCTAssertLessThanOrEqual(CrashScheduler.Intensity.chaotic.warmUp, 60)
+        // Every other level keeps both, because for those the point IS to catch a working day.
+        for level in CrashScheduler.Intensity.allCases where level != .chaotic {
+            XCTAssertTrue(level.waitsForAQuietMoment, "\(level.rawValue) should wait for a quiet moment")
+            XCTAssertEqual(level.warmUp, 10 * 60, "\(level.rawValue) should keep the ten-minute warm-up")
+        }
+    }
+
     func testRarerLevelsAreActuallyRarer() {
         let order: [CrashScheduler.Intensity] = [.chaotic, .authentic, .rare, .veryRare]
         let means = order.compactMap { $0.meanInterval }

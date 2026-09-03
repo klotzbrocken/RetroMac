@@ -11,18 +11,29 @@ struct GetMoreView: View {
     /// Shown as the page's own heading in the Setup Assistant, which has no other title.
     var showsHeader = true
 
-    private struct Perk: Identifiable {
+    struct Perk: Identifiable {
         let id = UUID()
         let icon: String, tint: Color, title: String, subtitle: String
+        /// The `LicenseManager.premiumFeatures` entry this line sells, where it sells one.
+        ///
+        /// The two lists have to agree and nothing made them: Retro Crashes was gated, added to
+        /// `premiumFeatures`, and never mentioned on the page that asks for the money. This is
+        /// what a test can hold on to.
+        var feature: String? = nil
     }
 
-    private let perks: [Perk] = [
+    static let perks: [Perk] = [
         Perk(icon: "tv.fill", tint: .blue, title: "Every shader",
              subtitle: "The full preset library — CRT, VHS, Trinitron, LCD and the rest — plus your own imported ones."),
         Perk(icon: "camera.fill", tint: .purple, title: "Webcam support",
-             subtitle: "Run the effect through a virtual camera, so your calls and streams get it too."),
+             subtitle: "Run the effect through a virtual camera, so your calls and streams get it too.",
+             feature: "Virtual Camera"),
         Perk(icon: "photo.fill", tint: .teal, title: "Shader as live wallpaper",
-             subtitle: "Draw the effect on the desktop picture alone: animated, behind your icons and windows."),
+             subtitle: "Draw the effect on the desktop picture alone: animated, behind your icons and windows.",
+             feature: "Live Wallpaper"),
+        Perk(icon: "exclamationmark.triangle.fill", tint: .orange, title: "Retro Crashes",
+             subtitle: "Period system failures on the themed desktop — the blue screen, the illegal operation, the bomb — on a timer or on demand. Nothing ever really crashes.",
+             feature: "Retro Crashes"),
         Perk(icon: "heart.fill", tint: .pink, title: "Support the developer",
              subtitle: "One payment, no subscription. It is what keeps RetroMac being worked on."),
     ]
@@ -48,7 +59,7 @@ struct GetMoreView: View {
             }
 
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(perks.enumerated()), id: \.element.id) { i, perk in
+                ForEach(Array(Self.perks.enumerated()), id: \.element.id) { i, perk in
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: perk.icon)
                             .font(.system(size: 18)).foregroundStyle(perk.tint).frame(width: 26)
@@ -60,7 +71,7 @@ struct GetMoreView: View {
                         Spacer(minLength: 0)
                     }
                     .padding(.vertical, 9)
-                    if i < perks.count - 1 { Divider() }
+                    if i < Self.perks.count - 1 { Divider() }
                 }
             }
 
