@@ -14,6 +14,14 @@ final class VolumePopup {
     private var panel: NSPanel?
     private var monitor: Any?
 
+    /// Called whenever the popup changes the volume or the mute state.
+    ///
+    /// The taskbar's own speaker reads `SystemVolume.isMuted` when it draws, and nothing told it
+    /// to draw again — so muting from here left the tray showing the old state until some
+    /// unrelated redraw came along. That was easy to miss while muting only faded the icon; it
+    /// stopped being easy to miss once muting draws a red prohibition sign.
+    var onChange: (() -> Void)?
+
     var isOpen: Bool { panel?.isVisible == true }
 
     func toggle(anchor: NSRect) { isOpen ? close() : show(anchor: anchor) }
@@ -36,7 +44,9 @@ final class VolumePopup {
         p.backgroundColor = .clear
         p.hasShadow = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-        p.contentView = VolumePopupView(frame: NSRect(origin: .zero, size: size))
+        let view = VolumePopupView(frame: NSRect(origin: .zero, size: size))
+        view.onChange = { [weak self] in self?.onChange?() }
+        p.contentView = view
         p.orderFrontRegardless()
         panel = p
 
@@ -55,6 +65,9 @@ final class VolumePopup {
 /// Drawn rather than assembled from AppKit controls: an NSSlider and an NSButton would bring
 /// their own macOS look into a Windows 98 taskbar.
 private final class VolumePopupView: NSView {
+
+    /// Fired after the device has actually been changed, not after the guess.
+    var onChange: (() -> Void)?
 
     private var muted = SystemVolume.isMuted
     private var level = CGFloat(SystemVolume.level ?? 0.5)
@@ -128,6 +141,7 @@ private final class VolumePopupView: NSView {
             muted = SystemVolume.isMuted        // trust the device, not our guess
             level = CGFloat(SystemVolume.level ?? Float(level))
             needsDisplay = true
+            onChange?()
             return
         }
         guard trackHitRect.contains(p) else { return }
@@ -145,7 +159,7 @@ private final class VolumePopupView: NSView {
         level = min(max((p.y - t.minY) / max(1, t.height), 0), 1)
         SystemVolume.level = Float(level)
         // Moving the slider off zero un-mutes, the way the original did.
-        if muted && level > 0 { muted = false; SystemVolume.isMuted = false }
+        if muted && level > 0 { muted = false; SystemVolume.isMuted = false; onChange?() }
         needsDisplay = true
     }
 }

@@ -395,16 +395,75 @@ final class AppSettings: ObservableObject {
     /// Music-video / retro streams added in 2.3. Merged into existing installs once (see init).
     static let newTVBookmarksV23: [TVBookmark] = [
         TVBookmark(name: "Stingray Nothin' But 90s", url: "https://lotus.stingray.com/manifest/ose-142ads-montreal/samsungtvplus/master.m3u8"),
-        TVBookmark(name: "VEVO 90s", url: "https://amg00056-vevotv-vevo90saunz-samsungau-n6a0d.amagi.tv/playlist/amg00056-vevotv-vevo90saunz-samsungau/playlist.m3u8"),
+        TVBookmark(name: "XITE 90s Throwback", url: AppSettings.xite90sURL),
         TVBookmark(name: "NOW 90s00s", url: "https://amg01076-amg01076c19-rakuten-gb-8653.playouts.now.amagi.tv/playlist/amg01076-lightning-now90s00s-rakutengb/playlist.m3u8"),
-        TVBookmark(name: "VEVO 2K", url: "https://d1s6jz7jeei17.cloudfront.net/playlist/amg00056-vevotv-vevo2kau-samsungau/playlist.m3u8"),
-        TVBookmark(name: "VEVO Retro Rock", url: "https://d2lyea6if8kkz9.cloudfront.net/playlist/amg00056-vevotv-vevoretrorockau-samsungau/playlist.m3u8"),
-        TVBookmark(name: "VEVO 80s", url: "https://amg00056-vevotv-vevo80saunz-samsungau-rp5e3.amagi.tv/playlist/amg00056-vevotv-vevo80saunz-samsungau/playlist.m3u8"),
+        TVBookmark(name: "XITE 80s Flashback", url: AppSettings.xite80sURL),
         TVBookmark(name: "Totalmusic 80s", url: "https://cdn.global.elektamedia.com/live/c7eds/Totalmusic_80s/SA_LIVE_hls_enc/master.m3u8"),
     ]
 
+    /// Retro cartoon and classic-TV streams added in 2.9. Merged into existing installs once.
+    ///
+    /// The two `jmp2.uk` addresses are redirectors: each request mints a fresh playlist with a
+    /// 24-hour token in it, so the redirector is what belongs in the list, not whatever it
+    /// resolves to today. Storing a resolved URL would give everyone a channel that stops working
+    /// tomorrow.
+    static let newTVBookmarksV29: [TVBookmark] = [
+        TVBookmark(name: "Totally Turtles", url: "https://jmp2.uk/plu-5d0c16d686454ead733d08f8.m3u8"),
+        TVBookmark(name: "RetroTV", url: "https://freecast-lukentvlive.vgcdn.net/out/v1/665e9f91614b43b0a0654e9317f1d9f3/index.m3u8"),
+        TVBookmark(name: "The Addams Family", url: "https://jmp2.uk/plu-5d81607ab737153ea3c1c80e.m3u8"),
+        // Vevo returns on links that work. The amagi.tv addresses these replace are the ones the
+        // XITE swap takes out, so a list that had the old ones ends up with exactly one of each.
+        TVBookmark(name: "VEVO 90s", url: "https://jmp2.uk/plu-5fd7bb1f86d94a000796e2c2.m3u8"),
+        TVBookmark(name: "VEVO 80s", url: "https://jmp2.uk/plu-5fd7b8bf927e090007685853.m3u8"),
+        TVBookmark(name: "VEVO 2K", url: "https://jmp2.uk/plu-5fd7bca3e0a4ee0007a38e8c.m3u8"),
+    ]
+
     /// The full built-in set for a fresh install.
-    static var defaultTVBookmarks: [TVBookmark] { baseTVBookmarks + newTVBookmarksV23 }
+    static var defaultTVBookmarks: [TVBookmark] {
+        baseTVBookmarks + newTVBookmarksV23 + newTVBookmarksV29
+    }
+
+    // ── The XITE swap ──
+    //
+    // Editing the lists above only reaches a fresh install: everyone who has ever reordered or
+    // added a channel carries their own copy in `tvBookmarks`, and `tvBookmarksMerged_v2_3` has
+    // long been true, so nothing would touch it. Hence a second one-time pass.
+
+    static let xite90sURL = "https://d284aawtm5vi48.cloudfront.net/XITE_90s_Throwback.m3u8"
+    static let xite80sURL = "https://d1n314cytqn9r3.cloudfront.net/XITE_80s_Flashback.m3u8"
+
+    private static let vevo90sURL = "https://amg00056-vevotv-vevo90saunz-samsungau-n6a0d.amagi.tv/playlist/amg00056-vevotv-vevo90saunz-samsungau/playlist.m3u8"
+    private static let vevo80sURL = "https://amg00056-vevotv-vevo80saunz-samsungau-rp5e3.amagi.tv/playlist/amg00056-vevotv-vevo80saunz-samsungau/playlist.m3u8"
+    private static let vevo2kURL = "https://d1s6jz7jeei17.cloudfront.net/playlist/amg00056-vevotv-vevo2kau-samsungau/playlist.m3u8"
+    private static let vevoRetroRockURL = "https://d2lyea6if8kkz9.cloudfront.net/playlist/amg00056-vevotv-vevoretrorockau-samsungau/playlist.m3u8"
+
+    /// Put XITE where the two Vevo channels were, and drop the two that go without a successor.
+    ///
+    /// Matched by URL and never by name, and the replacement keeps the old entry's position: a
+    /// channel somebody renamed is still theirs, one they already pointed somewhere else must not
+    /// be touched, and nobody's list should get reshuffled by an update.
+    static func applyingXiteSwap(to list: [TVBookmark]) -> (list: [TVBookmark], changed: Bool) {
+        let replacements = [
+            vevo90sURL: TVBookmark(name: "XITE 90s Throwback", url: xite90sURL),
+            vevo80sURL: TVBookmark(name: "XITE 80s Flashback", url: xite80sURL),
+        ]
+        let removals: Set<String> = [vevo2kURL, vevoRetroRockURL]
+        var out: [TVBookmark] = []
+        var changed = false
+        for bookmark in list {
+            if var replacement = replacements[bookmark.url] {
+                // Keep whatever preset the user had picked for that slot.
+                replacement.presetID = bookmark.presetID
+                out.append(replacement)
+                changed = true
+            } else if removals.contains(bookmark.url) {
+                changed = true
+            } else {
+                out.append(bookmark)
+            }
+        }
+        return (out, changed)
+    }
 
     // ── Tube Mode (flyout retro TV with bezel) ──
     @Published var tvTubePreset: String {
@@ -502,8 +561,20 @@ final class AppSettings: ObservableObject {
     /// Paint a solid strip of menu-bar height into the top of the theme wallpaper. macOS gives
     /// no way to colour the menu bar, but it is translucent over the desktop picture — and the
     /// wallpaper is something RetroMac already owns and pre-renders per screen.
+    ///
+    /// Defaults to on. A Mac era whose menu bar is plainly the wrong one is the first thing the
+    /// eye lands on, so this is not really an extra: it is part of the theme being right.
     @Published var menuBarTint: Bool {
         didSet { defaults.set(menuBarTint, forKey: "menuBarTint") }
+    }
+    /// Which messenger sits in the Windows 95/98/Me system tray: "msn" or "icq".
+    ///
+    /// Both were there in that era and neither is more correct than the other — ICQ arrived in
+    /// 1996 and MSN Messenger in 1999, so for the Windows 95 desktop the flower is if anything
+    /// the more period one. The default stays MSN because that is what the tray has shown until
+    /// now, and a setting should not rearrange somebody's taskbar on its own.
+    @Published var trayMessenger: String {
+        didSet { defaults.set(trayMessenger, forKey: "trayMessenger") }
     }
     @Published var hideMenuBar: Bool {
         didSet {
@@ -1046,23 +1117,43 @@ final class AppSettings: ObservableObject {
             // have (matched by URL), without disturbing their order or resurrecting anything
             // they deliberately removed. `didSet` does NOT fire for this first assignment in
             // init, so persist the merged list explicitly before setting the done-flag.
-            let mergeKey = "tvBookmarksMerged_v2_3"
-            if !defaults.bool(forKey: mergeKey) {
-                let existingURLs = Set(bookmarks.map { $0.url })
-                let missing = Self.newTVBookmarksV23.filter { !existingURLs.contains($0.url) }
-                let merged = bookmarks + missing
-                tvBookmarks = merged
-                if !missing.isEmpty, let data = try? JSONEncoder().encode(merged) {
-                    defaults.set(data, forKey: "tvBookmarks")
-                }
-                defaults.set(true, forKey: mergeKey)
-            } else {
-                tvBookmarks = bookmarks
+            var list = bookmarks
+            var changed = false
+
+            // Each release's new streams are appended once, matched by URL so nothing the user
+            // deliberately removed comes back and nothing they reordered gets moved. Written as
+            // a loop rather than a local function because Swift will not let init call one.
+            let additions: [(streams: [TVBookmark], key: String)] = [
+                (Self.newTVBookmarksV23, "tvBookmarksMerged_v2_3"),
+                (Self.newTVBookmarksV29, "tvBookmarksMerged_v2_9"),
+            ]
+            for step in additions where !defaults.bool(forKey: step.key) {
+                let existing = Set(list.map { $0.url })
+                let missing = step.streams.filter { !existing.contains($0.url) }
+                if !missing.isEmpty { list += missing; changed = true }
+                defaults.set(true, forKey: step.key)
+            }
+
+            // Vevo's 90s and 80s channels become XITE's; Vevo 2K and Retro Rock go.
+            let xiteKey = "tvBookmarksXite_v1"
+            if !defaults.bool(forKey: xiteKey) {
+                let result = Self.applyingXiteSwap(to: list)
+                list = result.list
+                changed = changed || result.changed
+                defaults.set(true, forKey: xiteKey)
+            }
+
+            tvBookmarks = list
+            // `didSet` does not fire for this first assignment in init, so persist explicitly.
+            if changed, let data = try? JSONEncoder().encode(list) {
+                defaults.set(data, forKey: "tvBookmarks")
             }
         } else {
             tvBookmarks = Self.defaultTVBookmarks
-            // A fresh install already has the 2.3 streams; don't merge them again later.
+            // A fresh install already has all of this; don't run any pass later.
             defaults.set(true, forKey: "tvBookmarksMerged_v2_3")
+            defaults.set(true, forKey: "tvBookmarksMerged_v2_9")
+            defaults.set(true, forKey: "tvBookmarksXite_v1")
         }
         tvTubePreset = defaults.string(forKey: "tvTubePreset") ?? "joel-gdv-ntsc"
         tvTubeBezel = defaults.string(forKey: "tvTubeBezel") ?? ""
@@ -1075,8 +1166,14 @@ final class AppSettings: ObservableObject {
         dockHideSystemDock = defaults.object(forKey: "dockHideSystemDock") as? Bool ?? true
         themeWindowBorders = defaults.bool(forKey: "themeWindowBorders")
         win98Scheme = defaults.string(forKey: "win98Scheme") ?? ""
+        trayMessenger = defaults.string(forKey: "trayMessenger") ?? "msn"
         hideMenuBar = defaults.bool(forKey: "hideMenuBar")
-        menuBarTint = defaults.bool(forKey: "menuBarTint")
+        // On unless the user turned it off. The tint only ever reaches an Apple theme with a
+        // visible bar — `ThemeManager.menuBarStyle(for:)` returns nil for every other family, and
+        // the switch is not even shown there — so defaulting to true means "on for the Mac eras,
+        // nothing at all for Windows", which is what it is for. `object(forKey:)` rather than
+        // `bool(forKey:)`: an explicit false has to survive, and only a missing key means yes.
+        menuBarTint = defaults.object(forKey: "menuBarTint") as? Bool ?? true
         // Menu-bar Apple style (migrate the legacy menuBarRainbowApple bool: true → rainbow).
         if let style = defaults.object(forKey: "menuBarAppleStyle") as? Int {
             menuBarAppleStyle = style

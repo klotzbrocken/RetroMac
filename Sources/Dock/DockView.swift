@@ -616,7 +616,11 @@ final class DockView: NSView {
             // At Win98's 3pt gap and equal size the two read as one smudge.
             let isXPTray = theme.isXPStartMenu
             let speakerSize = isXPTray ? traySize * 1.2 : traySize
-            let speakerGap = isXPTray ? trayPad + 6 : trayPad
+            // Windows 95, 98 and Me share one tray and get one rhythm — see ClassicTrayLayout.
+            // XP keeps its own spacing (chevron, larger speaker) and Windows 7 draws its own
+            // glyphs in drawWin7Systray, so neither goes through it.
+            let isClassicTray = hasTrayIcon && !isXPTray && RetroFrameTheme.key() != "win7"
+            let speakerGap = isXPTray ? trayPad + 6 : (isClassicTray ? ClassicTrayLayout.gap : trayPad)
 
             if hasClock {
                 updateClockString()
@@ -628,7 +632,13 @@ final class DockView: NSView {
                 var clockWidth = clockTextWidth + (isXP ? 20 : 16)
                 // Widen systray for the tray icons. Adding the speaker without widening here is
                 // what put it on top of the clock's first digit.
-                if hasTrayIcon {
+                if isClassicTray {
+                    // Width follows from the gaps rather than the other way round, which is what
+                    // let the three drift to 5, 3 and 11 points in the first place.
+                    clockWidth = ClassicTrayLayout(iconSize: traySize,
+                                                   hasSpeaker: SystemVolume.isAvailable,
+                                                   clockTextWidth: clockTextWidth).width
+                } else if hasTrayIcon {
                     clockWidth += traySize + trayPad * 2 + 2
                     if RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable {
                         clockWidth += speakerSize + speakerGap
@@ -664,7 +674,7 @@ final class DockView: NSView {
                 if theme.isXPStartMenu {
                     trayStartX = clockFrame.minX + max(14, iconSize * 0.55) * 0.9 + trayPad + 4
                 } else {
-                    trayStartX = clockFrame.minX + trayPad + 2
+                    trayStartX = clockFrame.minX + (isClassicTray ? ClassicTrayLayout.gap : trayPad + 2)
                 }
                 trayIconFrame = NSRect(
                     x: trayStartX,
@@ -945,7 +955,11 @@ final class DockView: NSView {
             // At Win98's 3pt gap and equal size the two read as one smudge.
             let isXPTray = theme.isXPStartMenu
             let speakerSize = isXPTray ? traySize * 1.2 : traySize
-            let speakerGap = isXPTray ? trayPad + 6 : trayPad
+            // Windows 95, 98 and Me share one tray and get one rhythm — see ClassicTrayLayout.
+            // XP keeps its own spacing (chevron, larger speaker) and Windows 7 draws its own
+            // glyphs in drawWin7Systray, so neither goes through it.
+            let isClassicTray = hasTrayIcon && !isXPTray && RetroFrameTheme.key() != "win7"
+            let speakerGap = isXPTray ? trayPad + 6 : (isClassicTray ? ClassicTrayLayout.gap : trayPad)
 
             if hasClock {
                 updateClockString()
@@ -957,7 +971,13 @@ final class DockView: NSView {
                 var clockWidth = clockTextWidth + (isXP ? 20 : 16)
                 // Widen systray for the tray icons. Adding the speaker without widening here is
                 // what put it on top of the clock's first digit.
-                if hasTrayIcon {
+                if isClassicTray {
+                    // Width follows from the gaps rather than the other way round, which is what
+                    // let the three drift to 5, 3 and 11 points in the first place.
+                    clockWidth = ClassicTrayLayout(iconSize: traySize,
+                                                   hasSpeaker: SystemVolume.isAvailable,
+                                                   clockTextWidth: clockTextWidth).width
+                } else if hasTrayIcon {
                     clockWidth += traySize + trayPad * 2 + 2
                     if RetroFrameTheme.key() != "win7" && SystemVolume.isAvailable {
                         clockWidth += speakerSize + speakerGap
@@ -993,7 +1013,7 @@ final class DockView: NSView {
                 if theme.isXPStartMenu {
                     trayStartX = clockFrame.minX + max(14, iconSize * 0.55) * 0.9 + trayPad + 4
                 } else {
-                    trayStartX = clockFrame.minX + trayPad + 2
+                    trayStartX = clockFrame.minX + (isClassicTray ? ClassicTrayLayout.gap : trayPad + 2)
                 }
                 trayIconFrame = NSRect(
                     x: trayStartX,
@@ -2964,17 +2984,19 @@ final class DockView: NSView {
         // Tray speaker, for the Windows themes that are not Win7 (which draws its own pair).
         if !traySpeakerFrame.isEmpty {
             if let img = startMenuIcon("volume.png") {
-                // Period artwork from the theme; dimmed while muted, which is how the tray
-                // showed it before the crossed-out speaker existed.
                 // Nearest-neighbour only where the theme asks for it. The speaker used to be
                 // hardcoded to it, so on XP a 32px icon scaled to ~21pt lost whole rows of
-                // pixels and looked ragged beside the smoothly drawn ICQ badge.
+                // pixels and looked ragged beside the smoothly drawn messenger badge.
                 let pixelated = ThemeManager.shared.activeTheme?.config.isPixelated ?? true
+                // Always at full strength. Muting used to draw this same artwork at 40%, which
+                // is fine for a colourful icon and useless for this one: the speaker is mid-grey
+                // and so is the taskbar under it, so "muted" read as "the icon is broken".
                 img.draw(in: traySpeakerFrame, from: .zero, operation: .sourceOver,
-                         fraction: SystemVolume.isMuted ? 0.4 : 1.0,
+                         fraction: 1.0,
                          respectFlipped: true,
                          hints: pixelated ? [.interpolation: NSImageInterpolation.none]
                                           : [.interpolation: NSImageInterpolation.high])
+                if SystemVolume.isMuted { Self.drawMutedMarker(in: traySpeakerFrame) }
             } else if let img = NSImage(systemSymbolName:
                         SystemVolume.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                         accessibilityDescription: "Volume") {
@@ -2985,14 +3007,12 @@ final class DockView: NSView {
             }
         }
 
-        // ICQ tray icon (right of clock, for Windows 98 / Windows XP). Win7 draws its own
-        // network/volume glyphs in drawWin7Systray instead, so skip the ICQ there.
-        if !trayIconFrame.isEmpty, RetroFrameTheme.key() != "win7", let icqImg = startMenuIcon("icq.png") {
-            icqImg.size = trayIconFrame.size
-            icqImg.draw(in: trayIconFrame,
-                        from: .zero,
-                        operation: .sourceOver,
-                        fraction: 1.0)
+        // The messenger in the tray, for Windows 95/98/Me and XP. Windows 7 draws its own
+        // network and volume glyphs in drawWin7Systray, so it gets none.
+        if !trayIconFrame.isEmpty, RetroFrameTheme.key() != "win7",
+           let img = trayMessengerIcon() {
+            img.size = trayIconFrame.size
+            img.draw(in: trayIconFrame, from: .zero, operation: .sourceOver, fraction: 1.0)
         }
     }
 
@@ -3316,6 +3336,9 @@ final class DockView: NSView {
                 VolumePopup.shared.close()
                 openSettingsPane("com.apple.Sound-Settings.extension")
             } else {
+                // The tray speaker draws from the live mute state, so it has to be told when
+                // the popup changes it.
+                VolumePopup.shared.onChange = { [weak self] in self?.needsDisplay = true }
                 VolumePopup.shared.toggle(
                     anchor: window?.convertToScreen(convert(traySpeakerFrame, to: nil)) ?? traySpeakerFrame)
             }
@@ -4259,6 +4282,48 @@ final class DockView: NSView {
         } catch {
             NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents"))
         }
+    }
+
+    /// The tray messenger the user chose, falling back to whichever one the theme actually has.
+    ///
+    /// The file used to be called `icq.png` in every theme while three of them held the MSN logo,
+    /// which is why the code says ICQ and the taskbar said MSN. They are named for what they are
+    /// now, and a theme that ships only one still works.
+    static func trayMessengerIconName() -> String {
+        AppSettings.shared.trayMessenger == "icq" ? "icq.png" : "msn.png"
+    }
+
+    private func trayMessengerIcon() -> NSImage? {
+        startMenuIcon(Self.trayMessengerIconName())
+            ?? startMenuIcon("icq.png")
+            ?? startMenuIcon("msn.png")
+    }
+
+    /// The prohibition sign over a muted tray speaker, drawn rather than faded.
+    ///
+    /// Red is the one colour nothing else on a Windows taskbar uses, which is why it still reads
+    /// at fourteen points where dimming a grey icon on a grey bar does not. Rendered at every
+    /// tray size the dock can produce before this shape was settled on.
+    ///
+    /// Deliberately left antialiased even in the pixel-art themes: this is a vector mark laid
+    /// over the artwork, not part of it, and a jagged circle at 14 points reads as damage.
+    static func drawMutedMarker(in rect: NSRect) {
+        guard let ctx = NSGraphicsContext.current else { return }
+        ctx.saveGraphicsState()
+        ctx.shouldAntialias = true
+        let r = rect.insetBy(dx: rect.width * 0.02, dy: rect.width * 0.02)
+        let lw = max(1.5, rect.width / 8)
+        NSColor(srgbRed: 0.80, green: 0, blue: 0, alpha: 1).setStroke()
+        let ring = NSBezierPath(ovalIn: r.insetBy(dx: lw / 2, dy: lw / 2))
+        ring.lineWidth = lw
+        ring.stroke()
+        let d = r.width * 0.20
+        let bar = NSBezierPath()
+        bar.move(to: NSPoint(x: r.minX + d, y: r.maxY - d))
+        bar.line(to: NSPoint(x: r.maxX - d, y: r.minY + d))
+        bar.lineWidth = lw
+        bar.stroke()
+        ctx.restoreGraphicsState()
     }
 
     private func startMenuIcon(_ name: String) -> NSImage? {

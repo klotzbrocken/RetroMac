@@ -131,11 +131,15 @@
   body.theme-win98 #win{background:#c4c4c4;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;}
   body.theme-win98 .body{border:none;background:#c4c4c4;box-shadow:none;margin:0;padding:8px;}
-  body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:22px;margin:3px 3px 0;padding:0 2px 0 6px;
+  /* No side margin, because `.body` beneath has none either: it spans the full 236px of #win
+     and paints over the inset bevel. Measured, after guessing wrong once — at 3px, and still at
+     2px, the top strip was four pixels narrower than everything under it, and that difference
+     is what read as an extra grey border down both sides of the title and menu bars. */
+  body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:22px;margin:2px 0 0;padding:0 2px 0 6px;
     background:linear-gradient(90deg,#00007b,#1085d2);}
   body.theme-win98 .disp{background:#fff;border:none;box-shadow:inset -1px -1px 0 #dbdbdb,inset 1px 1px 0 #808080,inset -2px -2px 0 #fff,inset 2px 2px 0 #000;color:#000;}
   /* calc.exe menu bar (Edit / View / Help) */
-  body.theme-win98 .w98-menubar{display:flex;height:16px;margin:1px 3px 0;padding:0 2px;
+  body.theme-win98 .w98-menubar{display:flex;height:16px;margin:1px 0 0;padding:0 6px;
     background:#c4c4c4;align-items:center;gap:0;
     font:12px Tahoma,"MS Sans Serif",Verdana,sans-serif;color:#000;}
   body.theme-win98 .w98-menubar span{padding:1px 6px;line-height:1;cursor:default;}

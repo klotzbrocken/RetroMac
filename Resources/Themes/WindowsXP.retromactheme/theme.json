@@ -231,7 +231,11 @@
     "com.apple.iCal": "calendar.png",
     "com.apple.systempreferences": "settings.png",
     "com.apple.Music": "music.png",
-    "com.apple.Terminal": "terminal.png"
+    "com.apple.Terminal": "terminal.png",
+    "com.microsoft.Word": "word.png",
+    "com.microsoft.Excel": "excel.png",
+    "com.microsoft.Powerpoint": "powerpoint.png",
+    "com.microsoft.Outlook": "outlook.png"
   },
   "desktopIconSize": 48,
   "splashVideo": "boot.mp4",

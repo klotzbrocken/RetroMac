@@ -5,6 +5,51 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Windows 95/98/Me: the calculator's top strip was narrower than the rest of the window.** The
+  title and menu bars were inset three pixels a side while the body beneath them spans the full
+  window and paints over the frame, so the top sat four pixels narrower than everything under it.
+  All three now share one width.
+
+
+- **Windows Me folder and TV windows lose the navigation toolbar and the address bar**, and the
+  web-view panel down the left gets the real banner artwork instead of the gradient standing in
+  for it. What makes a Me window read as Me is that panel, not the buttons above it. The File and
+  Window menu bar takes the theme's own face colour; it was the one grey surface the scheme
+  recolouring had missed.
+
+
+- **Office icons for Windows Me and XP.** Word, Excel, PowerPoint and Outlook in their 2000-03
+  artwork, at each theme's own icon size. Outlook had no mapping in any theme before.
+
+
+- **Windows 98 quick launch:** the Explorer and MS-DOS icons corrected in the same way Windows Me
+  got them, and the messenger tile is ICQ.
+
+
+- **The muted tray speaker is visible again.** Muting drew the same grey speaker at 40% opacity,
+  which works for a colourful icon and fails completely for this one: the speaker is mid-grey and
+  so is the taskbar under it, so "muted" read as a half-erased icon rather than as a state. It now
+  stays at full strength and takes a red prohibition sign over it — red being the one colour a
+  Windows taskbar does not otherwise use, which is why it still reads at fourteen points. And the
+  volume slider now tells the taskbar when it changes something: it never did, so muting from the
+  popup left the tray showing the old state until an unrelated redraw came along.
+
+
+- **The Windows 95/98/Me tray has one rhythm again.** The three spaces in it came from three
+  unrelated expressions and worked out to 5, 3 and 11 points, so the speaker was glued to the icon
+  beside it while the clock sat in a hole. All three now come out of a single number, derived so
+  they cannot drift apart again. Windows XP and Windows 7 are untouched: XP carries the
+  hidden-icons chevron and a differently proportioned speaker, and Windows 7 draws its own glyphs.
+
+
+- **Pick the messenger in the tray: MSN or ICQ.** The icon file was called `icq.png` in every
+  Windows theme while three of them held the MSN logo, which is why the code said ICQ and the
+  taskbar said MSN. They are named for what they are now, and Windows 95, 98 and Me carry both, so
+  Settings ▸ Dock offers the choice. MSN stays the default because that is what the tray has shown
+  until now. Worth knowing while choosing: ICQ arrived in 1996 and MSN Messenger in 1999, so on a
+  Windows 95 desktop the flower is the more period one of the two.
+
+
 - **The shareware episodes are in the Game Library.** Doom, Heretic, Duke Nukem 3D, Quake and
   Quake II each shipped a free episode that its publisher wrote a licence for: Duke's says in
   capitals that individuals are encouraged to give copies away. Those episodes now have a button

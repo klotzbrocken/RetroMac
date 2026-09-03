@@ -899,6 +899,10 @@ final class DockController {
             self?.dockView?.needsDisplay = true
         }.store(in: &settingsObservers)
 
+        s.$trayMessenger.dropFirst().sink { [weak self] _ in
+            self?.dockView?.needsDisplay = true
+        }.store(in: &settingsObservers)
+
         s.$dockTargetDisplayUUID.dropFirst().sink { [weak self] _ in
             self?.repositionWindow()
         }.store(in: &settingsObservers)

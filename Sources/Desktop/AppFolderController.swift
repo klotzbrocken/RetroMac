@@ -142,6 +142,14 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         // Theme the window chrome (BeOS tab vs Mac OS 9 Platinum) before populating.
         webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        // The chrome key alone cannot tell Windows Me from 95 and 98 — see `eraSlug`. The window
+        // furniture differs between them, so the page gets the era as well.
+        let era = RetroFrameTheme.eraSlug()
+        webView.evaluateJavaScript("""
+        (function(){var b=document.body; if(!b) return;
+          b.className = b.className.split(' ').filter(function(c){return c.indexOf('era-')!==0;}).join(' ');
+          if ('\(era)') b.classList.add('era-\(era)');})();
+        """)
         webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         if kind == .funStuff {
             reloadFunGrid()

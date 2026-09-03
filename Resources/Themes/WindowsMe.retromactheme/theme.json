@@ -127,7 +127,8 @@
     "org.videolan.vlc": "vlc.png",
     "com.apple.FaceTime": "facetime.png",
     "com.apple.clock": "clock.png",
-    "com.apple.podcasts": "podcasts.png"
+    "com.apple.podcasts": "podcasts.png",
+    "com.microsoft.Outlook": "outlook.png"
   },
   "desktopIconsSide": "left",
   "desktopIcons": [
@@ -279,7 +280,19 @@
   "appearance": "light",
   "accentColor": "blue",
   "systemTweaks": [
-    { "domain": "-g", "key": "NSConvolutionOverride1", "type": "float", "value": "2", "refresh": "Finder" },
-    { "domain": "-g", "key": "NSSplitViewItemGlassMinimumCornerRadius", "type": "float", "value": "2", "refresh": "Finder" }
+    {
+      "domain": "-g",
+      "key": "NSConvolutionOverride1",
+      "type": "float",
+      "value": "2",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "-g",
+      "key": "NSSplitViewItemGlassMinimumCornerRadius",
+      "type": "float",
+      "value": "2",
+      "refresh": "Finder"
+    }
   ]
 }

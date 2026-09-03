@@ -378,6 +378,19 @@
      page white on the right. The folder's name sits UNDER it in black, over a blue rule. */
   body.theme-win98 .w98-banner{height:46px;
     background:linear-gradient(90deg,#2c5c96 0%,#6f9ac6 34%,#e8b95a 66%,#fff 100%);}
+
+  /* ===== Windows Me only =====
+     Me shares its chrome with 95 and 98 (see RetroFrameTheme.key), so the era class from
+     AppFolderController is what separates them here.
+
+     Its folder windows drop the navigation toolbar and the address bar: what makes a Me window
+     read as Me is the web-view panel down the left, not the buttons above it. The panel keeps
+     the real banner artwork instead of the gradient that stood in for it. */
+  body.era-windows-me .w98-toolbar,
+  body.era-windows-me .w98-addr{display:none!important;}
+  body.era-windows-me .w98-banner{
+    background:url("active.png") left top no-repeat, #fff;
+    background-size:auto 100%;}
   body.theme-win98 .w98-sidebody{padding:6px 8px 8px;}
   body.theme-win98 .w98-sidetitle{margin:0 0 6px;padding:0 0 4px;
     font:700 14px Tahoma,sans-serif;color:#000;border-bottom:1px solid #2c5c96;}

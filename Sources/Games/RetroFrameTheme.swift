@@ -12,6 +12,26 @@ enum RetroFrameTheme {
     /// "which era does this theme look like" — so it reads the theme's DECLARED `chrome.style`
     /// (Manifest 2.0). A theme can pick its renderer without any central switch being edited;
     /// the display-name heuristic below survives only for pre-2.0 themes that declare nothing.
+    /// A slug for the ACTIVE theme by name, for the places that need one era rather than the
+    /// chrome family. `key()` collapses Windows 95, 98 and Me into `win98` on purpose, because
+    /// they draw the same chrome — but they do not furnish their windows the same way, and Me is
+    /// the one with the web-view panel and without the navigation toolbar.
+    ///
+    /// Empty when no theme is on, so a caller can add nothing rather than a misleading class.
+    static func eraSlug() -> String {
+        guard AppSettings.shared.dockEnabled,
+              let name = ThemeManager.shared.activeTheme?.config.name, !name.isEmpty else { return "" }
+        let lower = name.lowercased()
+        var out = ""
+        var lastWasDash = false
+        for ch in lower {
+            if ch.isLetter || ch.isNumber { out.append(ch); lastWasDash = false }
+            else if !lastWasDash && !out.isEmpty { out.append("-"); lastWasDash = true }
+        }
+        while out.hasSuffix("-") { out.removeLast() }
+        return out
+    }
+
     static func key() -> String {
         // Only frame launched content (TV window chrome, game frames) when a theme
         // is actually ON. After a clean launch ThemeManager still remembers the last

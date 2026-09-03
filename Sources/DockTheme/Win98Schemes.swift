@@ -165,7 +165,7 @@ struct Win98Scheme {
         body.theme-win98 .w98-title,body.theme-win98 .w98-dlg-tb{background:linear-gradient(90deg,\(a),\(b))!important;}
         body.theme-win98 .w98-cap,body.theme-win98 .w98-dlg-tb{color:\(tt)!important;}
         body.theme-win98 #win,body.theme-win98 .body,body.theme-win98 .w98-btn,body.theme-win98 .be-win,body.theme-win98 .window,
-        body.theme-win98 .w98-menubar,body.theme-win98 .np-toolbar,body.theme-win98 .np-status,
+        body.theme-win98 .w98-menubar,body.theme-win98 .be-menubar,body.theme-win98 .np-toolbar,body.theme-win98 .np-status,
         body.theme-win98 #npedit,body.theme-win98 .memind,body.theme-win98 .k,
         body.theme-win98 .w98-toolbar,body.theme-win98 .w98-addr,body.theme-win98 .be-status,
         body.theme-win98 .w98-statusrow .be-count,body.theme-win98 .w98-statusrow .w98-pane,

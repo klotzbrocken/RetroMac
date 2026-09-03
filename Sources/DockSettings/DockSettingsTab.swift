@@ -332,6 +332,19 @@ struct DockSettingsTab: View {
                         }
                     }
                 }
+                // Only the three themes that ship both icons. XP and Windows 7 carry the flower
+                // alone, and a picker whose second option falls back to the first is worse than
+                // no picker.
+                if ["Windows 95", "Windows 98", "Windows Me"].contains(selectedThemeConfig?.name ?? "") {
+                    RMRow(label: "Messenger in the tray", hint: "Which messenger sits beside the clock. ICQ arrived in 1996 and MSN Messenger in 1999, so on the Windows 95 desktop the flower is the more period one of the two.") {
+                        Picker("", selection: $settings.trayMessenger) {
+                            Text("MSN Messenger").tag("msn")
+                            Text("ICQ").tag("icq")
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 200)
+                    }
+                }
                 if selectedThemeConfig?.systemTweaks != nil {
                     RMRow(label: "Classic Finder", hint: "Make the real Finder match this era — opaque windows, classic scrollbars, list view, fewer animations. Changes your system Finder while the theme is on; restored when you switch it off.") {
                         Toggle("", isOn: $settings.themeApplySystemTweaks)
