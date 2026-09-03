@@ -391,6 +391,9 @@ final class ThemeManager {
             return
         }
         let ws = NSWorkspace.shared
+        // Why the menu-bar strip did or did not happen. "It is on and I do not see it" was not
+        // answerable before: every step that could swallow it failed silently.
+        var tintNote = "not attempted"
         for screen in NSScreen.screens {
             // Pattern-tile wallpapers (e.g. System 6 8×8): setDesktopImageURL has no tiling
             // mode, so pre-render the tile to this screen's exact pixel size. Only for
@@ -402,11 +405,21 @@ final class ThemeManager {
             }
             // Menu-bar tint: paint the strip into the copy that actually gets set. Only Apple
             // themes get one — see `menuBarStyle(for:)` — and never while the bar is hidden.
-            if AppSettings.shared.menuBarTint, !AppSettings.shared.hideMenuBar,
-               let style = Self.menuBarStyle(for: theme.config),
-               let tinted = tintedWallpaperURL(source: finalURL, for: screen,
-                                               themeName: theme.name, style: style) {
+            if !AppSettings.shared.menuBarTint {
+                tintNote = "off in settings"
+            } else if AppSettings.shared.hideMenuBar {
+                tintNote = "the menu bar is hidden"
+            } else if Self.menuBarStyle(for: theme.config) == nil {
+                tintNote = "\(theme.name) has no Mac menu bar"
+            } else if menuBarHeight(of: screen) <= 0 {
+                tintNote = "macOS reports no menu bar on \(screen.localizedName)"
+            } else if let style = Self.menuBarStyle(for: theme.config),
+                      let tinted = tintedWallpaperURL(source: finalURL, for: screen,
+                                                      themeName: theme.name, style: style) {
                 finalURL = tinted
+                tintNote = "applied"
+            } else {
+                tintNote = "could not be rendered"
             }
             let screenKey = screenKey(for: screen)
             // Only capture the ORIGINAL once, and never capture one of OUR OWN wallpapers as the
@@ -430,7 +443,7 @@ final class ThemeManager {
             try? ws.setDesktopImageURL(finalURL, for: screen, options: [:])
         }
         persistWallpaperBackup()
-        print("[Theme] Wallpaper set on \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent)")
+        print("[Theme] Wallpaper set on \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent) — menu-bar tint \(tintNote)")
         AppearanceAdapter.apply(for: theme.config)
         CursorThemeManager.shared.apply(for: theme.config)
         TerminalThemer.apply(forThemeNamed: theme.config.name)
@@ -468,6 +481,19 @@ final class ThemeManager {
         let rule: NSColor         // the hairline that closes the bar off
         var ruleHeight: CGFloat = 1
         var pinstripe: NSColor?   // Aqua's fine stripes, drawn over the fill
+
+        /// Short, stable fingerprint of the colours, for the rendered strip's filename.
+        var cacheTag: String {
+            func hex(_ c: NSColor) -> String {
+                guard let s = c.usingColorSpace(.sRGB) else { return "x" }
+                return String(format: "%02X%02X%02X",
+                              Int((s.redComponent * 255).rounded()),
+                              Int((s.greenComponent * 255).rounded()),
+                              Int((s.blueComponent * 255).rounded()))
+            }
+            return [hex(bottom), hex(top), hex(rule), String(Int(ruleHeight)),
+                    pinstripe.map(hex) ?? "n"].joined(separator: "")
+        }
     }
 
     static func menuBarStyle(for theme: DockThemeConfig) -> MenuBarStyle? {
@@ -506,9 +532,11 @@ final class ThemeManager {
         let dir = Self.tiledWallpaperDir
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let safe = themeName.replacingOccurrences(of: " ", with: "-")
+        // The style goes into the name as well as the theme. Without it a corrected bar colour
+        // would never reach the screen: the file for that theme and that wallpaper already
+        // exists, so the painted-once strip is served forever.
         let out = dir.appendingPathComponent(
-            "\(safe)-\(source.deletingPathExtension().lastPathComponent)-menubar\(Int(barH))-\(pxW)x\(pxH).png")
-        // `safe` carries the theme name, so two eras never share a cached strip.
+            "\(safe)-\(source.deletingPathExtension().lastPathComponent)-menubar\(Int(barH))-\(style.cacheTag)-\(pxW)x\(pxH).png")
         if FileManager.default.fileExists(atPath: out.path) { return out }
 
         guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pxW, pixelsHigh: pxH,

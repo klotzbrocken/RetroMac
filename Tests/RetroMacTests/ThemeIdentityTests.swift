@@ -171,4 +171,34 @@ final class ThemeIdentityTests: XCTestCase {
                            "\(cfg.name): declared chrome must match the pre-2.0 heuristic")
         }
     }
+
+    /// The menu-bar tint is on by default, so what it reaches matters more than it used to.
+    /// It must reach every Apple theme that shows a Mac menu bar, and nothing else: painting a
+    /// grey band across the top of a Windows wallpaper would be a defect, not a tint.
+    func testOnlyAppleThemesWithAVisibleBarGetAMenuBarTint() throws {
+        let themesDir = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Resources/Themes")
+        let bundles = try FileManager.default.contentsOfDirectory(at: themesDir, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "retromactheme" }
+        XCTAssertFalse(bundles.isEmpty)
+
+        var tinted: [String] = []
+        for url in bundles {
+            let cfg = try ThemeBundle(url: url, isBuiltIn: true).config
+            let style = ThemeManager.menuBarStyle(for: cfg)
+            if style != nil { tinted.append(cfg.name) }
+
+            if cfg.family?.id != "apple" {
+                XCTAssertNil(style, "\(cfg.name) is not an Apple theme and must not be tinted")
+            }
+            if cfg.hideMenuBarDefault == true {
+                XCTAssertNil(style, "\(cfg.name) hides the menu bar, so there is nothing to match")
+            }
+        }
+        // The five Mac eras, and only those. A new Apple theme falls through to the 10.6 bar
+        // rather than to nil, so adding one is meant to change this list.
+        XCTAssertEqual(Set(tinted), ["Mac OS 6 classic", "Mac OS 9.2 Classic",
+                                     "Mac OS X", "Snow Leopard", "Mountain Lion"])
+    }
 }

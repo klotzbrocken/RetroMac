@@ -5,6 +5,17 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **The Mac menu bar matches the era again, without being asked.** macOS gives no way to recolour
+  the menu bar, but it is translucent over the desktop picture, so RetroMac paints a strip of
+  menu-bar height into the top of the wallpaper it renders anyway — System 6's white bar under its
+  hard black rule, Platinum's flat grey, Aqua's pinstripes, the 10.6 gradient. That has been in the
+  app for a while as a switch that was off unless you found it, which meant the first thing your eye
+  landed on was the wrong menu bar. It is on by default now for the five Mac themes, still a switch
+  under Desktop ▸ Wallpaper, and an explicit "off" is remembered. Windows themes are untouched: they
+  either hide the bar or draw their own, and a grey band across the top of their wallpaper would be
+  a defect rather than a tint.
+
+
 - **Retro Crashes is on the Get More page.** It was gated behind the licence, wired to the unlock
   screen and listed as a paid feature everywhere except the one page the Setup Assistant shows to
   ask for the purchase. A test now checks that every paid feature is named there, and that the
