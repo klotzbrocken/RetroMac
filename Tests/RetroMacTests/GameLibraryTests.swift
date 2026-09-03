@@ -275,6 +275,67 @@ final class GameLibraryTests: XCTestCase {
         XCTAssertTrue(InternetArchive.foundLocally([try title("doom")], in: [root]).isEmpty)
     }
 
+    // MARK: - Steam's libraries
+
+    /// The current `libraryfolders.vdf`, where each library is a numbered block with a `path`.
+    /// The `apps` block inside it is the trap: it is full of numbered keys whose values are app
+    /// ids, and a parser that takes "a number followed by something" swallows those too.
+    func testTheCurrentVDFFormatYieldsOnlyTheLibraryPaths() {
+        let vdf = """
+        "libraryfolders"
+        {
+        \t"0"
+        \t{
+        \t\t"path"\t\t"/Users/maik/Library/Application Support/Steam"
+        \t\t"label"\t\t""
+        \t\t"totalsize"\t\t"0"
+        \t\t"apps"
+        \t\t{
+        \t\t\t"2280"\t\t"14892400"
+        \t\t}
+        \t}
+        \t"1"
+        \t{
+        \t\t"path"\t\t"/Volumes/Games SSD/SteamLibrary"
+        \t\t"label"\t\t""
+        \t}
+        }
+        """
+        XCTAssertEqual(InternetArchive.steamLibraryPaths(fromVDF: vdf),
+                       ["/Users/maik/Library/Application Support/Steam",
+                        "/Volumes/Games SSD/SteamLibrary"])
+    }
+
+    /// The pre-2021 format put the path straight against the number, with counters beside it.
+    func testTheOldVDFFormatStillParses() {
+        let vdf = """
+        "LibraryFolders"
+        {
+        \t"TimeNextStatsReport"\t\t"1788283649"
+        \t"ContentStatsID"\t\t"-4373139012345"
+        \t"1"\t\t"/Volumes/Games SSD/SteamLibrary"
+        }
+        """
+        XCTAssertEqual(InternetArchive.steamLibraryPaths(fromVDF: vdf),
+                       ["/Volumes/Games SSD/SteamLibrary"])
+    }
+
+    func testAMissingOrJunkVDFYieldsNothingRatherThanNonsense() {
+        XCTAssertTrue(InternetArchive.steamLibraryPaths(fromVDF: "").isEmpty)
+        XCTAssertTrue(InternetArchive.steamLibraryPaths(fromVDF: "not a vdf at all").isEmpty)
+        XCTAssertTrue(InternetArchive.steamLibraryPaths(fromVDF: "\"path\" \"relative/thing\"").isEmpty)
+    }
+
+    /// Whatever the file says, the default library is always searched, and never twice.
+    func testTheDefaultLibraryIsAlwaysIncludedExactlyOnce() {
+        let libs = InternetArchive.steamLibraries()
+        let expected = URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent("Library/Application Support/Steam/steamapps/common").path
+        XCTAssertEqual(libs.first, expected)
+        XCTAssertEqual(libs.filter { $0 == expected }.count, 1)
+        XCTAssertEqual(Set(libs).count, libs.count, "a library is listed twice")
+    }
+
     // MARK: - Which folders are ours to delete
 
     /// A prefix test says yes to "RetroMac Backup", and for Warcraft the thing being tested is

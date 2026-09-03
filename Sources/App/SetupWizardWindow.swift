@@ -349,7 +349,7 @@ struct SetupWizardView: View {
                 Button(has ? "Change…" : "Choose…") { g.choose() }
                 // A download is offered only where RetroMac may actually distribute the data.
                 // For the commercial titles this row names the file it wants and takes the
-                // user's own copy; the gallery adds finding the one Steam or GOG already has.
+                // user's own copy; the gallery adds finding the one Steam already has.
                 if let t = InternetArchive.title(id: g.id), t.freelyDistributable {
                     Button(dlActive == g.id ? "Cancel" : "Download \(InternetArchive.sizeText(t.bytes))") {
                         dlActive == g.id ? GameDownloader.shared.cancel() : startDownload(t)

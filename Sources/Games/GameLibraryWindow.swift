@@ -6,7 +6,7 @@ import AppKit
 ///
 /// It is deliberately not a shop. Two titles are free to distribute and RetroMac fetches those;
 /// for the other eight it installs the engine, names the file it wants, finds the copy Steam or
-/// GOG already put on this Mac, and otherwise waits for the user to point at their own.
+/// Steam already put on this Mac, and otherwise waits for the user to point at their own.
 ///
 /// It is a window of its own rather than a wizard page, because the Setup Assistant is a
 /// first-run thing and this is not: people add a game months later. The Games page links into it,
@@ -218,7 +218,6 @@ struct GameLibraryView: View {
     private static func storeName(for url: URL) -> String {
         let p = url.path
         if p.contains("/Steam/steamapps/") { return "your Steam library" }
-        if p.contains("/GOG.com/") || p.contains("/Contents/Resources/game") { return "a GOG installation" }
         return "\(url.deletingLastPathComponent().lastPathComponent)"
     }
 
@@ -244,7 +243,7 @@ struct GameLibraryView: View {
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("RetroMac downloads what its publisher released to be copied: Freedoom, which is free software, and the shareware and demo episodes of Doom, Heretic, Duke Nukem 3D, Quake, Quake II and Shadow Warrior. It does not download the full commercial games. For those, the copy you play has to be your own — bought, on a disc, or already in your Steam or GOG library, where RetroMac will look for it.")
+            Text("RetroMac downloads what its publisher released to be copied: Freedoom, which is free software, and the shareware and demo episodes of Doom, Heretic, Duke Nukem 3D, Quake, Quake II and Shadow Warrior. It does not download the full commercial games. For those, the copy you play has to be your own — bought, on a disc, or already in your Steam library, where RetroMac will look for it.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             // No link here on purpose: every card already carries its own source in the "more"
@@ -280,7 +279,7 @@ final class GameLibraryModel: ObservableObject {
         scanForLocalCopies()
     }
 
-    /// Look for Steam and GOG copies of everything not already in place. Off the main thread:
+    /// Look for Steam copies of everything not already in place. Off the main thread:
     /// this is a few hundred directory listings on a large Steam library, and the gallery has to
     /// draw immediately.
     private func scanForLocalCopies() {

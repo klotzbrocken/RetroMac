@@ -5,6 +5,28 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Windows 95/98/Me: the calculator's top strip was narrower than the rest of the window.** The
+  title and menu bars were inset three pixels a side while the body beneath them spans the full
+  window and paints over the frame, so the top sat four pixels narrower than everything under it.
+  All three now share one width.
+
+- **Windows Me folder and TV windows lose the navigation toolbar and the address bar**, and the
+  web-view panel down the left gets the real banner artwork instead of the gradient standing in
+  for it. What makes a Me window read as Me is that panel, not the buttons above it. The File and
+  Window menu bar takes the theme's own face colour; it was the one grey surface the scheme
+  recolouring had missed.
+
+- **Office icons for Windows Me and XP.** Word, Excel, PowerPoint and Outlook in their 2000-03
+  artwork, at each theme's own icon size. Outlook had no mapping in any theme before.
+
+- **Windows 98 quick launch:** the Explorer and MS-DOS icons corrected in the same way Windows Me
+  got them, and the messenger tile is ICQ.
+
+- **Retro Crashes is on the Get More page.** It was gated behind the licence, wired to the unlock
+  screen and listed as a paid feature everywhere except the one page the Setup Assistant shows to
+  ask for the purchase. A test now checks that every paid feature is named there, and that the
+  page sells nothing that is not actually gated.
+
 - **The TV channel list gets a clean-out and six new channels.** Vevo's four streams had gone
   dead at their old addresses; they come back on working ones as VEVO 90s, VEVO 80s and VEVO 2K,
   joined by XITE 90s Throwback and XITE 80s Flashback in the slots the dead 90s and 80s channels
@@ -16,23 +38,26 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   for it, leaves a channel alone if you had already pointed it somewhere else, and never brings
   back one you removed.
 
+- **The muted tray speaker is visible again.** Muting drew the same grey speaker at 40% opacity,
+  which works for a colourful icon and fails completely for this one: the speaker is mid-grey and
+  so is the taskbar under it, so "muted" read as a half-erased icon rather than as a state. It now
+  stays at full strength and takes a red prohibition sign over it — red being the one colour a
+  Windows taskbar does not otherwise use, which is why it still reads at fourteen points. And the
+  volume slider now tells the taskbar when it changes something: it never did, so muting from the
+  popup left the tray showing the old state until an unrelated redraw came along.
 
-- **The Mac menu bar matches the era again, without being asked.** macOS gives no way to recolour
-  the menu bar, but it is translucent over the desktop picture, so RetroMac paints a strip of
-  menu-bar height into the top of the wallpaper it renders anyway — System 6's white bar under its
-  hard black rule, Platinum's flat grey, Aqua's pinstripes, the 10.6 gradient. That has been in the
-  app for a while as a switch that was off unless you found it, which meant the first thing your eye
-  landed on was the wrong menu bar. It is on by default now for the five Mac themes, still a switch
-  under Desktop ▸ Wallpaper, and an explicit "off" is remembered. Windows themes are untouched: they
-  either hide the bar or draw their own, and a grey band across the top of their wallpaper would be
-  a defect rather than a tint.
+- **The Windows 95/98/Me tray has one rhythm again.** The three spaces in it came from three
+  unrelated expressions and worked out to 5, 3 and 11 points, so the speaker was glued to the icon
+  beside it while the clock sat in a hole. All three now come out of a single number, derived so
+  they cannot drift apart again. Windows XP and Windows 7 are untouched: XP carries the
+  hidden-icons chevron and a differently proportioned speaker, and Windows 7 draws its own glyphs.
 
-
-- **Retro Crashes is on the Get More page.** It was gated behind the licence, wired to the unlock
-  screen and listed as a paid feature everywhere except the one page the Setup Assistant shows to
-  ask for the purchase. A test now checks that every paid feature is named there, and that the
-  page sells nothing that is not actually gated.
-
+- **Pick the messenger in the tray: MSN or ICQ.** The icon file was called `icq.png` in every
+  Windows theme while three of them held the MSN logo, which is why the code said ICQ and the
+  taskbar said MSN. They are named for what they are now, and Windows 95, 98 and Me carry both, so
+  Settings ▸ Dock offers the choice. MSN stays the default because that is what the tray has shown
+  until now. Worth knowing while choosing: ICQ arrived in 1996 and MSN Messenger in 1999, so on a
+  Windows 95 desktop the flower is the more period one of the two.
 
 - **"Chaotic" crashes now actually happen.** The setting named for demos was the one that could
   not fire during a demo. Every tick asked whether the user was at the machine but between
@@ -47,51 +72,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   happens" is answerable: until now the two steps that swallowed the tick left no trace while the
   tab read "Armed".
 
-
-- **Windows 95/98/Me: the calculator's top strip was narrower than the rest of the window.** The
-  title and menu bars were inset three pixels a side while the body beneath them spans the full
-  window and paints over the frame, so the top sat four pixels narrower than everything under it.
-  All three now share one width.
-
-
-- **Windows Me folder and TV windows lose the navigation toolbar and the address bar**, and the
-  web-view panel down the left gets the real banner artwork instead of the gradient standing in
-  for it. What makes a Me window read as Me is that panel, not the buttons above it. The File and
-  Window menu bar takes the theme's own face colour; it was the one grey surface the scheme
-  recolouring had missed.
-
-
-- **Office icons for Windows Me and XP.** Word, Excel, PowerPoint and Outlook in their 2000-03
-  artwork, at each theme's own icon size. Outlook had no mapping in any theme before.
-
-
-- **Windows 98 quick launch:** the Explorer and MS-DOS icons corrected in the same way Windows Me
-  got them, and the messenger tile is ICQ.
-
-
-- **The muted tray speaker is visible again.** Muting drew the same grey speaker at 40% opacity,
-  which works for a colourful icon and fails completely for this one: the speaker is mid-grey and
-  so is the taskbar under it, so "muted" read as a half-erased icon rather than as a state. It now
-  stays at full strength and takes a red prohibition sign over it — red being the one colour a
-  Windows taskbar does not otherwise use, which is why it still reads at fourteen points. And the
-  volume slider now tells the taskbar when it changes something: it never did, so muting from the
-  popup left the tray showing the old state until an unrelated redraw came along.
-
-
-- **The Windows 95/98/Me tray has one rhythm again.** The three spaces in it came from three
-  unrelated expressions and worked out to 5, 3 and 11 points, so the speaker was glued to the icon
-  beside it while the clock sat in a hole. All three now come out of a single number, derived so
-  they cannot drift apart again. Windows XP and Windows 7 are untouched: XP carries the
-  hidden-icons chevron and a differently proportioned speaker, and Windows 7 draws its own glyphs.
-
-
-- **Pick the messenger in the tray: MSN or ICQ.** The icon file was called `icq.png` in every
-  Windows theme while three of them held the MSN logo, which is why the code said ICQ and the
-  taskbar said MSN. They are named for what they are now, and Windows 95, 98 and Me carry both, so
-  Settings ▸ Dock offers the choice. MSN stays the default because that is what the tray has shown
-  until now. Worth knowing while choosing: ICQ arrived in 1996 and MSN Messenger in 1999, so on a
-  Windows 95 desktop the flower is the more period one of the two.
-
+- **The Mac menu bar matches the era again, without being asked.** macOS gives no way to recolour
+  the menu bar, but it is translucent over the desktop picture, so RetroMac paints a strip of
+  menu-bar height into the top of the wallpaper it renders anyway — System 6's white bar under its
+  hard black rule, Platinum's flat grey, Aqua's pinstripes, the 10.6 gradient. That has been in the
+  app for a while as a switch that was off unless you found it, which meant the first thing your eye
+  landed on was the wrong menu bar. It is on by default now for the five Mac themes, still a switch
+  under Desktop ▸ Wallpaper, and an explicit "off" is remembered. Windows themes are untouched: they
+  either hide the bar or draw their own, and a grey band across the top of their wallpaper would be
+  a defect rather than a tint.
 
 - **The shareware episodes are in the Game Library.** Doom, Heretic, Duke Nukem 3D, Quake and
   Quake II each shipped a free episode that its publisher wrote a licence for: Duke's says in
@@ -112,7 +101,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   released for free distribution. The other eight are commercial games, and not one of the Archive
   items holding them states a licence, so RetroMac stops handing them out. Those cards still do
   the useful half of the job: they install the engine, name the exact file the engine wants, and
-  look through your Steam and GOG libraries for the copy you already own — one press adopts it.
+  look through your Steam libraries for the copy you already own — one press adopts it.
   Otherwise, point the card at your own files as before.
 
 - **Cancelling a download now cancels it.** A cancelled multi-file title used to carry on

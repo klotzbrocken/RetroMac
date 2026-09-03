@@ -446,24 +446,58 @@ enum InternetArchive {
 
     // MARK: - Copies the user already has
 
-    /// Where other stores put games on this Mac. GOG's macOS builds are DOSBox or ScummVM
-    /// wrappers, so their data sits at a fixed depth inside the application bundle; those paths
-    /// are named rather than searched, which is why `/Applications` itself is not a root.
+    /// Where Steam keeps its libraries, plus the one folder people put loose game data in.
+    ///
+    /// Only Steam, deliberately. GOG's macOS releases are DOSBox or Wine wrappers with no
+    /// consistent layout inside the bundle, and guessing at a path nobody has verified would mean
+    /// claiming to find something we cannot.
     private static var searchRoots: [URL] {
         let fm = FileManager.default
         let home = URL(fileURLWithPath: NSHomeDirectory())
-        var roots = [
-            home.appendingPathComponent("Library/Application Support/Steam/steamapps/common"),
-            home.appendingPathComponent("Library/Application Support/GOG.com"),
-            home.appendingPathComponent("Games"),
-        ]
-        let apps = (try? fm.contentsOfDirectory(at: URL(fileURLWithPath: "/Applications"),
-                                                includingPropertiesForKeys: nil,
-                                                options: [.skipsHiddenFiles])) ?? []
-        for app in apps where app.pathExtension == "app" {
-            roots.append(app.appendingPathComponent("Contents/Resources/game"))
-        }
+        var roots = steamLibraries().map { URL(fileURLWithPath: $0) }
+        roots.append(home.appendingPathComponent("Games"))
         return roots.filter { fm.fileExists(atPath: $0.path) }
+    }
+
+    /// Every `steamapps/common` on this Mac, not just the one in the home folder.
+    ///
+    /// Steam lets a library live anywhere, and an external SSD is where a large one usually ends
+    /// up. Looking only in the default place meant telling somebody their game was not on the
+    /// machine while it sat on the drive next to it.
+    static func steamLibraries() -> [String] {
+        let home = URL(fileURLWithPath: NSHomeDirectory())
+        let steamapps = home.appendingPathComponent("Library/Application Support/Steam/steamapps")
+        var out = [steamapps.appendingPathComponent("common").path]
+        if let text = try? String(contentsOf: steamapps.appendingPathComponent("libraryfolders.vdf"),
+                                  encoding: .utf8) {
+            for path in steamLibraryPaths(fromVDF: text) {
+                let common = URL(fileURLWithPath: path).appendingPathComponent("steamapps/common").path
+                if !out.contains(common) { out.append(common) }
+            }
+        }
+        return out
+    }
+
+    /// Pull the library paths out of Steam's `libraryfolders.vdf`.
+    ///
+    /// Parsed by picking quoted pairs off each line rather than with a real VDF parser, because
+    /// two formats are in the wild and both fall out of the same rule: the current one writes
+    /// `"path"  "/Volumes/SSD/SteamLibrary"` inside a numbered block, and the pre-2021 one wrote
+    /// the path straight against the number as `"1"  "/Volumes/SSD/SteamLibrary"`.
+    static func steamLibraryPaths(fromVDF text: String) -> [String] {
+        var out: [String] = []
+        for line in text.split(separator: "\n") {
+            let quoted = line.split(separator: "\"").enumerated()
+                .filter { $0.offset % 2 == 1 }
+                .map { String($0.element) }
+            guard quoted.count >= 2 else { continue }
+            let key = quoted[0], value = quoted[1]
+            let isPathKey = key.lowercased() == "path"
+            let isNumberedPath = Int(key) != nil && value.hasPrefix("/")
+            guard isPathKey || isNumberedPath, value.hasPrefix("/") else { continue }
+            if !out.contains(value) { out.append(value) }
+        }
+        return out
     }
 
     /// Copies of these titles that other stores already put on this Mac, keyed by title id.
