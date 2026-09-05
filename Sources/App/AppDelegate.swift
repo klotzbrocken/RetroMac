@@ -436,15 +436,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Double-click on the floating launcher button: toggle the last-used theme. If a theme is
     /// currently active it turns Dock Mode off; otherwise it re-activates the theme ThemeManager
     /// still remembers (falling back to the first available theme on a fresh start).
-    func toggleLastActiveTheme() {
-        if AppSettings.shared.dockEnabled {
-            disableTheme()
-        } else if let name = ThemeManager.shared.activeTheme?.config.name {
-            launcherActivateTheme(name)
-        } else if let first = ThemeManager.shared.availableThemes.first?.config.name {
-            launcherActivateTheme(first)
-        }
-    }
     /// Flyout/menu "CRT Shader" = the whole-screen effect. Forces the scope to whole-screen so it
     /// can't get stuck on wallpaper after "Live Wallpaper" set `shaderWallpaperOnly = true`.
     func launcherToggleShader() {
@@ -596,24 +587,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         private let quitButton = NSImageView()
         private let retroButton = NSImageView()
         private let floatButton = NSImageView()
-        private let themeButton = NSImageView()
         private let iconView = NSView()
         private let glowDot = NSView(frame: NSRect(x: 9, y: 9, width: 8, height: 8))
         private var onGear: (() -> Void)?
         private var onQuit: (() -> Void)?
         private var onRetro: (() -> Void)?
         private var onFloat: (() -> Void)?
-        private var onTheme: (() -> Void)?
 
         init(presetName: String, statusText: String, shaderOn: Bool, retroActive: Bool,
              onGear: @escaping () -> Void, onQuit: @escaping () -> Void,
-             onRetro: @escaping () -> Void, onFloat: @escaping () -> Void,
-             onTheme: @escaping () -> Void) {
+             onRetro: @escaping () -> Void, onFloat: @escaping () -> Void) {
             self.onGear = onGear
             self.onQuit = onQuit
             self.onRetro = onRetro
             self.onFloat = onFloat
-            self.onTheme = onTheme
             super.init(frame: NSRect(x: 0, y: 0, width: 300, height: 50))
             autoresizingMask = .width
 
@@ -673,11 +660,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             floatButton.toolTip = "Floating launcher button"
             addSubview(floatButton)
 
-            // Theme on/off — the visible home of what used to be a double click on the floating
-            // button, where an ordinary click could trigger it by accident.
-            themeButton.toolTip = "Turn the retro desktop on or off"
-            addSubview(themeButton)
-
             // Apply initial state
             update(shaderOn: shaderOn, presetName: presetName, statusText: statusText, retroActive: retroActive)
         }
@@ -688,12 +670,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             retroButton.image = NSImage(systemSymbolName: retroActive ? "wand.and.stars.inverse" : "wand.and.stars",
                                         accessibilityDescription: "Retro Mode")?.withSymbolConfiguration(retroConfig)
             retroButton.contentTintColor = retroActive ? .controlAccentColor : .secondaryLabelColor
-
-            let themeOn = ThemeManager.shared.activeTheme != nil
-            themeButton.image = NSImage(systemSymbolName: themeOn ? "paintpalette.fill" : "paintpalette",
-                                        accessibilityDescription: "Retro desktop")?
-                .withSymbolConfiguration(retroConfig)
-            themeButton.contentTintColor = themeOn ? .controlAccentColor : .secondaryLabelColor
 
             let floatOn = AppSettings.shared.floatingLauncherEnabled
             floatButton.image = NSImage(systemSymbolName: floatOn ? "circle.dashed.inset.filled" : "circle.dashed",
@@ -721,16 +697,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             quitButton.frame = NSRect(x: bounds.width - gearSize * 2 - 16, y: 13, width: gearSize, height: gearSize)
             retroButton.frame = NSRect(x: bounds.width - gearSize * 3 - 20, y: 13, width: gearSize, height: gearSize)
             floatButton.frame = NSRect(x: bounds.width - gearSize * 4 - 24, y: 13, width: gearSize, height: gearSize)
-            themeButton.frame = NSRect(x: bounds.width - gearSize * 5 - 28, y: 13, width: gearSize, height: gearSize)
             // Give the labels whatever is left, or the icons would run into the preset name.
-            let textWidth = max(60, themeButton.frame.minX - 48 - 8)
+            let textWidth = max(60, floatButton.frame.minX - 48 - 8)
             presetLabel.frame = NSRect(x: 48, y: 26, width: textWidth, height: 16)
             statusLabel.frame = NSRect(x: 48, y: 9, width: textWidth, height: 14)
         }
 
         required init?(coder: NSCoder) { fatalError() }
 
-        /// The three icons are NSImageViews, so route clicks here (same approach as
+        /// The icons are NSImageViews, so route clicks here (same approach as
         /// MenuToggleRowView). Hit areas are padded since the icons are only 24×24.
         override func mouseUp(with event: NSEvent) {
             let p = convert(event.locationInWindow, from: nil)
@@ -738,12 +713,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             else if quitButton.frame.insetBy(dx: -2, dy: -8).contains(p) { quitTapped() }
             else if retroButton.frame.insetBy(dx: -2, dy: -8).contains(p) { retroTapped() }
             else if floatButton.frame.insetBy(dx: -2, dy: -8).contains(p) { onFloat?() }
-            else if themeButton.frame.insetBy(dx: -2, dy: -8).contains(p) { themeTapped() }
-        }
-
-        @objc private func themeTapped() {
-            enclosingMenuItem?.menu?.cancelTracking()
-            onTheme?()
         }
 
         @objc private func gearTapped() {
@@ -1017,8 +986,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }, onFloat: { [weak self] in
             self?.toggleFloatingLauncher()
             self?.updateMenuLive()
-        }, onTheme: { [weak self] in
-            self?.toggleLastActiveTheme()
         })
         menuHeaderView = headerView
         let headerItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
