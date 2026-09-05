@@ -62,6 +62,13 @@ final class DesktopIconsController {
     // MARK: - Public API
 
     /// Show desktop icons for the active theme (call on theme change).
+    /// The icon layer's window id, for the desktop-scope capture that has to include it and
+    /// nothing else.
+    var captureWindowID: CGWindowID? {
+        guard let window, window.isVisible else { return nil }
+        return CGWindowID(window.windowNumber)
+    }
+
     func update() {
         // Dock-only changes nothing but the dock — no themed desktop icons.
         if AppSettings.shared.dockOnly { hide(); return }
@@ -132,7 +139,11 @@ final class DesktopIconsController {
             // "click wallpaper to reveal desktop" gesture and slides all windows off-screen.
             // A sub-normal level keeps the icons behind apps while a click is consumed as a
             // normal window click, so the reveal gesture no longer fires.
-            panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.normalWindow)) - 1)
+            // The band under the application windows, bottom to top: this icon layer at -4, the
+            // retro dock at -3, an open start menu at -2, and the desktop-scope overlay at -1
+            // covering all of them with their shaded copy. Distinct levels rather than shared
+            // ones, so the order never depends on which window was ordered front last.
+            panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.normalWindow)) - 4)
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = false

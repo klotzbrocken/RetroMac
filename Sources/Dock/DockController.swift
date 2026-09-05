@@ -237,6 +237,10 @@ final class DockController {
             win.contentView = container
         }
 
+        // A theme switch rebuilds this window, so the lowered level has to be re-applied here
+        // rather than only when the mode is turned on.
+        applyDockLevel(to: win)
+
         self.window = win
         self.dockView = dockView
     }
@@ -1264,6 +1268,41 @@ final class DockController {
     }
 
     /// Returns the current dock window frame in screen coordinates (for DockFix)
+    /// Live Wallpaper Plus puts the dock into the band BELOW the application windows, where the
+    /// desktop-scope overlay already covers the wallpaper and the desktop icons.
+    ///
+    /// That is what lets one shader pass cover all three at once: the real dock is hidden under
+    /// the opaque overlay exactly as the wallpaper is, so there is no second copy to ghost against
+    /// and no mask to get wrong. Clicks still reach it, because the overlay ignores mouse events.
+    ///
+    /// The cost is stated rather than hidden: while this is on, the retro dock is not above
+    /// application windows.
+    private(set) var loweredForDesktopShader = false
+
+    func setLoweredForDesktopShader(_ lowered: Bool) {
+        guard loweredForDesktopShader != lowered else { return }
+        loweredForDesktopShader = lowered
+        if let window { applyDockLevel(to: window) }
+    }
+
+    private func applyDockLevel(to window: NSWindow) {
+        let level = loweredForDesktopShader
+            ? Int(CGWindowLevelForKey(.normalWindow)) - 3
+            : DockWindow.defaultLevel
+        window.level = NSWindow.Level(rawValue: level)
+    }
+
+    /// The dock window's id, for the desktop-scope capture.
+    ///
+    /// Not gated on `isVisible`: the window exists for the life of the theme, while that flag
+    /// goes false whenever the dock auto-hides. Gating the CAPTURE on it meant one auto-hide
+    /// early on left the dock unfiltered until the theme was restarted. Whether anything is
+    /// drawn is decided per frame from the dock's current frame instead.
+    var captureWindowID: CGWindowID? {
+        guard let window else { return nil }
+        return CGWindowID(window.windowNumber)
+    }
+
     func currentDockFrame() -> NSRect? {
         guard isVisible else { return nil }
         return window?.frame

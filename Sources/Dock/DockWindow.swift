@@ -1,6 +1,10 @@
 import AppKit
 
 final class DockWindow: NSPanel {
+    /// Above every application window, below the shader overlay at 25 and the start menu at 27.
+    /// `DockController` lowers it under the application windows while Live Wallpaper Plus runs.
+    static let defaultLevel = 24
+
     init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,
@@ -8,7 +12,7 @@ final class DockWindow: NSPanel {
             backing: .buffered,
             defer: false
         )
-        level = NSWindow.Level(rawValue: 24)
+        level = NSWindow.Level(rawValue: Self.defaultLevel)
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false

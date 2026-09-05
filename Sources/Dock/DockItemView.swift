@@ -53,6 +53,7 @@ final class DockItemView: NSView {
         iconImageView.image = image
     }
 
+
     func updateTheme(_ theme: DockThemeConfig) {
         if theme.isPixelated {
             iconImageView.layer?.magnificationFilter = .nearest

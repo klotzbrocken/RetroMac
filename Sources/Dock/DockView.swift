@@ -3014,6 +3014,7 @@ final class DockView: NSView {
             img.size = trayIconFrame.size
             img.draw(in: trayIconFrame, from: .zero, operation: .sourceOver, fraction: 1.0)
         }
+
     }
 
     // MARK: - Control Strip Drawing

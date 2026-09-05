@@ -5,6 +5,23 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Live Wallpaper can now cover the whole desktop, not just the picture.** A new switch under
+  Settings > Desktop runs the selected shader over the desktop picture, RetroMac's own desktop
+  icons, the retro dock and an open start menu in ONE pass, so the scanlines run through all of
+  them instead of restarting in each. Application windows are never touched. Getting one pass to
+  span them meant putting the dock and the start menu into the band below the application windows
+  while the mode runs, which is the visible cost: the retro taskbar is not on top while this is
+  on. The effect also runs at the display's frame rate rather than the usual 30, because it now
+  carries the dock's own magnification, and five frames of a 0.18 second animation looked exactly
+  as stepped as that sounds.
+
+- **The status menu lost four things it did not need.** "Apply to Full Screen" is gone, since that
+  is what the effect does unless told otherwise, and "Apply to Window" is a switch instead of a
+  second line with a tick on it. Window borders moved to Settings > Themes, "About This Theme"
+  left the menu and stays on its desktop icon, and the floating launcher button became an icon in
+  the menu's header next to Retro Mode, where it reads as a way back into RetroMac rather than as
+  an afterthought under the setup assistant.
+
 - **Mac OS 6 and 9 crash alerts: the text lines up, and every alert has an icon.** The fault line
   carried eight hard-coded spaces to indent it, which is an arbitrary width in a proportional face
   and left it standing out of line with the sentences above and below. All lines now share the one

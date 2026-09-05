@@ -72,12 +72,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cameraPillToggle: PillToggleView?
     private var viewportPillToggle: PillToggleView?
 
+
     var captureModeDescription: String {
         guard let controller = overlayController else { return "—" }
         switch controller.captureMode {
         case .fullScreen: return "Full Screen"
         case .singleDisplay: return "Single Display"
         case .singleWindow: return "Single Window"
+        case .desktopScope: return "Desktop (wallpaper + icons)"
         }
     }
 
@@ -405,11 +407,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cam.target = self
         cam.state = VirtualCameraManager.shared.isRunning ? .on : .off
         menu.addItem(cam)
-        let borders = NSMenuItem(title: "Window Borders (Theme)", action: #selector(toggleThemeWindowBorders), keyEquivalent: "")
-        borders.target = self
-        borders.state = AppSettings.shared.themeWindowBorders ? .on : .off
-        menu.addItem(borders)
-
         menu.addItem(.separator())
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: "")
         settings.target = self
@@ -586,16 +583,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         private let gearButton = NSImageView()
         private let quitButton = NSImageView()
         private let retroButton = NSImageView()
+        private let floatButton = NSImageView()
         private let iconView = NSView()
         private let glowDot = NSView(frame: NSRect(x: 9, y: 9, width: 8, height: 8))
         private var onGear: (() -> Void)?
         private var onQuit: (() -> Void)?
         private var onRetro: (() -> Void)?
+        private var onFloat: (() -> Void)?
 
-        init(presetName: String, statusText: String, shaderOn: Bool, retroActive: Bool, onGear: @escaping () -> Void, onQuit: @escaping () -> Void, onRetro: @escaping () -> Void) {
+        init(presetName: String, statusText: String, shaderOn: Bool, retroActive: Bool,
+             onGear: @escaping () -> Void, onQuit: @escaping () -> Void,
+             onRetro: @escaping () -> Void, onFloat: @escaping () -> Void) {
             self.onGear = onGear
             self.onQuit = onQuit
             self.onRetro = onRetro
+            self.onFloat = onFloat
             super.init(frame: NSRect(x: 0, y: 0, width: 300, height: 50))
             autoresizingMask = .width
 
@@ -649,6 +651,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             retroButton.toolTip = "Retro Mode — hide desktop & apply your favourite"
             addSubview(retroButton)
 
+            // Floating launcher — left of Retro Mode. It used to be a line at the very bottom
+            // of the menu, below the setup assistant, where it read as an afterthought rather
+            // than as the always-there way back into RetroMac that it is.
+            floatButton.toolTip = "Floating launcher button"
+            addSubview(floatButton)
+
             // Apply initial state
             update(shaderOn: shaderOn, presetName: presetName, statusText: statusText, retroActive: retroActive)
         }
@@ -659,6 +667,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             retroButton.image = NSImage(systemSymbolName: retroActive ? "wand.and.stars.inverse" : "wand.and.stars",
                                         accessibilityDescription: "Retro Mode")?.withSymbolConfiguration(retroConfig)
             retroButton.contentTintColor = retroActive ? .controlAccentColor : .secondaryLabelColor
+
+            let floatOn = AppSettings.shared.floatingLauncherEnabled
+            floatButton.image = NSImage(systemSymbolName: floatOn ? "circle.dashed.inset.filled" : "circle.dashed",
+                                        accessibilityDescription: "Floating launcher button")?
+                .withSymbolConfiguration(retroConfig)
+            floatButton.contentTintColor = floatOn ? .controlAccentColor : .secondaryLabelColor
 
             let dotColor: NSColor = shaderOn
                 ? NSColor(red: 0.2, green: 0.9, blue: 0.3, alpha: 1)
@@ -679,6 +693,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             gearButton.frame = NSRect(x: bounds.width - gearSize - 12, y: 13, width: gearSize, height: gearSize)
             quitButton.frame = NSRect(x: bounds.width - gearSize * 2 - 16, y: 13, width: gearSize, height: gearSize)
             retroButton.frame = NSRect(x: bounds.width - gearSize * 3 - 20, y: 13, width: gearSize, height: gearSize)
+            floatButton.frame = NSRect(x: bounds.width - gearSize * 4 - 24, y: 13, width: gearSize, height: gearSize)
+            // Give the labels whatever is left, or a fourth icon would run into the preset name.
+            let textWidth = max(60, floatButton.frame.minX - 48 - 8)
+            presetLabel.frame = NSRect(x: 48, y: 26, width: textWidth, height: 16)
+            statusLabel.frame = NSRect(x: 48, y: 9, width: textWidth, height: 14)
         }
 
         required init?(coder: NSCoder) { fatalError() }
@@ -690,6 +709,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if gearButton.frame.insetBy(dx: -2, dy: -8).contains(p) { gearTapped() }
             else if quitButton.frame.insetBy(dx: -2, dy: -8).contains(p) { quitTapped() }
             else if retroButton.frame.insetBy(dx: -2, dy: -8).contains(p) { retroTapped() }
+            else if floatButton.frame.insetBy(dx: -2, dy: -8).contains(p) { onFloat?() }
         }
 
         @objc private func gearTapped() {
@@ -960,6 +980,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.quitApp()
         }, onRetro: { [weak self] in
             self?.toggleRetroMode()
+        }, onFloat: { [weak self] in
+            self?.toggleFloatingLauncher()
+            self?.updateMenuLive()
         })
         menuHeaderView = headerView
         let headerItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
@@ -1046,21 +1069,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         tubeToggleItem.view = tubeRow
         menu.addItem(tubeToggleItem)
 
-        // ── Window Borders (Theme) toggle — prototype ──
-        let bordersPill = PillToggleView(isOn: AppSettings.shared.themeWindowBorders)
-        let bordersRow = MenuToggleRowView(
+        // Window borders live in Settings > Themes and nowhere else. A switch that exists in
+        // two places is a switch that eventually disagrees with itself.
+
+        // Where the effect is drawn. Both entries are listed and the active one is ticked:
+        // only the window entry existed, so once a customer had picked a window there was no
+        // visible way back to the whole screen, and nothing said which mode they were in.
+        let isWindowMode: Bool
+        if case .singleWindow = overlayController?.captureMode { isWindowMode = true } else { isWindowMode = false }
+
+        // One switch instead of two entries. Full screen is what the effect does unless told
+        // otherwise, so it does not need a line of its own; turning this off IS "apply to full
+        // screen", and the switch says which of the two you are in without having to read a tick
+        // on the other line.
+        let windowPill = PillToggleView(isOn: isActive && isWindowMode)
+        let windowRow = MenuToggleRowView(
             icon: "macwindow",
-            label: "Window Borders (Theme)",
+            label: "Apply to Window",
             hotkeyHint: nil,
-            pill: bordersPill
+            pill: windowPill
         ) { [weak self] in
-            self?.toggleThemeWindowBorders()
-            bordersPill.isOn = AppSettings.shared.themeWindowBorders
-            self?.updateMenuLive()
+            guard let self else { return }
+            if isWindowMode { self.applyFullScreen() } else { self.pickWindowVisual() }
         }
-        let bordersToggleItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        bordersToggleItem.view = bordersRow
-        menu.addItem(bordersToggleItem)
+        let windowItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        windowItem.view = windowRow
+        menu.addItem(windowItem)
 
         // ── PRESETS section ──
         menu.addItem(sectionLabel("PRESETS"))
@@ -1275,25 +1309,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         displayItem.submenu = displayMenu
         menu.addItem(displayItem)
 
-        // Where the effect is drawn. Both entries are listed and the active one is ticked:
-        // only the window entry existed, so once a customer had picked a window there was no
-        // visible way back to the whole screen, and nothing said which mode they were in.
-        let isWindowMode: Bool
-        if case .singleWindow = overlayController?.captureMode { isWindowMode = true } else { isWindowMode = false }
-
-        let fullScreenItem = NSMenuItem(title: "Apply to Full Screen", action: #selector(applyFullScreen), keyEquivalent: "")
-        fullScreenItem.target = self
-        fullScreenItem.image = sfIcon("display")
-        fullScreenItem.state = (isActive && !isWindowMode) ? .on : .off
-        menu.addItem(fullScreenItem)
-
-        // Window picker
-        let pickItem = NSMenuItem(title: "Apply to Window\u{2026}", action: #selector(pickWindowVisual), keyEquivalent: "")
-        pickItem.target = self
-        pickItem.image = sfIcon("macwindow")
-        pickItem.state = (isActive && isWindowMode) ? .on : .off
-        menu.addItem(pickItem)
-
         menu.addItem(NSMenuItem.separator())
 
         // ── RETROMAC section ──
@@ -1344,15 +1359,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         themesItem.submenu = themesMenu
         menu.addItem(themesItem)
 
-        // About This Theme — a historical readme (with "did you know" curiosities) for the
-        // active theme's OS, shown only when the theme ships a readme.html.
-        if ThemeReadmeController.activeThemeHasReadme() {
-            let aboutTheme = NSMenuItem(title: "About This Theme\u{2026}", action: #selector(showThemeReadme), keyEquivalent: "")
-            aboutTheme.image = sfIcon("book")
-            aboutTheme.target = self
-            menu.addItem(aboutTheme)
-        }
-
         // (Television submenu removed — channels live in the TV Tube toggle + its
         // right-click menu; the dock/start-menu entries start the Tube directly.)
 
@@ -1399,24 +1405,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        // ── Screenshot with shader ──
-        let screenshotItem = NSMenuItem(title: "Screenshot with Shader", action: #selector(screenshotMenuAction), keyEquivalent: "")
-        screenshotItem.target = self
-        screenshotItem.image = sfIcon("camera.fill")
-        screenshotItem.isEnabled = isActive || retroViewport.isActive
-        menu.addItem(screenshotItem)
-
-        menu.addItem(NSMenuItem.separator())
         let wizardItem = NSMenuItem(title: "Setup Assistant\u{2026}", action: #selector(openSetupWizard), keyEquivalent: "")
         wizardItem.target = self
-        wizardItem.image = sfIcon("wand.and.stars")
+        // Not the wand: that is Retro Mode / favourite, up in the header.
+        wizardItem.image = sfIcon("checklist")
         menu.addItem(wizardItem)
-
-        let floatItem = NSMenuItem(title: "Floating Launcher Button", action: #selector(toggleFloatingLauncher), keyEquivalent: "")
-        floatItem.target = self
-        floatItem.image = sfIcon("circle.dashed")
-        floatItem.state = AppSettings.shared.floatingLauncherEnabled ? .on : .off
-        menu.addItem(floatItem)
 
         // Quit moved to a power symbol in the header; Reset Permissions moved to Settings.
         statusItem.menu = menu
@@ -1724,6 +1717,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlayStartTask = nil
         permissionPollTimer?.invalidate()   // stop waiting for Screen Recording if we're turning off
         permissionPollTimer = nil
+        DockController.shared.setLoweredForDesktopShader(false)
         overlayController?.stop()
         overlayController = nil
         crtLiteOverlay?.stop()
@@ -1787,6 +1781,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startWallpaperShader(presetID: String) {
         overlayStartTask?.cancel()
         overlayStartTask = nil
+        DockController.shared.setLoweredForDesktopShader(false)
         overlayController?.stop()
         overlayController = nil
         crtLiteOverlay?.stop()
@@ -1795,6 +1790,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         wallpaperShaderController = nil
 
         let effective = Self.fullPreset(for: presetID)
+
+        // "Live Wallpaper includes dock and icons": one screen-space pass over the desktop
+        // picture AND RetroMac's own icon layer, sat below every application window. Filtering
+        // them separately is what made the scanlines restart in each piece, so this replaces the
+        // wallpaper-only path rather than adding to it.
+        if AppSettings.shared.liveWallpaperPlus {
+            startDesktopScopeShader(presetID: presetID, effective: effective)
+            return
+        }
+        startWallpaperShaderOnly(presetID: presetID, effective: effective)
+    }
+
+    /// The plain Live Wallpaper: the shader on the desktop picture only.
+    private func startWallpaperShaderOnly(presetID: String, effective: String) {
         do {
             let controller = try WallpaperShaderController.create(presetName: effective)
             controller.intensity = currentIntensity
@@ -1819,6 +1828,62 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.informativeText = "\(error.localizedDescription)"
             alert.runModal()
         }
+    }
+
+    /// The desktop scope: wallpaper, desktop icons AND the dock through one shader pass, under
+    /// the application windows.
+    private func startDesktopScopeShader(presetID: String, effective: String) {
+        // Before the overlay exists, so the dock is already in the band the capture covers and
+        // is in the window list the filter is built from.
+        DockController.shared.setLoweredForDesktopShader(true)
+        overlayStartTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let controller = try await OverlayWindowController.create(mode: .desktopScope)
+                guard !Task.isCancelled else { await MainActor.run { controller.stop() }; return }
+                controller.intensity = self.currentIntensity
+                controller.vignetteIntensity = self.currentVignetteIntensity
+                try await controller.start(presetName: effective)
+                let settings = AppSettings.shared
+                if let renderer = controller.renderer {
+                    renderer.bloomEnabled = settings.bloomEnabled
+                    renderer.bloomIntensity = settings.bloomIntensity
+                    renderer.phosphorPersistence = settings.phosphorPersistence
+                    renderer.bloomRadius = settings.bloomRadius
+                }
+                guard !Task.isCancelled else { await MainActor.run { controller.stop() }; return }
+                self.overlayController = controller
+                self.currentPresetName = presetID
+                self.isActive = true
+                self.overlayStartTask = nil
+                await MainActor.run {
+                    self.updateMenuBarIcon()
+                    self.rebuildMenu()
+                    NotificationCenter.default.post(name: .overlayStateChanged, object: nil)
+                }
+                print("[RetroMac] Desktop-scope shader started: \(presetID) → \(effective)")
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.overlayStartTask = nil
+                print("[RetroMac] Desktop-scope shader ERROR: \(error)")
+                // Fall back to the plain wallpaper effect rather than leaving the user with
+                // nothing. The wide scope needs RetroMac's own desktop windows in its capture,
+                // and without a theme running there are none.
+                await MainActor.run {
+                    DockController.shared.setLoweredForDesktopShader(false)
+                    self.startWallpaperShaderOnly(presetID: presetID, effective: effective)
+                }
+            }
+        }
+    }
+
+    /// Restart the running effect so a change to the Live Wallpaper scope takes hold now.
+    ///
+    /// The two scopes are different controllers on different window levels, so this is a restart
+    /// and not a repaint.
+    func restartLiveWallpaperScope() {
+        guard launcherLiveWallpaperActive else { return }
+        startWallpaperShader(presetID: currentPresetName ?? AppSettings.shared.defaultPreset)
     }
 
     @objc func toggleOverlay() {
@@ -1888,7 +1953,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .fullScreen, .singleDisplay:
                 startWallpaperShader(presetID: effectivePreset.isEmpty ? AppSettings.shared.defaultPreset : effectivePreset)
                 return
-            case .singleWindow:
+            case .singleWindow, .desktopScope:
                 break
             }
         }
@@ -2385,6 +2450,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applyPreset(_ presetID: String) {
         currentPresetName = presetID
 
+        // Live Wallpaper Plus bakes the shader into the dock's and the icons' own bitmaps, so a
+        // new preset does not reach them by repainting. The icons in particular are built once
+        // and would otherwise keep the previous shader until the theme is reactivated.
+
         // Wallpaper-only scope: switch the shader in place on the wallpaper controller.
         if isWallpaperOnlyScope {
             if let wp = wallpaperShaderController, wp.isActive {
@@ -2613,10 +2682,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 alert.runModal()
             }
         }
-    }
-
-    @objc private func showThemeReadme() {
-        ThemeReadmeController.shared.showForActiveTheme()
     }
 
     /// The menu-bar status-item icon in screen coordinates (target for the onboarding coach mark).
@@ -2893,10 +2958,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Screenshot with Shader
-
-    @objc private func screenshotMenuAction() {
-        captureScreenshotWithShader()
-    }
 
     /// Capture the full screen including the active CRT shader overlay and save to Desktop.
     func captureScreenshotWithShader() {
@@ -4685,12 +4746,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Virtual Camera
-
-    @objc private func toggleThemeWindowBorders() {
-        // Prototype toggle: theme-coloured border around the focused window of every app.
-        // AppSettings.didSet drives WindowBorderController.update(); flip the flag here.
-        AppSettings.shared.themeWindowBorders.toggle()
-    }
 
     @objc private func toggleVirtualCamera() {
         let vcam = VirtualCameraManager.shared

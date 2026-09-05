@@ -18,6 +18,20 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
     /// guessing a constant 2×. Defaults to 2 until a stream starts.
     private(set) var captureScale: Int = 2
 
+    /// What `startDisplayIncludingOnly` was asked to keep, and the exclusion list it last handed
+    /// to the stream. An `SCContentFilter` built with `excludingWindows:` is a fixed LIST, not a
+    /// rule: a window that did not exist when the stream started can never be in it and is
+    /// therefore captured. Without a refresh, every application window opened after the effect
+    /// starts turns up inside the desktop layer.
+    private var scopeDisplayID: CGDirectDisplayID?
+    private var scopeKeepIDs: Set<CGWindowID> = []
+    /// Re-read on every refresh. The windows to keep are not a fixed set: a Windows start menu
+    /// exists only while it is open, and it has to stay in the capture the moment it appears.
+    var scopeKeepProvider: (@MainActor () -> [CGWindowID])?
+    private var scopeExcludedIDs: Set<CGWindowID> = []
+    private var scopeRefreshTimer: DispatchSourceTimer?
+    private var scopeRefreshInFlight = false
+
     init(device: MTLDevice) {
         self.device = device
         super.init()
@@ -104,6 +118,105 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
             return (Int(display.width) * scale, Int(display.height) * scale)
         }
         return result
+    }
+
+    /// Capture a display showing ONLY the given windows, over the desktop picture.
+    ///
+    /// The inverse of `startDisplay`, and the piece that makes a synchronised desktop shader
+    /// possible: the effect has to reach the wallpaper and RetroMac's own desktop icons while
+    /// leaving every application window alone, and "everything except the applications" is not a
+    /// thing ScreenCaptureKit can be asked for directly. It can be asked to exclude a list, so
+    /// the list is built as the complement of what we want to keep.
+    ///
+    /// Anything not named here is excluded, this app's own windows included — which is what keeps
+    /// the overlay from filming itself.
+    func startDisplayIncludingOnly(_ displayID: CGDirectDisplayID,
+                                   windowIDs: [CGWindowID],
+                                   content: SCShareableContent? = nil) async throws {
+        // Fetch the window list WITHOUT the desktop windows, and that is the whole point of this
+        // call rather than reusing the caller's content. The desktop picture is itself a window;
+        // in a list that includes it, "exclude everything I did not name" excludes the wallpaper
+        // too and the capture comes back black. Asking for the list without desktop windows means
+        // they are never candidates for exclusion, so the wallpaper always survives.
+        _ = content
+        let resolved = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
+        guard let display = resolved.displays.first(where: { $0.displayID == displayID }) else {
+            throw CaptureError.noDisplay
+        }
+        let keep = Set(windowIDs)
+        let exclude = resolved.windows.filter { !keep.contains($0.windowID) }
+        let kept = resolved.windows.filter { keep.contains($0.windowID) }
+        print("[Capture] Desktop scope on display \(displayID): asked to keep \(keep.count), found \(kept.count), excluding \(exclude.count) of \(resolved.windows.count)")
+        // Refuse rather than deliver a capture that is missing the very windows the caller asked
+        // to keep. The overlay this feeds is OPAQUE and covers the dock and the desktop icons, so
+        // a capture without them in it does not look like a wrong filter, it looks like the dock
+        // and the icons have vanished.
+        if !keep.isEmpty, kept.isEmpty {
+            throw CaptureError.noDisplay
+        }
+        let filter = SCContentFilter(display: display, excludingWindows: exclude)
+        scopeDisplayID = displayID
+        scopeKeepIDs = keep
+        scopeExcludedIDs = Set(exclude.map(\.windowID))
+
+        let config = SCStreamConfiguration()
+        let (w, h) = await captureSize(for: display)
+        config.width = w
+        config.height = h
+        config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(targetFPS))
+        config.queueDepth = targetFPS > 30 ? 5 : 3
+        config.pixelFormat = kCVPixelFormatType_32BGRA
+        config.showsCursor = false
+
+        try await startStream(filter: filter, config: config)
+        startScopeRefresh()
+    }
+
+    /// Keep the exclusion list in step with the windows that actually exist.
+    ///
+    /// Once a second, not per frame: it costs a `SCShareableContent` fetch, and the stream is only
+    /// touched when the set of ids has genuinely changed, so a quiet desktop costs one query and
+    /// nothing else.
+    private func startScopeRefresh() {
+        scopeRefreshTimer?.cancel()
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+        timer.schedule(deadline: .now() + 1, repeating: 1)
+        timer.setEventHandler { [weak self] in
+            guard let self, !self.scopeRefreshInFlight else { return }
+            self.scopeRefreshInFlight = true
+            Task { [weak self] in
+                await self?.refreshScopeFilter()
+                self?.scopeRefreshInFlight = false
+            }
+        }
+        timer.resume()
+        scopeRefreshTimer = timer
+    }
+
+    private func refreshScopeFilter() async {
+        guard let stream, let displayID = scopeDisplayID else { return }
+        guard let resolved = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true),
+              let display = resolved.displays.first(where: { $0.displayID == displayID })
+        else { return }
+
+        if let provider = scopeKeepProvider {
+            scopeKeepIDs = Set(await MainActor.run { provider() })
+        }
+        let exclude = resolved.windows.filter { !scopeKeepIDs.contains($0.windowID) }
+        let ids = Set(exclude.map(\.windowID))
+        guard ids != scopeExcludedIDs else { return }
+
+        let filter = SCContentFilter(display: display, excludingWindows: exclude)
+        do {
+            try await stream.updateContentFilter(filter)
+            // Only once it is actually applied. Recording it before the await meant a single
+            // transient failure stuck for good: the next tick compared against the set it had
+            // already adopted, found no change, and never retried.
+            scopeExcludedIDs = ids
+            print("[Capture] Desktop scope filter refreshed: excluding \(exclude.count) window(s)")
+        } catch {
+            print("[Capture] Desktop scope filter refresh failed, will retry: \(error)")
+        }
     }
 
     func startWindow(_ scWindow: SCWindow, excludingWindowIDs: [CGWindowID]) async throws {
@@ -220,6 +333,9 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     func stop() {
+        scopeRefreshTimer?.cancel()
+        scopeRefreshTimer = nil
+        scopeDisplayID = nil
         let stoppingStream = stream
         stream = nil
         hasReceivedFirstFrame = false

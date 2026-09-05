@@ -98,11 +98,7 @@ final class DesktopIconView: NSView {
     // MARK: - Trash State
 
     func setTrashFull(_ isFull: Bool) {
-        if isFull, let full = fullImage {
-            imageView.image = full
-        } else {
-            imageView.image = emptyImage
-        }
+        imageView.image = (isFull ? fullImage : nil) ?? emptyImage
     }
 
     // Drag + context menu (desktop icon customization)

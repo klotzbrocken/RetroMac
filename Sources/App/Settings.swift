@@ -30,7 +30,7 @@ enum PerformanceProfile: String, CaseIterable, Identifiable {
         switch self {
         case .high: return "Retina 2×, 30 fps, all overlays"
         case .balanced: return "1× resolution, 30 fps, all overlays"
-        case .low: return "1× resolution, 24 fps, no overlays"
+        case .low: return "1× resolution, 30 fps, no overlays"
         }
     }
 
@@ -566,6 +566,17 @@ final class AppSettings: ObservableObject {
     /// eye lands on, so this is not really an extra: it is part of the theme being right.
     @Published var menuBarTint: Bool {
         didSet { defaults.set(menuBarTint, forKey: "menuBarTint") }
+    }
+    /// Live Wallpaper reaches past the wallpaper and onto the dock and the desktop icons.
+    ///
+    /// Only meaningful while `shaderWallpaperOnly` is on: it is the second rung of that feature,
+    /// not a feature of its own. The wallpaper is filtered live in its own window; the dock and
+    /// the icons cannot join that window, so they get the same shader baked into their pixels
+    /// instead. Application windows are never touched either way.
+    ///
+    /// Off by default: it costs a Metal pass per redraw of the dock.
+    @Published var liveWallpaperPlus: Bool {
+        didSet { defaults.set(liveWallpaperPlus, forKey: "liveWallpaperPlus") }
     }
     /// Which messenger sits in the Windows 95/98/Me system tray: "msn" or "icq".
     ///
@@ -1174,6 +1185,7 @@ final class AppSettings: ObservableObject {
         // nothing at all for Windows", which is what it is for. `object(forKey:)` rather than
         // `bool(forKey:)`: an explicit false has to survive, and only a missing key means yes.
         menuBarTint = defaults.object(forKey: "menuBarTint") as? Bool ?? true
+        liveWallpaperPlus = defaults.bool(forKey: "liveWallpaperPlus")
         // Menu-bar Apple style (migrate the legacy menuBarRainbowApple bool: true → rainbow).
         if let style = defaults.object(forKey: "menuBarAppleStyle") as? Int {
             menuBarAppleStyle = style

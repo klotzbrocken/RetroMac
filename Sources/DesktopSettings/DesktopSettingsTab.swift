@@ -88,7 +88,7 @@ struct DesktopSettingsTab: View {
                 // paint a grey band across the top of a wallpaper for no reason.
                 if let cfg = themeConfig, ThemeManager.menuBarStyle(for: cfg) != nil {
                 RMRow(label: "Tint the menu bar",
-                      hint: "macOS cannot recolour the menu bar, but it is translucent over the desktop picture. This paints a strip of menu-bar height into the top of the wallpaper, matched to how \(themeName) drew its bar.") {
+                      hint: "macOS cannot recolour the menu bar, but it is translucent over the desktop picture. This paints a strip of menu-bar height into the top of the wallpaper, matched to how \(themeName) drew its bar.\nLast run — \(ThemeManager.lastMenuBarTintNote)") {
                     Toggle("", isOn: $settings.menuBarTint)
                         .toggleStyle(.switch)
                         .tint(.rmAccent)
@@ -97,6 +97,20 @@ struct DesktopSettingsTab: View {
                             ThemeManager.shared.applyWallpaper()
                         }
                 }
+                }
+                // An option OF Live Wallpaper, not a mode beside it: Live Wallpaper is still
+                // switched on wherever it always was, in the flyout and the menu. This only says
+                // how far it reaches once it is on. Application windows are never included —
+                // they are not RetroMac's windows to touch.
+                RMRow(label: "Live Wallpaper covers the whole desktop",
+                      hint: "Runs the desktop picture, RetroMac's desktop icons and the retro dock through the selected shader in ONE pass, so the pattern runs through all three instead of restarting in each. Application windows are never touched. While this is on the dock sits behind them, and the effect runs at the display's frame rate because it now carries the dock's own animation \u{2014} unless you picked a frame rate yourself under Shader.") {
+                    Toggle("", isOn: $settings.liveWallpaperPlus)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                        .onChange(of: settings.liveWallpaperPlus) { _, _ in
+                            (NSApp.delegate as? AppDelegate)?.restartLiveWallpaperScope()
+                        }
                 }
                 RMRow(label: "Reset to theme default", isLast: true) {
                     Button("Reset") {

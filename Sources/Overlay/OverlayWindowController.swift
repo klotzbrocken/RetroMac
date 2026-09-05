@@ -8,6 +8,14 @@ enum CaptureMode {
     case fullScreen
     case singleDisplay(CGDirectDisplayID)
     case singleWindow(SCWindow)
+    /// The desktop and RetroMac's own desktop icons, and nothing else.
+    ///
+    /// A full-screen overlay like `.fullScreen`, but sat BELOW application windows and fed by a
+    /// capture that includes only the wallpaper and the icon layer. That is what lets one shader
+    /// pass cover the desktop picture and the icons in a single screen-space raster — filtering
+    /// them separately restarts the pattern in each one and the lines do not line up — while
+    /// every application window, sitting above the overlay, is left alone.
+    case desktopScope
 }
 
 final class OverlayWindowController: NSObject, MTKViewDelegate {
@@ -80,10 +88,10 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     @MainActor
     private func setupWindows() {
         let settings = AppSettings.shared
-        let fps = settings.targetFPS
+        let fps = effectiveFPS
 
         switch captureMode {
-        case .fullScreen:
+        case .fullScreen, .desktopScope:
             for screen in NSScreen.screens {
                 createOverlayWindow(frame: screen.frame, screen: screen, fps: fps)
             }
@@ -132,9 +140,13 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         // singleWindow overlay needs level 28 (above TV window at 25, above dock at 24, above start menu at 27)
         // fullScreen/singleDisplay uses level 28 (above start menu at 27)
         let overlayLevel: Int
-        if case .singleWindow = captureMode {
-            overlayLevel = 28
-        } else {
+        switch captureMode {
+        case .desktopScope:
+            // Above the desktop icon layer, which sits at normalWindow - 2, and BELOW every
+            // application window. That position is the whole point of the mode: the overlay
+            // replaces what it covers (wallpaper and icons) and cannot touch what is above it.
+            overlayLevel = Int(CGWindowLevelForKey(.normalWindow)) - 1
+        default:
             overlayLevel = 28
         }
         window.level = NSWindow.Level(rawValue: overlayLevel)
@@ -150,6 +162,61 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     }
 
     private var shouldHideSystemUI = false
+
+    /// The rate for BOTH the capture stream and the view, resolved in one place.
+    ///
+    /// The desktop scope covers the dock, so from the moment it is on, the dock's magnification is
+    /// only ever SEEN through this pipeline: a 0.18 second ease at 30 fps is about five frames,
+    /// which is what makes it look stepped. Every performance profile returns 30
+    /// (`Settings.swift:58`), so left alone this mode would always be the steppy one.
+    ///
+    /// A rate the user picked themselves is honoured — `targetFPSUserSet` already records that,
+    /// and silently overriding a deliberate choice for lower power would be worse than a stepped
+    /// animation. The other capture modes keep today's value; raising their default is a separate
+    /// decision about battery, and this is the mode whose whole point is that it stays on.
+    @MainActor
+    private var effectiveFPS: Int {
+        let settings = AppSettings.shared
+        guard isDesktopScope, !settings.targetFPSUserSet else { return settings.targetFPS }
+        // The display's own rate, not a fixed 60: this mode carries the dock's magnification, and
+        // every frame it does not get is a step in that animation. Capped at 120 so an exotic
+        // panel cannot ask for a rate the capture will not keep up with anyway.
+        let refresh = NSScreen.screens.map(\.maximumFramesPerSecond).max() ?? 60
+        return max(settings.targetFPS, min(refresh, 120))
+    }
+
+    var isDesktopScope: Bool {
+        if case .desktopScope = captureMode { return true }
+        return false
+    }
+
+
+    /// The only windows the desktop scope keeps in its capture: RetroMac's own desktop icon layer
+    /// and its dock. Everything else, this app's other windows included, is filtered out — which
+    /// is also what stops the overlay from filming itself.
+    ///
+    /// The dock is in here because it is lowered into this band while the mode runs. One capture
+    /// and one shader pass over wallpaper, icons and dock together is the only way their raster
+    /// can be continuous: a separate pass computes its pattern from its own picture and restarts
+    /// it, which is exactly what a second dock pass did before this.
+    ///
+    /// Recomputed rather than fixed, because the set changes while the mode runs: a Windows
+    /// start menu is a window that only exists while it is open. A fixed list would have the
+    /// capture's one-second refresh start EXCLUDING it a second after it appeared, and since it
+    /// now lives below the opaque overlay, excluded means invisible.
+    ///
+    /// Always via `MainActor.run` from the async capture path, never `assumeIsolated`: that is a
+    /// hard trap, not a warning, and it took the whole process down once already.
+    @MainActor
+    func desktopBandWindowIDs() -> [CGWindowID] {
+        let normal = Int(CGWindowLevelForKey(.normalWindow))
+        let ownOverlays = Set(windows.map { $0.windowNumber })
+        return NSApp.windows
+            .filter { $0.isVisible && $0.level.rawValue < normal && !ownOverlays.contains($0.windowNumber) }
+            .map { CGWindowID($0.windowNumber) }
+    }
+
+    private var desktopScopeWindowIDs: [CGWindowID] = []
 
     func loadOverlays() {
         let settings = AppSettings.shared
@@ -182,13 +249,16 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         loadOverlays()
 
         let settings = AppSettings.shared
-        let captureFPS = settings.targetFPS
+        let captureFPS = await MainActor.run { self.effectiveFPS }
 
         let isFullscreenMode: Bool
         switch captureMode {
         case .fullScreen, .singleDisplay: isFullscreenMode = true
-        case .singleWindow: isFullscreenMode = false
+        case .singleWindow, .desktopScope: isFullscreenMode = false
         }
+        // The desktop scope still wants the Space observer that keeps a full-screen overlay
+        // asserted, it just must not hide the menu bar and dock: it is not a whole-screen effect.
+        let wantsSpaceObserver = isFullscreenMode || isDesktopScope
 
         shouldHideSystemUI = isFullscreenMode && settings.hideSystemUI
         didReceiveFirstFrame = false
@@ -199,7 +269,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
             // Full-screen overlay sometimes "falls off" when a window enters its own
             // native fullscreen Space. Re-assert the overlay to the front whenever the
             // active Space changes (mirrors the dock controller's space handling).
-            if isFullscreenMode, self.spaceObserver == nil {
+            if wantsSpaceObserver, self.spaceObserver == nil {
                 self.spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
                     forName: NSWorkspace.activeSpaceDidChangeNotification,
                     object: nil, queue: .main
@@ -219,9 +289,18 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         let windowIDs = await MainActor.run {
             self.windows.map { CGWindowID($0.windowNumber) }
         }
+        if isDesktopScope {
+            self.desktopScopeWindowIDs = await MainActor.run { self.desktopBandWindowIDs() }
+            print("[Overlay] Desktop scope keeps window(s): \(self.desktopScopeWindowIDs)")
+            // Same reasoning as the capture-side guard: an opaque overlay fed by a capture that
+            // has neither the dock nor the icons in it hides both and looks like they are gone.
+            if self.desktopScopeWindowIDs.isEmpty {
+                throw SetupError.noDesktopWindows
+            }
+        }
 
         switch captureMode {
-        case .fullScreen:
+        case .fullScreen, .desktopScope:
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             let screens = await MainActor.run { NSScreen.screens }
 
@@ -256,7 +335,11 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                         }
                         manager.setFrameRate(fps: captureFPS)
                         do {
-                            try await manager.startDisplay(fallbackID, excludingWindowIDs: windowIDs, content: content)
+                            if self.isDesktopScope {
+                                try await manager.startDisplayIncludingOnly(fallbackID, windowIDs: self.desktopScopeWindowIDs, content: content)
+                            } else {
+                                try await manager.startDisplay(fallbackID, excludingWindowIDs: windowIDs, content: content)
+                            }
                             print("[Overlay] Started capture for display \(fallbackID) (fallback for \(screen.localizedName))")
                         } catch {
                             print("[Overlay] Failed to start display \(fallbackID): \(error)")
@@ -284,7 +367,14 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                 }
                 manager.setFrameRate(fps: captureFPS)
                 do {
-                    try await manager.startDisplay(displayID, excludingWindowIDs: windowIDs, content: content)
+                    if isDesktopScope {
+                        // The set is re-read on every refresh, so a start menu that opens later
+                        // is kept rather than filtered out from under the overlay.
+                        manager.scopeKeepProvider = { [weak self] in self?.desktopBandWindowIDs() ?? [] }
+                        try await manager.startDisplayIncludingOnly(displayID, windowIDs: desktopScopeWindowIDs, content: content)
+                    } else {
+                        try await manager.startDisplay(displayID, excludingWindowIDs: windowIDs, content: content)
+                    }
                     print("[Overlay] Started capture for display \(displayID) (\(screen.localizedName))")
                 } catch {
                     print("[Overlay] Failed to start display \(displayID) (\(screen.localizedName)): \(error)")
@@ -342,6 +432,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
             try await manager.startWindow(scWindow, excludingWindowIDs: windowIDs)
             self.trackedWindowID = scWindow.windowID
             startWindowTracking()
+
         }
 
         print("[Overlay] Active (fps=\(captureFPS)).")
@@ -451,7 +542,10 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         // so its texture stays valid and re-presenting it is safe.
         let texture = textureLock.withLock { viewTextures[viewID] }
         guard let texture = texture, let drawable = view.currentDrawable else { return }
-        renderer.render(sourceTexture: texture, to: drawable, viewportSize: view.drawableSize)
+        // The desktop scope covers the wallpaper, so it draws opaque: anything left transparent
+        // would show the untouched wallpaper straight through the shaded copy of it.
+        renderer.render(sourceTexture: texture, to: drawable, viewportSize: view.drawableSize,
+                        opaque: isDesktopScope)
         fpsFrameCount += 1
     }
 
@@ -587,9 +681,11 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     enum SetupError: Error, LocalizedError {
         case noMetalDevice
         case noScreen
+        case noDesktopWindows
         var errorDescription: String? {
             switch self {
             case .noMetalDevice: return "No Metal GPU found"
+            case .noDesktopWindows: return "No retro desktop to filter — activate a theme first"
             case .noScreen: return "No screen found"
             }
         }
