@@ -148,6 +148,13 @@ final class AppManager {
 extension Notification.Name {
     static let dockAppsChanged = Notification.Name("DockAppsChanged")
     static let dockThemeChanged = Notification.Name("DockThemeChanged")
+    /// Posted immediately BEFORE the desktop picture is swapped, by every path that swaps it.
+    ///
+    /// The desktop-scope overlay is opaque and shows whatever the capture delivers, and macOS
+    /// hands out a black frame or two while it exchanges the wallpaper. This is the only moment
+    /// that is known in advance, so it is the only place a freeze can start early enough — a
+    /// notification sent afterwards arrives when the flash has already been drawn.
+    static let desktopPictureWillChange = Notification.Name("DesktopPictureWillChange")
     static let virtualCameraStateChanged = Notification.Name("VirtualCameraStateChanged")
     static let overlayStateChanged = Notification.Name("OverlayStateChanged")
     static let shaderScopeChanged = Notification.Name("ShaderScopeChanged")

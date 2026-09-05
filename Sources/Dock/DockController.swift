@@ -48,33 +48,40 @@ final class DockController {
         ThemeManager.shared.reload()
         AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
         AppManager.shared.syncAutoApplications(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowApplications)
-        // Dock-only changes nothing but the dock — no boot splash (matches the
-        // theme-switch path in the $dockTheme sink).
+        // Everything that puts something on screen waits until the boot screen is up, so turning
+        // a theme on shows the boot screen and then the finished desktop, never the desktop being
+        // assembled. Dock-only changes nothing but the dock, so it has no boot splash and runs
+        // straight away — the same rule as the theme-switch path in the sink.
+        let build = { [weak self] in
+            guard let self = self else { return }
+            // Simulated crashes belong to the themed desktop, so they live and die with it.
+            CrashScheduler.shared.start()
+            let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false
+            if !hidesDock {
+                self.createWindow()
+            }
+            self.registerHotkey()
+            self.applySystemDockPolicy()
+            DesktopIconsController.shared.update()
+            ProgramManagerController.shared.update()
+            SGIDesktopController.shared.update()
+            BeOSDeskbarController.shared.update()
+            NextMenuController.shared.update()
+            NextDockController.shared.update()
+            NextRunningAppsController.shared.update()
+            WindowBorderController.shared.update()
+            RainbowAppleController.shared.update()
+            if AppSettings.shared.hideMenuBar {
+                SystemUIHelper.setMenuBarAutoHide(true)
+            }
+            if AppSettings.shared.hideDesktopIcons {
+                SystemUIHelper.setDesktopIconsHidden(true)
+            }
+        }
         if !AppSettings.shared.dockOnly, let theme = ThemeManager.shared.activeTheme {
-            SplashController.shared.showIfEnabled(for: theme)
-        }
-        // Simulated crashes belong to the themed desktop, so they live and die with it.
-        CrashScheduler.shared.start()
-        let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false
-        if !hidesDock {
-            createWindow()
-        }
-        registerHotkey()
-        applySystemDockPolicy()
-        DesktopIconsController.shared.update()
-        ProgramManagerController.shared.update()
-        SGIDesktopController.shared.update()
-        BeOSDeskbarController.shared.update()
-        NextMenuController.shared.update()
-        NextDockController.shared.update()
-        NextRunningAppsController.shared.update()
-        WindowBorderController.shared.update()
-        RainbowAppleController.shared.update()
-        if AppSettings.shared.hideMenuBar {
-            SystemUIHelper.setMenuBarAutoHide(true)
-        }
-        if AppSettings.shared.hideDesktopIcons {
-            SystemUIHelper.setDesktopIconsHidden(true)
+            SplashController.shared.cover(for: theme, then: build)
+        } else {
+            build()
         }
 
         screenObserver = NotificationCenter.default.addObserver(
@@ -860,23 +867,34 @@ final class DockController {
             // update and drops the tile click (the card "loses focus" / needs several tries).
             // Defer to the next runloop tick so the click completes first, like the handlers below.
             DispatchQueue.main.async {
+                // Selecting the theme changes nothing on screen, so it happens in front of the
+                // cover — and it has to, because the cover IS this theme's own boot screen.
                 ThemeManager.shared.reload(selectTheme: newTheme)
                 ThemeManager.shared.clearCache()
-                // "Dock only": restyle the Dock without touching the desktop wallpaper or
-                // showing the theme's boot splash (those are whole-system changes).
-                if AppSettings.shared.dockOnly {
-                    ThemeManager.shared.restoreWallpapers()
-                } else {
-                    ThemeManager.shared.applyWallpaper()
+
+                // Everything below is visible, so it waits until the boot screen is up. When
+                // setActiveTheme already raised one, `cover` runs this straight away behind it.
+                let apply = { [weak self] in
+                    // "Dock only": restyle the Dock without touching the desktop wallpaper or
+                    // showing the theme's boot splash (those are whole-system changes).
+                    if AppSettings.shared.dockOnly {
+                        ThemeManager.shared.restoreWallpapers()
+                    } else {
+                        // Before the wallpaper, never after — see syncMenuBarVisibility.
+                        ThemeManager.shared.syncMenuBarVisibility()
+                        ThemeManager.shared.applyWallpaper()
+                    }
+                    AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
+                    AppManager.shared.syncAutoApplications(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowApplications)
+                    self?.recreateWindow()
+                    // Note: no .dockThemeChanged post needed — recreateWindow() already
+                    // creates a fresh DockView with the new theme's layout.
                 }
-                AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
-        AppManager.shared.syncAutoApplications(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowApplications)
                 if !AppSettings.shared.dockOnly, let theme = ThemeManager.shared.activeTheme {
-                    SplashController.shared.showIfEnabled(for: theme)
+                    SplashController.shared.cover(for: theme, then: apply)
+                } else {
+                    apply()
                 }
-                self?.recreateWindow()
-                // Note: no .dockThemeChanged post needed — recreateWindow() already
-                // creates a fresh DockView with the new theme's layout.
             }
         }.store(in: &settingsObservers)
 

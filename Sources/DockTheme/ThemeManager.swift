@@ -138,8 +138,41 @@ final class ThemeManager {
     /// Select a theme by display name (what the pickers hand us) or by stable id — both are
     /// resolved through `theme(for:)`. Whatever comes in, what gets STORED is the stable id, so a
     /// later rename of the theme cannot orphan the selection or its per-theme settings.
+    /// Put the menu bar into the state the theme wants, BEFORE its wallpaper is rendered.
+    ///
+    /// The tinted menu-bar strip is painted into the wallpaper file, and whether it is painted at
+    /// all depends on `hideMenuBar`. That flag used to be set from the `.dockThemeChanged`
+    /// observer, which runs after the wallpaper has already been applied — so switching from a
+    /// menu-bar-hiding theme (Windows) to a Mac theme rendered the UNTINTED file first, and only
+    /// the delayed second pass produced the tinted one. That second `setDesktopImageURL` is a
+    /// black flash, because macOS reloads the picture through black. Themes without a tinted bar
+    /// never showed it, which is exactly why Windows 98 looked fine and Snow Leopard did not.
+    func syncMenuBarVisibility() {
+        // Only on a real change. The setter talks to System Events over AppleScript, so writing
+        // an unchanged value cost a round trip on every theme switch and could re-trigger a
+        // screen-parameter change, which is what schedules the delayed second wallpaper pass.
+        let wanted = activeTheme?.config.hideMenuBarDefault ?? false
+        guard AppSettings.shared.hideMenuBar != wanted else { return }
+        AppSettings.shared.hideMenuBar = wanted
+    }
+
+    /// Switch to `name`, with the theme's boot screen raised FIRST so none of the switch shows.
+    ///
+    /// Asynchronous in the covered case. No caller reads state back from this — they all set a
+    /// theme and let the notifications carry the rest.
     func setActiveTheme(name: String, applyWallpaper applyWP: Bool = true) {
         let bundle = theme(for: name)
+        let apply: () -> Void = { [weak self] in
+            self?.activate(name: name, bundle: bundle, applyWallpaper: applyWP)
+        }
+        if applyWP, !AppSettings.shared.dockOnly, let bundle {
+            SplashController.shared.cover(for: bundle, then: apply)
+        } else {
+            apply()
+        }
+    }
+
+    private func activate(name: String, bundle: ThemeBundle?, applyWallpaper applyWP: Bool) {
         let key = bundle?.stableID ?? name
         AppSettings.shared.dockTheme = key
         AppSettings.shared.loadIconScales(forTheme: key)   // each theme remembers its icon sizes
@@ -148,6 +181,7 @@ final class ThemeManager {
         registerThemeFonts()   // e.g. Chicago/Geneva for Mac OS 6 (process-scoped, idempotent)
         applyDockVariants()
         // "Dock only" mode skips the desktop wallpaper change (theme affects the dock only).
+        syncMenuBarVisibility()
         if applyWP { applyWallpaper() } else { restoreWallpapers() }
         NotificationCenter.default.post(name: .dockThemeChanged, object: nil)
         print("[Theme] Active theme: \(name)")
@@ -402,7 +436,22 @@ final class ThemeManager {
     }
 
     func applyWallpaper() {
+        // Announced lazily, immediately before the first screen that actually changes, and never
+        // more than once per pass.
+        //
+        // Two reasons it cannot be posted unconditionally at the top. It freezes anything showing
+        // a live copy of the desktop for 1.2s, and applyWallpaper runs several times over one
+        // theme switch (the theme grid, the menu-bar visibility change it triggers, the desktop
+        // icon rebuild), so the shaded desktop would sit frozen for seconds. And a pass that
+        // changes nothing must not claim the picture is about to change.
+        var announced = false
+        func announceChange() {
+            guard !announced else { return }
+            announced = true
+            NotificationCenter.default.post(name: .desktopPictureWillChange, object: nil)
+        }
         guard let theme = activeTheme else {
+            announceChange()
             restoreWallpapers()
             return
         }
@@ -417,12 +466,14 @@ final class ThemeManager {
             } else if let fallback = theme.wallpaperURL() {
                 wpURL = fallback
             } else {
+                announceChange()
                 restoreWallpapers()
                 return
             }
         } else if let defaultURL = theme.wallpaperURL() {
             wpURL = defaultURL
         } else {
+            announceChange()
             restoreWallpapers()
             return
         }
@@ -430,6 +481,7 @@ final class ThemeManager {
         // Why the menu-bar strip did or did not happen. "It is on and I do not see it" was not
         // answerable before: every step that could swallow it failed silently.
         var tintNotes: [String] = []
+        var changed = 0
         for screen in NSScreen.screens {
             // Pattern-tile wallpapers (e.g. System 6 8×8): setDesktopImageURL has no tiling
             // mode, so pre-render the tile to this screen's exact pixel size. Only for
@@ -476,10 +528,22 @@ final class ThemeManager {
                 }
                 persistWallpaperBackup()   // crash-safe: back up the original BEFORE overwriting it
             }
+            // Setting the same picture again is NOT free: macOS reloads it, and the reload goes
+            // through black. A single theme switch calls applyWallpaper more than once, so the
+            // later passes were the black flash the user sees BETWEEN two correct wallpapers.
+            // Both rendered variants above cache by a filename that encodes everything that can
+            // change the image (theme, source, size, menu-bar height, tint style), so an equal
+            // URL really does mean an equal picture.
+            if lastSetWallpaper[screenKey]?.standardizedFileURL.path == finalURL.standardizedFileURL.path {
+                continue
+            }
+            announceChange()
             try? ws.setDesktopImageURL(finalURL, for: screen, options: [:])
+            lastSetWallpaper[screenKey] = finalURL
+            changed += 1
         }
         persistWallpaperBackup()
-        print("[Theme] Wallpaper set on \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent) — menu-bar tint — \(tintNotes.joined(separator: "; "))")
+        print("[Theme] Wallpaper set on \(changed) of \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent) — menu-bar tint — \(tintNotes.joined(separator: "; "))")
         Self.lastMenuBarTintNote = tintNotes.joined(separator: ", ")
         AppearanceAdapter.apply(for: theme.config)
         CursorThemeManager.shared.apply(for: theme.config)
@@ -491,9 +555,39 @@ final class ThemeManager {
     /// = 1 point, crisp nearest-neighbour) and caches the PNG in Application Support.
     /// The height of `screen`'s menu bar, or 0 when it is not showing (auto-hidden, or a
     /// secondary display without one).
+    /// The last height each screen reported a menu bar at, so a momentary zero cannot undo a
+    /// strip that was already correct.
+    /// What we last set on each screen, so a redundant set can be skipped without asking the
+    /// system what is currently shown.
+    ///
+    /// Asking cost over a second: `NSWorkspace.desktopImageURL(for:)` is a synchronous IPC round
+    /// trip to the Dock process (`_CoreDockCopyDesktopForDisplayAndSpace`), and `sample` measured
+    /// 1034 ms of main-thread time inside it during a single theme switch — half of everything the
+    /// main thread did in 30 seconds. Skipping a redundant set is worth a dictionary lookup, not a
+    /// second of frozen UI.
+    ///
+    /// Cleared whenever we hand the desktop back, so the next apply cannot skip on a stale entry.
+    private var lastSetWallpaper: [String: URL] = [:]
+
+    private var knownMenuBarHeight: [String: CGFloat] = [:]
+
     private func menuBarHeight(of screen: NSScreen) -> CGFloat {
         let inset = screen.frame.maxY - screen.visibleFrame.maxY
-        return inset > 1 ? inset : 0
+        let key = screenKey(for: screen)
+        if inset > 1 {
+            knownMenuBarHeight[key] = inset
+            return inset
+        }
+        // `visibleFrame` reports no menu bar while a display configuration is settling, and this
+        // runs on every display change. Reading that as "this screen has no menu bar" meant a
+        // sleep, a resolution change or a monitor being plugged in re-applied the UNTINTED
+        // wallpaper over a correct one — the tint did not fail to appear, it was taken away
+        // afterwards. A screen that has ever had a menu bar keeps its height for the session.
+        // Nothing remembered for this screen yet — the first theme switch of a session that
+        // starts on a menu-bar-hiding theme lands here. AppKit's own menu bar height is the right
+        // answer on every display without a notch, and being a few points short for one pass is
+        // better than rendering no strip and then correcting it with a black flash.
+        return knownMenuBarHeight[key] ?? NSApp.mainMenu?.menuBarHeight ?? 0
     }
 
     /// A copy of `source`, rendered to this screen's pixel size with a solid strip painted across
@@ -655,6 +749,7 @@ final class ThemeManager {
         guard !savedWallpapers.isEmpty || anyScreenShowsOwnWallpaper() else { return }
         applyOriginalWallpapers()
         savedWallpapers.removeAll()
+        lastSetWallpaper.removeAll()
         persistWallpaperBackup()
         print("[Theme] Wallpaper restore pass complete")
     }
@@ -671,6 +766,7 @@ final class ThemeManager {
         guard !savedWallpapers.isEmpty || anyScreenShowsOwnWallpaper() else { return }
         applyOriginalWallpapers()
         savedWallpapers.removeAll()
+        lastSetWallpaper.removeAll()
         persistWallpaperBackup()
         print("[Theme] Launch wallpaper recovery complete")
     }

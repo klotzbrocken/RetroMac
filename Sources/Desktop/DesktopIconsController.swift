@@ -247,9 +247,15 @@ final class DesktopIconsController {
             trashObserver = DistributedNotificationCenter.default().addObserver(
                 forName: NSNotification.Name("com.apple.finder.trashdirectory.changed"),
                 object: nil, queue: .main
-            ) { [weak self] _ in self?.updateTrashState() }
+            ) { [weak self] _ in
+                // Finder says it changed: drop the shared answer so this really re-reads it.
+                TrashState.invalidate()
+                self?.updateTrashState()
+            }
+            // Slow on purpose — see the note on the dock's poll in DockView.startTrashMonitor.
+            // The notification above is what makes the icon react; this is only the safety net.
             trashPollTimer?.invalidate()
-            trashPollTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { [weak self] _ in
+            trashPollTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
                 self?.updateTrashState()
             }
             updateTrashState()
@@ -280,28 +286,12 @@ final class DesktopIconsController {
     // MARK: - Trash State
 
     private func updateTrashState() {
-        // ~/.Trash is TCC-gated on modern macOS, so compute off-main (direct read with Full
-        // Disk Access, else Finder's item count via AppleScript) and update the icon on main.
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            let hasItems = !DesktopIconsController.trashEmpty()
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                for view in self.iconViews where view.entry.type == "trash" {
-                    view.setTrashFull(hasItems)
-                }
+        TrashState.isEmpty { [weak self] empty in
+            guard let self = self else { return }
+            for view in self.iconViews where view.entry.type == "trash" {
+                view.setTrashFull(!empty)
             }
         }
-    }
-
-    private static func trashEmpty() -> Bool {
-        if let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first,
-           let contents = try? FileManager.default.contentsOfDirectory(atPath: trashURL.path) {
-            return !contents.contains(where: { !$0.hasPrefix(".") })
-        }
-        guard let script = NSAppleScript(source: "tell application \"Finder\" to return (count of items of trash)") else { return true }
-        var err: NSDictionary?
-        let r = script.executeAndReturnError(&err)
-        return err == nil ? (Int(r.int32Value) == 0) : true
     }
 
     /// Deselect all desktop icons (called when clicking on empty area).

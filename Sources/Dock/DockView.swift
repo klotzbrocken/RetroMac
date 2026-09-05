@@ -365,11 +365,17 @@ final class DockView: NSView {
     // MARK: - Trash Monitoring
 
     private func startTrashMonitor() {
-        // ALWAYS poll — this is the reliable path. The fs-monitor below is a bonus and
-        // can fail (e.g. opening ~/.Trash is TCC-gated); previously a failed open()
-        // returned early and skipped the poll entirely, so the icon never updated.
+        // ALWAYS poll — the fs-monitor below is a bonus and can fail (e.g. opening ~/.Trash is
+        // TCC-gated); a failed open() used to return early and skip the poll entirely, so the
+        // icon never updated.
+        //
+        // Every three seconds was far too often. Without Full Disk Access each answer costs a
+        // Finder round trip over AppleScript on the main thread, and this timer plus the desktop
+        // icons' own one made ~35 of those a minute. The monitor below and the desktop icons'
+        // change notification are what make the icon react; this is only the safety net for when
+        // neither fires, so it can be slow.
         trashPollTimer?.invalidate()
-        trashPollTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        trashPollTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
             self?.refreshTrashState()
         }
         refreshTrashState()
@@ -385,6 +391,9 @@ final class DockView: NSView {
             queue: .main
         )
         source.setEventHandler { [weak self] in
+            // A real change: drop the shared answer so this asks Finder instead of being served
+            // the cached one.
+            TrashState.invalidate()
             self?.refreshTrashState()
         }
         source.setCancelHandler {
@@ -396,38 +405,12 @@ final class DockView: NSView {
 
     private func isTrashEmpty() -> Bool { trashEmptyCached }
 
-    /// Recompute trash full/empty off-main, then update the icon. ~/.Trash is TCC-gated on
-    /// modern macOS (enumerating it fails without Full Disk Access), so we ask Finder for the
-    /// item count via AppleScript (Automation) instead — with a direct-read fast path for
-    /// users who HAVE granted Full Disk Access.
     private func refreshTrashState() {
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            let empty = DockView.computeTrashEmpty()
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                self.trashEmptyCached = empty
-                self.updateTrashIcon()
-            }
+        TrashState.isEmpty { [weak self] empty in
+            guard let self = self else { return }
+            self.trashEmptyCached = empty
+            self.updateTrashIcon()
         }
-    }
-
-    private static func computeTrashEmpty() -> Bool {
-        // Fast path: direct read (only succeeds with Full Disk Access).
-        if let trashURL = try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false),
-           let contents = try? FileManager.default.contentsOfDirectory(at: trashURL, includingPropertiesForKeys: nil, options: []) {
-            return contents.filter { $0.lastPathComponent != ".DS_Store" }.isEmpty
-        }
-        // TCC-gated → ask Finder.
-        if let n = trashCountViaFinder() { return n == 0 }
-        return true   // can't tell → assume empty (no false "full")
-    }
-
-    private static func trashCountViaFinder() -> Int? {
-        guard let script = NSAppleScript(source: "tell application \"Finder\" to return (count of items of trash)") else { return nil }
-        var err: NSDictionary?
-        let r = script.executeAndReturnError(&err)
-        if err != nil { return nil }
-        return Int(r.int32Value)
     }
 
     private func updateTrashIcon() {

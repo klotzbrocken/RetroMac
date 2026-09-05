@@ -31,14 +31,6 @@ final class SplashController {
         theme.config.splashVideo != nil || theme.config.splashScreen != nil || theme.config.splashWelcome == true
     }
 
-    /// Show the boot screen for the active theme if enabled. No-op otherwise.
-    func showIfEnabled(for theme: ThemeBundle) {
-        guard AppSettings.shared.showSplashScreen else { return }
-        let enabled = AppSettings.shared.themeBootscreenEnabled[theme.stableID] ?? bootscreenDefaultOn(theme)
-        guard enabled else { return }
-        _ = present(theme: theme, completion: nil)
-    }
-
     /// Play the boot screen whatever the settings say, and call back exactly once when it is
     /// over — whether it timed out or the user clicked through it. Used by the simulated restart
     /// in Retro Crashes, where the boot screen is part of the act rather than a preference.
@@ -46,20 +38,77 @@ final class SplashController {
         if !present(theme: theme, completion: completion) { completion() }
     }
 
+    /// Put the boot screen up FIRST, then run `work` behind it.
+    ///
+    /// A boot screen exists to hide the switch, and it used to run last: the wallpaper had been
+    /// swapped, the dock and the desktop icons rebuilt, and only then did it appear. Every one of
+    /// those steps was on screen, which is what the flicker between two wallpapers and the black
+    /// gaps actually were. Nothing visible may change until the cover is up.
+    ///
+    /// `work` runs exactly once, on the main thread, on every path: when the boot screen has a
+    /// frame on screen, immediately when this theme has no boot screen or the user turned it off,
+    /// immediately when an earlier step of the same switch already raised a cover, when the user
+    /// clicks the boot screen away, and after a deadline if the video never becomes ready.
+    ///
+    /// The deadline is not optional. This cover is a full-screen window at `.screenSaver` level
+    /// that takes every keystroke and click, so it must never be able to outlive the thing it is
+    /// covering — an earlier version without one turned a slow switch into an unusable Mac.
+    func cover(for theme: ThemeBundle, then work: @escaping () -> Void) {
+        // Already covered by an earlier step of this same switch (setActiveTheme raises the
+        // cover, then the dockTheme sink asks again). Run behind the cover that is already up.
+        if isPresenting || pendingWork != nil { work(); return }
+
+        // One switch, one attempt. When a cover gives up, the work it was holding runs, and that
+        // drives the next step of the same switch straight back in here — without this, that step
+        // would sit through the whole deadline again.
+        if CFAbsoluteTimeGetCurrent() - lastCoverFailure < 5 { work(); return }
+
+        guard AppSettings.shared.showSplashScreen,
+              AppSettings.shared.themeBootscreenEnabled[theme.stableID] ?? bootscreenDefaultOn(theme)
+        else { work(); return }
+
+        if !present(theme: theme, completion: nil, onVisible: work) { work() }
+    }
+
+    /// The switch waiting behind a cover that is still being raised.
+    private var pendingWork: (() -> Void)?
+
+    /// When a boot screen last failed to become ready in time.
+    private var lastCoverFailure: CFAbsoluteTime = 0
+
+    /// Runs the waiting switch, at most once.
+    private func runPendingWork() {
+        let work = pendingWork
+        pendingWork = nil
+        work?()
+    }
+
     /// True while a boot screen is on screen.
     var isPresenting: Bool { !windows.isEmpty }
 
-    /// The old body of `showIfEnabled`, without the two gates. Returns false when the theme has
-    /// no boot screen at all, so a forced caller can carry on rather than wait for nothing.
+    /// Builds and starts the boot screen. Returns false when the theme has no boot screen at
+    /// all, so a caller can carry on rather than wait for nothing. The settings gates live in
+    /// `cover`; `playForced` deliberately bypasses them.
     @discardableResult
-    private func present(theme: ThemeBundle, completion: (() -> Void)?) -> Bool {
+    /// `onVisible` is the work that has to wait until the boot screen is actually on screen.
+    private func present(theme: ThemeBundle, completion: (() -> Void)?,
+                         onVisible: (() -> Void)? = nil) -> Bool {
         guard let screen = NSScreen.main else { return false }
+        // Clear a boot screen that is still up BEFORE arming the callback. Each display method
+        // used to call `dismiss()` as its own first statement, which fired and cleared the
+        // completion that had just been assigned — so `playForced` reported "done" at the START
+        // of the boot screen instead of at its end, and Retro Crashes' simulated restart brought
+        // the desktop back while the boot video was still playing.
+        dismiss()
         onFinish = completion
 
         // Prefer a boot video (played fullscreen with sound) when present.
         if let videoFile = theme.config.splashVideo {
             let url = theme.url.appendingPathComponent(videoFile)
             if FileManager.default.fileExists(atPath: url.path) {
+                // Assigned after the `dismiss()` above, so retiring the previous cover cannot
+                // flush this one's work. A video is the only path that has to wait.
+                pendingWork = onVisible
                 showVideo(url: url, on: screen)
                 return true
             }
@@ -67,12 +116,14 @@ final class SplashController {
         // Classic "Welcome to Macintosh" boot screen (System 6), drawn natively.
         if theme.config.splashWelcome == true {
             showWelcome(on: screen)
+            onVisible?()   // drawn natively: on screen the moment it is ordered in
             return true
         }
         // Fall back to the image splash.
         guard let splashURL = theme.rootResource(theme.config.splashScreen),
               let image = NSImage(contentsOf: splashURL) else { onFinish = nil; return false }
         show(image: image, on: screen, fullscreen: theme.config.splashFullscreen == true)
+        onVisible?()   // a still is on screen the moment it is ordered in
         return true
     }
 
@@ -124,35 +175,78 @@ final class SplashController {
         win.makeFirstResponder(dismissView)
     }
 
+    /// Kept alive so `isReadyForDisplay` can be observed until the first frame exists.
+    private var readyObservation: NSKeyValueObservation?
+
     private func showVideo(url: URL, on screen: NSScreen) {
-        dismiss()
         let frame = screen.frame
         let win = bootWindow(frame, opaque: true)
         win.hasShadow = false
 
         let player = AVPlayer(url: url)
-        let pv = AVPlayerView(frame: NSRect(origin: .zero, size: frame.size))
-        pv.player = player
-        pv.controlsStyle = .none
-        pv.videoGravity = .resizeAspect   // fit the whole frame (4:3 boot videos keep their bottom animation; black bars on the sides read as authentic)
-        let dv = dismissView(NSRect(origin: .zero, size: frame.size), content: pv)
+        // AVPlayerLayer rather than AVPlayerView: it is the lighter of the two and, more to the
+        // point, it says when it can actually draw. AVPlayerView does not expose that.
+        let videoLayer = AVPlayerLayer(player: player)
+        videoLayer.videoGravity = .resizeAspect   // 4:3 boot videos keep their bottom animation; black bars on the sides read as authentic
+        videoLayer.frame = NSRect(origin: .zero, size: frame.size)
+        videoLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+        let host = NSView(frame: NSRect(origin: .zero, size: frame.size))
+        host.wantsLayer = true
+        host.layer?.backgroundColor = NSColor.black.cgColor
+        host.layer?.addSublayer(videoLayer)
+        let dv = dismissView(NSRect(origin: .zero, size: frame.size), content: host)
         win.contentView = dv
         self.player = player
 
-        addCoverScreens(except: screen)
-        present(win, dismissView: dv)
-
-        // No dismiss-on-end observer: a clip shorter than `duration` holds its last frame so
-        // every boot screen lasts the same time, and a longer one is cut. Both are deliberate.
+        // The boot window is opaque black and used to be ordered in the instant it was built,
+        // while the player still had nothing to draw. Measured on a real theme switch, that gap
+        // was 1.1s to 1.4s of full-screen black between the new wallpaper and the boot screen.
+        // The player itself is ready in ~110ms; the rest is the main thread rebuilding the dock,
+        // the desktop icons and the widgets.
+        //
+        // So nothing is ordered in until there is a frame to show. It is NOT presented invisibly:
+        // this window sits at .screenSaver level, becomes key and takes mouse events, so a
+        // transparent one is an invisible full-screen click trap the moment the reveal is late —
+        // which is exactly what a blocked main thread produces. An unbuilt window traps nothing.
         player.play()
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: Self.duration, repeats: false) { [weak self] _ in
-            self?.dismiss()
+
+        var settled = false
+        let reveal: () -> Void = { [weak self] in
+            guard let self, !settled else { return }
+            settled = true
+            self.readyObservation = nil
+            self.addCoverScreens(except: screen)
+            self.present(win, dismissView: dv)
+            // The clock starts when the boot screen becomes visible, not when it was built, so
+            // waiting for the first frame cannot shorten it.
+            //
+            // No dismiss-on-end observer: a clip shorter than `duration` holds its last frame so
+            // every boot screen lasts the same time, and a longer one is cut. Both are deliberate.
+            self.dismissTimer = Timer.scheduledTimer(withTimeInterval: Self.duration, repeats: false) { [weak self] _ in
+                self?.dismiss()
+            }
+            self.runPendingWork()
         }
+        // The video never became ready. Drop the boot screen rather than show a black one, and
+        // let the switch proceed uncovered — waiting longer would only stall it further.
+        let giveUp: () -> Void = { [weak self] in
+            guard let self, !settled else { return }
+            settled = true
+            self.readyObservation = nil
+            self.player?.pause()
+            self.player = nil
+            print("[Splash] Boot video was not ready in time — switching without it")
+            self.lastCoverFailure = CFAbsoluteTimeGetCurrent()
+            self.runPendingWork()
+        }
+        readyObservation = videoLayer.observe(\.isReadyForDisplay, options: [.initial, .new]) { layer, _ in
+            guard layer.isReadyForDisplay else { return }
+            DispatchQueue.main.async(execute: reveal)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: giveUp)
     }
 
     private func show(image: NSImage, on screen: NSScreen, fullscreen: Bool) {
-        dismiss()
-
         let frame: NSRect
         if fullscreen {
             frame = screen.frame                       // fill the whole display (e.g. Win 98 boot)
@@ -187,7 +281,6 @@ final class SplashController {
     /// Classic Mac boot screen: the "Welcome to Macintosh" dialog box on a grey desktop, drawn
     /// natively (ported from metamage_1's Welcome demo — happy Mac icon + text in a dBoxProc frame).
     private func showWelcome(on screen: NSScreen) {
-        dismiss()
         let frame = screen.frame
         let win = bootWindow(frame, opaque: true)
         win.hasShadow = false
@@ -200,6 +293,11 @@ final class SplashController {
     }
 
     func dismiss() {
+        readyObservation = nil
+        // Whatever ended the cover — a click, the timer, a new boot screen — a switch waiting
+        // behind it must still happen. This is what makes "a click always tears the cover down"
+        // safe: the desktop that comes back is the finished one, not a half-applied theme.
+        runPendingWork()
         // Nil first, then call: exactly once, and safe if the callback dismisses us again.
         let finished = onFinish
         onFinish = nil
