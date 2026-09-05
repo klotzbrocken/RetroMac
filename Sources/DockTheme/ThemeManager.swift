@@ -16,6 +16,32 @@ final class ThemeManager {
     private let wallpaperBackupKey = "savedWallpaperBackup"
     private var savedWallpapers: [String: URL] = [:]
 
+    /// Re-apply the wallpaper when the displays change.
+    ///
+    /// Nothing did this before, and the menu-bar tint depends on it: the strip is only painted on
+    /// a screen that reports a menu bar, and `visibleFrame` reports none while a display
+    /// configuration is still settling. A theme activated in that window got the untinted
+    /// wallpaper and never revisited the question, so connecting or disconnecting a display made
+    /// the tint quietly disappear until the theme was switched by hand.
+    ///
+    /// Debounced, because macOS sends several of these while a display comes up.
+    private var screenChangeObserver: NSObjectProtocol?
+    private var wallpaperReapplyWork: DispatchWorkItem?
+
+    private func observeScreenChanges() {
+        guard screenChangeObserver == nil else { return }
+        screenChangeObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self, self.activeTheme != nil else { return }
+            self.wallpaperReapplyWork?.cancel()
+            let work = DispatchWorkItem { [weak self] in self?.applyWallpaper() }
+            self.wallpaperReapplyWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
+        }
+    }
+
     init() {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         userThemesDir = appSupport.appendingPathComponent("RetroMac/DockThemes")
@@ -31,6 +57,8 @@ final class ThemeManager {
         }
 
         reload()
+
+        observeScreenChanges()
     }
 
     var userThemesDirectory: URL { userThemesDir }
