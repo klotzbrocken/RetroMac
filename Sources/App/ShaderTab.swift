@@ -67,11 +67,34 @@ private struct PerformanceSection: View {
                             }
                             .labelsHidden()
                             .frame(width: 180)
+                            .onChange(of: settings.performanceProfile) { _, _ in
+                                // Quality drives the capture RESOLUTION, and nothing else
+                                // reconfigured the running stream. Between two profiles that share
+                                // a frame rate — high and balanced both sit at 30 — the frame-rate
+                                // handler below never fired, so the picker described a resolution
+                                // that only took effect at the next manual restart.
+                                (NSApp.delegate as? AppDelegate)?.reapplyCaptureSettings()
+                            }
                         }
                         RMRow(label: "Frame rate",
                               hint: "How often the effect redraws. Higher is smoother while scrolling or dragging windows, and costs more GPU and battery.",
                               isLast: true) {
-                            Picker("", selection: $settings.targetFPS) {
+                            // "Automatic" is a real state, not the absence of a choice: with the
+                            // picker untouched, the desktop scope runs at the display's own
+                            // refresh rate. Binding straight to the stored number showed 30 while
+                            // 100 was running, which reads as a setting that does nothing.
+                            Picker("", selection: Binding<Int>(
+                                get: { settings.targetFPSUserSet ? settings.targetFPS : 0 },
+                                set: { value in
+                                    if value == 0 {
+                                        settings.targetFPSUserSet = false
+                                    } else {
+                                        settings.targetFPS = value
+                                        settings.targetFPSUserSet = true
+                                    }
+                                    (NSApp.delegate as? AppDelegate)?.reapplyCaptureSettings()
+                                })) {
+                                Text("Automatic \u{2014} follows the display").tag(0)
                                 Text("30 fps \u{2014} lower power").tag(30)
                                 Text("60 fps \u{2014} smoother").tag(60)
                                 // Only where a display can actually show it: a 100 Hz panel would
@@ -82,12 +105,7 @@ private struct PerformanceSection: View {
                             }
                             .labelsHidden()
                             .frame(width: 180)
-                            .onChange(of: settings.targetFPS) { _, _ in
-                                // Mark it as a deliberate choice so the Quality picker stops
-                                // resetting it (see AppSettings.applyPerformanceProfile).
-                                settings.targetFPSUserSet = true
-                                (NSApp.delegate as? AppDelegate)?.reapplyCaptureSettings()
-                            }
+
                         }
                     }
                 }
@@ -112,18 +130,33 @@ private struct ScopeSection: View {
                             : "Draw the effect over everything, or only on the wallpaper (Pro) \u{2014} animated, behind your icons and windows.",
                        bodyPadding: 0) {
                     VStack(spacing: 0) {
-                        RMRow(label: "Apply to", isLast: true) {
-                            Picker("", selection: Binding(
-                                get: { settings.shaderWallpaperOnly && license.isLicensed },
-                                set: { on in
-                                    if on && !license.isLicensed {
+                        // One control, three entries. The reach used to be split across two tabs:
+                        // this picker said "Wallpaper only" while a separate switch over in
+                        // Desktop silently widened it to wallpaper, icons and dock. A label that
+                        // can mean two different things is worse than no label.
+                        RMRow(label: "Apply to",
+                              hint: settings.shaderWallpaperOnly && settings.liveWallpaperPlus
+                                    ? "While this is on, the retro dock sits behind your application windows. That is what puts it in the same pass as the desktop."
+                                    : nil,
+                              isLast: true) {
+                            Picker("", selection: Binding<Int>(
+                                get: {
+                                    guard settings.shaderWallpaperOnly, license.isLicensed else { return 0 }
+                                    return settings.liveWallpaperPlus ? 2 : 1
+                                },
+                                set: { mode in
+                                    if mode > 0 && !license.isLicensed {
                                         (NSApp.delegate as? AppDelegate)?.presentUnlockScreen()
-                                    } else {
-                                        settings.shaderWallpaperOnly = on
+                                        return
                                     }
+                                    settings.liveWallpaperPlus = (mode == 2)
+                                    settings.shaderWallpaperOnly = (mode > 0)
+                                    (NSApp.delegate as? AppDelegate)?.restartLiveWallpaperScope()
                                 })) {
-                                Text("Whole screen").tag(false)
-                                Text(license.isLicensed ? "Wallpaper only" : "Wallpaper only \u{1F512}").tag(true)
+                                Text("Whole screen").tag(0)
+                                Text(license.isLicensed ? "Wallpaper only" : "Wallpaper only \u{1F512}").tag(1)
+                                Text(license.isLicensed ? "Desktop: wallpaper, icons and dock"
+                                                        : "Desktop: wallpaper, icons and dock \u{1F512}").tag(2)
                             }
                             .pickerStyle(.segmented)
                             .labelsHidden().frame(width: 240)

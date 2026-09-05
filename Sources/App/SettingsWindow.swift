@@ -347,7 +347,8 @@ struct SidebarStatusFooter: View {
                 Spacer()
 
                 if overlayIsOn {
-                    Text("\(settings.targetFPS) fps")
+                    // "Auto" rather than a stored number the effect may not be using.
+                    Text(settings.targetFPSUserSet ? "\(settings.targetFPS) fps" : "auto fps")
                         .font(.rmMono(size: 10.5))
                         .foregroundColor(.rmTextTertiary)
                 }
@@ -375,7 +376,11 @@ struct SettingsDetailPane: View {
                 case .dock:
                     DockThemesTab()
                 case .desktop:
+                    // Identity tied to the theme: the tab's @State holds that theme's desktop
+                    // record, and it must not survive a theme switch and be written back under
+                    // the next theme's key.
                     DesktopSettingsTab()
+                        .id(ThemeManager.shared.activeTheme?.config.settingsKey ?? "")
                 case .retroMode:
                     RetroModeTab()
                 case .camera:

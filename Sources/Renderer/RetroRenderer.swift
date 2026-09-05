@@ -53,17 +53,47 @@ final class RetroRenderer {
         didSet { bloomFilter?.threshold = bloomThreshold }
     }
 
-    // Phosphor persistence (afterglow across frames)
-    private(set) var phosphorFilter: PhosphorPersistence?
+    /// The mutable state that belongs to ONE output surface, kept apart from the pipelines, which
+    /// are immutable and shared on purpose.
+    ///
+    /// One renderer serves every screen, and sharing these two was wrong in both directions.
+    /// The afterglow history is a picture of the previous frame, so with two screens each was
+    /// handed the other's trails; and where the screens differ in size, the history textures were
+    /// reallocated on EVERY draw, which also reset the frame clock so the decay ran on a fixed
+    /// fallback delta and sampled a texture whose contents were undefined. The frame counter
+    /// advanced once per render call rather than once per screen per frame, so anything animating
+    /// on it ran at N times speed with the screens half a phase apart.
+    private final class OutputState {
+        var phosphor: PhosphorPersistence?
+        var frameCount: UInt32 = 0
+    }
+    private var outputs: [ObjectIdentifier: OutputState] = [:]
+
+    /// Per-output state, created on first use. Callers that have no surface of their own — the
+    /// screenshot path, the virtual camera — share the renderer's own identity as the key.
+    private func state(for output: AnyObject?) -> OutputState {
+        let key = ObjectIdentifier(output ?? self)
+        if let existing = outputs[key] { return existing }
+        let fresh = OutputState()
+        if phosphorPersistence > 0.001 {
+            fresh.phosphor = try? PhosphorPersistence(device: device)
+            fresh.phosphor?.persistence = phosphorPersistence
+        }
+        outputs[key] = fresh
+        return fresh
+    }
+
     /// 0 = off, 1 = maximum afterglow. Needs the previous frame, so it lives in the renderer
     /// rather than in a (single-pass) shader preset.
     var phosphorPersistence: Float = 0 {
         didSet {
             guard phosphorPersistence != oldValue else { return }
-            if phosphorPersistence > 0.001, phosphorFilter == nil {
-                phosphorFilter = try? PhosphorPersistence(device: device)
+            for out in outputs.values {
+                if phosphorPersistence > 0.001, out.phosphor == nil {
+                    out.phosphor = try? PhosphorPersistence(device: device)
+                }
+                out.phosphor?.persistence = phosphorPersistence
             }
-            phosphorFilter?.persistence = phosphorPersistence
         }
     }
 
@@ -86,6 +116,12 @@ final class RetroRenderer {
     }
 
     func loadShader(named name: String) throws {
+        // Before the cache check, not after. A new effect must not inherit the old one's
+        // afterglow, and that is just as true for a preset that has been compiled before — which,
+        // once someone has cycled through the picker, is every switch. Every output, because each
+        // screen carries its own history.
+        for out in outputs.values { out.phosphor?.reset() }
+
         if let cached = pipelineCache[name] {
             currentPipeline = cached
             return
@@ -109,7 +145,6 @@ final class RetroRenderer {
         desc.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
 
         let pipeline = try device.makeRenderPipelineState(descriptor: desc)
-        phosphorFilter?.reset()   // a new effect must not inherit the old one's afterglow
         pipelineCache[name] = pipeline
         currentPipeline = pipeline
     }
@@ -127,12 +162,17 @@ final class RetroRenderer {
     /// the grid and leaves only a dimming. Passing true reports the output size as the source
     /// size so the raster hangs on the screen, where a picture that is simply a picture belongs.
     /// Sampling is unaffected either way, because texture coordinates are normalised.
+    ///
+    /// `output` identifies the surface being drawn, normally the `MTKView`. It selects that
+    /// surface's own afterglow history and frame counter; passing nil shares the renderer's.
     func render(sourceTexture: MTLTexture, to drawable: CAMetalDrawable, viewportSize: CGSize,
-                opaque: Bool = false, rasterMatchesOutput: Bool = false) {
+                opaque: Bool = false, rasterMatchesOutput: Bool = false,
+                output: AnyObject? = nil) {
         guard let pipeline = currentPipeline,
               let commandBuffer = commandQueue.makeCommandBuffer() else { return }
 
-        frameCount &+= 1
+        let outputState = state(for: output)
+        outputState.frameCount &+= 1
 
         let w = Float(viewportSize.width)
         let h = Float(viewportSize.height)
@@ -145,7 +185,7 @@ final class RetroRenderer {
             sourceSize: SIMD4<Float>(sw, sh, 1.0 / sw, 1.0 / sh),
             originalSize: SIMD4<Float>(sw, sh, 1.0 / sw, 1.0 / sh),
             finalViewportSize: SIMD4<Float>(w, h, 1.0 / w, 1.0 / h),
-            frameCount: frameCount,
+            frameCount: outputState.frameCount,
             frameDirection: 1,
             intensity: intensity,
             vignetteIntensity: vignetteIntensity
@@ -153,7 +193,7 @@ final class RetroRenderer {
 
         // Phosphor afterglow acts on the SIGNAL, ahead of the mask: the shader then draws a
         // glowing image through a mask that stays razor sharp. Returns `sourceTexture` when off.
-        let shaderInput = phosphorFilter?.accumulate(source: sourceTexture, commandBuffer: commandBuffer) ?? sourceTexture
+        let shaderInput = outputState.phosphor?.accumulate(source: sourceTexture, commandBuffer: commandBuffer) ?? sourceTexture
 
         let renderDesc = MTLRenderPassDescriptor()
         renderDesc.colorAttachments[0].texture = drawable.texture

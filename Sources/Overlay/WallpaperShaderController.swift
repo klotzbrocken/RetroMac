@@ -186,8 +186,8 @@ final class WallpaperShaderController: NSObject, MTKViewDelegate {
 
     func loadOverlays() {
         let settings = AppSettings.shared
-        overlayManager.loadScanline(named: settings.scanlineOverlayName)
-        overlayManager.loadReflection(named: settings.reflectionName)
+        overlayManager.loadScanline(named: settings.effectiveScanlineOverlayName)
+        overlayManager.loadReflection(named: settings.effectiveReflectionName)
         syncOverlayTextures()
     }
 
@@ -210,6 +210,6 @@ final class WallpaperShaderController: NSObject, MTKViewDelegate {
         // belongs to the screen. Without this the scanlines of a 3840-wide wallpaper on a
         // 1920-wide display fall below the pixel grid and vanish into a flat dimming.
         renderer.render(sourceTexture: texture, to: drawable, viewportSize: view.drawableSize,
-                        opaque: true, rasterMatchesOutput: true)
+                        opaque: true, rasterMatchesOutput: true, output: view)
     }
 }

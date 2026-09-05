@@ -1399,10 +1399,21 @@ final class AppSettings: ObservableObject {
         halfResolution = profile.halfResolution
         if !targetFPSUserSet { targetFPS = profile.targetFPS }
 
-        if profile.disableOverlays {
-            scanlineOverlayName = ""
-            reflectionName = ""
-        }
+        // Deliberately NOT clearing scanlineOverlayName / reflectionName here. They are user
+        // choices, exactly like the frame rate one line above, which is guarded by
+        // `targetFPSUserSet` for that very reason. Erasing them meant a trip through the low
+        // profile silently threw both away for good, with no way back after a relaunch.
+        // Suppression happens at the point of use instead, see `effectiveScanlineOverlayName`.
+    }
+
+    /// The scanline overlay to actually load, empty while the current profile disables overlays.
+    var effectiveScanlineOverlayName: String {
+        performanceProfile.disableOverlays ? "" : scanlineOverlayName
+    }
+
+    /// The reflection overlay to actually load, empty while the current profile disables overlays.
+    var effectiveReflectionName: String {
+        performanceProfile.disableOverlays ? "" : reflectionName
     }
 
     private func updateLoginItem() {

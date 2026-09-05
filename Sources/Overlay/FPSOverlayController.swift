@@ -52,15 +52,28 @@ final class FPSOverlayController {
 
     var isVisible: Bool { window != nil }
 
-    func update(fps: Int, gpuTimeMs: Double, resolution: String) {
-        self.fps = fps
+    /// Render rate and CAPTURE rate, separately, per screen.
+    ///
+    /// One "FPS" field could not answer the question it was there for: the draw loop re-presents
+    /// the last texture when ScreenCaptureKit goes quiet on a static display, so a healthy render
+    /// number says nothing about whether a frame has arrived recently. `capture` and the age of
+    /// the newest frame say that.
+    func update(render: [Int], capture: [Int], captureAge: Double,
+                gpuTimeMs: Double, resolution: String) {
+        self.fps = render.first ?? 0
         self.gpuTimeMs = gpuTimeMs
         self.resolution = resolution
+
+        let renderStr = render.isEmpty ? "—" : render.map(String.init).joined(separator: "/")
+        let captureStr = capture.isEmpty ? "—" : capture.map(String.init).joined(separator: "/")
+        // Only worth showing once it is genuinely stale; a frame or two of slack is normal.
+        let ageStr = captureAge > 1.5 ? String(format: " (stale %.0fs)", captureAge) : ""
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             let gpuStr = String(format: "%.1f", self.gpuTimeMs)
-            self.label?.stringValue = "FPS: \(self.fps) | GPU: \(gpuStr)ms | \(self.resolution)"
+            self.label?.stringValue =
+                "Draw: \(renderStr) | Capture: \(captureStr)\(ageStr) | GPU: \(gpuStr)ms | \(self.resolution)"
         }
     }
 }

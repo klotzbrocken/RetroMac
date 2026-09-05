@@ -38,9 +38,42 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     private var resizeDebounceTimer: DispatchSourceTimer?
     private var trackingIsMoving = false
 
-    private var fpsFrameCount = 0
+    /// What the HUD reports, per output surface.
+    ///
+    /// One shared counter incremented in `draw(in:)` could not answer the question it was there
+    /// for. It summed across screens, so two displays at a healthy 30 read as 60; and because
+    /// `draw` deliberately re-presents the last texture when ScreenCaptureKit falls silent on a
+    /// static display, a perfect number could equally mean the capture had stalled seconds ago.
+    /// Render ticks and delivered capture frames are counted separately now, per view, with the
+    /// age of the newest capture frame alongside.
+    struct FPSReport {
+        var renderFPS: [Int] = []
+        var captureFPS: [Int] = []
+        /// Seconds since the most recent capture frame on any surface.
+        var captureAge: Double = 0
+        var resolution: CGSize = .zero
+    }
+
+    /// While this deadline is in the future, incoming capture frames are dropped and the last one
+    /// keeps being presented.
+    ///
+    /// For the moment the desktop picture is swapped. This overlay is opaque and shows exactly
+    /// what the capture delivers, and macOS hands out a black frame or two while it exchanges the
+    /// wallpaper — without the effect you would see its own crossfade instead. Holding the last
+    /// good frame turns a black flash into a still that then snaps to the new desktop.
+    private var holdFramesUntil: CFTimeInterval = 0
+
+    /// Freeze what is on screen for `seconds`. Called when something is known to be about to
+    /// disturb the desktop, rather than guessed at from the picture.
+    func holdCurrentFrame(for seconds: Double) {
+        textureLock.withLock { holdFramesUntil = CACurrentMediaTime() + seconds }
+    }
+
+    private var renderTicks: [ObjectIdentifier: Int] = [:]
+    private var captureTicks: [ObjectIdentifier: Int] = [:]
+    private var lastCaptureAt: CFTimeInterval = 0
     private var fpsTimer: DispatchSourceTimer?
-    var onFPSUpdate: ((Int, CGSize) -> Void)?
+    var onFPSUpdate: ((FPSReport) -> Void)?
 
     var intensity: Float {
         get { renderer?.intensity ?? 1.0 }
@@ -88,12 +121,11 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     @MainActor
     private func setupWindows() {
         let settings = AppSettings.shared
-        let fps = effectiveFPS
 
         switch captureMode {
         case .fullScreen, .desktopScope:
             for screen in NSScreen.screens {
-                createOverlayWindow(frame: screen.frame, screen: screen, fps: fps)
+                createOverlayWindow(frame: screen.frame, screen: screen)
             }
         case .singleDisplay(let displayID):
             // Resolve to EXACTLY ONE screen so the single capture stream (which feeds
@@ -106,18 +138,19 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                 if screen.displayID != displayID {
                     print("[Overlay] singleDisplay: stored id \(displayID) not found — falling back to \(screen.localizedName) (id=\(screen.displayID))")
                 }
-                createOverlayWindow(frame: screen.frame, screen: screen, fps: fps)
+                createOverlayWindow(frame: screen.frame, screen: screen)
             }
         case .singleWindow(let scWindow):
             let nsFrame = Self.cgRectToNS(scWindow.frame)
             let nsMidPoint = CGPoint(x: nsFrame.midX, y: nsFrame.midY)
             let targetScreen = NSScreen.screens.first(where: { $0.frame.contains(nsMidPoint) }) ?? NSScreen.main!
-            createOverlayWindow(frame: nsFrame, screen: targetScreen, fps: fps)
+            createOverlayWindow(frame: nsFrame, screen: targetScreen)
         }
     }
 
     @MainActor
-    private func createOverlayWindow(frame: NSRect, screen: NSScreen?, fps: Int) {
+    private func createOverlayWindow(frame: NSRect, screen: NSScreen?) {
+        let fps = effectiveFPS(for: screen)
         let metalView = MTKView(frame: NSRect(origin: .zero, size: frame.size), device: device)
         metalView.isPaused = true
         metalView.enableSetNeedsDisplay = false
@@ -174,14 +207,20 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     /// and silently overriding a deliberate choice for lower power would be worse than a stepped
     /// animation. The other capture modes keep today's value; raising their default is a separate
     /// decision about battery, and this is the mode whose whole point is that it stays on.
+    ///
+    /// Per screen, not one number for all of them. The first version took the maximum across every
+    /// attached display and handed it to every stream, so a 120 Hz panel drove the capture of a
+    /// 60 Hz one at twice the rate it could ever show.
     @MainActor
-    private var effectiveFPS: Int {
+    private func effectiveFPS(for screen: NSScreen?) -> Int {
         let settings = AppSettings.shared
         guard isDesktopScope, !settings.targetFPSUserSet else { return settings.targetFPS }
-        // The display's own rate, not a fixed 60: this mode carries the dock's magnification, and
-        // every frame it does not get is a step in that animation. Capped at 120 so an exotic
-        // panel cannot ask for a rate the capture will not keep up with anyway.
-        let refresh = NSScreen.screens.map(\.maximumFramesPerSecond).max() ?? 60
+        // The display's own rate: this mode carries the dock's magnification, and every frame it
+        // does not get is a step in that animation. Capped at 120 so an exotic panel cannot ask
+        // for a rate the capture will not keep up with anyway.
+        let refresh = screen?.maximumFramesPerSecond
+            ?? NSScreen.main?.maximumFramesPerSecond
+            ?? 60
         return max(settings.targetFPS, min(refresh, 120))
     }
 
@@ -220,8 +259,8 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
 
     func loadOverlays() {
         let settings = AppSettings.shared
-        overlayManager.loadScanline(named: settings.scanlineOverlayName)
-        overlayManager.loadReflection(named: settings.reflectionName)
+        overlayManager.loadScanline(named: settings.effectiveScanlineOverlayName)
+        overlayManager.loadReflection(named: settings.effectiveReflectionName)
         syncOverlayTextures()
 
         if let t = overlayManager.scanlineTexture {
@@ -249,7 +288,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         loadOverlays()
 
         let settings = AppSettings.shared
-        let captureFPS = await MainActor.run { self.effectiveFPS }
 
         let isFullscreenMode: Bool
         switch captureMode {
@@ -311,6 +349,8 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                 guard index < metalViews.count else { break }
                 let metalView = metalViews[index]
                 let displayID = screen.displayID
+                // This screen's rate, not the fastest attached one.
+                let captureFPS = await MainActor.run { self.effectiveFPS(for: screen) }
 
                 guard let scDisplay = content.displays.first(where: { $0.displayID == displayID }) else {
                     print("[Overlay] No SCDisplay match for \(screen.localizedName) (id=\(displayID)) — trying by index")
@@ -322,8 +362,11 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                         let viewID = ObjectIdentifier(metalView)
                         manager.onNewFrame = { [weak self] texture in
                             self?.textureLock.withLock {
-                                self?.viewTextures[viewID] = texture
-                                self?.viewDirtyFlags[viewID] = true
+                                guard let self, CACurrentMediaTime() >= self.holdFramesUntil else { return }
+                                self.viewTextures[viewID] = texture
+                                self.viewDirtyFlags[viewID] = true
+                                self.captureTicks[viewID, default: 0] += 1
+                                self.lastCaptureAt = CACurrentMediaTime()
                             }
                         }
                         manager.onFirstFrame = { [weak self] in
@@ -354,8 +397,11 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                 let viewID = ObjectIdentifier(metalView)
                 manager.onNewFrame = { [weak self] texture in
                     self?.textureLock.withLock {
-                        self?.viewTextures[viewID] = texture
-                        self?.viewDirtyFlags[viewID] = true
+                        guard let self, CACurrentMediaTime() >= self.holdFramesUntil else { return }
+                        self.viewTextures[viewID] = texture
+                        self.viewDirtyFlags[viewID] = true
+                        self.captureTicks[viewID, default: 0] += 1
+                        self.lastCaptureAt = CACurrentMediaTime()
                     }
                 }
                 manager.onFirstFrame = { [weak self] in
@@ -414,6 +460,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
 
             let manager = ScreenCaptureManager(device: device)
             captureManagers.append(manager)
+            let captureFPS = await MainActor.run { self.effectiveFPS(for: resolvedScreen) }
             setupSingleStreamCallbacks(manager: manager, metalView: metalViews[0], captureFPS: captureFPS)
             do {
                 try await manager.startDisplay(effectiveID, excludingWindowIDs: windowIDs, content: content)
@@ -428,6 +475,9 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         case .singleWindow(let scWindow):
             let manager = ScreenCaptureManager(device: device)
             captureManagers.append(manager)
+            let captureFPS = await MainActor.run {
+                self.effectiveFPS(for: self.windows.first?.screen ?? NSScreen.main)
+            }
             setupSingleStreamCallbacks(manager: manager, metalView: metalViews[0], captureFPS: captureFPS, hideSystemUI: false)
             try await manager.startWindow(scWindow, excludingWindowIDs: windowIDs)
             self.trackedWindowID = scWindow.windowID
@@ -435,7 +485,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
 
         }
 
-        print("[Overlay] Active (fps=\(captureFPS)).")
+        print("[Overlay] Active.")
     }
 
     private func handleFirstFrame() {
@@ -456,8 +506,11 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         let viewID = ObjectIdentifier(metalView)
         manager.onNewFrame = { [weak self] texture in
             self?.textureLock.withLock {
-                self?.viewTextures[viewID] = texture
-                self?.viewDirtyFlags[viewID] = true
+                guard let self, CACurrentMediaTime() >= self.holdFramesUntil else { return }
+                self.viewTextures[viewID] = texture
+                self.viewDirtyFlags[viewID] = true
+                self.captureTicks[viewID, default: 0] += 1
+                self.lastCaptureAt = CACurrentMediaTime()
             }
         }
         manager.onFirstFrame = { [weak self] in
@@ -545,8 +598,8 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         // The desktop scope covers the wallpaper, so it draws opaque: anything left transparent
         // would show the untouched wallpaper straight through the shaded copy of it.
         renderer.render(sourceTexture: texture, to: drawable, viewportSize: view.drawableSize,
-                        opaque: isDesktopScope)
-        fpsFrameCount += 1
+                        opaque: isDesktopScope, output: view)
+        textureLock.withLock { renderTicks[viewID, default: 0] += 1 }
     }
 
     func startFPSTracking() {
@@ -554,15 +607,26 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         timer.schedule(deadline: .now() + 1, repeating: 1)
         timer.setEventHandler { [weak self] in
             guard let self = self else { return }
-            let count = self.fpsFrameCount
-            self.fpsFrameCount = 0
-            let resolution: CGSize
-            if let tex = self.textureLock.withLock({ self.viewTextures.values.first }) {
-                resolution = CGSize(width: tex.width, height: tex.height)
-            } else {
-                resolution = .zero
+            var report = FPSReport()
+            self.textureLock.withLock {
+                // Ordered by the views themselves, so display 1 stays display 1 between ticks
+                // rather than following an unordered dictionary.
+                for view in self.metalViews {
+                    let id = ObjectIdentifier(view)
+                    report.renderFPS.append(self.renderTicks[id] ?? 0)
+                    report.captureFPS.append(self.captureTicks[id] ?? 0)
+                }
+                self.renderTicks.removeAll(keepingCapacity: true)
+                self.captureTicks.removeAll(keepingCapacity: true)
+                if let first = self.metalViews.first,
+                   let tex = self.viewTextures[ObjectIdentifier(first)] {
+                    report.resolution = CGSize(width: tex.width, height: tex.height)
+                }
+                report.captureAge = self.lastCaptureAt > 0
+                    ? CACurrentMediaTime() - self.lastCaptureAt
+                    : 0
             }
-            self.onFPSUpdate?(count, resolution)
+            self.onFPSUpdate?(report)
         }
         timer.resume()
         fpsTimer = timer

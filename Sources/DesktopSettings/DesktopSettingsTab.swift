@@ -22,6 +22,15 @@ struct DesktopSettingsTab: View {
     }
 
     @State private var custom = DesktopStore.ThemeCustom()
+    /// Which theme `custom` was loaded for.
+    ///
+    /// `themeKey` is computed live from the active theme, but `custom` is view state loaded once.
+    /// Switch theme from the status menu with this tab open and the two disagree: the icon list
+    /// already shows the new theme while the toggles still hold the old theme's record, and the
+    /// next edit writes it under the new key. That is not a wrong flag, it is data loss —
+    /// `DesktopStore.save` replaces the WHOLE record, so free-drag icon positions and hand-added
+    /// shortcuts of the new theme go with it.
+    @State private var loadedForTheme = ""
     @State private var refresh = false          // forces a redraw after a store write
 
     var body: some View {
@@ -42,6 +51,9 @@ struct DesktopSettingsTab: View {
             .padding(.vertical, 20)
         }
         .onAppear(perform: reload)
+        // The settings window is retained and not released when closed, so `custom` outlives both
+        // a close/reopen and a theme switch unless it is reloaded explicitly.
+        .onChange(of: themeKey) { _, _ in reload() }
     }
 
     // MARK: - Wallpaper
@@ -97,20 +109,6 @@ struct DesktopSettingsTab: View {
                             ThemeManager.shared.applyWallpaper()
                         }
                 }
-                }
-                // An option OF Live Wallpaper, not a mode beside it: Live Wallpaper is still
-                // switched on wherever it always was, in the flyout and the menu. This only says
-                // how far it reaches once it is on. Application windows are never included —
-                // they are not RetroMac's windows to touch.
-                RMRow(label: "Live Wallpaper covers the whole desktop",
-                      hint: "Runs the desktop picture, RetroMac's desktop icons and the retro dock through the selected shader in ONE pass, so the pattern runs through all three instead of restarting in each. Application windows are never touched. While this is on the dock sits behind them, and the effect runs at the display's frame rate because it now carries the dock's own animation \u{2014} unless you picked a frame rate yourself under Shader.") {
-                    Toggle("", isOn: $settings.liveWallpaperPlus)
-                        .toggleStyle(.switch)
-                        .tint(.rmAccent)
-                        .labelsHidden()
-                        .onChange(of: settings.liveWallpaperPlus) { _, _ in
-                            (NSApp.delegate as? AppDelegate)?.restartLiveWallpaperScope()
-                        }
                 }
                 RMRow(label: "Reset to theme default", isLast: true) {
                     Button("Reset") {
@@ -186,12 +184,22 @@ struct DesktopSettingsTab: View {
     }
 
     private func persist() {
+        // Never write a record that belongs to a different theme. Belt and braces next to the
+        // `.id(themeKey)` on the tab itself: that ties the view's identity to the theme, but it
+        // depends on how SwiftUI decides to rebuild, and this does not.
+        guard loadedForTheme == themeKey else {
+            reload()
+            return
+        }
         DesktopStore.save(custom, theme: themeKey)
         DesktopIconsController.shared.update()
         refresh.toggle()
     }
 
-    private func reload() { custom = DesktopStore.load(theme: themeKey) }
+    private func reload() {
+        loadedForTheme = themeKey
+        custom = DesktopStore.load(theme: themeKey)
+    }
 
     // MARK: - Size & widgets
 

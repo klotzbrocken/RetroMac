@@ -71,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var liveWallpaperPillToggle: PillToggleView?
     private var cameraPillToggle: PillToggleView?
     private var viewportPillToggle: PillToggleView?
+    private var desktopPictureObserver: NSObjectProtocol?
 
 
     var captureModeDescription: String {
@@ -172,13 +173,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             RainbowAppleController.shared.update()
             // Menu-bar hiding is tied to the theme: only themes that declare it (Windows 95/98, XP)
             // hide the macOS menu bar; every Mac OS theme AND theme-off (activeTheme == nil) force it
-            // back visible. Forced on each change (like menuBarAppleStyle) so it never stays hidden.
-            AppSettings.shared.hideMenuBar = ThemeManager.shared.activeTheme?.config.hideMenuBarDefault ?? false
+            // back visible. The theme switch itself already settles this before rendering the
+            // wallpaper; this is the safety net for any path that does not, and it no longer writes
+            // an unchanged value, so it cannot re-trigger a screen-parameter change of its own.
+            ThemeManager.shared.syncMenuBarVisibility()
             // The wallpaper-only shader samples the desktop image — refresh its texture when
             // the theme swaps the wallpaper. Slight delay so setDesktopImageURL has landed.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
                 self?.wallpaperShaderController?.reloadWallpaper()
             }
+        }
+
+        // Freeze the shaded desktop across a wallpaper swap. Posted BEFORE the picture changes —
+        // hooking this to the theme-changed notification instead was too late by exactly the
+        // frames that matter, because that one is sent after the wallpaper has already been set.
+        desktopPictureObserver = NotificationCenter.default.addObserver(
+            forName: .desktopPictureWillChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.overlayController?.holdCurrentFrame(for: 1.2)
         }
 
         // Switching "Apply to: Whole screen / Wallpaper only" restarts the running effect in the
@@ -584,20 +596,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         private let quitButton = NSImageView()
         private let retroButton = NSImageView()
         private let floatButton = NSImageView()
+        private let themeButton = NSImageView()
         private let iconView = NSView()
         private let glowDot = NSView(frame: NSRect(x: 9, y: 9, width: 8, height: 8))
         private var onGear: (() -> Void)?
         private var onQuit: (() -> Void)?
         private var onRetro: (() -> Void)?
         private var onFloat: (() -> Void)?
+        private var onTheme: (() -> Void)?
 
         init(presetName: String, statusText: String, shaderOn: Bool, retroActive: Bool,
              onGear: @escaping () -> Void, onQuit: @escaping () -> Void,
-             onRetro: @escaping () -> Void, onFloat: @escaping () -> Void) {
+             onRetro: @escaping () -> Void, onFloat: @escaping () -> Void,
+             onTheme: @escaping () -> Void) {
             self.onGear = onGear
             self.onQuit = onQuit
             self.onRetro = onRetro
             self.onFloat = onFloat
+            self.onTheme = onTheme
             super.init(frame: NSRect(x: 0, y: 0, width: 300, height: 50))
             autoresizingMask = .width
 
@@ -657,6 +673,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             floatButton.toolTip = "Floating launcher button"
             addSubview(floatButton)
 
+            // Theme on/off — the visible home of what used to be a double click on the floating
+            // button, where an ordinary click could trigger it by accident.
+            themeButton.toolTip = "Turn the retro desktop on or off"
+            addSubview(themeButton)
+
             // Apply initial state
             update(shaderOn: shaderOn, presetName: presetName, statusText: statusText, retroActive: retroActive)
         }
@@ -667,6 +688,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             retroButton.image = NSImage(systemSymbolName: retroActive ? "wand.and.stars.inverse" : "wand.and.stars",
                                         accessibilityDescription: "Retro Mode")?.withSymbolConfiguration(retroConfig)
             retroButton.contentTintColor = retroActive ? .controlAccentColor : .secondaryLabelColor
+
+            let themeOn = ThemeManager.shared.activeTheme != nil
+            themeButton.image = NSImage(systemSymbolName: themeOn ? "paintpalette.fill" : "paintpalette",
+                                        accessibilityDescription: "Retro desktop")?
+                .withSymbolConfiguration(retroConfig)
+            themeButton.contentTintColor = themeOn ? .controlAccentColor : .secondaryLabelColor
 
             let floatOn = AppSettings.shared.floatingLauncherEnabled
             floatButton.image = NSImage(systemSymbolName: floatOn ? "circle.dashed.inset.filled" : "circle.dashed",
@@ -694,8 +721,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             quitButton.frame = NSRect(x: bounds.width - gearSize * 2 - 16, y: 13, width: gearSize, height: gearSize)
             retroButton.frame = NSRect(x: bounds.width - gearSize * 3 - 20, y: 13, width: gearSize, height: gearSize)
             floatButton.frame = NSRect(x: bounds.width - gearSize * 4 - 24, y: 13, width: gearSize, height: gearSize)
-            // Give the labels whatever is left, or a fourth icon would run into the preset name.
-            let textWidth = max(60, floatButton.frame.minX - 48 - 8)
+            themeButton.frame = NSRect(x: bounds.width - gearSize * 5 - 28, y: 13, width: gearSize, height: gearSize)
+            // Give the labels whatever is left, or the icons would run into the preset name.
+            let textWidth = max(60, themeButton.frame.minX - 48 - 8)
             presetLabel.frame = NSRect(x: 48, y: 26, width: textWidth, height: 16)
             statusLabel.frame = NSRect(x: 48, y: 9, width: textWidth, height: 14)
         }
@@ -710,6 +738,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             else if quitButton.frame.insetBy(dx: -2, dy: -8).contains(p) { quitTapped() }
             else if retroButton.frame.insetBy(dx: -2, dy: -8).contains(p) { retroTapped() }
             else if floatButton.frame.insetBy(dx: -2, dy: -8).contains(p) { onFloat?() }
+            else if themeButton.frame.insetBy(dx: -2, dy: -8).contains(p) { themeTapped() }
+        }
+
+        @objc private func themeTapped() {
+            enclosingMenuItem?.menu?.cancelTracking()
+            onTheme?()
         }
 
         @objc private func gearTapped() {
@@ -983,6 +1017,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }, onFloat: { [weak self] in
             self?.toggleFloatingLauncher()
             self?.updateMenuLive()
+        }, onTheme: { [weak self] in
+            self?.toggleLastActiveTheme()
         })
         menuHeaderView = headerView
         let headerItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
@@ -2450,16 +2486,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applyPreset(_ presetID: String) {
         currentPresetName = presetID
 
-        // Live Wallpaper Plus bakes the shader into the dock's and the icons' own bitmaps, so a
-        // new preset does not reach them by repainting. The icons in particular are built once
-        // and would otherwise keep the previous shader until the theme is reactivated.
-
-        // Wallpaper-only scope: switch the shader in place on the wallpaper controller.
+        // Wallpaper scope: switch the shader in place, never restart.
+        //
+        // Both rungs need this, and only the narrow one had it. In the wide rung the running
+        // effect is the desktop-scope OVERLAY, not `wallpaperShaderController`, so the check for
+        // that controller failed and every preset change fell through to a full restart — which
+        // a theme change triggers, because it applies that theme's preset. Tearing the overlay
+        // down and building it again meant its first captured frame could be the black one macOS
+        // shows mid-wallpaper-swap, and the overlay is opaque, so that black was what you saw:
+        // right wallpaper, black, right wallpaper again.
         if isWallpaperOnlyScope {
-            if let wp = wallpaperShaderController, wp.isActive {
+            let settings = AppSettings.shared
+            if let oc = overlayController, oc.isDesktopScope {
+                oc.switchPreset(Self.fullPreset(for: presetID))
+                oc.loadOverlays()
+                currentVignetteIntensity = settings.vignetteIntensity
+                oc.vignetteIntensity = currentVignetteIntensity
+            } else if let wp = wallpaperShaderController, wp.isActive {
                 wp.switchPreset(Self.fullPreset(for: presetID))
                 wp.loadOverlays()
-                let settings = AppSettings.shared
                 currentVignetteIntensity = settings.vignetteIntensity
                 wp.vignetteIntensity = currentVignetteIntensity
             } else {
@@ -2549,11 +2594,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupFPSTracking() {
         guard let controller = overlayController else { return }
-        controller.onFPSUpdate = { [weak self] fps, resolution in
+        controller.onFPSUpdate = { [weak self] report in
             guard let self = self else { return }
             let gpuMs = self.overlayController?.lastGPUTimeMs ?? 0
-            let resStr = resolution.width > 0 ? "\(Int(resolution.width))×\(Int(resolution.height))" : "—"
-            self.fpsOverlay.update(fps: fps, gpuTimeMs: gpuMs, resolution: resStr)
+            let res = report.resolution
+            let resStr = res.width > 0 ? "\(Int(res.width))×\(Int(res.height))" : "—"
+            self.fpsOverlay.update(render: report.renderFPS, capture: report.captureFPS,
+                                   captureAge: report.captureAge, gpuTimeMs: gpuMs,
+                                   resolution: resStr)
         }
         controller.startFPSTracking()
     }

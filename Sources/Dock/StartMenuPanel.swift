@@ -121,16 +121,14 @@ final class StartMenuPanel: NSPanel {
         // borderless panel a default appear animation, which combined with the alpha-derived drop
         // shadow makes the menu visibly "shimmer"/settle for a frame after it opens.
         animationBehavior = .none
-        // Normally above everything. While Live Wallpaper Plus is on it joins the band below the
-        // application windows, one step above the dock, so the same single shader pass covers it
-        // — an open start menu is a big part of a Windows desktop and looking untouched next to a
-        // filtered dock is exactly the seam this mode exists to remove.
+        // Above everything, always — including while Live Wallpaper Plus has lowered the dock.
         //
-        // The level is read at creation, and this panel is built fresh on every open, so turning
-        // the mode off needs no cleanup here.
-        level = NSWindow.Level(rawValue: DockController.shared.loweredForDesktopShader
-                               ? Int(CGWindowLevelForKey(.normalWindow)) - 2
-                               : 27)
+        // It was briefly lowered into that band too, so the one shader pass would cover it. That
+        // put it UNDER the application windows, and a start menu is not a backdrop: it opens over
+        // the middle of the screen, so any window covering that area hid it and swallowed the
+        // click. An unshaded menu is a cosmetic seam; an unclickable one is a broken menu, and
+        // the whole point of this mode is that the desktop stays workable.
+        level = NSWindow.Level(rawValue: 27)
         collectionBehavior = [.canJoinAllSpaces, .stationary]
     }
 
