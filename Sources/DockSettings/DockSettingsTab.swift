@@ -203,6 +203,16 @@ struct DockSettingsTab: View {
                         .tint(.rmAccent)
                         .labelsHidden()
                 }
+                // Used to be a toggle row in the status menu as well. One switch, one place: a
+                // setting that exists twice is a setting that disagrees with itself eventually.
+                RMRow(label: "Window borders", hint: "Draws a border around every window in the theme's own colours.") {
+                    Toggle("", isOn: $settings.themeWindowBorders)
+                        .toggleStyle(.switch)
+                        .tint(.rmAccent)
+                        .labelsHidden()
+                        // No onChange: AppSettings.didSet already drives
+                        // WindowBorderController.update().
+                }
                 RMRow(label: "Activate theme on launch", hint: "Start straight into the last theme instead of the clean desktop.") {
                     Toggle("", isOn: $settings.activateThemeOnLaunch)
                         .toggleStyle(.switch)

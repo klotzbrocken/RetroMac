@@ -338,6 +338,14 @@ final class ThemeManager {
     }
 
     /// Where `tiledWallpaperURL` caches its pre-rendered pattern tiles.
+    /// Why the menu-bar strip did or did not happen, per screen, from the last run.
+    ///
+    /// It was a single variable inside the per-screen loop, so it always reported whatever the
+    /// LAST screen did — on a Mac with a second display that has no menu bar, it always said the
+    /// strip had not been drawn even when it had. And it only ever went to stdout, which is why
+    /// "the setting is there and does nothing" was not answerable. Settings > Desktop shows it.
+    private(set) static var lastMenuBarTintNote = "not attempted yet"
+
     private static var tiledWallpaperDir: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("RetroMac/TiledWallpapers", isDirectory: true)
@@ -393,7 +401,7 @@ final class ThemeManager {
         let ws = NSWorkspace.shared
         // Why the menu-bar strip did or did not happen. "It is on and I do not see it" was not
         // answerable before: every step that could swallow it failed silently.
-        var tintNote = "not attempted"
+        var tintNotes: [String] = []
         for screen in NSScreen.screens {
             // Pattern-tile wallpapers (e.g. System 6 8×8): setDesktopImageURL has no tiling
             // mode, so pre-render the tile to this screen's exact pixel size. Only for
@@ -406,20 +414,20 @@ final class ThemeManager {
             // Menu-bar tint: paint the strip into the copy that actually gets set. Only Apple
             // themes get one — see `menuBarStyle(for:)` — and never while the bar is hidden.
             if !AppSettings.shared.menuBarTint {
-                tintNote = "off in settings"
+                tintNotes.append("\(screen.localizedName): off in settings")
             } else if AppSettings.shared.hideMenuBar {
-                tintNote = "the menu bar is hidden"
+                tintNotes.append("\(screen.localizedName): the menu bar is hidden")
             } else if Self.menuBarStyle(for: theme.config) == nil {
-                tintNote = "\(theme.name) has no Mac menu bar"
+                tintNotes.append("\(screen.localizedName): \(theme.name) has no Mac menu bar")
             } else if menuBarHeight(of: screen) <= 0 {
-                tintNote = "macOS reports no menu bar on \(screen.localizedName)"
+                tintNotes.append("\(screen.localizedName): macOS reports no menu bar there")
             } else if let style = Self.menuBarStyle(for: theme.config),
                       let tinted = tintedWallpaperURL(source: finalURL, for: screen,
                                                       themeName: theme.name, style: style) {
                 finalURL = tinted
-                tintNote = "applied"
+                tintNotes.append("\(screen.localizedName): applied")
             } else {
-                tintNote = "could not be rendered"
+                tintNotes.append("\(screen.localizedName): could not be rendered")
             }
             let screenKey = screenKey(for: screen)
             // Only capture the ORIGINAL once, and never capture one of OUR OWN wallpapers as the
@@ -443,7 +451,8 @@ final class ThemeManager {
             try? ws.setDesktopImageURL(finalURL, for: screen, options: [:])
         }
         persistWallpaperBackup()
-        print("[Theme] Wallpaper set on \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent) — menu-bar tint \(tintNote)")
+        print("[Theme] Wallpaper set on \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent) — menu-bar tint — \(tintNotes.joined(separator: "; "))")
+        Self.lastMenuBarTintNote = tintNotes.joined(separator: ", ")
         AppearanceAdapter.apply(for: theme.config)
         CursorThemeManager.shared.apply(for: theme.config)
         TerminalThemer.apply(forThemeNamed: theme.config.name)
