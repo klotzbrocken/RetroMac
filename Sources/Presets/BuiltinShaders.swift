@@ -80,6 +80,11 @@ enum BuiltinShaders {
 
     """
 
+    /// Every id with a compiled shader behind it. Exists so a test can hold this list and the
+    /// picker's list against each other: they are maintained by hand, and a name in one and not
+    /// the other is either invisible or silently falls back to another preset.
+    static var allPresetIDs: [String] { Array(shaders.keys) }
+
     private static let shaders: [String: String] = [
         "zfast-crt": zfastCRTShader,
         "crt-lottes": crtLottesShader,
@@ -90,6 +95,23 @@ enum BuiltinShaders {
         "nlo-vhs-sp": nloVhsSpShader,
         "crt-easymode": crtEasymodeShader,
         "pal": palShader,
+        // The era shaders: one look per epoch, meant to be left switched on all day.
+        //
+        // They carry NO raster, and that is a decision backed by measurement rather than taste.
+        // On a 1x 1080p panel a raster needs three screen pixels to be resolved at all, and
+        // three screen pixels is also the stroke width of the text on the desktop. Three routes
+        // were built and measured: no raster at all reads as a grey filter; a uniform raster at
+        // three pixels measured 26% row modulation on a live frame, which is a venetian blind
+        // over the whole screen; and a detail-gated raster leaves a measured 3 to 8 percent
+        // bright halo around every piece of text, which reads as haze. The raster and the
+        // content are competing for the same pixels and no strength setting resolves that.
+        //
+        // So the structure moved to where nobody reads: it is baked into the wallpaper at
+        // device-pixel resolution by WallpaperRaster, behind every window. What is left here is
+        // the tone of the era — white point, black level, the way bright things spill — applied
+        // to the whole screen at a strength that costs nothing to work in.
+        "crt-readable": crtReadable(3, 0.0),
+        "lcd-tft": lcdTFT(3, 0.0),
         "lcd-grid": lcdGridShader,
         "lcd3x": lcd3xShader,
         "zfast-lcd": zfastLcdShader,
@@ -389,6 +411,197 @@ enum BuiltinShaders {
     """
 
     // MARK: - LCD 3x — sine-based RGB subpixel columns + scanlines (Public Domain, Gigaherz)
+
+
+    /// Definition, as one knob. Contrast, saturation and a light unsharp mask move together,
+    /// because "washed out" is never one of the three on its own.
+    /// Metal that yields `flat`: 1.0 where the picture is smooth, 0.0 where it carries fine
+    /// detail. Multiply any raster by it.
+    ///
+    /// This is the hinge of both era shaders. A scanline or a cell grid on a 1x 1080p screen
+    /// needs three screen pixels to be resolved at all, and three screen pixels is also exactly
+    /// the height of the stroke of the text you are reading. Applied everywhere, a raster
+    /// strong enough to be seen on the wallpaper is strong enough to eat 9pt type — which is
+    /// why every previous attempt ended up either "too coarse" or, once turned down far enough
+    /// to be safe, nothing but a tone curve. Gating solves the conflict instead of splitting the
+    /// difference: the raster lives on wallpaper, window fills, title bars and the dock, and
+    /// stops at the edge of anything with detail in it. Text keeps its full contrast because the
+    /// shader never touches it.
+    private static func detailGate(_ strength: Double) -> String {
+        guard strength > 0.0001 else { return "            float flat = 0.0;" }
+        return """
+            float2 gtexel = 1.0 / uniforms.outputSize.xy;
+            float3 gnb = (source.sample(s, uv + float2(gtexel.x, 0.0)).rgb
+                        + source.sample(s, uv - float2(gtexel.x, 0.0)).rgb
+                        + source.sample(s, uv + float2(0.0, gtexel.y)).rgb
+                        + source.sample(s, uv - float2(0.0, gtexel.y)).rgb) * 0.25;
+            float3 gd = abs(original - gnb);
+            float detail = max(max(gd.r, gd.g), gd.b);
+            float flat = 1.0 - smoothstep(0.03, 0.14, detail);
+        """
+    }
+
+    // MARK: - Era shaders
+
+    /// The flat panel of the Windows Me and XP years, at `cell` screen pixels per simulated
+    /// pixel.
+    ///
+    /// Deliberately does NOT quantise the picture to that grid. A real 1024x768 TFT was visible
+    /// because its pixels were large against what it showed; reproducing that literally on a
+    /// modern display means throwing away the resolution you actually read text with. So the
+    /// structure is drawn OVER the sharp image, and only where there is nothing to damage: the
+    /// thin dark matrix between cells and a hint of RGB stripe, both faded out by `flat`.
+    ///
+    /// The black floor is deliberately tiny. An earlier version lifted it to 0.013, which is
+    /// more than an order of magnitude past what a TN panel of the day actually did (a 400:1
+    /// static contrast is 0.0025 of the white, not 0.013) and it is the single thing that made
+    /// the picture read as washed out. Head on, those panels were the opposite of hazy: flat,
+    /// cool and clinical, with hard edges and no bloom.
+    private static func lcdTFT(_ cell: Int, _ matrixStrength: Double = 0.22) -> String {
+        let stripeAmplitude = 0.06 * (matrixStrength / 0.22)
+        return """
+        fragment float4 fragment_main(
+            VertexOut in [[stage_in]],
+            constant Uniforms& uniforms [[buffer(0)]],
+            texture2d<float> source [[texture(0)]],
+            sampler s [[sampler(0)]]
+        ) {
+            float2 uv = in.texCoord;
+            float intensity = uniforms.intensity;
+            float3 original = source.sample(s, uv).rgb;
+
+        \(detailGate(matrixStrength))
+
+            const float CELL = \(cell).0;
+            float2 px = uv * uniforms.outputSize.xy;
+            float2 f = fract(px / CELL);
+            float structure = intensity * flat;
+
+            // A triad needs three screen pixels to average back to neutral, which is why the
+            // cell is three and not two: at two, each screen pixel lands on ONE channel and a
+            // strong mask does not read as subpixels, it dyes the desktop. Carried as a smooth
+            // cosine so it degrades into a tint rather than a stripe if it ever falls below the
+            // raster, and mean-cancelled so what is left is chroma variation and not a cast.
+            float3 phase = float3(0.0, 2.09439510239, 4.18879020479);
+            float3 t = \(stripeAmplitude) * structure * cos(f.x * 6.28318530718 - phase);
+            t -= (t.r + t.g + t.b) / 3.0;
+            float3 tint = 1.0 + t;
+
+            // The black matrix: exactly ONE dark screen pixel per cell in each axis, hard edged.
+            // A first version used a smoothstep falloff from the cell boundary, which at a
+            // three pixel cell left two of every three pixels partly dimmed in both axes. The
+            // row profile then came out almost uniform and the grid measured 0.3% on screen,
+            // i.e. it was not there. This is a step, and it is the point of difference against
+            // the tube: a panel's gap is a hard black line, a tube's scanline is a soft cosine.
+            // The row gap leads, the column gap is lighter, the way a panel actually looked.
+            float gapY = step(fract(px.y / CELL), 1.0 / CELL);
+            float gapX = step(fract(px.x / CELL), 1.0 / CELL);
+            // Strictly <= 1. A first version divided the whole thing by its own mean to keep
+            // the average brightness, which multiplied every NON-gap pixel in a smooth area by
+            // up to 1.22 — so the wallpaper and every midtone ran into the clip and the desktop
+            // came out pale and detail-free. That is what a black matrix costs: light. It is
+            // paid here rather than borrowed back, because there is no headroom above white to
+            // borrow it from.
+            float matrix = (1.0 - \(matrixStrength) * structure * gapY)
+                         * (1.0 - \(matrixStrength * 0.6) * structure * gapX);
+
+            float3 color = original * tint * matrix;
+            // A cool cast and a black floor small enough to be a panel rather than a haze.
+            color = mix(color, color * float3(0.985, 0.995, 1.035) + 0.004, intensity);
+            // An S-curve on the midtones. This is what stops the picture reading as washed out:
+            // a TN head on was clinical and slightly over-contrasted, not soft.
+            float3 sc = color * color * (3.0 - 2.0 * color);
+            color = mix(color, sc, 0.22 * intensity);
+
+            color = applyVignette(color, uv, uniforms.vignetteIntensity);
+            return float4(clamp(color, 0.0, 1.0), sampleSourceAlpha(source, s, in.texCoord));
+        }
+        """
+    }
+
+    /// The tube of the Windows 95 and Mac OS 9 years, at `pitch` screen pixels per scanline.
+    ///
+    /// Everything that makes a CRT shader unusable is left out: no curvature, no barrel
+    /// distortion, no heavy bloom, no convergence error. What is left is what the eye actually
+    /// reads as a tube: scanlines on the flat areas, a soft phosphor triad, a little glow on
+    /// whites and a warm white point.
+    ///
+    /// `scanDepth` is peak-to-trough and the line is MEAN-PRESERVING, so the raster costs no
+    /// average brightness at all. That matters: an earlier version answered "too bright" with a
+    /// flat 14% multiply plus a 1.12 gamma push, which is a grey filter over the whole desktop,
+    /// text included. Brightness is taken off the top end only, where a tube really did run out
+    /// of beam current, and the midtones that carry the antialiasing of small type are left
+    /// exactly where they were.
+    private static func crtReadable(_ pitch: Int, _ scanDepth: Double = 0.30) -> String {
+        return """
+        fragment float4 fragment_main(
+            VertexOut in [[stage_in]],
+            constant Uniforms& uniforms [[buffer(0)]],
+            texture2d<float> source [[texture(0)]],
+            sampler s [[sampler(0)]]
+        ) {
+            float2 uv = in.texCoord;
+            float intensity = uniforms.intensity;
+            float3 original = source.sample(s, uv).rgb;
+
+        \(detailGate(scanDepth))
+
+            const float PITCH = \(pitch).0;
+            float2 px = uv * uniforms.outputSize.xy;
+            float structure = intensity * flat;
+
+            // Three screen pixels is the floor and the reason PITCH is three. At two the cosine
+            // is sampled at the Nyquist limit, consecutive rows land on almost the same phase
+            // and the modulation cancels: measured, deepening an 18% line to 34% made it
+            // FAINTER on screen, 3.8% down to 3.2%, while costing six percent brightness. A
+            // scanline you cannot resolve is not a subtle scanline, it is a grey filter.
+            float wave = 0.5 + 0.5 * cos(6.28318530718 * px.y / PITCH);
+            // Strictly <= 1, for the same reason the panel's matrix is: a scanline centred on
+            // 1.0 lifts every other row above white, which clips on anything bright and turns
+            // a raster into a wash.
+            float scan = 1.0 - \(scanDepth) * (1.0 - wave) * structure;
+
+            // The phosphor triad, turned right down and gated with everything else. At three
+            // screen pixels there is one pixel per channel, so anything stronger stops being a
+            // mask and becomes a colour cast: at 0.30 this rendered the whole desktop green.
+            float3 mask = crtPhosphorMask(px.x * (3.0 / PITCH), 0.08 * structure);
+
+            // Whites glow a little, the way a phosphor spills into its neighbours. Only the
+            // brightest areas, so the glow lands on text and window chrome, not everywhere.
+            float lum = dot(original, float3(0.299, 0.587, 0.114));
+            // The glow carries the warmth, not the white point. See below.
+            float glow = smoothstep(0.80, 1.0, lum) * 0.05 * intensity;
+
+            float3 color = original * scan * mask + glow * float3(1.0, 0.90, 0.76);
+            // A whisper of a warm point, and no more. The previous 1.045/1.0/0.945 was a ten
+            // percent spread between red and blue, which turns every white page cream and every
+            // black glyph on it brown — measured on a text specimen, that is what "hard to
+            // read" actually looked like, not the contrast, which never fell below 13:1. It is
+            // also poor history: a consumer tube was usually set near 9300K, i.e. BLUER than
+            // D65, and the warm cliche comes from aged phosphor and from amber monitors. The
+            // warmth belongs in the bloom, where a phosphor really is warm, and the bloom only
+            // touches the top of the range.
+            color *= mix(float3(1.0), float3(1.012, 1.0, 0.988), intensity);
+            // A gentle S-curve. This is where the old version's 1.12 gamma push earned its
+            // keep: it darkened the antialiasing greys around a glyph and so kept the strokes
+            // defined. A gamma push does that by darkening EVERYTHING, which is the grey
+            // filter. An S-curve darkens the dark side of an edge and lightens the light side,
+            // so the strokes come back and the page does not go down with them.
+            float3 crtS = clamp(color, 0.0, 1.0);
+            crtS = crtS * crtS * (3.0 - 2.0 * crtS);
+            color = mix(color, crtS, 0.18 * intensity);
+
+            // Highlight rolloff instead of a flat dim. A tube ran out of beam current at the top
+            // of its range, so its whites compressed; it did not draw the whole picture darker.
+            // Small, because the scanline already takes brightness off the flat areas; the
+            // midtones stay put, and those are what give a 9pt glyph its stroke weight.
+            color -= 0.06 * smoothstep(0.7, 1.0, color) * intensity;
+
+            color = applyVignette(color, uv, uniforms.vignetteIntensity);
+            return float4(clamp(color, 0.0, 1.0), sampleSourceAlpha(source, s, in.texCoord));
+        }
+        """
+    }
 
     private static let lcd3xShader = """
     fragment float4 fragment_main(

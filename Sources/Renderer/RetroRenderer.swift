@@ -114,7 +114,21 @@ final class RetroRenderer {
         currentPipeline = pipeline
     }
 
-    func render(sourceTexture: MTLTexture, to drawable: CAMetalDrawable, viewportSize: CGSize, opaque: Bool = false) {
+    /// Draw one frame.
+    ///
+    /// `rasterMatchesOutput` decides what a "source pixel" means to the shaders, and the two
+    /// answers are both right in their place. Shaders build their scanlines and masks from
+    /// `sourceSize`, which is correct for emulated content: a 320x240 game should get 240
+    /// scanlines however large the window is.
+    ///
+    /// It is wrong for a desktop picture. A theme wallpaper is 3840x2400 on a 1920x1080 screen,
+    /// so a scanline per source row lands every 0.45 screen pixels: below the raster, sampled
+    /// once per pixel, averaged into a flat grey. The effect does not weaken, it falls through
+    /// the grid and leaves only a dimming. Passing true reports the output size as the source
+    /// size so the raster hangs on the screen, where a picture that is simply a picture belongs.
+    /// Sampling is unaffected either way, because texture coordinates are normalised.
+    func render(sourceTexture: MTLTexture, to drawable: CAMetalDrawable, viewportSize: CGSize,
+                opaque: Bool = false, rasterMatchesOutput: Bool = false) {
         guard let pipeline = currentPipeline,
               let commandBuffer = commandQueue.makeCommandBuffer() else { return }
 
@@ -122,8 +136,8 @@ final class RetroRenderer {
 
         let w = Float(viewportSize.width)
         let h = Float(viewportSize.height)
-        let sw = Float(sourceTexture.width)
-        let sh = Float(sourceTexture.height)
+        let sw = rasterMatchesOutput ? w : Float(sourceTexture.width)
+        let sh = rasterMatchesOutput ? h : Float(sourceTexture.height)
 
         var uniforms = ShaderUniforms(
             mvp: makeOrthographic(width: w, height: h),
@@ -334,10 +348,18 @@ final class RetroRenderer {
             pixels.swapAt(i, i + 2)
         }
 
+        // Tag the image with the DISPLAY's profile, not device RGB. The live overlay draws
+        // into an untagged CAMetalLayer, so its numbers reach the panel unconverted. An image
+        // tagged device RGB is treated as sRGB and gets converted on the way to the panel, so
+        // the same shader output looks different in a screenshot than it did on screen —
+        // visibly so on an uncalibrated external monitor. Tagging with the display profile
+        // makes that conversion a no-op and the screenshot faithful.
+        let outputSpace = CGDisplayCopyColorSpace(CGMainDisplayID())
+
         guard let provider = CGDataProvider(data: Data(pixels) as CFData),
               let cgImage = CGImage(
                 width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 32,
-                bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceRGB(),
+                bytesPerRow: bytesPerRow, space: outputSpace,
                 bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
                 provider: provider, decode: nil, shouldInterpolate: false,
                 intent: .defaultIntent

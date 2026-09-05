@@ -206,6 +206,10 @@ final class WallpaperShaderController: NSObject, MTKViewDelegate {
     func draw(in view: MTKView) {
         guard let texture = wallpaperTextures[ObjectIdentifier(view)],
               let drawable = view.currentDrawable else { return }
-        renderer.render(sourceTexture: texture, to: drawable, viewportSize: view.drawableSize, opaque: true)
+        // The wallpaper is a picture, not a low-resolution signal being upscaled, so its raster
+        // belongs to the screen. Without this the scanlines of a 3840-wide wallpaper on a
+        // 1920-wide display fall below the pixel grid and vanish into a flat dimming.
+        renderer.render(sourceTexture: texture, to: drawable, viewportSize: view.drawableSize,
+                        opaque: true, rasterMatchesOutput: true)
     }
 }

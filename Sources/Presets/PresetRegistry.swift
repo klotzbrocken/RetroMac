@@ -16,14 +16,15 @@ struct PresetInfo {
 }
 
 enum PresetRegistry {
+    /// Six groups, down from nine. The three that went were splits nobody could act on: a
+    /// "Pro Monitor" is a CRT, a film stock and a video signal are both video, and an Apple
+    /// device is a retro device. A submenu that makes the reader guess which of two lists a
+    /// preset is in costs more than the distinction is worth.
     enum PresetCategory: String, CaseIterable {
         case lite = "Lite (Permission free)"
-        case crt = "CRT / Monitor"
-        case proMonitor = "Pro Monitors"
-        case video = "Video Signals"
-        case retro = "Retro Devices"
-        case apple = "Apple"
-        case film = "Film / Photo"
+        case crt = "CRT"
+        case video = "Video"
+        case retro = "Retro"
         case webcam = "Webcam Looks"
         case specialThx = "Special Thx"
     }
@@ -42,7 +43,13 @@ enum PresetRegistry {
             PresetInfo(id: "scanlines-lite", displayName: "Scanlines Lite", description: "Pure scanlines overlay — no screen recording"),
             PresetInfo(id: "grain-lite", displayName: "Film Scratches Lite", description: "Vertical scratches, dust specks + projector flicker"),
         ]),
+        // The era presets: one look per epoch, tuned so the desktop stays workable. They sit at
+        // the top of the CRT group because they are the ones meant to be left switched on.
         (.crt, [
+            PresetInfo(id: "crt-readable", displayName: "CRT Era",
+                       description: "Windows 95 / Mac OS 9 tube \u{2014} warm white, dimmer highlights, glow on the brightest areas. No scanlines."),
+            PresetInfo(id: "lcd-tft", displayName: "TFT Era",
+                       description: "Windows Me / XP flat panel \u{2014} cool white, lifted blacks, crisper mid-contrast. No grid."),
             PresetInfo(id: "zfast-crt", displayName: "zfast CRT", description: "Scanlines + chromatic aberration"),
             PresetInfo(id: "crt-lottes", displayName: "CRT Lottes", description: "Shadow mask + scanlines"),
             PresetInfo(id: "crt-geom", displayName: "CRT Geom", description: "Phosphor mask + scanlines"),
@@ -57,14 +64,12 @@ enum PresetRegistry {
             PresetInfo(id: "crt-easymode", displayName: "CRT EasyMode", description: "Clean, sharp mask + brightness-scaled scanlines"),
             PresetInfo(id: "retro-crisis-composite", displayName: "Retro Crisis Composite", description: "GDV-NTSC composite look — dot crawl, chroma fringe, mask + scanlines"),
             PresetInfo(id: "retro-crisis-rgb", displayName: "Retro Crisis RGB", description: "GDV clean RGB — crisp mask + scanlines, no composite noise"),
-        ]),
-        (.proMonitor, [
             PresetInfo(id: "pvm-2730qm", displayName: "Sony PVM 2730QM", description: "Pro monitor, sharp aperture grille"),
             PresetInfo(id: "pvm-20l4", displayName: "Sony PVM 20L4", description: "Pro monitor, fine slot mask"),
             PresetInfo(id: "mini-ultra-trinitron", displayName: "Mini Ultra Trinitron", description: "Ultra-fine Trinitron stripes"),
             PresetInfo(id: "bo-mx8000", displayName: "B&O MX8000", description: "Hi-end consumer, warm European"),
         ]),
-        (.video, [
+                (.video, [
             PresetInfo(id: "ntsc", displayName: "NTSC", description: "Composite video artifacts"),
             PresetInfo(id: "ntsc-320px", displayName: "NTSC 320px Composite", description: "Low-res NTSC composite"),
             PresetInfo(id: "pal", displayName: "PAL", description: "Cross-color + Hanover bars"),
@@ -72,6 +77,10 @@ enum PresetRegistry {
             PresetInfo(id: "s-vhs", displayName: "S-VHS", description: "Degraded tape + dropouts"),
             PresetInfo(id: "vcr-tracking", displayName: "VCR Tracking", description: "Jitter + tracking lines + head noise"),
             PresetInfo(id: "nlo-vhs-sp", displayName: "NLO VHS SP", description: "Real single-pass NTSC comb demod — dot crawl + cross-colour, gentle VHS"),
+            PresetInfo(id: "cinema-film", displayName: "Cinema Film", description: "Cinematic grading + grain + halation"),
+            PresetInfo(id: "sepia", displayName: "Sepia", description: "Warm vintage photograph"),
+            PresetInfo(id: "bw-film", displayName: "B&W Film", description: "Classic film grain"),
+            PresetInfo(id: "bw-noir", displayName: "B&W Noir", description: "High contrast noir"),
         ]),
         (.retro, [
             PresetInfo(id: "lcd-grid", displayName: "LCD Grid", description: "RGB subpixel grid"),
@@ -80,19 +89,11 @@ enum PresetRegistry {
             PresetInfo(id: "gameboy", displayName: "Game Boy", description: "DMG LCD palette + pixel grid"),
             PresetInfo(id: "amber-monitor", displayName: "Amber Monitor", description: "Amber phosphor terminal"),
             PresetInfo(id: "green-phosphor", displayName: "Green Phosphor", description: "P1 green terminal"),
-        ]),
-        (.apple, [
             PresetInfo(id: "mac-classic", displayName: "Macintosh Classic", description: "Warm white phosphor, subtle scanlines"),
             PresetInfo(id: "apple-ii", displayName: "Apple II", description: "Green phosphor, NTSC color bleed"),
             PresetInfo(id: "aqua", displayName: "Mac OS X Aqua", description: "Glossy bloom, Cinema Display"),
         ]),
-        (.film, [
-            PresetInfo(id: "cinema-film", displayName: "Cinema Film", description: "Cinematic grading + grain + halation"),
-            PresetInfo(id: "sepia", displayName: "Sepia", description: "Warm vintage photograph"),
-            PresetInfo(id: "bw-film", displayName: "B&W Film", description: "Classic film grain"),
-            PresetInfo(id: "bw-noir", displayName: "B&W Noir", description: "High contrast noir"),
-        ]),
-        (.webcam, [
+                        (.webcam, [
             PresetInfo(id: "late-night-crt", displayName: "Late Night CRT", description: "Warm 90s late-night TV studio"),
             PresetInfo(id: "newsroom-1987", displayName: "Newsroom 1987", description: "1987 broadcast newsroom look"),
             PresetInfo(id: "vhs-tape", displayName: "VHS Tape", description: "Well-worn rental VHS tape"),
