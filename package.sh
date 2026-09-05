@@ -4,7 +4,7 @@
 # Prerequisites:
 #   1. Developer ID Application certificate installed
 #   2. App-specific password stored in keychain:
-#      xcrun notarytool store-credentials "RetroMac" \
+#      xcrun notarytool store-credentials "Retromac" \
 #        --apple-id maik.klotz@me.com --team-id FTJLR8JRNS
 #   3. Developer ID provisioning profile for com.retromac.app
 #
@@ -37,7 +37,7 @@ else
     DMG_NAME="${APP_NAME}.dmg"
 fi
 DMG_DIR=".build/dmg-staging"
-KEYCHAIN_PROFILE="Retromac"
+KEYCHAIN_PROFILE="Retromac"   # the profile actually stored on this machine, case included
 
 # --- Step 1: Release build ---
 if [ "$SKIP_BUILD" = false ]; then

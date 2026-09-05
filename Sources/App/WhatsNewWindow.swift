@@ -11,9 +11,10 @@ struct WhatsNewView: View {
                     .padding(.top, 24)
                 Text("What's New in RetroMac \(currentAppVersion)")
                     .font(.title2.bold())
-                Text("Windows 95 arrives, with the Fun Stuff CD-ROM and Hover!")
+                Text("Windows Me in detail, crashes that never crash, a shader over the whole desktop")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
             .padding(.bottom, 16)
 
@@ -23,36 +24,36 @@ struct WhatsNewView: View {
                     featureRow(
                         icon: "desktopcomputer",
                         color: .blue,
-                        title: "Windows 95 theme",
-                        description: "The one that started it all: solid navy title bars, the silver 3D chrome, the clouds wallpaper and an authentic boot screen. The Start menu is period-correct too \u{2014} large icons in a narrow first level, small ones in the wider submenus, and neither Windows Update nor Log Off, because Windows 95 had neither."
+                        title: "Windows Me, gone over in detail",
+                        description: "The boot screen is the animated Me logo instead of a still, three original wallpapers come along, and Defrag is its own program on the desktop. Folder windows are Explorer now \u{2014} back, forward, up, an address bar, the info panel and a status line that counts what is in the folder. Plus a long row of small corrections: the tray carries the theme\u{2019}s colour instead of a foreign grey, its icons share one rhythm instead of three different gaps, mute shows as a red prohibition sign, quick launch stops growing under the pointer because Windows never did that, desktop icons start at the left, and the calculator has its original key colours and the memory indicator it was missing."
                     )
 
                     featureRow(
-                        icon: "opticaldisc",
-                        color: .indigo,
-                        title: "Fun Stuff (D:)",
-                        description: "The CD-ROM is back on the desktop. Browse FUNSTUFF into HOVER, VIDEOS and PICTURES: music videos play in a bare title-bar window, and Clouds.exe / WINBMP.EXE set your wallpaper the way a 1995 CD-ROM would."
+                        icon: "exclamationmark.triangle.fill",
+                        color: .red,
+                        title: "Retro Glitches & Crashes",
+                        description: "Failure, in period. The Windows 9x blue screen, the Illegal Operation dialog with its expandable register dump, the XP and 7 stop error with a counting memory dump, the Mac OS bomb. The desktop freezes, the message appears, and the way out is the one the machine offered at the time. Nothing actually crashes: no program is quit, no document closed, no restart triggered \u{2014} the frozen desktop is a photograph of itself, laid on top. By hand, or on a schedule from very rare to chaotic."
+                    )
+
+                    featureRow(
+                        icon: "photo.on.rectangle.angled",
+                        color: .purple,
+                        title: "Live Wallpaper covers the whole desktop",
+                        description: "One switch runs the selected shader over the desktop picture, RetroMac\u{2019}s own desktop icons, the retro dock and an open start menu \u{2014} in a single pass, so the scanlines run through all of them instead of restarting in each. Application windows are never touched. While it is on, the retro taskbar sits behind them, which is what puts it in the same pass as the desktop."
                     )
 
                     featureRow(
                         icon: "gamecontroller.fill",
                         color: .green,
-                        title: "Hover! plays again",
-                        description: "The Microsoft HTML5 remake of the Windows 95 classic, self-hosted and fully offline in its original pixel-graphics mode. No Wine, no emulator, no internet needed."
+                        title: "The Game Library",
+                        description: "A cover gallery for everything RetroMac can start. It installs the engine, names the file that engine needs, and looks in your Steam library for the copy you already own, external drives included. What the rights holder released for sharing it fetches itself: Freedoom and the shareware episodes of Doom, Heretic, Duke Nukem 3D, Quake, Quake II and Shadow Warrior. Full versions it does not fetch, and the card says so."
                     )
 
                     featureRow(
-                        icon: "slider.horizontal.below.rectangle",
-                        color: .orange,
-                        title: "Authentic Win95/98 details",
-                        description: "Scrollbars with a single arrow at each end, raised bevels and a dithered track. The status bar sits below its own scrollbar row, the program icon is back in the title bar, and 98/Me/XP drop the running-app dots \u{2014} their taskbars already show what is running."
-                    )
-
-                    featureRow(
-                        icon: "doc.text.fill",
-                        color: .purple,
-                        title: "Readmes overhauled",
-                        description: "Every theme\u{2019}s About This Theme is closable again, fills its window edge-to-edge, sizes itself so it needs no scrolling, and shows its artwork. Futurama finally has one too. Plus: a new setting starts you straight into your last theme."
+                        icon: "wrench.and.screwdriver.fill",
+                        color: .gray,
+                        title: "And a long list of fixes",
+                        description: "Cancelling a download now cancels it. \u{201C}Forget\u{201D} no longer meant \u{201C}delete\u{201D}. Crashes set to chaotic actually happen. The muted tray speaker is visible again. The Mac OS crash alerts line up and every one has an icon. The menu-bar tint comes back after a display is connected or unplugged. Quake II\u{2019}s demo download works again. And the credits say what is true."
                     )
 
                 }

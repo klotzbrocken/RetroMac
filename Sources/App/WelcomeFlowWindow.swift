@@ -117,42 +117,39 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Snow Leopard, properly \u{2014} with Dashboard and Expos\u{00E9}").font(.subheadline).foregroundStyle(.secondary)
+                Text("Windows Me in detail, crashes that never crash, a shader over the whole desktop")
+                    .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("desktopcomputer", .blue, "Windows Me, gone over in detail",
+                            "The boot screen is the animated Me logo instead of a still, three original wallpapers come along, and Defrag is its own program on the desktop. Folder windows are Explorer now \u{2014} back, forward, up, an address bar, the info panel and a status line that counts what is in the folder.")
+                    feature("slider.horizontal.below.rectangle", .cyan, "\u{2026} down to the small things",
+                            "The tray carries the theme\u{2019}s colour instead of a foreign grey and its icons share one rhythm instead of three different gaps. Mute shows as a red prohibition sign rather than a washed-out speaker. Quick launch stops growing under the pointer, because Windows never did that. Desktop icons start at the left. The calculator has its original key colours and the memory indicator it was missing. Three wrong icons are replaced \u{2014} Me showed the macOS Finder for the file manager and a Terminal for the command prompt \u{2014} and the tray messenger is yours to pick, MSN or ICQ.")
+                    feature("exclamationmark.triangle.fill", .red, "Retro Glitches & Crashes",
+                            "Failure, in period: the Windows 9x blue screen, the Illegal Operation dialog with its expandable register dump, the XP and 7 stop error with a counting memory dump, the Mac OS bomb. The desktop freezes, the message appears, and the way out is the one the machine offered at the time.")
+                    feature("lock.shield.fill", .orange, "\u{2026} and nothing actually crashes",
+                            "No program is quit, no document closed, no restart triggered. The frozen desktop is a photograph of itself, laid on top; force-quit RetroMac mid-crash and you are back at your untouched work instantly. Trigger it by hand, or on a schedule from very rare to chaotic \u{2014} and never while you are screen sharing, presenting or on camera.")
+                    feature("photo.on.rectangle.angled", .purple, "Live Wallpaper covers the whole desktop",
+                            "One switch runs the selected shader over the desktop picture, RetroMac\u{2019}s own desktop icons, the retro dock and an open start menu \u{2014} in a single pass, so the scanlines run through all of them instead of restarting in each. Application windows are never touched. While it is on, the retro taskbar sits behind them, which is what puts it in the same pass as the desktop.")
+                    feature("gamecontroller.fill", .green, "The Game Library",
+                            "A cover gallery for everything RetroMac can start. It installs the engine, names the file that engine needs, and looks in your Steam library for the copy you already own, external drives included. What the rights holder released for sharing it fetches itself: Freedoom and the shareware episodes of Doom, Heretic, Duke Nukem 3D, Quake, Quake II and Shadow Warrior. Full versions it does not fetch, and the card says so.")
+                    feature("tv.fill", .teal, "Television, and a drive that sounds like one",
+                            "The channel list is cleaned out \u{2014} dead streams gone, XITE and six retro channels in. Defrag got the drive to go with it: the spindle spins up when you press Start and coasts down when you stop, synthesised rather than recorded and tied to the display, so a freshly fragmented disk stutters and an almost sorted one only ticks.")
+                    feature("wrench.and.screwdriver.fill", .gray, "And a long list of fixes",
+                            "Cancelling a download now cancels it. \u{201C}Forget\u{201D} no longer meant \u{201C}delete\u{201D}. Crashes set to chaotic actually happen. The muted tray speaker is visible again. The calculator\u{2019}s top strip is the same width as the rest of its window. The Mac OS crash alerts line up and every one has an icon. The menu-bar tint comes back after a display is connected or unplugged. Quake II\u{2019}s demo download works again. And the credits say what is true.")
+
+                    sectionHeader("Also in 2.8")
+
                     feature("macwindow", .blue, "Snow Leopard has its own chrome",
-                            "10.6 no longer borrows Cheetah\u{2019}s early-Aqua look. The title bar is measured off the original \u{2014} unified grey, flat traffic lights, the separator along the bottom \u{2014} and it comes with blue gel scrollers, period-correct icons for Chrome, iWork, Claude and ChatGPT, and the striped Macintosh HD.")
+                            "10.6 no longer borrows Cheetah\u{2019}s early-Aqua look. The title bar is measured off the original \u{2014} unified grey, flat traffic lights, the separator along the bottom \u{2014} with blue gel scrollers, period-correct icons and the striped Macintosh HD.")
                     feature("square.grid.2x2.fill", .indigo, "Dashboard is back",
                             "The widget layer macOS dropped in Catalina, rebuilt. \u{2303}F12 brings up Clock, Calculator, Weather, Calendar, Stickies, a Google search pill and a CPU monitor. Add and remove them from the bar, drag them where you like, and they stay put.")
-                    feature("rectangle.3.group.fill", .teal, "Expos\u{00E9}",
-                            "Every window on the desktop, shrunk so none overlap, each card travelling from where its window actually sits. \u{2303}F9 for all of them, \u{2303}F10 for the front app \u{2014} or hold a dock icon, the way 10.6 changed that gesture to work.")
-                    feature("square.stack.3d.up.fill", .orange, "Stacks, drawn the way 10.6 drew them",
-                            "Applications and Downloads open as a grid with real Quick Look previews, sitting next to the Trash where they belong, and hanging from the callout nose that points back at the dock icon.")
-                    feature("internaldrive.fill", .brown, "Disk Defragmenter",
-                            "The Windows 95 and 98 themes get the defrag widget, with its authentic icon, a working scrollbar and a period-correct pace. It takes its time, as it should.")
-                    feature("sparkles.tv.fill", .purple, "Desktop extras",
-                            "The real Flurry screensaver, five more wallpapers (Rocks, Earth, Aurora Blue, Zebra, Stones), and an optional tint for the menu bar so a modern translucent one stops fighting the theme.")
+                    feature("rectangle.3.group.fill", .teal, "Expos\u{00E9} and Stacks",
+                            "Every window shrunk so none overlap, each card travelling from where its window actually sits: \u{2303}F9 for all, \u{2303}F10 for the front app, or hold a dock icon. Applications and Downloads open as a grid with real Quick Look previews, hanging from the callout nose that points back at the dock icon.")
                     feature("waveform.path.ecg", .pink, "Phosphor persistence",
                             "Afterglow across frames, applied to the signal ahead of the mask, in every Metal renderer. Bright things trail the way a real tube trails.")
-                    feature("gearshape.fill", .gray, "Settings, sorted out",
-                            "A Desktop tab that is actually listed in the sidebar, a frame-rate choice that offers 120 only on panels that reach it and stops being reset by the Quality picker, hotkey rows for Expos\u{00E9} and Dashboard, and a theme import that can no longer lose the theme it replaces.")
 
-                    feature("wrench.and.screwdriver.fill", .gray, "Bugfixing",
-                            "The trash sits on the dock again, Expos\u{00E9} no longer hides RetroMac\u{2019}s own windows, putting your system cursors back is reliable, and the menu bar can send the effect back to full screen.")
-
-                    sectionHeader("Also in 2.7")
-
-                    feature("desktopcomputer", .blue, "Windows 95 theme",
-                            "The one that started it all: solid navy title bars, the silver 3D chrome, the clouds wallpaper and an authentic boot screen. The Start menu is period-correct too \u{2014} large icons in a narrow first level, small ones in the wider submenus, and neither Windows Update nor Log Off, because Windows 95 had neither.")
-                    feature("opticaldisc", .indigo, "Fun Stuff (D:)",
-                            "The CD-ROM is back on the desktop. Browse FUNSTUFF into HOVER, VIDEOS and PICTURES: music videos play in a bare title-bar window, and Clouds.exe / WINBMP.EXE set your wallpaper the way a 1995 CD-ROM would.")
-                    feature("gamecontroller.fill", .green, "Hover! plays again",
-                            "The Microsoft HTML5 remake of the Windows 95 classic, self-hosted and fully offline in its original pixel-graphics mode. No Wine, no emulator, no internet needed.")
-                    feature("slider.horizontal.below.rectangle", .orange, "Authentic Win95/98 details",
-                            "Scrollbars with a single arrow at each end, raised bevels and a dithered track. The status bar sits below its own scrollbar row, the program icon is back in the title bar, and 98/Me/XP drop the running-app dots \u{2014} their taskbars already show what is running.")
-                    feature("doc.text.fill", .purple, "Readmes overhauled",
-                            "Every theme\u{2019}s About This Theme is closable again, fills its window edge-to-edge, sizes itself so it needs no scrolling, and shows its artwork. Futurama finally has one too. Plus: a setting that starts you straight into your last theme.")
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
         }
@@ -162,8 +159,8 @@ struct WelcomeFlowView: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.3"
     }
 
-    /// Divider between this release's entries and the ones carried over from the last. 2.7 was
-    /// short-lived, so anyone updating from 2.6 would otherwise never be told what it brought.
+    /// Divider between this release's entries and the ones carried over from the last, so anyone
+    /// updating across two versions is still told what the one in between brought.
     private func sectionHeader(_ text: String) -> some View {
         HStack(spacing: 8) {
             Text(text).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
