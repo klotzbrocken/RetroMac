@@ -404,6 +404,36 @@ enum CrashDialogRenderer {
 
     // MARK: - Macintosh
 
+    /// The caution triangle, for the alerts that were not a bomb.
+    ///
+    /// Drawn rather than shipped: it is three lines and a bar, and one more borrowed icon in the
+    /// bundle would need one more line in the credits for no gain. Sized off the rect so it holds
+    /// at any scale, with the exclamation built from rectangles so it stays crisp in the System 6
+    /// alert, which is one bit deep and has no grey to fall back on.
+    static func drawCaution(in rect: NSRect, isSix: Bool) {
+        let w = rect.width, h = rect.height
+        let lw = max(1, w / 16)
+        let tri = NSBezierPath()
+        tri.move(to: NSPoint(x: rect.midX, y: rect.maxY - lw))
+        tri.line(to: NSPoint(x: rect.maxX - lw, y: rect.minY + lw))
+        tri.line(to: NSPoint(x: rect.minX + lw, y: rect.minY + lw))
+        tri.close()
+        tri.lineJoinStyle = .round
+        (isSix ? NSColor.white : ClassicMacChrome.face).setFill()
+        tri.fill()
+        NSColor.black.setStroke()
+        tri.lineWidth = lw * 1.6
+        tri.stroke()
+
+        // The mark sits in the lower two thirds of the triangle, where there is room for it.
+        NSColor.black.setFill()
+        let barW = max(1, w * 0.11)
+        let barTop = rect.minY + h * 0.62
+        let barBottom = rect.minY + h * 0.30
+        NSRect(x: rect.midX - barW / 2, y: barBottom, width: barW, height: barTop - barBottom).fill()
+        NSRect(x: rect.midX - barW / 2, y: rect.minY + h * 0.19, width: barW, height: barW).fill()
+    }
+
     /// The bomb alert, drawn at display resolution for the same reason as above.
     static func macAlert(_ alert: MacAlert, scale: CGFloat) -> Rendered {
         let isSix = alert.style == .system6
@@ -445,9 +475,12 @@ enum CrashDialogRenderer {
                 hi.lineWidth = 1; hi.stroke()
             }
 
+            let iconRect = NSRect(x: pad, y: bounds.maxY - pad - bombSide,
+                                  width: bombSide, height: bombSide)
             if alert.showsBomb {
-                CrashRenderer.bomb?.draw(in: NSRect(x: pad, y: bounds.maxY - pad - bombSide,
-                                                    width: bombSide, height: bombSide))
+                CrashRenderer.bomb?.draw(in: iconRect)
+            } else {
+                drawCaution(in: iconRect, isSix: isSix)
             }
 
             var y = bounds.maxY - pad - 13

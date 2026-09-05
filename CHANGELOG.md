@@ -5,6 +5,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Mac OS 6 and 9 crash alerts: the text lines up, and every alert has an icon.** The fault line
+  carried eight hard-coded spaces to indent it, which is an arbitrary width in a proportional face
+  and left it standing out of line with the sentences above and below. All lines now share the one
+  left margin the renderer already had, with a blank line where the original put a gap. And the
+  "application has unexpectedly quit" alerts drew no icon at all while the layout still reserved
+  the space for one, so they looked like the artwork had failed to load; they take the caution
+  triangle now, drawn rather than bundled, in one bit for System 6 and in Platinum for Mac OS 9.
+
 - **Windows 95/98/Me: the calculator's top strip was narrower than the rest of the window.** The
   title and menu bars were inset three pixels a side while the body beneath them spans the full
   window and paints over the frame, so the top sat four pixels narrower than everything under it.

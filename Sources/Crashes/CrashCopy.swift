@@ -361,10 +361,14 @@ enum CrashCopy {
     static func macOS9BombNamed(using rng: inout CrashRNG) -> MacAlert {
         MacAlert(style: .platinum,
                  title: nil,
+                 // No leading spaces to indent with: the face is proportional, so a run of
+                 // them is an arbitrary width, and the renderer already puts every line on one
+                 // left margin beside the bomb. They were what pushed the fault line out of line
+                 // with the two around it.
                  lines: ["Sorry, a system error occurred.",
                          "",
-                         "        \(pick(macApps, using: &rng))",
-                         "        \(pick(macFaults, using: &rng))"],
+                         pick(macApps, using: &rng),
+                         pick(macFaults, using: &rng)],
                  buttons: ["Restart"],
                  idCode: nil,
                  restartButton: "Restart")
@@ -408,7 +412,8 @@ enum CrashCopy {
                         title: nil,
                         lines: ["Sorry, a system error occurred.",
                                 "",
-                                "        \(pick(faults, using: &rng))",
+                                pick(faults, using: &rng),
+                                "",
                                 "To temporarily turn off extensions, restart and",
                                 "hold down the shift key."],
                         buttons: ["Restart"],

@@ -69,8 +69,10 @@ struct MacAlert: Equatable {
     let title: String?
     let lines: [String]
     let buttons: [String]
-    /// A bomb for a system error; nothing for "the application unexpectedly quit", which was a
-    /// plain alert — the machine was fine, one program was not.
+    /// A bomb for a system error, the caution triangle for "the application unexpectedly quit":
+    /// the machine was fine, one program was not, and the alert said so with a milder icon
+    /// rather than with none. Leaving it out looked like the artwork had failed to load, because
+    /// the layout reserves the gutter either way.
     var showsBomb: Bool = true
     /// "ID = 03" in the corner, the number nobody could look up.
     let idCode: String?
