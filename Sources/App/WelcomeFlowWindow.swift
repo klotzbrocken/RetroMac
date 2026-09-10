@@ -58,7 +58,9 @@ struct WelcomeFlowView: View {
                 case .whatsNew: whatsNewPage
                 case .setupScreenRecording: screenRecordingPage
                 case .setupAccessibility: accessibilityPage
-                case .getMore: GetMoreView()
+                // Like the coffee page: the shared view carries no margin of its own, the
+                // Setup Assistant pads it and this window has to as well.
+                case .getMore: ScrollView { GetMoreView().padding(20) }
                 case .coffee: coffeePage
                 }
             }
