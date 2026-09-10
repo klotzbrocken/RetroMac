@@ -16,6 +16,13 @@ else
     # provisioning profile and launches directly — no manual AMFI re-sign. (Virtual camera can't be
     # activated in debug; build release for that.)
     APP_ENTITLEMENTS="RetroMac-debug.entitlements"
+    # Fehlt das Apple-Development-Zertifikat im Schlüsselbund (frischer Mac), wird der
+    # Debug-Build ad-hoc signiert — wie bei simplebanking. Lokal starten geht damit;
+    # nur die virtuelle Kamera braucht ohnehin den Release-Build.
+    if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "$SIGN_ID"; then
+        echo "⚠️  '$SIGN_ID' nicht im Schlüsselbund — Debug-Build wird ad-hoc signiert."
+        SIGN_ID="-"
+    fi
 fi
 # Release builds are Universal (Intel + Apple Silicon) for distribution.
 # Debug/dev builds stay native (host arch only) for fast iteration.
@@ -24,17 +31,21 @@ if [ "$MODE" = "release" ]; then
 else
     ARCH_FLAGS=""
 fi
+# Swift 6.4 (Xcode 27) nimmt standardmäßig das neue swiftbuild-System und legt die Produkte
+# unter .build/out/Products/<Config>/ ab. Dieses Skript (und package.sh) erwarten das alte
+# Layout (.build/<arch>-apple-macosx/<config>/, .build/artifacts/...). Bis auf das neue Layout
+# umgestellt ist, wird das native Build-System explizit angefordert — wie bei simplebanking.
 echo "Building RetroMac ($MODE, signing: $(echo "$SIGN_ID" | cut -d: -f1)${ARCH_FLAGS:+, Universal})..."
 
-swift build -c "$MODE" $ARCH_FLAGS --product RetroMac 2>&1 | tee /tmp/retromac_build.log | tail -3
+swift build --build-system native -c "$MODE" $ARCH_FLAGS --product RetroMac 2>&1 | tee /tmp/retromac_build.log | tail -3
 if [ "${PIPESTATUS[0]}" -ne 0 ]; then echo "❌ RetroMac build FAILED:"; cat /tmp/retromac_build.log; exit 1; fi
 
 echo "Building Camera Extension..."
-swift build -c "$MODE" $ARCH_FLAGS --product RetroMacCameraExtension 2>&1 | tee /tmp/retromac_ext_build.log | tail -3
+swift build --build-system native -c "$MODE" $ARCH_FLAGS --product RetroMacCameraExtension 2>&1 | tee /tmp/retromac_ext_build.log | tail -3
 if [ "${PIPESTATUS[0]}" -ne 0 ]; then echo "❌ Camera Extension build FAILED:"; cat /tmp/retromac_ext_build.log; exit 1; fi
 
 # Resolve the products dir (differs for universal builds → use --show-bin-path)
-BIN_PATH=$(swift build -c "$MODE" $ARCH_FLAGS --show-bin-path 2>/dev/null | tail -1)
+BIN_PATH=$(swift build --build-system native -c "$MODE" $ARCH_FLAGS --show-bin-path 2>/dev/null | tail -1)
 echo "  Products: $BIN_PATH"
 
 # --- Camera Extension .systemextension bundle ---
