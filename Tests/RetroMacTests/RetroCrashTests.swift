@@ -666,6 +666,25 @@ final class RetroCrashTests: XCTestCase {
         XCTAssertEqual(CrashView.PictureRatio(setting: ""), .fill)
     }
 
+    /// Without a still, an empty view lets the desktop through — but a text screen and the
+    /// blackout stay black, because those were black on the real machine.
+    func testWithoutAStillTheDesktopShowsThroughButBlackStaysBlack() throws {
+        let view = CrashView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+        view.showsLiveDesktopWhenEmpty = true
+        view.show(fullBleed: nil)
+        XCTAssertEqual(view.layer?.backgroundColor, NSColor.clear.cgColor)
+        view.showBlack()
+        XCTAssertEqual(view.layer?.backgroundColor, NSColor.black.cgColor)
+        var rng = CrashRNG(seed: 2)
+        let blue = try XCTUnwrap(CrashRenderer.image(for: CrashCopy.win9xFatalException(using: &rng)))
+        view.show(fullBleed: nil)
+        view.show(pixelImage: blue, ratio: .fourByThree)
+        XCTAssertEqual(view.layer?.backgroundColor, NSColor.black.cgColor)
+        view.showsLiveDesktopWhenEmpty = false
+        view.show(fullBleed: nil)
+        XCTAssertEqual(view.layer?.backgroundColor, NSColor.black.cgColor)
+    }
+
     // MARK: - Rendering
 
     func testProgressBarFillsWithTheCounter() throws {

@@ -146,7 +146,7 @@ struct CrashesTab: View {
                         RMRow(label: "Full sequence",
                               hint: canFreeze
                               ? "The pointer falls behind for five or six seconds and the drive starts hunting before the error appears. Off shows the error straight away."
-                              : "Needs Screen Recording: the build-up is a photograph of your desktop laid over your desktop, and without it there is nothing to freeze. RetroMac will show the error on its own instead.") {
+                              : "Needs Screen Recording: the build-up is a photograph of your desktop laid over your desktop, and without it there is nothing to freeze. RetroMac shows the error over the live desktop instead.") {
                             Toggle("", isOn: $settings.crashFullSequence)
                                 .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
                         }

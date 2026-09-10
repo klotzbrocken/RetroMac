@@ -54,6 +54,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   file names on the new screens are RetroMac's own where they can be, so nobody learns anything
   false about their machine.
 
+  Without Screen Recording there is no still to freeze, and the windowed errors used to land
+  on a black screen. They now land on the live desktop: not frozen, but yours. Text screens and
+  the blackout before the boot screen stay black, as they were.
+
   Two fixes on the way: an interrupted Explorer restart now brings the desktop icons back, and
   the liveness check no longer ends an Explorer restart after two seconds for having no window —
   it has no window on purpose.

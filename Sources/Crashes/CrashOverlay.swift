@@ -23,6 +23,10 @@ final class CrashView: NSView {
     var onButton: ((String) -> Void)?
     /// Hint drawn outside the picture, in the letterbox, so the screen itself stays faithful.
     var showsEscapeHint = true
+    /// With no still to show, an empty view lets the live desktop through instead of going
+    /// black: a dialog over the real desktop is a crash, a dialog on a black screen is a bug
+    /// report. Text screens and the blackout paint their own black regardless.
+    var showsLiveDesktopWhenEmpty = false
 
     private let imageLayer = CALayer()
     private var hintLabel: NSTextField?
@@ -195,6 +199,7 @@ final class CrashView: NSView {
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        layer?.backgroundColor = NSColor.black.cgColor
         imageLayer.contentsScale = scale
         imageLayer.contents = pixelImage
         imageLayer.frame = CGRect(x: ((bounds.width - w) / 2).rounded(),
@@ -204,6 +209,16 @@ final class CrashView: NSView {
         layoutHint()
     }
 
+    /// Black, whatever else is going on: the beat between "Restart" and the boot screen, which
+    /// is black even when there is no still and the view would otherwise show the desktop.
+    func showBlack() {
+        show(fullBleed: nil)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer?.backgroundColor = NSColor.black.cgColor
+        CATransaction.commit()
+    }
+
     /// A still of the desktop, or a black frame. Drawn edge to edge, smoothly — it is a photo of
     /// the real screen, not a text mode.
     func show(fullBleed image: CGImage?) {
@@ -211,6 +226,8 @@ final class CrashView: NSView {
         rollLayer?.removeFromSuperlayer(); rollLayer = nil
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        layer?.backgroundColor = (image == nil && showsLiveDesktopWhenEmpty)
+            ? NSColor.clear.cgColor : NSColor.black.cgColor
         imageLayer.magnificationFilter = .linear
         imageLayer.contents = image
         imageLayer.frame = bounds
@@ -328,6 +345,17 @@ final class CrashSession {
             if screen == NSScreen.main { mainView = view }
         }
         if mainView == nil { mainView = views.first }
+    }
+
+    /// Let the live desktop through wherever nothing is drawn. For the run where the machine
+    /// would not hand over a still: the windows stay, so every key and click is still ours,
+    /// but a dialog lands on the real desktop rather than on a black screen.
+    func setShowsLiveDesktop(_ on: Bool) {
+        for win in windows {
+            win.isOpaque = !on
+            win.backgroundColor = on ? .clear : .black
+        }
+        for view in views { view.showsLiveDesktopWhenEmpty = on }
     }
 
     func present() {

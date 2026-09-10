@@ -163,6 +163,9 @@ final class CrashDirector {
 
         let session = CrashSession()
         self.session = session
+        // No still (no Screen Recording, or a capture that came back black): the windowed
+        // errors go over the live desktop. It is not frozen, but it is the user's.
+        session.setShowsLiveDesktop(!stills.contains(where: { $0 != nil }))
         session.present()
         armedForResign = false
         // The activation churn of presenting counts as a resign on some paths, so the abort-on-
@@ -441,7 +444,7 @@ final class CrashDirector {
                                  over: still, fill: true)
             }
         case .black:
-            for view in session?.views ?? [] { view.show(fullBleed: nil) }
+            for view in session?.views ?? [] { view.showBlack() }
         case .still:
             showStills()
         case .bootGlyph(let glyph):
@@ -695,7 +698,7 @@ final class CrashDirector {
         blinkTimer?.invalidate()
         momentTimer?.invalidate()
         CrashSound.shared.stop()
-        for view in session?.views ?? [] { view.show(fullBleed: nil) }
+        for view in session?.views ?? [] { view.showBlack() }
         if !cursorHidden { NSCursor.hide(); cursorHidden = true }
 
         stageTimer = schedule(after: 1.1) { [weak self] in
