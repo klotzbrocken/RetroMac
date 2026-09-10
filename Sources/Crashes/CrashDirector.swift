@@ -71,6 +71,8 @@ final class CrashDirector {
     private var lastScenarioID: String?
     private var lastKind: CrashKind?
     private var lastMomentID: String?
+    /// The order the manual triggers walk through the catalogue.
+    private var manualCycle = CrashCatalogue.ManualCycle()
     private var cursorTimer: Timer?
     /// Separate from `stageTimer`: the build-up runs its own clock, because the glitch pass
     /// schedules against the stage timer and would otherwise cancel the end of the stutter.
@@ -107,10 +109,17 @@ final class CrashDirector {
         guard state == .idle else { return false }
         guard let era = CrashEra.current() else { return false }
         let settings = AppSettings.shared
-        let scenario = chosen ?? CrashCatalogue.pick(for: era, using: &rng,
-                                                     excluding: lastScenarioID,
-                                                     avoiding: lastKind) {
-            !settings.crashDisabledScenarios.contains($0)
+        let enabled: (String) -> Bool = { !settings.crashDisabledScenarios.contains($0) }
+        let scenario: CrashScenario?
+        if let chosen {
+            scenario = chosen
+        } else if source == .random {
+            scenario = CrashCatalogue.pick(for: era, using: &rng, excluding: lastScenarioID,
+                                           avoiding: lastKind, isEnabled: enabled)
+        } else {
+            // By hand — the flyout, the menu, "Surprise me" — the catalogue is walked through,
+            // every failure once before any comes round again.
+            scenario = manualCycle.next(for: era, using: &rng, avoiding: lastScenarioID, isEnabled: enabled)
         }
         guard let scenario else { return false }
         self.scenario = scenario

@@ -756,6 +756,33 @@ enum CrashCatalogue {
         draw(specs(for: era, category: .bootFailure).filter { isEnabled($0.id) }, using: &rng)
     }
 
+    /// The order the manual button walks through the failures of an era: every one once, in a
+    /// shuffled order, then a fresh shuffle. Somebody pressing "Crash" to see them all should
+    /// see them all, and never the same one twice in a row — which a weighted draw, however
+    /// well it avoids the last one, cannot promise.
+    struct ManualCycle {
+        private var era: CrashEra?
+        private var queue: [String] = []
+
+        /// The next scenario for `era`, among the ids `isEnabled` allows.
+        mutating func next(for era: CrashEra, using rng: inout CrashRNG, avoiding lastID: String? = nil,
+                           isEnabled: (String) -> Bool = { _ in true }) -> CrashScenario? {
+            let pool = CrashCatalogue.specs(for: era).map(\.id).filter(isEnabled)
+            guard !pool.isEmpty else { return nil }
+            // A change of era or of the enabled set starts over; otherwise anything the user
+            // switched off mid-cycle is simply skipped.
+            if era != self.era { queue = []; self.era = era }
+            queue.removeAll { !pool.contains($0) }
+            if queue.isEmpty {
+                queue = pool.shuffled(using: &rng)
+                // A fresh shuffle must not begin with what the last one ended on.
+                if queue.count > 1, queue.first == lastID { queue.swapAt(0, Int.random(in: 1..<queue.count, using: &rng)) }
+            }
+            let id = queue.removeFirst()
+            return CrashCatalogue.spec(id: id)?.build(&rng)
+        }
+    }
+
     private static func draw(_ choices: [Spec], using rng: inout CrashRNG) -> CrashScenario? {
         guard !choices.isEmpty else { return nil }
         let total = choices.reduce(0) { $0 + $1.weight }

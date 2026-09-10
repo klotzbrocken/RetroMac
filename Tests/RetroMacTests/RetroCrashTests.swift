@@ -488,6 +488,34 @@ final class RetroCrashTests: XCTestCase {
         XCTAssertGreaterThan(loudest, 0, "the buffer is silent")
     }
 
+    /// Pressing the button k times, with k failures switched on, shows each of them exactly
+    /// once — and the next round never opens with the one the last round closed on.
+    func testTheManualCycleShowsEveryFailureOnceBeforeRepeating() {
+        var rng = CrashRNG(seed: 111)
+        var cycle = CrashCatalogue.ManualCycle()
+        let pool = CrashCatalogue.specs(for: .win98).map(\.id)
+        var last: String?
+        for round in 0..<4 {
+            var seen: [String] = []
+            for _ in pool {
+                guard let s = cycle.next(for: .win98, using: &rng, avoiding: last) else { return XCTFail("nothing") }
+                XCTAssertNotEqual(s.id, last, "round \(round): \(s.id) came twice in a row")
+                seen.append(s.id)
+                last = s.id
+            }
+            XCTAssertEqual(Set(seen), Set(pool), "round \(round) did not show every failure once")
+            XCTAssertEqual(seen.count, pool.count)
+        }
+        // Switching one off mid-cycle drops it; switching eras starts over.
+        let off = pool[0]
+        for _ in 0..<(pool.count * 2) {
+            let s = cycle.next(for: .win98, using: &rng, avoiding: last) { $0 != off }
+            XCTAssertNotEqual(s?.id, off)
+            last = s?.id
+        }
+        XCTAssertEqual(cycle.next(for: .macos9, using: &rng)?.eras.contains(.macos9), true)
+    }
+
     // MARK: - Categories
 
     /// The picker reads the shape off the spec instead of building the scenario to look; the

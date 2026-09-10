@@ -47,6 +47,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   height from a new picker under Picture — instead of sitting in a black frame at whole-pixel
   size. A blue screen was the whole screen.
 
+  "Crash Now" — the flyout button, the menu entry, "Surprise me" — now walks through the
+  era's failures: every one once, in a shuffled order, then a fresh shuffle, never the same one
+  twice in a row. Pressing it to see them all shows them all. The crashes that happen by
+  themselves keep their weighted draw.
+
   Every scene is in the settings list with its own Show button and its own toggle. Text screens
   gained a blinking cursor, progress bars and countdowns; dialogs gained a clock and a button
   that goes on to the next stage instead of closing. The watchdog now sizes itself to the scene
