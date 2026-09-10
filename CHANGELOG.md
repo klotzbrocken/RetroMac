@@ -5,6 +5,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Lite shaders cover every screen.** The Lite presets drew one window across the union of
+  all displays. With an external 1x monitor as the main display next to the 2x built-in, AppKit
+  handed that window to the built-in's scale and a band of the external screen was left without
+  the effect. There is now one Lite window per screen, in that screen's own scale, rebuilt when
+  a display is plugged in or out — the same shape the full shaders and the wallpaper shader have
+  always had.
+
 - **Retro Crashes: more of the period.** Twenty-six new scenes, in three kinds.
 
   *More failures.* "The instruction at 0x… referenced memory at 0x…" for XP and 7; the System

@@ -8,12 +8,20 @@ import MetalKit
 /// This renders purely additive/subtractive effects (darkening patterns) without
 /// capturing the content underneath. The shader outputs black with varying alpha
 /// to simulate CRT characteristics.
+///
+/// One window PER SCREEN, like the full overlay and the wallpaper shader. A single window
+/// spanning the union of two displays looked right on one machine and wrong on the next:
+/// AppKit hands such a window to one display's backing scale, the other display gets a
+/// picture composited from it, and with an external 1x panel next to a 2x built-in a band of
+/// the screen was left without the effect. Per-screen windows sit in their own scale, and a
+/// display change simply rebuilds them.
 final class CRTLiteOverlay: NSObject, MTKViewDelegate {
-    private var window: NSWindow?
-    private var metalView: MTKView?
+    private var windows: [NSWindow] = []
+    private var metalViews: [MTKView] = []
     private var renderer: RetroRenderer?
     private var device: MTLDevice?
     private var clearTexture: MTLTexture?
+    private var screenParamsObserver: NSObjectProtocol?
 
     /// Whether the lite overlay is currently active
     private(set) var isActive = false
@@ -75,27 +83,31 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
             return
         }
 
-        guard let device = device else { return }
+        guard device != nil else { return }
 
-        // Honor the chosen display (Display menu). 0 = all screens (union); otherwise
-        // cover just the selected screen. Without this, Lite always spanned the union,
-        // so it effectively only appeared on the main display — unlike the full overlay.
-        let tid = AppSettings.shared.targetDisplayID
-        let frame: NSRect
-        if tid != 0, let target = NSScreen.screens.first(where: { $0.displayID == tid }) {
-            frame = target.frame
-        } else {
-            frame = NSScreen.screens.reduce(NSRect.zero) { $0.union($1.frame) }
-        }
-        createWindow(frame: frame, level: 28)
+        rebuildScreenWindows()
 
         renderer?.intensity = intensity
         renderer?.vignetteIntensity = vignetteIntensity
 
         isActive = true
-        metalView?.isPaused = false
-        window?.orderFrontRegardless()
-        print("[CRTLite] Full-screen overlay started")
+        showWindows()
+
+        // Rebuild on display reconfiguration: a monitor plugged in or out, a resolution change,
+        // the main display moving. The frames were right for the screens that existed when the
+        // overlay started, and for nothing else.
+        if screenParamsObserver == nil {
+            screenParamsObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil, queue: .main
+            ) { [weak self] _ in
+                guard let self, self.isActive, self.trackedBundleID == nil else { return }
+                self.rebuildScreenWindows()
+                self.showWindows()
+                print("[CRTLite] Screens changed — rebuilt on \(self.windows.count) screen(s)")
+            }
+        }
+        print("[CRTLite] Full-screen overlay started on \(windows.count) screen(s)")
     }
 
     /// Start Lite overlay tracking a specific app window by bundle ID
@@ -123,8 +135,7 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
             let nsFrame = cgRectToNS(appWindow)
             createWindow(frame: nsFrame, level: 26)
             isActive = true
-            metalView?.isPaused = false
-            window?.orderFrontRegardless()
+            showWindows()
             startTracking(bundleID: bundleID)
             print("[CRTLite] App overlay started for \(bundleID)")
         } else {
@@ -134,7 +145,7 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
             let placeholderFrame = NSRect(x: 0, y: 0, width: 1, height: 1)
             createWindow(frame: placeholderFrame, level: 26)
             isActive = true
-            metalView?.isPaused = false
+            for view in metalViews { view.isPaused = false }
             startTracking(bundleID: bundleID)
         }
     }
@@ -147,23 +158,22 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
         // Restore system display filter if we enabled it (B&W / Amber Lite)
         DisplayFilterHelper.restoreFilter()
 
+        if let obs = screenParamsObserver {
+            NotificationCenter.default.removeObserver(obs)
+            screenParamsObserver = nil
+        }
+
         // Stop timers first
         trackingTimer?.invalidate()
         trackingTimer = nil
         trackedBundleID = nil
         trackedWindowID = 0
 
-        // Pause rendering and detach delegate BEFORE closing
+        // Pause rendering and detach delegates BEFORE closing
         // This prevents draw(in:) from being called on a deallocating renderer
-        metalView?.isPaused = true
-        metalView?.delegate = nil
+        closeWindows()
 
-        // Hide and close window
-        window?.orderOut(nil)
-        window = nil
-        metalView = nil
-
-        // Release Metal resources AFTER view is detached
+        // Release Metal resources AFTER the views are detached
         renderer = nil
         clearTexture = nil
         device = nil
@@ -202,12 +212,42 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
         self.clearTexture = dev.makeTexture(descriptor: desc)
     }
 
-    private func createWindow(frame: NSRect, level: Int) {
-        // Clean up any existing window — detach delegate first
-        metalView?.delegate = nil
-        metalView?.isPaused = true
-        window?.orderOut(nil)
+    // MARK: - Windows
 
+    /// The screens the full-screen overlay covers: the chosen display (Display menu), or all
+    /// of them.
+    private func targetScreens() -> [NSScreen] {
+        let tid = AppSettings.shared.targetDisplayID
+        if tid != 0, let target = NSScreen.screens.first(where: { $0.displayID == tid }) {
+            return [target]
+        }
+        return NSScreen.screens
+    }
+
+    /// One window per screen, replacing whatever was there.
+    private func rebuildScreenWindows() {
+        closeWindows()
+        for screen in targetScreens() {
+            createWindow(frame: screen.frame, level: 28)
+        }
+    }
+
+    private func showWindows() {
+        for view in metalViews { view.isPaused = false }
+        for window in windows { window.orderFrontRegardless() }
+    }
+
+    private func closeWindows() {
+        for view in metalViews {
+            view.delegate = nil
+            view.isPaused = true
+        }
+        for window in windows { window.orderOut(nil) }
+        windows.removeAll()
+        metalViews.removeAll()
+    }
+
+    private func createWindow(frame: NSRect, level: Int) {
         let mtkView = MTKView(frame: NSRect(origin: .zero, size: frame.size), device: device)
         mtkView.isPaused = true
         mtkView.enableSetNeedsDisplay = false
@@ -218,7 +258,11 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
         mtkView.presentsWithTransaction = false
         mtkView.delegate = self
 
+        // Created in GLOBAL coordinates and the frame re-asserted afterwards — the same trap
+        // the full overlay documents: a secondary display has a non-zero origin, and a frame
+        // that is not re-set can end up placed relative to the wrong screen.
         let win = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        win.setFrame(frame, display: false)
         win.isReleasedWhenClosed = false
         win.level = NSWindow.Level(rawValue: level)
         win.isOpaque = false
@@ -229,8 +273,8 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
 
         win.contentView = mtkView
 
-        self.window = win
-        self.metalView = mtkView
+        windows.append(win)
+        metalViews.append(mtkView)
     }
 
     // MARK: - MTKViewDelegate
@@ -244,7 +288,8 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
               let clearTex = clearTexture else { return }
 
         let viewportSize = CGSize(width: view.drawableSize.width, height: view.drawableSize.height)
-        renderer.render(sourceTexture: clearTex, to: drawable, viewportSize: viewportSize)
+        // `output: view` keeps each screen's frame clock and afterglow to itself.
+        renderer.render(sourceTexture: clearTex, to: drawable, viewportSize: viewportSize, output: view)
     }
 
     // MARK: - Window Tracking
@@ -274,9 +319,9 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
             // went off-screen, fall back to a bundle-wide search (which re-locks).
             if let appFrame = self.frameForTrackedWindow() ?? self.findAppWindow(bundleID: bundleID) {
                 let nsFrame = self.cgRectToNS(appFrame)
-                if let win = self.window, win.frame != nsFrame {
+                if let win = self.windows.first, win.frame != nsFrame {
                     win.setFrame(nsFrame, display: false)
-                    self.metalView?.frame = NSRect(origin: .zero, size: nsFrame.size)
+                    self.metalViews.first?.frame = NSRect(origin: .zero, size: nsFrame.size)
                 }
             }
         }
