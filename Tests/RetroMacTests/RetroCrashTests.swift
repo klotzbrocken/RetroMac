@@ -546,7 +546,6 @@ final class RetroCrashTests: XCTestCase {
         var rng = CrashRNG(seed: 61)
         for spec in CrashCatalogue.all where spec.category == .moment {
             let scenario = spec.build(&rng)
-            XCTAssertNil(scenario.prelude)
             XCTAssertLessThanOrEqual(scenario.totalHold, 10, "\(spec.id) is not a moment")
             for stage in scenario.stages {
                 XCTAssertGreaterThan(stage.hold, 0, "\(spec.id) has a stage with no clock")
@@ -625,22 +624,29 @@ final class RetroCrashTests: XCTestCase {
         }
     }
 
-    /// The Zip drive appears before anything freezes, and only on Windows.
+    /// The Zip drive is opened from the desktop, never drawn, and only on Windows — and every
+    /// Windows theme that can crash has one on its desktop.
     func testTheZipDriveIsAWindowsThing() throws {
         var rng = CrashRNG(seed: 101)
         let spec = try XCTUnwrap(CrashCatalogue.spec(id: "win-zip-click-of-death"))
+        XCTAssertEqual(spec.category, .onDemand)
         let scenario = spec.build(&rng)
-        guard case .desktopDrive(let name, let icon, let timeout)? = scenario.prelude else {
-            return XCTFail("the Zip drive has no prelude")
-        }
-        XCTAssertTrue(name.contains("Zip"))
-        XCTAssertEqual(icon, "zipdrive")
-        XCTAssertGreaterThan(timeout.lowerBound, 5)
         for era in spec.eras {
             XCTAssertTrue(era.displayName.hasPrefix("Windows"), "\(era.displayName) never had a Zip drive")
         }
         // The first thing you see is the drive reading, with the clicking.
         XCTAssertEqual(scenario.stages.first?.sound, .zipClick)
+
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        for theme in ["Windows95", "Windows98", "WindowsMe", "WindowsXP"] {
+            let url = root.appendingPathComponent("Resources/Themes/\(theme).retromactheme/theme.json")
+            let data = try Data(contentsOf: url)
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            let icons = try XCTUnwrap(json["desktopIcons"] as? [[String: Any]])
+            XCTAssertEqual(icons.filter { $0["type"] as? String == "zipdrive" }.count, 1,
+                           "\(theme) should have exactly one Zip drive on its desktop")
+        }
     }
 
     // MARK: - Rendering

@@ -471,10 +471,12 @@ enum CrashCatalogue {
 
         // MARK: The Zip drive
 
+        // Never drawn: the Zip drive sits on the desktop of the Windows themes, and opening it
+        // is what starts this.
         Spec(id: "win-zip-click-of-death",
              title: "Iomega Zip — the click of death",
              eras: [.win95, .win98, .winMe, .winXP],
-             weight: 3, kind: .fullScreen) { rng in
+             weight: 3, kind: .fullScreen, category: .onDemand) { rng in
             let xp = CrashEra.current() == .winXP
             let hunting = Double.random(in: 4.0...7.0, using: &rng)
             var stages: [CrashStage] = [
@@ -501,7 +503,7 @@ enum CrashCatalogue {
                                          title: "Iomega Zip — the click of death",
                                          eras: [.win95, .win98, .winMe, .winXP], weight: 3,
                                          freezeHold: 0.3, stages: stages)
-            scenario.prelude = .desktopDrive(name: "Iomega Zip (D:)", icon: "zipdrive", timeout: 20...40)
+            scenario.category = .onDemand
             return scenario
         },
 

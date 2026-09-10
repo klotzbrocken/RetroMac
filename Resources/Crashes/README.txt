@@ -17,7 +17,7 @@ affiliated with or endorsed by Microsoft.
 
 zipdrive.png
 ------------
-The Iomega Zip drive that appears among the desktop icons before the click of
-death, 128x128, resampled from pixel art supplied by Maik Klotz. RetroMac's
-own artwork; it belongs to no theme, which is why it lives here and not in a
-theme's icons directory.
+The Iomega Zip drive on the Windows desktops, which starts the click of death
+when it is opened. 128x128, resampled from pixel art supplied by Maik Klotz.
+RetroMac's own artwork: the same drive sits on every Windows desktop, which is
+why it lives here and not in one theme's icons directory.

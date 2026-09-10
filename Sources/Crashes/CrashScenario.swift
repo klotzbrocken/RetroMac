@@ -319,20 +319,14 @@ struct CrashScenario: Identifiable, Equatable {
         case bootFailure
         /// A mild moment: no build-up, no error, over in seconds. Picked on its own clock.
         case moment
+        /// Started by something on the desktop — the Zip drive being opened — and never drawn.
+        case onDemand
     }
 
     /// A scene that follows this one after the machine has come back.
     struct Aftermath: Equatable {
         let id: String
         let delay: ClosedRange<TimeInterval>
-    }
-
-    /// What has to happen on the real desktop before the freeze. The only thing in the catalogue
-    /// that touches a live RetroMac window, and only ever RetroMac's own.
-    enum Prelude: Equatable {
-        /// A removable drive appears among the desktop icons. Opening it — or waiting — starts
-        /// the failure.
-        case desktopDrive(name: String, icon: String, timeout: ClosedRange<TimeInterval>)
     }
 
     let id: String
@@ -348,7 +342,6 @@ struct CrashScenario: Identifiable, Equatable {
     var aftermath: Aftermath? = nil
     /// When the stages run out by themselves, restart the machine instead of returning.
     var endsWithRestart: Bool = false
-    var prelude: Prelude? = nil
 
     /// What this looks like from across the room.
     var kind: CrashKind {

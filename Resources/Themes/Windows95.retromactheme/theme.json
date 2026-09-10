@@ -265,7 +265,8 @@
       "type": "defrag",
       "gridX": 1,
       "gridY": 7
-    }
+    },
+    { "name": "Iomega Zip (D:)", "icon": "", "type": "zipdrive", "gridX": 1, "gridY": 8 }
   ],
   "desktopIconSize": 40,
   "screensaver": "flowerbox",

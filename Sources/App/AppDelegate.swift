@@ -3311,7 +3311,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func crashNow() {
-        guard LicenseManager.shared.isLicensed else { presentUnlockScreen(); return }
+        guard let countdown = crashPermitted() else { return }
+        CrashScheduler.shared.fire(source: .manual, countdown: countdown)
+    }
+
+    /// The Zip drive on the desktop was opened. No countdown, whatever Party mode says: the
+    /// user just double-clicked the thing, and the drive answers at once.
+    func openZipDrive() {
+        guard crashPermitted() != nil else { return }
+        CrashScheduler.shared.fire(scenarioID: "win-zip-click-of-death", source: .manual)
+    }
+
+    /// Whether a crash may be staged right now, and with what countdown. nil = it may not, and
+    /// the user has been told why (or shown the unlock screen).
+    private func crashPermitted() -> Int? {
+        guard LicenseManager.shared.isLicensed else { presentUnlockScreen(); return nil }
         let hold = CrashScheduler.shared.hold(ignoringSchedule: true)
         guard hold == .ready else {
             let alert = NSAlert()
@@ -3319,10 +3333,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.informativeText = hold.explanation
             alert.addButton(withTitle: "OK")
             alert.runModal()
-            return
+            return nil
         }
-        let countdown = AppSettings.shared.crashMode == "party" ? AppSettings.shared.crashCountdown : 0
-        CrashScheduler.shared.fire(source: .manual, countdown: countdown)
+        return AppSettings.shared.crashMode == "party" ? AppSettings.shared.crashCountdown : 0
     }
 
     @objc func openGameLibrary() {

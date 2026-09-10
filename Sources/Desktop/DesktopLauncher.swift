@@ -57,6 +57,9 @@ enum DesktopLauncher {
         case "tvfolder":
             AppFolderController.tv.show()
 
+        case "zipdrive":
+            // The Iomega Zip of the Retro Crashes: opening it is what kills the cartridge.
+            (NSApp.delegate as? AppDelegate)?.openZipDrive()
         case "defrag":
             // Disk Defragmenter simulation (Windows 95/98 nostalgia; touches no real files).
             DefragController.shared.show()

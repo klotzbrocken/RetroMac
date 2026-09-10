@@ -7,8 +7,6 @@ final class DesktopIconView: NSView {
 
     weak var target: AnyObject?
     var action: Selector?
-    /// On the desktop for now, and never persisted: dragging it or removing it writes nothing.
-    var isTransient = false
 
     private let imageView: NSImageView
     private let label: NSTextField

@@ -16,13 +16,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   fails. XP's Stop error now has a sequel: a little while after the machine comes back, it asks
   whether Microsoft may hear about it.
 
-  *The Iomega Zip.* On a Windows theme, a Zip drive appears among the desktop icons. Open it —
-  or wait — and the drive starts clicking: the click of death, synthesised like the hard disk,
-  a run-out and a knock every half second. Windows reports the only thing it knows ("D:\ is not
-  accessible", or on XP "The disk in drive D is not formatted"), Retry makes it click again, and
-  when it is over the drive is gone. The icon is RetroMac's own and is never written into the
-  theme's desktop layout: dragging it, removing it, and its coming and going leave every other
-  icon exactly where it was.
+  *The Iomega Zip.* The Windows 95, 98, Me and XP desktops have a Zip drive on them now. Open
+  it and the drive starts clicking: the click of death, synthesised like the hard disk, a
+  run-out and a knock every half second. Windows reports the only thing it knows ("D:\ is not
+  accessible", or on XP "The disk in drive D is not formatted"), and Retry makes it click again.
+  It never happens on its own — only when you open the drive — and it is the one crash that is
+  not in the random draw.
 
   *The machine not coming back.* After "Restart", sometimes the boot fails first: "Non-System
   disk or disk error", "NTLDR is missing", "BOOTMGR is missing", "S.M.A.R.T. Status BAD", the

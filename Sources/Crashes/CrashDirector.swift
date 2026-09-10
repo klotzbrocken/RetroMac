@@ -28,9 +28,6 @@ final class CrashDirector {
     private enum State: Equatable {
         case idle
         case countdown
-        /// Something has to happen on the live desktop first: the Zip drive has appeared and the
-        /// machine is waiting to be asked to read it. No overlay yet.
-        case prelude
         /// The pointer starts falling behind while the machine is still "working".
         case stuttering
         /// Nothing answers any more; the drive is hunting.
@@ -55,7 +52,6 @@ final class CrashDirector {
     private var counterTimer: Timer?
     private var blinkTimer: Timer?
     private var momentTimer: Timer?
-    private var preludeTimer: Timer?
     private var watchdog: Timer?
     private var liveness: Timer?
     private var countdownTimer: Timer?
@@ -126,14 +122,12 @@ final class CrashDirector {
             lastKind = scenario.kind
         case .moment:
             lastMomentID = scenario.id
-        case .aftermath, .bootFailure:
+        case .aftermath, .bootFailure, .onDemand:
             break
         }
 
         print("[Crash] \(scenario.id) on \(era.displayName), source=\(source)")
-        if let prelude = scenario.prelude {
-            runPrelude(prelude)
-        } else if countdown > 0, scenario.category == .failure {
+        if countdown > 0, scenario.category == .failure {
             beginCountdown(seconds: countdown)
         } else {
             begin()
@@ -187,43 +181,11 @@ final class CrashDirector {
         showStills()
 
         // Only a failure gets the warning. A moment IS the warning with nothing after it, a boot
-        // failure happens on a black screen, and an aftermath arrives on a machine that has
-        // just come back and is working fine.
+        // failure happens on a black screen, an aftermath arrives on a machine that has just
+        // come back and is working fine, and the Zip drive answers the double-click at once.
         let plan = scenario.category == .failure ? chooseBuildUp() : .none
         print("[Crash] build-up: \(plan)")
         runBuildUp(plan)
-    }
-
-    // MARK: - The prelude
-
-    /// What has to happen on the live desktop before anything freezes. Nothing of ours is on
-    /// screen yet except one extra desktop icon, so no observers, no watchdog and no liveness:
-    /// the timeout is the only clock, and the user's double-click the only other way on.
-    private func runPrelude(_ prelude: CrashScenario.Prelude) {
-        state = .prelude
-        switch prelude {
-        case .desktopDrive(let name, let icon, let timeout):
-            let entry = DockThemeConfig.DesktopIconEntry(name: name, icon: "", type: icon)
-            DesktopIconsController.shared.onOpen = { [weak self] opened in
-                guard opened.name == name else { return false }
-                self?.beginFromPrelude()
-                return true
-            }
-            DesktopIconsController.shared.setTransientIcons([entry])
-            let wait = Double.random(in: timeout, using: &rng)
-            print("[Crash] prelude: \(name) on the desktop, reads itself in \(Int(wait)) s")
-            preludeTimer = schedule(after: wait) { [weak self] in self?.beginFromPrelude() }
-        }
-    }
-
-    private func beginFromPrelude() {
-        guard state == .prelude else { return }
-        print("[Crash] prelude over")
-        preludeTimer?.invalidate(); preludeTimer = nil
-        DesktopIconsController.shared.onOpen = nil
-        // The icon stays: the drive is still there while it dies. The freeze captures it, and
-        // teardown takes it away, which is the disk being ejected.
-        begin()
     }
 
     // MARK: - The build-up
@@ -819,7 +781,6 @@ final class CrashDirector {
         countdownTimer?.invalidate(); countdownTimer = nil
         blinkTimer?.invalidate();     blinkTimer = nil
         momentTimer?.invalidate();    momentTimer = nil
-        preludeTimer?.invalidate();   preludeTimer = nil
         watchdog?.invalidate();       watchdog = nil
         liveness?.invalidate();       liveness = nil
         cursorTimer?.invalidate();    cursorTimer = nil
@@ -832,9 +793,6 @@ final class CrashDirector {
         // So must the taskbar and the desktop icons, if a shell restart was interrupted half-way.
         restoreShell()
         DockController.shared.setSuspendedForCrash(false)
-        // And the Zip drive goes away, whatever happened to it.
-        DesktopIconsController.shared.onOpen = nil
-        DesktopIconsController.shared.setTransientIcons([])
 
         for token in observers { NotificationCenter.default.removeObserver(token) }
         observers.removeAll()

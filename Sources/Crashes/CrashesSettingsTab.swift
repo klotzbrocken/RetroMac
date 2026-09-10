@@ -19,6 +19,7 @@ struct CrashesTab: View {
     private var bootSpecs: [CrashCatalogue.Spec] { era.map { CrashCatalogue.specs(for: $0, category: .bootFailure) } ?? [] }
     private var momentSpecs: [CrashCatalogue.Spec] { era.map { CrashCatalogue.specs(for: $0, category: .moment) } ?? [] }
     private var aftermathSpecs: [CrashCatalogue.Spec] { era.map { CrashCatalogue.specs(for: $0, category: .aftermath) } ?? [] }
+    private var onDemandSpecs: [CrashCatalogue.Spec] { era.map { CrashCatalogue.specs(for: $0, category: .onDemand) } ?? [] }
     private var isParty: Bool { settings.crashMode == "party" }
 
     var body: some View {
@@ -105,7 +106,7 @@ struct CrashesTab: View {
                                   hint: "Each era has several failures and picks between them, so the same one does not come round twice. Windows 95, 98, Me, XP and 7, System 6, Mac OS 9, Mac OS X and Snow Leopard are covered; the other themes are still stable.",
                                   isLast: true) { EmptyView() }
                         } else {
-                            scenarioRows(specs + aftermathSpecs)
+                            scenarioRows(specs + aftermathSpecs + onDemandSpecs)
                         }
                     }
                 }
@@ -188,7 +189,7 @@ struct CrashesTab: View {
         ForEach(Array(list.enumerated()), id: \.element.id) { index, spec in
             RMRow(label: spec.title,
                   hint: spec.id == "win-zip-click-of-death"
-                  ? "A Zip drive appears on the desktop first. Open it, or wait."
+                  ? "Never on its own: the Zip drive on the desktop starts this when you open it."
                   : nil,
                   isLast: index == list.count - 1) {
                 HStack(spacing: 8) {
