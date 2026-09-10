@@ -493,7 +493,13 @@ final class RetroCrashTests: XCTestCase {
     func testTheManualCycleShowsEveryFailureOnceBeforeRepeating() {
         var rng = CrashRNG(seed: 111)
         var cycle = CrashCatalogue.ManualCycle()
-        let pool = CrashCatalogue.specs(for: .win98).map(\.id)
+        let pool = CrashCatalogue.ManualCycle.pool(for: .win98)
+        // Failures, boot failures and moments, so the button really shows everything; not the
+        // sequel and not the Zip drive, which have triggers of their own.
+        XCTAssertTrue(pool.contains("boot-scandisk"))
+        XCTAssertTrue(pool.contains("moment-hourglass"))
+        XCTAssertFalse(pool.contains("win-zip-click-of-death"))
+        XCTAssertFalse(CrashCatalogue.ManualCycle.pool(for: .winXP).contains("xp-recovered-serious-error"))
         var last: String?
         for round in 0..<4 {
             var seen: [String] = []

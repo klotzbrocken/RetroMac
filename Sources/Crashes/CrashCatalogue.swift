@@ -756,18 +756,26 @@ enum CrashCatalogue {
         draw(specs(for: era, category: .bootFailure).filter { isEnabled($0.id) }, using: &rng)
     }
 
-    /// The order the manual button walks through the failures of an era: every one once, in a
-    /// shuffled order, then a fresh shuffle. Somebody pressing "Crash" to see them all should
-    /// see them all, and never the same one twice in a row — which a weighted draw, however
-    /// well it avoids the last one, cannot promise.
+    /// The order the manual button walks through an era: every failure, every boot failure and
+    /// every moment once, in a shuffled order, then a fresh shuffle. Somebody pressing "Crash"
+    /// to see them all should see them all, and never the same one twice in a row — which a
+    /// weighted draw, however well it avoids the last one, cannot promise. The boot failures
+    /// are in here even though on their own they only ever follow a restart: shown by hand
+    /// they run as a preview, the machine failing to come up and then coming up.
     struct ManualCycle {
         private var era: CrashEra?
         private var queue: [String] = []
 
+        static func pool(for era: CrashEra) -> [String] {
+            CrashCatalogue.all
+                .filter { $0.eras.contains(era) && [.failure, .bootFailure, .moment].contains($0.category) }
+                .map(\.id)
+        }
+
         /// The next scenario for `era`, among the ids `isEnabled` allows.
         mutating func next(for era: CrashEra, using rng: inout CrashRNG, avoiding lastID: String? = nil,
                            isEnabled: (String) -> Bool = { _ in true }) -> CrashScenario? {
-            let pool = CrashCatalogue.specs(for: era).map(\.id).filter(isEnabled)
+            let pool = Self.pool(for: era).filter(isEnabled)
             guard !pool.isEmpty else { return nil }
             // A change of era or of the enabled set starts over; otherwise anything the user
             // switched off mid-cycle is simply skipped.

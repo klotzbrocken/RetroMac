@@ -48,9 +48,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   size. A blue screen was the whole screen.
 
   "Crash Now" — the flyout button, the menu entry, "Surprise me" — now walks through the
-  era's failures: every one once, in a shuffled order, then a fresh shuffle, never the same one
-  twice in a row. Pressing it to see them all shows them all. The crashes that happen by
-  themselves keep their weighted draw.
+  era: every failure, boot failure and moment once, in a shuffled order, then a fresh shuffle,
+  never the same one twice in a row. Pressing it to see them all shows them all. The crashes
+  that happen by themselves keep their weighted draw, and a boot failure on its own still only
+  follows a restart.
 
   Every scene is in the settings list with its own Show button and its own toggle. Text screens
   gained a blinking cursor, progress bars and countdowns; dialogs gained a clock and a button
