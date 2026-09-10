@@ -271,22 +271,50 @@ struct WelcomeFlowView: View {
                                subtitle: "Just start using RetroMac",
                                chip: nil) { finish() }
 
-                    // Already-supported + license key
-                    VStack(alignment: .leading, spacing: 8) {
-                        Toggle("I already chipped in (hide this next time)", isOn: $coffeeAck)
-                            .toggleStyle(.checkbox).font(.caption)
+                    // The licence key. Its own card with a heading and a sentence of help: the
+                    // bare field under the support rows was easy to miss, and a pasted key in a
+                    // small system field was hard to see at all.
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 8) {
-                            TextField("License key", text: $keyInput)
-                                .textFieldStyle(.roundedBorder)
-                                .font(.system(size: 12, design: .monospaced))
+                            Image(systemName: "key.fill").font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.orange)
+                            Text("Already have a licence key?").font(.headline)
+                        }
+                        Text("Paste the key from your purchase email here and click Activate. It looks like XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 8) {
+                            TextField("XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX", text: $keyInput)
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 13, design: .monospaced))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 10).padding(.vertical, 8)
+                                .background(RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(nsColor: .textBackgroundColor)))
+                                .overlay(RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.secondary.opacity(0.5), lineWidth: 1))
                             Button(license.isValidating ? "…" : "Activate") { activateKey() }
-                                .buttonStyle(.bordered)
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.large)
                                 .disabled(keyInput.trimmingCharacters(in: .whitespaces).isEmpty || license.isValidating)
                         }
                         if let msg = activationMessage {
-                            Text(msg).font(.caption).foregroundStyle(activationSuccess == true ? .green : .red)
+                            Label(msg, systemImage: activationSuccess == true ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(activationSuccess == true ? .green : .red)
                         }
-                    }.padding(.top, 4)
+                        Toggle("I already chipped in (hide this next time)", isOn: $coffeeAck)
+                            .toggleStyle(.checkbox).font(.caption)
+                    }
+                    .padding(14)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.06)))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange.opacity(0.35), lineWidth: 1))
+                    .padding(.top, 4)
+                    .onAppear {
+                        // A key that was entered before but never validated is worth showing
+                        // again, the way the Settings tab does.
+                        if keyInput.isEmpty && !license.licenseKey.isEmpty { keyInput = license.licenseKey }
+                    }
                 }
             }
             .padding(20)
