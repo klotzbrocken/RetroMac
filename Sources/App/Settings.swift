@@ -955,6 +955,19 @@ final class AppSettings: ObservableObject {
     @Published var crashBudgetDay: Double {
         didSet { defaults.set(crashBudgetDay, forKey: "crashBudgetDay") }
     }
+    /// After a simulated restart, sometimes the machine does not come straight back: a disk
+    /// check, a missing NTLDR, a sad Mac, before the boot screen.
+    @Published var crashBootFailures: Bool {
+        didSet { defaults.set(crashBootFailures, forKey: "crashBootFailures") }
+    }
+    /// The mild moments between the failures: the beach ball, the hourglass, a picture that
+    /// rolls for a second. On their own clock, more often than the crashes.
+    @Published var crashMoments: Bool {
+        didSet { defaults.set(crashMoments, forKey: "crashMoments") }
+    }
+    @Published var crashMomentLastFiredAt: Double {
+        didSet { defaults.set(crashMomentLastFiredAt, forKey: "crashMomentLastFiredAt") }
+    }
 
     /// Screensaver master switch.
     @Published var screensaverEnabled: Bool {
@@ -1317,6 +1330,9 @@ final class AppSettings: ObservableObject {
         crashLastFiredAt = defaults.double(forKey: "crashLastFiredAt")
         crashesToday = defaults.integer(forKey: "crashesToday")
         crashBudgetDay = defaults.double(forKey: "crashBudgetDay")
+        crashBootFailures = defaults.object(forKey: "crashBootFailures") as? Bool ?? true
+        crashMoments = defaults.object(forKey: "crashMoments") as? Bool ?? true
+        crashMomentLastFiredAt = defaults.double(forKey: "crashMomentLastFiredAt")
 
         // Per-app rules (migrate from old perAppPresets if needed)
         if let data = defaults.data(forKey: "perAppRules"),

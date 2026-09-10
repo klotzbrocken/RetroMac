@@ -5,6 +5,49 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Retro Crashes: more of the period.** Twenty-six new scenes, in three kinds.
+
+  *More failures.* "The instruction at 0x… referenced memory at 0x…" for XP and 7; the System
+  Shutdown dialog of the summer of 2003, counting down from 59 with no button, which restarts the
+  machine when it reaches zero; Dr. Watson; "It's now safe to turn off your computer", in
+  orange; the floppy that was not there ("A:\ is not accessible", Retry, the drive hunting,
+  Retry again); the scratched CD ("Data error (cyclic redundancy check)"); and on the Mac, "This
+  disk is unreadable by this Computer", where Initialize is the mistake and the initialising
+  fails. XP's Stop error now has a sequel: a little while after the machine comes back, it asks
+  whether Microsoft may hear about it.
+
+  *The Iomega Zip.* On a Windows theme, a Zip drive appears among the desktop icons. Open it —
+  or wait — and the drive starts clicking: the click of death, synthesised like the hard disk,
+  a run-out and a knock every half second. Windows reports the only thing it knows ("D:\ is not
+  accessible", or on XP "The disk in drive D is not formatted"), Retry makes it click again, and
+  when it is over the drive is gone. The icon is RetroMac's own and is never written into the
+  theme's desktop layout: dragging it, removing it, and its coming and going leave every other
+  icon exactly where it was.
+
+  *The machine not coming back.* After "Restart", sometimes the boot fails first: "Non-System
+  disk or disk error", "NTLDR is missing", "BOOTMGR is missing", "S.M.A.R.T. Status BAD", the
+  full-screen ScanDisk that Windows 9x ran after every unclean shutdown (with the bar that stalls
+  somewhere in the middle), CHKDSK with its ten seconds to skip, the Sad Mac, the blinking
+  question-mark folder, the prohibitory sign. Any key moves the boot along; so does waiting. A
+  switch turns them off.
+
+  *Moments.* Not a crash: the beach ball, the wristwatch, the hourglass, Windows 7's busy ring,
+  CGA snow, the palette going for a beat, the picture losing sync and rolling before it locks
+  with a click, the monitor's relay switching modes. A few seconds, no build-up, no error, and
+  they pass. On their own clock — about three times as often as the failures at the same
+  setting, with no daily limit — and their own switch.
+
+  Every scene is in the settings list with its own Show button and its own toggle. Text screens
+  gained a blinking cursor, progress bars and countdowns; dialogs gained a clock and a button
+  that goes on to the next stage instead of closing. The watchdog now sizes itself to the scene
+  it is watching rather than to a flat minute, so the countdown can run its course. Program and
+  file names on the new screens are RetroMac's own where they can be, so nobody learns anything
+  false about their machine.
+
+  Two fixes on the way: an interrupted Explorer restart now brings the desktop icons back, and
+  the liveness check no longer ends an Explorer restart after two seconds for having no window —
+  it has no window on purpose.
+
 - **Live Wallpaper can now cover the whole desktop, not just the picture.** A new switch under
   Settings > Desktop runs the selected shader over the desktop picture, RetroMac's own desktop
   icons, the retro dock and an open start menu in ONE pass, so the scanlines run through all of

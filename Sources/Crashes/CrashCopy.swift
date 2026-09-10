@@ -384,7 +384,7 @@ enum CrashCopy {
                         lines: ["The application \u{201C}\(app)\u{201D} has unexpectedly quit,",
                                 "because an error of type \(pick(types, using: &rng)) occurred."],
                         buttons: ["OK"],
-                        showsBomb: false,
+                        icon: .caution,
                         idCode: nil,
                         restartButton: nil)
     }
@@ -460,5 +460,398 @@ enum CrashCopy {
         [.blank,
          .text("Beginning dump of physical memory"),
          .counter(prefix: "Dumping physical memory to disk: ")]
+    }
+
+    // MARK: - More of Windows XP
+
+    /// The user-mode access violation, as the NT family reported it: two addresses and the
+    /// verb in quotation marks, which is the detail everybody remembers.
+    static func xpMemoryCouldNotBeRead(style: ErrorDialog.Style, using rng: inout CrashRNG) -> ErrorDialog {
+        let apps = ["RETROMAC.EXE", "RETROMAC.EXE", "iexplore.exe", "explorer.exe",
+                    "wmplayer.exe", "OUTLOOK.EXE", "svchost.exe"]
+        let app = pick(apps, using: &rng)
+        // ntdll and user32 addresses of the period; the referenced memory is nearly always
+        // the null page, because that is what a bad pointer usually is.
+        let instruction = pick(["0x7c9\(hex(5, using: &rng))", "0x0040\(hex(4, using: &rng))",
+                                "0x77d\(hex(5, using: &rng))"], using: &rng)
+        let memory = pick(["0x00000000", "0x00000000", "0x00000000", "0x0000000c",
+                           "0x\(hex(8, using: &rng))"], using: &rng)
+        let verb = pick(["read", "read", "read", "written"], using: &rng)
+        return ErrorDialog(
+            title: "\(app) - Application Error",
+            body: ["The instruction at \"\(instruction)\" referenced memory at \"\(memory)\". The",
+                   "memory could not be \"\(verb)\".",
+                   "",
+                   "Click on OK to terminate the program",
+                   "Click on CANCEL to debug the program"],
+            buttons: ["OK", "Cancel"],
+            restartButton: nil,
+            style: style,
+            icon: .errorXP,
+            escalatesToBlueScreen: true)
+    }
+
+    /// The dialog of the summer of 2003: the RPC service had died, and Windows XP gave you sixty
+    /// seconds to save your work before it restarted itself. There was no button. People
+    /// learned to type `shutdown -a` in those sixty seconds, which is why the word is in the
+    /// text and not in the code.
+    static func xpSystemShutdown(using rng: inout CrashRNG) -> ErrorDialog {
+        let seconds = pick([59, 44, 29], using: &rng)
+        var dialog = ErrorDialog(
+            title: "System Shutdown",
+            body: ["This system is shutting down. Please save all",
+                   "work in progress and log off. Any unsaved",
+                   "changes will be lost. This shutdown was",
+                   "initiated by NT AUTHORITY\\SYSTEM",
+                   "",
+                   "Time before shutdown :  \(ErrorDialog.countdownToken)",
+                   "",
+                   "Message",
+                   "Windows must now restart because the",
+                   "Remote Procedure Call (RPC) service",
+                   "terminated unexpectedly"],
+            buttons: [],
+            restartButton: nil,
+            style: .winXP,
+            icon: .errorXP)
+        dialog.countdownSeconds = seconds
+        return dialog
+    }
+
+    /// What XP said after it came back from a Stop error. Same dialog as the application error,
+    /// different news.
+    static func xpRecoveredFromSeriousError() -> ErrorDialog {
+        ErrorDialog(
+            title: "Microsoft Windows",
+            body: ["The system has recovered from a serious error.",
+                   "",
+                   "A log of this error has been created.",
+                   "",
+                   "Please tell Microsoft about this problem.",
+                   "We have created an error report that you can send to help us improve",
+                   "Microsoft Windows. We will treat this report as confidential and anonymous."],
+            buttons: ["Send Error Report", "Don't Send"],
+            restartButton: nil,
+            style: .winXP,
+            icon: .warning)
+    }
+
+    /// Dr. Watson, the debugger that shipped with NT and wrote a log nobody read.
+    static func drWatson(using rng: inout CrashRNG) -> ErrorDialog {
+        let apps = ["RETROMAC.EXE", "RETROMAC.EXE", "iexplore.exe", "winword.exe",
+                    "explorer.exe", "msimn.exe"]
+        let exceptions = [("access violation", "0xc0000005"), ("access violation", "0xc0000005"),
+                          ("access violation", "0xc0000005"), ("stack overflow", "0xc00000fd"),
+                          ("illegal instruction", "0xc000001d")]
+        let ex = pick(exceptions, using: &rng)
+        return ErrorDialog(
+            title: "Dr. Watson for Windows",
+            body: ["An application error has occurred",
+                   "and an application error log is being generated.",
+                   "",
+                   "\(pick(apps, using: &rng))",
+                   "",
+                   "Exception: \(ex.0) (\(ex.1)), Address: 0x77f5\(hex(4, using: &rng))"],
+            buttons: ["OK"],
+            restartButton: nil,
+            style: .winXP,
+            icon: .errorXP)
+    }
+
+    /// The copy error that meant a scratched CD: the cyclic redundancy check had failed. XP
+    /// said so in one line; Windows 7 wrapped it in a dialog with three choices.
+    static func cdromCRC(style: ErrorDialog.Style, using rng: inout CrashRNG) -> ErrorDialog {
+        let files = ["RETROMAC.EXE", "RETROMAC.EXE", "SETUP.EXE", "DATA1.CAB",
+                     "VTS_01_1.VOB", "Holiday 2003.avi", "AUTORUN.INF"]
+        let file = pick(files, using: &rng)
+        if style == .win7 {
+            return ErrorDialog(
+                title: "Interrupted Action",
+                body: ["An unexpected error is keeping you from copying the file. If you",
+                       "continue to receive this error, you can use the error code to search",
+                       "for help with this problem.",
+                       "",
+                       "Error 0x80070017: Data error (cyclic redundancy check).",
+                       "",
+                       "    \(file)"],
+                buttons: ["Try Again", "Skip", "Cancel"],
+                restartButton: nil,
+                style: .win7,
+                icon: .errorXP)
+        }
+        return ErrorDialog(
+            title: "Error Copying File or Folder",
+            body: ["Cannot copy \(file): Data error (cyclic redundancy check)."],
+            buttons: ["OK"],
+            restartButton: nil,
+            style: .winXP,
+            icon: .errorXP)
+    }
+
+    // MARK: - More of Windows 9x
+
+    /// The orange screen at the end of a shutdown, in the words 9x used. The real one was a
+    /// 320x400 bitmap; a text mode is the honest stand-in.
+    static func win9xSafeToTurnOff() -> TextScreen {
+        TextScreen(grid: .vga80x25, topRow: 12, leftColumn: 0, lines: [
+            .centred("It's now safe to turn off your computer."),
+        ], palette: .orange9x)
+    }
+
+    /// The floppy that was not there. 9x asked from a small dialog, with the two buttons DOS
+    /// had reduced to.
+    static func win9xDriveNotReady(using rng: inout CrashRNG) -> ErrorDialog {
+        let drive = pick(["A:\\", "A:\\", "A:\\", "D:\\"], using: &rng)
+        var dialog = ErrorDialog(
+            title: "Error",
+            body: ["\(drive) is not accessible.",
+                   "",
+                   "The device is not ready."],
+            buttons: ["Retry", "Cancel"],
+            restartButton: nil,
+            style: .win9x,
+            icon: .error9x)
+        dialog.nextButton = "Retry"
+        return dialog
+    }
+
+    /// The same, after the last retry: only Cancel is left to press.
+    static func win9xDriveNotReadyFinal(_ first: ErrorDialog) -> ErrorDialog {
+        ErrorDialog(title: first.title, body: first.body, buttons: ["Retry", "Cancel"],
+                    restartButton: nil, style: .win9x, icon: .error9x)
+    }
+
+    /// The Zip drive in Windows 9x. The cartridge was in, the drive was clicking, and Explorer
+    /// reported the only thing it knew: the device was not ready.
+    static func win9xZipNotReady() -> ErrorDialog {
+        var dialog = ErrorDialog(
+            title: "Error",
+            body: ["D:\\ is not accessible.",
+                   "",
+                   "The device is not ready."],
+            buttons: ["Retry", "Cancel"],
+            restartButton: nil,
+            style: .win9x,
+            icon: .error9x)
+        dialog.nextButton = "Retry"
+        return dialog
+    }
+
+    /// The Zip drive in Windows XP: the cartridge the drive had just destroyed looked, to
+    /// Windows, like a blank one.
+    static func xpDiskNotFormatted() -> ErrorDialog {
+        var dialog = ErrorDialog(
+            title: "Iomega Zip 100 (D:)",
+            body: ["The disk in drive D is not formatted.",
+                   "",
+                   "Do you want to format it now?"],
+            buttons: ["Yes", "No"],
+            restartButton: nil,
+            style: .winXP,
+            icon: .warning)
+        dialog.nextButton = "Yes"
+        return dialog
+    }
+
+    static func xpFormatFailed() -> ErrorDialog {
+        ErrorDialog(
+            title: "Formatting Iomega Zip 100 (D:)",
+            body: ["Windows was unable to complete the format."],
+            buttons: ["OK"],
+            restartButton: nil,
+            style: .winXP,
+            icon: .errorXP)
+    }
+
+    // MARK: - More of the Macintosh
+
+    /// The alert for a disk the Mac could not read, with the two answers it offered: give it
+    /// back, or wipe it.
+    static func macDiskUnreadable(style: MacAlert.Style) -> MacAlert {
+        var alert = MacAlert(style: style,
+                             title: nil,
+                             lines: ["This disk is unreadable by this Computer.",
+                                     "Do you want to initialize the disk?"],
+                             buttons: ["Eject", "Initialize"],
+                             icon: .disk,
+                             idCode: nil,
+                             restartButton: nil)
+        alert.nextButton = "Initialize"
+        return alert
+    }
+
+    static func macInitializing(style: MacAlert.Style) -> MacAlert {
+        MacAlert(style: style, title: nil,
+                 lines: ["Initializing disk\u{2026}"],
+                 buttons: [], icon: .disk, idCode: nil, restartButton: nil)
+    }
+
+    static func macInitializationFailed(style: MacAlert.Style) -> MacAlert {
+        MacAlert(style: style, title: nil,
+                 lines: ["Initialization failed!"],
+                 buttons: ["OK"], icon: .caution, idCode: nil, restartButton: nil)
+    }
+
+    // MARK: - The machine not coming back
+
+    /// The PC before any operating system: light grey on black, top left, no cursor to speak
+    /// of except the one waiting for a key.
+    static func bootText(_ lines: [String], prompt: Bool = true) -> TextScreen {
+        var screenLines = lines.map { ScreenLine.text($0) }
+        if prompt { screenLines.append(.prompt("")) }
+        return TextScreen(grid: .vga80x25, topRow: 0, leftColumn: 0, lines: screenLines, palette: .dos)
+    }
+
+    static func bootNonSystemDisk() -> TextScreen {
+        bootText(["Non-System disk or disk error", "Replace and strike any key when ready"])
+    }
+
+    static func bootNTLDRMissing() -> TextScreen {
+        bootText(["NTLDR is missing", "Press any key to restart"])
+    }
+
+    static func bootBOOTMGRMissing() -> TextScreen {
+        bootText(["BOOTMGR is missing", "Press Ctrl+Alt+Del to restart"], prompt: false)
+    }
+
+    static func bootInvalidSystemDisk() -> TextScreen {
+        bootText(["Invalid system disk", "Replace the disk, and then press any key"])
+    }
+
+    /// The POST screen with the one line that made people back up: SMART had given up on the
+    /// drive. The drive is ours, and says so.
+    static func bootSmartBad(using rng: inout CrashRNG) -> TextScreen {
+        let sizes = ["8.4GB", "6.4GB", "20.4GB", "40.0GB"]
+        let size = pick(sizes, using: &rng)
+        let mem = pick(["65536K", "131072K", "262144K"], using: &rng)
+        return TextScreen(grid: .vga80x25, topRow: 0, leftColumn: 0, lines: [
+            .text("Award Modular BIOS v4.51PG, An Energy Star Ally"),
+            .text("Copyright (C) 1984-98, Award Software, Inc."),
+            .blank,
+            .text("Main Processor : PENTIUM II MMX"),
+            .text("Memory Test : \(mem) OK"),
+            .blank,
+            .text("Award Plug and Play BIOS Extension v1.0A"),
+            .text("Copyright (C) 1998, Award Software, Inc."),
+            .blank,
+            .text("Detecting HDD Primary Master   ... RETROMAC \(size)"),
+            .text("Detecting HDD Primary Slave    ... None"),
+            .text("Detecting HDD Secondary Master ... CD-ROM"),
+            .text("Detecting HDD Secondary Slave  ... None"),
+            .blank,
+            .text("Primary Master Hard Disk: S.M.A.R.T. Status BAD, Backup and Replace"),
+            .blank,
+            .text("Press F1 to Resume"),
+            .prompt(""),
+        ], palette: .dos)
+    }
+
+    /// ScanDisk after an unclean shutdown: the full-screen check Windows 9x ran before it would
+    /// start, in a window drawn out of box characters. Two screens: the check, and the result.
+    static func bootScanDisk(using rng: inout CrashRNG) -> (checking: TextScreen, done: TextScreen) {
+        let inner = 68
+        let top    = "\u{2554}" + String(repeating: "\u{2550}", count: inner) + "\u{2557}"
+        let bottom = "\u{255A}" + String(repeating: "\u{2550}", count: inner) + "\u{255D}"
+        func boxed(_ s: String) -> ScreenLine {
+            let padded = " " + s + String(repeating: " ", count: max(0, inner - s.count - 1))
+            return .text("\u{2551}" + padded + "\u{2551}")
+        }
+        func boxedCentred(_ s: String) -> ScreenLine {
+            let left = (inner - s.count) / 2
+            let padded = String(repeating: " ", count: left) + s
+                + String(repeating: " ", count: max(0, inner - left - s.count))
+            return .text("\u{2551}" + padded + "\u{2551}")
+        }
+        let stall = CounterStall(at: Int.random(in: 37...88, using: &rng),
+                                 seconds: Double.random(in: 2...4, using: &rng))
+        let head: [ScreenLine] = [
+            .text(top),
+            boxedCentred("Microsoft ScanDisk"),
+            boxed(""),
+            boxed("Because Windows was not properly shut down, one or more of your"),
+            boxed("disk drives may have errors on it."),
+            boxed(""),
+            boxed("To avoid seeing this message again, always shut down your computer"),
+            boxed("by selecting Shut Down from the Start menu."),
+            boxed(""),
+        ]
+        // Sized for the two-digit count it shows nearly all the time; the box edge steps out
+        // one cell at 100, for the frame it is there.
+        let percentSuffix = "% complete" + String(repeating: " ", count: inner - 15) + "\u{2551}"
+        let checking = TextScreen(grid: .vga80x25, topRow: 3, leftColumn: 5, lines: head + [
+            boxed("ScanDisk is now checking the following areas of drive C:"),
+            boxed(""),
+            boxed("  Media descriptor"),
+            boxed("  File allocation tables"),
+            boxed("  Directory structure"),
+            boxed("  File system"),
+            boxed("  Surface scan"),
+            boxed(""),
+            .progressBar(prefix: "\u{2551} ", width: inner - 2, suffix: " \u{2551}"),
+            .percent(prefix: "\u{2551}   ", suffix: percentSuffix),
+            .text(bottom),
+        ], palette: .scandisk, counterStall: stall)
+        let done = TextScreen(grid: .vga80x25, topRow: 3, leftColumn: 5, lines: head + [
+            boxed("ScanDisk did not find any errors on this drive."),
+            boxed(""),
+            boxed(""),
+            boxed(""),
+            boxed(""),
+            boxed(""),
+            boxed(""),
+            boxed(""),
+            boxedCentred("Windows will now start."),
+            boxed(""),
+            .text(bottom),
+        ], palette: .scandisk)
+        return (checking, done)
+    }
+
+    /// CHKDSK at boot, the NT family's version of the same ritual: a countdown to skip it, and
+    /// three stages that reported in percent.
+    static func bootChkdsk(palette: ScreenPalette) -> (prompt: TextScreen, stages: [TextScreen], done: TextScreen) {
+        let head: [ScreenLine] = [
+            .text("Checking file system on C:"),
+            .text("The type of the file system is NTFS."),
+            .text("The volume is dirty."),
+            .blank,
+            .text("One of your disks needs to be checked for consistency. You"),
+            .text("may cancel the disk check, but it is strongly recommended"),
+            .text("that you continue."),
+        ]
+        let prompt = TextScreen(grid: .vga80x30, topRow: 1, leftColumn: 0, lines: head + [
+            .countdown(prefix: "To skip disk checking, press any key within ", seconds: 10, suffix: " second(s)."),
+        ], palette: palette)
+        let names = ["verifying files", "verifying indexes", "verifying security descriptors"]
+        var stages: [TextScreen] = []
+        var sofar: [ScreenLine] = head + [.text("Windows will now check the disk."), .blank]
+        for (i, name) in names.enumerated() {
+            let line = ScreenLine.percent(prefix: "CHKDSK is \(name) (stage \(i + 1) of 3)... ",
+                                          suffix: " percent complete.")
+            stages.append(TextScreen(grid: .vga80x30, topRow: 1, leftColumn: 0,
+                                     lines: sofar + [line], palette: palette))
+            sofar.append(.text("CHKDSK is \(name) (stage \(i + 1) of 3)... 100 percent complete."))
+        }
+        let done = TextScreen(grid: .vga80x30, topRow: 1, leftColumn: 0, lines: sofar + [
+            .text("Windows has checked the file system and found no problems."),
+            .blank,
+            .text("  20972857 KB total disk space."),
+            .text("  14203112 KB in 61829 files."),
+            .text("     19540 KB in 4406 indexes."),
+            .text("         0 KB in bad sectors."),
+            .text("    163377 KB in use by the system."),
+            .text("   6586828 KB available on disk."),
+            .blank,
+            .text("Windows has finished checking your disk."),
+            .text("Please wait while your computer restarts."),
+        ], palette: palette)
+        return (prompt, stages, done)
+    }
+
+    /// The Sad Mac's codes: the first word says what failed, the second where. These are the
+    /// ones people photographed.
+    static func sadMacCodes(using rng: inout CrashRNG) -> String {
+        pick(["0000000F 0000000A", "0000000F 00000001", "00000003 0000FFFF",
+              "0000000E 00000001", "0000000F 00000003"], using: &rng)
     }
 }

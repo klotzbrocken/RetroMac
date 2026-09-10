@@ -13,6 +13,11 @@ import AVFoundation
 ///  - the click of death: the same burst, louder and slower, repeating, because the head has hit
 ///    the stop and the drive is recalibrating and failing and trying again.
 ///
+/// The Zip drive's click of death is the same idea with the spindle left out and the rhythm of
+/// its own actuator: a short whirr as the heads run out, and a hard knock as they hit the stop,
+/// every half second or so, for as long as the cartridge stays in. The floppy is the same knock
+/// with a quicker, lighter stepper behind it.
+///
 /// Nothing here plays unless the user asked for a crash, and it is one short buffer, so there is
 /// no audio session to manage and nothing to leave running.
 final class CrashSound {
@@ -27,11 +32,38 @@ final class CrashSound {
     /// Play the drive struggling for `seconds`. Safe to call twice; the second call replaces the
     /// first.
     func playDriveFailure(seconds: TimeInterval) {
+        play(Self.driveFailureWAV(seconds: seconds), volume: 0.45)
+    }
+
+    /// The Zip drive: heads hunting, hitting the stop, trying again.
+    func playZipClick(seconds: TimeInterval) {
+        play(Self.zipClickWAV(seconds: seconds), volume: 0.5)
+    }
+
+    /// A floppy drive looking for a track that is not there.
+    func playFloppySeek(seconds: TimeInterval) {
+        play(Self.floppySeekWAV(seconds: seconds), volume: 0.4)
+    }
+
+    /// One knock: the picture locking back into place, the relay in a monitor switching modes.
+    func playClick() {
+        play(Self.clickWAV(), volume: 0.35)
+    }
+
+    /// The sound a stage asked for.
+    func play(_ which: StageSound, seconds: TimeInterval) {
+        switch which {
+        case .driveFailure: playDriveFailure(seconds: seconds)
+        case .zipClick:     playZipClick(seconds: seconds)
+        case .floppySeek:   playFloppySeek(seconds: seconds)
+        }
+    }
+
+    private func play(_ data: Data?, volume: Float) {
         stop()
-        guard isEnabled else { return }
-        guard let data = Self.driveFailureWAV(seconds: seconds) else { return }
+        guard isEnabled, let data else { return }
         let s = NSSound(data: data)
-        s?.volume = 0.45
+        s?.volume = volume
         sound = s
         s?.play()
     }
@@ -52,7 +84,6 @@ final class CrashSound {
         var samples = [Float](repeating: 0, count: n)
 
         var rng = SystemRandomNumberGenerator()
-        var noiseState: Float = 0
 
         // 1. Spindle. Starts at rest, sweeps up over the first second and a half, then holds with
         //    a slow wobble — a platter is never perfectly balanced.
@@ -82,27 +113,135 @@ final class CrashSound {
                                           : Double.random(in: 0.25...0.5, using: &rng)))
             t += gap
         }
-
         for (start, strength) in clickTimes {
-            let from = Int(start * sampleRate)
-            let length = Int(0.018 * sampleRate)
-            guard from + length < n else { continue }
-            for k in 0..<length {
-                let env = exp(-Double(k) / (Double(length) * 0.22))
-                // One-pole low-pass on white noise: a mechanical knock, not a hiss.
-                let white = Float.random(in: -1...1, using: &rng)
-                noiseState += (white - noiseState) * 0.35
-                samples[from + k] += Float(env * strength * 0.5) * noiseState
-            }
+            knock(&samples, at: start, strength: strength, length: 0.018, rng: &rng)
         }
 
-        // 3. Fade the last 120 ms so the buffer does not end on a click of its own.
-        let fade = Int(0.12 * sampleRate)
+        fadeOut(&samples, seconds: 0.12)
+        return wav(samples)
+    }
+
+    /// The Zip drive. No spindle: what you heard was the actuator, a short run-out and a knock,
+    /// again and again, about twice a second, sometimes twice in a row.
+    static func zipClickWAV(seconds: TimeInterval) -> Data? {
+        let n = Int(seconds * sampleRate)
+        guard n > 0 else { return nil }
+        var samples = [Float](repeating: 0, count: n)
+        var rng = SystemRandomNumberGenerator()
+
+        var t = 0.15
+        var cycle = 0
+        while t < seconds {
+            // The whirr: a quarter second of the actuator motor, rising slightly as it speeds up.
+            let run = Double.random(in: 0.15...0.25, using: &rng)
+            whirr(&samples, from: t, length: run, hz: 62, rise: 1.25, strength: 0.22, rng: &rng)
+            // The knock: the heads hitting the stop. Harder and lower than a hard disk's.
+            knock(&samples, at: t + run, strength: 1.0, length: 0.026, rng: &rng)
+            thud(&samples, at: t + run, hz: 190, length: 0.045, strength: 0.55)
+            cycle += 1
+            // Every third to fifth cycle the heads bounce: a second, softer knock right after.
+            if cycle % Int.random(in: 3...5, using: &rng) == 0 {
+                knock(&samples, at: t + run + 0.07, strength: 0.6, length: 0.018, rng: &rng)
+                thud(&samples, at: t + run + 0.07, hz: 220, length: 0.03, strength: 0.3)
+            }
+            t += run + Double.random(in: 0.35...0.75, using: &rng)
+        }
+
+        fadeOut(&samples, seconds: 0.08)
+        return wav(samples)
+    }
+
+    /// The floppy drive: a quick stepper buzz, a light knock at the end of travel, three or four
+    /// times while DOS decides the disk is not there.
+    static func floppySeekWAV(seconds: TimeInterval) -> Data? {
+        let n = Int(seconds * sampleRate)
+        guard n > 0 else { return nil }
+        var samples = [Float](repeating: 0, count: n)
+        var rng = SystemRandomNumberGenerator()
+
+        var t = 0.1
+        while t < seconds {
+            let run = Double.random(in: 0.28...0.45, using: &rng)
+            whirr(&samples, from: t, length: run, hz: 140, rise: 1.0, strength: 0.16, rng: &rng)
+            knock(&samples, at: t + run, strength: 0.45, length: 0.012, rng: &rng)
+            t += run + Double.random(in: 0.25...0.5, using: &rng)
+        }
+
+        fadeOut(&samples, seconds: 0.08)
+        return wav(samples)
+    }
+
+    /// One short mechanical knock, on its own.
+    static func clickWAV() -> Data? {
+        let n = Int(0.12 * sampleRate)
+        var samples = [Float](repeating: 0, count: n)
+        var rng = SystemRandomNumberGenerator()
+        knock(&samples, at: 0.005, strength: 0.9, length: 0.016, rng: &rng)
+        thud(&samples, at: 0.005, hz: 240, length: 0.03, strength: 0.35)
+        fadeOut(&samples, seconds: 0.03)
+        return wav(samples)
+    }
+
+    // MARK: - Ingredients
+
+    /// One-pole low-passed white noise under a sharp envelope: a mechanical knock, not a hiss.
+    private static func knock(_ samples: inout [Float], at start: Double, strength: Double,
+                              length seconds: Double, rng: inout SystemRandomNumberGenerator) {
+        let from = Int(start * sampleRate)
+        let length = Int(seconds * sampleRate)
+        guard from >= 0, from + length < samples.count else { return }
+        var noiseState: Float = 0
+        for k in 0..<length {
+            let env = exp(-Double(k) / (Double(length) * 0.22))
+            let white = Float.random(in: -1...1, using: &rng)
+            noiseState += (white - noiseState) * 0.35
+            samples[from + k] += Float(env * strength * 0.5) * noiseState
+        }
+    }
+
+    /// The body of a knock: a low sine that dies fast. What makes a Zip drive's stop sound like
+    /// a piece of metal rather than a tap on a desk.
+    private static func thud(_ samples: inout [Float], at start: Double, hz: Double,
+                             length seconds: Double, strength: Double) {
+        let from = Int(start * sampleRate)
+        let length = Int(seconds * sampleRate)
+        guard from >= 0, from + length < samples.count else { return }
+        for k in 0..<length {
+            let t = Double(k) / sampleRate
+            let env = exp(-Double(k) / (Double(length) * 0.3))
+            samples[from + k] += Float(sin(2 * .pi * hz * t) * env * strength)
+        }
+    }
+
+    /// A small motor running: a buzz with a little noise on it, rising by `rise` over its run.
+    private static func whirr(_ samples: inout [Float], from start: Double, length seconds: Double,
+                              hz: Double, rise: Double, strength: Double,
+                              rng: inout SystemRandomNumberGenerator) {
+        let from = Int(start * sampleRate)
+        let length = Int(seconds * sampleRate)
+        guard from >= 0, from + length < samples.count else { return }
+        var phase = 0.0
+        var noiseState: Float = 0
+        for k in 0..<length {
+            let p = Double(k) / Double(length)
+            let f = hz * (1 + (rise - 1) * p)
+            phase += 2 * .pi * f / sampleRate
+            // Attack and release so the motor does not start and stop with a click of its own.
+            let env = min(1, Double(k) / (0.02 * sampleRate)) * min(1, Double(length - k) / (0.03 * sampleRate))
+            let white = Float.random(in: -1...1, using: &rng)
+            noiseState += (white - noiseState) * 0.12
+            let buzz = sin(phase) * 0.6 + sin(phase * 2) * 0.25 + sin(phase * 3) * 0.1
+            samples[from + k] += Float((buzz + Double(noiseState) * 0.5) * env * strength)
+        }
+    }
+
+    /// Fade the tail so the buffer does not end on a click of its own.
+    private static func fadeOut(_ samples: inout [Float], seconds: Double) {
+        let n = samples.count
+        let fade = Int(seconds * sampleRate)
         for k in 0..<min(fade, n) {
             samples[n - 1 - k] *= Float(k) / Float(fade)
         }
-
-        return wav(samples)
     }
 
     /// Minimal 16-bit PCM WAV container.

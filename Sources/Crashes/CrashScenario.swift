@@ -30,6 +30,37 @@ enum ScreenLine: Equatable {
     case inverted(String)
     /// A counter line that fills in while the stage runs: "Dumping physical memory to disk: 42".
     case counter(prefix: String)
+    /// Text followed by the block cursor of a machine waiting for a key. The block blinks.
+    case prompt(String)
+    /// A bar of `width` cells that fills with the counter, the way ScanDisk's did, between two
+    /// fixed pieces of text (the edges of its box).
+    case progressBar(prefix: String, width: Int, suffix: String)
+    /// "37% complete": the counter between two fixed pieces of text.
+    case percent(prefix: String, suffix: String)
+    /// A number that runs DOWN from `seconds` to zero across the stage: the CHKDSK skip prompt.
+    case countdown(prefix: String, seconds: Int, suffix: String)
+
+    /// Whether the line changes while the stage runs.
+    var isAnimated: Bool {
+        switch self {
+        case .counter, .progressBar, .percent, .countdown: return true
+        case .blank, .text, .centred, .inverted, .prompt: return false
+        }
+    }
+
+    /// The characters this line occupies from the left margin, for the fit-the-grid test. The
+    /// animated ones are measured at their widest.
+    var width: Int {
+        switch self {
+        case .blank: return 0
+        case .text(let s), .centred(let s), .inverted(let s): return s.count
+        case .prompt(let s): return s.count + 1
+        case .counter(let prefix): return prefix.count + 3
+        case .progressBar(let prefix, let width, let suffix): return prefix.count + width + suffix.count
+        case .percent(let prefix, let suffix): return prefix.count + 3 + suffix.count
+        case .countdown(let prefix, let seconds, let suffix): return prefix.count + String(seconds).count + suffix.count
+        }
+    }
 }
 
 /// Which typeface a text screen is set in. The IBM PC ones are a character ROM; Mac OS X's
@@ -44,6 +75,19 @@ enum ScreenPalette: Equatable {
     case nt
     /// The Mac OS X panic console: white on black.
     case console
+    /// The PC before any operating system: light grey on black. The BIOS, DOS, a missing NTLDR.
+    case dos
+    /// "It's now safe to turn off your computer", in the orange Windows 9x chose for it.
+    case orange9x
+    /// ScanDisk's full-screen window: light grey on blue, with white for what mattered.
+    case scandisk
+}
+
+/// A pause in the counter — ScanDisk sitting at 43% for a while, which is where the tension was.
+struct CounterStall: Equatable {
+    /// The counter value to stop at.
+    let at: Int
+    let seconds: TimeInterval
 }
 
 struct TextScreen: Equatable {
@@ -55,6 +99,12 @@ struct TextScreen: Equatable {
     let lines: [ScreenLine]
     var font: ScreenFont = .vga
     var palette: ScreenPalette = .win9x
+    var counterStall: CounterStall? = nil
+
+    /// Whether anything on it moves while the stage holds.
+    var isAnimated: Bool { lines.contains { $0.isAnimated } }
+    /// Whether it carries a blinking cursor.
+    var blinks: Bool { lines.contains { if case .prompt = $0 { return true }; return false } }
 }
 
 /// The Macintosh system-error alert: a bomb, a sentence, and a button that never helped.
@@ -65,18 +115,26 @@ struct MacAlert: Equatable {
         /// Mac OS 9: Platinum grey with a bevel.
         case platinum
     }
+    /// What sits in the alert's gutter. The bomb for a system error, the caution triangle for
+    /// "the application unexpectedly quit" — the machine was fine, one program was not, and the
+    /// alert said so with a milder icon rather than with none. The floppy for a disk the Mac
+    /// could not read. Leaving the gutter empty looked like the artwork had failed to load,
+    /// because the layout reserves it either way.
+    enum Icon: Equatable { case bomb, caution, disk }
+
     let style: Style
     let title: String?
     let lines: [String]
     let buttons: [String]
-    /// A bomb for a system error, the caution triangle for "the application unexpectedly quit":
-    /// the machine was fine, one program was not, and the alert said so with a milder icon
-    /// rather than with none. Leaving it out looked like the artwork had failed to load, because
-    /// the layout reserves the gutter either way.
-    var showsBomb: Bool = true
+    var icon: Icon = .bomb
     /// "ID = 03" in the corner, the number nobody could look up.
     let idCode: String?
     let restartButton: String?
+    /// The button that moves to the next stage instead of closing: "Initialize" on the disk
+    /// alert, which led to the initialising, which led to the failure.
+    var nextButton: String? = nil
+
+    var showsBomb: Bool { icon == .bomb }
 }
 
 /// The grey curtain: "You need to restart your computer", in four languages, over whatever was
@@ -107,6 +165,9 @@ struct ErrorDialog: Equatable {
     /// other dialogs put them in a row along the bottom.
     enum ButtonLayout: Equatable { case bottomRight, rightColumn }
 
+    /// The token in a body line that the renderer replaces with the running countdown.
+    static let countdownToken = "{countdown}"
+
     let title: String
     let body: [String]
     let buttons: [String]
@@ -124,6 +185,12 @@ struct ErrorDialog: Equatable {
     /// Closing this dialog sometimes takes the whole machine with it. A program that had just
     /// performed an illegal operation frequently did.
     var escalatesToBlueScreen: Bool = false
+    /// A clock in the body that counts down from here, once a second, where the body says
+    /// `{countdown}`. The stage's hold is what ends it.
+    var countdownSeconds: Int? = nil
+    /// The button that moves to the next stage instead of closing: "Retry" on a drive that is
+    /// not ready, which tried again and failed again.
+    var nextButton: String? = nil
 
     static func == (a: ErrorDialog, b: ErrorDialog) -> Bool {
         a.title == b.title && a.body == b.body && a.buttons == b.buttons
@@ -131,7 +198,47 @@ struct ErrorDialog: Equatable {
             && a.buttonLayout == b.buttonLayout && a.details == b.details && a.report == b.report
             && a.statusBar?.0 == b.statusBar?.0 && a.statusBar?.1 == b.statusBar?.1
             && a.escalatesToBlueScreen == b.escalatesToBlueScreen
+            && a.countdownSeconds == b.countdownSeconds && a.nextButton == b.nextButton
     }
+}
+
+/// The pictures a Mac showed when it could not start. None of them is text.
+enum BootGlyph: Equatable {
+    /// The Sad Mac: the one-bit face and two groups of hex under it, on black.
+    case sadMac(codes: String)
+    /// The folder with a question mark that blinked while the Mac looked for a system.
+    case questionFolder
+    /// The circle with a bar through it: a system the machine would not boot.
+    case prohibitory
+}
+
+/// A mild moment: the machine not answering for a few seconds, the picture wrong for a beat.
+/// No error follows; it simply passes.
+enum Moment: Equatable {
+    /// The spinning beach ball of Mac OS X.
+    case beachball
+    /// The wristwatch cursor of the classic Mac OS.
+    case watchCursor
+    /// The Windows hourglass.
+    case hourglass
+    /// The blue ring that replaced it in Vista and 7.
+    case busyRing
+    /// CGA snow: short bursts of bright blocks where the video memory was read mid-write.
+    case snowBurst
+    /// The palette pulled apart for a moment and put back.
+    case paletteCorruption
+    /// The picture loses horizontal sync, rolls, and locks again.
+    case hsyncRoll
+}
+
+/// A sound the director starts when a stage begins.
+enum StageSound: Equatable {
+    /// The dying hard disk from the build-up.
+    case driveFailure
+    /// The Zip drive's click of death.
+    case zipClick
+    /// A floppy drive hunting for a track that is not there.
+    case floppySeek
 }
 
 enum CrashSurface: Equatable {
@@ -145,6 +252,12 @@ enum CrashSurface: Equatable {
     case shellRestart
     /// Black, for the beat between "Restart" and the boot screen.
     case black
+    /// The frozen desktop with nothing on it: the beat between "Retry" and the next failure.
+    case still
+    /// A Mac that will not start, as a picture rather than a screen of text.
+    case bootGlyph(BootGlyph)
+    /// A few seconds of something being wrong, and then nothing.
+    case moment(Moment)
 }
 
 /// What the user may do to get out of a stage, and what that does.
@@ -166,19 +279,26 @@ struct CrashRecovery: OptionSet {
 
 struct CrashStage: Equatable {
     let surface: CrashSurface
-    /// Seconds to hold before moving to the next stage. Ignored when `recovery` is non-empty:
-    /// then the stage waits for the user.
+    /// Seconds to hold before moving to the next stage. With a non-empty `recovery` the stage
+    /// ends on whichever comes first: the key, or the clock — a boot failure that waits for
+    /// "any key" cannot wait forever, because the boot has to finish. Zero means the stage waits
+    /// for the user alone.
     let hold: TimeInterval
     let recovery: CrashRecovery
+    /// Started when the stage begins, stopped when it ends.
+    var sound: StageSound? = nil
 
-    init(_ surface: CrashSurface, hold: TimeInterval = 0, recovery: CrashRecovery = .none) {
+    init(_ surface: CrashSurface, hold: TimeInterval = 0, recovery: CrashRecovery = .none,
+         sound: StageSound? = nil) {
         self.surface = surface
         self.hold = hold
         self.recovery = recovery
+        self.sound = sound
     }
 
     static func == (a: CrashStage, b: CrashStage) -> Bool {
         a.surface == b.surface && a.hold == b.hold && a.recovery.rawValue == b.recovery.rawValue
+            && a.sound == b.sound
     }
 }
 
@@ -188,6 +308,33 @@ struct CrashStage: Equatable {
 enum CrashKind: Equatable { case fullScreen, window, shell }
 
 struct CrashScenario: Identifiable, Equatable {
+    /// What kind of thing a scenario is, which decides when it can appear.
+    enum Category: Equatable {
+        /// A failure: picked by the scheduler, preceded by the freeze and the build-up.
+        case failure
+        /// Shown once, a little while after a failure that restarted the machine. Never picked
+        /// on its own.
+        case aftermath
+        /// Shown during the simulated restart, before the boot screen. Never picked on its own.
+        case bootFailure
+        /// A mild moment: no build-up, no error, over in seconds. Picked on its own clock.
+        case moment
+    }
+
+    /// A scene that follows this one after the machine has come back.
+    struct Aftermath: Equatable {
+        let id: String
+        let delay: ClosedRange<TimeInterval>
+    }
+
+    /// What has to happen on the real desktop before the freeze. The only thing in the catalogue
+    /// that touches a live RetroMac window, and only ever RetroMac's own.
+    enum Prelude: Equatable {
+        /// A removable drive appears among the desktop icons. Opening it — or waiting — starts
+        /// the failure.
+        case desktopDrive(name: String, icon: String, timeout: ClosedRange<TimeInterval>)
+    }
+
     let id: String
     /// Shown in the settings list and the Party-mode picker.
     let title: String
@@ -197,6 +344,11 @@ struct CrashScenario: Identifiable, Equatable {
     /// How long the desktop sits there looking frozen before the failure appears.
     let freezeHold: TimeInterval
     let stages: [CrashStage]
+    var category: Category = .failure
+    var aftermath: Aftermath? = nil
+    /// When the stages run out by themselves, restart the machine instead of returning.
+    var endsWithRestart: Bool = false
+    var prelude: Prelude? = nil
 
     /// What this looks like from across the room.
     var kind: CrashKind {
@@ -206,6 +358,9 @@ struct CrashScenario: Identifiable, Equatable {
         default:                 return .fullScreen
         }
     }
+
+    /// Every second the stages could take on their own, for the watchdog.
+    var totalHold: TimeInterval { stages.reduce(0) { $0 + $1.hold } }
 
     static func == (a: CrashScenario, b: CrashScenario) -> Bool { a.id == b.id }
 }

@@ -15,6 +15,12 @@ final class DesktopIconsController {
     private var screenObserver: Any?
     private var trashPollTimer: Timer?
     private var custom = DesktopStore.ThemeCustom()
+    /// Icons that are on the desktop for now and never written anywhere: the Zip drive a
+    /// simulated crash puts there and takes away again. Not part of the layout hash, so
+    /// their coming and going cannot reset anybody's arrangement.
+    private var transient: [DockThemeConfig.DesktopIconEntry] = []
+    /// Asked before an icon is opened. Return true to have taken the double-click.
+    var onOpen: ((DockThemeConfig.DesktopIconEntry) -> Bool)?
     /// Storage key for everything this controller persists per theme (desktop layout via
     /// `DesktopStore`, wallpaper overrides). This is the theme's stable id, not its display name,
     /// so renaming a theme keeps its desktop arrangement — see `DockThemeConfig.settingsKey`.
@@ -67,6 +73,16 @@ final class DesktopIconsController {
     var captureWindowID: CGWindowID? {
         guard let window, window.isVisible else { return nil }
         return CGWindowID(window.windowNumber)
+    }
+
+    /// Put `icons` on the desktop until further notice, or take them away with an empty list.
+    /// A no-op when nothing changes, so the teardown after every crash does not rebuild the
+    /// desktop for nothing.
+    func setTransientIcons(_ icons: [DockThemeConfig.DesktopIconEntry]) {
+        let names = icons.map(\.name)
+        guard names != transient.map(\.name) else { return }
+        transient = icons
+        if isVisible || !icons.isEmpty { update() }
     }
 
     func update() {
@@ -184,7 +200,10 @@ final class DesktopIconsController {
             custom.layoutHash = layoutHash
             DesktopStore.save(custom, theme: themeName)
         }
-        let effective = entries.filter { !custom.removed.contains($0.name) } + custom.added.filter { !custom.removed.contains($0.name) }
+        let effective = entries.filter { !custom.removed.contains($0.name) }
+            + custom.added.filter { !custom.removed.contains($0.name) }
+            + transient
+        let transientNames = Set(transient.map(\.name))
 
         // Where an icon with no grid position goes. `index` was the old answer, and it put the
         // sixteenth icon on row sixteen — below the bottom of any screen. Added shortcuts now
@@ -215,6 +234,7 @@ final class DesktopIconsController {
 
             let view = DesktopIconView(entry: entry, image: iconImage, fullImage: fullImage,
                                        iconSize: iSize, isPixelated: isPixelated)
+            view.isTransient = transientNames.contains(entry.name)
             view.target = self
             view.action = #selector(iconDoubleClicked(_:))
             view.onMoved = { [weak self] v in self?.iconMoved(v) }
@@ -304,6 +324,14 @@ final class DesktopIconsController {
     // MARK: - Icon Loading
 
     private func loadIconImage(for entry: DockThemeConfig.DesktopIconEntry, theme: ThemeBundle?, size: CGFloat) -> NSImage {
+        // The Zip drive of a simulated crash: RetroMac's own artwork, not the theme's, because
+        // it belongs to no theme in particular and `iconResource` is confined to the theme's
+        // own icons directory.
+        if entry.type == "zipdrive",
+           let url = Bundle.main.resourceURL?.appendingPathComponent("Crashes/zipdrive.png"),
+           let img = NSImage(contentsOf: url) {
+            return img
+        }
         // sheep.exe: prefer the ORIGINAL eSheep icon (fetched at runtime like the sprite —
         // never bundled); the theme's own sheep.png is the offline fallback.
         if entry.type == "sheep", let img = NSImage(contentsOf: DesktopPetController.sheepIconCacheURL) {
@@ -375,6 +403,7 @@ final class DesktopIconsController {
     // MARK: - Actions
 
     @objc private func iconDoubleClicked(_ sender: DesktopIconView) {
+        if onOpen?(sender.entry) == true { return }
         DesktopLauncher.launch(sender.entry)
     }
 
@@ -383,6 +412,8 @@ final class DesktopIconsController {
     private func persist() { DesktopStore.save(custom, theme: themeName) }
 
     private func iconMoved(_ v: DesktopIconView) {
+        // A transient icon can be dragged, but where it went is not worth remembering.
+        guard !v.isTransient else { return }
         custom.positions[v.entry.name] = [v.frame.minX, v.frame.minY]
         persist()
     }
@@ -399,7 +430,7 @@ final class DesktopIconsController {
             ? visibleFrame.minX + marginX - screenFrame.origin.x
             : visibleFrame.maxX - marginX - cw - screenFrame.origin.x   // x of column 0
         let baseY = visibleFrame.maxY - marginY - ch - screenFrame.origin.y   // y of row 0
-        for v in iconViews {
+        for v in iconViews where !v.isTransient {
             let dx = iconsFromLeft ? (v.frame.minX - baseX) : (baseX - v.frame.minX)
             let col = max(0, (dx / cw).rounded())
             let row = max(0, ((baseY - v.frame.minY) / ch).rounded())
@@ -456,11 +487,18 @@ final class DesktopIconsController {
         panel.allowedContentTypes = [.png, .jpeg, .tiff, .icns, .image]
         panel.message = "Choose an icon image"
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard !v.isTransient else { return }
         custom.iconOverrides[v.entry.name] = url.path
         persist(); update()
     }
     @objc private func menuRemove(_ sender: NSMenuItem) {
         guard let v = sender.representedObject as? DesktopIconView else { return }
+        if v.isTransient {
+            // Removing the Zip drive is ejecting it: it goes, and nothing is written down.
+            transient.removeAll { $0.name == v.entry.name }
+            update()
+            return
+        }
         custom.added.removeAll { $0.name == v.entry.name }
         custom.removed.append(v.entry.name)
         custom.positions[v.entry.name] = nil

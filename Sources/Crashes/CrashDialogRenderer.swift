@@ -37,6 +37,18 @@ enum CrashDialogRenderer {
         return image
     }
 
+    /// The same dialog with other words in it. `body` is a `let`, and it is the only field the
+    /// clock has to change.
+    private static func withBody(_ d: ErrorDialog, _ body: [String]) -> ErrorDialog {
+        var out = ErrorDialog(title: d.title, body: body, buttons: d.buttons, restartButton: d.restartButton,
+                              style: d.style, icon: d.icon, buttonLayout: d.buttonLayout,
+                              details: d.details, report: d.report, statusBar: d.statusBar,
+                              escalatesToBlueScreen: d.escalatesToBlueScreen)
+        out.countdownSeconds = d.countdownSeconds
+        out.nextButton = d.nextButton
+        return out
+    }
+
     // MARK: - Windows 9x
 
     /// The invalid-page-fault dialog. Real ones were small: a caption bar, three or four lines of
@@ -44,7 +56,17 @@ enum CrashDialogRenderer {
     /// "Details >>" revealed, which is the only thing that button ever did.
     /// Routes to the era that owns this dialog. One entry point so the director never has to
     /// know which paint job a scenario asked for.
-    static func dialog(_ dialog: ErrorDialog, expanded: Bool, scale: CGFloat) -> Rendered {
+    static func dialog(_ dialog: ErrorDialog, expanded: Bool, scale: CGFloat,
+                       countdown: Int? = nil) -> Rendered {
+        // The clock is put into the words before any painter sees them, so every painter gets
+        // it for free and none of them has to know there is a clock.
+        var dialog = dialog
+        if let countdown, dialog.body.contains(where: { $0.contains(ErrorDialog.countdownToken) }) {
+            let clock = String(format: "%02d:%02d:%02d", countdown / 3600, (countdown / 60) % 60, countdown % 60)
+            dialog = withBody(dialog, dialog.body.map {
+                $0.replacingOccurrences(of: ErrorDialog.countdownToken, with: clock)
+            })
+        }
         // Content decides before style does. A dialog with a sunken report well, a status strip
         // or a column of buttons needs the painter that can draw those — the Luna one cannot,
         // and routing an antivirus notification to it silently dropped its entire contents.
@@ -434,6 +456,54 @@ enum CrashDialogRenderer {
         NSRect(x: rect.midX - barW / 2, y: rect.minY + h * 0.19, width: barW, height: barW).fill()
     }
 
+    /// The floppy disk of the "This disk is unreadable" alert, one bit deep like the original.
+    static func drawFloppy(in rect: NSRect, isSix: Bool) {
+        let rows: [String] = [
+            "################################",
+            "#..............................#",
+            "#..######################......#",
+            "#..#....................#......#",
+            "#..#....................#......#",
+            "#..#....................#......#",
+            "#..#....................#......#",
+            "#..#....................#......#",
+            "#..######################......#",
+            "#..............................#",
+            "#..............................#",
+            "#..............................#",
+            "#..............................#",
+            "#..............................#",
+            "#..............................#",
+            "#..............................#",
+            "#..............................#",
+            "#..............................#",
+            "#..............................#",
+            "#.....####################.....#",
+            "#.....#..................#.....#",
+            "#.....#..................#.....#",
+            "#.....#..######..........#.....#",
+            "#.....#..#....#..........#.....#",
+            "#.....#..#....#..........#.....#",
+            "#.....#..#....#..........#.....#",
+            "#.....#..#....#..........#.....#",
+            "#.....#..######..........#.....#",
+            "#.....#..................#.....#",
+            "#.....#..................#.....#",
+            "#.....####################.....#",
+            "################################",
+        ]
+        let unit = rect.width / 32
+        (isSix ? NSColor.white : ClassicMacChrome.face).setFill()
+        rect.fill()
+        NSColor.black.setFill()
+        for (y, row) in rows.enumerated() {
+            for (x, ch) in row.enumerated() where ch == "#" {
+                NSRect(x: rect.minX + CGFloat(x) * unit, y: rect.maxY - CGFloat(y + 1) * unit,
+                       width: unit, height: unit).fill()
+            }
+        }
+    }
+
     /// The bomb alert, drawn at display resolution for the same reason as above.
     static func macAlert(_ alert: MacAlert, scale: CGFloat) -> Rendered {
         let isSix = alert.style == .system6
@@ -477,10 +547,10 @@ enum CrashDialogRenderer {
 
             let iconRect = NSRect(x: pad, y: bounds.maxY - pad - bombSide,
                                   width: bombSide, height: bombSide)
-            if alert.showsBomb {
-                CrashRenderer.bomb?.draw(in: iconRect)
-            } else {
-                drawCaution(in: iconRect, isSix: isSix)
+            switch alert.icon {
+            case .bomb:    CrashRenderer.bomb?.draw(in: iconRect)
+            case .caution: drawCaution(in: iconRect, isSix: isSix)
+            case .disk:    drawFloppy(in: iconRect, isSix: isSix)
             }
 
             var y = bounds.maxY - pad - 13

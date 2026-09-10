@@ -43,6 +43,43 @@ enum CrashGlitch {
         return colourBreakdown(torn, era: era, severity: severity)
     }
 
+    /// CGA snow: bright blocks the size of a character cell, scattered where the video memory
+    /// was read while something wrote to it. A burst, not a state — the caller shows it for a
+    /// few hundred milliseconds and puts the clean picture back.
+    static func snow(_ image: CGImage, seed: UInt64) -> CGImage? {
+        var rng = CrashRNG(seed: seed)
+        let w = image.width, h = image.height
+        guard w > 0, h > 0,
+              let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+        ctx.interpolationQuality = .none
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        // About one cell in a hundred, on a coarse grid, in the few colours CGA had.
+        let cell = max(4, w / 160)
+        let count = (w / cell) * (h / (cell * 2)) / 100
+        let colours: [CGColor] = [
+            CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1),
+            CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1),
+            CGColor(srgbRed: 0.33, green: 1, blue: 1, alpha: 1),
+            CGColor(srgbRed: 1, green: 0.33, blue: 1, alpha: 1),
+            CGColor(srgbRed: 0.67, green: 0.67, blue: 0.67, alpha: 1),
+        ]
+        for _ in 0..<count {
+            let x = Int.random(in: 0..<max(1, w / cell), using: &rng) * cell
+            let y = Int.random(in: 0..<max(1, h / (cell * 2)), using: &rng) * cell * 2
+            let wide = Int.random(in: 1...2, using: &rng)
+            ctx.setFillColor(colours[Int.random(in: 0..<colours.count, using: &rng)])
+            ctx.fill(CGRect(x: x, y: y, width: cell * wide, height: cell * 2))
+        }
+        return ctx.makeImage()
+    }
+
+    /// The colour failure on its own, for a moment that is nothing else.
+    static func paletteOnly(_ image: CGImage, era: CrashEra, severity: Severity) -> CGImage? {
+        colourBreakdown(image, era: era, severity: max(0.36, severity))
+    }
+
     // MARK: - Effects
 
     /// A window dragged across a hung desktop, repeated because nothing repainted behind it.
@@ -157,6 +194,26 @@ extension CrashEra {
         switch self {
         case .win95, .win98, .winMe, .macos6, .macos9: return true
         case .winXP, .win7, .macosxAqua, .macosxModern: return false
+        }
+    }
+
+    /// Machines that were plugged into a tube. A picture can only lose sync where there is a
+    /// beam to lose it; by Windows 7 and Snow Leopard the monitor on the desk was flat.
+    var hasCRT: Bool {
+        switch self {
+        case .win95, .win98, .winMe, .winXP, .macos6, .macos9, .macosxAqua: return true
+        case .win7, .macosxModern: return false
+        }
+    }
+
+    /// How often the machine fails to come straight back after a restart. Windows 9x ran
+    /// ScanDisk after every unclean shutdown, so it is the era where the boot failing is the
+    /// rule rather than the exception.
+    var bootFailureChance: Double {
+        switch self {
+        case .win95, .win98, .winMe: return 0.4
+        case .winXP, .win7, .macos6, .macos9: return 0.3
+        case .macosxAqua, .macosxModern: return 0.2
         }
     }
 }

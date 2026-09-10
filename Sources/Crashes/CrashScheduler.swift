@@ -74,6 +74,14 @@ final class CrashScheduler {
             case .chaotic:  return .max
             }
         }
+
+        /// The mild moments come round about three times as often as the failures: a beach
+        /// ball was an everyday sight, a kernel panic was not. No daily budget — nothing to
+        /// dismiss, nothing lost.
+        var momentMeanInterval: TimeInterval? { meanInterval.map { $0 / 3 } }
+        var momentMinimumGap: TimeInterval {
+            minimumGap == .infinity ? .infinity : max(120, minimumGap / 4)
+        }
     }
 
     /// Why nothing is happening. The Crashes tab shows this, because "it never fires" with no
@@ -140,7 +148,9 @@ final class CrashScheduler {
     ]
 
     private var timer: Timer?
+    private var pendingAftermath: Timer?
     private var rng = CrashRNG(seed: UInt64(UInt32.random(in: 0...UInt32.max)))
+    private var lastMomentID: String?
     private let launchedAt = Date()
 
     var intensity: Intensity {
@@ -160,6 +170,34 @@ final class CrashScheduler {
     func stop() {
         timer?.invalidate()
         timer = nil
+        pendingAftermath?.invalidate()
+        pendingAftermath = nil
+    }
+
+    /// A sequel, a little while after a failure that restarted the machine. Outside the budget
+    /// and the minimum gap on purpose — it is the same failure, still going — but never past
+    /// the reasons that hold even a manual crash: nobody wants the sequel in their meeting.
+    func scheduleAftermath(_ aftermath: CrashScenario.Aftermath, using rng: inout CrashRNG) {
+        guard !AppSettings.shared.crashDisabledScenarios.contains(aftermath.id),
+              let spec = CrashCatalogue.spec(id: aftermath.id), spec.category == .aftermath else { return }
+        let delay = Double.random(in: aftermath.delay, using: &rng)
+        pendingAftermath?.invalidate()
+        var tries = 0
+        let t = Timer(timeInterval: delay, repeats: true) { [weak self] timer in
+            guard let self else { timer.invalidate(); return }
+            tries += 1
+            if self.hold(ignoringSchedule: true) == .ready {
+                timer.invalidate()
+                self.pendingAftermath = nil
+                self.fire(scenarioID: aftermath.id, source: .aftermath)
+            } else if tries >= 2 {
+                // Twice is enough. A sequel that arrives ten minutes later is not a sequel.
+                timer.invalidate()
+                self.pendingAftermath = nil
+            }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        pendingAftermath = t
     }
 
     // MARK: - The decision
@@ -172,10 +210,33 @@ final class CrashScheduler {
         // One Bernoulli trial a minute rather than a countdown: a crash you cannot predict is
         // the only kind worth simulating.
         let p = 60.0 / mean
-        guard Double.random(in: 0..<1, using: &rng) < p else { return note("armed, dice said no") }
+        if Double.random(in: 0..<1, using: &rng) < p {
+            guard plausibleMoment(intensity) else { return note("armed, but not a plausible moment") }
+            note("firing")
+            fire(source: .random)
+            return
+        }
+        tickMoment(intensity)
+    }
+
+    /// The second draw of the minute: not a failure, a moment. Its own gap and its own last
+    /// stamp, so a beach ball does not push the next blue screen back by ninety minutes.
+    private func tickMoment(_ intensity: Intensity) {
+        guard AppSettings.shared.crashMoments, let mean = intensity.momentMeanInterval else {
+            return note("armed, dice said no")
+        }
+        guard case .ready = hold(forMoment: true) else { return note("armed, dice said no") }
+        guard Double.random(in: 0..<1, using: &rng) < 60.0 / mean else { return note("armed, dice said no") }
         guard plausibleMoment(intensity) else { return note("armed, but not a plausible moment") }
-        note("firing")
-        fire(source: .random)
+        guard let era = CrashEra.current() else { return }
+        let disabled = Set(AppSettings.shared.crashDisabledScenarios)
+        guard let moment = CrashCatalogue.pickMoment(for: era, using: &rng, excluding: lastMomentID,
+                                                     isEnabled: { !disabled.contains($0) }) else { return }
+        note("firing a moment")
+        lastMomentID = moment.id
+        if CrashDirector.shared.trigger(moment, source: .random) {
+            AppSettings.shared.crashMomentLastFiredAt = Date().timeIntervalSince1970
+        }
     }
 
     /// What the last tick decided, printed only when it changes.
@@ -191,8 +252,9 @@ final class CrashScheduler {
         print("[Crash] scheduler \(what)")
     }
 
-    /// Everything that must be true before a crash may appear on its own.
-    func hold(ignoringSchedule: Bool = false) -> Hold {
+    /// Everything that must be true before a crash may appear on its own. `forMoment` swaps in
+    /// the moments' own gap and leaves the daily budget alone.
+    func hold(ignoringSchedule: Bool = false, forMoment: Bool = false) -> Hold {
         guard LicenseManager.shared.isLicensed else { return .notLicensed }
         if !ignoringSchedule {
             guard intensity != .off else { return .intensityOff }
@@ -227,10 +289,11 @@ final class CrashScheduler {
 
         if !ignoringSchedule {
             guard Date().timeIntervalSince(launchedAt) > intensity.warmUp else { return .justLaunched }
-            let last = Date(timeIntervalSince1970: AppSettings.shared.crashLastFiredAt)
-            guard AppSettings.shared.crashLastFiredAt == 0
-                    || Date().timeIntervalSince(last) > intensity.minimumGap else { return .tooSoon }
-            guard budgetLeft() > 0 else { return .budgetSpent }
+            let lastAt = forMoment ? AppSettings.shared.crashMomentLastFiredAt : AppSettings.shared.crashLastFiredAt
+            let gap = forMoment ? intensity.momentMinimumGap : intensity.minimumGap
+            let last = Date(timeIntervalSince1970: lastAt)
+            guard lastAt == 0 || Date().timeIntervalSince(last) > gap else { return .tooSoon }
+            if !forMoment { guard budgetLeft() > 0 else { return .budgetSpent } }
         }
         return .ready
     }

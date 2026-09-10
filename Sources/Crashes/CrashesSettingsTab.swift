@@ -16,6 +16,9 @@ struct CrashesTab: View {
 
     private var era: CrashEra? { CrashEra.current() }
     private var specs: [CrashCatalogue.Spec] { era.map { CrashCatalogue.specs(for: $0) } ?? [] }
+    private var bootSpecs: [CrashCatalogue.Spec] { era.map { CrashCatalogue.specs(for: $0, category: .bootFailure) } ?? [] }
+    private var momentSpecs: [CrashCatalogue.Spec] { era.map { CrashCatalogue.specs(for: $0, category: .moment) } ?? [] }
+    private var aftermathSpecs: [CrashCatalogue.Spec] { era.map { CrashCatalogue.specs(for: $0, category: .aftermath) } ?? [] }
     private var isParty: Bool { settings.crashMode == "party" }
 
     var body: some View {
@@ -102,19 +105,37 @@ struct CrashesTab: View {
                                   hint: "Each era has several failures and picks between them, so the same one does not come round twice. Windows 95, 98, Me, XP and 7, System 6, Mac OS 9, Mac OS X and Snow Leopard are covered; the other themes are still stable.",
                                   isLast: true) { EmptyView() }
                         } else {
-                            ForEach(Array(specs.enumerated()), id: \.element.id) { index, spec in
-                                RMRow(label: spec.title,
-                                      hint: nil,
-                                      isLast: index == specs.count - 1) {
-                                    HStack(spacing: 8) {
-                                        Button("Show") { fire(spec.id) }
-                                            .buttonStyle(RMGhostButtonStyle())
-                                            .disabled(!license.isLicensed)
-                                        Toggle("", isOn: enabledBinding(spec.id))
-                                            .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
-                                    }
-                                }
+                            scenarioRows(specs + aftermathSpecs)
+                        }
+                    }
+                }
+
+                if !bootSpecs.isEmpty {
+                    RMCard(title: "When it restarts",
+                           subtitle: "Sometimes the machine does not come straight back. Each of these can happen between the black screen and the boot screen.",
+                           bodyPadding: 0) {
+                        VStack(spacing: 0) {
+                            RMRow(label: "Boot failures",
+                                  hint: "Off makes every restart a clean one.") {
+                                Toggle("", isOn: $settings.crashBootFailures)
+                                    .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
                             }
+                            scenarioRows(bootSpecs)
+                        }
+                    }
+                }
+
+                if !momentSpecs.isEmpty {
+                    RMCard(title: "Moments",
+                           subtitle: "Not a crash: a few seconds of the machine not answering, or the picture going wrong, and then nothing. On their own clock, more often than the failures.",
+                           bodyPadding: 0) {
+                        VStack(spacing: 0) {
+                            RMRow(label: "Mild moments",
+                                  hint: "About three times as often as a crash at the same setting, with no daily limit.") {
+                                Toggle("", isOn: $settings.crashMoments)
+                                    .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                            }
+                            scenarioRows(momentSpecs)
                         }
                     }
                 }
@@ -128,8 +149,8 @@ struct CrashesTab: View {
                             Toggle("", isOn: $settings.crashFullSequence)
                                 .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
                         }
-                        RMRow(label: "Failing drive sound",
-                              hint: "Synthesised, not sampled: a spindle spinning up, then the head clicking and retrying.") {
+                        RMRow(label: "Drive sounds",
+                              hint: "Synthesised, not sampled: a hard disk spinning up and clicking, a floppy hunting, the Zip drive's click of death.") {
                             Toggle("", isOn: $settings.crashSoundEnabled)
                                 .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
                         }
@@ -159,6 +180,26 @@ struct CrashesTab: View {
             .padding(RMSpacing.page)
         }
         .onAppear { refresh() }
+    }
+
+    /// One row per scenario: its name, a button that shows it, and a switch that keeps it out
+    /// of the draw.
+    private func scenarioRows(_ list: [CrashCatalogue.Spec]) -> some View {
+        ForEach(Array(list.enumerated()), id: \.element.id) { index, spec in
+            RMRow(label: spec.title,
+                  hint: spec.id == "win-zip-click-of-death"
+                  ? "A Zip drive appears on the desktop first. Open it, or wait."
+                  : nil,
+                  isLast: index == list.count - 1) {
+                HStack(spacing: 8) {
+                    Button("Show") { fire(spec.id) }
+                        .buttonStyle(RMGhostButtonStyle())
+                        .disabled(!license.isLicensed)
+                    Toggle("", isOn: enabledBinding(spec.id))
+                        .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                }
+            }
+        }
     }
 
     private func enabledBinding(_ id: String) -> Binding<Bool> {

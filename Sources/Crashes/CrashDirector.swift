@@ -12,8 +12,8 @@ import AppKit
 /// changed, killing the process — Force Quit, `kill -9`, a genuine crash of our own — is itself a
 /// complete repair: the windows die with it and the desktop underneath was never altered. Every
 /// other safety net here (the idempotent teardown, the session that closes its own windows when
-/// deallocated, the sixty-second watchdog, the abort on losing focus) exists to make the normal
-/// case pleasant. This invariant is what makes the worst case survivable. Do not trade it away.
+/// deallocated, the watchdog, the abort on losing focus) exists to make the normal case pleasant.
+/// This invariant is what makes the worst case survivable. Do not trade it away.
 final class CrashDirector {
 
     static let shared = CrashDirector()
@@ -21,13 +21,16 @@ final class CrashDirector {
 
     // MARK: - State
 
-    enum Source { case random, manual, hotkey }
+    enum Source { case random, manual, hotkey, aftermath }
     enum AbortReason: String {
         case escape, lostActivation, watchdog, notKey, willSleep, screensChanged, themeStopped, appQuit, finished
     }
     private enum State: Equatable {
         case idle
         case countdown
+        /// Something has to happen on the live desktop first: the Zip drive has appeared and the
+        /// machine is waiting to be asked to read it. No overlay yet.
+        case prelude
         /// The pointer starts falling behind while the machine is still "working".
         case stuttering
         /// Nothing answers any more; the drive is hunting.
@@ -43,9 +46,16 @@ final class CrashDirector {
     private var state: State = .idle
     private var session: CrashSession?
     private var scenario: CrashScenario?
+    /// What is on screen while the machine fails to come back up. Kept apart from `scenario`
+    /// so the failure that caused the restart keeps its aftermath.
+    private var bootScenario: CrashScenario?
+    private var active: CrashScenario? { bootScenario ?? scenario }
     private var stills: [CGImage?] = []
     private var stageTimer: Timer?
     private var counterTimer: Timer?
+    private var blinkTimer: Timer?
+    private var momentTimer: Timer?
+    private var preludeTimer: Timer?
     private var watchdog: Timer?
     private var liveness: Timer?
     private var countdownTimer: Timer?
@@ -56,9 +66,15 @@ final class CrashDirector {
     private var workspaceObservers: [NSObjectProtocol] = []
     private var armedForResign = false
     private var dumpCounter = 0
+    private var blinkOn = true
+    /// The clock in a dialog that counts down, in seconds left.
+    private var dialogCountdown = 0
+    /// Where the counter is stalled, if it is: the end of the stall.
+    private var stallUntil: Date?
     /// What was shown last, so the next pick can avoid it — by name and by shape.
     private var lastScenarioID: String?
     private var lastKind: CrashKind?
+    private var lastMomentID: String?
     private var cursorTimer: Timer?
     /// Separate from `stageTimer`: the build-up runs its own clock, because the glitch pass
     /// schedules against the stage timer and would otherwise cancel the end of the stutter.
@@ -69,13 +85,22 @@ final class CrashDirector {
     private var stutterStarted = Date()
     /// Whether the 9x dialog's "Details >>" well is open.
     private var dialogExpanded = false
+    /// Whether the taskbar and the desktop icons are away for a shell restart, so teardown
+    /// knows to put them back.
+    private var shellHidden = false
+    /// Whether this run went through the simulated restart — the aftermath only follows a
+    /// machine that came back.
+    private var didRestart = false
     private var rng = CrashRNG(seed: UInt64(UInt32.random(in: 0...UInt32.max)))
 
     var isStaging: Bool { state != .idle }
 
     /// The absolute ceiling on one simulation, never reset by a stage change. A user who walks
-    /// away mid-crash comes back to their desktop, not to a blue screen.
+    /// away mid-crash comes back to their desktop, not to a blue screen. The scenario's own
+    /// holds are added on top, because a countdown that runs for a minute is a minute long.
     private static let watchdogSeconds: TimeInterval = 60
+    /// Room for a boot failure and the boot screen after the last stage.
+    private static let watchdogSlack: TimeInterval = 25
 
     // MARK: - Trigger
 
@@ -93,11 +118,22 @@ final class CrashDirector {
         }
         guard let scenario else { return false }
         self.scenario = scenario
-        lastScenarioID = scenario.id
-        lastKind = scenario.kind
+        bootScenario = nil
+        didRestart = false
+        switch scenario.category {
+        case .failure:
+            lastScenarioID = scenario.id
+            lastKind = scenario.kind
+        case .moment:
+            lastMomentID = scenario.id
+        case .aftermath, .bootFailure:
+            break
+        }
 
         print("[Crash] \(scenario.id) on \(era.displayName), source=\(source)")
-        if countdown > 0 {
+        if let prelude = scenario.prelude {
+            runPrelude(prelude)
+        } else if countdown > 0, scenario.category == .failure {
             beginCountdown(seconds: countdown)
         } else {
             begin()
@@ -125,7 +161,8 @@ final class CrashDirector {
 
     private func begin() {
         guard let scenario else { teardown(.finished); return }
-        if state != .countdown { installObservers(); armWatchdog(extra: 0) }
+        if state != .countdown { installObservers() }
+        armWatchdog(extra: scenario.totalHold + Self.watchdogSlack)
 
         // Capture first, present second: whatever is on screen must not include our own overlay.
         stills = DesktopFreeze.capture()
@@ -149,9 +186,44 @@ final class CrashDirector {
         }
         showStills()
 
-        let plan = chooseBuildUp()
+        // Only a failure gets the warning. A moment IS the warning with nothing after it, a boot
+        // failure happens on a black screen, and an aftermath arrives on a machine that has
+        // just come back and is working fine.
+        let plan = scenario.category == .failure ? chooseBuildUp() : .none
         print("[Crash] build-up: \(plan)")
         runBuildUp(plan)
+    }
+
+    // MARK: - The prelude
+
+    /// What has to happen on the live desktop before anything freezes. Nothing of ours is on
+    /// screen yet except one extra desktop icon, so no observers, no watchdog and no liveness:
+    /// the timeout is the only clock, and the user's double-click the only other way on.
+    private func runPrelude(_ prelude: CrashScenario.Prelude) {
+        state = .prelude
+        switch prelude {
+        case .desktopDrive(let name, let icon, let timeout):
+            let entry = DockThemeConfig.DesktopIconEntry(name: name, icon: "", type: icon)
+            DesktopIconsController.shared.onOpen = { [weak self] opened in
+                guard opened.name == name else { return false }
+                self?.beginFromPrelude()
+                return true
+            }
+            DesktopIconsController.shared.setTransientIcons([entry])
+            let wait = Double.random(in: timeout, using: &rng)
+            print("[Crash] prelude: \(name) on the desktop, reads itself in \(Int(wait)) s")
+            preludeTimer = schedule(after: wait) { [weak self] in self?.beginFromPrelude() }
+        }
+    }
+
+    private func beginFromPrelude() {
+        guard state == .prelude else { return }
+        print("[Crash] prelude over")
+        preludeTimer?.invalidate(); preludeTimer = nil
+        DesktopIconsController.shared.onOpen = nil
+        // The icon stays: the drive is still there while it dies. The freeze captures it, and
+        // teardown takes it away, which is the disk being ejected.
+        begin()
     }
 
     // MARK: - The build-up
@@ -226,6 +298,7 @@ final class CrashDirector {
         glitchTimer?.invalidate();  glitchTimer = nil
         stageTimer?.invalidate();   stageTimer = nil
         stutterTimer?.invalidate(); stutterTimer = nil
+        blinkTimer?.invalidate();   blinkTimer = nil
         session?.mainView?.hideFakeCursor()
         state = .frozen
         enterStage(0)
@@ -292,15 +365,22 @@ final class CrashDirector {
     private func runShellRestart(seconds: TimeInterval) {
         session?.close()
         session = nil
+        shellHidden = true
         DockController.shared.setSuspendedForCrash(true)
         DesktopIconsController.shared.hide()
 
         stageTimer = schedule(after: seconds) { [weak self] in
             guard let self else { return }
-            DockController.shared.setSuspendedForCrash(false)
-            DesktopIconsController.shared.update()
+            self.restoreShell()
             self.teardown(.finished)
         }
+    }
+
+    private func restoreShell() {
+        guard shellHidden else { return }
+        shellHidden = false
+        DockController.shared.setSuspendedForCrash(false)
+        DesktopIconsController.shared.update()
     }
 
     /// What happens when a dialog is dismissed. A program that had just performed an illegal
@@ -321,7 +401,7 @@ final class CrashDirector {
 
     private func showBadge() {
         let on = AppSettings.shared.crashShowBadge
-        for view in session?.views ?? [] { view.showBadge(on, name: scenario?.title) }
+        for view in session?.views ?? [] { view.showBadge(on, name: active?.title) }
     }
 
     // MARK: - Stages
@@ -330,29 +410,62 @@ final class CrashDirector {
         // Nothing from the warning may still be drawing once a failure is up.
         cursorTimer?.invalidate(); cursorTimer = nil
         glitchTimer?.invalidate(); glitchTimer = nil
+        blinkTimer?.invalidate(); blinkTimer = nil
+        momentTimer?.invalidate(); momentTimer = nil
+        counterTimer?.invalidate(); counterTimer = nil
+        stageTimer?.invalidate(); stageTimer = nil
 
-        guard let scenario, index < scenario.stages.count else { teardown(.finished); return }
+        guard let scenario = active else { teardown(.finished); return }
+        guard index < scenario.stages.count else { endOfStages(scenario); return }
         state = .failure(index)
         let stage = scenario.stages[index]
+        print("[Crash] stage \(index + 1)/\(scenario.stages.count) of \(scenario.id): \(Self.describe(stage))")
         dumpCounter = 0
-        counterTimer?.invalidate(); counterTimer = nil
+        blinkOn = true
+        stallUntil = nil
 
         switch stage.surface {
         case .textScreen(let screen):
             render(screen)
-            if screen.lines.contains(where: { if case .counter = $0 { return true }; return false }),
-               stage.hold > 0 {
-                // The dump counter walks 0…100 across the stage's own length.
+            if screen.isAnimated, stage.hold > 0 {
+                // The counter walks 0…100 across the stage's own length — pausing where the
+                // screen says to, which is where ScanDisk's tension was.
                 let step = max(0.03, stage.hold / 100)
                 counterTimer = schedule(every: step) { [weak self] in
                     guard let self, self.dumpCounter < 100 else { return }
+                    if let until = self.stallUntil {
+                        if Date() < until { return }
+                        self.stallUntil = nil
+                    } else if let stall = screen.counterStall, self.dumpCounter == stall.at {
+                        self.stallUntil = Date().addingTimeInterval(stall.seconds)
+                        return
+                    }
                     self.dumpCounter += 1
+                    self.render(screen)
+                }
+            }
+            if screen.blinks {
+                blinkTimer = schedule(every: 0.5) { [weak self] in
+                    guard let self else { return }
+                    self.blinkOn.toggle()
                     self.render(screen)
                 }
             }
         case .dialog(let dialog):
             dialogExpanded = false
-            showWindowedError(CrashDialogRenderer.dialog(dialog, expanded: false, scale: backingScale))
+            dialogCountdown = dialog.countdownSeconds ?? 0
+            showWindowedError(CrashDialogRenderer.dialog(dialog, expanded: false, scale: backingScale,
+                                                         countdown: dialog.countdownSeconds))
+            if dialog.countdownSeconds != nil {
+                counterTimer = schedule(every: 1.0) { [weak self] in
+                    guard let self, self.dialogCountdown > 0 else { return }
+                    self.dialogCountdown -= 1
+                    self.showWindowedError(CrashDialogRenderer.dialog(
+                        dialog, expanded: self.dialogExpanded, scale: self.backingScale,
+                        countdown: self.dialogCountdown))
+                    self.wireInput(for: stage, index: index)
+                }
+            }
         case .shellRestart:
             runShellRestart(seconds: stage.hold)
         case .macAlert(let alert):
@@ -367,14 +480,60 @@ final class CrashDirector {
             }
         case .black:
             for view in session?.views ?? [] { view.show(fullBleed: nil) }
+        case .still:
+            showStills()
+        case .bootGlyph(let glyph):
+            renderGlyph(glyph)
+            if glyph == .questionFolder {
+                blinkTimer = schedule(every: 0.5) { [weak self] in
+                    guard let self else { return }
+                    self.blinkOn.toggle()
+                    self.renderGlyph(glyph)
+                }
+            }
+        case .moment(let moment):
+            runMoment(moment, hold: stage.hold)
+        }
+
+        if let sound = stage.sound {
+            CrashSound.shared.play(sound, seconds: max(1, stage.hold))
         }
 
         applyCursorPolicy(for: stage)
-        wireInput(for: stage)
+        wireInput(for: stage, index: index)
 
-        if stage.recovery.isEmpty && stage.hold > 0 {
+        // The clock runs whether or not a key could also end the stage: a boot failure waits
+        // for "any key", and when nobody presses one the machine tries again on its own.
+        if stage.hold > 0 {
             stageTimer = schedule(after: stage.hold) { [weak self] in self?.enterStage(index + 1) }
         }
+    }
+
+    /// The stages have run out by themselves. What that means depends on what they were.
+    private func endOfStages(_ scenario: CrashScenario) {
+        if scenario.category == .bootFailure {
+            playBootSplash()
+        } else if scenario.endsWithRestart {
+            restart()
+        } else {
+            teardown(.finished)
+        }
+    }
+
+    private static func describe(_ stage: CrashStage) -> String {
+        let what: String
+        switch stage.surface {
+        case .textScreen(let t): what = "text(\(t.palette))"
+        case .dialog(let d): what = "dialog(\(d.title))"
+        case .macAlert(let a): what = "alert(\(a.lines.first ?? ""))"
+        case .kernelPanic: what = "panic"
+        case .shellRestart: what = "shellRestart"
+        case .black: what = "black"
+        case .still: what = "still"
+        case .bootGlyph(let g): what = "glyph(\(g))"
+        case .moment(let m): what = "moment(\(m))"
+        }
+        return "\(what) hold=\(stage.hold) recovery=\(stage.recovery.rawValue)\(stage.sound.map { " sound=\($0)" } ?? "")"
     }
 
     private var backingScale: CGFloat {
@@ -392,9 +551,17 @@ final class CrashDirector {
     }
 
     private func render(_ screen: TextScreen) {
-        guard let image = CrashRenderer.image(for: screen, counter: dumpCounter) else { return }
+        guard let image = CrashRenderer.image(for: screen, counter: dumpCounter, blinkOn: blinkOn) else { return }
         let stretch = AppSettings.shared.crashStretchToFill
         for view in session?.views ?? [] { view.show(pixelImage: image, stretchToFill: stretch) }
+    }
+
+    private func renderGlyph(_ glyph: BootGlyph) {
+        for view in session?.views ?? [] {
+            let image = CrashRenderer.bootGlyphImage(glyph, blinkOn: blinkOn, size: view.bounds.size)
+            var rect = NSRect(origin: .zero, size: image.size)
+            view.show(fullBleed: image.cgImage(forProposedRect: &rect, context: nil, hints: nil))
+        }
     }
 
     private func showStills() {
@@ -403,13 +570,88 @@ final class CrashDirector {
         }
     }
 
+    // MARK: - Moments
+
+    /// A few seconds of something being wrong. The still stays up throughout; only the pointer
+    /// or the picture changes, and then the stage's own clock ends it.
+    private func runMoment(_ moment: Moment, hold: TimeInterval) {
+        guard let era = CrashEra.current() else { return }
+        let started = Date()
+        switch moment {
+        case .beachball, .watchCursor, .hourglass, .busyRing:
+            let frames: [CrashRenderer.CursorFrame]
+            switch moment {
+            case .beachball:   frames = CrashRenderer.beachballFrames(scale: backingScale)
+            case .watchCursor: frames = CrashRenderer.watchCursorFrames(scale: backingScale)
+            case .busyRing:    frames = CrashRenderer.busyRingFrames(scale: backingScale)
+            default:           frames = CrashRenderer.hourglassFrames(scale: backingScale)
+            }
+            guard !frames.isEmpty else { return }
+            if !cursorHidden { NSCursor.hide(); cursorHidden = true }
+            let rate: Double = [.beachball, .busyRing].contains(moment) ? 12.0 : 2.0
+            cursorTimer = schedule(every: 1.0 / 30.0) { [weak self] in
+                guard let self, let view = self.session?.mainView else { return }
+                // The pointer is busy, not lagging: it goes exactly where the hand goes.
+                let index = Int(Date().timeIntervalSince(started) * rate) % frames.count
+                let frame = frames[index]
+                view.showFakeCursor(at: self.mouseInMainView(), image: frame.image, hotSpot: frame.hotSpot)
+            }
+
+        case .snowBurst:
+            // Bursts of a few hundred milliseconds with the picture clean in between: the video
+            // memory being read while something wrote to it, not a permanent fault.
+            scheduleSnowBurst(era: era, until: started.addingTimeInterval(hold - 0.2))
+
+        case .paletteCorruption:
+            let steps: [(TimeInterval, Double)] = [(0, 0.6), (hold * 0.4, 1.0), (hold * 0.75, 0)]
+            for (at, severity) in steps {
+                let t = schedule(after: max(0.01, at)) { [weak self] in
+                    guard let self else { return }
+                    for (i, view) in (self.session?.views ?? []).enumerated() {
+                        guard i < self.stills.count, let still = self.stills[i] else { continue }
+                        view.show(fullBleed: severity == 0 ? still
+                                  : CrashGlitch.paletteOnly(still, era: era, severity: severity) ?? still)
+                    }
+                }
+                if at == 0 { momentTimer = t }
+            }
+
+        case .hsyncRoll:
+            for view in session?.views ?? [] { view.roll(seconds: max(0.5, hold - 0.4)) }
+            momentTimer = schedule(after: max(0.5, hold - 0.4)) {
+                CrashSound.shared.playClick()
+            }
+        }
+    }
+
+    private func scheduleSnowBurst(era: CrashEra, until end: Date) {
+        let gap = Double.random(in: 0.12...0.45, using: &rng)
+        momentTimer = schedule(after: gap) { [weak self] in
+            guard let self, Date() < end else { return }
+            let seed = UInt64(Date().timeIntervalSince1970 * 1000) & 0xFFFF
+            for (i, view) in (self.session?.views ?? []).enumerated() {
+                guard i < self.stills.count, let still = self.stills[i] else { continue }
+                view.show(fullBleed: CrashGlitch.snow(still, seed: seed &+ UInt64(i)) ?? still)
+            }
+            let burst = Double.random(in: 0.10...0.40, using: &self.rng)
+            self.momentTimer = self.schedule(after: burst) { [weak self] in
+                guard let self else { return }
+                self.showStills()
+                self.scheduleSnowBurst(era: era, until: end)
+            }
+        }
+    }
+
     /// Whether this surface needs a pointer. A blue screen never had one — the machine was not
     /// answering — but a dialog with buttons is useless without one, and hiding it there was a
     /// straightforward mistake: you cannot aim at a button you cannot see.
     private func surfaceNeedsPointer(_ surface: CrashSurface) -> Bool {
         switch surface {
-        case .dialog, .macAlert: return true
-        case .textScreen, .kernelPanic, .shellRestart, .black: return false
+        case .dialog, .macAlert, .still: return true
+        case .textScreen, .kernelPanic, .shellRestart, .black, .bootGlyph: return false
+        // The cursor moments draw their own pointer; the picture moments keep the real one,
+        // because the machine is answering, only the picture is wrong.
+        case .moment(let m): return ![.beachball, .watchCursor, .hourglass, .busyRing].contains(m)
         }
     }
 
@@ -422,8 +664,11 @@ final class CrashDirector {
         }
     }
 
-    private func wireInput(for stage: CrashStage) {
+    private func wireInput(for stage: CrashStage, index: Int) {
         let recovery = stage.recovery
+        var nextButton: String?
+        if case .dialog(let d) = stage.surface { nextButton = d.nextButton }
+        if case .macAlert(let a) = stage.surface { nextButton = a.nextButton }
         for view in session?.views ?? [] {
             view.onEscape = { [weak self] in self?.abort(.escape) }
             view.onButton = { [weak self] label in
@@ -434,13 +679,18 @@ final class CrashDirector {
                     self.dialogExpanded.toggle()
                     if case .dialog(let dialog) = stage.surface {
                         self.showWindowedError(CrashDialogRenderer.dialog(
-                            dialog, expanded: self.dialogExpanded, scale: self.backingScale))
-                        self.wireInput(for: stage)
+                            dialog, expanded: self.dialogExpanded, scale: self.backingScale,
+                            countdown: self.dialogCountdown))
+                        self.wireInput(for: stage, index: index)
                     }
                 case "Restart":
                     self.restart()
+                case nextButton:
+                    // "Retry", "Initialize": the machine tries again, and the next stage is what
+                    // trying again got you.
+                    self.enterStage(index + 1)
                 default:
-                    self.closeDialog(stage)
+                    self.dismiss(stage, index: index)
                 }
             }
             view.onKey = { [weak self] event in
@@ -456,9 +706,19 @@ final class CrashDirector {
                 if recovery.contains(.restartsOnAnyKey) { self.restart(); return }
                 // A key and a click on OK mean the same thing, so they must lead to the same
                 // place — including the roll for whether the machine survives it.
-                if recovery.contains(.enterKey), event.keyCode == 36 { self.closeDialog(stage); return }
-                if recovery.contains(.anyKey) { self.closeDialog(stage) }
+                if recovery.contains(.enterKey), event.keyCode == 36 { self.dismiss(stage, index: index); return }
+                if recovery.contains(.anyKey) { self.dismiss(stage, index: index) }
             }
+        }
+    }
+
+    /// "Any key" on a boot failure moves the boot along; on anything else it takes the failure
+    /// away.
+    private func dismiss(_ stage: CrashStage, index: Int) {
+        if active?.category == .bootFailure {
+            enterStage(index + 1)
+        } else {
+            closeDialog(stage)
         }
     }
 
@@ -467,46 +727,77 @@ final class CrashDirector {
     private func restart() {
         guard state != .blackout, state != .booting else { return }
         state = .blackout
+        didRestart = true
         stageTimer?.invalidate()
         counterTimer?.invalidate()
+        blinkTimer?.invalidate()
+        momentTimer?.invalidate()
+        CrashSound.shared.stop()
         for view in session?.views ?? [] { view.show(fullBleed: nil) }
+        if !cursorHidden { NSCursor.hide(); cursorHidden = true }
 
         stageTimer = schedule(after: 1.1) { [weak self] in
             guard let self else { return }
-            self.state = .booting
-            guard let theme = ThemeManager.shared.activeTheme else { self.teardown(.finished); return }
-            // The boot screen comes up BEFORE our windows go away, so there is never a frame in
-            // which the real desktop shows through the "reboot".
-            // Captured BEFORE the splash starts. `playForced` calls its completion
-            // SYNCHRONOUSLY when the theme has no boot screen at all — Mountain Lion is such a
-            // theme and is a crash era — and that completion presents the restored still and
-            // assigns it to `self.session`. Reading `self.session` in the block below would then
-            // close the new session instead of the blackout, and the restored beat would live
-            // two frames instead of its 0.9 s.
-            let blackout = self.session
-            SplashController.shared.playForced(for: theme) { [weak self] in
-                guard let self else { return }
-                // The desktop was never touched, so it is already back. Holding the still for a
-                // beat first is what makes the return read as a return rather than a cut — but
-                // only when there IS a still. Without one this would put a black screen between
-                // the boot logo and the desktop, which is worse than no beat at all.
-                guard self.stills.contains(where: { $0 != nil }) else {
-                    self.teardown(.finished)
-                    return
-                }
-                self.state = .restored
-                let session = CrashSession()
-                self.session = session
-                session.present()
-                self.showStills()
+            // Sometimes the machine does not come straight back. Same windows, same session:
+            // the boot failure is drawn into the blackout, and the boot screen follows it.
+            if let boot = self.pickBootFailureIfAny() {
+                print("[Crash] boot failure: \(boot.id)")
+                self.bootScenario = boot
                 self.showBadge()
-                self.stageTimer = self.schedule(after: 0.9) { [weak self] in
-                    self?.teardown(.finished)
-                }
+                self.enterStage(0)
+            } else {
+                self.playBootSplash()
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                blackout?.close()
+        }
+    }
+
+    private func pickBootFailureIfAny() -> CrashScenario? {
+        guard AppSettings.shared.crashBootFailures, let era = CrashEra.current() else { return nil }
+        guard Double.random(in: 0..<1, using: &rng) < era.bootFailureChance else { return nil }
+        let disabled = AppSettings.shared.crashDisabledScenarios
+        return CrashCatalogue.pickBootFailure(for: era, using: &rng) { !disabled.contains($0) }
+    }
+
+    /// The boot screen, then the desktop. Works from any session: the blackout after "Restart",
+    /// or the one a boot failure was previewed in.
+    private func playBootSplash() {
+        stageTimer?.invalidate(); stageTimer = nil
+        counterTimer?.invalidate(); counterTimer = nil
+        blinkTimer?.invalidate(); blinkTimer = nil
+        CrashSound.shared.stop()
+        state = .booting
+        guard let theme = ThemeManager.shared.activeTheme else { teardown(.finished); return }
+        // The boot screen comes up BEFORE our windows go away, so there is never a frame in
+        // which the real desktop shows through the "reboot".
+        // Captured BEFORE the splash starts. `playForced` calls its completion
+        // SYNCHRONOUSLY when the theme has no boot screen at all — Mountain Lion is such a
+        // theme and is a crash era — and that completion presents the restored still and
+        // assigns it to `self.session`. Reading `self.session` in the block below would then
+        // close the new session instead of the blackout, and the restored beat would live
+        // two frames instead of its 0.9 s.
+        let blackout = self.session
+        SplashController.shared.playForced(for: theme) { [weak self] in
+            guard let self else { return }
+            // The desktop was never touched, so it is already back. Holding the still for a
+            // beat first is what makes the return read as a return rather than a cut — but
+            // only when there IS a still. Without one this would put a black screen between
+            // the boot logo and the desktop, which is worse than no beat at all.
+            guard self.stills.contains(where: { $0 != nil }) else {
+                self.teardown(.finished)
+                return
             }
+            self.state = .restored
+            let session = CrashSession()
+            self.session = session
+            session.present()
+            self.showStills()
+            self.showBadge()
+            self.stageTimer = self.schedule(after: 0.9) { [weak self] in
+                self?.teardown(.finished)
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            blackout?.close()
         }
     }
 
@@ -526,6 +817,9 @@ final class CrashDirector {
         stageTimer?.invalidate();     stageTimer = nil
         counterTimer?.invalidate();   counterTimer = nil
         countdownTimer?.invalidate(); countdownTimer = nil
+        blinkTimer?.invalidate();     blinkTimer = nil
+        momentTimer?.invalidate();    momentTimer = nil
+        preludeTimer?.invalidate();   preludeTimer = nil
         watchdog?.invalidate();       watchdog = nil
         liveness?.invalidate();       liveness = nil
         cursorTimer?.invalidate();    cursorTimer = nil
@@ -535,8 +829,12 @@ final class CrashDirector {
         CrashSound.shared.stop()
         // The pointer must come back from every exit, including the ones nobody plans for.
         if cursorHidden { NSCursor.unhide(); cursorHidden = false }
-        // So must the taskbar, if a shell restart was interrupted half-way.
+        // So must the taskbar and the desktop icons, if a shell restart was interrupted half-way.
+        restoreShell()
         DockController.shared.setSuspendedForCrash(false)
+        // And the Zip drive goes away, whatever happened to it.
+        DesktopIconsController.shared.onOpen = nil
+        DesktopIconsController.shared.setTransientIcons([])
 
         for token in observers { NotificationCenter.default.removeObserver(token) }
         observers.removeAll()
@@ -546,11 +844,20 @@ final class CrashDirector {
 
         session?.close()
         session = nil
+        let finished = scenario
+        let cameBack = didRestart
         scenario = nil
+        bootScenario = nil
+        didRestart = false
         stills = []
         armedForResign = false
         state = .idle
-        if reason != .finished { print("[Crash] ended (\(reason.rawValue))") }
+        print(reason == .finished ? "[Crash] finished" : "[Crash] ended (\(reason.rawValue))")
+
+        // The machine came back and finished cleanly: some failures had a sequel.
+        if reason == .finished, cameBack, let aftermath = finished?.aftermath {
+            CrashScheduler.shared.scheduleAftermath(aftermath, using: &rng)
+        }
     }
 
     // MARK: - Safety nets
@@ -592,6 +899,8 @@ final class CrashDirector {
             // The splash owns the key window while it plays, and the restored still is a
             // half-second beat with no input of its own.
             if self.state == .booting || self.state == .restored { return }
+            // A shell restart has no window at all, on purpose: there is nothing to be key.
+            if self.shellHidden { return }
             if !NSApp.isActive || self.session?.isKey != true { self.abort(.notKey) }
         }
     }
@@ -678,35 +987,46 @@ extension CrashDirector {
                     print("[Crash] wrote \(name)")
                 }
             }
+            if let snow = CrashGlitch.snow(still, seed: 9),
+               let data = NSBitmapImageRep(cgImage: snow).representation(using: .png, properties: [:]) {
+                try? data.write(to: directory.appendingPathComponent("moment-snow.png"))
+            }
+        }
+        func write(_ image: NSImage, _ name: String) {
+            guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
+                  let data = rep.representation(using: .png, properties: [:]) else { return }
+            try? data.write(to: directory.appendingPathComponent(name))
+            print("[Crash] wrote \(name) (\(image.size.width)x\(image.size.height))")
         }
         for spec in CrashCatalogue.all {
             let scenario = spec.build(&rng)
             for (i, stage) in scenario.stages.enumerated() {
-                guard case .textScreen(let screen) = stage.surface,
-                      let image = CrashRenderer.image(for: screen, counter: 67) else { continue }
-                let rep = NSBitmapImageRep(cgImage: image)
-                guard let data = rep.representation(using: .png, properties: [:]) else { continue }
                 let name = scenario.stages.count > 1 ? "\(spec.id)-\(i).png" : "\(spec.id).png"
-                try? data.write(to: directory.appendingPathComponent(name))
-                print("[Crash] wrote \(name) \(image.width)x\(image.height)")
+                switch stage.surface {
+                case .textScreen(let screen):
+                    guard let image = CrashRenderer.image(for: screen, counter: 67) else { continue }
+                    let rep = NSBitmapImageRep(cgImage: image)
+                    guard let data = rep.representation(using: .png, properties: [:]) else { continue }
+                    try? data.write(to: directory.appendingPathComponent(name))
+                    print("[Crash] wrote \(name) \(image.width)x\(image.height)")
+                case .dialog(let dialog):
+                    write(CrashDialogRenderer.dialog(dialog, expanded: false, scale: 2,
+                                                     countdown: dialog.countdownSeconds).image, name)
+                case .macAlert(let alert):
+                    write(CrashDialogRenderer.macAlert(alert, scale: 2).image, name)
+                case .kernelPanic(let panic):
+                    write(CrashRenderer.panicImage(panic, size: NSSize(width: 1280, height: 800)), name)
+                case .bootGlyph(let glyph):
+                    write(CrashRenderer.bootGlyphImage(glyph, blinkOn: true, size: NSSize(width: 1280, height: 800)), name)
+                default:
+                    break
+                }
             }
-            // The windowed surfaces, drawn at their own size.
-            var windowed: NSImage?
-            switch scenario.stages.first?.surface {
-            case .dialog(let dialog):
-                windowed = CrashDialogRenderer.dialog(dialog, expanded: false, scale: 2).image
-            case .macAlert(let alert):
-                windowed = CrashDialogRenderer.macAlert(alert, scale: 2).image
-            case .kernelPanic(let panic):
-                windowed = CrashRenderer.panicImage(panic, size: NSSize(width: 1280, height: 800))
-            default: break
-            }
-            if let image = windowed,
-               let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
-               let data = rep.representation(using: .png, properties: [:]) {
-                try? data.write(to: directory.appendingPathComponent("\(spec.id).png"))
-                print("[Crash] wrote \(spec.id).png (\(image.size.width)x\(image.size.height))")
-            }
+        }
+        for (name, frames) in [("cursor-beachball", CrashRenderer.beachballFrames(scale: 2)),
+                               ("cursor-watch", CrashRenderer.watchCursorFrames(scale: 2)),
+                               ("cursor-hourglass", CrashRenderer.hourglassFrames(scale: 2))] {
+            if let first = frames.first { write(first.image, "\(name).png") }
         }
     }
 }

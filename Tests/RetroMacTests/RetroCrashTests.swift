@@ -25,8 +25,12 @@ final class RetroCrashTests: XCTestCase {
                 XCTAssertTrue(stage.hold > 0 || !stage.recovery.isEmpty,
                               "\(spec.id) stage \(i) has no hold and no recovery")
                 // A shell restart ends by itself: there is no screen to dismiss, the taskbar
-                // simply comes back.
-                if isLast, stage.surface != .shellRestart {
+                // simply comes back. So does a moment, a boot failure (the boot goes on), and a
+                // countdown that restarts the machine when it runs out.
+                let endsByItself = stage.surface == .shellRestart
+                    || scenario.category == .moment || scenario.category == .bootFailure
+                    || scenario.endsWithRestart
+                if isLast, !endsByItself {
                     XCTAssertFalse(stage.recovery.isEmpty,
                                    "\(spec.id) ends on a stage the user cannot dismiss")
                 }
@@ -184,7 +188,8 @@ final class RetroCrashTests: XCTestCase {
     func testTheScreensThatCouldNotReturnRestart() {
         var rng = CrashRNG(seed: 21)
         let restarts = ["nt-stop-error", "winme-protection-error", "macos6-bomb",
-                        "macos9-bomb", "macosx-panic-console", "macosx-panic-curtain"]
+                        "macos9-bomb", "macosx-panic-console", "macosx-panic-curtain",
+                        "win9x-safe-to-turn-off"]
         for id in restarts {
             let spec = CrashCatalogue.spec(id: id)
             let last = spec?.build(&rng).stages.last
@@ -276,11 +281,14 @@ final class RetroCrashTests: XCTestCase {
             for stage in spec.build(&rng).stages {
                 switch stage.surface {
                 case .dialog(let d):
-                    // Either a button or the close box: something must be clickable.
-                    XCTAssertTrue(!d.buttons.isEmpty || !d.report.isEmpty,
+                    // Either a button or the close box: something must be clickable — unless
+                    // the dialog is a clock, which ends itself.
+                    XCTAssertTrue(!d.buttons.isEmpty || !d.report.isEmpty || d.countdownSeconds != nil,
                                   "\(spec.id) shows a dialog with nothing to do")
                 case .macAlert(let a):
-                    XCTAssertFalse(a.buttons.isEmpty, "\(spec.id) shows an alert with no buttons")
+                    // "Initializing…" had no button either; it went away on its own.
+                    XCTAssertTrue(!a.buttons.isEmpty || stage.hold > 0,
+                                  "\(spec.id) shows an alert with no buttons")
                 default:
                     break
                 }
@@ -342,29 +350,28 @@ final class RetroCrashTests: XCTestCase {
 
     func testStopScreenFitsItsGrid() {
         var rng = CrashRNG(seed: 11)
-        let screen = CrashCopy.ntStopScreen(using: &rng)
-        XCTAssertEqual(screen.grid, .vga80x30)
-        // 80 columns is not a suggestion: a longer line is simply cut off by the edge of the
-        // screen, and nobody would notice in review.
-        for line in screen.lines {
-            if case .text(let s) = line {
-                XCTAssertLessThanOrEqual(s.count + screen.leftColumn, screen.grid.columns, "too wide: \(s)")
-            }
-        }
-        XCTAssertLessThanOrEqual(screen.topRow + screen.lines.count, screen.grid.rows,
-                                 "the screen is taller than the grid")
+        XCTAssertEqual(CrashCopy.ntStopScreen(using: &rng).grid, .vga80x30)
+        XCTAssertEqual(CrashCopy.win9xGeneralFault(using: &rng).grid, .vga80x25)
     }
 
-    func testNineXScreensFitTheirGrid() {
+    /// 80 columns is not a suggestion: a longer line is simply cut off by the edge of the
+    /// screen, and nobody would notice in review. Every text screen of every scenario, measured
+    /// at its widest — the animated lines at 100.
+    func testEveryTextScreenFitsItsGrid() {
         var rng = CrashRNG(seed: 13)
-        for screen in [CrashCopy.win9xGeneralFault(using: &rng),
-                       CrashCopy.win9xFatalException(using: &rng),
-                       CrashCopy.winMeProtectionError(using: &rng)] {
-            XCTAssertEqual(screen.grid, .vga80x25)
-            XCTAssertLessThanOrEqual(screen.topRow + screen.lines.count, screen.grid.rows)
-            for line in screen.lines {
-                if case .text(let s) = line {
-                    XCTAssertLessThanOrEqual(s.count + screen.leftColumn, screen.grid.columns, "too wide: \(s)")
+        for spec in CrashCatalogue.all {
+            for stage in spec.build(&rng).stages {
+                guard case .textScreen(let screen) = stage.surface else { continue }
+                XCTAssertLessThanOrEqual(screen.topRow + screen.lines.count, screen.grid.rows,
+                                         "\(spec.id) is taller than its grid")
+                for line in screen.lines {
+                    switch line {
+                    case .centred, .inverted:
+                        XCTAssertLessThanOrEqual(line.width, screen.grid.columns, "\(spec.id) too wide: \(line)")
+                    default:
+                        XCTAssertLessThanOrEqual(line.width + screen.leftColumn, screen.grid.columns,
+                                                 "\(spec.id) too wide: \(line)")
+                    }
                 }
             }
         }
@@ -481,6 +488,218 @@ final class RetroCrashTests: XCTestCase {
         XCTAssertGreaterThan(loudest, 0, "the buffer is silent")
     }
 
+    // MARK: - Categories
+
+    /// The picker reads the shape off the spec instead of building the scenario to look; the
+    /// two must not drift apart.
+    func testDeclaredKindMatchesBuiltKind() {
+        var rng = CrashRNG(seed: 31)
+        for spec in CrashCatalogue.all {
+            let built = spec.build(&rng)
+            XCTAssertEqual(built.kind, spec.kind, "\(spec.id) declares \(spec.kind), builds \(built.kind)")
+            XCTAssertEqual(built.category, spec.category, "\(spec.id) declares \(spec.category), builds \(built.category)")
+        }
+    }
+
+    /// Boot failures, aftermaths and moments have their own doors; the main draw must never
+    /// open one of them.
+    func testOnlyFailuresAreEverPickedAsFailures() {
+        var rng = CrashRNG(seed: 41)
+        for era in CrashEra.allCases {
+            for _ in 0..<200 {
+                guard let s = CrashCatalogue.pick(for: era, using: &rng) else { continue }
+                XCTAssertEqual(s.category, .failure, "\(s.id) came out of the main draw")
+            }
+            for _ in 0..<100 {
+                if let m = CrashCatalogue.pickMoment(for: era, using: &rng) {
+                    XCTAssertEqual(m.category, .moment, "\(m.id) came out of the moment draw")
+                }
+                if let b = CrashCatalogue.pickBootFailure(for: era, using: &rng) {
+                    XCTAssertEqual(b.category, .bootFailure, "\(b.id) came out of the boot draw")
+                }
+            }
+        }
+    }
+
+    func testEveryEraCanFailToBoot() {
+        for era in CrashEra.allCases {
+            XCTAssertFalse(CrashCatalogue.specs(for: era, category: .bootFailure).isEmpty,
+                           "\(era.displayName) always comes straight back")
+            XCTAssertFalse(CrashCatalogue.specs(for: era, category: .moment).isEmpty,
+                           "\(era.displayName) has no moments")
+        }
+    }
+
+    /// A boot failure sits inside the watchdog's slack, which is what makes the slack enough.
+    func testBootFailuresFitTheirCeiling() {
+        var rng = CrashRNG(seed: 51)
+        for spec in CrashCatalogue.all where spec.category == .bootFailure {
+            for _ in 0..<10 {
+                XCTAssertLessThanOrEqual(spec.build(&rng).totalHold, 25, "\(spec.id) takes too long to boot")
+            }
+        }
+    }
+
+    /// A moment asks nothing of the user: every stage holds, none waits, and it is over in
+    /// seconds.
+    func testMomentsEndByThemselves() {
+        var rng = CrashRNG(seed: 61)
+        for spec in CrashCatalogue.all where spec.category == .moment {
+            let scenario = spec.build(&rng)
+            XCTAssertNil(scenario.prelude)
+            XCTAssertLessThanOrEqual(scenario.totalHold, 10, "\(spec.id) is not a moment")
+            for stage in scenario.stages {
+                XCTAssertGreaterThan(stage.hold, 0, "\(spec.id) has a stage with no clock")
+                XCTAssertTrue(stage.recovery.isEmpty, "\(spec.id) waits for a key")
+            }
+        }
+    }
+
+    func testMomentIntervalsAreShorterThanFailures() {
+        for level in CrashScheduler.Intensity.allCases {
+            guard let mean = level.meanInterval, let momentMean = level.momentMeanInterval else { continue }
+            XCTAssertLessThan(momentMean, mean)
+            XCTAssertLessThan(level.momentMinimumGap, level.minimumGap)
+            XCTAssertLessThan(60.0 / momentMean, 0.2, "\(level.rawValue) fires moments too eagerly")
+        }
+    }
+
+    /// The picture can only lose sync where there was a beam.
+    func testOnlyCRTErasRoll() {
+        XCTAssertTrue(CrashEra.win98.hasCRT)
+        XCTAssertTrue(CrashEra.macosxAqua.hasCRT)
+        XCTAssertFalse(CrashEra.win7.hasCRT)
+        XCTAssertFalse(CrashEra.macosxModern.hasCRT)
+        let rolls = CrashCatalogue.spec(id: "moment-hsync-roll")?.eras ?? []
+        for era in CrashEra.allCases {
+            XCTAssertEqual(rolls.contains(era), era.hasCRT, "\(era.displayName) rolls: \(rolls.contains(era))")
+        }
+    }
+
+    /// Every sequel names a scene that exists, is a sequel, and belongs to the same era.
+    func testAftermathTargetsExist() {
+        var rng = CrashRNG(seed: 71)
+        var found = 0
+        for spec in CrashCatalogue.all {
+            guard let aftermath = spec.build(&rng).aftermath else { continue }
+            found += 1
+            let target = CrashCatalogue.spec(id: aftermath.id)
+            XCTAssertNotNil(target, "\(spec.id) has a sequel that does not exist")
+            XCTAssertEqual(target?.category, .aftermath)
+            XCTAssertFalse(target?.eras.isDisjoint(with: spec.eras) ?? true,
+                           "\(spec.id) has a sequel from another era")
+            XCTAssertGreaterThan(aftermath.delay.lowerBound, 0)
+        }
+        XCTAssertGreaterThan(found, 0, "no scene has a sequel")
+    }
+
+    /// The countdown dialog restarts when it runs out, and holds for exactly as long as it says.
+    func testCountdownDialogEndsInARestart() throws {
+        var rng = CrashRNG(seed: 81)
+        let scenario = try XCTUnwrap(CrashCatalogue.spec(id: "xp-rpc-countdown")?.build(&rng))
+        XCTAssertTrue(scenario.endsWithRestart)
+        let stage = try XCTUnwrap(scenario.stages.first)
+        guard case .dialog(let d) = stage.surface else { return XCTFail("not a dialog") }
+        let seconds = try XCTUnwrap(d.countdownSeconds)
+        XCTAssertEqual(stage.hold, TimeInterval(seconds + 1))
+        XCTAssertTrue(d.body.contains { $0.contains(ErrorDialog.countdownToken) })
+        // And the clock is really put into the words.
+        let rendered = CrashDialogRenderer.dialog(d, expanded: false, scale: 1, countdown: 59)
+        XCTAssertNotNil(rendered.image)
+    }
+
+    /// A "next" button must be one of the dialog's buttons, and never on the last stage — there
+    /// is nothing after the last stage to go to.
+    func testNextButtonsAreRealAndLeadSomewhere() {
+        var rng = CrashRNG(seed: 91)
+        for spec in CrashCatalogue.all {
+            let stages = spec.build(&rng).stages
+            for (i, stage) in stages.enumerated() {
+                var next: String?, buttons: [String] = []
+                if case .dialog(let d) = stage.surface { next = d.nextButton; buttons = d.buttons }
+                if case .macAlert(let a) = stage.surface { next = a.nextButton; buttons = a.buttons }
+                guard let next else { continue }
+                XCTAssertTrue(buttons.contains(next), "\(spec.id) stage \(i): \(next) is not a button")
+                XCTAssertLessThan(i, stages.count - 1, "\(spec.id) ends on a stage with a next button")
+            }
+        }
+    }
+
+    /// The Zip drive appears before anything freezes, and only on Windows.
+    func testTheZipDriveIsAWindowsThing() throws {
+        var rng = CrashRNG(seed: 101)
+        let spec = try XCTUnwrap(CrashCatalogue.spec(id: "win-zip-click-of-death"))
+        let scenario = spec.build(&rng)
+        guard case .desktopDrive(let name, let icon, let timeout)? = scenario.prelude else {
+            return XCTFail("the Zip drive has no prelude")
+        }
+        XCTAssertTrue(name.contains("Zip"))
+        XCTAssertEqual(icon, "zipdrive")
+        XCTAssertGreaterThan(timeout.lowerBound, 5)
+        for era in spec.eras {
+            XCTAssertTrue(era.displayName.hasPrefix("Windows"), "\(era.displayName) never had a Zip drive")
+        }
+        // The first thing you see is the drive reading, with the clicking.
+        XCTAssertEqual(scenario.stages.first?.sound, .zipClick)
+    }
+
+    // MARK: - Rendering
+
+    func testProgressBarFillsWithTheCounter() throws {
+        let screen = TextScreen(grid: .vga80x25, topRow: 2, leftColumn: 2, lines: [
+            .progressBar(prefix: "[", width: 40, suffix: "]"),
+            .percent(prefix: "", suffix: "% complete"),
+        ], palette: .scandisk)
+        let a = try XCTUnwrap(CrashRenderer.image(for: screen, counter: 0))
+        let b = try XCTUnwrap(CrashRenderer.image(for: screen, counter: 50))
+        let c = try XCTUnwrap(CrashRenderer.image(for: screen, counter: 100))
+        XCTAssertNotEqual(pixels(a), pixels(b))
+        XCTAssertNotEqual(pixels(b), pixels(c))
+    }
+
+    func testBlinkFramesDiffer() throws {
+        let screen = CrashCopy.bootNTLDRMissing()
+        XCTAssertTrue(screen.blinks)
+        XCTAssertFalse(screen.isAnimated)
+        let on = try XCTUnwrap(CrashRenderer.image(for: screen, blinkOn: true))
+        let off = try XCTUnwrap(CrashRenderer.image(for: screen, blinkOn: false))
+        XCTAssertNotEqual(pixels(on), pixels(off))
+    }
+
+    func testPaletteColoursAreDistinct() {
+        for palette in [ScreenPalette.win9x, .nt, .console, .dos, .orange9x, .scandisk] {
+            XCTAssertNotEqual(CrashPalette.background(palette), CrashPalette.foreground(palette),
+                              "\(palette) is invisible")
+        }
+    }
+
+    func testBootGlyphsDraw() {
+        for glyph in [BootGlyph.sadMac(codes: "0000000F 0000000A"), .questionFolder, .prohibitory] {
+            let image = CrashRenderer.bootGlyphImage(glyph, blinkOn: true, size: NSSize(width: 640, height: 480))
+            XCTAssertEqual(image.size.width, 640)
+        }
+        let on = CrashRenderer.bootGlyphImage(.questionFolder, blinkOn: true, size: NSSize(width: 320, height: 240))
+        let off = CrashRenderer.bootGlyphImage(.questionFolder, blinkOn: false, size: NSSize(width: 320, height: 240))
+        XCTAssertNotEqual(on.tiffRepresentation, off.tiffRepresentation, "the question mark does not blink")
+    }
+
+    func testBusyPointersHaveFrames() {
+        XCTAssertEqual(CrashRenderer.beachballFrames(scale: 2).count, 8)
+        XCTAssertEqual(CrashRenderer.watchCursorFrames(scale: 2).count, 2)
+        XCTAssertEqual(CrashRenderer.hourglassFrames(scale: 2).count, 2)
+        XCTAssertEqual(CrashRenderer.busyRingFrames(scale: 2).count, 8)
+    }
+
+    func testTheOtherSoundsAreRealWAVs() throws {
+        for data in [try XCTUnwrap(CrashSound.zipClickWAV(seconds: 2)),
+                     try XCTUnwrap(CrashSound.floppySeekWAV(seconds: 2)),
+                     try XCTUnwrap(CrashSound.clickWAV())] {
+            XCTAssertEqual(String(bytes: data.prefix(4), encoding: .ascii), "RIFF")
+            XCTAssertGreaterThan(data.dropFirst(44).max() ?? 0, 0, "the buffer is silent")
+        }
+        XCTAssertEqual(try XCTUnwrap(CrashSound.zipClickWAV(seconds: 2)).count, 44 + Int(2 * 22_050) * 2)
+    }
+
     // MARK: - Helpers
 
     private func solid(_ colour: NSColor) -> CGImage? {
@@ -530,7 +749,10 @@ final class RetroCrashTests: XCTestCase {
             "CGDisplayCapture",      // taking the display away from the window server
             "NSAppleScript",         // scripting other apps
             "terminate(",            // quitting anything, including ourselves
-            "shutdown", "reboot",
+            // The CALL shapes, not the bare words: the period screens say "shutdown" in their
+            // own text ("This shutdown was initiated by…", "It's now safe to…"), and a colour
+            // is named after one. A string that contains the word turns nothing off.
+            "shutdown(", "reboot(", "kAEShutDown", "kAERestart", "SMShutdown", "SMRestart",
         ]
         let dir = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()   // RetroMacTests

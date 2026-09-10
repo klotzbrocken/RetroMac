@@ -31,6 +31,8 @@ final class CrashView: NSView {
     /// Kept so a re-layout after a new overlay can rebuild the badge with the same wording.
     private var badgeName: String?
     private let fakeCursorLayer = CALayer()
+    /// The two stacked copies of the still while the picture rolls.
+    private var rollLayer: CALayer?
     /// Clickable rects of the dialog currently on screen, in view coordinates.
     private var hotspots: [(rect: NSRect, label: String)] = []
 
@@ -57,25 +59,84 @@ final class CrashView: NSView {
     /// what a machine that has stopped answering looks like. The real pointer is never moved —
     /// warping somebody's mouse would be a genuine loss of control rather than a joke.
     func showFakeCursor(at point: NSPoint) {
+        showFakeCursor(at: point, image: NSCursor.arrow.image, hotSpot: NSCursor.arrow.hotSpot)
+    }
+
+    /// The same, with a pointer of the caller's choosing: the beach ball, the wristwatch, the
+    /// hourglass. `hotSpot` is in the image's own points, y down, the way NSCursor keeps it.
+    func showFakeCursor(at point: NSPoint, image: NSImage, hotSpot: NSPoint) {
         if fakeCursorLayer.superlayer == nil {
-            let cursor = NSCursor.arrow
-            let image = cursor.image
-            fakeCursorLayer.contents = image
-            fakeCursorLayer.bounds = CGRect(origin: .zero, size: image.size)
-            fakeCursorLayer.anchorPoint = CGPoint(x: cursor.hotSpot.x / max(1, image.size.width),
-                                                  y: 1 - cursor.hotSpot.y / max(1, image.size.height))
             fakeCursorLayer.contentsScale = window?.backingScaleFactor ?? 2
+            fakeCursorLayer.magnificationFilter = .nearest
             layer?.addSublayer(fakeCursorLayer)
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        if fakeCursorLayer.contents as? NSImage !== image {
+            fakeCursorLayer.contents = image
+            fakeCursorLayer.bounds = CGRect(origin: .zero, size: image.size)
+            fakeCursorLayer.anchorPoint = CGPoint(x: hotSpot.x / max(1, image.size.width),
+                                                  y: 1 - hotSpot.y / max(1, image.size.height))
+        }
         fakeCursorLayer.position = point
         CATransaction.commit()
     }
 
     func hideFakeCursor() {
         fakeCursorLayer.removeFromSuperlayer()
+        fakeCursorLayer.contents = nil
     }
+
+    // MARK: - The picture losing sync
+
+    /// The picture rolls: it loses horizontal hold, slides down with a copy of itself following,
+    /// slows, and snaps back into place. Two copies of the still in one sublayer, moved with
+    /// an animation the layer plays on its own, so nothing is redrawn per frame.
+    func roll(seconds: TimeInterval) {
+        guard let image = imageLayer.contents else { return }
+        let h = bounds.height
+        let container = CALayer()
+        container.frame = CGRect(x: 0, y: -h, width: bounds.width, height: h * 2)
+        container.masksToBounds = false
+        for i in 0..<2 {
+            let copy = CALayer()
+            copy.contents = image
+            copy.contentsScale = imageLayer.contentsScale
+            copy.frame = CGRect(x: 0, y: CGFloat(i) * h, width: bounds.width, height: h)
+            container.addSublayer(copy)
+        }
+        // A dark gap between the two copies: the vertical blanking interval showing through.
+        let gap = CALayer()
+        gap.backgroundColor = NSColor.black.cgColor
+        gap.frame = CGRect(x: 0, y: h - 6, width: bounds.width, height: 12)
+        container.addSublayer(gap)
+        layer?.insertSublayer(container, above: imageLayer)
+        rollLayer?.removeFromSuperlayer()
+        rollLayer = container
+
+        let anim = CAKeyframeAnimation(keyPath: "position.y")
+        let base = container.position.y
+        // Faster at first, then hanging, then a last slow drift before it locks.
+        anim.values = [base, base - h * 0.55, base - h * 1.15, base - h * 1.62, base - h * 1.85, base - h * 2.0]
+        anim.keyTimes = [0, 0.22, 0.5, 0.78, 0.93, 1.0]
+        anim.timingFunctions = [CAMediaTimingFunction(name: .easeIn),
+                                CAMediaTimingFunction(name: .linear),
+                                CAMediaTimingFunction(name: .linear),
+                                CAMediaTimingFunction(name: .easeOut),
+                                CAMediaTimingFunction(name: .easeOut)]
+        anim.duration = seconds
+        anim.isRemovedOnCompletion = true
+        container.add(anim, forKey: "roll")
+        // The animation ends exactly one screen further down, which is the same picture; when it
+        // is removed the container sits back where it started and nothing jumps.
+        CATransaction.begin()
+        CATransaction.setCompletionBlock { [weak self] in
+            self?.rollLayer?.removeFromSuperlayer()
+            self?.rollLayer = nil
+        }
+        CATransaction.commit()
+    }
+
 
     /// "simulated crash", bottom right, in red. The one piece of the screen that is not in
     /// period, on purpose: nobody should walk past this desk and believe the machine is broken.
@@ -106,6 +167,7 @@ final class CrashView: NSView {
         // led to a blue screen stayed sitting on top of it, and the two were on screen at once —
         // which is not a thing that could happen on a real machine.
         clearOverlay()
+        rollLayer?.removeFromSuperlayer(); rollLayer = nil
         let scale = window?.backingScaleFactor ?? 2
         let pxW = bounds.width * scale, pxH = bounds.height * scale
         let srcW = CGFloat(pixelImage.width), srcH = CGFloat(pixelImage.height)
@@ -134,6 +196,7 @@ final class CrashView: NSView {
     /// the real screen, not a text mode.
     func show(fullBleed image: CGImage?) {
         clearOverlay()
+        rollLayer?.removeFromSuperlayer(); rollLayer = nil
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         imageLayer.magnificationFilter = .linear
