@@ -16,12 +16,20 @@ else
     # provisioning profile and launches directly — no manual AMFI re-sign. (Virtual camera can't be
     # activated in debug; build release for that.)
     APP_ENTITLEMENTS="RetroMac-debug.entitlements"
-    # Fehlt das Apple-Development-Zertifikat im Schlüsselbund (frischer Mac), wird der
-    # Debug-Build ad-hoc signiert — wie bei simplebanking. Lokal starten geht damit;
-    # nur die virtuelle Kamera braucht ohnehin den Release-Build.
+    # Fehlt das Apple-Development-Zertifikat im Schlüsselbund (frischer Mac), nimmt der
+    # Debug-Build das Developer-ID-Zertifikat, und erst wenn auch das fehlt, ad-hoc. Der Grund
+    # ist nicht Gatekeeper, sondern TCC: macOS bindet die Freigaben für Bedienungshilfen und
+    # Bildschirmaufnahme an die Signatur. Ad-hoc ist bei jedem Build eine neue Identität, und
+    # die Freigaben waren nach jedem Rebuild weg — eine stabile Signatur behält sie.
     if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "$SIGN_ID"; then
-        echo "⚠️  '$SIGN_ID' nicht im Schlüsselbund — Debug-Build wird ad-hoc signiert."
-        SIGN_ID="-"
+        DEV_ID="Developer ID Application: Maik Klotz (FTJLR8JRNS)"
+        if security find-identity -v -p codesigning 2>/dev/null | grep -q "$DEV_ID"; then
+            echo "⚠️  '$SIGN_ID' nicht im Schlüsselbund — Debug-Build wird mit Developer ID signiert."
+            SIGN_ID="$DEV_ID"
+        else
+            echo "⚠️  Kein Zertifikat im Schlüsselbund — Debug-Build wird ad-hoc signiert."
+            SIGN_ID="-"
+        fi
     fi
 fi
 # Release builds are Universal (Intel + Apple Silicon) for distribution.
