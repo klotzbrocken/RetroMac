@@ -170,11 +170,14 @@ struct CrashesTab: View {
                 }
 
                 RMCard(title: "Picture", bodyPadding: 0) {
-                    RMRow(label: "Stretch to fill the screen",
-                          hint: "Off keeps whole square pixels with a black border, the way a 720x400 text mode looked on a modern panel. On stretches it edge to edge, like a 4:3 signal on a widescreen monitor.",
+                    RMRow(label: "Shape of the screen",
+                          hint: "16:9 stretches the text mode edge to edge, like a 4:3 signal on a widescreen monitor set to fill. 4:3 keeps the shape of the monitor of the day at full height, with bars at the sides.",
                           isLast: true) {
-                        Toggle("", isOn: $settings.crashStretchToFill)
-                            .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                        Picker("", selection: $settings.crashPictureRatio) {
+                            Text("16:9").tag("fill")
+                            Text("4:3").tag("4:3")
+                        }
+                        .pickerStyle(.segmented).labelsHidden().frame(width: 140)
                     }
                 }
             }

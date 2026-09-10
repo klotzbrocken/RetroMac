@@ -939,10 +939,11 @@ final class AppSettings: ObservableObject {
     @Published var crashGlitches: Bool {
         didSet { defaults.set(crashGlitches, forKey: "crashGlitches") }
     }
-    /// Fill the whole screen instead of keeping whole pixels. A 4:3 signal on a wide panel is
-    /// period-correct in its own way, but it costs the square pixels.
-    @Published var crashStretchToFill: Bool {
-        didSet { defaults.set(crashStretchToFill, forKey: "crashStretchToFill") }
+    /// How a text-mode screen fills the display: "fill" stretches it edge to edge, "4:3" keeps
+    /// the shape of the monitor of the day at full height. Never a black frame all round — a
+    /// blue screen was the whole screen.
+    @Published var crashPictureRatio: String {
+        didSet { defaults.set(crashPictureRatio, forKey: "crashPictureRatio") }
     }
     /// When the last simulated crash ran, and how many have run today. Persisted so relaunching
     /// cannot be used — or happen by accident — as a way around the daily budget.
@@ -1322,7 +1323,7 @@ final class AppSettings: ObservableObject {
         crashIntensity = defaults.string(forKey: "crashIntensity") ?? "off"
         crashDisabledScenarios = defaults.stringArray(forKey: "crashDisabledScenarios") ?? []
         crashCountdown = defaults.object(forKey: "crashCountdown") as? Int ?? 3
-        crashStretchToFill = defaults.bool(forKey: "crashStretchToFill")
+        crashPictureRatio = defaults.string(forKey: "crashPictureRatio") ?? "fill"
         crashSoundEnabled = defaults.object(forKey: "crashSoundEnabled") as? Bool ?? true
         crashShowBadge = defaults.object(forKey: "crashShowBadge") as? Bool ?? true
         crashFullSequence = defaults.object(forKey: "crashFullSequence") as? Bool ?? true

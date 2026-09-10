@@ -36,6 +36,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   they pass. On their own clock — about three times as often as the failures at the same
   setting, with no daily limit — and their own switch.
 
+  A text-mode screen now fills the display — 16:9 edge to edge by default, or 4:3 at full
+  height from a new picker under Picture — instead of sitting in a black frame at whole-pixel
+  size. A blue screen was the whole screen.
+
   Every scene is in the settings list with its own Show button and its own toggle. Text screens
   gained a blinking cursor, progress bars and countdowns; dialogs gained a clock and a button
   that goes on to the next stage instead of closing. The watchdog now sizes itself to the scene

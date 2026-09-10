@@ -82,6 +82,9 @@ final class CrashView: NSView {
         CATransaction.commit()
     }
 
+    /// Where the text-mode picture sits, for the test that checks it fills the screen.
+    var pictureFrame: CGRect? { imageLayer.contents == nil ? nil : imageLayer.frame }
+
     func hideFakeCursor() {
         fakeCursorLayer.removeFromSuperlayer()
         fakeCursorLayer.contents = nil
@@ -160,26 +163,35 @@ final class CrashView: NSView {
 
     // MARK: - Content
 
-    /// A pixel-exact screen: scaled by a whole number so every source pixel becomes an identical
-    /// block. The leftover border reads as the overscan of a CRT, which is the correct look.
-    func show(pixelImage: CGImage, stretchToFill: Bool) {
+    /// How a text-mode screen is fitted to the display.
+    enum PictureRatio {
+        /// Edge to edge: the 4:3 signal stretched across the whole panel, the way a wide monitor
+        /// showed it when the scaler was set to fill.
+        case fill
+        /// Full height, 4:3 wide, the shape of the monitor of the day. Bars at the sides.
+        case fourByThree
+
+        init(setting: String) { self = setting == "4:3" ? .fourByThree : .fill }
+    }
+
+    /// A text-mode screen, scaled with nearest-neighbour so the pixels stay blocks. Never
+    /// letterboxed all round: a blue screen was the whole screen, and a black frame around it
+    /// reads as a picture of one.
+    func show(pixelImage: CGImage, ratio: PictureRatio) {
         // A full-screen surface replaces whatever was on screen. Without this the dialog that
         // led to a blue screen stayed sitting on top of it, and the two were on screen at once —
         // which is not a thing that could happen on a real machine.
         clearOverlay()
         rollLayer?.removeFromSuperlayer(); rollLayer = nil
         let scale = window?.backingScaleFactor ?? 2
-        let pxW = bounds.width * scale, pxH = bounds.height * scale
-        let srcW = CGFloat(pixelImage.width), srcH = CGFloat(pixelImage.height)
 
         var w: CGFloat, h: CGFloat
-        if stretchToFill {
-            // Period-correct in its own way: a 4:3 signal stretched across the whole panel.
+        switch ratio {
+        case .fill:
             w = bounds.width; h = bounds.height
-        } else {
-            let k = max(1, floor(min(pxW / srcW, pxH / srcH)))
-            w = srcW * k / scale
-            h = srcH * k / scale
+        case .fourByThree:
+            h = bounds.height
+            w = min(bounds.width, (h * 4 / 3).rounded())
         }
         CATransaction.begin()
         CATransaction.setDisableActions(true)

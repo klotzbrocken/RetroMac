@@ -341,7 +341,7 @@ final class RetroCrashTests: XCTestCase {
         XCTAssertFalse(view.subviews.isEmpty, "the dialog should be on screen")
 
         let blue = try XCTUnwrap(CrashRenderer.image(for: CrashCopy.win9xFatalException(using: &rng)))
-        view.show(pixelImage: blue, stretchToFill: false)
+        view.show(pixelImage: blue, ratio: .fill)
         XCTAssertTrue(view.subviews.allSatisfy { $0 is NSTextField },
                       "the dialog is still on top of the blue screen")
     }
@@ -649,6 +649,23 @@ final class RetroCrashTests: XCTestCase {
         }
     }
 
+    /// Whatever the ratio, the picture takes the full height and never sits in a frame: a
+    /// blue screen was the whole screen.
+    func testTextScreensAreNeverLetterboxedAllRound() throws {
+        var rng = CrashRNG(seed: 2)
+        let blue = try XCTUnwrap(CrashRenderer.image(for: CrashCopy.win9xFatalException(using: &rng)))
+        for ratio in [CrashView.PictureRatio.fill, .fourByThree] {
+            let view = CrashView(frame: NSRect(x: 0, y: 0, width: 1920, height: 1080))
+            view.show(pixelImage: blue, ratio: ratio)
+            let frame = try XCTUnwrap(view.pictureFrame)
+            XCTAssertEqual(frame.height, 1080, "\(ratio) leaves a band above or below")
+            XCTAssertEqual(frame.width, ratio == .fill ? 1920 : 1440, "\(ratio) has the wrong width")
+        }
+        XCTAssertEqual(CrashView.PictureRatio(setting: "4:3"), .fourByThree)
+        XCTAssertEqual(CrashView.PictureRatio(setting: "fill"), .fill)
+        XCTAssertEqual(CrashView.PictureRatio(setting: ""), .fill)
+    }
+
     // MARK: - Rendering
 
     func testProgressBarFillsWithTheCounter() throws {
@@ -694,6 +711,12 @@ final class RetroCrashTests: XCTestCase {
         XCTAssertEqual(CrashRenderer.watchCursorFrames(scale: 2).count, 2)
         XCTAssertEqual(CrashRenderer.hourglassFrames(scale: 2).count, 2)
         XCTAssertEqual(CrashRenderer.busyRingFrames(scale: 2).count, 8)
+        // Pointers, not pictures of pointers: the one-bit ones are their original 16-ish pixels.
+        for frame in CrashRenderer.hourglassFrames(scale: 2) + CrashRenderer.watchCursorFrames(scale: 2) {
+            XCTAssertLessThanOrEqual(frame.image.size.width, 20)
+            XCTAssertLessThanOrEqual(frame.image.size.height, 20)
+        }
+        XCTAssertLessThanOrEqual(CrashRenderer.beachballFrames(scale: 2)[0].image.size.width, 32)
     }
 
     func testTheOtherSoundsAreRealWAVs() throws {

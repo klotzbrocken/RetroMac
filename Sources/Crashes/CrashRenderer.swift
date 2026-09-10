@@ -441,7 +441,7 @@ extension CrashRenderer {
             "................",
         ]
         return [a, b].map { rows in
-            CursorFrame(image: outlined(rows, scale: 2), hotSpot: NSPoint(x: 16, y: 16))
+            CursorFrame(image: outlined(rows), hotSpot: NSPoint(x: 9, y: 9))
         }
     }
 
@@ -484,15 +484,20 @@ extension CrashRenderer {
             "#############",
         ]
         return [a, b].map { rows in
-            CursorFrame(image: outlined(rows, scale: 2), hotSpot: NSPoint(x: 13, y: 16))
+            CursorFrame(image: outlined(rows), hotSpot: NSPoint(x: 7, y: 9))
         }
     }
 
     /// A one-bit cursor with the white surround the originals had, so it reads on any desktop.
-    private static func outlined(_ rows: [String], scale: Int) -> NSImage {
+    /// One point per pixel: these were 16-pixel cursors, and drawn twice the size they stop
+    /// being a pointer and start being a picture of one. The layer scales them up whole-number
+    /// on a Retina display, which keeps the pixels square.
+    private static func outlined(_ rows: [String]) -> NSImage {
+        let scale = 1
         let h = rows.count, w = rows.map(\.count).max() ?? 0
         let image = NSImage(size: NSSize(width: (w + 2) * scale, height: (h + 2) * scale))
         image.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .none
         func ink(_ x: Int, _ y: Int) -> Bool {
             guard y >= 0, y < h, x >= 0 else { return false }
             let row = Array(rows[y])

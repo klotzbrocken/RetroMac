@@ -514,8 +514,8 @@ final class CrashDirector {
 
     private func render(_ screen: TextScreen) {
         guard let image = CrashRenderer.image(for: screen, counter: dumpCounter, blinkOn: blinkOn) else { return }
-        let stretch = AppSettings.shared.crashStretchToFill
-        for view in session?.views ?? [] { view.show(pixelImage: image, stretchToFill: stretch) }
+        let ratio = CrashView.PictureRatio(setting: AppSettings.shared.crashPictureRatio)
+        for view in session?.views ?? [] { view.show(pixelImage: image, ratio: ratio) }
     }
 
     private func renderGlyph(_ glyph: BootGlyph) {

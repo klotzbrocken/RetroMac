@@ -478,7 +478,10 @@ enum CrashCatalogue {
              eras: [.win95, .win98, .winMe, .winXP],
              weight: 3, kind: .fullScreen, category: .onDemand) { rng in
             let xp = CrashEra.current() == .winXP
-            let hunting = Double.random(in: 4.0...7.0, using: &rng)
+            // Windows did not give up quickly: the drive clicked away for a good ten or twenty
+            // seconds with the hourglass up before anything was said about it.
+            let hunting = Double.random(in: 12.0...20.0, using: &rng)
+            let retry = Double.random(in: 5.0...8.0, using: &rng)
             var stages: [CrashStage] = [
                 // The drive reading the cartridge: the hourglass, and the clicking.
                 CrashStage(.moment(.hourglass), hold: hunting, sound: .zipClick),
@@ -486,16 +489,16 @@ enum CrashCatalogue {
             if xp {
                 stages += [
                     CrashStage(.dialog(CrashCopy.xpDiskNotFormatted()), recovery: .anyKey),
-                    CrashStage(.still, hold: 2.0, sound: .zipClick),
+                    CrashStage(.moment(.hourglass), hold: retry, sound: .zipClick),
                     CrashStage(.dialog(CrashCopy.xpFormatFailed()), recovery: .anyKey),
                 ]
             } else {
                 let dialog = CrashCopy.win9xZipNotReady()
                 stages += [
                     CrashStage(.dialog(dialog), recovery: .anyKey),
-                    CrashStage(.still, hold: 1.6, sound: .zipClick),
+                    CrashStage(.moment(.hourglass), hold: retry, sound: .zipClick),
                     CrashStage(.dialog(dialog), recovery: .anyKey),
-                    CrashStage(.still, hold: 1.6, sound: .zipClick),
+                    CrashStage(.moment(.hourglass), hold: retry, sound: .zipClick),
                     CrashStage(.dialog(CrashCopy.win9xDriveNotReadyFinal(dialog)), recovery: .anyKey),
                 ]
             }
