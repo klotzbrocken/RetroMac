@@ -218,7 +218,7 @@
       "gridX": 0,
       "gridY": 8
     },
-    { "name": "Iomega Zip (D:)", "icon": "", "type": "zipdrive", "gridX": 1, "gridY": 6 }
+    { "name": "ZIP 100 (D:)", "icon": "", "type": "zipdrive", "gridX": 1, "gridY": 6 }
   ],
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-retro-lite",
