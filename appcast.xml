@@ -15,31 +15,6 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
-      <title>Version 2.8.4</title>
-      <pubDate>Fri, 11 Sep 2026 14:02:14 +0000</pubDate>
-      <sparkle:version>2.8.4</sparkle:version>
-      <sparkle:shortVersionString>2.8.4</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>RetroMac 2.8.4</h2>
-        <ul>
-          <li><b>Retro Glitches &amp; Crashes.</b> System failures in period, and none of them real: the Windows 9x blue screen, &ldquo;This program has performed an illegal operation&rdquo;, the NT Stop screen with its memory dump on XP and 7, the System 6 bomb, the type 11 error on Mac OS 9, the Mac OS X kernel panic. Twenty-six new scenes on top: &ldquo;The instruction at 0x&hellip; referenced memory at 0x&hellip;&rdquo;, the RPC shutdown countdown from 2003, Dr. Watson, &ldquo;It&rsquo;s now safe to turn off your computer&rdquo;, the missing floppy, the scratched CD, the Mac that wants to initialise your disk. The Windows desktops carry an Iomega ZIP 100 &mdash; open it and hear the click of death. After a simulated restart the machine may fail to boot first (NTLDR is missing, ScanDisk, CHKDSK, the sad Mac, the blinking folder), and small moments &mdash; beachball, wristwatch, hourglass, snow, a rolling picture &mdash; come and go on their own. Nothing is quit, closed, restarted or changed: the desktop is frozen as a photograph and the error laid on top. Esc always ends it. Settings &gt; Crashes decides how often; &ldquo;Crash Now&rdquo; walks through every scene.</li>
-          <li><b>Windows Me, gone over in detail.</b> The animated Me boot logo, three original wallpapers, Explorer-style folder windows with the real banner artwork, a tray in the theme&rsquo;s own colour with MSN or ICQ, its own cursor set, Office icons, and Defrag as its own program on the desktop.</li>
-          <li><b>Defrag has the drive to go with it.</b> The spindle spins up, the heads clatter across the platter, every written cluster ticks &mdash; synthesised, and tied to what the window shows.</li>
-          <li><b>Live Wallpaper Plus.</b> Wallpaper, desktop icons, the retro dock and the start menu sit behind the shader in one pass while your application windows stay untouched. Settings &gt; Desktop.</li>
-          <li><b>Themes.</b> The seventeen Windows 95/98 pattern wallpapers, tiled. Windows 95 and Me get their own pointers and hourglass, Snow Leopard and Mountain Lion the Aqua pointer. New icons (Office on Me and XP, Word/Excel/PowerPoint on Mac OS X, Reminders on Snow Leopard), a boot screen for Mountain Lion, the Mac menu bar matches the era by itself.</li>
-          <li><b>Games.</b> The shareware episodes of Doom, Heretic, Duke Nukem 3D and Quake are in the Game Library; the Quake II demo download works again; cancelling a download cancels it.</li>
-          <li><b>Fixes.</b> The Lite shaders cover every monitor, the settings are tidied so every option has one home, the Windows 9x tray has one rhythm again, the muted speaker is visible, six new TV channels, and the app is about 15 MB smaller.</li>
-        </ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.8.4/RetroMac.dmg"
-        type="application/octet-stream"
-        sparkle:edSignature="TIFIw2mwFf9Fsj8Lm9BPtV1VD6vsCJf3cd+PvR7+QHhrmWR+vIcdqyoL+X8L3eXoP+Ya4Z62K7sK+lPojy5iDg=="
-        length="95310569"
-      />
-    </item>
-    <item>
       <title>Version 2.8.3</title>
       <pubDate>Mon, 31 Aug 2026 02:44:15 +0000</pubDate>
       <sparkle:version>2.8.3</sparkle:version>
