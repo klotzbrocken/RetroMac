@@ -3,7 +3,7 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## Unreleased
+## 2.8.4
 
 - **A smaller download.** The release binary is stripped (its symbols go to a dSYM next to
   the bundle), the Warcraft maps that came unpacked are gzipped like the rest, and the three
