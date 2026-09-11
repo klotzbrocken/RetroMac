@@ -121,7 +121,26 @@ private struct ScopeSection: View {
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var license = LicenseManager.shared
 
+    /// 0 = whole screen, 1 = wallpaper only, 2 = wallpaper, icons and dock.
+    private var mode: Binding<Int> {
+        Binding<Int>(
+            get: {
+                guard settings.shaderWallpaperOnly, license.isLicensed else { return 0 }
+                return settings.liveWallpaperPlus ? 2 : 1
+            },
+            set: { mode in
+                if mode > 0 && !license.isLicensed {
+                    (NSApp.delegate as? AppDelegate)?.presentUnlockScreen()
+                    return
+                }
+                settings.liveWallpaperPlus = (mode == 2)
+                settings.shaderWallpaperOnly = (mode > 0)
+                (NSApp.delegate as? AppDelegate)?.restartLiveWallpaperScope()
+            })
+    }
+
     var body: some View {
+        let lock = license.isLicensed ? "" : " \u{1F512}"
         ScrollView {
             VStack(spacing: RMSpacing.section) {
                 RMCard(title: "Effect scope",
@@ -129,38 +148,22 @@ private struct ScopeSection: View {
                             ? "Draw the effect over everything, or only on the wallpaper \u{2014} animated, behind your icons and windows."
                             : "Draw the effect over everything, or only on the wallpaper (Pro) \u{2014} animated, behind your icons and windows.",
                        bodyPadding: 0) {
-                    VStack(spacing: 0) {
-                        // One control, three entries. The reach used to be split across two tabs:
-                        // this picker said "Wallpaper only" while a separate switch over in
-                        // Desktop silently widened it to wallpaper, icons and dock. A label that
-                        // can mean two different things is worse than no label.
-                        RMRow(label: "Apply to",
-                              hint: settings.shaderWallpaperOnly && settings.liveWallpaperPlus
-                                    ? "While this is on, the retro dock sits behind your application windows. That is what puts it in the same pass as the desktop."
-                                    : nil,
-                              isLast: true) {
-                            Picker("", selection: Binding<Int>(
-                                get: {
-                                    guard settings.shaderWallpaperOnly, license.isLicensed else { return 0 }
-                                    return settings.liveWallpaperPlus ? 2 : 1
-                                },
-                                set: { mode in
-                                    if mode > 0 && !license.isLicensed {
-                                        (NSApp.delegate as? AppDelegate)?.presentUnlockScreen()
-                                        return
-                                    }
-                                    settings.liveWallpaperPlus = (mode == 2)
-                                    settings.shaderWallpaperOnly = (mode > 0)
-                                    (NSApp.delegate as? AppDelegate)?.restartLiveWallpaperScope()
-                                })) {
-                                Text("Whole screen").tag(0)
-                                Text(license.isLicensed ? "Wallpaper only" : "Wallpaper only \u{1F512}").tag(1)
-                                Text(license.isLicensed ? "Desktop: wallpaper, icons and dock"
-                                                        : "Desktop: wallpaper, icons and dock \u{1F512}").tag(2)
-                            }
-                            .pickerStyle(.segmented)
-                            .labelsHidden().frame(width: 240)
-                        }
+                    // One choice, three answers, each with its own line of explanation. It was a
+                    // segmented control whose third segment read "Desktop: wallpaper, icons and
+                    // dock", squeezed to 240 points: AppKit does not clip a segmented control to
+                    // its frame, so it drew over the hint and off the card. The reach used to be
+                    // split across two tabs, too — this picker said "Wallpaper only" while a
+                    // separate switch over in Desktop silently widened it to wallpaper, icons and
+                    // dock. A label that can mean two different things is worse than no label.
+                    VStack(alignment: .leading, spacing: 0) {
+                        choice(0, "Whole screen",
+                               "Over everything, windows and menu bar included \u{2014} like a monitor.")
+                        divider
+                        choice(1, "Wallpaper only" + lock,
+                               "Only the desktop picture, animated, behind your icons and windows.")
+                        divider
+                        choice(2, "Desktop: wallpaper, icons and dock" + lock,
+                               "One pass over the picture, RetroMac's desktop icons and the retro dock. While this is on, the retro dock sits behind your application windows.")
                     }
                 }
             }
@@ -168,9 +171,37 @@ private struct ScopeSection: View {
             .padding(.vertical, 20)
         }
     }
+
+    private var divider: some View {
+        Rectangle().fill(Color.rmDivider).frame(height: 1).padding(.horizontal, RMSpacing.card)
+    }
+
+    /// One radio line: the button, the name, and the sentence under it. A row of its own
+    /// rather than an RMRow, because the control IS the row.
+    private func choice(_ value: Int, _ title: String, _ hint: String) -> some View {
+        let selected = mode.wrappedValue == value
+        return Button { mode.wrappedValue = value } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 14))
+                    .foregroundColor(selected ? .rmAccent : .rmTextSecondary)
+                    .padding(.top, 1)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.rmBody).foregroundColor(.rmTextPrimary)
+                    Text(hint).font(.rmSecondary).foregroundColor(.rmTextSecondary)
+                        .lineSpacing(1.45)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+            .padding(.vertical, 11)
+            .padding(.horizontal, RMSpacing.card)
+        }
+        .buttonStyle(.plain)
+    }
 }
 
-/// Extra layers drawn on top of whichever preset is running.
 private struct LookSection: View {
     @ObservedObject private var settings = AppSettings.shared
 
