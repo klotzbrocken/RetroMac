@@ -50,16 +50,13 @@ struct RetroModeTab: View {
                     (NSApp.delegate as? AppDelegate)?.toggleRetroMode()
                 } label: {
                     Label("Toggle Retro Mode now", systemImage: "wand.and.stars")
-                        .frame(maxWidth: .infinity)
                 }
-                .controlSize(.large)
+                .buttonStyle(RMPrimaryButtonStyle())
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // The Settings panel is a fixed light theme (Color.rmBg) — pin this tab to the
-        // light color scheme so text/controls stay readable in system Dark Mode.
-        .environment(\.colorScheme, .light)
     }
 
     private func sw(_ binding: Binding<Bool>) -> some View {

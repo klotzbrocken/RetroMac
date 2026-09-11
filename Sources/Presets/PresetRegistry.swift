@@ -136,3 +136,15 @@ enum PresetRegistry {
         }
     }
 }
+
+extension PresetRegistry {
+    /// Every preset as (id, name) pairs in the registry's own order, with "None" first — the
+    /// list a settings picker offers. Was copied verbatim into two tabs.
+    static var pickerList: [(id: String, name: String)] {
+        var list: [(id: String, name: String)] = [("", "None")]
+        for (_, presets) in categorizedPresets {
+            for p in presets { list.append((p.id, p.displayName)) }
+        }
+        return list
+    }
+}

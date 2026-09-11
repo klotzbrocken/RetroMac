@@ -166,6 +166,19 @@ private struct ScopeSection: View {
                                "One pass over the picture, RetroMac's desktop icons and the retro dock. While this is on, the retro dock sits behind your application windows.")
                     }
                 }
+
+                RMCard(title: "While the shader is on", bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Hide the system menu bar") {
+                            Toggle("", isOn: $settings.hideMenuBar)
+                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        }
+                        RMRow(label: "Hide the desktop icons", isLast: true) {
+                            Toggle("", isOn: $settings.hideDesktopIcons)
+                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        }
+                    }
+                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)

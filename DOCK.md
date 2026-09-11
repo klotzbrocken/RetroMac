@@ -15,15 +15,21 @@ An alternative, themable Dock that sits at the bottom of your screen. Designed t
 
 ## Settings
 
-All dock settings are in the "Dock" tab of RetroMac Settings:
+The dock is configured under **Settings ▸ Themes**:
 
-- **Enable/Disable** the retro dock
-- **Auto-show** only when System Dock is set to auto-hide
-- **Theme** selection from built-in and custom themes
-- **Transparency** slider
-- **Target display** for multi-monitor setups
-- **Hotkey** configuration
-- **App list** management
+- **Theme** — pick a built-in or custom theme; "Add custom…" imports a `.retromactheme` bundle
+- **Behaviour** — RetroMac in the macOS Dock, activate the theme on launch, boot screens
+- **Dock** — on/off, show only when the system Dock is hidden, position, per-theme dock styles,
+  running-app indicators, 24-hour clock
+- **Theme extras** — what a particular theme brings along (Plus! schemes, the tray messenger,
+  Re:Amp, Pac-Man, the Doom Slayer)
+- **System integration** — window borders, appearance, cursor, Terminal profile, Classic Finder,
+  theme icons for system apps
+- **Apps in the dock** — the app list, with per-app custom icons
+- **Advanced** — transparency, icon scale, target display, and the theme files
+
+The dock hotkey is under **Settings ▸ Shortcuts**; the desktop icons, their size, the wallpaper and
+the menu bar under **Settings ▸ Desktop**. `docs/SETTINGS.md` describes the whole settings window.
 
 ## Themes
 

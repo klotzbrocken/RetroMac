@@ -5,6 +5,20 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Settings, tidied.** One home per setting: the per-theme shader switch and preset are under
+  Shader ▸ When only; wallpaper, desktop-icon size and the menu bar (tint and the Apple logo)
+  under Desktop only; "hide the menu bar / desktop icons while the shader is on" under Shader ▸
+  Where, next to the scope they belong to; the Setup Assistant under General only; permissions
+  under General only, with Health Check left to what this Mac can do. The thirty-row "Behavior"
+  card on Themes is four cards that say what they hold — Behaviour, Dock, the theme's extras,
+  System integration. Screensaver, Games and Health Check use the same cards as every other tab
+  instead of a system form. The hints that ran to six or eight lines are one line again. A
+  wide control — a three-way segmented picker, a slider with its value, a text field with a
+  button — now sits under its label instead of drawing over the hint, which is how the Live
+  Wallpaper scope picker came to be unreadable. Switching "Show theme widgets" or a Windows
+  tray messenger applies at once instead of at the next theme change. Three hundred lines of
+  unreachable settings code are gone. `docs/SETTINGS.md` describes the window and its rules.
+
 - **Windows 95 and 98: the seventeen pattern wallpapers.** Black Thatch, Blue Rivets, Bubbles,
   Carved Stone, Circles, Forest, Gold Weave, Houndstooth, Metal Links, Pinstripe, Red Blocks,
   Sandstone, Stitches, Straw Mat, Tiles, Triangles and Waves, under Change Wallpaper, each

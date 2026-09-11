@@ -54,33 +54,39 @@ struct RMCard<Content: View>: View {
 
 // MARK: - Row
 
+/// One setting: a label and an optional one-line hint on the left, the control on the right.
+///
+/// `stacked` puts the control UNDER the text instead, full width. Use it for anything wider than
+/// about 200 points — a segmented control with three entries, a slider with a value, a text field
+/// with a button beside it. AppKit does not clip a segmented control to the frame it is given,
+/// so a wide one in the side-by-side layout draws straight over the hint.
 struct RMRow<Control: View>: View {
     var label: String
     var hint: String? = nil
     var isLast: Bool = false
+    var stacked: Bool = false
     @ViewBuilder var control: () -> Control
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 0) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(label)
-                        .font(.rmBody)
-                        .foregroundColor(.rmTextPrimary)
-                        .lineSpacing(1.35)
-                    if let hint = hint {
-                        Text(hint)
-                            .font(.rmSecondary)
-                            .foregroundColor(.rmTextSecondary)
-                            .lineSpacing(1.45)
-                    }
+            if stacked {
+                VStack(alignment: .leading, spacing: 8) {
+                    text
+                    control()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Spacer(minLength: 12)
-                control()
-                    .frame(minHeight: 22)
+                .padding(.vertical, 11)
+                .padding(.horizontal, RMSpacing.card)
+            } else {
+                HStack(alignment: .center, spacing: 0) {
+                    text
+                    Spacer(minLength: 12)
+                    control()
+                        .frame(minHeight: 22)
+                }
+                .padding(.vertical, 11)
+                .padding(.horizontal, RMSpacing.card)
             }
-            .padding(.vertical, 11)
-            .padding(.horizontal, RMSpacing.card)
 
             if !isLast {
                 Rectangle()
@@ -89,6 +95,35 @@ struct RMRow<Control: View>: View {
                     .padding(.horizontal, RMSpacing.card)
             }
         }
+    }
+
+    private var text: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.rmBody)
+                .foregroundColor(.rmTextPrimary)
+                .lineSpacing(1.35)
+            if let hint = hint {
+                Text(hint)
+                    .font(.rmSecondary)
+                    .foregroundColor(.rmTextSecondary)
+                    .lineSpacing(1.45)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+/// A line of text inside a card body that is not a setting: an empty state, a note.
+struct RMNote: View {
+    var text: String
+    var body: some View {
+        Text(text)
+            .font(.rmSecondary)
+            .foregroundColor(.rmTextSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 11)
+            .padding(.horizontal, RMSpacing.card)
     }
 }
 

@@ -7,13 +7,7 @@ struct TVSettingsTab: View {
     @State private var bezelStatus: String = ""
     @State private var downloadingBezel: String? = nil
 
-    private var allPresets: [(String, String)] {
-        var list: [(String, String)] = [("", "None")]
-        for (_, presets) in PresetRegistry.categorizedPresets {
-            for p in presets { list.append((p.id, p.displayName)) }
-        }
-        return list
-    }
+    private var allPresets: [(id: String, name: String)] { PresetRegistry.pickerList }
 
     var body: some View {
         ScrollView {
@@ -119,10 +113,10 @@ struct TVSettingsTab: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .environment(\.colorScheme, .light)
     }
 
     @ViewBuilder

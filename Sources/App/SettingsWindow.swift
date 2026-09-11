@@ -43,7 +43,7 @@ enum SettingsTab: String, CaseIterable {
         case .dock: return "Themes"
         case .desktop: return "Desktop"
         case .retroMode: return "Retro Mode"
-        case .camera: return "Camera & Streaming"
+        case .camera: return LicenseManager.shared.label("Camera & Streaming")
         case .games: return "Games"
         case .crashes: return LicenseManager.shared.label("Crashes")
         case .shader: return "Shader"
@@ -86,10 +86,14 @@ enum SettingsTab: String, CaseIterable {
         case .dock: return "Pick a theme and configure the retro dock."
         case .desktop: return "Wallpaper, desktop icons and widgets for the active theme."
         case .shader: return "Everything about the effect itself: preset, look, where it draws and when it runs."
-        case .shortcuts: return "Global hotkeys and menu-bar behaviour."
+        case .shortcuts: return "Global hotkeys."
         case .general: return "Setup, startup and the permissions RetroMac needs."
         case .crashes: return "Simulated failures in period. Nothing ever really crashes."
-        default: return nil
+        case .retroMode: return "One click to a favourite look, and back."
+        case .camera: return "A shader on your webcam, and television bookmarks."
+        case .games: return "CRT for the games, and where their files live."
+        case .health: return "What this Mac can do, and what RetroMac is doing right now."
+        case .about: return nil
         }
     }
 }
@@ -202,46 +206,6 @@ struct SettingsSidebar: View {
 }
 
 // MARK: - Sidebar Components
-
-struct CRTBrandMark: View {
-    var body: some View {
-        ZStack {
-            // Dark CRT body
-            RoundedRectangle(cornerRadius: 3)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 0.172, green: 0.192, blue: 0.220), Color(red: 0.094, green: 0.106, blue: 0.122)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 22, height: 18)
-
-            // Green phosphor glow
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(red: 0.247, green: 0.725, blue: 0.420).opacity(0.55), Color.clear],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 9
-                    )
-                )
-                .frame(width: 18, height: 14)
-
-            // Scanlines hint
-            VStack(spacing: 2) {
-                ForEach(0..<4, id: \.self) { _ in
-                    Rectangle()
-                        .fill(Color.rmAccent.opacity(0.3))
-                        .frame(height: 1.5)
-                }
-            }
-            .frame(width: 18, height: 14)
-            .clipShape(RoundedRectangle(cornerRadius: 2))
-        }
-    }
-}
 
 struct SidebarSectionHeader: View {
     var title: String
@@ -518,7 +482,7 @@ struct CameraTab: View {
                     }
                 }
 
-                RMCard(title: "Lower Third",
+                RMCard(title: "Lower third",
                        subtitle: "Available with Late Night CRT and Newsroom 1987 shaders.",
                        bodyPadding: 0) {
                     VStack(spacing: 0) {
@@ -535,7 +499,7 @@ struct CameraTab: View {
                             TextField("@handle", text: $settings.lowerThirdHandle)
                                 .textFieldStyle(.roundedBorder).frame(width: 180)
                         }
-                        RMRow(label: "Accent color", hint: "Custom bar colour; reset falls back to the style default.") {
+                        RMRow(label: "Accent colour", hint: "Custom bar colour; Reset falls back to the style default.") {
                             HStack(spacing: 8) {
                                 ColorPicker("", selection: Binding(
                                     get: { ltAccentColor },
@@ -569,10 +533,10 @@ struct CameraTab: View {
                     }
                 }
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .environment(\.colorScheme, .light)
         .onAppear { cameras = VirtualCameraManager.availableCameras() }
         // Continuity Camera (iPhone) and USB webcams connect on-demand; refresh the
         // source list live so a device that wakes while Settings is open shows up.
@@ -990,75 +954,6 @@ struct PerAppRuleRow: View {
                     .padding(.horizontal, RMSpacing.card)
             }
         }
-    }
-}
-
-// MARK: - Hotkey Recorder (kept)
-
-struct HotkeyRecorderView: View {
-    @ObservedObject var settings = AppSettings.shared
-    @State private var isRecording = false
-
-    var body: some View {
-        HStack {
-            Text("Toggle Overlay")
-            Spacer()
-            Button(action: { isRecording.toggle() }) {
-                Text(isRecording ? "Press keys\u{2026}" : settings.hotkeyDisplayString)
-                    .frame(minWidth: 100)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-            }
-            .buttonStyle(.bordered)
-            .overlay(
-                HotkeyListenerView(isRecording: $isRecording)
-                    .frame(width: 0, height: 0)
-            )
-        }
-    }
-}
-
-struct HotkeyListenerView: NSViewRepresentable {
-    @Binding var isRecording: Bool
-
-    func makeNSView(context: Context) -> HotkeyNSView {
-        let view = HotkeyNSView()
-        view.onKeyRecorded = { keyCode, modifiers in
-            let settings = AppSettings.shared
-            settings.hotkeyCode = UInt32(keyCode)
-
-            var carbonMods: UInt32 = 0
-            if modifiers.contains(.command) { carbonMods |= UInt32(cmdKey) }
-            if modifiers.contains(.shift) { carbonMods |= UInt32(shiftKey) }
-            if modifiers.contains(.option) { carbonMods |= UInt32(optionKey) }
-            if modifiers.contains(.control) { carbonMods |= UInt32(controlKey) }
-            settings.hotkeyModifiers = carbonMods
-
-            DispatchQueue.main.async {
-                self.isRecording = false
-                if let delegate = NSApp.delegate as? AppDelegate {
-                    delegate.registerHotkey()
-                }
-            }
-        }
-        return view
-    }
-
-    func updateNSView(_ nsView: HotkeyNSView, context: Context) {
-        if isRecording {
-            nsView.window?.makeFirstResponder(nsView)
-        }
-    }
-}
-
-final class HotkeyNSView: NSView {
-    var onKeyRecorded: ((UInt16, NSEvent.ModifierFlags) -> Void)?
-
-    override var acceptsFirstResponder: Bool { true }
-
-    override func keyDown(with event: NSEvent) {
-        guard !event.modifierFlags.intersection([.command, .shift, .option, .control]).isEmpty else { return }
-        onKeyRecorded?(event.keyCode, event.modifierFlags)
     }
 }
 

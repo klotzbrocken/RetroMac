@@ -1,13 +1,14 @@
 import SwiftUI
 
-/// Screensaver + boot-screen settings. The saver and boot-screen toggle apply to the
-/// currently selected theme (settings.dockTheme); global on/off + idle delay are app-wide.
+/// Screensaver settings. The saver applies to the currently selected theme (settings.dockTheme);
+/// the on/off switch and the idle delay are app-wide. The boot screen switch is under Themes ▸
+/// Behaviour, next to the other things that happen when a theme starts.
 struct ScreensaverSettingsTab: View {
     @ObservedObject var settings = AppSettings.shared
     @State private var installMessage = ""
 
-    /// Storage key for the per-theme saver / boot-screen settings — `dockTheme` holds the stable
-    /// theme id, never the display name.
+    /// Storage key for the per-theme saver — `dockTheme` holds the stable theme id, never the
+    /// display name.
     private var themeName: String { settings.dockTheme }
 
     /// What the user should actually SEE — the id is an internal identifier.
@@ -32,7 +33,7 @@ struct ScreensaverSettingsTab: View {
             try? FileManager.default.removeItem(at: dest)
             if (try? FileManager.default.copyItem(at: s, to: dest)) != nil { ok += 1 }
         }
-        installMessage = "Installed \(ok) savers — pick them in System Settings ▸ Screen Saver."
+        installMessage = "Installed \(ok) savers. Pick them in System Settings \u{25B8} Screen Saver."
     }
 
     private var themeConfig: DockThemeConfig? {
@@ -46,61 +47,55 @@ struct ScreensaverSettingsTab: View {
         )
     }
 
-    private var bootDefaultOn: Bool {
-        themeConfig?.splashVideo != nil || themeConfig?.splashScreen != nil
-    }
-
-    private var bootBinding: Binding<Bool> {
-        Binding(
-            get: { settings.themeBootscreenEnabled[themeName] ?? bootDefaultOn },
-            set: { settings.themeBootscreenEnabled[themeName] = $0 }
-        )
-    }
-
     var body: some View {
-        Form {
-            Section("Screensaver") {
-                Toggle("Enable screensaver", isOn: $settings.screensaverEnabled)
-
-                Stepper(value: $settings.screensaverIdleMinutes, in: 1...120) {
-                    Text("Start after \(settings.screensaverIdleMinutes) min of inactivity")
-                }
-                .disabled(!settings.screensaverEnabled)
-
-                Picker("Saver for “\(themeLabel)”", selection: saverBinding) {
-                    ForEach(ScreensaverController.available, id: \.id) { s in
-                        Text(s.name).tag(s.id)
+        ScrollView {
+            VStack(spacing: RMSpacing.section) {
+                RMCard(title: "Screensaver", bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Screensaver") {
+                            Toggle("", isOn: $settings.screensaverEnabled)
+                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        }
+                        RMRow(label: "Start after",
+                              hint: "Minutes without input.") {
+                            HStack(spacing: 8) {
+                                Text("\(settings.screensaverIdleMinutes) min")
+                                    .font(.rmMono(size: 11.5)).foregroundColor(.rmTextSecondary)
+                                Stepper("", value: $settings.screensaverIdleMinutes, in: 1...120)
+                                    .labelsHidden()
+                            }
+                            .disabled(!settings.screensaverEnabled)
+                        }
+                        RMRow(label: "Saver for \u{201C}\(themeLabel)\u{201D}",
+                              hint: "A \u{201C}Screen Saver\u{201D} icon on the desktop starts it at once.") {
+                            Picker("", selection: saverBinding) {
+                                ForEach(ScreensaverController.available, id: \.id) { s in
+                                    Text(s.name).tag(s.id)
+                                }
+                            }
+                            .labelsHidden().frame(width: 180)
+                        }
+                        RMRow(label: "Preview", isLast: true) {
+                            Button("Start now") { ScreensaverController.shared.start() }
+                                .buttonStyle(RMDefaultButtonStyle())
+                                .disabled(saverBinding.wrappedValue == "none")
+                        }
                     }
                 }
 
-                HStack {
-                    Button("Preview") { ScreensaverController.shared.start() }
-                        .disabled(saverBinding.wrappedValue == "none")
-                    Spacer()
-                    Text("Tip: a “Screen Saver” icon on the desktop starts it instantly.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack {
-                    Button("Install as macOS screensavers…") { installSavers() }
-                    Spacer()
-                    Text(installMessage.isEmpty
-                         ? "Installs Pipes, FlowerBox, Flying Toasters and Flurry as real .saver modules (System Settings ▸ Screen Saver)."
-                         : installMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                RMCard(title: "macOS screensavers",
+                       subtitle: "Pipes, FlowerBox, Flying Toasters and Flurry as real .saver modules for System Settings \u{25B8} Screen Saver.",
+                       bodyPadding: 0) {
+                    RMRow(label: "Install",
+                          hint: installMessage.isEmpty ? nil : installMessage,
+                          isLast: true) {
+                        Button("Install\u{2026}") { installSavers() }
+                            .buttonStyle(RMDefaultButtonStyle())
+                    }
                 }
             }
-
-            Section("Boot Screen") {
-                Toggle("Show boot screen for “\(themeLabel)”", isOn: bootBinding)
-                Text("Plays this theme's boot video or image when you switch to it.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
-        .formStyle(.grouped)
-        .padding(.top, 8)
     }
 }

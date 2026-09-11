@@ -53,13 +53,14 @@ struct CrashesTab: View {
                             .pickerStyle(.segmented).labelsHidden().frame(width: 180)
                         }
                         RMRow(label: "How often",
-                              hint: isParty ? "Ignored in Party mode." : nil) {
+                              hint: isParty ? "Ignored in Party mode." : nil,
+                              stacked: true) {
                             Picker("", selection: $settings.crashIntensity) {
                                 ForEach(CrashScheduler.Intensity.allCases, id: \.rawValue) { level in
                                     Text(level.title).tag(level.rawValue)
                                 }
                             }
-                            .labelsHidden().frame(width: 280)
+                            .labelsHidden().frame(width: 300)
                             .disabled(isParty)
                         }
                         RMRow(label: "By itself", hint: scheduleReason, isLast: true) {
@@ -102,9 +103,7 @@ struct CrashesTab: View {
                 RMCard(title: "What can happen", bodyPadding: 0) {
                     VStack(spacing: 0) {
                         if specs.isEmpty {
-                            RMRow(label: "Nothing yet",
-                                  hint: "Each era has several failures and picks between them, so the same one does not come round twice. Windows 95, 98, Me, XP and 7, System 6, Mac OS 9, Mac OS X and Snow Leopard are covered; the other themes are still stable.",
-                                  isLast: true) { EmptyView() }
+                            RMNote(text: "Nothing for this theme. Windows 95, 98, Me, XP and 7, System 6, Mac OS 9 and the Mac OS X themes can crash; the others are still stable.")
                         } else {
                             scenarioRows(specs + aftermathSpecs + onDemandSpecs)
                         }
@@ -151,12 +150,12 @@ struct CrashesTab: View {
                                 .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
                         }
                         RMRow(label: "Drive sounds",
-                              hint: "Synthesised, not sampled: a hard disk spinning up and clicking, a floppy hunting, the Zip drive's click of death.") {
+                              hint: "The failing hard disk, the floppy, the Zip drive. Synthesised, not sampled.") {
                             Toggle("", isOn: $settings.crashSoundEnabled)
                                 .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
                         }
                         RMRow(label: "Graphics glitches",
-                              hint: "Corrupts the frozen desktop in the way the era really did: redraw trails on everything before Windows Vista, torn bands, stale blocks of video memory, and a wrecked palette where the desktop had 256 colours.") {
+                              hint: "The frozen desktop comes apart the way the era's did: redraw trails, torn bands, a wrecked palette.") {
                             Toggle("", isOn: $settings.crashGlitches)
                                 .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
                         }
@@ -171,7 +170,7 @@ struct CrashesTab: View {
 
                 RMCard(title: "Picture", bodyPadding: 0) {
                     RMRow(label: "Shape of the screen",
-                          hint: "16:9 stretches the text mode edge to edge, like a 4:3 signal on a widescreen monitor set to fill. 4:3 keeps the shape of the monitor of the day at full height, with bars at the sides.",
+                          hint: "16:9 fills the display edge to edge; 4:3 keeps the monitor of the day, with bars at the sides.",
                           isLast: true) {
                         Picker("", selection: $settings.crashPictureRatio) {
                             Text("16:9").tag("fill")
@@ -181,7 +180,8 @@ struct CrashesTab: View {
                     }
                 }
             }
-            .padding(RMSpacing.page)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
         .onAppear { refresh() }
     }

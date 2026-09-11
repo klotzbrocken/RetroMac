@@ -173,29 +173,34 @@ struct ROMLibrarySection: View {
     @State private var romToDelete: ROMEntry?
     @State private var showDeleteConfirm = false
 
+    // Plain views rather than `Section`s: this lives inside a settings card now, not a Form,
+    // and a Section outside a Form is just its header and rows without the grouping.
     var body: some View {
         if library.entries.isEmpty {
             Text("No ROMs added yet. Drop ROM files above to get started.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.rmSecondary)
+                .foregroundColor(.rmTextSecondary)
                 .padding(.vertical, 4)
         } else {
-            ForEach(library.entriesBySystem, id: \.system) { group in
-                systemSection(system: group.system, roms: group.roms)
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(library.entriesBySystem, id: \.system) { group in
+                    systemSection(system: group.system, roms: group.roms)
+                }
             }
         }
     }
 
     private func systemSection(system: RetroSystem, roms: [ROMEntry]) -> some View {
-        Section {
-            ForEach(roms) { rom in
-                romRow(rom: rom)
-            }
-        } header: {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
                 Image(systemName: system.sfSymbol)
                     .font(.caption)
                 Text("\(system.displayName) (\(roms.count))")
+                    .font(.rmSecondary).fontWeight(.semibold)
+            }
+            .foregroundColor(.rmTextSecondary)
+            ForEach(roms) { rom in
+                romRow(rom: rom)
             }
         }
     }
@@ -310,9 +315,19 @@ struct ROMLibrarySection: View {
 
 struct EmulatorStatusSection: View {
     var body: some View {
-        Section("Emulators") {
-            ForEach(EmulatorType.allCases) { emulator in
-                emulatorRow(emulator)
+        // Rows of a settings card, not a Form section.
+        VStack(spacing: 0) {
+            let all = EmulatorType.allCases
+            ForEach(Array(all.enumerated()), id: \.element) { index, emulator in
+                VStack(spacing: 0) {
+                    emulatorRow(emulator)
+                        .padding(.vertical, 11)
+                        .padding(.horizontal, RMSpacing.card)
+                    if index < all.count - 1 {
+                        Rectangle().fill(Color.rmDivider).frame(height: 1)
+                            .padding(.horizontal, RMSpacing.card)
+                    }
+                }
             }
         }
     }

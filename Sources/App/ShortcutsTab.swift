@@ -9,13 +9,15 @@ struct ShortcutsTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: RMSpacing.section) {
-                // Global hotkeys
                 globalHotkeysCard
-
-                // Two side-by-side cards
-                HStack(alignment: .top, spacing: RMSpacing.xxl) {
-                    menuBarCard
-                    onboardingCard
+                // "Hide the menu bar / desktop icons while the shader is on" moved to Shader ▸
+                // Where, next to the scope they belong to; the Apple logo to Desktop ▸ Menu bar;
+                // the Setup Assistant to General, its one home.
+                RMCard(title: "Conflicts", bodyPadding: 0) {
+                    RMRow(label: "Show a tip when a hotkey is already taken", isLast: true) {
+                        Toggle("", isOn: $settings.showHotkeyConflictTips)
+                            .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                    }
                 }
             }
             .padding(.horizontal, 24)
@@ -189,60 +191,6 @@ struct ShortcutsTab: View {
         }
     }
 
-    // MARK: - Menu Bar Card
-
-    private var menuBarCard: some View {
-        RMCard(title: "Menu bar", bodyPadding: 0) {
-            VStack(spacing: 0) {
-                RMRow(label: "Hide system menu bar when overlay is on") {
-                    Toggle("", isOn: $settings.hideMenuBar)
-                        .toggleStyle(.switch)
-                        .tint(.rmAccent)
-                        .labelsHidden()
-                }
-                RMRow(label: "Hide desktop icons when overlay is on") {
-                    Toggle("", isOn: $settings.hideDesktopIcons)
-                        .toggleStyle(.switch)
-                        .tint(.rmAccent)
-                        .labelsHidden()
-                }
-                RMRow(label: "Menu-bar Apple logo",
-                      hint: "Cover the system Apple with a retro logo. Also cycled from the flyout.",
-                      isLast: true) {
-                    Picker("", selection: $settings.menuBarAppleStyle) {
-                        Text("Off").tag(0)
-                        Text("Rainbow").tag(1)
-                        Text("Aqua").tag(2)
-                        Text("Aqua Classic").tag(3)
-                        Text("Apple Hell").tag(4)
-                        Text("Futurama").tag(5)
-                    }
-                    .labelsHidden().pickerStyle(.menu).frame(width: 140)
-                }
-            }
-        }
-    }
-
-    // MARK: - Onboarding Card
-
-    private var onboardingCard: some View {
-        RMCard(title: "Onboarding", bodyPadding: 0) {
-            VStack(spacing: 0) {
-                RMRow(label: "Show tips on hotkey conflicts") {
-                    Toggle("", isOn: $settings.showHotkeyConflictTips)
-                        .toggleStyle(.switch)
-                        .tint(.rmAccent)
-                        .labelsHidden()
-                }
-                RMRow(label: "Re-run setup assistant", isLast: true) {
-                    Button("Open\u{2026}") {
-                        AppDelegate.shared?.showOnboarding()
-                    }
-                    .buttonStyle(RMDefaultButtonStyle())
-                }
-            }
-        }
-    }
 }
 
 // MARK: - Hotkey Row (with key recording)

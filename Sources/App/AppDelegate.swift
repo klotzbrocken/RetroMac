@@ -2746,8 +2746,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
+    /// The switch in Settings ▸ Desktop, applied to the active theme right away.
+    func applyThemeWidgetsNow() {
+        guard AppSettings.shared.dockEnabled, let theme = ThemeManager.shared.activeTheme else { return }
+        applyThemeWidgets(for: theme.name)
+    }
+
     /// Show or hide the theme's desktop widgets based on the `themeIncludeWidgets`
-    /// preference (set in the Setup Assistant). First version = the desktop Clock.
+    /// preference (Settings ▸ Desktop, and the Setup Assistant). First version = the desktop Clock.
     private func applyThemeWidgets(for themeName: String) {
         // Dock-only deliberately changes nothing but the dock — no desktop widgets.
         if AppSettings.shared.themeIncludeWidgets && !AppSettings.shared.dockOnly

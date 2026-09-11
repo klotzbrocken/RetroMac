@@ -13,46 +13,19 @@ struct GamesSettingsTab: View {
     @State private var wadFiles: [String] = []
     @State private var grpFiles: [String] = []
 
-    /// Every CRT preset, grouped as the registry orders them ("" = None).
-    private var allPresets: [(String, String)] {
-        var list: [(String, String)] = [("", "None")]
-        for (_, presets) in PresetRegistry.categorizedPresets {
-            for p in presets { list.append((p.id, p.displayName)) }
-        }
-        return list
-    }
-
     var body: some View {
-        Form {
-            librarySection
-
-            // One global CRT switch for all bundled PC games (replaces per-game toggles).
-            Section("Game effects") {
-                Toggle("Apply CRT effect to games", isOn: $settings.gamesCRTEnabled)
-                    .toggleStyle(.switch)
-                    .tint(.rmAccent)
-                Text("Master switch. Doom, Duke Nukem 3D, Heretic, Shadow Warrior and Freedoom load a shader mod into the game engine itself. Warcraft, Quake and console ROMs can't do that, so RetroMac lays its own CRT over their window instead — which needs Screen Recording permission.")
-                    .font(.caption).foregroundStyle(.secondary)
-
-                overlayPickers
+        ScrollView {
+            VStack(spacing: RMSpacing.section) {
+                libraryCard
+                effectsCard
+                dataFoldersCard
+                romsCard
+                pacmanCard
+                emulatorsCard
             }
-
-            dataFoldersSection
-
-            // Retro Console ROMs (drop zone + library)
-            Section("Retro Games") {
-                ROMDropZone()
-            }
-            ROMLibrarySection()
-
-            // Bundled arcade demo
-            pacmanSection
-
-            // Emulators at bottom
-            EmulatorStatusSection()
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
         }
-        .formStyle(.grouped)
-        .padding(.top, 8)
         .onAppear {
             refreshWadFiles()
             refreshGrpFiles()
@@ -61,157 +34,151 @@ struct GamesSettingsTab: View {
 
     // MARK: - The Library
 
-    private var librarySection: some View {
-        Section("Games") {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 18)).foregroundStyle(.secondary).frame(width: 24)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Game Library").font(.headline)
-                    Text("Every game RetroMac can run: what is installed, what still has to be downloaded, its engine, and where to point it at your own files.")
-                        .font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-                Button("Open…") { GameLibraryWindowController.shared.show() }
-            }
+    private var libraryCard: some View {
+        RMCard(title: "Game Library",
+               subtitle: "Every game RetroMac can run: what is installed, what still has to be downloaded, its engine, and where to point it at your own files.",
+               headerAction: AnyView(
+                Button("Open\u{2026}") { GameLibraryWindowController.shared.show() }
+                    .buttonStyle(RMPrimaryButtonStyle())),
+               bodyPadding: 0) {
+            Color.clear.frame(height: 0)
         }
     }
 
-    // MARK: - Overlays
+    // MARK: - Effects
 
-    /// Three games cannot load a shader into their own engine, so RetroMac lays one over the
-    /// window instead. That choice has nowhere to live in the Library, so it stays here.
-    @ViewBuilder
-    private var overlayPickers: some View {
-        HStack {
-            Text("Warcraft I + II")
-            Spacer()
-            Picker("", selection: $settings.warcraftPresetID) {
-                Text("Follow current preset").tag("")
-                Text("Off").tag("off")
-                Divider()
-                ForEach(allPresets.filter { !$0.0.isEmpty }, id: \.0) { id, name in
-                    Text(name).tag(id)
+    /// One switch for all bundled PC games, and the three that cannot load a shader into their
+    /// own engine, so RetroMac lays one over the window instead.
+    private var effectsCard: some View {
+        RMCard(title: "Game effects",
+               subtitle: "Doom, Duke Nukem 3D, Heretic, Shadow Warrior and Freedoom load a shader into the engine. Warcraft, Quake and console ROMs get RetroMac's own CRT over their window, which needs Screen Recording.",
+               bodyPadding: 0) {
+            VStack(spacing: 0) {
+                RMRow(label: "CRT effect in games") {
+                    Toggle("", isOn: $settings.gamesCRTEnabled)
+                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                }
+                RMRow(label: "Warcraft I + II") {
+                    Picker("", selection: $settings.warcraftPresetID) {
+                        Text("Follow current preset").tag("")
+                        Text("Off").tag("off")
+                        Divider()
+                        ForEach(PresetRegistry.pickerList.filter { !$0.id.isEmpty }, id: \.id) { entry in
+                            Text(entry.name).tag(entry.id)
+                        }
+                    }
+                    .labelsHidden().pickerStyle(.menu).frame(width: 200)
+                    .disabled(!settings.gamesCRTEnabled)
+                }
+                RMRow(label: "Quake") {
+                    LiteShaderPicker(selection: $settings.quakeLitePreset)
+                        .frame(width: 200)
+                        .disabled(!settings.gamesCRTEnabled)
+                }
+                RMRow(label: "Quake II",
+                      hint: "With a theme active the games open in a borderless window, so the CRT sits on the game and not on a title bar.",
+                      isLast: true) {
+                    LiteShaderPicker(selection: $settings.quake2LitePreset)
+                        .frame(width: 200)
+                        .disabled(!settings.gamesCRTEnabled)
                 }
             }
-            .labelsHidden().pickerStyle(.menu).frame(width: 200)
-            .disabled(!settings.gamesCRTEnabled)
         }
-        HStack {
-            Text("Quake")
-            Spacer()
-            LiteShaderPicker(selection: $settings.quakeLitePreset)
-                .frame(width: 200)
-                .disabled(!settings.gamesCRTEnabled)
-        }
-        HStack {
-            Text("Quake II")
-            Spacer()
-            LiteShaderPicker(selection: $settings.quake2LitePreset)
-                .frame(width: 200)
-                .disabled(!settings.gamesCRTEnabled)
-        }
-        if !settings.gamesCRTEnabled {
-            Text("Turn “Apply CRT effect to games” on to use these.")
-                .font(.caption2).foregroundStyle(.secondary)
-        }
-        Text("With a theme active the games open in a borderless window — just the picture, so the CRT sits on the game and not on a title bar. Fullscreen and quitting are in the game's own menu.")
-            .font(.caption2).foregroundStyle(.secondary)
     }
 
     // MARK: - Where the game data lives
 
     /// The folders themselves, not the games in them: which game is installed is the Library's
     /// business, but "where does RetroMac put a download" belongs in settings.
-    private var dataFoldersSection: some View {
-        Section("Game data folders") {
-            folderRow(title: "Doom WADs", path: settings.doomWadFolder,
-                      detail: wadFiles.isEmpty ? "No WAD or PK3 files here"
-                                               : "\(wadFiles.count) file\(wadFiles.count == 1 ? "" : "s") — also used by Heretic and Freedoom",
-                      choose: chooseWadFolder)
-            folderRow(title: "Duke Nukem GRPs", path: settings.razeGrpFolder,
-                      detail: grpFiles.isEmpty ? "No GRP files here"
-                                               : "\(grpFiles.count) file\(grpFiles.count == 1 ? "" : "s") — also used by Shadow Warrior",
-                      choose: chooseGrpFolder)
-            folderRow(title: "Quake", path: settings.quakeBasePath,
-                      detail: "Base folder, holds id1/pak0.pak",
-                      choose: chooseQuakeBasePath)
-            folderRow(title: "Quake II", path: settings.quake2BasePath,
-                      detail: "Base folder, holds baseq2/pak0.pak",
-                      choose: chooseQuake2BasePath)
-
-            // Warcraft is read-only here: its folder is either data the extractor produced or a
-            // folder the user picked, and both of those routes run through the Library.
-            warcraftFolderRow(.warcraft1)
-            warcraftFolderRow(.warcraft2)
-
-            Text("Point a game at files you already have with “Use My Own Files…” in the Game Library.")
-                .font(.caption2).foregroundStyle(.secondary)
+    private var dataFoldersCard: some View {
+        RMCard(title: "Game data folders",
+               subtitle: "Point a game at files you already have with \u{201C}Use My Own Files\u{2026}\u{201D} in the Game Library.",
+               bodyPadding: 0) {
+            VStack(spacing: 0) {
+                folderRow(title: "Doom WADs", path: settings.doomWadFolder,
+                          detail: wadFiles.isEmpty ? "No WAD or PK3 files here"
+                                                   : "\(wadFiles.count) file\(wadFiles.count == 1 ? "" : "s"), also used by Heretic and Freedoom",
+                          choose: chooseWadFolder)
+                folderRow(title: "Duke Nukem GRPs", path: settings.razeGrpFolder,
+                          detail: grpFiles.isEmpty ? "No GRP files here"
+                                                   : "\(grpFiles.count) file\(grpFiles.count == 1 ? "" : "s"), also used by Shadow Warrior",
+                          choose: chooseGrpFolder)
+                folderRow(title: "Quake", path: settings.quakeBasePath,
+                          detail: "Base folder, holds id1/pak0.pak",
+                          choose: chooseQuakeBasePath)
+                folderRow(title: "Quake II", path: settings.quake2BasePath,
+                          detail: "Base folder, holds baseq2/pak0.pak",
+                          choose: chooseQuake2BasePath)
+                // Warcraft is read-only here: its folder is either data the extractor produced or a
+                // folder the user picked, and both of those routes run through the Library.
+                warcraftFolderRow(.warcraft1, isLast: false)
+                warcraftFolderRow(.warcraft2, isLast: true)
+            }
         }
     }
 
     private func folderRow(title: String, path: String, detail: String,
                            choose: @escaping () -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(title)
-                Spacer()
-                Button("Choose…", action: choose)
-                Button("Open in Finder") {
+        RMRow(label: title,
+              hint: (path.isEmpty ? "Not set" : abbreviatePath(path)) + " \u{2014} " + detail) {
+            HStack(spacing: 6) {
+                Button("Choose\u{2026}", action: choose)
+                    .buttonStyle(RMDefaultButtonStyle())
+                Button("Show") {
                     NSWorkspace.shared.open(URL(fileURLWithPath: path))
                 }
+                .buttonStyle(RMGhostButtonStyle())
                 .disabled(path.isEmpty || !FileManager.default.fileExists(atPath: path))
             }
-            Text(path.isEmpty ? "Not set" : abbreviatePath(path))
-                .font(.caption).foregroundStyle(.secondary)
-                .lineLimit(1).truncationMode(.middle)
-            Text(detail).font(.caption2).foregroundStyle(.secondary)
         }
     }
 
-    @ViewBuilder
-    private func warcraftFolderRow(_ title: WarcraftGame.Title) -> some View {
+    private func warcraftFolderRow(_ title: WarcraftGame.Title, isLast: Bool) -> some View {
         let folder = WarcraftGame.dataFolder(title)
         let engineOK = WarcraftGame.isEngineAvailable(title)
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(title.displayName)
-                Spacer()
-                Button("Open in Finder") {
-                    NSWorkspace.shared.open(URL(fileURLWithPath: folder))
-                }
-                .disabled(folder.isEmpty || !FileManager.default.fileExists(atPath: folder))
+        let where_ = folder.isEmpty ? "Not set" : abbreviatePath(folder)
+        // Build-level, not per-game: without the engine neither Warcraft can run at all.
+        let hint = engineOK ? where_
+            : where_ + " \u{2014} the Stratagus engine is not in this build (it needs cmake and pkg-config to compile)."
+        return RMRow(label: title.displayName, hint: hint, isLast: isLast) {
+            Button("Show") {
+                NSWorkspace.shared.open(URL(fileURLWithPath: folder))
             }
-            Text(folder.isEmpty ? "Not set" : abbreviatePath(folder))
-                .font(.caption).foregroundStyle(.secondary)
-                .lineLimit(1).truncationMode(.middle)
-            if !engineOK {
-                // Build-level, not per-game: without the engine neither Warcraft can run at all.
-                Text("The Stratagus engine is not in this build. It is compiled from the vendored submodules on first build and needs cmake and pkg-config.")
-                    .font(.caption2).foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
+            .buttonStyle(RMGhostButtonStyle())
+            .disabled(folder.isEmpty || !FileManager.default.fileExists(atPath: folder))
+        }
+    }
+
+    // MARK: - ROMs and emulators
+
+    private var romsCard: some View {
+        RMCard(title: "Retro games",
+               subtitle: "Console ROMs, played through an emulator with the CRT over the window.",
+               bodyPadding: RMSpacing.card) {
+            VStack(alignment: .leading, spacing: 12) {
+                ROMDropZone()
+                ROMLibrarySection()
             }
         }
     }
 
-    // MARK: - Bundled arcade demo
-
-    private var pacmanSection: some View {
-        Section {
-            DisclosureGroup("Pac-Man") {
-                HStack {
-                    Image(systemName: PacmanGame.isAvailable ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundStyle(PacmanGame.isAvailable ? .green : .red)
-                    Text("Pac-Man (BeOS demo)")
-                    Spacer()
-                    Button("Play") { PacmanGame.launch() }
-                        .disabled(!PacmanGame.isAvailable)
-                }
-                Text("Bundled SDL Pac-Man clone. The window frame matches the active theme (BeOS Lasche on the BeOS theme).")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    private var pacmanCard: some View {
+        RMCard(title: "Pac-Man", bodyPadding: 0) {
+            RMRow(label: "Pac-Man (BeOS demo)",
+                  hint: PacmanGame.isAvailable
+                    ? "Bundled SDL Pac-Man clone. The window frame follows the active theme."
+                    : "Not in this build.",
+                  isLast: true) {
+                Button("Play") { PacmanGame.launch() }
+                    .buttonStyle(RMDefaultButtonStyle())
+                    .disabled(!PacmanGame.isAvailable)
             }
+        }
+    }
+
+    private var emulatorsCard: some View {
+        RMCard(title: "Emulators", bodyPadding: 0) {
+            EmulatorStatusSection()
         }
     }
 
