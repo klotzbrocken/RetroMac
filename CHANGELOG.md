@@ -5,6 +5,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Windows 95 and Windows Me swap the pointer too.** Both kept the macOS cursor; they now use
+  the same black-arrow set Windows 3.1 uses, which is what those desktops looked like. Windows 98
+  is unchanged: the system pointer by default, the Plus! sets with their schemes.
+
 - **Lite shaders cover every screen.** The Lite presets drew one window across the union of
   all displays. With an external 1x monitor as the main display next to the 2x built-in, AppKit
   handed that window to the built-in's scale and a band of the external screen was left without

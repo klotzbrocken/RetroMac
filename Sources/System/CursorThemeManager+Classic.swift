@@ -14,7 +14,9 @@ extension CursorThemeManager {
         case "Mac OS 6 classic":                        return loadBundledSet("Cursors/AppleSystem6")
         case "Mac OS 9.2 Classic":                      return loadBundledSet("Cursors/AppleSystem9")
         case "Mac OS X":                                return loadBundledSet("Cursors/MacOSX")
-        case "Windows 3.1":                             return loadBundledSet("Cursors/Retrosmart")
+        // 95 and Me had the same black arrow with the white edge that 3.1 had, and no set of
+        // their own is bundled, so they borrow it.
+        case "Windows 3.1", "Windows 95", "Windows Me": return loadBundledSet("Cursors/Retrosmart")
         case "Windows XP":                              return loadBundledSet("Cursors/WindowsXP", scale: AppSettings.shared.xpCursorScale)
         case "Windows 98":
             // The default Windows 98 scheme keeps the system pointer; the Plus! schemes ship a set.
