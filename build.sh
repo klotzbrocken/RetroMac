@@ -355,7 +355,7 @@ if [ "$MODE" = "release" ]; then
         CERT_SHA1=$(security find-certificate -c "$SIGN_ID" -Z 2>/dev/null | awk '/SHA-1/ {print $3}' | head -1)
         PROFILE_SHA1S=$(security cms -D -i "$PROFILE" 2>/dev/null | python3 -c '
 import plistlib, sys, hashlib
-for c in plistlib.load(sys.stdin.buffer).get("DeveloperCertificates", []):
+for c in plistlib.loads(sys.stdin.buffer.read()).get("DeveloperCertificates", []):
     print(hashlib.sha1(c).hexdigest().upper())')
         if [ -z "$CERT_SHA1" ] || ! echo "$PROFILE_SHA1S" | grep -q "$CERT_SHA1"; then
             echo "  ❌ The provisioning profile does not contain the signing certificate:"
