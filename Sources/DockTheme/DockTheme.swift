@@ -78,6 +78,10 @@ struct DockThemeConfig: Codable {
     struct WallpaperOption: Codable {
         var name: String
         var file: String
+        /// true = a small pattern tile, repeated edge to edge rather than stretched (the
+        /// Windows 95 "Black Thatch" and friends). Per option, so a theme can offer both a
+        /// photograph and its patterns; `wallpaperTiled` on the theme still tiles everything.
+        var tiled: Bool? = nil
     }
 
     /// A Windows-style appearance colour scheme (from a `.theme` `[Control Panel\Colors]` section):

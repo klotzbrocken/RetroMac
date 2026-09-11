@@ -169,6 +169,7 @@
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-sharp-lite",
   "iconMappings": {
+    "com.apple.reminders": "reminders.png",
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",
     "com.apple.mail": "mail.png",

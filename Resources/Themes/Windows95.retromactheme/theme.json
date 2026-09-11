@@ -47,7 +47,24 @@
     {
       "name": "Classic Teal",
       "file": "wallpaper-teal.png"
-    }
+    },
+    { "name": "Black Thatch (tiled)", "file": "tile-black-thatch.png", "tiled": true },
+    { "name": "Blue Rivets (tiled)", "file": "tile-blue-rivets.png", "tiled": true },
+    { "name": "Bubbles (tiled)", "file": "tile-bubbles.png", "tiled": true },
+    { "name": "Carved Stone (tiled)", "file": "tile-carved-stone.png", "tiled": true },
+    { "name": "Circles (tiled)", "file": "tile-circles.png", "tiled": true },
+    { "name": "Forest (tiled)", "file": "tile-forest.png", "tiled": true },
+    { "name": "Gold Weave (tiled)", "file": "tile-gold-weave.png", "tiled": true },
+    { "name": "Houndstooth (tiled)", "file": "tile-houndstooth.png", "tiled": true },
+    { "name": "Metal Links (tiled)", "file": "tile-metal-links.png", "tiled": true },
+    { "name": "Pinstripe (tiled)", "file": "tile-pinstripe.png", "tiled": true },
+    { "name": "Red Blocks (tiled)", "file": "tile-red-blocks.png", "tiled": true },
+    { "name": "Sandstone (tiled)", "file": "tile-sandstone.png", "tiled": true },
+    { "name": "Stitches (tiled)", "file": "tile-stitches.png", "tiled": true },
+    { "name": "Straw Mat (tiled)", "file": "tile-straw-mat.png", "tiled": true },
+    { "name": "Tiles (tiled)", "file": "tile-tiles.png", "tiled": true },
+    { "name": "Triangles (tiled)", "file": "tile-triangles.png", "tiled": true },
+    { "name": "Waves (tiled)", "file": "tile-waves.png", "tiled": true }
   ],
   "dock": {
     "height": 40,

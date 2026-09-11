@@ -478,6 +478,10 @@ final class ThemeManager {
             return
         }
         let ws = NSWorkspace.shared
+        // Tiled either for the whole theme (System 6, NeXTSTEP) or for this one option (the
+        // Windows 95 patterns next to the Clouds photograph).
+        let isTiled = theme.config.wallpaperTiled == true
+            || theme.config.wallpapers?.first { $0.file == wpURL.lastPathComponent }?.tiled == true
         // Why the menu-bar strip did or did not happen. "It is on and I do not see it" was not
         // answerable before: every step that could swallow it failed silently.
         var tintNotes: [String] = []
@@ -487,7 +491,7 @@ final class ThemeManager {
             // mode, so pre-render the tile to this screen's exact pixel size. Only for
             // theme-bundled files — a custom "Browse…" wallpaper is never tiled.
             var finalURL = wpURL
-            if theme.config.wallpaperTiled == true, wpURL.path.hasPrefix(theme.url.path),
+            if isTiled, wpURL.path.hasPrefix(theme.url.path),
                let tiled = tiledWallpaperURL(tile: wpURL, for: screen, themeName: theme.name) {
                 finalURL = tiled
             }

@@ -5,6 +5,18 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Windows 95 and 98: the seventeen pattern wallpapers.** Black Thatch, Blue Rivets, Bubbles,
+  Carved Stone, Circles, Forest, Gold Weave, Houndstooth, Metal Links, Pinstripe, Red Blocks,
+  Sandstone, Stitches, Straw Mat, Tiles, Triangles and Waves, under Change Wallpaper, each
+  tiled edge to edge the way the originals were rather than stretched. A wallpaper option can
+  now be tiled on its own, next to a photograph that is not.
+- **Windows 95 has its hourglass.** Its own cursor set: the Retrosmart arrows with the real
+  Windows 95 wait cursor.
+- **Snow Leopard and Mountain Lion swap the pointer**, using the Mac OS X set; the Aqua arrow
+  did not change between 10.0 and 10.8.
+- **Mountain Lion has a boot screen**, the same as Snow Leopard's.
+- **New icons:** Reminders on Snow Leopard; Word, Excel and PowerPoint on Mac OS X.
+
 - **Windows 95 and Windows Me swap the pointer too.** Both kept the macOS cursor; they now use
   the same black-arrow set Windows 3.1 uses, which is what those desktops looked like. Windows 98
   is unchanged: the system pointer by default, the Plus! sets with their schemes.
