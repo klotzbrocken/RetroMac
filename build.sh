@@ -85,6 +85,15 @@ rm -rf "$CONTENTS/Resources/Helpers"
 cp "$BIN_PATH/RetroMac" "$CONTENTS/MacOS/RetroMac"
 # Add rpath so dyld finds Sparkle.framework in Contents/Frameworks
 install_name_tool -add_rpath @executable_path/../Frameworks "$CONTENTS/MacOS/RetroMac" 2>/dev/null || true
+# Release: keep the debug symbols in a dSYM next to the bundle, then strip the binary. The
+# Swift release build carries ~7 MB of local symbols nobody reads at runtime; crash logs are
+# symbolicated against .build/RetroMac.dSYM instead. Debug builds stay unstripped so lldb works.
+if [ "$MODE" = "release" ]; then
+    dsymutil "$BIN_PATH/RetroMac" -o ".build/RetroMac.dSYM" 2>/dev/null \
+        && echo "  ✓ dSYM written to .build/RetroMac.dSYM" \
+        || echo "  ⚠ dsymutil failed — binary stays unstripped"
+    [ -d ".build/RetroMac.dSYM" ] && strip -x "$CONTENTS/MacOS/RetroMac"
+fi
 cp Info.plist "$CONTENTS/Info.plist"
 # Debug builds use a separate bundle ID to avoid poisoning release TCC grants
 if [ "$MODE" != "release" ]; then
@@ -310,7 +319,16 @@ if [ -x "$WC_BUILD/stratagus" ]; then
         for d in scripts campaigns maps contrib; do
             [ -d "$src/$d" ] && cp -R "$src/$d" "$WC_DIR/$key-base/$d"
         done
+        # Most maps come gzipped from upstream; the twenty that don't cost 7 MB for 0.8 MB of
+        # content. The engine opens "<name>.sms" and "<name>.sms.gz" alike (iolib.cpp,
+        # LibraryFileName), and the map browsers list by the .smp, which stays as it is.
+        [ -d "$WC_DIR/$key-base/maps" ] && find "$WC_DIR/$key-base/maps" -name "*.sms" -exec gzip -9 {} +
     done
+    if [ "$MODE" = "release" ]; then
+        for bin in stratagus wartool war1tool; do
+            [ -f "$WC_DIR/$bin" ] && strip -x "$WC_DIR/$bin"
+        done
+    fi
     codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$WC_DIR/stratagus"
     [ -f "$WC_DIR/wartool" ] && codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$WC_DIR/wartool"
     [ -f "$WC_DIR/war1tool" ] && codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$WC_DIR/war1tool"

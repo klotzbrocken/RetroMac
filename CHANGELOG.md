@@ -5,6 +5,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **A smaller download.** The release binary is stripped (its symbols go to a dSYM next to
+  the bundle), the Warcraft maps that came unpacked are gzipped like the rest, and the three
+  Windows 7 wallpapers and Mac OS 9's poppy are re-encoded at a sane JPEG quality. About 15 MB
+  less in the app, no visible change.
 - **Settings, tidied.** One home per setting: the per-theme shader switch and preset are under
   Shader ▸ When only; wallpaper, desktop-icon size and the menu bar (tint and the Apple logo)
   under Desktop only; "hide the menu bar / desktop icons while the shader is on" under Shader ▸
