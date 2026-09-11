@@ -348,8 +348,26 @@ PKG
 if [ "$MODE" = "release" ]; then
     PROFILE="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/RetroMac_Developer_ID.provisionprofile"
     if [ -f "$PROFILE" ]; then
+        # HARD FAIL: the profile must list the certificate we sign with. A Developer ID
+        # certificate renewed in the portal (10 Sep 2026) left the profile carrying the old
+        # one; the build signed, notarized and stapled cleanly, and AMFI killed it on launch
+        # (SIGKILL, exit 137, "Launchd job spawn failed"). 2.8.4 shipped like that for an hour.
+        CERT_SHA1=$(security find-certificate -c "$SIGN_ID" -Z 2>/dev/null | awk '/SHA-1/ {print $3}' | head -1)
+        PROFILE_SHA1S=$(security cms -D -i "$PROFILE" 2>/dev/null | python3 -c '
+import plistlib, sys, hashlib
+for c in plistlib.load(sys.stdin.buffer).get("DeveloperCertificates", []):
+    print(hashlib.sha1(c).hexdigest().upper())')
+        if [ -z "$CERT_SHA1" ] || ! echo "$PROFILE_SHA1S" | grep -q "$CERT_SHA1"; then
+            echo "  ❌ The provisioning profile does not contain the signing certificate:"
+            echo "     signing with  $CERT_SHA1"
+            echo "     profile lists $(echo "$PROFILE_SHA1S" | tr '\n' ' ')"
+            echo "     An app signed like this is killed by AMFI on launch (exit 137). Edit the"
+            echo "     Developer ID profile at developer.apple.com, tick the current certificate,"
+            echo "     download it to $PROFILE and rebuild."
+            exit 1
+        fi
         cp "$PROFILE" "$CONTENTS/embedded.provisionprofile"
-        echo "  ✓ Provisioning profile embedded"
+        echo "  ✓ Provisioning profile embedded (matches certificate $CERT_SHA1)"
     else
         # HARD FAIL: the release entitlements include com.apple.developer.system-extension.install,
         # which AMFI only permits with an embedded provisioning profile. Without it the WHOLE APP
