@@ -582,6 +582,32 @@ enum CrashCatalogue {
             return bootFailure("boot-chkdsk", "CHKDSK", [.winXP, .win7], weight: 4, stages: stages)
         },
 
+        Spec(id: "boot-xp-installing-updates",
+             title: "Installing update 3 of 7 (XP)",
+             eras: [.winXP],
+             weight: 4, kind: .fullScreen, category: .bootFailure) { rng in
+            let screen = CrashCopy.bootXPInstallingUpdates(using: &rng)
+            return bootFailure("boot-xp-installing-updates", "Installing update 3 of 7 (XP)", [.winXP], weight: 4,
+                               stages: [CrashStage(.bootGlyph(.windowsUpdate(screen)),
+                                                   hold: Double.random(in: 8...12, using: &rng))])
+        },
+
+        Spec(id: "boot-win7-configuring-updates",
+             title: "Configuring Windows updates (7)",
+             eras: [.win7],
+             weight: 4, kind: .fullScreen, category: .bootFailure) { rng in
+            let screens = CrashCopy.bootWin7ConfiguringUpdates(using: &rng)
+            var stages = [
+                CrashStage(.bootGlyph(.windowsUpdate(screens.preparing)), hold: Double.random(in: 3...4, using: &rng)),
+                CrashStage(.bootGlyph(.windowsUpdate(screens.configuring)), hold: Double.random(in: 7...10, using: &rng)),
+            ]
+            // Half the time it does not take, which is the half everyone remembers.
+            if Bool.random(using: &rng) {
+                stages.append(CrashStage(.bootGlyph(.windowsUpdate(screens.reverting)), hold: Double.random(in: 4...5, using: &rng)))
+            }
+            return bootFailure("boot-win7-configuring-updates", "Configuring Windows updates (7)", [.win7], weight: 4, stages: stages)
+        },
+
         Spec(id: "boot-sad-mac",
              title: "Sad Mac",
              eras: [.macos6, .macos9],

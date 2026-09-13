@@ -458,6 +458,16 @@ final class CrashDirector {
             showStills()
         case .bootGlyph(let glyph):
             renderGlyph(glyph)
+            if glyph.isAnimated, stage.hold > 0 {
+                // Same clock as the text screens: the counter walks 0…100 across the hold, and
+                // the screen decides where it stops showing progress.
+                let step = max(0.03, stage.hold / 100)
+                counterTimer = schedule(every: step) { [weak self] in
+                    guard let self, self.dumpCounter < 100 else { return }
+                    self.dumpCounter += 1
+                    self.renderGlyph(glyph)
+                }
+            }
             if glyph == .questionFolder {
                 blinkTimer = schedule(every: 0.5) { [weak self] in
                     guard let self else { return }
@@ -532,7 +542,7 @@ final class CrashDirector {
 
     private func renderGlyph(_ glyph: BootGlyph) {
         for view in session?.views ?? [] {
-            let image = CrashRenderer.bootGlyphImage(glyph, blinkOn: blinkOn, size: view.bounds.size)
+            let image = CrashRenderer.bootGlyphImage(glyph, blinkOn: blinkOn, counter: dumpCounter, size: view.bounds.size)
             var rect = NSRect(origin: .zero, size: image.size)
             view.show(fullBleed: image.cgImage(forProposedRect: &rect, context: nil, hints: nil))
         }
@@ -987,7 +997,7 @@ extension CrashDirector {
                 case .kernelPanic(let panic):
                     write(CrashRenderer.panicImage(panic, size: NSSize(width: 1280, height: 800)), name)
                 case .bootGlyph(let glyph):
-                    write(CrashRenderer.bootGlyphImage(glyph, blinkOn: true, size: NSSize(width: 1280, height: 800)), name)
+                    write(CrashRenderer.bootGlyphImage(glyph, blinkOn: true, counter: 35, size: NSSize(width: 1280, height: 800)), name)
                 default:
                     break
                 }

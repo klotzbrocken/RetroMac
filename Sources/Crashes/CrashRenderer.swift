@@ -201,7 +201,7 @@ extension CrashRenderer {
     }
 
     /// The pictures a Mac drew when it could not boot, at screen size.
-    static func bootGlyphImage(_ glyph: BootGlyph, blinkOn: Bool, size: NSSize) -> NSImage {
+    static func bootGlyphImage(_ glyph: BootGlyph, blinkOn: Bool, counter: Int = 0, size: NSSize) -> NSImage {
         let image = NSImage(size: size)
         image.lockFocus()
         defer { image.unlockFocus() }
@@ -209,6 +209,9 @@ extension CrashRenderer {
         let unit = max(1, Int((min(size.width, size.height) / 160).rounded()))
 
         switch glyph {
+        case .windowsUpdate(let screen):
+            drawWindowsUpdate(screen, counter: counter, in: bounds)
+
         case .sadMac(let codes):
             NSColor.black.setFill(); bounds.fill()
             let face = bitmap(Self.sadMacRows, ink: .white, scale: unit * 2)
@@ -250,6 +253,63 @@ extension CrashRenderer {
             bar.stroke()
         }
         return image
+    }
+
+    /// The update screen. Text is set in Tahoma on XP, which macOS ships, and in the system
+    /// face for 7, whose Segoe UI it does not. Everything scales from the picture's height so a
+    /// 4:3 window and a 16:9 screen get the same proportions.
+    private static func drawWindowsUpdate(_ screen: WindowsUpdateScreen, counter: Int, in bounds: NSRect) {
+        let percent = min(max(counter, 0), screen.ceiling)
+        let h = bounds.height
+        let top: NSColor, bottom: NSColor
+        switch screen.style {
+        case .xp:   top = NSColor(red: 0.36, green: 0.51, blue: 0.88, alpha: 1); bottom = NSColor(red: 0.20, green: 0.33, blue: 0.75, alpha: 1)
+        case .win7: top = NSColor(red: 0.17, green: 0.43, blue: 0.63, alpha: 1); bottom = NSColor(red: 0.05, green: 0.19, blue: 0.35, alpha: 1)
+        }
+        NSGradient(starting: top, ending: bottom)?.draw(in: bounds, angle: -90)
+
+        let bodySize = (h * 0.024).rounded()
+        let headSize = screen.style == .xp ? (h * 0.030).rounded() : bodySize
+        let body: NSFont = screen.style == .xp
+            ? (NSFont(name: "Tahoma", size: bodySize) ?? .systemFont(ofSize: bodySize))
+            : .systemFont(ofSize: bodySize, weight: .regular)
+        let head: NSFont = screen.style == .xp
+            ? (NSFont(name: "Tahoma-Bold", size: headSize) ?? .boldSystemFont(ofSize: headSize))
+            : body
+        let lineGap = bodySize * 0.55
+        let lines = screen.lines.map { $0.replacingOccurrences(of: WindowsUpdateScreen.percentToken, with: String(percent)) }
+        let sized: [(String, NSFont, NSSize)] = lines.enumerated().map { i, text in
+            let font = i == 0 ? head : body
+            return (text, font, (text as NSString).size(withAttributes: [.font: font]))
+        }
+        let barHeight = screen.bar ? bodySize * 0.9 : 0
+        let barGap = screen.bar ? bodySize * 1.2 : 0
+        let block = sized.reduce(0) { $0 + $1.2.height } + lineGap * CGFloat(max(0, sized.count - 1)) + barGap + barHeight
+        var y = bounds.midY + block / 2
+        for (text, font, size) in sized {
+            y -= size.height
+            (text as NSString).draw(at: NSPoint(x: bounds.midX - size.width / 2, y: y),
+                                    withAttributes: [.font: font, .foregroundColor: NSColor.white])
+            y -= lineGap
+        }
+        guard screen.bar else { return }
+        y = y + lineGap - barGap - barHeight
+        // Luna's bar: a sunken white trough with green blocks that never quite reach the end.
+        let width = (bounds.width * 0.26).rounded()
+        let trough = NSRect(x: bounds.midX - width / 2, y: y, width: width, height: barHeight)
+        NSColor(white: 1, alpha: 0.92).setFill(); trough.fill()
+        NSColor(red: 0.42, green: 0.53, blue: 0.80, alpha: 1).setStroke()
+        NSBezierPath(rect: trough.insetBy(dx: 0.5, dy: 0.5)).stroke()
+        let inner = trough.insetBy(dx: barHeight * 0.18, dy: barHeight * 0.18)
+        let blockW = inner.height * 0.62, gap = inner.height * 0.16
+        let filled = inner.width * CGFloat(percent) / 100
+        var x = inner.minX
+        while x + blockW <= inner.minX + filled {
+            let r = NSRect(x: x, y: inner.minY, width: blockW, height: inner.height)
+            NSGradient(starting: NSColor(red: 0.55, green: 0.85, blue: 0.40, alpha: 1),
+                       ending: NSColor(red: 0.20, green: 0.63, blue: 0.16, alpha: 1))?.draw(in: r, angle: -90)
+            x += blockW + gap
+        }
     }
 
     /// The Sad Mac, traced from the 32x32 original.

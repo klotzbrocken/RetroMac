@@ -210,6 +210,36 @@ enum BootGlyph: Equatable {
     case questionFolder
     /// The circle with a bar through it: a system the machine would not boot.
     case prohibitory
+    /// Windows installing updates where the desktop should have been.
+    case windowsUpdate(WindowsUpdateScreen)
+
+    /// Whether the picture changes while the stage holds: the update screens count.
+    var isAnimated: Bool {
+        if case .windowsUpdate(let screen) = self { return screen.isAnimated }
+        return false
+    }
+}
+
+/// "Do not turn off your computer." The screen Windows put up while it installed updates, at
+/// shutdown on XP and at the next start on 7, and which it could sit on for a very long time.
+struct WindowsUpdateScreen: Equatable {
+    enum Style: Equatable {
+        /// XP at shutdown: Luna blue, a green segmented bar, the update count.
+        case xp
+        /// Windows 7 at start: the dark blue-green gradient and three lines of white text.
+        case win7
+    }
+    let style: Style
+    /// Top to bottom, centred. `{percent}` is replaced by the counter.
+    let lines: [String]
+    /// Whether a progress bar runs under the text (XP had one; 7 said the number).
+    let bar: Bool
+    /// Where the counter stops. Windows 7 stayed at 35% for as long as it liked, and so does this.
+    var ceiling: Int = 100
+
+    static let percentToken = "{percent}"
+
+    var isAnimated: Bool { bar || lines.contains { $0.contains(Self.percentToken) } }
 }
 
 /// A mild moment: the machine not answering for a few seconds, the picture wrong for a beat.

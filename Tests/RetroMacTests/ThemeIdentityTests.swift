@@ -201,4 +201,15 @@ final class ThemeIdentityTests: XCTestCase {
         XCTAssertEqual(Set(tinted), ["Mac OS 6 classic", "Mac OS 9.2 Classic",
                                      "Mac OS X", "Snow Leopard", "Mountain Lion"])
     }
+
+    func testMinAppVersionIsComparedNumerically() {
+        XCTAssertTrue(ThemeBundle.satisfies(minAppVersion: nil, appVersion: "2.8.4"))
+        XCTAssertTrue(ThemeBundle.satisfies(minAppVersion: "", appVersion: "2.8.4"))
+        XCTAssertTrue(ThemeBundle.satisfies(minAppVersion: "2.8.4", appVersion: "2.8.4"))
+        XCTAssertTrue(ThemeBundle.satisfies(minAppVersion: "2.8", appVersion: "2.8.0"))
+        XCTAssertTrue(ThemeBundle.satisfies(minAppVersion: "2.9", appVersion: "2.10"), "2.10 is newer than 2.9, whatever a string compare says")
+        XCTAssertFalse(ThemeBundle.satisfies(minAppVersion: "2.9", appVersion: "2.8.4"))
+        XCTAssertFalse(ThemeBundle.satisfies(minAppVersion: "3", appVersion: "2.99.99"))
+        XCTAssertTrue(ThemeBundle.satisfies(minAppVersion: "soon", appVersion: "2.8.4"), "a typo must not hide the theme")
+    }
 }

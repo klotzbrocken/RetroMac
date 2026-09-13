@@ -574,6 +574,34 @@ final class RetroCrashTests: XCTestCase {
         }
     }
 
+    /// "Do not turn off your computer" is a boot failure that runs on its own clock: every stage
+    /// holds, nothing waits for a key, the counter has somewhere to stop, and the text carries
+    /// the number only where the screen actually showed one.
+    func testWindowsUpdateScreensRunOnTheirOwnClock() {
+        var rng = CrashRNG(seed: 77)
+        for id in ["boot-xp-installing-updates", "boot-win7-configuring-updates"] {
+            guard let spec = CrashCatalogue.all.first(where: { $0.id == id }) else { return XCTFail("\(id) missing") }
+            XCTAssertEqual(spec.category, .bootFailure)
+            for _ in 0..<10 {
+                let scenario = spec.build(&rng)
+                for stage in scenario.stages {
+                    guard case .bootGlyph(.windowsUpdate(let screen)) = stage.surface else { return XCTFail("\(id) is not an update screen") }
+                    XCTAssertGreaterThan(stage.hold, 0)
+                    XCTAssertTrue(stage.recovery.isEmpty, "\(id) waits for a key")
+                    XCTAssertTrue((1...100).contains(screen.ceiling))
+                    XCTAssertEqual(screen.bar, screen.style == .xp, "only XP drew a bar")
+                    XCTAssertFalse(screen.lines.isEmpty)
+                }
+            }
+        }
+        // The counter stops where the screen says, not at the stage's end.
+        let stuck = WindowsUpdateScreen(style: .win7, lines: ["\(WindowsUpdateScreen.percentToken)% complete"], bar: false, ceiling: 35)
+        XCTAssertTrue(stuck.isAnimated)
+        let a = CrashRenderer.bootGlyphImage(.windowsUpdate(stuck), blinkOn: true, counter: 35, size: NSSize(width: 320, height: 200))
+        let b = CrashRenderer.bootGlyphImage(.windowsUpdate(stuck), blinkOn: true, counter: 90, size: NSSize(width: 320, height: 200))
+        XCTAssertEqual(a.tiffRepresentation, b.tiffRepresentation, "the picture moved past its ceiling")
+    }
+
     /// A moment asks nothing of the user: every stage holds, none waits, and it is over in
     /// seconds.
     func testMomentsEndByThemselves() {

@@ -11,6 +11,12 @@ extension Notification.Name {
 /// apps that have minimized windows) and `allWindows` (every top-level window, with focus +
 /// minimized state — used by the Win98/XP taskbar's per-window task buttons). Poll-based (1.5s);
 /// the AX scan runs on a background queue, only the published lists are touched on main.
+///
+/// Without Accessibility it does not go dark: it publishes one entry per running app from
+/// NSWorkspace instead, with "hidden" standing in for "minimized". The taskbar then shows
+/// programs rather than windows, and says so (`isLimited`), instead of showing nothing and
+/// putting up the system prompt at every start. The moment the permission arrives, the next
+/// poll switches to windows on its own.
 final class MinimizedWindowTracker {
 
     static let shared = MinimizedWindowTracker()
@@ -22,12 +28,18 @@ final class MinimizedWindowTracker {
         let window: AXUIElement
         var isMinimized: Bool = false
         var isFocused: Bool = false
+        /// True for the no-permission stand-in: the entry is the application, not one of its
+        /// windows, and `window` is only the app element (never queried).
+        var isAppLevel: Bool = false
     }
+
+    /// Whether the tracker is running on the app-level fallback because Accessibility is not
+    /// granted. The dock reads this to show the hint in the taskbar.
+    var isLimited: Bool { !AXIsProcessTrusted() }
 
     private(set) var entries: [Entry] = []      // minimized windows only (back-compat)
     private(set) var allWindows: [Entry] = []   // every top-level window (task buttons)
     private var timer: Timer?
-    private var didPrompt = false
     private var scanInProgress = false   // don't pile up scans if an app responds slowly
     private var scanGeneration = 0       // stop()/new scans invalidate stale in-flight results
     /// Serial queue for the (potentially slow) Accessibility scan so the main thread never blocks.
@@ -35,12 +47,9 @@ final class MinimizedWindowTracker {
 
     func start() {
         guard timer == nil else { return }
-        // Accessibility is already part of onboarding; prompt once if it's still missing.
-        if !AXIsProcessTrusted() && !didPrompt {
-            didPrompt = true
-            let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-            _ = AXIsProcessTrustedWithOptions(opts)
-        }
+        // No system prompt here. Accessibility is asked for in the Setup Assistant and under
+        // Settings ▸ General; until then the taskbar runs in its app-level mode and shows a hint,
+        // which is a better answer than a permission dialog at every launch.
         SystemBridge.shared.ensureAccessibility()   // reconcile the cached capability for Health Check
         let t = Timer(timeInterval: 1.5, repeats: true) { [weak self] _ in self?.poll() }
         RunLoop.main.add(t, forMode: .common)
@@ -57,33 +66,48 @@ final class MinimizedWindowTracker {
         if had { notify() }
     }
 
-    /// Restore every minimized window of the given app (dock-tile click).
+    /// Restore every minimized window of the given app (dock-tile click). In app-level mode
+    /// the app is hidden rather than its windows minimized, so it is unhidden.
     func restoreWindows(for bundleID: String) {
         let wins = entries.filter { $0.bundleID == bundleID }
         guard !wins.isEmpty else { return }
         for e in wins {
-            AXUIElementSetAttributeValue(e.window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+            if e.isAppLevel {
+                NSRunningApplication(processIdentifier: e.pid)?.unhide()
+            } else {
+                AXUIElementSetAttributeValue(e.window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+            }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.poll() }
     }
 
     /// Bring a specific window to the front (de-minimize, make main, raise, activate the app).
     func activate(_ e: Entry) {
-        AXUIElementSetAttributeValue(e.window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
-        AXUIElementSetAttributeValue(e.window, kAXMainAttribute as CFString, kCFBooleanTrue)
-        AXUIElementPerformAction(e.window, kAXRaiseAction as CFString)
-        NSRunningApplication(processIdentifier: e.pid)?.activate(options: [.activateIgnoringOtherApps])
+        let app = NSRunningApplication(processIdentifier: e.pid)
+        if e.isAppLevel {
+            app?.unhide()
+        } else {
+            AXUIElementSetAttributeValue(e.window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+            AXUIElementSetAttributeValue(e.window, kAXMainAttribute as CFString, kCFBooleanTrue)
+            AXUIElementPerformAction(e.window, kAXRaiseAction as CFString)
+        }
+        app?.activate(options: [.activateIgnoringOtherApps])
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.poll() }
     }
 
-    /// Minimize a specific window (clicking the active window's task button).
+    /// Minimize a specific window (clicking the active window's task button). Without
+    /// Accessibility the whole app is hidden, which is the nearest thing the system allows.
     func minimize(_ e: Entry) {
-        AXUIElementSetAttributeValue(e.window, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+        if e.isAppLevel {
+            NSRunningApplication(processIdentifier: e.pid)?.hide()
+        } else {
+            AXUIElementSetAttributeValue(e.window, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.poll() }
     }
 
     private func poll() {
-        guard AXIsProcessTrusted() else { return }
+        guard AXIsProcessTrusted() else { pollAppLevel(); return }
         guard !scanInProgress else { return }   // a scan is still running — don't queue another
         scanInProgress = true
         scanGeneration += 1
@@ -147,6 +171,33 @@ final class MinimizedWindowTracker {
                 if changed { self.notify() }
             }
         }
+    }
+
+    /// The no-permission scan: every regular app as one entry, on main, no Accessibility call.
+    /// A hidden app is published as "minimized" so the dock's restore path and the taskbar's
+    /// inactive button both do the right thing with it.
+    private func pollAppLevel() {
+        let ownBundleID = Bundle.main.bundleIdentifier ?? ""
+        let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? -1
+        let all: [Entry] = NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular }
+            .compactMap { app in
+                guard let bid = app.bundleIdentifier, bid != ownBundleID else { return nil }
+                let hidden = app.isHidden
+                return Entry(pid: app.processIdentifier, bundleID: bid,
+                             title: app.localizedName ?? bid,
+                             window: AXUIElementCreateApplication(app.processIdentifier),
+                             isMinimized: hidden,
+                             isFocused: !hidden && app.processIdentifier == frontPID,
+                             isAppLevel: true)
+            }
+        func sig(_ list: [Entry]) -> [String] {
+            list.map { "\($0.bundleID)|\($0.title)|\($0.isMinimized ? 1 : 0)|\($0.isFocused ? 1 : 0)|\($0.isAppLevel ? 1 : 0)" }
+        }
+        let changed = sig(all) != sig(allWindows)
+        allWindows = all
+        entries = all.filter { $0.isMinimized }
+        if changed { notify() }
     }
 
     private func notify() {

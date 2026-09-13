@@ -67,6 +67,29 @@ final class ThemeBundle {
         let id: String?
     }
 
+    /// Whether a theme that asks for `minAppVersion` can run on `appVersion` (the running app's
+    /// CFBundleShortVersionString by default). "2.9" and "2.9.0" are the same version; a
+    /// malformed requirement counts as none, so a typo never hides a theme.
+    static func satisfies(minAppVersion required: String?, appVersion: String = ThemeBundle.currentAppVersion) -> Bool {
+        guard let required, !required.trimmingCharacters(in: .whitespaces).isEmpty else { return true }
+        func parts(_ v: String) -> [Int]? {
+            let ps = v.split(separator: ".").map { Int($0.trimmingCharacters(in: .whitespaces)) }
+            guard !ps.isEmpty, ps.allSatisfy({ $0 != nil }) else { return nil }
+            return ps.map { $0! }
+        }
+        guard let need = parts(required), let have = parts(appVersion) else { return true }
+        for i in 0..<max(need.count, have.count) {
+            let n = i < need.count ? need[i] : 0
+            let h = i < have.count ? have[i] : 0
+            if h != n { return h > n }
+        }
+        return true
+    }
+
+    static var currentAppVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+    }
+
     /// A manifest id must be stable, non-localised and filesystem/URL-safe.
     static func isValidID(_ id: String) -> Bool {
         guard !id.isEmpty, id.count <= 128 else { return false }

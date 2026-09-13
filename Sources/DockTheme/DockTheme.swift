@@ -26,6 +26,10 @@ struct DockThemeConfig: Codable {
     /// Declared window/widget chrome. `chrome.style` replaces the display-name heuristic in
     /// `RetroFrameTheme.key()` — see that file.
     var chrome: ChromeDecl? = nil
+    /// The oldest RetroMac this theme works on ("2.9"). A theme that uses a manifest key or a
+    /// desktop icon type this build does not know is skipped with a log line instead of loading
+    /// half of itself. Compared numerically, component by component; nil means any version.
+    var minAppVersion: String? = nil
 
     /// The OS family this theme belongs to, for grouping themes in the UI.
     struct Family: Codable {

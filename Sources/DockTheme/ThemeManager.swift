@@ -120,7 +120,12 @@ final class ThemeManager {
             .filter { $0.pathExtension == "retromactheme" }
             .compactMap { url in
                 do {
-                    return try ThemeBundle(url: url, isBuiltIn: builtIn)
+                    let bundle = try ThemeBundle(url: url, isBuiltIn: builtIn)
+                    if !ThemeBundle.satisfies(minAppVersion: bundle.config.minAppVersion) {
+                        print("[Theme] Skipping \(url.lastPathComponent): it needs RetroMac \(bundle.config.minAppVersion ?? "?"), this is \(ThemeBundle.currentAppVersion)")
+                        return nil
+                    }
+                    return bundle
                 } catch {
                     print("[Theme] Failed to load \(url.lastPathComponent): \(error)")
                     return nil

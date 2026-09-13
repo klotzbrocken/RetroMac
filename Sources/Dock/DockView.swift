@@ -1185,17 +1185,27 @@ final class DockView: NSView {
         default:      style = theme.isXPStartMenu ? .winxp : .win98
         }
         let models = buildTaskModels()
-        guard !models.isEmpty else { return }
+        let limited = MinimizedWindowTracker.shared.isLimited
+        guard !models.isEmpty || limited else { return }
         let gap: CGFloat = 2
-        let available = max(0, rightEdge - startX - gap)
-        let n = CGFloat(models.count)
-        var bw = (available - gap * (n - 1)) / n
-        bw = min(160, max(40, bw))
         // Buttons sit a touch narrower than the bar (more "Rand" top/bottom), matching the real
         // Windows Me taskbar where the buttons don't fill the whole bar height.
         let h = barRect.height - 8
         let y = (barRect.height - h) / 2
         var x = startX
+        if limited {
+            // Without Accessibility the buttons are programs, not windows. Say so where the
+            // difference shows, with the way to change it one click away.
+            let notice = TaskbarNoticeView(frame: NSRect(x: x, y: y, width: h, height: h), style: style)
+            notice.toolTip = "Showing programs, not windows: RetroMac has no Accessibility permission. Click to grant it and get a button per window, minimised ones included."
+            notice.onClick = { TaskbarNoticeView.requestAccessibility() }
+            addSubview(notice)
+            x += h + gap
+        }
+        let available = max(0, rightEdge - x - gap)
+        let n = CGFloat(max(1, models.count))
+        var bw = (available - gap * (n - 1)) / n
+        bw = min(160, max(40, bw))
         for m in models {
             if x + bw > rightEdge { break }   // don't draw under the trays
             let btn = TaskButtonView(frame: NSRect(x: x, y: y, width: bw, height: h),
@@ -1204,6 +1214,9 @@ final class DockView: NSView {
                                      // visible size is iconSize-4; cap tab icons to that, never larger.
                                      maxIconSize: max(0, iconSize - 4),
                                      enlargeIcon: m.system)
+            if limited {
+                btn.toolTip = "\(m.label) — the program, not a window. Grant Accessibility for one button per window."
+            }
             let wasActive = m.active
             btn.onClick = { [weak self, weak btn] in
                 m.action()

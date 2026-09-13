@@ -706,6 +706,31 @@ enum CrashCopy {
         bootText(["Non-System disk or disk error", "Replace and strike any key when ready"])
     }
 
+    /// XP installing updates at shutdown. The count is small because XP's were: a handful of
+    /// patches per Tuesday, each with its own progress bar.
+    static func bootXPInstallingUpdates(using rng: inout CrashRNG) -> WindowsUpdateScreen {
+        let total = Int.random(in: 2...9, using: &rng)
+        let current = Int.random(in: 1...total, using: &rng)
+        return WindowsUpdateScreen(style: .xp, lines: [
+            "Installing update \(current) of \(total)...",
+            "Do not turn off or unplug your computer.",
+            "It will turn off automatically when installation is complete.",
+        ], bar: true)
+    }
+
+    /// Windows 7 at the next start: preparing, then a percentage that may well stop at 35, and
+    /// on a bad day the sentence that meant another twenty minutes.
+    static func bootWin7ConfiguringUpdates(using rng: inout CrashRNG)
+        -> (preparing: WindowsUpdateScreen, configuring: WindowsUpdateScreen, reverting: WindowsUpdateScreen) {
+        let ceiling = [35, 35, 62, 100].randomElement(using: &rng) ?? 35
+        return (
+            WindowsUpdateScreen(style: .win7, lines: ["Preparing to configure Windows.", "Do not turn off your computer."], bar: false),
+            WindowsUpdateScreen(style: .win7, lines: ["Configuring Windows updates", "\(WindowsUpdateScreen.percentToken)% complete", "Do not turn off your computer."],
+                                bar: false, ceiling: ceiling),
+            WindowsUpdateScreen(style: .win7, lines: ["Failure configuring Windows updates", "Reverting changes", "Do not turn off your computer."], bar: false)
+        )
+    }
+
     static func bootNTLDRMissing() -> TextScreen {
         bootText(["NTLDR is missing", "Press any key to restart"])
     }

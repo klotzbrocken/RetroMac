@@ -3,6 +3,31 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+- **"Do not turn off your computer."** Two boot failures more: Windows XP installing update 3
+  of 7 at shutdown, with the green Luna bar, and Windows 7 configuring updates at the next start,
+  counting to 35% and staying there, and half the time giving up ("Failure configuring Windows
+  updates. Reverting changes."). Like every boot failure they run on their own clock and end in
+  the boot screen; Esc still ends everything.
+
+- **The taskbar works without the Accessibility permission.** Until now the Windows taskbars
+  showed no task buttons at all without it, and the app put up the system permission dialog
+  at every start. Now they show one button per running program instead of one per window,
+  clicking the active one hides the program the way minimising did, and a small caution sign at
+  the left of the buttons says why and asks for the permission with one click. The system
+  dialog at launch is gone; the Setup Assistant and Settings ▸ General still offer it.
+
+- **`minAppVersion` in theme.json.** A theme can say which RetroMac it needs; an older build
+  skips it with a line in the log rather than loading half of it. Compared numerically, so 2.10
+  is newer than 2.9.
+
+- **Documentation.** `docs/THEMES.md` describes the theme bundle, every manifest key, the
+  desktop icon types and how to test a theme. `LEGAL.md` says what in the app was written for
+  it, what is other people's free software, and what is the original artwork of the companies
+  whose desktops it recreates, and whom to write to about any of it. The README shows the app
+  instead of describing it: a hero, a tour, a gallery, and the download link at the top.
+
 ## 2.8.4
 
 - **A smaller download.** The release binary is stripped (its symbols go to a dSYM next to
