@@ -544,7 +544,15 @@ struct DockSettingsTab: View {
                           hint: bars
                             ? "A Platinum or Luna title bar over every window, drawn square. Close, minimise, zoom and dragging work; toolbars that share the title bar lose their top edge."
                             : "The era's glossy lights over the real ones, and nothing else changes. Close, minimise and zoom work.") {
+                        // (Platinum's WindowShade box minimises: a real shade would need the app to allow a 28 pt window.)
                         toggle($settings.themeTitleBars)
+                    }
+                    if settings.themeTitleBars, !TitleBarOverlayController.accessibilityGranted {
+                        RMRow(label: "Needs Accessibility",
+                              hint: "The controls drive the real windows through Accessibility; until it is granted nothing is drawn.") {
+                            Button("Grant\u{2026}") { TaskbarNoticeView.requestAccessibility() }
+                                .buttonStyle(RMDefaultButtonStyle())
+                        }
                     }
                     if settings.themeTitleBars {
                         titleBarExclusions

@@ -70,16 +70,27 @@ enum ClassicMacChrome {
     }
 
     /// Draw the centred title over a light plaque that interrupts the pinstripes.
-    static func titlePlaque(_ title: String, bar: NSRect, font: NSFont) {
+    /// `maxWidth` bounds the plaque (text included): a title longer than that is shortened in
+    /// the middle, the way the Finder shortened file names, so it never runs over the boxes.
+    static func titlePlaque(_ title: String, bar: NSRect, font: NSFont, maxWidth: CGFloat? = nil) {
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
-        let s = title.size(withAttributes: attrs)
-        let px = bar.minX + (bar.width - s.width) / 2
-        fill(NSRect(x: px - 8, y: bar.minY, width: s.width + 16, height: bar.height), plaque)
+        let full = title.size(withAttributes: attrs)
+        let textLimit = maxWidth.map { max(0, $0 - 16) } ?? .greatestFiniteMagnitude
+        let textWidth = min(full.width, textLimit)
+        let px = bar.minX + (bar.width - textWidth) / 2
+        fill(NSRect(x: px - 8, y: bar.minY, width: textWidth + 16, height: bar.height), plaque)
         // draw(in:) respects the current context's flipped-ness, so this works in both views.
-        let style = NSMutableParagraphStyle(); style.alignment = .center
+        let style = NSMutableParagraphStyle(); style.alignment = .center; style.lineBreakMode = .byTruncatingMiddle
         var a = attrs; a[.paragraphStyle] = style
-        let ty = bar.minY + (bar.height - s.height) / 2
-        (title as NSString).draw(in: NSRect(x: bar.minX, y: ty, width: bar.width, height: s.height),
+        let ty = bar.minY + (bar.height - full.height) / 2
+        (title as NSString).draw(in: NSRect(x: px, y: ty, width: textWidth, height: full.height),
                                  withAttributes: a)
+    }
+
+    /// The width a plaque will take for `title` under `maxWidth`, for tests and layout.
+    static func plaqueWidth(_ title: String, font: NSFont, maxWidth: CGFloat?) -> CGFloat {
+        let full = title.size(withAttributes: [.font: font]).width
+        let limit = maxWidth.map { max(0, $0 - 16) } ?? .greatestFiniteMagnitude
+        return min(full, limit) + 16
     }
 }

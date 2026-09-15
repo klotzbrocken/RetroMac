@@ -22,6 +22,18 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   window's bar keeps up. Known limits: a toolbar that shares the title bar (Safari, Finder)
   loses its top edge under the strip, and a window the size of the screen gets no bar.
 
+- **Title bars, hardened after review.** Every Accessibility request this process makes now
+  gives up after half a second instead of six, so a hung app no longer hangs RetroMac (checked
+  with a frozen TextEdit: RetroMac answered in 50 ms). A window whose toolbar shares the title
+  bar (Safari, Finder, Mail) gets no bar any more — the bar hid the toolbar and let clicks
+  through to it; Platinum keeps its close box over the red light there. The bar needs the
+  Accessibility permission and says so in Settings; a click on a window that is not in front
+  brings it there first; the dead zone over the real lights is measured per window; a long
+  Platinum title is shortened in the middle instead of running over the boxes; a maximised
+  Luna window shows Restore, an inactive one pales its buttons; zoom remembers what the app
+  actually allowed, so a window with a size limit restores too; windows the size of their own
+  screen are told apart on a second monitor; titles are cached and app icons too.
+
 - **Experiment: traffic lights in theme style.** The same switch on Mac OS X and Snow Leopard
   covers only the three lights: Snow Leopard's glossy orbs from the theme's own artwork, or
   Aqua gems for Mac OS X, at the exact spots the real lights sit in each window, with the ×,

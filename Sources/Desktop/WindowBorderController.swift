@@ -128,7 +128,7 @@ final class WindowBorderController {
         }
     }
 
-    fileprivate func addMinimizeObserver(pid: pid_t) {
+    func addMinimizeObserver(pid: pid_t) {
         guard pid != getpid(), axObservers[pid] == nil else { return }
         var observer: AXObserver?
         // Requires Accessibility permission (the app already uses it); fails gracefully otherwise —
@@ -165,8 +165,9 @@ final class WindowBorderController {
         borders.removeValue(forKey: wid)
     }
 
-    /// Re-add a border after a window is de-miniaturized (restored from the Dock).
-    fileprivate func resync() { sync() }
+    /// Re-add a border after a window is de-miniaturized (restored from the Dock). The bars
+    /// come back through the same notice.
+    fileprivate func resync() { sync(); TitleBarOverlayController.shared.resync() }
 
     /// Drop every border and bar whose window is no longer on screen. Cheaper than a full sync:
     /// one window list, no filter round trip, and it runs on every destroyed AX element.

@@ -22,10 +22,16 @@ import SkyLightBridge
 /// lights are covered, at the exact spots the Accessibility API reports for the real ones,
 /// and the rest of the title bar is left as it is.
 ///
-/// Known limits, on purpose: the strip is the theme's own height (22 / 30 pt) from the top edge,
-/// so on a window whose toolbar shares the title bar (Safari, Finder) it covers the top of that
-/// toolbar. And the real traffic lights underneath are hidden but not gone: the strip above them
-/// is a dead zone the overlay handles itself, so a click there never reaches them.
+/// A window whose toolbar shares the title bar (Safari, Finder, Mail; told apart by where the
+/// Accessibility API says its lights sit) gets no bar: a bar over its top would hide the
+/// toolbar and let clicks through to it. Platinum still puts its close box over the red light
+/// there; Luna leaves the window native. The real lights under a bar are hidden but not gone:
+/// the strip above them, measured per window, is a dead zone the overlay handles itself.
+///
+/// Diagnostics: RETROMAC_TITLEBAR_STATS=1 logs event and sync rates every 10 s. Measured
+/// 15 Sep 2026 with 10 windows, bars and borders on: 2.1 syncs/s (the timer), no reorder
+/// events at idle, RetroMac 3–7 % CPU in every mode — no feedback loop, no case for a shared
+/// window service yet.
 final class TitleBarOverlayController {
 
     static let shared = TitleBarOverlayController()
@@ -34,6 +40,7 @@ final class TitleBarOverlayController {
     enum Style {
         case platinum, luna            // a whole bar
         case aquaLights, snowLights    // the three lights only
+        case platinumCloseOnly         // a Platinum window whose toolbar shares the title bar: the close box alone
         var isBar: Bool { self == .platinum || self == .luna }
     }
 
@@ -73,10 +80,16 @@ final class TitleBarOverlayController {
         }
     }
 
+    /// Every control on the bar is driven through Accessibility; without the permission the
+    /// bar would hide the real buttons behind ones that do nothing. Settings ▸ Themes says so.
+    static var accessibilityGranted: Bool { AXIsProcessTrusted() }
+
     func update() {
         let want = AppSettings.shared.themeTitleBars
             && AppSettings.shared.dockEnabled
             && !AppSettings.shared.dockOnly
+            && Self.accessibilityGranted
+            && Self.style(for: RetroFrameTheme.key()) != nil   // an unsupported theme runs nothing at all
         if want { start() } else { stop() }
     }
 
@@ -84,12 +97,16 @@ final class TitleBarOverlayController {
         let newStyle = Self.style(for: RetroFrameTheme.key())
         excluded = Set(AppSettings.shared.themeTitleBarsExcludedApps)
         if running {
-            if newStyle != style { style = newStyle; stopOverlays(); lightOffsets.removeAll(); lightOffsetsFirstSeen.removeAll(); squareTheRealCorners() }
+            if newStyle != style { style = newStyle; stopOverlays(); squareTheRealCorners() }
             sync()
             return
         }
         style = newStyle
         running = true
+        // A hung app must not hang RetroMac: every Accessibility request this process makes
+        // gives up after half a second instead of the six-second default. Process-wide, which
+        // also covers the observers and the minimised-window tracker.
+        AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 0.5)
         squareTheRealCorners()
         WindowBorderController.shared.ensureServerEvents()   // move/resize/minimise arrive through it
         WindowBorderController.shared.ensureObservers()      // and closed windows, through Accessibility
@@ -98,7 +115,19 @@ final class TitleBarOverlayController {
                      NSWorkspace.activeSpaceDidChangeNotification,
                      NSWorkspace.didLaunchApplicationNotification,
                      NSWorkspace.didTerminateApplicationNotification] {
-            wsTokens.append(nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.sync() })
+            wsTokens.append(nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                guard let self else { return }
+                let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+                if name == NSWorkspace.didTerminateApplicationNotification, let pid = app?.processIdentifier {
+                    Self.bundleIDs.removeValue(forKey: pid)
+                    Self.icons.removeValue(forKey: pid)
+                } else if let pid = app?.processIdentifier {
+                    // A new or re-activated app needs its AX observer (closed/minimised windows)
+                    // whether or not the borders are running.
+                    WindowBorderController.shared.addMinimizeObserver(pid: pid)
+                }
+                self.sync()
+            })
         }
         let t = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in self?.sync() }
         RunLoop.main.add(t, forMode: .common)
@@ -119,8 +148,6 @@ final class TitleBarOverlayController {
         wsTokens.removeAll()
         if let m = mouseMonitor { NSEvent.removeMonitor(m); mouseMonitor = nil }
         stopOverlays()
-        lightOffsets.removeAll()
-        lightOffsetsFirstSeen.removeAll()
         WindowBorderController.shared.releaseObserversIfIdle()
         squareTheRealCorners()   // reconciles without the corner key now
     }
@@ -141,12 +168,18 @@ final class TitleBarOverlayController {
         for o in overlays.values { o.panel.orderOut(nil) }
         overlays.removeAll()
         axWindows.removeAll()
+        lightOffsets.removeAll()
+        lightOffsetsFirstSeen.removeAll()
+        titles.removeAll()
+        zoomedFrom.removeAll()
+        zoomedTo.removeAll()
     }
 
     // MARK: - Sync
 
     private func sync() {
         guard running, let style else { return }
+        count("sync")
         let windows = Self.onScreenWindows()
         var infoByID = [CGWindowID: WindowInfo](minimumCapacity: windows.count)
         for w in windows { infoByID[w.id] = w }
@@ -182,24 +215,56 @@ final class TitleBarOverlayController {
         }
     }
 
+    /// The screen a window mostly sits on, in Quartz (top-left) coordinates.
+    static func screen(for bounds: CGRect) -> NSScreen? {
+        NSScreen.screens.max(by: { quartz($0.frame).intersection(bounds).area < quartz($1.frame).intersection(bounds).area })
+    }
+
+    static func quartz(_ r: NSRect) -> CGRect {
+        let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
+        return CGRect(x: r.minX, y: primaryTop - r.maxY, width: r.width, height: r.height)
+    }
+
+    /// A window the size of its own screen is native full screen (or as good as): leave it.
+    static func isScreenSized(_ bounds: CGRect) -> Bool {
+        guard let scr = screen(for: bounds) else { return false }
+        return bounds.width >= scr.frame.width - 1 && bounds.height >= scr.frame.height - 1
+    }
+
+    /// Below this, the lights sit in a plain 28 pt title bar; deeper means the title bar and
+    /// the toolbar are one (Safari, Finder, Mail), and a bar over its top would hide the
+    /// toolbar and let clicks through to it.
+    static let plainTitleBarLightCentre: CGFloat = 20
+
     private func apply(_ info: WindowInfo, level: Int32, style: Style, isFront: Bool) {
-        // Skip full-screen / desktop-sized windows, like the borders do.
-        if let scr = NSScreen.screens.first(where: { $0.frame.width >= info.bounds.width }),
-           info.bounds.width >= scr.frame.width - 1, info.bounds.height >= scr.frame.height - 1 {
-            drop(for: info.id); return
-        }
+        if Self.isScreenSized(info.bounds) { drop(for: info.id); return }
+        // Every style needs the real lights: a bar to know the title bar's height and where
+        // the dead zone ends, a lights style to know where to draw.
+        guard let offsets = lightOffsets(for: info) else { drop(for: info.id); return }
         let frame: NSRect
         var lights: [ChromeButtonKind: NSRect] = [:]
-        if style.isBar {
+        var deadZoneWidth: CGFloat = 0
+        var drawStyle = style
+        let unified = (offsets[.close]?.midY ?? 0) > Self.plainTitleBarLightCentre
+        if style.isBar && !unified {
             frame = Self.barFrame(for: info.bounds, style: style)
+            // The dead zone ends just past the last real light, wherever this window puts them.
+            let lastLight = offsets.values.map { $0.maxX }.max() ?? 68
+            deadZoneWidth = lastLight + 8 + WindowBorderController.shared.activeBorderWidth
+        } else if style.isBar {
+            // A unified toolbar keeps its bar. Platinum still gets its close box over the red
+            // light, the one control it had on the left; Luna's controls would sit on the right,
+            // over the toolbar, so that window is left entirely native.
+            guard style == .platinum, let close = offsets[.close] else { drop(for: info.id); return }
+            drawStyle = .platinumCloseOnly
+            (frame, lights) = Self.lightsFrame(for: info.bounds, offsets: [.close: close])
         } else {
-            // The panel is just big enough for the three lights, wherever this window keeps them
-            // (a unified toolbar puts them lower than a plain title bar does).
-            guard let offsets = lightOffsets(for: info) else { drop(for: info.id); return }
+            // The panel is just big enough for the three lights, wherever this window keeps them.
             (frame, lights) = Self.lightsFrame(for: info.bounds, offsets: offsets)
         }
-        let title = style.isBar ? (info.title.isEmpty ? (axTitle(info.id, pid: info.pid) ?? info.ownerName) : info.title) : ""
-        let icon = style == .luna ? NSRunningApplication(processIdentifier: info.pid)?.icon : nil
+        let title = drawStyle.isBar ? title(for: info) : ""
+        let icon = drawStyle == .luna ? Self.icon(for: info.pid) : nil
+        let zoomed = zoomedTo[info.id] != nil
 
         if let o = overlays[info.id] {
             o.bounds = info.bounds
@@ -208,7 +273,8 @@ final class TitleBarOverlayController {
             // windows rise above ours, and nothing but this puts the bar back on top.
             o.level = level
             order(o, above: info.id)
-            o.view.configure(style: style, title: title, icon: icon, isFront: isFront, lights: lights)
+            o.view.configure(style: drawStyle, title: title, icon: icon, isFront: isFront, lights: lights,
+                             deadZoneWidth: deadZoneWidth, zoomed: zoomed)
             return
         }
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
@@ -223,8 +289,10 @@ final class TitleBarOverlayController {
         panel.animationBehavior = .none
         let view = TitleBarOverlayView(frame: NSRect(origin: .zero, size: frame.size))
         view.autoresizingMask = [.width, .height]
-        view.configure(style: style, title: title, icon: icon, isFront: isFront, lights: lights)
+        view.configure(style: drawStyle, title: title, icon: icon, isFront: isFront, lights: lights,
+                       deadZoneWidth: deadZoneWidth, zoomed: zoomed)
         view.onAction = { [weak self] kind in self?.perform(kind, on: info.id, pid: info.pid) }
+        view.onActivate = { [weak self] in self?.activate(info.id, pid: info.pid) }
         view.onDrag = { [weak self] delta in self?.drag(info.id, pid: info.pid, by: delta) }
         view.onDragEnd = { [weak self] in self?.dragOrigin = nil }
         view.onLeave = { [weak panel] in panel?.ignoresMouseEvents = true }
@@ -249,7 +317,7 @@ final class TitleBarOverlayController {
         switch style {
         case .platinum: return 28
         case .luna:     return 30
-        case .aquaLights, .snowLights: return 0   // no strip: the lights panel is sized from the real lights
+        case .aquaLights, .snowLights, .platinumCloseOnly: return 0   // sized from the real lights instead
         }
     }
 
@@ -285,18 +353,34 @@ final class TitleBarOverlayController {
 
     // MARK: - Events from the WindowServer (forwarded by WindowBorderController)
 
+    // MARK: Diagnostics (RETROMAC_TITLEBAR_STATS=1): event and sync rates, logged every 10 s.
+    private static let statsEnabled = ProcessInfo.processInfo.environment["RETROMAC_TITLEBAR_STATS"] != nil
+    private var stats: [String: Int] = [:]
+    private var statsSince = Date()
+    private func count(_ key: String) {
+        guard Self.statsEnabled else { return }
+        stats[key, default: 0] += 1
+        if Date().timeIntervalSince(statsSince) >= 10 {
+            let line = stats.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
+            print("[TitleBar] stats/10s overlays=\(overlays.count) \(line)")
+            stats.removeAll(); statsSince = Date()
+        }
+    }
+
     func handleServerEvent(event: UInt32, wid: CGWindowID) {
         guard running else { return }
+        count("event\(event)")
         switch event {
         case PrivateWindowAPI.EVENT_WINDOW_MOVE, PrivateWindowAPI.EVENT_WINDOW_RESIZE:
             guard let o = overlays[wid], let style else { return }
             guard let g = PrivateWindowAPI.bounds(of: wid) else { drop(for: wid); return }
             o.bounds = g
             let f: NSRect
-            if style.isBar {
+            if o.view.isBarPanel {
                 f = Self.barFrame(for: g, style: style)
             } else if let offsets = lightOffsets[wid] {
-                f = Self.lightsFrame(for: g, offsets: offsets).0   // the lights do not move inside the window
+                let used = o.view.currentStyle == .platinumCloseOnly ? offsets.filter { $0.key == .close } : offsets
+                f = Self.lightsFrame(for: g, offsets: used).0   // the lights do not move inside the window
             } else { return }
             if f.size == o.panel.frame.size {
                 if f.origin != o.panel.frame.origin { o.panel.setFrameOrigin(f.origin) }   // a move: no redraw
@@ -318,11 +402,17 @@ final class TitleBarOverlayController {
     func drop(for wid: CGWindowID) {
         lightOffsets.removeValue(forKey: wid)
         lightOffsetsFirstSeen.removeValue(forKey: wid)
+        titles.removeValue(forKey: wid)
+        zoomedFrom.removeValue(forKey: wid)
+        zoomedTo.removeValue(forKey: wid)
         guard let o = overlays[wid] else { return }
         o.panel.orderOut(nil)
         overlays.removeValue(forKey: wid)
         axWindows.removeValue(forKey: wid)
     }
+
+    /// A window came back from the Dock: give it its bar again without waiting for the poll.
+    func resync() { sync() }
 
     /// Drop every bar whose window is not in `onScreen` (a closed window, reported through AX).
     func dropAll(notIn onScreen: Set<CGWindowID>) {
@@ -404,6 +494,45 @@ final class TitleBarOverlayController {
         return (ref as? String).flatMap { $0.isEmpty ? nil : $0 }
     }
 
+    /// Titles the window list did not carry, fetched through Accessibility once and kept. A
+    /// window that yields none is asked again after 1, 2, 4 … 30 seconds, not twice a second.
+    private struct TitleEntry { var title: String?; var nextTry: Date; var failures: Int }
+    private var titles: [CGWindowID: TitleEntry] = [:]
+
+    private func title(for info: WindowInfo) -> String {
+        if !info.title.isEmpty { titles.removeValue(forKey: info.id); return info.title }
+        if let e = titles[info.id] {
+            if let t = e.title { return t }
+            if Date() < e.nextTry { return info.ownerName }
+        }
+        let failures = titles[info.id]?.failures ?? 0
+        if let t = axTitle(info.id, pid: info.pid) {
+            titles[info.id] = TitleEntry(title: t, nextTry: .distantFuture, failures: 0)
+            return t
+        }
+        let wait = min(30, pow(2, Double(failures)))
+        titles[info.id] = TitleEntry(title: nil, nextTry: Date().addingTimeInterval(wait), failures: failures + 1)
+        return info.ownerName
+    }
+
+    private static var icons: [pid_t: NSImage] = [:]
+    private static func icon(for pid: pid_t) -> NSImage? {
+        if let i = icons[pid] { return i }
+        guard let i = NSRunningApplication(processIdentifier: pid)?.icon else { return nil }
+        icons[pid] = i
+        return i
+    }
+
+    /// Bring a window's app to the front and the window with it, the way a click on a real
+    /// title bar does; the bar intercepts that click, so it has to do it itself.
+    private func activate(_ wid: CGWindowID, pid: pid_t) {
+        NSRunningApplication(processIdentifier: pid)?.activate(options: [])
+        if let w = axWindow(wid, pid: pid) {
+            AXUIElementPerformAction(w, kAXRaiseAction as CFString)
+            AXUIElementSetAttributeValue(w, kAXMainAttribute as CFString, kCFBooleanTrue)
+        }
+    }
+
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
         guard let w = axWindow(wid, pid: pid) else { return }
         let attr: String
@@ -424,18 +553,18 @@ final class TitleBarOverlayController {
         }
     }
 
-    /// Frames remembered before a zoom, so the second click puts the window back.
+    /// Frames remembered around a zoom: where the window came from, and where it actually
+    /// ended up (an app may refuse part of the size, so the request is no measure of it).
     private var zoomedFrom: [CGWindowID: CGRect] = [:]
+    private var zoomedTo: [CGWindowID: CGRect] = [:]
 
     /// Zoom the way the era did: fill the screen the window is on, and back again. Pressing the
     /// real green button would put the window into native full screen instead, which is
     /// neither Platinum nor Luna and leaves no bar to click.
     private func zoom(_ w: AXUIElement, wid: CGWindowID) {
         guard let current = overlays[wid]?.bounds ?? PrivateWindowAPI.bounds(of: wid) else { return }
-        let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
-        func quartz(_ r: NSRect) -> CGRect { CGRect(x: r.minX, y: primaryTop - r.maxY, width: r.width, height: r.height) }
-        let screen = NSScreen.screens.max(by: { quartz($0.frame).intersection(current).area < quartz($1.frame).intersection(current).area })
-        guard let screen else { return }
+        let quartz = Self.quartz
+        guard let screen = Self.screen(for: current) else { return }
         // The screen minus the menu bar and the system Dock, and minus the retro taskbar too:
         // a maximised window stopped at the taskbar, and a window the size of the screen would
         // also lose its bar (screen-sized windows get none, so a native full-screen one is left alone).
@@ -452,17 +581,46 @@ final class TitleBarOverlayController {
         if visible.height >= screen.frame.height - 1 { visible = visible.insetBy(dx: 0, dy: 1) }
         let full = quartz(visible)
         let target: CGRect
-        if let back = zoomedFrom[wid], abs(current.width - full.width) < 2, abs(current.height - full.height) < 2 {
+        let restoring: Bool
+        if let back = zoomedFrom[wid], let reached = zoomedTo[wid], Self.roughlySame(current, reached) {
             target = back
-            zoomedFrom.removeValue(forKey: wid)
+            restoring = true
         } else {
             zoomedFrom[wid] = current
             target = full
+            restoring = false
         }
+        let reached = Self.setFrame(target, of: w) ?? target
+        if restoring {
+            zoomedFrom.removeValue(forKey: wid)
+            zoomedTo.removeValue(forKey: wid)
+        } else {
+            zoomedTo[wid] = reached   // whatever the app allowed is what "zoomed" looks like now
+        }
+        overlays[wid]?.view.configure(zoomed: !restoring)
+    }
+
+    static func roughlySame(_ a: CGRect, _ b: CGRect) -> Bool {
+        abs(a.minX - b.minX) < 2 && abs(a.minY - b.minY) < 2 && abs(a.width - b.width) < 2 && abs(a.height - b.height) < 2
+    }
+
+    /// Position, size, position again (a move first can be clipped to the old size), then read
+    /// back what the app actually did. Nil when it answered none of it.
+    @discardableResult
+    private static func setFrame(_ target: CGRect, of w: AXUIElement) -> CGRect? {
         var p = target.origin, sz = target.size
+        var ok = false
+        if let pv = AXValueCreate(.cgPoint, &p) { ok = AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, pv) == .success || ok }
+        if let sv = AXValueCreate(.cgSize, &sz) { ok = AXUIElementSetAttributeValue(w, kAXSizeAttribute as CFString, sv) == .success || ok }
         if let pv = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, pv) }
-        if let sv = AXValueCreate(.cgSize, &sz) { AXUIElementSetAttributeValue(w, kAXSizeAttribute as CFString, sv) }
-        if let pv = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, pv) }
+        guard ok else { return nil }
+        var pRef: CFTypeRef?, sRef: CFTypeRef?
+        var rp = CGPoint.zero, rs = CGSize.zero
+        guard AXUIElementCopyAttributeValue(w, kAXPositionAttribute as CFString, &pRef) == .success, let pRef,
+              AXValueGetValue(pRef as! AXValue, .cgPoint, &rp),
+              AXUIElementCopyAttributeValue(w, kAXSizeAttribute as CFString, &sRef) == .success, let sRef,
+              AXValueGetValue(sRef as! AXValue, .cgSize, &rs) else { return target }
+        return CGRect(origin: rp, size: rs)
     }
 
     /// Move the real window by `delta` (AppKit points, y up) from where it was when the drag began.
@@ -528,6 +686,7 @@ final class TitleBarOverlayController {
 /// Draws one title bar and owns its controls. Flipped, so y runs down like the strip does.
 final class TitleBarOverlayView: NSView {
     var onAction: ((ChromeButtonKind) -> Void)?
+    var onActivate: (() -> Void)?
     var onDrag: ((NSPoint) -> Void)?
     var onDragEnd: (() -> Void)?
     var onLeave: (() -> Void)?
@@ -537,7 +696,11 @@ final class TitleBarOverlayView: NSView {
     private var icon: NSImage?
     private var isFront = true
     private var lights: [ChromeButtonKind: NSRect] = [:]
+    private var deadZoneWidth: CGFloat = 0
+    private var zoomed = false
     private var tracker = ChromeButtonTracker()
+    var currentStyle: TitleBarOverlayController.Style { style }
+    var isBarPanel: Bool { style.isBar }
     private var buttonRects: [(ChromeButtonKind, NSRect)] = []
     private var dragStart: NSPoint?
     private var dragging = false
@@ -545,21 +708,32 @@ final class TitleBarOverlayView: NSView {
     override var isFlipped: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    /// Where the real traffic lights sit under a full bar. Clicks there are ours, never theirs.
-    /// A lights panel has no dead zone: it is the lights.
-    private var deadZone: NSRect { style.isBar ? NSRect(x: 0, y: 0, width: 76, height: bounds.height) : .zero }
+    /// Where the real traffic lights sit under a full bar, as measured for this window. Clicks
+    /// there are ours, never theirs. A lights panel has no dead zone: it is the lights.
+    private var deadZone: NSRect { style.isBar ? NSRect(x: 0, y: 0, width: deadZoneWidth, height: bounds.height) : .zero }
 
     func configure(style: TitleBarOverlayController.Style, title: String, icon: NSImage?, isFront: Bool,
-                   lights: [ChromeButtonKind: NSRect]) {
+                   lights: [ChromeButtonKind: NSRect], deadZoneWidth: CGFloat, zoomed: Bool) {
         guard style != self.style || title != self.title || isFront != self.isFront
-                || lights != self.lights || (icon == nil) != (self.icon == nil) else { return }
+                || lights != self.lights || (icon == nil) != (self.icon == nil)
+                || deadZoneWidth != self.deadZoneWidth || zoomed != self.zoomed else { return }
         self.style = style; self.title = title; self.icon = icon; self.isFront = isFront; self.lights = lights
+        self.deadZoneWidth = deadZoneWidth; self.zoomed = zoomed
         needsDisplay = true
     }
 
-    /// Whether the panel should take the mouse at `p` (view coordinates).
+    func configure(zoomed: Bool) {
+        guard zoomed != self.zoomed else { return }
+        self.zoomed = zoomed
+        needsDisplay = true
+    }
+
+    /// Whether the panel should take the mouse at `p` (view coordinates). An inactive Platinum
+    /// bar shows no boxes, so it has none to hit; its dead zone still takes the click, to
+    /// activate the window.
     func isHot(_ p: NSPoint) -> Bool {
-        if buttonRects.contains(where: { $0.1.insetBy(dx: -3, dy: -3).contains(p) }) { return true }
+        let boxesShown = isFront || style != .platinum
+        if boxesShown, buttonRects.contains(where: { $0.1.insetBy(dx: -3, dy: -3).contains(p) }) { return true }
         return deadZone.contains(p)
     }
 
@@ -573,7 +747,7 @@ final class TitleBarOverlayView: NSView {
         buttonRects.removeAll()
         let h = bounds.height, w = bounds.width
         switch style {
-        case .aquaLights, .snowLights:
+        case .aquaLights, .snowLights, .platinumCloseOnly:
             for kind in [ChromeButtonKind.close, .minimize, .zoom] {
                 guard let r = lights[kind] else { continue }
                 tracker.add(kind, r, interactive: true)
@@ -615,6 +789,13 @@ final class TitleBarOverlayView: NSView {
         case .luna:       drawLuna(b)
         case .snowLights: drawLights(aqua: false)
         case .aquaLights: drawLights(aqua: true)
+        case .platinumCloseOnly:
+            // One Platinum box over the red light, a little larger than the box was so the
+            // light is covered; the plate behind it hides the light's antialiased edge.
+            for (k, r) in buttonRects {
+                ClassicMacChrome.face.setFill(); NSBezierPath(ovalIn: r.insetBy(dx: -1, dy: -1)).fill()
+                ClassicMacChrome.bevelBox(r, state: isFront ? tracker.state(for: k) : .disabled)
+            }
         }
     }
 
@@ -642,7 +823,10 @@ final class TitleBarOverlayView: NSView {
                 if k == .zoom { ClassicMacChrome.zoomGlyph(in: r) }
                 if k == .collapse { ClassicMacChrome.collapseGlyph(in: r) }
             }
-            ClassicMacChrome.titlePlaque(title, bar: b, font: font)
+            // The plaque stays between the close box and the collapse box, whatever the title's length.
+            let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 8
+            let right = (buttonRects.first { $0.0 == .collapse }?.1.minX ?? b.width) - 8
+            ClassicMacChrome.titlePlaque(title, bar: b, font: font, maxWidth: max(0, right - left))
         } else {
             // An inactive Platinum window: plain plate, no boxes, grey title.
             let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor(calibratedWhite: 0.45, alpha: 1)]
@@ -672,9 +856,9 @@ final class TitleBarOverlayView: NSView {
         let shadow = NSShadow()
         shadow.shadowColor = NSColor.black.withAlphaComponent(0.6)
         shadow.shadowOffset = NSSize(width: 1, height: -1)
-        let attrs: [NSAttributedString.Key: Any] = [.font: cs.titleFont,
-                                                   .foregroundColor: isFront ? NSColor.white : NSColor(white: 0.9, alpha: 1),
-                                                   .shadow: shadow]
+        var attrs: [NSAttributedString.Key: Any] = [.font: cs.titleFont,
+                                                   .foregroundColor: isFront ? NSColor.white : NSColor(white: 0.9, alpha: 1)]
+        if isFront { attrs[.shadow] = shadow }   // XP dropped the emboss on an inactive caption
         let avail = (buttonRects.map { $0.1.minX }.min() ?? b.width) - 8 - x
         let s = title.size(withAttributes: attrs)
         (title as NSString).draw(in: NSRect(x: x, y: (b.height - s.height) / 2, width: max(0, avail), height: s.height),
@@ -683,11 +867,12 @@ final class TitleBarOverlayView: NSView {
             let base: String
             switch k {
             case .close: base = "close"
-            case .maximize: base = "max"
+            case .maximize: base = zoomed ? "restore" : "max"   // a maximised window offers Restore
             default: base = "min"
             }
             if let img = ChromeAssets.image(dir: "winxp", base: base, state: tracker.state(for: k)) {
-                img.draw(in: r, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+                // Inactive captions paled their buttons along with the gradient.
+                img.draw(in: r, from: .zero, operation: .sourceOver, fraction: isFront ? 1 : 0.75, respectFlipped: true, hints: nil)
             }
         }
     }
@@ -696,6 +881,8 @@ final class TitleBarOverlayView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
+        // A click on a window that is not in front brings it there first, as the real bar would.
+        if !isFront { onActivate?() }
         if tracker.mouseDown(at: p) { needsDisplay = true; return }
         if deadZone.contains(p) {
             if event.clickCount == 2 { onAction?(.zoom); return }
