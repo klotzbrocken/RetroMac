@@ -3,7 +3,7 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## Unreleased
+## 2.8.5
 
 - **Paint, Solitaire, Minesweeper, Internet Explorer and 3D Pinball open again.** The site
   that hosted these 98.js programs (bored-win98.pisaucer.com) went off the air in September;
