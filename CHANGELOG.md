@@ -15,9 +15,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   that belongs to the front window draws active, the others draw inactive. The windows are
   square while it is on: macOS is asked to stop rounding them (the same corner setting the
   "Classic Finder" tweaks use, at its smallest value, snapshotted and put back), which every
-  app picks up when it is next opened; for the apps already running, the bar covers the top
-  corners and the window border paints the sliver in the bottom ones. The bar runs out over the
-  window border when that is on. Apps can be left alone ("Leave these apps alone", from the
+  app picks up when it is next opened. Apps can be left alone ("Leave these apps alone", from the
   running apps or any app). A closed window takes its bar with it at once, and a dragged
   window's bar keeps up. Known limits: a toolbar that shares the title bar (Safari, Finder)
   loses its top edge under the strip, and a window the size of the screen gets no bar.
@@ -30,6 +28,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   colour, photographed off the screen beside them, so light, dark and inactive all match. A
   window with no room above it is moved down by the bar's height; a zoomed window leaves the
   bar its room. Snow Leopard and Mac OS X keep the lights-only mode, which is all they need.
+  The frame is 3 pt on Windows XP instead of 4, has no edge of its own above a Windows bar
+  (the caption is the top of the frame, as it was), and paints nothing into the corners: the
+  windows are square, and the few that were open before stay rounded until they are reopened.
 
 - **Title bars, hardened after review.** Every Accessibility request this process makes now
   gives up after half a second instead of six, so a hung app no longer hangs RetroMac (checked

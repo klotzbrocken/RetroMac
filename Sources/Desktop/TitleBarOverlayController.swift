@@ -14,9 +14,7 @@ import SkyLightBridge
 /// "not set"; measured on macOS 27 on the window's own alpha, 15 Sep 2026 — the sibling key
 /// NSSplitViewItemGlassMinimumCornerRadius only concerns sidebars and does nothing here). It is
 /// written through SystemTweaksAdapter while a bar style runs, and Finder is relaunched to pick
-/// it up. Apps that were already running keep their rounded windows until they are reopened;
-/// for those the bar covers the top corners and the window border paints the bottom ones
-/// (`WindowBorderController`, which asks each window's app when it launched).
+/// it up. Apps that were already running keep their rounded windows until they are reopened.
 ///
 /// The lights styles (Mac OS X, Snow Leopard) are the small version: only the three traffic
 /// lights are covered, at the exact spots the Accessibility API reports for the real ones,
@@ -27,7 +25,8 @@ import SkyLightBridge
 /// it, its buttons are the only controls there). What remains of the real bar is its three
 /// lights, and those are hidden under a patch that wears the bar's own colour, photographed
 /// off the screen next to them (`NativeBarSampler`). A window with no room above it is moved
-/// down by the bar's height, once, so every window can carry its bar.
+/// down by the bar's height, so every window can carry its bar. Apps running before the bars
+/// went on keep their rounded corners until they are reopened; nothing is painted over them.
 ///
 /// Diagnostics: RETROMAC_TITLEBAR_STATS=1 logs event and sync rates every 10 s. Measured
 /// 15 Sep 2026 with 10 windows, bars and borders on: 2.1 syncs/s (the timer), no reorder
@@ -60,13 +59,11 @@ final class TitleBarOverlayController {
 
     private var running = false
     var isRunning: Bool { running && style != nil }
-    /// Whether the real windows are being squared right now (bar styles only), and since when:
-    /// an app launched after this has square windows, one launched before still has round ones.
+    /// Whether the real windows are being squared right now (bar styles only).
     var squaresCorners: Bool { running && style?.isBar == true }
     /// How much the bar adds above each window while a bar style runs (0 otherwise), for the
     /// border to frame and the zoom to allow for.
     var barAboveHeight: CGFloat { squaresCorners ? Self.stripHeight(style!) : 0 }
-    private(set) var cornersSquaredAt: Date?
     private var style: Style?
     private var excluded: Set<String> = []
     private var overlays: [CGWindowID: Overlay] = [:]
@@ -166,8 +163,6 @@ final class TitleBarOverlayController {
     /// is on: when the theme is going off, ThemeManager's restore has the last word.
     private func squareTheRealCorners() {
         let wanted = squaresCorners
-        if wanted, cornersSquaredAt == nil { cornersSquaredAt = Date() }
-        if !wanted { cornersSquaredAt = nil }
         guard AppSettings.shared.dockEnabled, let theme = ThemeManager.shared.activeTheme else { return }
         SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)
         if wanted { SystemTweaksAdapter.showCornerHintIfNeeded(for: theme.config, squareCorners: true) }
