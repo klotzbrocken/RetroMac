@@ -96,7 +96,7 @@ final class WindowBorderController {
                 self?.sync()
             })
         }
-        let t = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in self?.sync() }
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.sync() }   // safety net; events do the work
         RunLoop.main.add(t, forMode: .common)
         syncTimer = t
         sync()

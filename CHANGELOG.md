@@ -24,15 +24,18 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 - **Title bars, hardened after review.** Every Accessibility request this process makes now
   gives up after half a second instead of six, so a hung app no longer hangs RetroMac (checked
-  with a frozen TextEdit: RetroMac answered in 50 ms). A window whose toolbar shares the title
-  bar (Safari, Finder, Mail) gets no bar any more — the bar hid the toolbar and let clicks
-  through to it; Platinum keeps its close box over the red light there. The bar needs the
+  with a frozen TextEdit: RetroMac answered in 50 ms). Where a window keeps its lights lower
+  (Finder, Notes, Safari) the strip grows to cover them. The bar needs the
   Accessibility permission and says so in Settings; a click on a window that is not in front
   brings it there first; the dead zone over the real lights is measured per window; a long
   Platinum title is shortened in the middle instead of running over the boxes; a maximised
   Luna window shows Restore, an inactive one pales its buttons; zoom remembers what the app
   actually allowed, so a window with a size limit restores too; windows the size of their own
-  screen are told apart on a second monitor; titles are cached and app icons too.
+  screen are told apart on a second monitor; titles are cached and app icons too. And it
+  stays off the main thread's back: the window list is fetched in the background, the
+  overlays are re-ordered on the WindowServer's events instead of every pass, and the
+  safety-net poll runs once a second — 1.8 ms of main-thread work per second instead of 15,
+  which is what stuttered the Snow Leopard dock's magnification.
 
 - **Experiment: traffic lights in theme style.** The same switch on Mac OS X and Snow Leopard
   covers only the three lights: Snow Leopard's glossy orbs from the theme's own artwork, or

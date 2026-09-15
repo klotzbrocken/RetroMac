@@ -22,11 +22,12 @@ import SkyLightBridge
 /// lights are covered, at the exact spots the Accessibility API reports for the real ones,
 /// and the rest of the title bar is left as it is.
 ///
-/// A window whose toolbar shares the title bar (Safari, Finder, Mail; told apart by where the
-/// Accessibility API says its lights sit) gets no bar: a bar over its top would hide the
-/// toolbar and let clicks through to it. Platinum still puts its close box over the red light
-/// there; Luna leaves the window native. The real lights under a bar are hidden but not gone:
-/// the strip above them, measured per window, is a dead zone the overlay handles itself.
+/// Known limit, kept on purpose: on a window whose toolbar shares the title bar (Safari,
+/// Finder, Notes) the strip covers the top of that toolbar, and a click on the bar outside its
+/// controls reaches whatever toolbar item lies under it. Leaving those windows bare was tried
+/// and left most apps without a bar, which is worse. The real lights under a bar are hidden
+/// but not gone: the strip above them, measured per window, is a dead zone the overlay
+/// handles itself.
 ///
 /// Diagnostics: RETROMAC_TITLEBAR_STATS=1 logs event and sync rates every 10 s. Measured
 /// 15 Sep 2026 with 10 windows, bars and borders on: 2.1 syncs/s (the timer), no reorder
@@ -40,7 +41,6 @@ final class TitleBarOverlayController {
     enum Style {
         case platinum, luna            // a whole bar
         case aquaLights, snowLights    // the three lights only
-        case platinumCloseOnly         // a Platinum window whose toolbar shares the title bar: the close box alone
         var isBar: Bool { self == .platinum || self == .luna }
     }
 
@@ -129,7 +129,8 @@ final class TitleBarOverlayController {
                 self.sync()
             })
         }
-        let t = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in self?.sync() }
+        // A safety net behind the WindowServer and Accessibility events, not the main path.
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.sync() }
         RunLoop.main.add(t, forMode: .common)
         syncTimer = t
         // The panels ignore the mouse except over a control; this is what flips them.
@@ -142,6 +143,7 @@ final class TitleBarOverlayController {
     private func stop() {
         guard running else { return }
         running = false
+        syncGeneration += 1
         syncTimer?.invalidate(); syncTimer = nil
         let nc = NSWorkspace.shared.notificationCenter
         wsTokens.forEach { nc.removeObserver($0) }
@@ -170,6 +172,7 @@ final class TitleBarOverlayController {
         axWindows.removeAll()
         lightOffsets.removeAll()
         lightOffsetsFirstSeen.removeAll()
+        lightOffsetsRetry.removeAll()
         titles.removeAll()
         zoomedFrom.removeAll()
         zoomedTo.removeAll()
@@ -177,14 +180,44 @@ final class TitleBarOverlayController {
 
     // MARK: - Sync
 
+    private var lastFullReorder = Date.distantPast
+    private var reorderDue = false
+    private var syncInFlight = false
+    private var syncPending = false
+    /// The window list is the expensive half of a sync (3 ms with a dozen windows, mostly the
+    /// titles) and does not need the main thread; the dock's magnification does.
+    private static let listQueue = DispatchQueue(label: "com.retromac.titlebar.windowlist", qos: .userInitiated)
+
     private func sync() {
+        guard running, style != nil else { return }
+        if syncInFlight { syncPending = true; return }
+        syncInFlight = true
+        let generation = syncGeneration
+        Self.listQueue.async {
+            let windows = Self.onScreenWindows()
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.syncInFlight = false
+                if generation == self.syncGeneration { self.finishSync(windows) }
+                if self.syncPending { self.syncPending = false; self.sync() }
+            }
+        }
+    }
+
+    /// Bumped by stop(), so a list fetched for a run that has ended is thrown away.
+    private var syncGeneration = 0
+
+    private func finishSync(_ windows: [WindowInfo]) {
         guard running, let style else { return }
-        count("sync")
-        let windows = Self.onScreenWindows()
+        let t0 = Date()
+        defer { count("sync", seconds: Date().timeIntervalSince(t0)) }
+        reorderDue = Date().timeIntervalSince(lastFullReorder) > 3
+        if reorderDue { lastFullReorder = Date() }
         var infoByID = [CGWindowID: WindowInfo](minimumCapacity: windows.count)
         for w in windows { infoByID[w.id] = w }
 
         let candidates = windows.map { $0.id }
+        let tFilter = Date()
         PrivateWindowAPI.requestNotifications(for: candidates)
         var outWID = [UInt32](repeating: 0, count: candidates.count)
         var outLevel = [Int32](repeating: 0, count: candidates.count)
@@ -196,8 +229,10 @@ final class TitleBarOverlayController {
                 }
             }
         }
+        self.count("sync.filter", seconds: Date().timeIntervalSince(tFilter))
         // The front window: the first suitable one, in z-order, that belongs to the active app.
         let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? -1
+        let screens = NSScreen.screens
         var frontWID: CGWindowID = 0
         var suitable = Set<CGWindowID>()
         for i in 0..<count {
@@ -206,7 +241,7 @@ final class TitleBarOverlayController {
             if frontWID == 0, info.pid == frontPID { frontWID = wid }
             if excluded.contains(info.bundleID) { continue }
             suitable.insert(wid)
-            apply(info, level: outLevel[i], style: style, isFront: wid == frontWID)
+            apply(info, level: outLevel[i], style: style, isFront: wid == frontWID, screens: screens)
         }
         for (wid, o) in overlays where !suitable.contains(wid) {
             o.panel.orderOut(nil)
@@ -216,50 +251,47 @@ final class TitleBarOverlayController {
     }
 
     /// The screen a window mostly sits on, in Quartz (top-left) coordinates.
-    static func screen(for bounds: CGRect) -> NSScreen? {
-        NSScreen.screens.max(by: { quartz($0.frame).intersection(bounds).area < quartz($1.frame).intersection(bounds).area })
+    static func screen(for bounds: CGRect, screens: [NSScreen] = NSScreen.screens) -> NSScreen? {
+        let top = primaryTop(screens)
+        return screens.max(by: { quartz($0.frame, top).intersection(bounds).area < quartz($1.frame, top).intersection(bounds).area })
     }
 
-    static func quartz(_ r: NSRect) -> CGRect {
-        let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
-        return CGRect(x: r.minX, y: primaryTop - r.maxY, width: r.width, height: r.height)
+    static func primaryTop(_ screens: [NSScreen] = NSScreen.screens) -> CGFloat {
+        (screens.first(where: { $0.frame.origin == .zero }) ?? screens.first)?.frame.maxY ?? 0
+    }
+
+    static func quartz(_ r: NSRect, _ top: CGFloat = primaryTop()) -> CGRect {
+        CGRect(x: r.minX, y: top - r.maxY, width: r.width, height: r.height)
     }
 
     /// A window the size of its own screen is native full screen (or as good as): leave it.
-    static func isScreenSized(_ bounds: CGRect) -> Bool {
-        guard let scr = screen(for: bounds) else { return false }
+    static func isScreenSized(_ bounds: CGRect, screens: [NSScreen] = NSScreen.screens) -> Bool {
+        guard let scr = screen(for: bounds, screens: screens) else { return false }
         return bounds.width >= scr.frame.width - 1 && bounds.height >= scr.frame.height - 1
     }
 
-    /// Below this, the lights sit in a plain 28 pt title bar; deeper means the title bar and
-    /// the toolbar are one (Safari, Finder, Mail), and a bar over its top would hide the
-    /// toolbar and let clicks through to it.
-    static let plainTitleBarLightCentre: CGFloat = 20
-
-    private func apply(_ info: WindowInfo, level: Int32, style: Style, isFront: Bool) {
-        if Self.isScreenSized(info.bounds) { drop(for: info.id); return }
-        // Every style needs the real lights: a bar to know the title bar's height and where
-        // the dead zone ends, a lights style to know where to draw.
-        guard let offsets = lightOffsets(for: info) else { drop(for: info.id); return }
+    private func apply(_ info: WindowInfo, level: Int32, style: Style, isFront: Bool, screens: [NSScreen]) {
+        if Self.isScreenSized(info.bounds, screens: screens) { drop(for: info.id); return }
         let frame: NSRect
         var lights: [ChromeButtonKind: NSRect] = [:]
         var deadZoneWidth: CGFloat = 0
-        var drawStyle = style
-        let unified = (offsets[.close]?.midY ?? 0) > Self.plainTitleBarLightCentre
-        if style.isBar && !unified {
-            frame = Self.barFrame(for: info.bounds, style: style)
-            // The dead zone ends just past the last real light, wherever this window puts them.
-            let lastLight = offsets.values.map { $0.maxX }.max() ?? 68
+        let drawStyle = style
+        if style.isBar {
+            // The bar goes on every window, toolbar-in-the-title-bar ones included (Finder,
+            // Notes, Safari): the alternative, no bar there, left most apps bare. What the
+            // lights measurement buys the bar is the end of the dead zone; if the app does
+            // not answer in time, the default from the plain title bar serves.
+            // Where the lights sit lower (toolbar in the title bar), the strip grows to cover
+            // them; a half light under the bar gives the whole thing away.
+            let offsets = lightOffsets(for: info)
+            let lightsBottom = offsets?.values.map { $0.maxY }.max() ?? 0
+            frame = Self.barFrame(for: info.bounds, style: style, coveringDownTo: lightsBottom + 2)
+            let lastLight = offsets?.values.map { $0.maxX }.max() ?? 70
             deadZoneWidth = lastLight + 8 + WindowBorderController.shared.activeBorderWidth
-        } else if style.isBar {
-            // A unified toolbar keeps its bar. Platinum still gets its close box over the red
-            // light, the one control it had on the left; Luna's controls would sit on the right,
-            // over the toolbar, so that window is left entirely native.
-            guard style == .platinum, let close = offsets[.close] else { drop(for: info.id); return }
-            drawStyle = .platinumCloseOnly
-            (frame, lights) = Self.lightsFrame(for: info.bounds, offsets: [.close: close])
         } else {
-            // The panel is just big enough for the three lights, wherever this window keeps them.
+            // The panel is just big enough for the three lights, wherever this window keeps
+            // them; without the measurement there is nothing to draw.
+            guard let offsets = lightOffsets(for: info) else { drop(for: info.id); return }
             (frame, lights) = Self.lightsFrame(for: info.bounds, offsets: offsets)
         }
         let title = drawStyle.isBar ? title(for: info) : ""
@@ -269,10 +301,14 @@ final class TitleBarOverlayController {
         if let o = overlays[info.id] {
             o.bounds = info.bounds
             if o.panel.frame != frame { o.panel.setFrame(frame, display: false) }
-            // Re-assert the order every pass: when the target's app comes to the front its
-            // windows rise above ours, and nothing but this puts the bar back on top.
-            o.level = level
-            order(o, above: info.id)
+            // The z-order is re-asserted on the WindowServer's reorder and front-change events
+            // (`handleServerEvent`); here only when the level changed, and once every few
+            // seconds as a safety net. Ordering every overlay every pass was most of the 7 ms a
+            // sync cost, and 7 ms twice a second is a dropped frame in the dock's magnification.
+            if o.level != level || reorderDue {
+                o.level = level
+                order(o, above: info.id)
+            }
             o.view.configure(style: drawStyle, title: title, icon: icon, isFront: isFront, lights: lights,
                              deadZoneWidth: deadZoneWidth, zoomed: zoomed)
             return
@@ -317,7 +353,7 @@ final class TitleBarOverlayController {
         switch style {
         case .platinum: return 28
         case .luna:     return 30
-        case .aquaLights, .snowLights, .platinumCloseOnly: return 0   // sized from the real lights instead
+        case .aquaLights, .snowLights: return 0   // sized from the real lights instead
         }
     }
 
@@ -345,10 +381,10 @@ final class TitleBarOverlayController {
 
     /// The bar's frame: the strip along the window's top edge, widened over the window border
     /// when that is on, so bar and frame are one piece out to the edge.
-    static func barFrame(for bounds: CGRect, style: Style) -> NSRect {
+    static func barFrame(for bounds: CGRect, style: Style, coveringDownTo lightsBottom: CGFloat = 0) -> NSRect {
         let bw = WindowBorderController.shared.activeBorderWidth
         let grown = CGRect(x: bounds.minX - bw, y: bounds.minY - bw, width: bounds.width + 2 * bw, height: bounds.height + bw)
-        return appKitFrame(topLeft: grown, height: stripHeight(style) + bw)
+        return appKitFrame(topLeft: grown, height: max(stripHeight(style), lightsBottom) + bw)
     }
 
     // MARK: - Events from the WindowServer (forwarded by WindowBorderController)
@@ -357,13 +393,18 @@ final class TitleBarOverlayController {
     private static let statsEnabled = ProcessInfo.processInfo.environment["RETROMAC_TITLEBAR_STATS"] != nil
     private var stats: [String: Int] = [:]
     private var statsSince = Date()
-    private func count(_ key: String) {
+    private var statsTime: [String: Double] = [:]
+    private func count(_ key: String, seconds: Double = 0) {
         guard Self.statsEnabled else { return }
         stats[key, default: 0] += 1
+        statsTime[key, default: 0] += seconds
         if Date().timeIntervalSince(statsSince) >= 10 {
-            let line = stats.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
+            let line = stats.sorted { $0.key < $1.key }.map { k, v in
+                let t = statsTime[k] ?? 0
+                return t > 0 ? String(format: "%@=%d(%.1fms avg)", k, v, t / Double(v) * 1000) : "\(k)=\(v)"
+            }.joined(separator: " ")
             print("[TitleBar] stats/10s overlays=\(overlays.count) \(line)")
-            stats.removeAll(); statsSince = Date()
+            stats.removeAll(); statsTime.removeAll(); statsSince = Date()
         }
     }
 
@@ -377,10 +418,10 @@ final class TitleBarOverlayController {
             o.bounds = g
             let f: NSRect
             if o.view.isBarPanel {
-                f = Self.barFrame(for: g, style: style)
+                let lightsBottom = lightOffsets[wid]?.values.map { $0.maxY }.max() ?? 0
+                f = Self.barFrame(for: g, style: style, coveringDownTo: lightsBottom + 2)
             } else if let offsets = lightOffsets[wid] {
-                let used = o.view.currentStyle == .platinumCloseOnly ? offsets.filter { $0.key == .close } : offsets
-                f = Self.lightsFrame(for: g, offsets: used).0   // the lights do not move inside the window
+                f = Self.lightsFrame(for: g, offsets: offsets).0   // the lights do not move inside the window
             } else { return }
             if f.size == o.panel.frame.size {
                 if f.origin != o.panel.frame.origin { o.panel.setFrameOrigin(f.origin) }   // a move: no redraw
@@ -402,6 +443,7 @@ final class TitleBarOverlayController {
     func drop(for wid: CGWindowID) {
         lightOffsets.removeValue(forKey: wid)
         lightOffsetsFirstSeen.removeValue(forKey: wid)
+        lightOffsetsRetry.removeValue(forKey: wid)
         titles.removeValue(forKey: wid)
         zoomedFrom.removeValue(forKey: wid)
         zoomedTo.removeValue(forKey: wid)
@@ -446,12 +488,16 @@ final class TitleBarOverlayController {
     /// rest of the slide.
     private var lightOffsets: [CGWindowID: [ChromeButtonKind: CGRect]] = [:]
     private var lightOffsetsFirstSeen: [CGWindowID: Date] = [:]
+    /// A window that gave no answer is asked again after 1, 2, 4 … 30 s, not every sync: with
+    /// a hung app each ask costs the full timeout.
+    private var lightOffsetsRetry: [CGWindowID: (next: Date, failures: Int)] = [:]
 
     private func lightOffsets(for info: WindowInfo) -> [ChromeButtonKind: CGRect]? {
         let firstSeen = lightOffsetsFirstSeen[info.id] ?? Date()
         lightOffsetsFirstSeen[info.id] = firstSeen
         if let cached = lightOffsets[info.id], Date().timeIntervalSince(firstSeen) > 3 { return cached }
-        guard let w = axWindow(info.id, pid: info.pid) else { return nil }
+        if let r = lightOffsetsRetry[info.id], Date() < r.next { return lightOffsets[info.id] }
+        guard let w = axWindow(info.id, pid: info.pid) else { noteOffsetsFailure(info.id); return lightOffsets[info.id] }
         var out: [ChromeButtonKind: CGRect] = [:]
         for (kind, attr) in [(ChromeButtonKind.close, kAXCloseButtonAttribute),
                              (.minimize, kAXMinimizeButtonAttribute), (.zoom, kAXZoomButtonAttribute)] {
@@ -466,13 +512,23 @@ final class TitleBarOverlayController {
                   AXValueGetValue(sRef as! AXValue, .cgSize, &sz), sz.width > 0 else { continue }
             out[kind] = CGRect(x: p.x - info.bounds.minX, y: p.y - info.bounds.minY, width: sz.width, height: sz.height)
         }
-        guard out[.close] != nil else { return nil }
+        guard out[.close] != nil else { noteOffsetsFailure(info.id); return lightOffsets[info.id] }
         lightOffsets[info.id] = out
+        lightOffsetsRetry.removeValue(forKey: info.id)
         return out
     }
 
+    private func noteOffsetsFailure(_ wid: CGWindowID) {
+        let failures = lightOffsetsRetry[wid]?.failures ?? 0
+        lightOffsetsRetry[wid] = (Date().addingTimeInterval(min(30, pow(2, Double(failures)))), failures + 1)
+    }
+
+    private var axWindowRetry: [CGWindowID: Date] = [:]
+
     private func axWindow(_ wid: CGWindowID, pid: pid_t) -> AXUIElement? {
         if let cached = axWindows[wid] { return cached }
+        if let next = axWindowRetry[wid], Date() < next { return nil }
+        axWindowRetry[wid] = Date().addingTimeInterval(2)   // a miss is not asked about again for 2 s
         let app = AXUIElementCreateApplication(pid)
         var ref: CFTypeRef?
         guard AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &ref) == .success,
@@ -481,6 +537,7 @@ final class TitleBarOverlayController {
             var id: CGWindowID = 0
             if axUIElementGetWindow?(w, &id) == .success, id == wid {
                 axWindows[wid] = w
+                axWindowRetry.removeValue(forKey: wid)
                 return w
             }
         }
@@ -563,7 +620,7 @@ final class TitleBarOverlayController {
     /// neither Platinum nor Luna and leaves no bar to click.
     private func zoom(_ w: AXUIElement, wid: CGWindowID) {
         guard let current = overlays[wid]?.bounds ?? PrivateWindowAPI.bounds(of: wid) else { return }
-        let quartz = Self.quartz
+        func quartz(_ r: NSRect) -> CGRect { Self.quartz(r) }
         guard let screen = Self.screen(for: current) else { return }
         // The screen minus the menu bar and the system Dock, and minus the retro taskbar too:
         // a maximised window stopped at the taskbar, and a window the size of the screen would
@@ -747,7 +804,7 @@ final class TitleBarOverlayView: NSView {
         buttonRects.removeAll()
         let h = bounds.height, w = bounds.width
         switch style {
-        case .aquaLights, .snowLights, .platinumCloseOnly:
+        case .aquaLights, .snowLights:
             for kind in [ChromeButtonKind.close, .minimize, .zoom] {
                 guard let r = lights[kind] else { continue }
                 tracker.add(kind, r, interactive: true)
@@ -789,13 +846,6 @@ final class TitleBarOverlayView: NSView {
         case .luna:       drawLuna(b)
         case .snowLights: drawLights(aqua: false)
         case .aquaLights: drawLights(aqua: true)
-        case .platinumCloseOnly:
-            // One Platinum box over the red light, a little larger than the box was so the
-            // light is covered; the plate behind it hides the light's antialiased edge.
-            for (k, r) in buttonRects {
-                ClassicMacChrome.face.setFill(); NSBezierPath(ovalIn: r.insetBy(dx: -1, dy: -1)).fill()
-                ClassicMacChrome.bevelBox(r, state: isFront ? tracker.state(for: k) : .disabled)
-            }
         }
     }
 

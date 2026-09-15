@@ -37,14 +37,10 @@ final class TitleBarOverlayTests: XCTestCase {
         }
         // The orb is centred on the real light (16 pt centre), so it covers it on every side.
         XCTAssertEqual(lights[.close]!.midX + frame.minX - 100, 16, accuracy: 0.01)
-        // A unified toolbar puts the lights lower; that is what the bar styles key on.
-        XCTAssertLessThan(offsets[.close]!.midY, TitleBarOverlayController.plainTitleBarLightCentre)
-        XCTAssertGreaterThan(CGRect(x: 8, y: 16, width: 16, height: 16).midY, TitleBarOverlayController.plainTitleBarLightCentre)
     }
 
     func testTrafficLightStyleNeedsNoStripAndBarStylesDo() {
         XCTAssertEqual(TitleBarOverlayController.stripHeight(.snowLights), 0)
-        XCTAssertEqual(TitleBarOverlayController.stripHeight(.platinumCloseOnly), 0)
         XCTAssertGreaterThanOrEqual(TitleBarOverlayController.stripHeight(.platinum), 28, "must cover the native 28 pt bar")
         XCTAssertGreaterThanOrEqual(TitleBarOverlayController.stripHeight(.luna), 28)
     }
