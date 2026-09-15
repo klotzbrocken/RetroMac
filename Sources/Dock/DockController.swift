@@ -41,8 +41,8 @@ final class DockController {
     private var originalAutohideDelay: String?
 
     // Auto-hide state
-    private var globalMouseMonitor: Any?
-    private var localMouseMonitor: Any?
+    private var autoHidePoll: Timer?
+    private var autoHideLastPointer = NSPoint(x: -1, y: -1)
     private var autoHideVisible = false
     private var autoHideAnimating = false
     private let autoHideTriggerHeight: CGFloat = 5    // px from screen bottom to trigger show
@@ -734,24 +734,23 @@ final class DockController {
         autoHideVisible = false
         hideOffscreen()
 
-        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
-            self?.handleMouseMoved()
+        // A poll, not a global mouse monitor: with a monitor for moved events installed, the
+        // WindowServer delivered this window's own mouse moves in bursts (30 a second with
+        // gaps of up to 700 ms instead of a steady stream) from the first change of front
+        // application on, and the magnification juddered. 25 checks of the pointer a second
+        // reveal the dock just as promptly.
+        let t = Timer(timeInterval: 0.04, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            let p = NSEvent.mouseLocation
+            if p != self.autoHideLastPointer { self.autoHideLastPointer = p; self.handleMouseMoved() }
         }
-        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
-            self?.handleMouseMoved()
-            return event
-        }
+        RunLoop.main.add(t, forMode: .common)
+        autoHidePoll = t
     }
 
     private func removeAutoHideMonitors() {
-        if let monitor = globalMouseMonitor {
-            NSEvent.removeMonitor(monitor)
-            globalMouseMonitor = nil
-        }
-        if let monitor = localMouseMonitor {
-            NSEvent.removeMonitor(monitor)
-            localMouseMonitor = nil
-        }
+        autoHidePoll?.invalidate()
+        autoHidePoll = nil
     }
 
     private func handleMouseMoved() {

@@ -33,7 +33,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   moves in bursts (thirty a second with gaps of up to 700 ms instead of a steady stream) from
   the first change of front application on, which is what made the magnification judder.
   The overlay now asks where the pointer is 25 times a second instead, which the dock does
-  not notice. Measured with the dock's new cadence log (`RETROMAC_DOCK_STATS=1`).
+  not notice. The dock's own auto-hide watched the pointer the same way and juddered the same
+  way once it was revealed; it polls now too. Measured with the dock's new cadence log
+  (`RETROMAC_DOCK_STATS=1`).
 
 - **The boot screen can always be clicked away, and a stuck switch cannot lock the Mac.**
   The click used to run the waiting theme switch first and take the cover down after, so a
