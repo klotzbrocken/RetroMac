@@ -177,6 +177,15 @@ uint64_t skb_send_to_space(uint32_t wid, uint32_t target) {
     return (moveErr == kCGErrorSuccess) ? sid : 0;
 }
 
+// Take any window of ours off the screen, from any thread. The boot-screen watchdog uses this
+// when the main thread has stopped answering with a full-screen cover up: AppKit's orderOut
+// needs the main thread, this does not.
+extern CGError SLSOrderWindow(int cid, uint32_t wid, int mode, uint32_t relative);
+void skb_order_out(uint32_t wid) {
+    if (wid == 0) return;
+    SLSOrderWindow(SLSMainConnectionID(), wid, 0 /* out */, 0);
+}
+
 void skb_order(uint32_t wid, int level, uint32_t target) {
     if (wid == 0) return;
     int cid = SLSMainConnectionID();

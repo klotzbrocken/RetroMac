@@ -178,8 +178,15 @@ enum SystemUIHelper {
         SystemBridge.shared.killall("Finder")
     }
 
+    /// Every Apple event RetroMac sends waits at most this long. The default is two minutes,
+    /// and a System Events or Finder that is busy (or being relaunched by the theme's own
+    /// tweaks) would hold the main thread — and a boot screen — for all of it.
+    static func withTimeout(_ source: String, seconds: Int = 4) -> String {
+        "with timeout of \(seconds) seconds\n\(source)\nend timeout"
+    }
+
     private static func readAppleScriptBool(_ source: String) -> Bool {
-        guard let script = NSAppleScript(source: source) else { return false }
+        guard let script = NSAppleScript(source: withTimeout(source)) else { return false }
         var error: NSDictionary?
         let result = script.executeAndReturnError(&error)
         if error != nil { return false }
@@ -188,7 +195,7 @@ enum SystemUIHelper {
 
     @discardableResult
     static func runAppleScript(_ source: String) -> Bool {
-        guard let script = NSAppleScript(source: source) else { return false }
+        guard let script = NSAppleScript(source: withTimeout(source)) else { return false }
         var error: NSDictionary?
         script.executeAndReturnError(&error)
         if let error = error {

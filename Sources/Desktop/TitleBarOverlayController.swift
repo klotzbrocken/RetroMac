@@ -64,6 +64,15 @@ final class TitleBarOverlayController {
     var isRunning: Bool { running && style != nil }
     /// Whether the real windows are being squared right now (bar styles only).
     var squaresCorners: Bool { running && style?.isBar == true }
+    /// The window corner radius the running style asks macOS for: square under a bar (0.5 is
+    /// the smallest value the key takes; 0 means unset), the era's rounding under the lights —
+    /// 10.5 to 10.8 rounded all four corners about 5 pt, and the classic Aqua's rounded top
+    /// with square bottom is not something one radius can say, so it gets the same. Nil when
+    /// nothing runs.
+    var desiredCornerRadius: CGFloat? {
+        guard running, let style else { return nil }
+        return style.isBar ? 0.5 : 5
+    }
     /// How much the bar adds above each window while a bar style runs (0 otherwise), for the
     /// border to frame and the zoom to allow for.
     var barAboveHeight: CGFloat { squaresCorners ? Self.stripHeight(style!) : 0 }
@@ -180,7 +189,6 @@ final class TitleBarOverlayController {
         overlays.removeAll()
         axWindows.removeAll()
         lightOffsets.removeAll()
-        lightOffsetsFirstSeen.removeAll()
         lightOffsetsRetry.removeAll()
         titles.removeAll()
         zoomedFrom.removeAll()
@@ -443,13 +451,14 @@ final class TitleBarOverlayController {
     }
 
     /// Height of the bar above the window: the era's own, since nothing native has to be
-    /// covered any more. Windows 95/98/Me: an 18 pt caption and the 2 pt of face under it.
+    /// covered any more. Windows 95/98/Me: the 22 pt caption the theme's own windows use, and
+    /// the 2 pt of face under it.
     static func stripHeight(_ style: Style) -> CGFloat {
         switch style {
         case .system6:  return 20
         case .platinum: return 22
         case .win31:    return 20
-        case .win98:    return 20
+        case .win98:    return 24
         case .luna:     return 30
         case .aero:     return 30
         case .aquaLights, .snowLights: return 0   // sized from the real lights instead
@@ -550,7 +559,6 @@ final class TitleBarOverlayController {
 
     func drop(for wid: CGWindowID) {
         lightOffsets.removeValue(forKey: wid)
-        lightOffsetsFirstSeen.removeValue(forKey: wid)
         lightOffsetsRetry.removeValue(forKey: wid)
         titles.removeValue(forKey: wid)
         zoomedFrom.removeValue(forKey: wid)
@@ -590,23 +598,26 @@ final class TitleBarOverlayController {
 
     static let lightDiameter: CGFloat = 15   // a hair over the real 14, so nothing of them shows
 
-    /// Where the three real lights sit, relative to the window's top-left corner. Cached per
-    /// window: three Accessibility round trips per window is fine once, not twice a second.
-    /// A window is re-measured for its first seconds, because a new one is still sliding into
-    /// place while the window list already reports it, and an offset taken then is off by the
-    /// rest of the slide.
+    /// Where the three real lights sit, relative to the window's top-left corner — the
+    /// corner as Accessibility reports it in the same breath as the buttons, so a window still
+    /// sliding into place gives the same answer as one at rest. Measured once per window:
+    /// during a drag the app answers Accessibility slowly, and a re-measure then (nine round
+    /// trips at up to half a second each) was the four seconds the lights took to catch up.
     private var lightOffsets: [CGWindowID: [ChromeButtonKind: CGRect]] = [:]
-    private var lightOffsetsFirstSeen: [CGWindowID: Date] = [:]
     /// A window that gave no answer is asked again after 1, 2, 4 … 30 s, not every sync: with
     /// a hung app each ask costs the full timeout.
     private var lightOffsetsRetry: [CGWindowID: (next: Date, failures: Int)] = [:]
 
     private func lightOffsets(for info: WindowInfo) -> [ChromeButtonKind: CGRect]? {
-        let firstSeen = lightOffsetsFirstSeen[info.id] ?? Date()
-        lightOffsetsFirstSeen[info.id] = firstSeen
-        if let cached = lightOffsets[info.id], Date().timeIntervalSince(firstSeen) > 3 { return cached }
-        if let r = lightOffsetsRetry[info.id], Date() < r.next { return lightOffsets[info.id] }
-        guard let w = axWindow(info.id, pid: info.pid) else { noteOffsetsFailure(info.id); return lightOffsets[info.id] }
+        if let cached = lightOffsets[info.id] { return cached }
+        if let r = lightOffsetsRetry[info.id], Date() < r.next { return nil }
+        guard let w = axWindow(info.id, pid: info.pid) else { noteOffsetsFailure(info.id); return nil }
+        // The window's own corner, from the same source as the buttons.
+        var origin = info.bounds.origin
+        var oRef: CFTypeRef?
+        var op = CGPoint.zero
+        if AXUIElementCopyAttributeValue(w, kAXPositionAttribute as CFString, &oRef) == .success, let oRef,
+           AXValueGetValue(oRef as! AXValue, .cgPoint, &op) { origin = op }
         var out: [ChromeButtonKind: CGRect] = [:]
         for (kind, attr) in [(ChromeButtonKind.close, kAXCloseButtonAttribute),
                              (.minimize, kAXMinimizeButtonAttribute), (.zoom, kAXZoomButtonAttribute)] {
@@ -619,9 +630,9 @@ final class TitleBarOverlayController {
                   AXValueGetValue(pRef as! AXValue, .cgPoint, &p),
                   AXUIElementCopyAttributeValue(button, kAXSizeAttribute as CFString, &sRef) == .success, let sRef,
                   AXValueGetValue(sRef as! AXValue, .cgSize, &sz), sz.width > 0 else { continue }
-            out[kind] = CGRect(x: p.x - info.bounds.minX, y: p.y - info.bounds.minY, width: sz.width, height: sz.height)
+            out[kind] = CGRect(x: p.x - origin.x, y: p.y - origin.y, width: sz.width, height: sz.height)
         }
-        guard out[.close] != nil else { noteOffsetsFailure(info.id); return lightOffsets[info.id] }
+        guard out[.close] != nil else { noteOffsetsFailure(info.id); return nil }
         lightOffsets[info.id] = out
         lightOffsetsRetry.removeValue(forKey: info.id)
         return out
@@ -954,8 +965,8 @@ final class TitleBarOverlayView: NSView {
                 buttonRects.append((k, r))
             }
         case .win98:
-            // 16x14 bevel buttons: [min][max] then a 2 pt gap, then [close], 2 pt from the edge.
-            let bw: CGFloat = 16, bh: CGFloat = 14
+            // 20x18 bevel buttons, the theme's own size: [min][max], a 2 pt gap, [close].
+            let bw: CGFloat = 20, bh: CGFloat = 18
             let y: CGFloat = 2
             let close = NSRect(x: w - 2 - bw, y: y, width: bw, height: bh)
             let max = NSRect(x: close.minX - 2 - bw, y: y, width: bw, height: bh)
@@ -1107,17 +1118,17 @@ final class TitleBarOverlayView: NSView {
     private func drawWin98(_ b: NSRect) {
         let cs = ChromeStyleFactory.win98()   // colours follow the theme's scheme (Plus!)
         cs.windowFill.setFill(); b.fill()
-        let cap = NSRect(x: 0, y: 0, width: b.width, height: 18)
+        let cap = NSRect(x: 0, y: 0, width: b.width, height: 22)
         if isFront {
             cs.captionGradient?.draw(in: cap)
         } else {
             let a = cs.bevelShadow ?? NSColor(white: 0.5, alpha: 1), z = cs.bevelLight ?? NSColor(white: 0.75, alpha: 1)
             NSGradient(starting: a, ending: z)?.draw(in: cap, angle: 0)
         }
-        var x: CGFloat = 2
+        var x: CGFloat = 3
         if let icon {
-            icon.draw(in: NSRect(x: x, y: 1, width: 16, height: 16), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
-            x += 20
+            icon.draw(in: NSRect(x: x, y: 3, width: 16, height: 16), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            x += 21
         }
         let hi = cs.bevelHilight ?? .white, lo = cs.bevelDkShadow ?? .black
         let light = cs.bevelLight ?? NSColor(white: 0.86, alpha: 1), shade = cs.bevelShadow ?? NSColor(white: 0.5, alpha: 1)
@@ -1133,19 +1144,19 @@ final class TitleBarOverlayView: NSView {
             NSColor.black.setFill(); NSColor.black.setStroke()
             switch k {
             case .minimize:
-                NSRect(x: r.minX + 4 + o, y: r.maxY - 5 + o, width: 6, height: 2).fill()
+                NSRect(x: r.minX + 5 + o, y: r.maxY - 6 + o, width: 8, height: 2).fill()
             case .maximize:
                 if zoomed {   // restore: two overlapping frames
-                    frameGlyph(NSRect(x: r.minX + 5 + o, y: r.minY + 2 + o, width: 7, height: 6))
-                    NSColor(calibratedWhite: 0.75, alpha: 1).setFill(); NSRect(x: r.minX + 3 + o, y: r.minY + 5 + o, width: 7, height: 6).fill(); NSColor.black.setFill()
-                    frameGlyph(NSRect(x: r.minX + 3 + o, y: r.minY + 5 + o, width: 7, height: 6))
+                    frameGlyph(NSRect(x: r.minX + 7 + o, y: r.minY + 3 + o, width: 8, height: 7))
+                    cs.windowFill.setFill(); NSRect(x: r.minX + 4 + o, y: r.minY + 6 + o, width: 8, height: 7).fill(); NSColor.black.setFill()
+                    frameGlyph(NSRect(x: r.minX + 4 + o, y: r.minY + 6 + o, width: 8, height: 7))
                 } else {
-                    frameGlyph(NSRect(x: r.minX + 3 + o, y: r.minY + 2 + o, width: 10, height: 9))
+                    frameGlyph(NSRect(x: r.minX + 4 + o, y: r.minY + 3 + o, width: 12, height: 11))
                 }
             default:
-                let p = NSBezierPath(); p.lineWidth = 1.6
-                p.move(to: NSPoint(x: r.minX + 5 + o, y: r.minY + 4 + o)); p.line(to: NSPoint(x: r.maxX - 5 + o, y: r.maxY - 4 + o))
-                p.move(to: NSPoint(x: r.maxX - 5 + o, y: r.minY + 4 + o)); p.line(to: NSPoint(x: r.minX + 5 + o, y: r.maxY - 4 + o))
+                let p = NSBezierPath(); p.lineWidth = 1.8
+                p.move(to: NSPoint(x: r.minX + 6 + o, y: r.minY + 5 + o)); p.line(to: NSPoint(x: r.maxX - 6 + o, y: r.maxY - 5 + o))
+                p.move(to: NSPoint(x: r.maxX - 6 + o, y: r.minY + 5 + o)); p.line(to: NSPoint(x: r.minX + 6 + o, y: r.maxY - 5 + o))
                 p.stroke()
             }
         }

@@ -20,6 +20,27 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   window's bar keeps up. Known limits: a toolbar that shares the title bar (Safari, Finder)
   loses its top edge under the strip, and a window the size of the screen gets no bar.
 
+- **The boot screen can always be clicked away, and a stuck switch cannot lock the Mac.**
+  The click used to run the waiting theme switch first and take the cover down after, so a
+  click sat through the whole switch — and a switch that blocked (an Apple event to a Finder
+  the theme's own tweaks were relaunching can wait two minutes) left a full-screen key window
+  over everything, with no Escape. Now the cover comes down first; a watchdog on another thread
+  removes it through the WindowServer if the main thread stops answering under it for four
+  seconds; and every Apple event RetroMac sends gives up after four seconds instead of two
+  minutes.
+
+- **Traffic lights keep up with a dragged window.** The lights were re-measured through
+  Accessibility for a window's first seconds, and an app being dragged answers slowly — nine
+  round trips at up to half a second each was the pause before the orbs caught up. They are
+  measured once now, against the corner Accessibility reports in the same breath.
+
+- **Windows 95, 98 and Me: the caption is the size of the theme's own windows** (22 pt, 20×18
+  buttons), not the 18 pt of a 96-dpi screen next to them.
+
+- **Under the Mac OS X and Snow Leopard lights the windows round their corners the era's way**
+  (about 5 pt), through the same corner setting the bars use to square them, for every app
+  opened after the switch.
+
 - **The title bar sits above the window now, not on it, for every Windows and Mac theme.**
   System 6 (racing stripes, close and zoom boxes), Mac OS 9 (Platinum), Windows 3.1 (the
   system-menu box, ▼ and ▲), Windows 95, 98 and Me (the caption in the theme's own colour

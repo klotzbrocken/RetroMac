@@ -64,14 +64,17 @@ enum SystemTweaksAdapter {
     /// alpha: 0.5 → 0 px of corner, 2 → 3 px, 4 → 7 px, unset → 35 px at 2x. Same snapshot,
     /// same restore, same limit as the theme's own corner tweak: an app reads it when it
     /// launches, so windows already open keep their corners until the app is reopened.
-    static let squareCornerTweaks: [DockThemeConfig.SystemTweak] = [
-        .init(domain: "-g", key: "NSConvolutionOverride1", type: "float", value: "0.5", refresh: "Finder"),
-    ]
+    static let squareCornerTweaks: [DockThemeConfig.SystemTweak] = cornerTweaks(radius: 0.5)
+
+    static func cornerTweaks(radius: CGFloat) -> [DockThemeConfig.SystemTweak] {
+        [.init(domain: "-g", key: "NSConvolutionOverride1", type: "float", value: String(format: "%g", radius), refresh: "Finder")]
+    }
 
     private static func withSquareCorners(_ tweaks: [DockThemeConfig.SystemTweak]) -> [DockThemeConfig.SystemTweak] {
-        guard TitleBarOverlayController.shared.squaresCorners else { return tweaks }
-        let keys = Set(squareCornerTweaks.map { $0.key })
-        return tweaks.filter { !keys.contains($0.key) } + squareCornerTweaks
+        guard let radius = TitleBarOverlayController.shared.desiredCornerRadius else { return tweaks }
+        let mine = cornerTweaks(radius: radius)
+        let keys = Set(mine.map { $0.key })
+        return tweaks.filter { !keys.contains($0.key) } + mine
     }
 
     /// Put every tracked key back to the user's original value. Pass `sync: true` on the quit

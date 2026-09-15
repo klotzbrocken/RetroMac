@@ -384,7 +384,7 @@ final class WindowBorderController {
         let defaultRadius: CGFloat = 10
         // With the title bars on, the windows are drawn square: the bar covers the top corners
         // and the border fills the bottom ones (see `drawBorder`).
-        if TitleBarOverlayController.shared.squaresCorners { return 0 }
+        if let r = TitleBarOverlayController.shared.desiredCornerRadius { return r < 1 ? 0 : r }
         guard AppSettings.shared.themeApplySystemTweaks,
               let tweaks = ThemeManager.shared.activeTheme?.config.systemTweaks else { return defaultRadius }
         for t in tweaks where t.key == "NSConvolutionOverride1" || t.key == "NSSplitViewItemGlassMinimumCornerRadius" {

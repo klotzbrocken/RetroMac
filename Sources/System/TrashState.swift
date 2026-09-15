@@ -81,7 +81,7 @@ enum TrashState {
     private static func viaFinder() -> Bool? {
         dispatchPrecondition(condition: .onQueue(.main))
         if script == nil {
-            script = NSAppleScript(source: "tell application \"Finder\" to return (count of items of trash)")
+            script = NSAppleScript(source: SystemUIHelper.withTimeout("tell application \"Finder\" to return (count of items of trash)", seconds: 3))
         }
         guard let script else { return nil }
         var err: NSDictionary?

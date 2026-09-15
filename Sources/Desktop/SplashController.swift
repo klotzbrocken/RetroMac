@@ -1,6 +1,7 @@
 import AppKit
 import AVKit
 import AVFoundation
+import SkyLightBridge
 
 /// Shows a theme's boot screen on theme activation: a fullscreen video (with sound) if the
 /// theme defines `splashVideo`, otherwise the `splashScreen` image (~3 s). Covers every
@@ -173,6 +174,45 @@ final class SplashController {
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
         win.makeFirstResponder(dismissView)
+        armWatchdog()
+    }
+
+    // MARK: - Watchdog
+
+    /// The cover is a full-screen key window at `.screenSaver` level. If the main thread stops
+    /// answering while it is up (a switch waiting on a Finder that is being relaunched, an
+    /// Apple event that never returns), no click and no Escape can reach `dismiss()`, and the
+    /// Mac looks dead. A thread that is not the main thread watches for exactly that and takes
+    /// the cover off through the WindowServer directly; `dismiss()` finishes the rest when the
+    /// main thread comes back.
+    private var watchdogGeneration = 0
+    private var mainThreadHeartbeat = 0
+    private static let watchdogQueue = DispatchQueue(label: "com.retromac.splash.watchdog", qos: .userInteractive)
+
+    private func armWatchdog() {
+        watchdogGeneration += 1
+        let generation = watchdogGeneration
+        let ids = windows.map { UInt32($0.windowNumber) }
+        var lastSeen = mainThreadHeartbeat
+        var stalledFor = 0
+        func tick() {
+            Self.watchdogQueue.asyncAfter(deadline: .now() + 1) { [weak self] in
+                guard let self else { return }
+                // Read on the watchdog thread; written on main. Torn reads only cost a beat.
+                if generation != self.watchdogGeneration { return }   // the cover changed or came down
+                if self.mainThreadHeartbeat != lastSeen { lastSeen = self.mainThreadHeartbeat; stalledFor = 0 }
+                else { stalledFor += 1 }
+                if stalledFor >= 4 {
+                    print("[Splash] main thread unresponsive for \(stalledFor) s under the boot screen — taking the cover off")
+                    for wid in ids { skb_order_out(wid) }
+                    return
+                }
+                DispatchQueue.main.async { self.mainThreadHeartbeat &+= 1 }
+                tick()
+            }
+        }
+        DispatchQueue.main.async { [weak self] in self?.mainThreadHeartbeat &+= 1 }
+        tick()
     }
 
     /// Kept alive so `isReadyForDisplay` can be observed until the first frame exists.
@@ -294,18 +334,23 @@ final class SplashController {
 
     func dismiss() {
         readyObservation = nil
-        // Whatever ended the cover — a click, the timer, a new boot screen — a switch waiting
-        // behind it must still happen. This is what makes "a click always tears the cover down"
-        // safe: the desktop that comes back is the finished one, not a half-applied theme.
-        runPendingWork()
-        // Nil first, then call: exactly once, and safe if the callback dismisses us again.
-        let finished = onFinish
-        onFinish = nil
+        watchdogGeneration += 1
+        // The cover comes down FIRST, whatever ended it. A switch still waiting behind it runs
+        // right after, on the next turn of the run loop: it used to run before the windows were
+        // ordered out, so a click on the boot screen sat through the whole switch with the
+        // cover up — and a switch that blocked left the Mac looking dead.
         dismissTimer?.invalidate(); dismissTimer = nil
         player?.pause(); player = nil
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
-        finished?()
+        // Nil first, then call: exactly once, and safe if the callback dismisses us again.
+        let finished = onFinish
+        onFinish = nil
+        let work = pendingWork
+        pendingWork = nil
+        if work != nil || finished != nil {
+            DispatchQueue.main.async { work?(); finished?() }
+        }
     }
 }
 

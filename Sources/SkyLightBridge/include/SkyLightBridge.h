@@ -33,5 +33,7 @@ void skb_order(uint32_t wid, int level, uint32_t target);
 void skb_flush(uint32_t wid, CGContextRef ctx);
 // Tear the border window down.
 void skb_destroy(uint32_t wid);
+// Order any window of this process out, from any thread (no AppKit involved).
+void skb_order_out(uint32_t wid);
 
 #endif
