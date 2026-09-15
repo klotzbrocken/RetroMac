@@ -12,7 +12,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   box minimises), zoom the way the era did (to the screen and back, stopping at the taskbar;
   never native full screen), and dragging where the traffic lights used to be. Everywhere else
   the bar lets the mouse through, so the native drag and double-click keep working. The bar
-  that belongs to the front window draws active, the others draw inactive. Known limits: a
+  that belongs to the front window draws active, the others draw inactive. The windows are
+  drawn square while it is on: the bar covers the top corners and runs out over the window
+  border when that is on, and the border paints the sliver macOS leaves in the bottom corners.
+  Apps can be left alone ("Leave these apps alone", from the running apps or any app). A closed
+  window takes its bar with it at once, and a dragged window's bar keeps up. Known limits: a
   toolbar that shares the title bar (Safari, Finder) loses its top edge under the strip, and a
   window the size of the screen gets no bar.
 

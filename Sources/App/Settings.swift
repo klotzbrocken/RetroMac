@@ -559,6 +559,13 @@ final class AppSettings: ObservableObject {
     @Published var themeTitleBars: Bool {
         didSet {
             defaults.set(themeTitleBars, forKey: "themeTitleBars")
+            WindowBorderController.shared.update()   // restyles the borders square, then the bars
+        }
+    }
+    /// Bundle identifiers whose windows keep their native title bar.
+    @Published var themeTitleBarsExcludedApps: [String] {
+        didSet {
+            defaults.set(themeTitleBarsExcludedApps, forKey: "themeTitleBarsExcludedApps")
             TitleBarOverlayController.shared.update()
         }
     }
@@ -1199,6 +1206,7 @@ final class AppSettings: ObservableObject {
         dockHideSystemDock = defaults.object(forKey: "dockHideSystemDock") as? Bool ?? true
         themeWindowBorders = defaults.bool(forKey: "themeWindowBorders")
         themeTitleBars = defaults.bool(forKey: "themeTitleBars")
+        themeTitleBarsExcludedApps = defaults.stringArray(forKey: "themeTitleBarsExcludedApps") ?? []
         win98Scheme = defaults.string(forKey: "win98Scheme") ?? ""
         trayMessenger = defaults.string(forKey: "trayMessenger") ?? "msn"
         hideMenuBar = defaults.bool(forKey: "hideMenuBar")

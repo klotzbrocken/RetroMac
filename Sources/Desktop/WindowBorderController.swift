@@ -32,6 +32,9 @@ final class WindowBorderController {
     private var running = false
     private var borders: [CGWindowID: SkyBorder] = [:]
     private var currentStyle: WindowBorderStyle = .none
+    /// The width of the frame being drawn right now (0 when borders are off), for the title
+    /// bar to stretch over it.
+    var activeBorderWidth: CGFloat { running ? currentStyle.width : 0 }
     private var wsTokens: [NSObjectProtocol] = []
     private var syncTimer: Timer?
     private var didRegisterEvents = false
@@ -104,9 +107,16 @@ final class WindowBorderController {
         let nc = NSWorkspace.shared.notificationCenter
         wsTokens.forEach { nc.removeObserver($0) }
         wsTokens.removeAll()
-        removeMinimizeObservers()
+        releaseObserversIfIdle()
         for b in borders.values { skb_destroy(b.wid) }
         borders.removeAll()
+    }
+
+    /// The per-app Accessibility observers serve the title-bar overlay too; they live while
+    /// either feature runs.
+    func ensureObservers() { setupMinimizeObservers() }
+    func releaseObserversIfIdle() {
+        if !running && !TitleBarOverlayController.shared.isRunning { removeMinimizeObservers() }
     }
 
     // MARK: - Minimize detection (Accessibility)
@@ -132,6 +142,9 @@ final class WindowBorderController {
         let addErr = AXObserverAddNotification(observer, appEl, kAXWindowMiniaturizedNotification as CFString, ctx)
         guard addErr == .success else { return }
         AXObserverAddNotification(observer, appEl, kAXWindowDeminiaturizedNotification as CFString, ctx)
+        // A closed window: the WindowServer's destroy event can trail the close by as long as the
+        // app keeps the NSWindow around, but the Accessibility element goes at once.
+        AXObserverAddNotification(observer, appEl, kAXUIElementDestroyedNotification as CFString, ctx)
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
         axObservers[pid] = observer
     }
@@ -153,6 +166,14 @@ final class WindowBorderController {
 
     /// Re-add a border after a window is de-miniaturized (restored from the Dock).
     fileprivate func resync() { sync() }
+
+    /// Drop every border and bar whose window is no longer on screen. Cheaper than a full sync:
+    /// one window list, no filter round trip, and it runs on every destroyed AX element.
+    fileprivate func dropGone() {
+        let onScreen = Set(Self.onScreenWindows().map { $0.id })
+        for wid in borders.keys where !onScreen.contains(wid) { dropBorder(for: wid) }
+        TitleBarOverlayController.shared.dropAll(notIn: onScreen)
+    }
 
     private func restyle() {
         currentStyle = Self.style(for: RetroFrameTheme.key(),
@@ -339,6 +360,9 @@ final class WindowBorderController {
 
     static func windowCornerRadius() -> CGFloat {
         let defaultRadius: CGFloat = 10
+        // With the title bars on, the windows are drawn square: the bar covers the top corners
+        // and the border fills the bottom ones (see `drawBorder`).
+        if TitleBarOverlayController.shared.isRunning { return 0 }
         guard AppSettings.shared.themeApplySystemTweaks,
               let tweaks = ThemeManager.shared.activeTheme?.config.systemTweaks else { return defaultRadius }
         for t in tweaks where t.key == "NSConvolutionOverride1" || t.key == "NSSplitViewItemGlassMinimumCornerRadius" {
@@ -399,11 +423,40 @@ final class WindowBorderController {
             beveledRing(ctx, bounds, outerInset: o, innerInset: width, outerRadius: radius + width - o, innerRadius: radius, light: hiInner, dark: loInner)
         case let .solid(color, width, topR, _):
             strokeRing(ctx, bounds, width: width, radius: topR, color: color, glow: false)
+            if topR == 0 { fillCornerNotches(ctx, bounds, inset: width, color: color) }
         case let .glow(color, width, radius):
             strokeRing(ctx, bounds, width: width, radius: radius, color: color, glow: true)
         case .none:
             break
         }
+        if case let .bevel(_, hiInner, _, _, width, radius) = style, radius == 0 {
+            fillCornerNotches(ctx, bounds, inset: width, color: hiInner)
+        }
+    }
+
+    /// A square frame around a window macOS still rounds leaves a sliver of desktop in each
+    /// corner. Paint the sliver in the frame's colour, so the window reads as square.
+    private static func fillCornerNotches(_ ctx: CGContext, _ bounds: CGRect, inset: CGFloat, color: NSColor) {
+        let r: CGFloat = 12   // a little over the system radius, to be safe on every macOS
+        let inner = bounds.insetBy(dx: inset, dy: inset)
+        guard inner.width > 2 * r, inner.height > 2 * r else { return }
+        ctx.saveGState()
+        ctx.setFillColor(color.cgColor)
+        for (cx, cy, x, y) in [(inner.minX + r, inner.minY + r, inner.minX, inner.minY),
+                               (inner.maxX - r, inner.minY + r, inner.maxX - r, inner.minY),
+                               (inner.minX + r, inner.maxY - r, inner.minX, inner.maxY - r),
+                               (inner.maxX - r, inner.maxY - r, inner.maxX - r, inner.maxY - r)] {
+            ctx.saveGState()
+            ctx.addRect(CGRect(x: x, y: y, width: r, height: r))
+            // A touch smaller than the window's arc, so the hairline macOS draws along the
+            // rounded edge goes under the paint too.
+            let e = r - 1.5
+            ctx.addEllipse(in: CGRect(x: cx - e, y: cy - e, width: 2 * e, height: 2 * e))
+            ctx.clip(using: .evenOdd)
+            ctx.fill(CGRect(x: x, y: y, width: r, height: r))
+            ctx.restoreGState()
+        }
+        ctx.restoreGState()
     }
 
     private static func roundedOrRect(_ r: CGRect, _ radius: CGFloat) -> CGPath {
@@ -481,9 +534,11 @@ private func axWindowNotify(_ observer: AXObserver, _ element: AXUIElement,
     let controller = Unmanaged<WindowBorderController>.fromOpaque(context).takeUnretainedValue()
     var wid: CGWindowID = 0
     let gotWid = (axUIElementGetWindow?(element, &wid) == .success) && wid != 0
-    if (notification as String) == (kAXWindowMiniaturizedNotification as String) {
+    let name = notification as String
+    if name == (kAXWindowMiniaturizedNotification as String) || name == (kAXUIElementDestroyedNotification as String) {
         if gotWid { controller.dropBorder(for: wid) }   // remove the specific border, before the genie
-        else { controller.resync() }                    // couldn't resolve the window → re-sync (drops off-screen ones)
+        else if name == (kAXWindowMiniaturizedNotification as String) { controller.resync() }
+        else { controller.dropGone() }                  // a destroyed element rarely resolves; drop what is off screen
     } else {
         controller.resync()                             // de-miniaturized (restored) → re-add its border
     }

@@ -475,6 +475,59 @@ struct DockSettingsTab: View {
     }
 
     /// What the theme changes OUTSIDE RetroMac's own windows. Every one of these is restored
+    /// Apps whose windows keep their native title bar. Running apps are one click away; any
+    /// other app through the open panel.
+    @ViewBuilder
+    private var titleBarExclusions: some View {
+        let excluded = settings.themeTitleBarsExcludedApps
+        RMRow(label: "Leave these apps alone",
+              hint: excluded.isEmpty ? "Every window gets the bar." : nil,
+              isLast: excluded.isEmpty) {
+            Menu("Add app\u{2026}") {
+                let running = NSWorkspace.shared.runningApplications
+                    .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != nil
+                              && $0.bundleIdentifier != Bundle.main.bundleIdentifier
+                              && !excluded.contains($0.bundleIdentifier!) }
+                    .sorted { ($0.localizedName ?? "") < ($1.localizedName ?? "") }
+                ForEach(running, id: \.processIdentifier) { app in
+                    Button(app.localizedName ?? app.bundleIdentifier!) {
+                        settings.themeTitleBarsExcludedApps.append(app.bundleIdentifier!)
+                    }
+                }
+                if !running.isEmpty { Divider() }
+                Button("Other app\u{2026}") { excludeAppFromPanel() }
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+        }
+        ForEach(Array(excluded.enumerated()), id: \.element) { index, bundleID in
+            RMRow(label: Self.appName(for: bundleID), hint: bundleID, isLast: index == excluded.count - 1) {
+                Button("Remove") {
+                    settings.themeTitleBarsExcludedApps.removeAll { $0 == bundleID }
+                }
+                .buttonStyle(RMGhostButtonStyle())
+            }
+        }
+    }
+
+    private static func appName(for bundleID: String) -> String {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return bundleID }
+        return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+    }
+
+    private func excludeAppFromPanel() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.message = "Choose an app whose windows keep their own title bar"
+        panel.prompt = "Exclude"
+        guard panel.runModal() == .OK, let url = panel.url,
+              let id = Bundle(url: url)?.bundleIdentifier else { return }
+        if !settings.themeTitleBarsExcludedApps.contains(id) { settings.themeTitleBarsExcludedApps.append(id) }
+    }
+
     /// when the theme goes off.
     private var integrationCard: some View {
         RMCard(title: "System integration",
@@ -487,8 +540,11 @@ struct DockSettingsTab: View {
                 }
                 if ["macos9", "winxp"].contains(selectedThemeConfig?.chrome?.style ?? "") {
                     RMRow(label: "Title bars (experimental)",
-                          hint: "A Platinum or Luna title bar over every window. Close, minimise, zoom and dragging work; toolbars that share the title bar lose their top edge.") {
+                          hint: "A Platinum or Luna title bar over every window, drawn square. Close, minimise, zoom and dragging work; toolbars that share the title bar lose their top edge.") {
                         toggle($settings.themeTitleBars)
+                    }
+                    if settings.themeTitleBars {
+                        titleBarExclusions
                     }
                 }
                 RMRow(label: "Match appearance", hint: "macOS appearance and accent colour to fit the theme.") {

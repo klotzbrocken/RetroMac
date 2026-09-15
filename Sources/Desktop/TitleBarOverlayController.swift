@@ -31,7 +31,9 @@ final class TitleBarOverlayController {
     }
 
     private var running = false
+    var isRunning: Bool { running && style != nil }
     private var style: Style?
+    private var excluded: Set<String> = []
     private var overlays: [CGWindowID: Overlay] = [:]
     private var axWindows: [CGWindowID: AXUIElement] = [:]
     private var wsTokens: [NSObjectProtocol] = []
@@ -57,13 +59,16 @@ final class TitleBarOverlayController {
 
     private func start() {
         let newStyle = Self.style(for: RetroFrameTheme.key())
+        excluded = Set(AppSettings.shared.themeTitleBarsExcludedApps)
         if running {
-            if newStyle != style { style = newStyle; stopOverlays(); sync() }
+            if newStyle != style { style = newStyle; stopOverlays() }
+            sync()
             return
         }
         style = newStyle
         running = true
         WindowBorderController.shared.ensureServerEvents()   // move/resize/minimise arrive through it
+        WindowBorderController.shared.ensureObservers()      // and closed windows, through Accessibility
         let nc = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didActivateApplicationNotification,
                      NSWorkspace.activeSpaceDidChangeNotification,
@@ -90,6 +95,7 @@ final class TitleBarOverlayController {
         wsTokens.removeAll()
         if let m = mouseMonitor { NSEvent.removeMonitor(m); mouseMonitor = nil }
         stopOverlays()
+        WindowBorderController.shared.releaseObserversIfIdle()
     }
 
     private func stopOverlays() {
@@ -125,8 +131,9 @@ final class TitleBarOverlayController {
         for i in 0..<count {
             let wid = outWID[i]
             guard let info = infoByID[wid] else { continue }
-            suitable.insert(wid)
             if frontWID == 0, info.pid == frontPID { frontWID = wid }
+            if excluded.contains(info.bundleID) { continue }
+            suitable.insert(wid)
             apply(info, level: outLevel[i], style: style, isFront: wid == frontWID)
         }
         for (wid, o) in overlays where !suitable.contains(wid) {
@@ -142,8 +149,7 @@ final class TitleBarOverlayController {
            info.bounds.width >= scr.frame.width - 1, info.bounds.height >= scr.frame.height - 1 {
             drop(for: info.id); return
         }
-        let height = Self.stripHeight(style)
-        let frame = Self.appKitFrame(topLeft: info.bounds, height: height)
+        let frame = Self.barFrame(for: info.bounds, style: style)
         let title = info.title.isEmpty ? (axTitle(info.id, pid: info.pid) ?? info.ownerName) : info.title
         let icon = style == .luna ? NSRunningApplication(processIdentifier: info.pid)?.icon : nil
 
@@ -206,6 +212,14 @@ final class TitleBarOverlayController {
         return NSRect(x: b.minX, y: primaryTop - b.minY - height, width: b.width, height: height)
     }
 
+    /// The bar's frame: the strip along the window's top edge, widened over the window border
+    /// when that is on, so bar and frame are one piece out to the edge.
+    static func barFrame(for bounds: CGRect, style: Style) -> NSRect {
+        let bw = WindowBorderController.shared.activeBorderWidth
+        let grown = CGRect(x: bounds.minX - bw, y: bounds.minY - bw, width: bounds.width + 2 * bw, height: bounds.height + bw)
+        return appKitFrame(topLeft: grown, height: stripHeight(style) + bw)
+    }
+
     // MARK: - Events from the WindowServer (forwarded by WindowBorderController)
 
     func handleServerEvent(event: UInt32, wid: CGWindowID) {
@@ -215,14 +229,19 @@ final class TitleBarOverlayController {
             guard let o = overlays[wid], let style else { return }
             guard let g = PrivateWindowAPI.bounds(of: wid) else { drop(for: wid); return }
             o.bounds = g
-            let f = Self.appKitFrame(topLeft: g, height: Self.stripHeight(style))
-            if o.panel.frame != f { o.panel.setFrame(f, display: true) }
-        case PrivateWindowAPI.EVENT_WINDOW_MINIMIZE:
+            let f = Self.barFrame(for: g, style: style)
+            if f.size == o.panel.frame.size {
+                if f.origin != o.panel.frame.origin { o.panel.setFrameOrigin(f.origin) }   // a move: no redraw
+            } else if o.panel.frame != f {
+                o.panel.setFrame(f, display: false)
+                o.view.needsDisplay = true
+            }
+        case PrivateWindowAPI.EVENT_WINDOW_MINIMIZE, PrivateWindowAPI.EVENT_WINDOW_DESTROY:
             drop(for: wid)
         case PrivateWindowAPI.EVENT_WINDOW_REORDER, PrivateWindowAPI.EVENT_FRONT_CHANGE:
             for (target, o) in overlays { order(o, above: target) }
             sync()   // the front window changed, and with it which bar draws active
-        case PrivateWindowAPI.EVENT_WINDOW_CREATE, PrivateWindowAPI.EVENT_WINDOW_DESTROY:
+        case PrivateWindowAPI.EVENT_WINDOW_CREATE:
             sync()
         default: break
         }
@@ -233,6 +252,11 @@ final class TitleBarOverlayController {
         o.panel.orderOut(nil)
         overlays.removeValue(forKey: wid)
         axWindows.removeValue(forKey: wid)
+    }
+
+    /// Drop every bar whose window is not in `onScreen` (a closed window, reported through AX).
+    func dropAll(notIn onScreen: Set<CGWindowID>) {
+        for wid in overlays.keys where !onScreen.contains(wid) { drop(for: wid) }
     }
 
     // MARK: - Mouse routing
@@ -287,6 +311,9 @@ final class TitleBarOverlayController {
         }
         var ref: CFTypeRef?
         if AXUIElementCopyAttributeValue(w, attr as CFString, &ref) == .success, let ref {
+            // The bar goes before the window does; a bar over a fading window is the one thing
+            // that gives the trick away. Comes back on the next sync if the app asked to save.
+            if kind == .close { drop(for: wid) }
             AXUIElementPerformAction(ref as! AXUIElement, kAXPressAction as CFString)
         } else if attr == kAXMinimizeButtonAttribute {
             AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
@@ -359,6 +386,15 @@ final class TitleBarOverlayController {
         let bounds: CGRect
         let title: String
         let ownerName: String
+        let bundleID: String
+    }
+
+    private static var bundleIDs: [pid_t: String] = [:]
+    private static func bundleID(for pid: pid_t) -> String {
+        if let b = bundleIDs[pid] { return b }
+        let b = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? ""
+        bundleIDs[pid] = b
+        return b
     }
 
     private static func onScreenWindows() -> [WindowInfo] {
@@ -376,7 +412,8 @@ final class TitleBarOverlayController {
             // kCGWindowName needs Screen Recording, which the shader already has; empty otherwise.
             out.append(WindowInfo(id: num, pid: pid, bounds: b,
                                   title: (w[kCGWindowName as String] as? String) ?? "",
-                                  ownerName: (w[kCGWindowOwnerName as String] as? String) ?? ""))
+                                  ownerName: (w[kCGWindowOwnerName as String] as? String) ?? "",
+                                  bundleID: bundleID(for: pid)))
         }
         return out
     }
@@ -458,24 +495,13 @@ final class TitleBarOverlayView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         layoutControls()
+        // Square, edge to edge: the bar covers the window's rounded top corners, and when the
+        // window border is on it runs out over the frame too (`barFrame`), so the two are one.
         let b = bounds
-        NSGraphicsContext.saveGraphicsState()
-        // The real window's rounded top corners: clip to them so the bar has no square ears.
-        let clip = NSBezierPath()
-        let r = min(radius, b.height)
-        clip.move(to: NSPoint(x: 0, y: b.height))
-        clip.line(to: NSPoint(x: 0, y: r))
-        clip.appendArc(withCenter: NSPoint(x: r, y: r), radius: r, startAngle: 180, endAngle: 270, clockwise: false)
-        clip.line(to: NSPoint(x: b.width - r, y: 0))
-        clip.appendArc(withCenter: NSPoint(x: b.width - r, y: r), radius: r, startAngle: 270, endAngle: 360, clockwise: false)
-        clip.line(to: NSPoint(x: b.width, y: b.height))
-        clip.close()
-        clip.addClip()
         switch style {
         case .platinum: drawPlatinum(b)
         case .luna:     drawLuna(b)
         }
-        NSGraphicsContext.restoreGraphicsState()
     }
 
     private func drawPlatinum(_ b: NSRect) {
@@ -508,7 +534,7 @@ final class TitleBarOverlayView: NSView {
                        ending: NSColor(srgbRed: 0.47, green: 0.58, blue: 0.86, alpha: 1))?.draw(in: b, angle: -90)
         }
         NSColor.white.withAlphaComponent(0.45).setFill()
-        NSRect(x: radius, y: 0, width: b.width - radius * 2, height: 1).fill()
+        NSRect(x: 1, y: 0, width: b.width - 2, height: 1).fill()
         var x: CGFloat = 8
         if let icon {
             icon.draw(in: NSRect(x: x, y: (b.height - 16) / 2, width: 16, height: 16), from: .zero,
