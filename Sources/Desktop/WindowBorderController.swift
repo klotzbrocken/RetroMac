@@ -62,6 +62,7 @@ final class WindowBorderController {
     // MARK: - Lifecycle
 
     func update() {
+        TitleBarOverlayController.shared.update()   // same triggers: setting, theme, dock on/off
         let want = AppSettings.shared.themeWindowBorders
             && AppSettings.shared.dockEnabled
             && !AppSettings.shared.dockOnly
@@ -144,6 +145,7 @@ final class WindowBorderController {
 
     /// Drop a window's border immediately (called the instant AX reports a minimize).
     fileprivate func dropBorder(for wid: CGWindowID) {
+        TitleBarOverlayController.shared.drop(for: wid)
         guard let b = borders[wid] else { return }
         skb_destroy(b.wid)
         borders.removeValue(forKey: wid)
@@ -293,6 +295,10 @@ final class WindowBorderController {
 
     // MARK: - WindowServer events
 
+    /// The title-bar overlay rides on the same WindowServer subscription (one notify proc per
+    /// event per connection, so a second registration would replace this one).
+    func ensureServerEvents() { registerServerEvents() }
+
     private func registerServerEvents() {
         guard PrivateWindowAPI.eventsAvailable, !didRegisterEvents else { return }
         didRegisterEvents = true
@@ -308,6 +314,7 @@ final class WindowBorderController {
     }
 
     fileprivate func handleServerEvent(event: UInt32, wid: CGWindowID) {
+        TitleBarOverlayController.shared.handleServerEvent(event: event, wid: wid)
         guard running, !currentStyle.isNone else { return }
         switch event {
         case PrivateWindowAPI.EVENT_WINDOW_MOVE, PrivateWindowAPI.EVENT_WINDOW_RESIZE:
@@ -460,7 +467,7 @@ private func borderNotifyProc(_ event: UInt32, _ data: UnsafeMutableRawPointer?,
 /// CGWindowID. Resolved via `dlsym(RTLD_DEFAULT,…)` rather than `@_silgen_name` so that if Apple
 /// ever removes the symbol the app still LAUNCHES (a hard link would make dyld abort at startup);
 /// the callback then simply falls back to a full re-sync.
-private let axUIElementGetWindow: (@convention(c) (AXUIElement, UnsafeMutablePointer<CGWindowID>) -> AXError)? = {
+let axUIElementGetWindow: (@convention(c) (AXUIElement, UnsafeMutablePointer<CGWindowID>) -> AXError)? = {
     guard let sym = dlsym(UnsafeMutableRawPointer(bitPattern: -2) /* RTLD_DEFAULT */, "_AXUIElementGetWindow") else { return nil }
     return unsafeBitCast(sym, to: (@convention(c) (AXUIElement, UnsafeMutablePointer<CGWindowID>) -> AXError).self)
 }()

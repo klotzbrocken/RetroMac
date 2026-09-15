@@ -485,6 +485,12 @@ struct DockSettingsTab: View {
                     toggle($settings.themeWindowBorders)
                     // No onChange: AppSettings.didSet already drives WindowBorderController.update().
                 }
+                if ["macos9", "winxp"].contains(selectedThemeConfig?.chrome?.style ?? "") {
+                    RMRow(label: "Title bars (experimental)",
+                          hint: "A Platinum or Luna title bar over every window. Close, minimise, zoom and dragging work; toolbars that share the title bar lose their top edge.") {
+                        toggle($settings.themeTitleBars)
+                    }
+                }
                 RMRow(label: "Match appearance", hint: "macOS appearance and accent colour to fit the theme.") {
                     Toggle("", isOn: $settings.themeAdaptAppearance)
                         .toggleStyle(.switch).tint(.rmAccent).labelsHidden()

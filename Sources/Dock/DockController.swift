@@ -5,6 +5,14 @@ import Combine
 final class DockController {
     static let shared = DockController()
 
+    /// The retro bar's frame on screen (AppKit coordinates), or nil while it is not up. The
+    /// title-bar overlay keeps a zoomed window off it, the way a maximised window stopped at
+    /// the taskbar.
+    var barScreenFrame: NSRect? {
+        guard let w = window, w.isVisible else { return nil }
+        return w.frame
+    }
+
     private var window: DockWindow?
     private var dockView: DockView?
     private var isStarted = false       // guards re-entrancy for dock-less themes (Win 3.1)

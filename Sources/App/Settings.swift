@@ -554,6 +554,14 @@ final class AppSettings: ObservableObject {
             WindowBorderController.shared.update()
         }
     }
+    /// Experiment: a Platinum or Luna title bar over every real window (Mac OS 9 and Windows
+    /// XP themes). See TitleBarOverlayController.
+    @Published var themeTitleBars: Bool {
+        didSet {
+            defaults.set(themeTitleBars, forKey: "themeTitleBars")
+            TitleBarOverlayController.shared.update()
+        }
+    }
     /// Chosen Windows 98 Plus! scheme ("" = default Windows 98). See Win98Scheme / applyWin98PlusVariant.
     @Published var win98Scheme: String {
         didSet { defaults.set(win98Scheme, forKey: "win98Scheme") }
@@ -1190,6 +1198,7 @@ final class AppSettings: ObservableObject {
         activateThemeOnLaunch = defaults.bool(forKey: "activateThemeOnLaunch")
         dockHideSystemDock = defaults.object(forKey: "dockHideSystemDock") as? Bool ?? true
         themeWindowBorders = defaults.bool(forKey: "themeWindowBorders")
+        themeTitleBars = defaults.bool(forKey: "themeTitleBars")
         win98Scheme = defaults.string(forKey: "win98Scheme") ?? ""
         trayMessenger = defaults.string(forKey: "trayMessenger") ?? "msn"
         hideMenuBar = defaults.bool(forKey: "hideMenuBar")

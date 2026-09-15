@@ -3,6 +3,19 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+- **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the
+  window borders, when Mac OS 9 or Windows XP is selected: a Platinum or Luna title bar over
+  every real window. It is RetroMac's own panel above the window, not a change to the app, and
+  its controls drive the real window through Accessibility: close, minimise (the WindowShade
+  box minimises), zoom the way the era did (to the screen and back, stopping at the taskbar;
+  never native full screen), and dragging where the traffic lights used to be. Everywhere else
+  the bar lets the mouse through, so the native drag and double-click keep working. The bar
+  that belongs to the front window draws active, the others draw inactive. Known limits: a
+  toolbar that shares the title bar (Safari, Finder) loses its top edge under the strip, and a
+  window the size of the screen gets no bar.
+
 ## 2.8.5
 
 - **Paint, Solitaire, Minesweeper, Internet Explorer and 3D Pinball open again.** The site
