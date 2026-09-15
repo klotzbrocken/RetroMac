@@ -20,14 +20,18 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   window's bar keeps up. Known limits: a toolbar that shares the title bar (Safari, Finder)
   loses its top edge under the strip, and a window the size of the screen gets no bar.
 
-- **The title bar sits above the window now, not on it.** For Windows XP and Mac OS 9 the
-  Luna or Platinum bar is added on top of the real window, outside it: the real title bar and
+- **The title bar sits above the window now, not on it, for every Windows and Mac theme.**
+  System 6 (racing stripes, close and zoom boxes), Mac OS 9 (Platinum), Windows 3.1 (the
+  system-menu box, ▼ and ▲), Windows 95, 98 and Me (the caption in the theme's own colour
+  scheme, three bevel buttons), Windows XP (Luna) and Windows 7 (real Aero glass, the desktop
+  blurred behind the bar). Mac OS X, Mountain Lion and Snow Leopard keep the lights-only mode.
+  The bar is added on top of the real window, outside it: the real title bar and
   its toolbar stay whole and clickable (Finder, Notes, Safari, Mail included), the bar is the
   window's own to drag and double-click, and the frame goes round both. What is left of the
   real bar is its three lights, and they disappear under a patch that wears the bar's own
   colour, photographed off the screen beside them, so light, dark and inactive all match. A
   window with no room above it is moved down by the bar's height; a zoomed window leaves the
-  bar its room. Snow Leopard and Mac OS X keep the lights-only mode, which is all they need.
+  bar its room.
   The frame is 3 pt on Windows XP instead of 4, has no edge of its own above a Windows bar
   (the caption is the top of the frame, as it was), and paints nothing into the corners: the
   windows are square, and the few that were open before stay rounded until they are reopened.

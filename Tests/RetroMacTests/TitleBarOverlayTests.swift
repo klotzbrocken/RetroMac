@@ -39,9 +39,20 @@ final class TitleBarOverlayTests: XCTestCase {
         XCTAssertEqual(lights[.close]!.midX + frame.minX - 100, 16, accuracy: 0.01)
     }
 
-    func testTrafficLightStyleNeedsNoStripAndBarStylesDo() {
-        XCTAssertEqual(TitleBarOverlayController.stripHeight(.snowLights), 0)
-        XCTAssertGreaterThanOrEqual(TitleBarOverlayController.stripHeight(.platinum), 28, "must cover the native 28 pt bar")
-        XCTAssertGreaterThanOrEqual(TitleBarOverlayController.stripHeight(.luna), 28)
+    /// The bar sits above the window, so every bar style has the height of its era and the
+    /// lights styles have none; every Windows and Mac chrome key resolves to a style.
+    func testEveryWindowsAndMacChromeHasAStyle() {
+        for key in ["macos6", "macos9", "win31", "win98", "winxp", "win7"] {
+            let style = TitleBarOverlayController.style(for: key)
+            XCTAssertEqual(style?.isBar, true, "\(key) should be a bar")
+            XCTAssertGreaterThan(TitleBarOverlayController.stripHeight(style!), 0)
+        }
+        for key in ["macosx", "snowleopard"] {
+            let style = TitleBarOverlayController.style(for: key)
+            XCTAssertEqual(style?.isBar, false, "\(key) should be lights only")
+            XCTAssertEqual(TitleBarOverlayController.stripHeight(style!), 0)
+        }
+        XCTAssertNil(TitleBarOverlayController.style(for: "beos"))
+        XCTAssertEqual(TitleBarOverlayController.stripHeight(.platinum), 22, "Platinum's own height, nothing to cover any more")
     }
 }

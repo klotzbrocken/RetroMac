@@ -309,8 +309,10 @@ final class WindowBorderController {
     }
 
     /// The chrome families whose title bar is the frame's top: no separate edge above it.
+    /// Luna's caption is; the 9x, 3.1 and Aero frames ran round the caption too, as the Mac
+    /// bevels did.
     static func captionIsTheTop(_ key: String) -> Bool {
-        ["win98", "winxp", "win7", "win31"].contains(key)
+        key == "winxp"
     }
 
     // MARK: - Window enumeration (public CGWindowList; top-left global bounds)

@@ -538,11 +538,11 @@ struct DockSettingsTab: View {
                     toggle($settings.themeWindowBorders)
                     // No onChange: AppSettings.didSet already drives WindowBorderController.update().
                 }
-                if let chrome = selectedThemeConfig?.chrome?.style, ["macos9", "winxp", "macosx", "snowleopard"].contains(chrome) {
-                    let bars = chrome == "macos9" || chrome == "winxp"
+                if let chrome = selectedThemeConfig?.chrome?.style, TitleBarOverlayController.style(for: chrome) != nil {
+                    let bars = TitleBarOverlayController.style(for: chrome)?.isBar == true
                     RMRow(label: bars ? "Title bars (experimental)" : "Traffic lights (experimental)",
                           hint: bars
-                            ? "A Platinum or Luna title bar over every window, drawn square. Close, minimise, zoom and dragging work; toolbars that share the title bar lose their top edge."
+                            ? "The era's title bar above every window, with its own buttons; the real title bar keeps its toolbar, only the lights are hidden. Windows are drawn square."
                             : "The era's glossy lights over the real ones, and nothing else changes. Close, minimise and zoom work.") {
                         // (Platinum's WindowShade box minimises: a real shade would need the app to allow a 28 pt window.)
                         toggle($settings.themeTitleBars)

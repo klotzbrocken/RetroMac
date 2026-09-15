@@ -38,9 +38,12 @@ final class TitleBarOverlayController {
     private init() {}
 
     enum Style {
-        case platinum, luna            // a whole bar
-        case aquaLights, snowLights    // the three lights only
-        var isBar: Bool { self == .platinum || self == .luna }
+        case system6, platinum                 // the Mac bars
+        case win31, win98, luna, aero          // the Windows bars (95, 98 and Me share win98)
+        case aquaLights, snowLights            // the three lights only (Mac OS X, Snow Leopard, Mountain Lion)
+        var isBar: Bool { self != .aquaLights && self != .snowLights }
+        /// Windows caption buttons cluster on the right; the Mac's close box sits on the left.
+        var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero }
     }
 
     private final class Overlay {
@@ -76,10 +79,14 @@ final class TitleBarOverlayController {
 
     static func style(for key: String) -> Style? {
         switch key {
+        case "macos6":      return .system6
         case "macos9":      return .platinum
+        case "win31":       return .win31
+        case "win98":       return .win98      // Windows 95, 98 and Me
         case "winxp":       return .luna
+        case "win7":        return .aero
         case "macosx":      return .aquaLights
-        case "snowleopard": return .snowLights
+        case "snowleopard": return .snowLights // and Mountain Lion, which declares the same chrome
         default:            return nil
         }
     }
@@ -182,6 +189,7 @@ final class TitleBarOverlayController {
 
     // MARK: - Sync
 
+    private var resampleTimer: Timer?
     private var lastFullReorder = Date.distantPast
     private var reorderDue = false
     private var syncInFlight = false
@@ -285,7 +293,7 @@ final class TitleBarOverlayController {
             (frame, lights) = Self.lightsFrame(for: info.bounds, offsets: offsets)
         }
         let title = drawStyle.isBar ? title(for: info) : ""
-        let icon = drawStyle == .luna ? Self.icon(for: info.pid) : nil
+        let icon = drawStyle.isWindows && drawStyle != .win31 ? Self.icon(for: info.pid) : nil
         let zoomed = zoomedTo[info.id] != nil
 
         if let o = overlays[info.id] {
@@ -316,6 +324,22 @@ final class TitleBarOverlayController {
         panel.animationBehavior = .none
         let view = TitleBarOverlayView(frame: NSRect(origin: .zero, size: frame.size))
         view.autoresizingMask = [.width, .height]
+        var content: NSView = view
+        if style == .aero {
+            // Real Aero: the desktop behind the bar, blurred, with the tints painted over it.
+            // The glass is a sibling under the drawing view, not a subview of it: a subview
+            // would sit on top of what the view draws.
+            let container = NSView(frame: view.bounds)
+            let glass = NSVisualEffectView(frame: view.bounds)
+            glass.autoresizingMask = [.width, .height]
+            glass.blendingMode = .behindWindow
+            glass.material = .fullScreenUI
+            glass.state = .active
+            glass.appearance = NSAppearance(named: .aqua)
+            container.addSubview(glass)
+            container.addSubview(view)
+            content = container
+        }
         view.configure(style: drawStyle, title: title, icon: icon, isFront: isFront, lights: lights,
                        deadZoneWidth: deadZoneWidth, zoomed: zoomed)
         view.onAction = { [weak self] kind in self?.perform(kind, on: info.id, pid: info.pid) }
@@ -323,7 +347,7 @@ final class TitleBarOverlayController {
         view.onDrag = { [weak self] delta in self?.drag(info.id, pid: info.pid, by: delta) }
         view.onDragEnd = { [weak self] in self?.dragOrigin = nil }
         view.onLeave = { [weak panel] in panel?.ignoresMouseEvents = true }
-        panel.contentView = view
+        panel.contentView = content
         let o = Overlay(panel: panel, view: view, bounds: info.bounds, level: level)
         overlays[info.id] = o
         panel.orderFrontRegardless()
@@ -384,14 +408,19 @@ final class TitleBarOverlayController {
         }
         if o.patchSampledFront != isFront {
             o.patchSampledFront = isFront
-            // A strip of the real bar in the gap between the window's edge and the first light:
-            // the one place on any title bar that is always plain. Not too near the edge, where
-            // an old window's corner still curves.
-            let sample = CGRect(x: info.bounds.minX + 3, y: quartz.minY, width: max(3, close.minX - 6), height: quartz.height)
+            // A strip of the real bar from the gap between the first two lights: plain on every
+            // title bar, and away from the corner, which on a window opened before the bars went
+            // on still curves and lets the desktop through.
+            let gapStart = close.maxX + 2
+            let gapEnd = (offsets[.minimize]?.minX ?? (close.maxX + 7)) - 2
+            let sample = CGRect(x: info.bounds.minX + gapStart, y: quartz.minY, width: max(2, gapEnd - gapStart), height: quartz.height)
             let wid = info.id
+            // The sample lies under the patch itself: hide the patch for the photograph.
+            o.patch?.alphaValue = 0
             NativeBarSampler.sample(sample) { [weak self] image in
-                guard let self, let o = self.overlays[wid], let image else { return }
-                o.patchView?.image = image
+                guard let self, let o = self.overlays[wid] else { return }
+                if let image { o.patchView?.image = image }
+                o.patch?.alphaValue = 1
             }
         }
         o.patch.map { orderPatch($0, above: info.id) }
@@ -413,12 +442,16 @@ final class TitleBarOverlayController {
         if let patch = o.patch { orderPatch(patch, above: target) }
     }
 
-    /// Height of the strip: the theme's title bar, but never less than the real one (28 pt), or
-    /// the bottom of the traffic lights peeks out under a 22 pt Platinum bar.
+    /// Height of the bar above the window: the era's own, since nothing native has to be
+    /// covered any more. Windows 95/98/Me: an 18 pt caption and the 2 pt of face under it.
     static func stripHeight(_ style: Style) -> CGFloat {
         switch style {
-        case .platinum: return 28
+        case .system6:  return 20
+        case .platinum: return 22
+        case .win31:    return 20
+        case .win98:    return 20
         case .luna:     return 30
+        case .aero:     return 30
         case .aquaLights, .snowLights: return 0   // sized from the real lights instead
         }
     }
@@ -488,6 +521,12 @@ final class TitleBarOverlayController {
                 if let patch = o.patch {
                     let d = CGPoint(x: g.minX - previous.minX, y: g.minY - previous.minY)
                     if d != .zero { patch.setFrameOrigin(NSPoint(x: patch.frame.minX + d.x, y: patch.frame.minY - d.y)) }
+                    // The bar behind the lights may look different where the window now sits
+                    // (another display, a different backdrop through a translucent bar): take
+                    // the photograph again once the window has come to rest.
+                    o.patchSampledFront = nil
+                    resampleTimer?.invalidate()
+                    resampleTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false) { [weak self] _ in self?.sync() }
                 }
             } else if let offsets = lightOffsets[wid] {
                 f = Self.lightsFrame(for: g, offsets: offsets).0   // the lights do not move inside the window
@@ -893,6 +932,48 @@ final class TitleBarOverlayView: NSView {
                 tracker.add(k, r.insetBy(dx: -3, dy: -3), interactive: isFront)
                 buttonRects.append((k, r))
             }
+        case .system6:
+            // System 6: the close box on the left, the zoom box on the right, both 15 pt.
+            let s = System6Chrome.boxSize
+            let y = ((h - s) / 2).rounded()
+            for (k, r) in [(ChromeButtonKind.close, NSRect(x: 8, y: y, width: s, height: s)),
+                           (.zoom, NSRect(x: w - 8 - s, y: y, width: s, height: s))] {
+                tracker.add(k, r.insetBy(dx: -3, dy: -3), interactive: isFront)
+                buttonRects.append((k, r))
+            }
+        case .win31:
+            // The system-menu box on the left (a double-click closed the window; here one
+            // click does), minimise and maximise on the right.
+            let bw: CGFloat = 18, bh: CGFloat = 18
+            let y = ((h - bh) / 2).rounded()
+            let sys = NSRect(x: 1, y: y, width: bw, height: bh)
+            let max = NSRect(x: w - 1 - bw, y: y, width: bw, height: bh)
+            let min = NSRect(x: max.minX - bw, y: y, width: bw, height: bh)
+            for (k, r) in [(ChromeButtonKind.close, sys), (.minimize, min), (.maximize, max)] {
+                tracker.add(k, r, interactive: true)
+                buttonRects.append((k, r))
+            }
+        case .win98:
+            // 16x14 bevel buttons: [min][max] then a 2 pt gap, then [close], 2 pt from the edge.
+            let bw: CGFloat = 16, bh: CGFloat = 14
+            let y: CGFloat = 2
+            let close = NSRect(x: w - 2 - bw, y: y, width: bw, height: bh)
+            let max = NSRect(x: close.minX - 2 - bw, y: y, width: bw, height: bh)
+            let min = NSRect(x: max.minX - bw, y: y, width: bw, height: bh)
+            for (k, r) in [(ChromeButtonKind.minimize, min), (.maximize, max), (.close, close)] {
+                tracker.add(k, r, interactive: true)
+                buttonRects.append((k, r))
+            }
+        case .aero:
+            // The glass cluster hangs from the top edge: [min][max][close], close 29x19 like the rest.
+            let bw: CGFloat = 29, bh: CGFloat = 19
+            let close = NSRect(x: w - 6 - bw, y: 0, width: bw, height: bh)
+            let max = NSRect(x: close.minX - bw, y: 0, width: bw, height: bh)
+            let min = NSRect(x: max.minX - bw, y: 0, width: bw, height: bh)
+            for (k, r) in [(ChromeButtonKind.minimize, min), (.maximize, max), (.close, close)] {
+                tracker.add(k, r, interactive: true)
+                buttonRects.append((k, r))
+            }
         case .luna:
             let cs = ChromeStyleFactory.xp()
             let bw = cs.buttonSize.width, bh = cs.buttonSize.height
@@ -915,11 +996,234 @@ final class TitleBarOverlayView: NSView {
         // window border is on it runs out over the frame too (`barFrame`), so the two are one.
         let b = bounds
         switch style {
+        case .system6:    drawSystem6(b)
         case .platinum:   drawPlatinum(b)
+        case .win31:      drawWin31(b)
+        case .win98:      drawWin98(b)
         case .luna:       drawLuna(b)
+        case .aero:       drawAero(b)
         case .snowLights: drawLights(aqua: false)
         case .aquaLights: drawLights(aqua: true)
         }
+    }
+
+    // MARK: System 6
+
+    private func drawSystem6(_ b: NSRect) {
+        System6Chrome.titleBar(b, active: isFront)
+        System6Chrome.black.setFill()
+        NSRect(x: 0, y: b.height - 1, width: b.width, height: 1).fill()   // the frame line under the bar
+        if isFront {
+            for (k, r) in buttonRects {
+                if k == .close { System6Chrome.closeBox(r, state: tracker.state(for: k)) }
+                else {
+                    // The zoom box: hollow, with the small square in its upper-left (y down here).
+                    System6Chrome.white.setFill(); r.fill()
+                    System6Chrome.black.setStroke()
+                    let o = NSBezierPath(rect: r.insetBy(dx: 0.5, dy: 0.5)); o.lineWidth = 1.5; o.stroke()
+                    let g = NSBezierPath(rect: NSRect(x: r.minX + 2.5, y: r.minY + 2.5, width: 4, height: 4)); g.lineWidth = 1; g.stroke()
+                    if tracker.state(for: k) == .pressed { System6Chrome.black.setFill(); r.insetBy(dx: 3, dy: 3).fill() }
+                }
+            }
+        }
+        let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 8
+        let right = (buttonRects.first { $0.0 == .zoom }?.1.minX ?? b.width) - 8
+        let font = System6Chrome.titleFont
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let width = min(title.size(withAttributes: attrs).width, max(0, right - left - 16))
+        // The plaque is drawn by the helper at full title width; clip it to the room between the boxes.
+        NSGraphicsContext.saveGraphicsState()
+        NSRect(x: (b.width - width) / 2 - 8, y: 0, width: width + 16, height: b.height).clip()
+        System6Chrome.titlePlaque(title, bar: b, font: font, active: isFront)
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    // MARK: Windows 3.1
+
+    private func drawWin31(_ b: NSRect) {
+        Win31Chrome.face.setFill(); b.fill()
+        let cap = NSRect(x: 0, y: 0, width: b.width, height: b.height - 2)
+        (isFront ? Win31Chrome.activeTitle : Win31Chrome.inactiveTitle).setFill(); cap.fill()
+        for (k, r) in buttonRects {
+            let pressed = tracker.state(for: k) == .pressed
+            Win31Chrome.face.setFill(); r.fill()
+            bevel(r, raised: !pressed, hi: .white, lo: Win31Chrome.darkGray, edge: .black)
+            Win31Chrome.black.setFill()
+            switch k {
+            case .close:
+                // The system-menu glyph: a bar with a white line under it.
+                NSRect(x: r.midX - 5, y: r.midY - 1, width: 10, height: 2).fill()
+                NSColor.white.setFill(); NSRect(x: r.midX - 5, y: r.midY + 1, width: 10, height: 1).fill()
+            case .minimize: triangle(in: r, pointingDown: true)
+            default:
+                if zoomed {   // restore: an up triangle over a down triangle
+                    triangle(in: NSRect(x: r.minX, y: r.minY, width: r.width, height: r.height / 2 + 1), pointingDown: false)
+                    triangle(in: NSRect(x: r.minX, y: r.midY - 1, width: r.width, height: r.height / 2 + 1), pointingDown: true)
+                } else { triangle(in: r, pointingDown: false) }
+            }
+        }
+        let font = Win31Chrome.font(size: 12)
+        let color = isFront ? Win31Chrome.titleText : Win31Chrome.inactiveTitleText
+        let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 6
+        let right = (buttonRects.first { $0.0 == .minimize }?.1.minX ?? b.width) - 6
+        drawCentredTitle(in: NSRect(x: left, y: cap.minY, width: max(0, right - left), height: cap.height), font: font, color: color)
+    }
+
+    private func triangle(in r: NSRect, pointingDown: Bool) {
+        let s = r.width * 0.22
+        let cy = r.midY + (pointingDown ? 0.5 : -0.5)
+        let p = NSBezierPath()
+        if pointingDown {
+            p.move(to: NSPoint(x: r.midX - s, y: cy - s * 0.7)); p.line(to: NSPoint(x: r.midX + s, y: cy - s * 0.7)); p.line(to: NSPoint(x: r.midX, y: cy + s * 0.7))
+        } else {
+            p.move(to: NSPoint(x: r.midX - s, y: cy + s * 0.7)); p.line(to: NSPoint(x: r.midX + s, y: cy + s * 0.7)); p.line(to: NSPoint(x: r.midX, y: cy - s * 0.7))
+        }
+        p.close(); p.fill()
+    }
+
+    /// A 3D bevel in this flipped view: light along the top and left, dark along the bottom
+    /// and right (or the other way round when sunken), an outer edge in `edge`.
+    private func bevel(_ r: NSRect, raised: Bool, hi: NSColor, lo: NSColor, edge: NSColor) {
+        func line(_ rr: NSRect, _ c: NSColor) { c.setFill(); rr.fill() }
+        let a = raised ? hi : lo, z = raised ? lo : hi
+        line(NSRect(x: r.minX, y: r.minY, width: r.width, height: 1), a)
+        line(NSRect(x: r.minX, y: r.minY, width: 1, height: r.height), a)
+        line(NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1), raised ? edge : hi)
+        line(NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height), raised ? edge : hi)
+        line(NSRect(x: r.minX + 1, y: r.maxY - 2, width: r.width - 2, height: 1), z)
+        line(NSRect(x: r.maxX - 2, y: r.minY + 1, width: 1, height: r.height - 2), z)
+    }
+
+    private func drawCentredTitle(in box: NSRect, font: NSFont, color: NSColor, shadow: NSShadow? = nil) {
+        let para = NSMutableParagraphStyle(); para.alignment = .center; para.lineBreakMode = .byTruncatingTail
+        var attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color, .paragraphStyle: para]
+        if let shadow { attrs[.shadow] = shadow }
+        let h = title.size(withAttributes: attrs).height
+        (title as NSString).draw(in: NSRect(x: box.minX, y: box.midY - h / 2, width: box.width, height: h), withAttributes: attrs)
+    }
+
+    // MARK: Windows 95 / 98 / Me
+
+    private func drawWin98(_ b: NSRect) {
+        let cs = ChromeStyleFactory.win98()   // colours follow the theme's scheme (Plus!)
+        cs.windowFill.setFill(); b.fill()
+        let cap = NSRect(x: 0, y: 0, width: b.width, height: 18)
+        if isFront {
+            cs.captionGradient?.draw(in: cap)
+        } else {
+            let a = cs.bevelShadow ?? NSColor(white: 0.5, alpha: 1), z = cs.bevelLight ?? NSColor(white: 0.75, alpha: 1)
+            NSGradient(starting: a, ending: z)?.draw(in: cap, angle: 0)
+        }
+        var x: CGFloat = 2
+        if let icon {
+            icon.draw(in: NSRect(x: x, y: 1, width: 16, height: 16), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            x += 20
+        }
+        let hi = cs.bevelHilight ?? .white, lo = cs.bevelDkShadow ?? .black
+        let light = cs.bevelLight ?? NSColor(white: 0.86, alpha: 1), shade = cs.bevelShadow ?? NSColor(white: 0.5, alpha: 1)
+        for (k, r) in buttonRects {
+            let pressed = tracker.state(for: k) == .pressed
+            cs.windowFill.setFill(); r.fill()
+            if pressed { bevel(r, raised: false, hi: hi, lo: shade, edge: lo) }
+            else {
+                bevel(r, raised: true, hi: light, lo: shade, edge: lo)
+                hi.setFill(); NSRect(x: r.minX + 1, y: r.minY + 1, width: r.width - 2, height: 1).fill(); NSRect(x: r.minX + 1, y: r.minY + 1, width: 1, height: r.height - 2).fill()
+            }
+            let o: CGFloat = pressed ? 1 : 0
+            NSColor.black.setFill(); NSColor.black.setStroke()
+            switch k {
+            case .minimize:
+                NSRect(x: r.minX + 4 + o, y: r.maxY - 5 + o, width: 6, height: 2).fill()
+            case .maximize:
+                if zoomed {   // restore: two overlapping frames
+                    frameGlyph(NSRect(x: r.minX + 5 + o, y: r.minY + 2 + o, width: 7, height: 6))
+                    NSColor(calibratedWhite: 0.75, alpha: 1).setFill(); NSRect(x: r.minX + 3 + o, y: r.minY + 5 + o, width: 7, height: 6).fill(); NSColor.black.setFill()
+                    frameGlyph(NSRect(x: r.minX + 3 + o, y: r.minY + 5 + o, width: 7, height: 6))
+                } else {
+                    frameGlyph(NSRect(x: r.minX + 3 + o, y: r.minY + 2 + o, width: 10, height: 9))
+                }
+            default:
+                let p = NSBezierPath(); p.lineWidth = 1.6
+                p.move(to: NSPoint(x: r.minX + 5 + o, y: r.minY + 4 + o)); p.line(to: NSPoint(x: r.maxX - 5 + o, y: r.maxY - 4 + o))
+                p.move(to: NSPoint(x: r.maxX - 5 + o, y: r.minY + 4 + o)); p.line(to: NSPoint(x: r.minX + 5 + o, y: r.maxY - 4 + o))
+                p.stroke()
+            }
+        }
+        let right = (buttonRects.map { $0.1.minX }.min() ?? b.width) - 4
+        let para = NSMutableParagraphStyle(); para.lineBreakMode = .byTruncatingTail
+        let attrs: [NSAttributedString.Key: Any] = [.font: cs.titleFont, .foregroundColor: isFront ? cs.titleColor : NSColor(white: 0.78, alpha: 1), .paragraphStyle: para]
+        let h = title.size(withAttributes: attrs).height
+        (title as NSString).draw(in: NSRect(x: x, y: cap.midY - h / 2, width: max(0, right - x), height: h), withAttributes: attrs)
+    }
+
+    /// The Windows "maximise" glyph: a frame with a thick top edge.
+    private func frameGlyph(_ r: NSRect) {
+        let p = NSBezierPath(rect: r.insetBy(dx: 0.5, dy: 0.5)); p.lineWidth = 1; p.stroke()
+        NSRect(x: r.minX, y: r.minY, width: r.width, height: 2).fill()
+    }
+
+    // MARK: Windows 7 (Aero)
+
+    private func drawAero(_ b: NSRect) {
+        let cs = ChromeStyleFactory.win7()
+        // The glass view behind this one blurs the desktop; only tints are painted here.
+        NSColor(srgbRed: 0.271, green: 0.502, blue: 0.769, alpha: isFront ? 0.28 : 0.14).setFill(); b.fill()
+        cs.captionGradient?.draw(in: b)
+        NSGradient(colorsAndLocations: (NSColor.white.withAlphaComponent(0), 0), (NSColor.white.withAlphaComponent(0.55), 0.5), (NSColor.white.withAlphaComponent(0), 1))?
+            .draw(in: NSRect(x: 0, y: b.height * 0.18, width: b.width, height: b.height * 0.24), angle: -90)
+        NSColor.white.withAlphaComponent(0.66).setStroke()
+        NSBezierPath(rect: b.insetBy(dx: 1.5, dy: 1.5)).stroke()
+        NSColor.black.withAlphaComponent(0.55).setStroke()
+        NSBezierPath(rect: b.insetBy(dx: 0.5, dy: 0.5)).stroke()
+        guard let close = buttonRects.first(where: { $0.0 == .close })?.1,
+              let minR = buttonRects.first(where: { $0.0 == .minimize })?.1,
+              let maxR = buttonRects.first(where: { $0.0 == .maximize })?.1 else { return }
+        let cluster = NSRect(x: minR.minX, y: 0, width: close.maxX - minR.minX, height: close.height)
+        let path = NSBezierPath(roundedRect: cluster, xRadius: 4, yRadius: 4)
+        NSGraphicsContext.saveGraphicsState()
+        path.addClip()
+        let W = { (a: CGFloat) in NSColor(srgbRed: 1, green: 1, blue: 1, alpha: a) }
+        let K = { (a: CGFloat) in NSColor(srgbRed: 0, green: 0, blue: 0, alpha: a) }
+        let glassR = NSRect(x: minR.minX, y: 0, width: maxR.maxX - minR.minX, height: close.height)
+        NSGradient(colorsAndLocations: (W(0.5), 0), (W(0.3), 0.45), (K(0.1), 0.5), (K(0.1), 0.75), (W(0.5), 1))?.draw(in: glassR, angle: -90)
+        for k in [ChromeButtonKind.minimize, .maximize] where tracker.state(for: k) == .hovered {
+            NSColor(srgbRed: 0.6, green: 0.85, blue: 1, alpha: 0.35).setFill(); (k == .minimize ? minR : maxR).fill()
+        }
+        let s = tracker.state(for: .close)
+        var top = NSColor(srgbRed: 0.878, green: 0.631, blue: 0.592, alpha: 1), mid = NSColor(srgbRed: 0.812, green: 0.475, blue: 0.416, alpha: 1), bot = NSColor(srgbRed: 0.835, green: 0.310, blue: 0.212, alpha: 1)
+        if s == .hovered { top = NSColor(srgbRed: 0.98, green: 0.72, blue: 0.66, alpha: 1); mid = NSColor(srgbRed: 0.90, green: 0.42, blue: 0.34, alpha: 1); bot = NSColor(srgbRed: 0.92, green: 0.28, blue: 0.16, alpha: 1) }
+        if s == .pressed { top = NSColor(srgbRed: 0.72, green: 0.34, blue: 0.28, alpha: 1); mid = NSColor(srgbRed: 0.64, green: 0.20, blue: 0.14, alpha: 1); bot = NSColor(srgbRed: 0.58, green: 0.12, blue: 0.08, alpha: 1) }
+        if !isFront { top = top.blended(withFraction: 0.5, of: .gray) ?? top; mid = mid.blended(withFraction: 0.5, of: .gray) ?? mid; bot = bot.blended(withFraction: 0.5, of: .gray) ?? bot }
+        NSGradient(colorsAndLocations: (top, 0), (mid, 0.25), (mid, 0.5), (bot, 0.5), (bot, 1))?.draw(in: close, angle: -90)
+        NSGraphicsContext.restoreGraphicsState()
+        NSColor.black.withAlphaComponent(0.28).setFill()
+        NSRect(x: maxR.minX, y: 1, width: 1, height: close.height - 2).fill()
+        NSRect(x: close.minX, y: 1, width: 1, height: close.height - 2).fill()
+        NSColor.black.withAlphaComponent(0.30).setStroke(); path.lineWidth = 1; path.stroke()
+        let ink = NSColor.black.withAlphaComponent(0.72)
+        ink.setFill(); NSRect(x: minR.midX - 4, y: minR.midY + 1, width: 8, height: 2).fill()
+        ink.setStroke(); ink.setFill()
+        if zoomed {
+            frameGlyph(NSRect(x: maxR.midX - 3, y: maxR.midY - 5, width: 8, height: 7))
+            frameGlyph(NSRect(x: maxR.midX - 6, y: maxR.midY - 2, width: 8, height: 7))
+        } else {
+            frameGlyph(NSRect(x: maxR.midX - 5, y: maxR.midY - 4, width: 10, height: 8))
+        }
+        NSColor.white.setStroke()
+        let xg = NSBezierPath(); xg.lineWidth = 2
+        xg.move(to: NSPoint(x: close.midX - 4, y: close.midY - 4)); xg.line(to: NSPoint(x: close.midX + 4, y: close.midY + 4))
+        xg.move(to: NSPoint(x: close.midX + 4, y: close.midY - 4)); xg.line(to: NSPoint(x: close.midX - 4, y: close.midY + 4))
+        xg.stroke()
+        var x: CGFloat = 8
+        if let icon {
+            icon.draw(in: NSRect(x: x, y: (b.height - 16) / 2, width: 16, height: 16), from: .zero, operation: .sourceOver, fraction: isFront ? 1 : 0.7, respectFlipped: true, hints: nil)
+            x += 20
+        }
+        let glow = NSShadow(); glow.shadowColor = NSColor.white.withAlphaComponent(0.95); glow.shadowOffset = .zero; glow.shadowBlurRadius = 4
+        let para = NSMutableParagraphStyle(); para.lineBreakMode = .byTruncatingTail
+        let attrs: [NSAttributedString.Key: Any] = [.font: cs.titleFont, .foregroundColor: isFront ? NSColor.black : NSColor(white: 0.35, alpha: 1), .shadow: glow, .paragraphStyle: para]
+        let h = title.size(withAttributes: attrs).height
+        (title as NSString).draw(in: NSRect(x: x, y: (b.height - h) / 2, width: max(0, minR.minX - 8 - x), height: h), withAttributes: attrs)
     }
 
     /// The three orbs, and nothing else: the panel is clear around them. 10.6 shows the ×, −
