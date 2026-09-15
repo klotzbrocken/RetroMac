@@ -24,8 +24,9 @@ final class WindowBorderController {
         var origin: CGPoint = CGPoint(x: -99999, y: -99999)
         var onSpace: Bool = false   // did SLSMoveWindowsToManagedSpace succeed? retry until it does
         var hidpi: Bool             // backing scale of the display this border was created for
-        init(wid: UInt32, ctx: CGContext, size: CGSize, hidpi: Bool) {
-            self.wid = wid; self.ctx = ctx; self.size = size; self.hidpi = hidpi
+        var fillCorners: Bool       // paint the corner slivers: the window is still rounded
+        init(wid: UInt32, ctx: CGContext, size: CGSize, hidpi: Bool, fillCorners: Bool) {
+            self.wid = wid; self.ctx = ctx; self.size = size; self.hidpi = hidpi; self.fillCorners = fillCorners
         }
     }
 
@@ -195,7 +196,8 @@ final class WindowBorderController {
         }
         let windows = Self.onScreenWindows()                 // [(id, top-left-global bounds)]
         var boundsByID = [CGWindowID: CGRect](minimumCapacity: windows.count)
-        for w in windows { boundsByID[w.id] = w.bounds }
+        var pidByID = [CGWindowID: pid_t](minimumCapacity: windows.count)
+        for w in windows { boundsByID[w.id] = w.bounds; pidByID[w.id] = w.pid }
 
         // Server-side suitability filter (excludes menus/tooltips/sheets/minimized).
         let candidates = windows.map { $0.id }
@@ -215,7 +217,7 @@ final class WindowBorderController {
             let wid = outWID[i]
             guard let b = boundsByID[wid] else { continue }
             suitable.insert(wid)
-            apply(target: wid, windowBounds: b, level: outLevel[i])
+            apply(target: wid, windowBounds: b, level: outLevel[i], pid: pidByID[wid] ?? 0)
         }
 
         // Drop borders whose window is gone / no longer suitable.
@@ -231,7 +233,15 @@ final class WindowBorderController {
     }
 
     /// Create or update the border for one target window.
-    private func apply(target: CGWindowID, windowBounds: CGRect, level: Int32) {
+    /// Whether this window's corners are still rounded: its app was running before the corner
+    /// key was written (or the key is not in play), so the frame has slivers to paint.
+    private static func windowStillRounded(pid: pid_t) -> Bool {
+        guard let since = TitleBarOverlayController.shared.cornersSquaredAt else { return true }
+        guard let launched = NSRunningApplication(processIdentifier: pid)?.launchDate else { return true }
+        return launched < since
+    }
+
+    private func apply(target: CGWindowID, windowBounds: CGRect, level: Int32, pid: pid_t) {
         // Skip full-screen / desktop-sized windows.
         if let scr = NSScreen.screens.first(where: { $0.frame.width >= windowBounds.width }),
            windowBounds.width >= scr.frame.width - 1, windowBounds.height >= scr.frame.height - 1 {
@@ -240,10 +250,12 @@ final class WindowBorderController {
         }
         let f = outerFrame(windowBounds)
         let hd = isHiDPI(for: windowBounds)
+        let rounded = Self.windowStillRounded(pid: pid)
 
         if let b = borders[target] {
             // Recreate on a size OR resolution change (the context is bound to both) — e.g. dragging
             // the window onto a display with a different backing scale.
+            if b.fillCorners != rounded { b.fillCorners = rounded; drawInto(b); skb_flush(b.wid, b.ctx) }
             if b.size != f.size || b.hidpi != hd {
                 skb_destroy(b.wid)
                 borders.removeValue(forKey: target)
@@ -259,7 +271,7 @@ final class WindowBorderController {
         // reshaping after drawing discards the backing content.
         var wid: UInt32 = 0
         guard let ctx = skb_create(Float(f.width), Float(f.height), hd, &wid), wid != 0 else { return }
-        let b = SkyBorder(wid: wid, ctx: ctx, size: f.size, hidpi: hd)
+        let b = SkyBorder(wid: wid, ctx: ctx, size: f.size, hidpi: hd, fillCorners: rounded)
         b.onSpace = (skb_send_to_space(b.wid, target) != 0)   // a fresh window is on no space → invisible
         skb_set_frame(b.wid, Float(f.minX), Float(f.minY), Float(f.width), Float(f.height))
         b.origin = f.origin
@@ -281,7 +293,7 @@ final class WindowBorderController {
         }
         let f = outerFrame(g)
         // Resize OR a cross-display move to a different backing scale → recreate at the new size/res.
-        if b.size != f.size || b.hidpi != isHiDPI(for: g) { apply(target: target, windowBounds: g, level: b.level) }
+        if b.size != f.size || b.hidpi != isHiDPI(for: g) { sync() }
         else if b.origin != f.origin { skb_move(b.wid, Float(f.minX), Float(f.minY)); b.origin = f.origin }
     }
 
@@ -290,12 +302,12 @@ final class WindowBorderController {
     }
 
     private func drawInto(_ b: SkyBorder) {
-        Self.drawBorder(currentStyle, into: b.ctx, size: b.size)
+        Self.drawBorder(currentStyle, into: b.ctx, size: b.size, fillCorners: b.fillCorners)
     }
 
     // MARK: - Window enumeration (public CGWindowList; top-left global bounds)
 
-    private struct WindowInfo { let id: CGWindowID; let bounds: CGRect }
+    private struct WindowInfo { let id: CGWindowID; let bounds: CGRect; let pid: pid_t }
 
     private static func onScreenWindows() -> [WindowInfo] {
         let opts: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
@@ -309,7 +321,7 @@ final class WindowBorderController {
             var b = CGRect.zero
             guard CGRectMakeWithDictionaryRepresentation(bDict as CFDictionary, &b),
                   b.width > 40, b.height > 40 else { continue }
-            out.append(WindowInfo(id: num, bounds: b))
+            out.append(WindowInfo(id: num, bounds: b, pid: pid))
         }
         return out
     }
@@ -362,7 +374,7 @@ final class WindowBorderController {
         let defaultRadius: CGFloat = 10
         // With the title bars on, the windows are drawn square: the bar covers the top corners
         // and the border fills the bottom ones (see `drawBorder`).
-        if TitleBarOverlayController.shared.isRunning { return 0 }
+        if TitleBarOverlayController.shared.squaresCorners { return 0 }
         guard AppSettings.shared.themeApplySystemTweaks,
               let tweaks = ThemeManager.shared.activeTheme?.config.systemTweaks else { return defaultRadius }
         for t in tweaks where t.key == "NSConvolutionOverride1" || t.key == "NSSplitViewItemGlassMinimumCornerRadius" {
@@ -412,7 +424,7 @@ final class WindowBorderController {
 
     // MARK: - Drawing (into a CGContext, bottom-left origin)
 
-    static func drawBorder(_ style: WindowBorderStyle, into ctx: CGContext, size: CGSize) {
+    static func drawBorder(_ style: WindowBorderStyle, into ctx: CGContext, size: CGSize, fillCorners: Bool = true) {
         let bounds = CGRect(origin: .zero, size: size)
         ctx.clear(bounds)                       // transparent background (window has alpha)
         ctx.setShouldAntialias(true)
@@ -423,13 +435,13 @@ final class WindowBorderController {
             beveledRing(ctx, bounds, outerInset: o, innerInset: width, outerRadius: radius + width - o, innerRadius: radius, light: hiInner, dark: loInner)
         case let .solid(color, width, topR, _):
             strokeRing(ctx, bounds, width: width, radius: topR, color: color, glow: false)
-            if topR == 0 { fillCornerNotches(ctx, bounds, inset: width, color: color) }
+            if topR == 0, fillCorners { fillCornerNotches(ctx, bounds, inset: width, color: color) }
         case let .glow(color, width, radius):
             strokeRing(ctx, bounds, width: width, radius: radius, color: color, glow: true)
         case .none:
             break
         }
-        if case let .bevel(_, hiInner, _, _, width, radius) = style, radius == 0 {
+        if case let .bevel(_, hiInner, _, _, width, radius) = style, radius == 0, fillCorners {
             fillCornerNotches(ctx, bounds, inset: width, color: hiInner)
         }
     }

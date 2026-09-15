@@ -52,9 +52,26 @@ enum SystemTweaksAdapter {
     /// Only BUILT-IN themes may apply tweaks: imported (untrusted) themes never mutate the real
     /// system, they just reconcile to an empty set (reverting any previously-applied tweaks).
     static func apply(for config: DockThemeConfig, isBuiltIn: Bool) {
-        guard AppSettings.shared.themeApplySystemTweaks else { return }
-        let target = isBuiltIn ? (config.systemTweaks ?? []) : []
+        var target: [DockThemeConfig.SystemTweak] = []
+        if AppSettings.shared.themeApplySystemTweaks, isBuiltIn { target = config.systemTweaks ?? [] }
+        target = withSquareCorners(target)
+        guard !target.isEmpty || d.bool(forKey: snapKey) else { return }   // nothing to write, nothing to undo
         queue.async { reconcile(to: target) }
+    }
+
+    /// The window corner radius AppKit reads at launch, set to 0.5 (0 means "not set") while
+    /// the title-bar overlay draws its square bars. Measured on macOS 27 on the window's own
+    /// alpha: 0.5 → 0 px of corner, 2 → 3 px, 4 → 7 px, unset → 35 px at 2x. Same snapshot,
+    /// same restore, same limit as the theme's own corner tweak: an app reads it when it
+    /// launches, so windows already open keep their corners until the app is reopened.
+    static let squareCornerTweaks: [DockThemeConfig.SystemTweak] = [
+        .init(domain: "-g", key: "NSConvolutionOverride1", type: "float", value: "0.5", refresh: "Finder"),
+    ]
+
+    private static func withSquareCorners(_ tweaks: [DockThemeConfig.SystemTweak]) -> [DockThemeConfig.SystemTweak] {
+        guard TitleBarOverlayController.shared.squaresCorners else { return tweaks }
+        let keys = Set(squareCornerTweaks.map { $0.key })
+        return tweaks.filter { !keys.contains($0.key) } + squareCornerTweaks
     }
 
     /// Put every tracked key back to the user's original value. Pass `sync: true` on the quit
@@ -69,17 +86,17 @@ enum SystemTweaksAdapter {
     /// declares window-corner tweaks): the corner radius is a global default each AppKit app reads
     /// only at launch, so it applies to the Finder immediately but to other apps only when they
     /// relaunch — for everything at once the user must log out. Honest, no forced logout.
-    static func showCornerHintIfNeeded(for config: DockThemeConfig) {
+    static func showCornerHintIfNeeded(for config: DockThemeConfig, squareCorners: Bool = false) {
         let key = "classicCornerHintShown"
         guard !d.bool(forKey: key) else { return }
-        let hasCorner = (config.systemTweaks ?? []).contains {
+        let hasCorner = squareCorners || (config.systemTweaks ?? []).contains {
             $0.key == "NSConvolutionOverride1" || $0.key == "NSSplitViewItemGlassMinimumCornerRadius"
         }
         guard hasCorner else { return }
         d.set(true, forKey: key)
         let alert = NSAlert()
         alert.messageText = "Classic window corners"
-        alert.informativeText = "The Finder now uses this era's squarer window corners. Other apps pick them up the next time you open them — to apply the corners everywhere at once, log out and back in."
+        alert.informativeText = "The Finder now uses this era's squarer window corners. Other apps pick them up the next time you open them — to apply the corners everywhere at once, log out and back in. Everything goes back to normal when the theme goes off."
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.runModal()

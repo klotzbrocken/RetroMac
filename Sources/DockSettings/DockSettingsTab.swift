@@ -481,7 +481,7 @@ struct DockSettingsTab: View {
     private var titleBarExclusions: some View {
         let excluded = settings.themeTitleBarsExcludedApps
         RMRow(label: "Leave these apps alone",
-              hint: excluded.isEmpty ? "Every window gets the bar." : nil,
+              hint: excluded.isEmpty ? "Every window gets them." : nil,
               isLast: excluded.isEmpty) {
             Menu("Add app\u{2026}") {
                 let running = NSWorkspace.shared.runningApplications
@@ -538,9 +538,12 @@ struct DockSettingsTab: View {
                     toggle($settings.themeWindowBorders)
                     // No onChange: AppSettings.didSet already drives WindowBorderController.update().
                 }
-                if ["macos9", "winxp"].contains(selectedThemeConfig?.chrome?.style ?? "") {
-                    RMRow(label: "Title bars (experimental)",
-                          hint: "A Platinum or Luna title bar over every window, drawn square. Close, minimise, zoom and dragging work; toolbars that share the title bar lose their top edge.") {
+                if let chrome = selectedThemeConfig?.chrome?.style, ["macos9", "winxp", "macosx", "snowleopard"].contains(chrome) {
+                    let bars = chrome == "macos9" || chrome == "winxp"
+                    RMRow(label: bars ? "Title bars (experimental)" : "Traffic lights (experimental)",
+                          hint: bars
+                            ? "A Platinum or Luna title bar over every window, drawn square. Close, minimise, zoom and dragging work; toolbars that share the title bar lose their top edge."
+                            : "The era's glossy lights over the real ones, and nothing else changes. Close, minimise and zoom work.") {
                         toggle($settings.themeTitleBars)
                     }
                     if settings.themeTitleBars {

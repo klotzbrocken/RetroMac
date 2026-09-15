@@ -13,12 +13,19 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   never native full screen), and dragging where the traffic lights used to be. Everywhere else
   the bar lets the mouse through, so the native drag and double-click keep working. The bar
   that belongs to the front window draws active, the others draw inactive. The windows are
-  drawn square while it is on: the bar covers the top corners and runs out over the window
-  border when that is on, and the border paints the sliver macOS leaves in the bottom corners.
-  Apps can be left alone ("Leave these apps alone", from the running apps or any app). A closed
-  window takes its bar with it at once, and a dragged window's bar keeps up. Known limits: a
-  toolbar that shares the title bar (Safari, Finder) loses its top edge under the strip, and a
-  window the size of the screen gets no bar.
+  square while it is on: macOS is asked to stop rounding them (the same corner setting the
+  "Classic Finder" tweaks use, at its smallest value, snapshotted and put back), which every
+  app picks up when it is next opened; for the apps already running, the bar covers the top
+  corners and the window border paints the sliver in the bottom ones. The bar runs out over the
+  window border when that is on. Apps can be left alone ("Leave these apps alone", from the
+  running apps or any app). A closed window takes its bar with it at once, and a dragged
+  window's bar keeps up. Known limits: a toolbar that shares the title bar (Safari, Finder)
+  loses its top edge under the strip, and a window the size of the screen gets no bar.
+
+- **Experiment: traffic lights in theme style.** The same switch on Mac OS X and Snow Leopard
+  covers only the three lights: Snow Leopard's glossy orbs from the theme's own artwork, or
+  Aqua gems for Mac OS X, at the exact spots the real lights sit in each window, with the ×,
+  − and + on hover. Nothing else about the title bar changes, so toolbars keep their top edge.
 
 ## 2.8.5
 

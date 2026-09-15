@@ -9,11 +9,18 @@ import SkyLightBridge
 /// moves it). Where there is no control the panel lets clicks through to the real bar, so the
 /// native drag and double-click keep working.
 ///
-/// Why the corners are painted rather than removed: the two global corner keys the themes use
-/// (NSConvolutionOverride1, NSSplitViewItemGlassMinimumCornerRadius) can make a window's corners
-/// rounder on macOS 27 but not squarer than the system's own ~10 pt — 0, 0.5, 1 and 4 all render
-/// the default, 30 renders 30 (tested 15 Sep 2026, TextEdit and Finder after a relaunch). So
-/// the bar covers the top corners and the border paints the bottom ones.
+/// Square corners come two ways. The global default NSConvolutionOverride1 is the window corner
+/// radius an AppKit app reads when it launches: 0.5 makes every window it opens square (0 means
+/// "not set"; measured on macOS 27 on the window's own alpha, 15 Sep 2026 — the sibling key
+/// NSSplitViewItemGlassMinimumCornerRadius only concerns sidebars and does nothing here). It is
+/// written through SystemTweaksAdapter while a bar style runs, and Finder is relaunched to pick
+/// it up. Apps that were already running keep their rounded windows until they are reopened;
+/// for those the bar covers the top corners and the window border paints the bottom ones
+/// (`WindowBorderController`, which asks each window's app when it launched).
+///
+/// The lights styles (Mac OS X, Snow Leopard) are the small version: only the three traffic
+/// lights are covered, at the exact spots the Accessibility API reports for the real ones,
+/// and the rest of the title bar is left as it is.
 ///
 /// Known limits, on purpose: the strip is the theme's own height (22 / 30 pt) from the top edge,
 /// so on a window whose toolbar shares the title bar (Safari, Finder) it covers the top of that
@@ -24,7 +31,11 @@ final class TitleBarOverlayController {
     static let shared = TitleBarOverlayController()
     private init() {}
 
-    enum Style { case platinum, luna }
+    enum Style {
+        case platinum, luna            // a whole bar
+        case aquaLights, snowLights    // the three lights only
+        var isBar: Bool { self == .platinum || self == .luna }
+    }
 
     private final class Overlay {
         let panel: NSPanel
@@ -38,6 +49,10 @@ final class TitleBarOverlayController {
 
     private var running = false
     var isRunning: Bool { running && style != nil }
+    /// Whether the real windows are being squared right now (bar styles only), and since when:
+    /// an app launched after this has square windows, one launched before still has round ones.
+    var squaresCorners: Bool { running && style?.isBar == true }
+    private(set) var cornersSquaredAt: Date?
     private var style: Style?
     private var excluded: Set<String> = []
     private var overlays: [CGWindowID: Overlay] = [:]
@@ -50,9 +65,11 @@ final class TitleBarOverlayController {
 
     static func style(for key: String) -> Style? {
         switch key {
-        case "macos9": return .platinum
-        case "winxp":  return .luna
-        default:       return nil
+        case "macos9":      return .platinum
+        case "winxp":       return .luna
+        case "macosx":      return .aquaLights
+        case "snowleopard": return .snowLights
+        default:            return nil
         }
     }
 
@@ -67,12 +84,13 @@ final class TitleBarOverlayController {
         let newStyle = Self.style(for: RetroFrameTheme.key())
         excluded = Set(AppSettings.shared.themeTitleBarsExcludedApps)
         if running {
-            if newStyle != style { style = newStyle; stopOverlays() }
+            if newStyle != style { style = newStyle; stopOverlays(); lightOffsets.removeAll(); lightOffsetsFirstSeen.removeAll(); squareTheRealCorners() }
             sync()
             return
         }
         style = newStyle
         running = true
+        squareTheRealCorners()
         WindowBorderController.shared.ensureServerEvents()   // move/resize/minimise arrive through it
         WindowBorderController.shared.ensureObservers()      // and closed windows, through Accessibility
         let nc = NSWorkspace.shared.notificationCenter
@@ -101,7 +119,22 @@ final class TitleBarOverlayController {
         wsTokens.removeAll()
         if let m = mouseMonitor { NSEvent.removeMonitor(m); mouseMonitor = nil }
         stopOverlays()
+        lightOffsets.removeAll()
+        lightOffsetsFirstSeen.removeAll()
         WindowBorderController.shared.releaseObserversIfIdle()
+        squareTheRealCorners()   // reconciles without the corner key now
+    }
+
+    /// Write (or withdraw) the corner key through the adapter that handles the theme's own
+    /// "Classic Finder" tweaks, so it is snapshotted and put back with them. Only while a theme
+    /// is on: when the theme is going off, ThemeManager's restore has the last word.
+    private func squareTheRealCorners() {
+        let wanted = squaresCorners
+        if wanted, cornersSquaredAt == nil { cornersSquaredAt = Date() }
+        if !wanted { cornersSquaredAt = nil }
+        guard AppSettings.shared.dockEnabled, let theme = ThemeManager.shared.activeTheme else { return }
+        SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)
+        if wanted { SystemTweaksAdapter.showCornerHintIfNeeded(for: theme.config, squareCorners: true) }
     }
 
     private func stopOverlays() {
@@ -155,8 +188,17 @@ final class TitleBarOverlayController {
            info.bounds.width >= scr.frame.width - 1, info.bounds.height >= scr.frame.height - 1 {
             drop(for: info.id); return
         }
-        let frame = Self.barFrame(for: info.bounds, style: style)
-        let title = info.title.isEmpty ? (axTitle(info.id, pid: info.pid) ?? info.ownerName) : info.title
+        let frame: NSRect
+        var lights: [ChromeButtonKind: NSRect] = [:]
+        if style.isBar {
+            frame = Self.barFrame(for: info.bounds, style: style)
+        } else {
+            // The panel is just big enough for the three lights, wherever this window keeps them
+            // (a unified toolbar puts them lower than a plain title bar does).
+            guard let offsets = lightOffsets(for: info) else { drop(for: info.id); return }
+            (frame, lights) = Self.lightsFrame(for: info.bounds, offsets: offsets)
+        }
+        let title = style.isBar ? (info.title.isEmpty ? (axTitle(info.id, pid: info.pid) ?? info.ownerName) : info.title) : ""
         let icon = style == .luna ? NSRunningApplication(processIdentifier: info.pid)?.icon : nil
 
         if let o = overlays[info.id] {
@@ -166,8 +208,7 @@ final class TitleBarOverlayController {
             // windows rise above ours, and nothing but this puts the bar back on top.
             o.level = level
             order(o, above: info.id)
-            o.view.configure(style: style, title: title, icon: icon, isFront: isFront,
-                             radius: WindowBorderController.windowCornerRadius())
+            o.view.configure(style: style, title: title, icon: icon, isFront: isFront, lights: lights)
             return
         }
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
@@ -182,8 +223,7 @@ final class TitleBarOverlayController {
         panel.animationBehavior = .none
         let view = TitleBarOverlayView(frame: NSRect(origin: .zero, size: frame.size))
         view.autoresizingMask = [.width, .height]
-        view.configure(style: style, title: title, icon: icon, isFront: isFront,
-                       radius: WindowBorderController.windowCornerRadius())
+        view.configure(style: style, title: title, icon: icon, isFront: isFront, lights: lights)
         view.onAction = { [weak self] kind in self?.perform(kind, on: info.id, pid: info.pid) }
         view.onDrag = { [weak self] delta in self?.drag(info.id, pid: info.pid, by: delta) }
         view.onDragEnd = { [weak self] in self?.dragOrigin = nil }
@@ -209,6 +249,7 @@ final class TitleBarOverlayController {
         switch style {
         case .platinum: return 28
         case .luna:     return 30
+        case .aquaLights, .snowLights: return 0   // no strip: the lights panel is sized from the real lights
         }
     }
 
@@ -216,6 +257,22 @@ final class TitleBarOverlayController {
     static func appKitFrame(topLeft b: CGRect, height: CGFloat) -> NSRect {
         let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
         return NSRect(x: b.minX, y: primaryTop - b.minY - height, width: b.width, height: height)
+    }
+
+    /// The lights panel: the union of the three orbs plus a little air, and each orb's rect
+    /// inside it.
+    static func lightsFrame(for bounds: CGRect, offsets: [ChromeButtonKind: CGRect]) -> (NSRect, [ChromeButtonKind: NSRect]) {
+        let orb = lightDiameter
+        let pad: CGFloat = 3
+        let rects = offsets.map { NSRect(x: $0.value.midX - orb / 2, y: $0.value.midY - orb / 2, width: orb, height: orb) }
+        let union = rects.reduce(NSRect.null) { $0.union($1) }.insetBy(dx: -pad, dy: -pad)
+        let frame = appKitFrame(topLeft: CGRect(x: bounds.minX + union.minX, y: bounds.minY + union.minY,
+                                                width: union.width, height: union.height), height: union.height)
+        var lights: [ChromeButtonKind: NSRect] = [:]
+        for (kind, r) in offsets {
+            lights[kind] = NSRect(x: r.midX - orb / 2 - union.minX, y: r.midY - orb / 2 - union.minY, width: orb, height: orb)
+        }
+        return (frame, lights)
     }
 
     /// The bar's frame: the strip along the window's top edge, widened over the window border
@@ -235,7 +292,12 @@ final class TitleBarOverlayController {
             guard let o = overlays[wid], let style else { return }
             guard let g = PrivateWindowAPI.bounds(of: wid) else { drop(for: wid); return }
             o.bounds = g
-            let f = Self.barFrame(for: g, style: style)
+            let f: NSRect
+            if style.isBar {
+                f = Self.barFrame(for: g, style: style)
+            } else if let offsets = lightOffsets[wid] {
+                f = Self.lightsFrame(for: g, offsets: offsets).0   // the lights do not move inside the window
+            } else { return }
             if f.size == o.panel.frame.size {
                 if f.origin != o.panel.frame.origin { o.panel.setFrameOrigin(f.origin) }   // a move: no redraw
             } else if o.panel.frame != f {
@@ -254,6 +316,8 @@ final class TitleBarOverlayController {
     }
 
     func drop(for wid: CGWindowID) {
+        lightOffsets.removeValue(forKey: wid)
+        lightOffsetsFirstSeen.removeValue(forKey: wid)
         guard let o = overlays[wid] else { return }
         o.panel.orderOut(nil)
         overlays.removeValue(forKey: wid)
@@ -282,6 +346,40 @@ final class TitleBarOverlayController {
     // MARK: - Driving the real window (Accessibility)
 
     private var dragOrigin: CGPoint?
+
+    static let lightDiameter: CGFloat = 15   // a hair over the real 14, so nothing of them shows
+
+    /// Where the three real lights sit, relative to the window's top-left corner. Cached per
+    /// window: three Accessibility round trips per window is fine once, not twice a second.
+    /// A window is re-measured for its first seconds, because a new one is still sliding into
+    /// place while the window list already reports it, and an offset taken then is off by the
+    /// rest of the slide.
+    private var lightOffsets: [CGWindowID: [ChromeButtonKind: CGRect]] = [:]
+    private var lightOffsetsFirstSeen: [CGWindowID: Date] = [:]
+
+    private func lightOffsets(for info: WindowInfo) -> [ChromeButtonKind: CGRect]? {
+        let firstSeen = lightOffsetsFirstSeen[info.id] ?? Date()
+        lightOffsetsFirstSeen[info.id] = firstSeen
+        if let cached = lightOffsets[info.id], Date().timeIntervalSince(firstSeen) > 3 { return cached }
+        guard let w = axWindow(info.id, pid: info.pid) else { return nil }
+        var out: [ChromeButtonKind: CGRect] = [:]
+        for (kind, attr) in [(ChromeButtonKind.close, kAXCloseButtonAttribute),
+                             (.minimize, kAXMinimizeButtonAttribute), (.zoom, kAXZoomButtonAttribute)] {
+            var ref: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(w, attr as CFString, &ref) == .success, let ref else { continue }
+            let button = ref as! AXUIElement
+            var pRef: CFTypeRef?, sRef: CFTypeRef?
+            var p = CGPoint.zero, sz = CGSize.zero
+            guard AXUIElementCopyAttributeValue(button, kAXPositionAttribute as CFString, &pRef) == .success, let pRef,
+                  AXValueGetValue(pRef as! AXValue, .cgPoint, &p),
+                  AXUIElementCopyAttributeValue(button, kAXSizeAttribute as CFString, &sRef) == .success, let sRef,
+                  AXValueGetValue(sRef as! AXValue, .cgSize, &sz), sz.width > 0 else { continue }
+            out[kind] = CGRect(x: p.x - info.bounds.minX, y: p.y - info.bounds.minY, width: sz.width, height: sz.height)
+        }
+        guard out[.close] != nil else { return nil }
+        lightOffsets[info.id] = out
+        return out
+    }
 
     private func axWindow(_ wid: CGWindowID, pid: pid_t) -> AXUIElement? {
         if let cached = axWindows[wid] { return cached }
@@ -438,7 +536,7 @@ final class TitleBarOverlayView: NSView {
     private var title = ""
     private var icon: NSImage?
     private var isFront = true
-    private var radius: CGFloat = 10
+    private var lights: [ChromeButtonKind: NSRect] = [:]
     private var tracker = ChromeButtonTracker()
     private var buttonRects: [(ChromeButtonKind, NSRect)] = []
     private var dragStart: NSPoint?
@@ -447,13 +545,15 @@ final class TitleBarOverlayView: NSView {
     override var isFlipped: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    /// Where the real traffic lights sit under the bar. Clicks there are ours, never theirs.
-    private var deadZone: NSRect { NSRect(x: 0, y: 0, width: 76, height: bounds.height) }
+    /// Where the real traffic lights sit under a full bar. Clicks there are ours, never theirs.
+    /// A lights panel has no dead zone: it is the lights.
+    private var deadZone: NSRect { style.isBar ? NSRect(x: 0, y: 0, width: 76, height: bounds.height) : .zero }
 
-    func configure(style: TitleBarOverlayController.Style, title: String, icon: NSImage?, isFront: Bool, radius: CGFloat) {
+    func configure(style: TitleBarOverlayController.Style, title: String, icon: NSImage?, isFront: Bool,
+                   lights: [ChromeButtonKind: NSRect]) {
         guard style != self.style || title != self.title || isFront != self.isFront
-                || radius != self.radius || (icon == nil) != (self.icon == nil) else { return }
-        self.style = style; self.title = title; self.icon = icon; self.isFront = isFront; self.radius = radius
+                || lights != self.lights || (icon == nil) != (self.icon == nil) else { return }
+        self.style = style; self.title = title; self.icon = icon; self.isFront = isFront; self.lights = lights
         needsDisplay = true
     }
 
@@ -473,6 +573,12 @@ final class TitleBarOverlayView: NSView {
         buttonRects.removeAll()
         let h = bounds.height, w = bounds.width
         switch style {
+        case .aquaLights, .snowLights:
+            for kind in [ChromeButtonKind.close, .minimize, .zoom] {
+                guard let r = lights[kind] else { continue }
+                tracker.add(kind, r, interactive: true)
+                buttonRects.append((kind, r))
+            }
         case .platinum:
             let s = ClassicMacChrome.boxSize
             let y = ((h - s) / 2).rounded()
@@ -505,8 +611,24 @@ final class TitleBarOverlayView: NSView {
         // window border is on it runs out over the frame too (`barFrame`), so the two are one.
         let b = bounds
         switch style {
-        case .platinum: drawPlatinum(b)
-        case .luna:     drawLuna(b)
+        case .platinum:   drawPlatinum(b)
+        case .luna:       drawLuna(b)
+        case .snowLights: drawLights(aqua: false)
+        case .aquaLights: drawLights(aqua: true)
+        }
+    }
+
+    /// The three orbs, and nothing else: the panel is clear around them. 10.6 shows the ×, −
+    /// and + on all three as soon as the pointer is over any of them, and so did Aqua.
+    private func drawLights(aqua: Bool) {
+        let hovering = tracker.hovered != nil || tracker.pressed != nil
+        for (kind, r) in buttonRects {
+            let light: SnowLeopardChrome.Light = kind == .close ? .close : (kind == .minimize ? .minimize : .zoom)
+            let pressed = tracker.state(for: kind) == .pressed
+            if aqua { AquaGem.draw(r, light, active: isFront, pressed: pressed) }
+            else { SnowLeopardChrome.drawLight(r, light, active: isFront, flipped: true) }
+            if pressed { NSColor.black.withAlphaComponent(0.18).setFill(); NSBezierPath(ovalIn: r).fill() }
+            if hovering && isFront { SnowLeopardChrome.drawGlyph(light, in: r) }
         }
     }
 
@@ -622,4 +744,36 @@ final class TitleBarOverlayView: NSView {
 
 private extension CGRect {
     var area: CGFloat { isNull ? 0 : width * height }
+}
+
+/// The Aqua traffic light of Mac OS X 10.0 to 10.5: a candy gem, lit from above, with a dark
+/// rim and a soft glow at the bottom. Drawn, not sampled.
+enum AquaGem {
+    static func draw(_ r: NSRect, _ kind: SnowLeopardChrome.Light, active: Bool, pressed: Bool) {
+        let body: NSColor, deep: NSColor
+        switch (active, kind) {
+        case (false, _):        body = NSColor(srgbRed: 0.80, green: 0.80, blue: 0.80, alpha: 1); deep = NSColor(srgbRed: 0.55, green: 0.55, blue: 0.55, alpha: 1)
+        case (true, .close):    body = NSColor(srgbRed: 1.00, green: 0.42, blue: 0.36, alpha: 1); deep = NSColor(srgbRed: 0.74, green: 0.10, blue: 0.08, alpha: 1)
+        case (true, .minimize): body = NSColor(srgbRed: 1.00, green: 0.78, blue: 0.30, alpha: 1); deep = NSColor(srgbRed: 0.80, green: 0.50, blue: 0.02, alpha: 1)
+        case (true, .zoom):     body = NSColor(srgbRed: 0.55, green: 0.86, blue: 0.36, alpha: 1); deep = NSColor(srgbRed: 0.15, green: 0.52, blue: 0.10, alpha: 1)
+        }
+        let disc = NSBezierPath(ovalIn: r)
+        // Body: light where the light hits it (upper left), deep colour at the rim.
+        NSGradient(colors: [body.blended(withFraction: pressed ? 0.25 : 0, of: .black) ?? body, deep])?
+            .draw(in: disc, relativeCenterPosition: NSPoint(x: -0.25, y: -0.35))
+        // Rim.
+        deep.blended(withFraction: 0.35, of: .black)?.setStroke()
+        disc.lineWidth = 0.8
+        disc.stroke()
+        // The specular arc across the top third (y down: near minY).
+        let gloss = NSBezierPath(ovalIn: NSRect(x: r.minX + r.width * 0.18, y: r.minY + r.height * 0.06,
+                                               width: r.width * 0.64, height: r.height * 0.42))
+        NSGradient(colors: [NSColor.white.withAlphaComponent(0.85), NSColor.white.withAlphaComponent(0.05)])?
+            .draw(in: gloss, angle: -90)
+        // The glow the bottom of the gem gives back.
+        let glow = NSBezierPath(ovalIn: NSRect(x: r.minX + r.width * 0.22, y: r.maxY - r.height * 0.36,
+                                              width: r.width * 0.56, height: r.height * 0.28))
+        body.withAlphaComponent(0.45).setFill()
+        glow.fill()
+    }
 }

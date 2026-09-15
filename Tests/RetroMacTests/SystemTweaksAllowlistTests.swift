@@ -44,4 +44,16 @@ final class SystemTweaksAllowlistTests: XCTestCase {
         // Global domain with a bogus refresh falls back to refreshing Finder + Dock.
         XCTAssertEqual(SystemTweaksAdapter.refreshTargets(domain: "-g", refresh: "kernel_task"), ["Finder", "Dock"])
     }
+
+    /// The corner key the title-bar overlay writes is allowlisted, and it is the only one it
+    /// touches, so the experiment cannot widen what may be changed.
+    func testSquareCornerTweakIsAllowlisted() {
+        let tweaks = SystemTweaksAdapter.squareCornerTweaks
+        XCTAssertEqual(tweaks.map { $0.key }, ["NSConvolutionOverride1"])
+        for t in tweaks {
+            XCTAssertTrue(SystemTweaksAdapter.isTweakAllowed(t))
+            XCTAssertEqual(t.domain, "-g")
+            XCTAssertEqual(Double(t.value), 0.5, "0 would mean unset; 0.5 is the smallest value that squares a window")
+        }
+    }
 }
