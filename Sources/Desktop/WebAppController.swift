@@ -14,7 +14,8 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 
     private static var openWindows: [String: WebAppController] = [:]
 
-    static func open(name: String, url: String, width: CGFloat, height: CGFloat, icon: String? = nil, titleOnly: Bool = false) {
+    static func open(name: String, url rawURL: String, width: CGFloat, height: CGFloat, icon: String? = nil, titleOnly: Bool = false) {
+        let url = rehomed(rawURL)
         if let existing = openWindows[url], existing.panel?.isVisible == true {
             existing.panel?.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -26,22 +27,33 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     }
 
     /// Hosts that serve the self-contained 98.js apps and may carry the native Save/Print
-    /// bridge. The project moved from GitHub Pages to its own domain — the old github.io URL
-    /// now 301-redirects there, so both must be trusted (otherwise the cross-host redirect is
-    /// blocked by the navigation confinement below and the app never loads).
+    /// bridge. The apps come from 98.js.org, the upstream project's own site (Isaiah Odhner,
+    /// github.com/1j01/98). The bored-entertainment fork that hosted them before (github.io,
+    /// then bored-win98.pisaucer.com) went off the air in September 2026 — its DNS name is
+    /// gone — and the github.io URL still 301-redirects into that void, so neither of the old
+    /// hosts is trusted any more: a redirect there would only land on nothing. Themes and
+    /// bookmarks that still name the old host are rewritten on load (`rehomed(_:)`).
     static func isTrusted98Host(_ host: String?) -> Bool {
-        host == "bored-win98.pisaucer.com" || host == "bored-entertainment.github.io"
+        host == "98.js.org"
     }
 
     /// True only for a trusted 98.js APP URL — this gates the native Save/Print bridge,
-    /// so each host is path-scoped to where its apps actually live (pisaucer serves them
-    /// under /programs/, the legacy github.io mirror under /98.js/). Unrelated content
-    /// later hosted elsewhere on the same domain does NOT inherit the bridge.
+    /// path-scoped to where the apps actually live (/programs/). Unrelated content later
+    /// hosted elsewhere on the same domain does NOT inherit the bridge.
     static func isTrusted98App(_ urlString: String) -> Bool {
         guard let c = URLComponents(string: urlString), c.scheme == "https" else { return false }
-        if c.host == "bored-win98.pisaucer.com" && c.path.hasPrefix("/programs/") { return true }
-        if c.host == "bored-entertainment.github.io" && c.path.hasPrefix("/98.js/") { return true }
-        return false
+        return c.host == "98.js.org" && c.path.hasPrefix("/programs/")
+    }
+
+    /// The old hosts' program URLs, moved to the live one. A user theme imported or duplicated
+    /// before the move still carries them, and so does a saved desktop layout; the bundled
+    /// manifests were rewritten, but those cannot be.
+    static func rehomed(_ urlString: String) -> String {
+        for old in ["https://bored-win98.pisaucer.com/programs/", "https://bored-entertainment.github.io/98.js/programs/"]
+        where urlString.hasPrefix(old) {
+            return "https://98.js.org/programs/" + urlString.dropFirst(old.count)
+        }
+        return urlString
     }
 
     static func closeAll() {

@@ -47,4 +47,19 @@ final class ThemeBundlePathTests: XCTestCase {
         XCTAssertNil(ThemeBundle.confinedResource(nil, under: bundleDir))
         XCTAssertNil(ThemeBundle.confinedResource("", under: bundleDir))
     }
+
+    /// The 98.js programs moved hosts twice; a theme or layout saved under an old address must
+    /// still open, and only the live host may carry the native Save/Print bridge.
+    func testOld98HostsAreRehomedAndNoLongerTrusted() {
+        XCTAssertEqual(WebAppController.rehomed("https://bored-win98.pisaucer.com/programs/jspaint/index.html"),
+                       "https://98.js.org/programs/jspaint/index.html")
+        XCTAssertEqual(WebAppController.rehomed("https://bored-entertainment.github.io/98.js/programs/explorer/index.html?address=x"),
+                       "https://98.js.org/programs/explorer/index.html?address=x")
+        XCTAssertEqual(WebAppController.rehomed("https://www.google.com"), "https://www.google.com")
+        XCTAssertTrue(WebAppController.isTrusted98App("https://98.js.org/programs/minesweeper/index.html"))
+        XCTAssertFalse(WebAppController.isTrusted98App("https://98.js.org/other/index.html"))
+        XCTAssertFalse(WebAppController.isTrusted98App("http://98.js.org/programs/minesweeper/index.html"))
+        XCTAssertFalse(WebAppController.isTrusted98App("https://bored-win98.pisaucer.com/programs/jspaint/index.html"))
+        XCTAssertFalse(WebAppController.isTrusted98Host("bored-entertainment.github.io"))
+    }
 }

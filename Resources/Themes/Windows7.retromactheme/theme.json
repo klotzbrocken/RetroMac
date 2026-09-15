@@ -116,7 +116,7 @@
       "name": "Internet Explorer",
       "icon": "win7_ie.png",
       "type": "webapp",
-      "url": "https://bored-win98.pisaucer.com/programs/explorer/index.html?address=https%3A%2F%2Fwww.amazon.com",
+      "url": "https://98.js.org/programs/explorer/index.html?address=https%3A%2F%2Fwww.amazon.com",
       "args": [
         "1020",
         "740"
@@ -135,7 +135,7 @@
       "name": "Paint",
       "icon": "win7_paint.png",
       "type": "webapp",
-      "url": "https://bored-win98.pisaucer.com/programs/jspaint/index.html",
+      "url": "https://98.js.org/programs/jspaint/index.html",
       "args": [
         "920",
         "640"
@@ -147,7 +147,7 @@
       "name": "Minesweeper",
       "icon": "win7_mines.png",
       "type": "webapp",
-      "url": "https://bored-win98.pisaucer.com/programs/minesweeper/index.html",
+      "url": "https://98.js.org/programs/minesweeper/index.html",
       "args": [
         "360",
         "460"
@@ -159,7 +159,7 @@
       "name": "Solitaire",
       "icon": "win7_solitaire.png",
       "type": "webapp",
-      "url": "https://bored-win98.pisaucer.com/programs/js-solitaire/index.html",
+      "url": "https://98.js.org/programs/js-solitaire/index.html",
       "args": [
         "800",
         "600"
@@ -171,7 +171,7 @@
       "name": "3D Pinball",
       "icon": "win7_pinball.png",
       "type": "webapp",
-      "url": "https://bored-win98.pisaucer.com/programs/pinball/space-cadet.html",
+      "url": "https://98.js.org/programs/pinball/space-cadet.html",
       "args": [
         "640",
         "620"

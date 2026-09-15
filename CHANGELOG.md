@@ -5,6 +5,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Paint, Solitaire, Minesweeper, Internet Explorer and 3D Pinball open again.** The site
+  that hosted these 98.js programs (bored-win98.pisaucer.com) went off the air in September;
+  its DNS name is gone, and the earlier github.io address still redirects into that void. The
+  five Windows themes now load them from 98.js.org, the upstream project's own site, and a
+  theme or desktop layout saved with an old address is rewritten on open. The native
+  Save/Print bridge is trusted for the new host only.
+
 - **"Do not turn off your computer."** Two boot failures more: Windows XP installing update 3
   of 7 at shutdown, with the green Luna bar, and Windows 7 configuring updates at the next start,
   counting to 35% and staying there, and half the time giving up ("Failure configuring Windows
