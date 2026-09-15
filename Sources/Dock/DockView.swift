@@ -2198,6 +2198,16 @@ final class DockView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
+        if Self.dockStats {
+            let t0 = CACurrentMediaTime()
+            defer { let d = CACurrentMediaTime() - t0; statDraws += 1; statDrawTime += d; statMaxDraw = max(statMaxDraw, d); statFlush() }
+            drawBody(dirtyRect)
+            return
+        }
+        drawBody(dirtyRect)
+    }
+
+    private func drawBody(_ dirtyRect: NSRect) {
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
         let ctx = NSGraphicsContext.current!.cgContext
         let scale = CGFloat(AppSettings.shared.dockIconScale)
@@ -3484,7 +3494,42 @@ final class DockView: NSView {
         magnificationTrackingArea = ta
     }
 
+    // Diagnostics (RETROMAC_DOCK_STATS=1): how evenly the magnification is fed. Intervals
+    // between mouse moves reaching this view, and how long each move and each draw takes.
+    private static let dockStats: Bool = {
+        guard ProcessInfo.processInfo.environment["RETROMAC_DOCK_STATS"] != nil else { return false }
+        setvbuf(stdout, nil, _IOLBF, 0) // the lines must reach a log file while it runs
+        return true
+    }()
+    private var statLastMove: CFTimeInterval = 0
+    private var statMoves = 0, statGaps = 0, statMaxGap: CFTimeInterval = 0, statMoveTime: CFTimeInterval = 0
+    private var statDraws = 0, statDrawTime: CFTimeInterval = 0, statMaxDraw: CFTimeInterval = 0
+    private var statSince: CFTimeInterval = CACurrentMediaTime()
+    private func statFlush() {
+        let now = CACurrentMediaTime()
+        guard now - statSince >= 2 else { return }
+        print(String(format: "[DockStats] %.0fs: moves=%d gaps>20ms=%d maxGap=%.0fms moveAvg=%.2fms draws=%d drawAvg=%.2fms drawMax=%.1fms",
+                     now - statSince, statMoves, statGaps, statMaxGap * 1000,
+                     statMoves > 0 ? statMoveTime / Double(statMoves) * 1000 : 0,
+                     statDraws, statDraws > 0 ? statDrawTime / Double(statDraws) * 1000 : 0, statMaxDraw * 1000))
+        statMoves = 0; statGaps = 0; statMaxGap = 0; statMoveTime = 0; statDraws = 0; statDrawTime = 0; statMaxDraw = 0
+        statSince = now
+    }
+
     override func mouseMoved(with event: NSEvent) {
+        if Self.dockStats {
+            let now = CACurrentMediaTime()
+            if statLastMove > 0 { let gap = now - statLastMove; if gap > 0.02 { statGaps += 1 }; statMaxGap = max(statMaxGap, gap) }
+            statLastMove = now
+            statMoves += 1
+            defer { statMoveTime += CACurrentMediaTime() - now; statFlush() }
+            mouseMovedBody(with: event)
+            return
+        }
+        mouseMovedBody(with: event)
+    }
+
+    private func mouseMovedBody(with event: NSEvent) {
         let local = convert(event.locationInWindow, from: nil)
 
         // Track start button hover state

@@ -82,7 +82,7 @@ final class TitleBarOverlayController {
     private var axWindows: [CGWindowID: AXUIElement] = [:]
     private var wsTokens: [NSObjectProtocol] = []
     private var syncTimer: Timer?
-    private var mouseMonitor: Any?
+    private var hoverTimer: Timer?
 
     // MARK: - Lifecycle
 
@@ -153,10 +153,16 @@ final class TitleBarOverlayController {
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.sync() }
         RunLoop.main.add(t, forMode: .common)
         syncTimer = t
-        // The panels ignore the mouse except over a control; this is what flips them.
-        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in
-            self?.routeMouse(NSEvent.mouseLocation)
-        }
+        // The panels ignore the mouse except over a control, so they get no events of their own
+        // until something notices the pointer arriving and flips them. A global mouse monitor
+        // did that, and took the dock's smoothness with it: from the first change of front
+        // application on, the WindowServer delivered the dock's own mouse moves in bursts (30 a
+        // second with gaps of 200-700 ms instead of a steady stream) for as long as a monitor
+        // for moved events was installed. Asking where the pointer is 25 times a second costs a
+        // handful of rectangle checks and has no such side effect.
+        let hover = Timer(timeInterval: 0.04, repeats: true) { [weak self] _ in self?.pollMouse() }
+        RunLoop.main.add(hover, forMode: .common)
+        hoverTimer = hover
         sync()
     }
 
@@ -168,7 +174,7 @@ final class TitleBarOverlayController {
         let nc = NSWorkspace.shared.notificationCenter
         wsTokens.forEach { nc.removeObserver($0) }
         wsTokens.removeAll()
-        if let m = mouseMonitor { NSEvent.removeMonitor(m); mouseMonitor = nil }
+        hoverTimer?.invalidate(); hoverTimer = nil
         stopOverlays()
         WindowBorderController.shared.releaseObserversIfIdle()
         squareTheRealCorners()   // reconciles without the corner key now
@@ -301,7 +307,10 @@ final class TitleBarOverlayController {
         } else {
             // The panel is just big enough for the three lights, wherever this window keeps
             // them; without the measurement there is nothing to draw.
-            guard let offsets = lightOffsets(for: info) else { drop(for: info.id); return }
+            guard let offsets = lightOffsets(for: info) else {
+                if Self.statsEnabled { print("[TitleBar] no light offsets for \(info.ownerName) wid=\(info.id) retry=\(String(describing: lightOffsetsRetry[info.id])) axRetry=\(String(describing: axWindowRetry[info.id]))") }
+                drop(for: info.id); return
+            }
             (frame, lights) = Self.lightsFrame(for: info.bounds, offsets: offsets)
         }
         let title = drawStyle.isBar ? title(for: info) : ""
@@ -429,6 +438,7 @@ final class TitleBarOverlayController {
             let wid = info.id
             // The sample lies under the patch itself: hide the patch for the photograph.
             o.patch?.alphaValue = 0
+            count("sample")
             NativeBarSampler.sample(sample) { [weak self] image in
                 guard let self, let o = self.overlays[wid] else { return }
                 if let image { o.patchView?.image = image }
@@ -439,6 +449,7 @@ final class TitleBarOverlayController {
     }
 
     private func orderPatch(_ patch: NSPanel, above target: CGWindowID) {
+        count("order")
         patch.level = overlays[target]?.panel.level ?? .normal
         patch.order(.above, relativeTo: Int(target))
     }
@@ -447,6 +458,7 @@ final class TitleBarOverlayController {
     /// it. AppKit's cross-application ordering does what the SkyLight transaction does for the
     /// border windows; the transaction itself leaves an AppKit window invisible.
     private func order(_ o: Overlay, above target: CGWindowID) {
+        count("order")
         o.panel.level = NSWindow.Level(rawValue: Int(o.level))
         // Above the border window when there is one, so the bar is never under the frame.
         let anchor = WindowBorderController.shared.borderWindowID(for: target) ?? target
@@ -501,7 +513,11 @@ final class TitleBarOverlayController {
     // MARK: - Events from the WindowServer (forwarded by WindowBorderController)
 
     // MARK: Diagnostics (RETROMAC_TITLEBAR_STATS=1): event and sync rates, logged every 10 s.
-    private static let statsEnabled = ProcessInfo.processInfo.environment["RETROMAC_TITLEBAR_STATS"] != nil
+    private static let statsEnabled: Bool = {
+        guard ProcessInfo.processInfo.environment["RETROMAC_TITLEBAR_STATS"] != nil else { return false }
+        setvbuf(stdout, nil, _IOLBF, 0) // the lines must reach a log file while it runs
+        return true
+    }()
     private var stats: [String: Int] = [:]
     private var statsSince = Date()
     private var statsTime: [String: Double] = [:]
@@ -586,7 +602,17 @@ final class TitleBarOverlayController {
 
     /// Only the controls and the dead zone take the mouse; everywhere else the panel is
     /// transparent to events so the real title bar drags and double-clicks as always.
+    private var lastPolled = NSPoint(x: -1, y: -1)
+
+    private func pollMouse() {
+        let p = NSEvent.mouseLocation
+        guard p != lastPolled, !overlays.isEmpty else { return }
+        lastPolled = p
+        routeMouse(p)
+    }
+
     private func routeMouse(_ screenPoint: NSPoint) {
+        count("routeMouse")
         for o in overlays.values {
             let inside = o.panel.frame.contains(screenPoint)
             let local = o.view.convert(o.panel.convertPoint(fromScreen: screenPoint), from: nil)

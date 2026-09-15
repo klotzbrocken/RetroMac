@@ -27,6 +27,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   The title-bar overlay no longer re-orders its panels every three seconds either, only when
   the z-order actually changed.
 
+- **The dock stutters no more while the title bars or lights are on.** The overlay watched the
+  pointer through a global mouse monitor, to hand its panels the mouse when it reached a
+  control. With such a monitor installed, the WindowServer delivered the dock's own mouse
+  moves in bursts (thirty a second with gaps of up to 700 ms instead of a steady stream) from
+  the first change of front application on, which is what made the magnification judder.
+  The overlay now asks where the pointer is 25 times a second instead, which the dock does
+  not notice. Measured with the dock's new cadence log (`RETROMAC_DOCK_STATS=1`).
+
 - **The boot screen can always be clicked away, and a stuck switch cannot lock the Mac.**
   The click used to run the waiting theme switch first and take the cover down after, so a
   click sat through the whole switch — and a switch that blocked (an Apple event to a Finder

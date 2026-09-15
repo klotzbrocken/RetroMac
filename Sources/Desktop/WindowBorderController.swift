@@ -166,6 +166,16 @@ final class WindowBorderController {
         borders.removeValue(forKey: wid)
     }
 
+    private var axCounts: [String: Int] = [:]
+    private var axCountsSince = Date()
+    fileprivate func countAXNotification(_ name: String) {
+        axCounts[name, default: 0] += 1
+        if Date().timeIntervalSince(axCountsSince) >= 10 {
+            print("[Border] AX notifications/10s: \(axCounts)")
+            axCounts.removeAll(); axCountsSince = Date()
+        }
+    }
+
     /// Re-add a border after a window is de-miniaturized (restored from the Dock). The bars
     /// come back through the same notice.
     fileprivate func resync() { sync(); TitleBarOverlayController.shared.resync() }
@@ -534,6 +544,7 @@ private func axWindowNotify(_ observer: AXObserver, _ element: AXUIElement,
     var wid: CGWindowID = 0
     let gotWid = (axUIElementGetWindow?(element, &wid) == .success) && wid != 0
     let name = notification as String
+    if ProcessInfo.processInfo.environment["RETROMAC_TITLEBAR_STATS"] != nil { controller.countAXNotification(name) }
     if name == (kAXWindowMiniaturizedNotification as String) || name == (kAXUIElementDestroyedNotification as String) {
         if gotWid { controller.dropBorder(for: wid) }   // remove the specific border, before the genie
         else if name == (kAXWindowMiniaturizedNotification as String) { controller.resync() }
