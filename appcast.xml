@@ -15,6 +15,28 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.8.5</title>
+      <pubDate>Tue, 15 Sep 2026 04:14:04 +0000</pubDate>
+      <sparkle:version>2.8.5</sparkle:version>
+      <sparkle:shortVersionString>2.8.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.8.5</h2>
+        <ul>
+          <li><b>Paint, Solitaire, Minesweeper, Internet Explorer and 3D Pinball open again.</b> The site that hosted these programs for the Windows themes went off the air; they now load from 98.js.org, the project&rsquo;s own home. Themes and desktop layouts saved with the old address are rewritten on open.</li>
+          <li><b>&ldquo;Do not turn off your computer.&rdquo;</b> Two boot failures more: Windows XP installing update 3 of 7 at shutdown, and Windows 7 configuring updates at 35% &mdash; and staying there, and half the time reverting.</li>
+          <li><b>The taskbar works without the Accessibility permission.</b> One button per running program instead of none, a small caution sign that explains and asks for the permission in one click, and no system dialog at every launch.</li>
+          <li><b>For theme makers:</b> <code>minAppVersion</code> in theme.json, and <a href="https://github.com/klotzbrocken/RetroMac/blob/main/docs/THEMES.md">docs/THEMES.md</a> describing every key. <a href="https://github.com/klotzbrocken/RetroMac/blob/main/LEGAL.md">LEGAL.md</a> says whose artwork is whose.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.8.5/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="EfKpLfFlJNmpMvteTHf5gyfl7uKpFwskTWJ/3mkdespGAFxVYuc8Ce6GJT6riHCndV1MyTY6AQ97nR15svjZDw=="
+        length="99484919"
+      />
+    </item>
+    <item>
       <title>Version 2.8.4</title>
       <pubDate>Fri, 11 Sep 2026 14:02:14 +0000</pubDate>
       <sparkle:version>2.8.4</sparkle:version>
