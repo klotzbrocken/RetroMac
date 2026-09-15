@@ -9,6 +9,12 @@ import SkyLightBridge
 /// moves it). Where there is no control the panel lets clicks through to the real bar, so the
 /// native drag and double-click keep working.
 ///
+/// Why the corners are painted rather than removed: the two global corner keys the themes use
+/// (NSConvolutionOverride1, NSSplitViewItemGlassMinimumCornerRadius) can make a window's corners
+/// rounder on macOS 27 but not squarer than the system's own ~10 pt — 0, 0.5, 1 and 4 all render
+/// the default, 30 renders 30 (tested 15 Sep 2026, TextEdit and Finder after a relaunch). So
+/// the bar covers the top corners and the border paints the bottom ones.
+///
 /// Known limits, on purpose: the strip is the theme's own height (22 / 30 pt) from the top edge,
 /// so on a window whose toolbar shares the title bar (Safari, Finder) it covers the top of that
 /// toolbar. And the real traffic lights underneath are hidden but not gone: the strip above them
