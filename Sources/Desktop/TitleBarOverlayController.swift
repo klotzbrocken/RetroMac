@@ -22,12 +22,12 @@ import SkyLightBridge
 /// lights are covered, at the exact spots the Accessibility API reports for the real ones,
 /// and the rest of the title bar is left as it is.
 ///
-/// Known limit, kept on purpose: on a window whose toolbar shares the title bar (Safari,
-/// Finder, Notes) the strip covers the top of that toolbar, and a click on the bar outside its
-/// controls reaches whatever toolbar item lies under it. Leaving those windows bare was tried
-/// and left most apps without a bar, which is worse. The real lights under a bar are hidden
-/// but not gone: the strip above them, measured per window, is a dead zone the overlay
-/// handles itself.
+/// The bar sits ABOVE the window, outside it, not over its title bar: the real title bar and
+/// its toolbar stay whole and clickable, and the bar is the window's own (drag it, double-click
+/// it, its buttons are the only controls there). What remains of the real bar is its three
+/// lights, and those are hidden under a patch that wears the bar's own colour, photographed
+/// off the screen next to them (`NativeBarSampler`). A window with no room above it is moved
+/// down by the bar's height, once, so every window can carry its bar.
 ///
 /// Diagnostics: RETROMAC_TITLEBAR_STATS=1 logs event and sync rates every 10 s. Measured
 /// 15 Sep 2026 with 10 windows, bars and borders on: 2.1 syncs/s (the timer), no reorder
@@ -49,6 +49,10 @@ final class TitleBarOverlayController {
         let view: TitleBarOverlayView
         var bounds: CGRect          // target bounds, top-left global
         var level: Int32
+        /// The panel over the real lights (bar styles only): a photograph of the bar beside them.
+        var patch: NSPanel?
+        var patchView: LightsPatchView?
+        var patchSampledFront: Bool?   // the front state the sample was taken in
         init(panel: NSPanel, view: TitleBarOverlayView, bounds: CGRect, level: Int32) {
             self.panel = panel; self.view = view; self.bounds = bounds; self.level = level
         }
@@ -59,6 +63,9 @@ final class TitleBarOverlayController {
     /// Whether the real windows are being squared right now (bar styles only), and since when:
     /// an app launched after this has square windows, one launched before still has round ones.
     var squaresCorners: Bool { running && style?.isBar == true }
+    /// How much the bar adds above each window while a bar style runs (0 otherwise), for the
+    /// border to frame and the zoom to allow for.
+    var barAboveHeight: CGFloat { squaresCorners ? Self.stripHeight(style!) : 0 }
     private(set) var cornersSquaredAt: Date?
     private var style: Style?
     private var excluded: Set<String> = []
@@ -167,7 +174,7 @@ final class TitleBarOverlayController {
     }
 
     private func stopOverlays() {
-        for o in overlays.values { o.panel.orderOut(nil) }
+        for o in overlays.values { o.panel.orderOut(nil); o.patch?.orderOut(nil) }
         overlays.removeAll()
         axWindows.removeAll()
         lightOffsets.removeAll()
@@ -243,11 +250,7 @@ final class TitleBarOverlayController {
             suitable.insert(wid)
             apply(info, level: outLevel[i], style: style, isFront: wid == frontWID, screens: screens)
         }
-        for (wid, o) in overlays where !suitable.contains(wid) {
-            o.panel.orderOut(nil)
-            overlays.removeValue(forKey: wid)
-            axWindows.removeValue(forKey: wid)
-        }
+        for wid in overlays.keys where !suitable.contains(wid) { drop(for: wid) }
     }
 
     /// The screen a window mostly sits on, in Quartz (top-left) coordinates.
@@ -277,17 +280,9 @@ final class TitleBarOverlayController {
         var deadZoneWidth: CGFloat = 0
         let drawStyle = style
         if style.isBar {
-            // The bar goes on every window, toolbar-in-the-title-bar ones included (Finder,
-            // Notes, Safari): the alternative, no bar there, left most apps bare. What the
-            // lights measurement buys the bar is the end of the dead zone; if the app does
-            // not answer in time, the default from the plain title bar serves.
-            // Where the lights sit lower (toolbar in the title bar), the strip grows to cover
-            // them; a half light under the bar gives the whole thing away.
-            let offsets = lightOffsets(for: info)
-            let lightsBottom = offsets?.values.map { $0.maxY }.max() ?? 0
-            frame = Self.barFrame(for: info.bounds, style: style, coveringDownTo: lightsBottom + 2)
-            let lastLight = offsets?.values.map { $0.maxX }.max() ?? 70
-            deadZoneWidth = lastLight + 8 + WindowBorderController.shared.activeBorderWidth
+            frame = Self.barFrame(for: info.bounds, style: style)
+            deadZoneWidth = 0   // nothing native lies under a bar that sits above the window
+            _ = lightOffsets(for: info)   // measured for the patch, not needed for the bar itself
         } else {
             // The panel is just big enough for the three lights, wherever this window keeps
             // them; without the measurement there is nothing to draw.
@@ -301,6 +296,7 @@ final class TitleBarOverlayController {
         if let o = overlays[info.id] {
             o.bounds = info.bounds
             if o.panel.frame != frame { o.panel.setFrame(frame, display: false) }
+            if style.isBar { makeRoom(for: o, info: info, screens: screens); updatePatch(o, info: info, isFront: isFront) }
             // The z-order is re-asserted on the WindowServer's reorder and front-change events
             // (`handleServerEvent`); here only when the level changed, and once every few
             // seconds as a safety net. Ordering every overlay every pass was most of the 7 ms a
@@ -337,6 +333,78 @@ final class TitleBarOverlayController {
         overlays[info.id] = o
         panel.orderFrontRegardless()
         order(o, above: info.id)
+        if style.isBar { makeRoom(for: o, info: info, screens: screens); updatePatch(o, info: info, isFront: isFront) }
+    }
+
+    // MARK: - Room above, and the patch over the lights
+
+    /// A window whose top edge leaves no room for the bar is moved down until there is: the
+    /// bar is part of the window now, and no title bar ever went above the screen. Not while
+    /// the user is dragging it with the bar, to avoid a tug of war.
+    private func makeRoom(for o: Overlay, info: WindowInfo, screens: [NSScreen]) {
+        guard dragOrigin == nil, let scr = Self.screen(for: info.bounds, screens: screens) else { return }
+        let top = Self.primaryTop(screens)
+        let usableTop = top - scr.visibleFrame.maxY   // Quartz y of the first usable row (below the menu bar)
+        let need = usableTop + Self.stripHeight(style ?? .luna) - info.bounds.minY
+        guard need > 0, let w = axWindow(info.id, pid: info.pid) else { return }
+        var p = CGPoint(x: info.bounds.minX, y: info.bounds.minY + need)
+        if let pv = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, pv) }
+    }
+
+    /// Create or refresh the patch that hides the real lights. The sample is retaken when the
+    /// window's front state changes, because the real bar changes colour with it.
+    private func updatePatch(_ o: Overlay, info: WindowInfo, isFront: Bool) {
+        guard let offsets = lightOffsets[info.id], let close = offsets[.close] else { return }
+        let last = offsets.values.map { $0.maxX }.max() ?? close.maxX
+        let top = offsets.values.map { $0.minY }.min() ?? close.minY
+        let bottom = offsets.values.map { $0.maxY }.max() ?? close.maxY
+        // The patch: from just left of the close light to just right of the last one.
+        let rel = CGRect(x: close.minX - 3, y: top - 2, width: last - close.minX + 6, height: bottom - top + 4)
+        let quartz = CGRect(x: info.bounds.minX + rel.minX, y: info.bounds.minY + rel.minY, width: rel.width, height: rel.height)
+        let frame = Self.appKitFrame(topLeft: quartz, height: quartz.height)
+        if o.patch == nil {
+            let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.hasShadow = false
+            // The patch takes the mouse: a hover would otherwise reach the hidden green light,
+            // whose "Move & Resize" popover would pop up out of nowhere. A click there behaves
+            // like a click on the bar: it brings the window forward, and a drag moves it.
+            panel.ignoresMouseEvents = false
+            panel.hidesOnDeactivate = false
+            panel.isReleasedWhenClosed = false
+            panel.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary]
+            panel.animationBehavior = .none
+            let v = LightsPatchView(frame: NSRect(origin: .zero, size: frame.size))
+            v.autoresizingMask = [.width, .height]
+            v.onActivate = o.view.onActivate
+            v.onDrag = o.view.onDrag
+            v.onDragEnd = o.view.onDragEnd
+            panel.contentView = v
+            o.patch = panel
+            o.patchView = v
+            panel.orderFrontRegardless()
+        } else if o.patch!.frame != frame {
+            o.patch!.setFrame(frame, display: false)
+        }
+        if o.patchSampledFront != isFront {
+            o.patchSampledFront = isFront
+            // A strip of the real bar in the gap between the window's edge and the first light:
+            // the one place on any title bar that is always plain. Not too near the edge, where
+            // an old window's corner still curves.
+            let sample = CGRect(x: info.bounds.minX + 3, y: quartz.minY, width: max(3, close.minX - 6), height: quartz.height)
+            let wid = info.id
+            NativeBarSampler.sample(sample) { [weak self] image in
+                guard let self, let o = self.overlays[wid], let image else { return }
+                o.patchView?.image = image
+            }
+        }
+        o.patch.map { orderPatch($0, above: info.id) }
+    }
+
+    private func orderPatch(_ patch: NSPanel, above target: CGWindowID) {
+        patch.level = overlays[target]?.panel.level ?? .normal
+        patch.order(.above, relativeTo: Int(target))
     }
 
     /// Directly above the target, at the target's level, so a buried window's bar is buried with
@@ -344,7 +412,10 @@ final class TitleBarOverlayController {
     /// border windows; the transaction itself leaves an AppKit window invisible.
     private func order(_ o: Overlay, above target: CGWindowID) {
         o.panel.level = NSWindow.Level(rawValue: Int(o.level))
-        o.panel.order(.above, relativeTo: Int(target))
+        // Above the border window when there is one, so the bar is never under the frame.
+        let anchor = WindowBorderController.shared.borderWindowID(for: target) ?? target
+        o.panel.order(.above, relativeTo: Int(anchor))
+        if let patch = o.patch { orderPatch(patch, above: target) }
     }
 
     /// Height of the strip: the theme's title bar, but never less than the real one (28 pt), or
@@ -379,12 +450,11 @@ final class TitleBarOverlayController {
         return (frame, lights)
     }
 
-    /// The bar's frame: the strip along the window's top edge, widened over the window border
-    /// when that is on, so bar and frame are one piece out to the edge.
-    static func barFrame(for bounds: CGRect, style: Style, coveringDownTo lightsBottom: CGFloat = 0) -> NSRect {
-        let bw = WindowBorderController.shared.activeBorderWidth
-        let grown = CGRect(x: bounds.minX - bw, y: bounds.minY - bw, width: bounds.width + 2 * bw, height: bounds.height + bw)
-        return appKitFrame(topLeft: grown, height: max(stripHeight(style), lightsBottom) + bw)
+    /// The bar's frame: a strip of the theme's height directly above the window, as wide as
+    /// the window. The border, when on, frames window and bar together.
+    static func barFrame(for bounds: CGRect, style: Style) -> NSRect {
+        let h = stripHeight(style)
+        return appKitFrame(topLeft: CGRect(x: bounds.minX, y: bounds.minY - h, width: bounds.width, height: h), height: h)
     }
 
     // MARK: - Events from the WindowServer (forwarded by WindowBorderController)
@@ -415,11 +485,15 @@ final class TitleBarOverlayController {
         case PrivateWindowAPI.EVENT_WINDOW_MOVE, PrivateWindowAPI.EVENT_WINDOW_RESIZE:
             guard let o = overlays[wid], let style else { return }
             guard let g = PrivateWindowAPI.bounds(of: wid) else { drop(for: wid); return }
+            let previous = o.bounds
             o.bounds = g
             let f: NSRect
             if o.view.isBarPanel {
-                let lightsBottom = lightOffsets[wid]?.values.map { $0.maxY }.max() ?? 0
-                f = Self.barFrame(for: g, style: style, coveringDownTo: lightsBottom + 2)
+                f = Self.barFrame(for: g, style: style)
+                if let patch = o.patch {
+                    let d = CGPoint(x: g.minX - previous.minX, y: g.minY - previous.minY)
+                    if d != .zero { patch.setFrameOrigin(NSPoint(x: patch.frame.minX + d.x, y: patch.frame.minY - d.y)) }
+                }
             } else if let offsets = lightOffsets[wid] {
                 f = Self.lightsFrame(for: g, offsets: offsets).0   // the lights do not move inside the window
             } else { return }
@@ -449,6 +523,7 @@ final class TitleBarOverlayController {
         zoomedTo.removeValue(forKey: wid)
         guard let o = overlays[wid] else { return }
         o.panel.orderOut(nil)
+        o.patch?.orderOut(nil)
         overlays.removeValue(forKey: wid)
         axWindows.removeValue(forKey: wid)
     }
@@ -635,7 +710,10 @@ final class TitleBarOverlayController {
                 if bottom < visible.maxY { visible = NSRect(x: visible.minX, y: visible.minY, width: visible.width, height: bottom - visible.minY) }
             }
         }
-        if visible.height >= screen.frame.height - 1 { visible = visible.insetBy(dx: 0, dy: 1) }
+        // The bar above the window is part of it now: a zoomed window starts a bar lower.
+        let bar = barAboveHeight
+        visible = NSRect(x: visible.minX, y: visible.minY, width: visible.width, height: max(100, visible.height - bar))
+        if visible.height + bar >= screen.frame.height - 1 { visible = visible.insetBy(dx: 0, dy: 1) }
         let full = quartz(visible)
         let target: CGRect
         let restoring: Bool
@@ -765,9 +843,9 @@ final class TitleBarOverlayView: NSView {
     override var isFlipped: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    /// Where the real traffic lights sit under a full bar, as measured for this window. Clicks
-    /// there are ours, never theirs. A lights panel has no dead zone: it is the lights.
-    private var deadZone: NSRect { style.isBar ? NSRect(x: 0, y: 0, width: deadZoneWidth, height: bounds.height) : .zero }
+    /// A bar sits above the window with nothing native under it, so all of it is ours: drag
+    /// anywhere, double-click anywhere, and the buttons. A lights panel is only its lights.
+    private var deadZone: NSRect { style.isBar ? bounds : .zero }
 
     func configure(style: TitleBarOverlayController.Style, title: String, icon: NSImage?, isFront: Bool,
                    lights: [ChromeButtonKind: NSRect], deadZoneWidth: CGFloat, zoomed: Bool) {
@@ -1013,4 +1091,28 @@ enum AquaGem {
         body.withAlphaComponent(0.45).setFill()
         glow.fill()
     }
+}
+
+/// The patch over the real traffic lights: the real title bar's own colour, photographed just
+/// beside the lights and stretched across them. Until the photograph arrives it is clear.
+final class LightsPatchView: NSView {
+    var image: NSImage? { didSet { needsDisplay = true } }
+    var onActivate: (() -> Void)?
+    var onDrag: ((NSPoint) -> Void)?
+    var onDragEnd: (() -> Void)?
+    private var dragStart: NSPoint?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func draw(_ dirtyRect: NSRect) {
+        guard let image else { return }
+        image.draw(in: bounds, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true,
+                   hints: [.interpolation: NSImageInterpolation.high])
+    }
+    override func mouseDown(with event: NSEvent) { onActivate?(); dragStart = NSEvent.mouseLocation }
+    override func mouseDragged(with event: NSEvent) {
+        guard let start = dragStart else { return }
+        let now = NSEvent.mouseLocation
+        onDrag?(NSPoint(x: now.x - start.x, y: now.y - start.y))
+    }
+    override func mouseUp(with event: NSEvent) { if dragStart != nil { dragStart = nil; onDragEnd?() } }
 }

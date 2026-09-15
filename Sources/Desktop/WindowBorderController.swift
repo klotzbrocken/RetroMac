@@ -228,10 +228,17 @@ final class WindowBorderController {
         }
     }
 
-    /// Border frame (top-left global) = the window grown by the edge width on all sides.
+    /// Border frame (top-left global) = the window grown by the edge width on all sides, and
+    /// by the title bar the overlay puts above the window, so the frame goes round both.
     private func outerFrame(_ windowBounds: CGRect) -> CGRect {
-        windowBounds.insetBy(dx: -currentStyle.width, dy: -currentStyle.width)
+        var b = windowBounds
+        let bar = TitleBarOverlayController.shared.barAboveHeight
+        b.origin.y -= bar; b.size.height += bar
+        return b.insetBy(dx: -currentStyle.width, dy: -currentStyle.width)
     }
+
+    /// The border window above `target`, for the title bar to order itself above it.
+    func borderWindowID(for target: CGWindowID) -> CGWindowID? { borders[target]?.wid }
 
     /// Create or update the border for one target window.
     /// Whether this window's corners are still rounded: its app was running before the corner
@@ -303,7 +310,10 @@ final class WindowBorderController {
     }
 
     private func drawInto(_ b: SkyBorder) {
-        Self.drawBorder(currentStyle, into: b.ctx, size: b.size, fillCorners: b.fillCorners)
+        // With a bar above the window, the window's own top corners sit that far below the
+        // frame's top; the slivers to paint are there, not at the frame's corners.
+        Self.drawBorder(currentStyle, into: b.ctx, size: b.size, fillCorners: b.fillCorners,
+                        windowTopInset: TitleBarOverlayController.shared.barAboveHeight)
     }
 
     // MARK: - Window enumeration (public CGWindowList; top-left global bounds)
@@ -425,7 +435,7 @@ final class WindowBorderController {
 
     // MARK: - Drawing (into a CGContext, bottom-left origin)
 
-    static func drawBorder(_ style: WindowBorderStyle, into ctx: CGContext, size: CGSize, fillCorners: Bool = true) {
+    static func drawBorder(_ style: WindowBorderStyle, into ctx: CGContext, size: CGSize, fillCorners: Bool = true, windowTopInset: CGFloat = 0) {
         let bounds = CGRect(origin: .zero, size: size)
         ctx.clear(bounds)                       // transparent background (window has alpha)
         ctx.setShouldAntialias(true)
@@ -436,29 +446,33 @@ final class WindowBorderController {
             beveledRing(ctx, bounds, outerInset: o, innerInset: width, outerRadius: radius + width - o, innerRadius: radius, light: hiInner, dark: loInner)
         case let .solid(color, width, topR, _):
             strokeRing(ctx, bounds, width: width, radius: topR, color: color, glow: false)
-            if topR == 0, fillCorners { fillCornerNotches(ctx, bounds, inset: width, color: color) }
+            if topR == 0, fillCorners { fillCornerNotches(ctx, bounds, inset: width, color: color, topInset: windowTopInset) }
         case let .glow(color, width, radius):
             strokeRing(ctx, bounds, width: width, radius: radius, color: color, glow: true)
         case .none:
             break
         }
         if case let .bevel(_, hiInner, _, _, width, radius) = style, radius == 0, fillCorners {
-            fillCornerNotches(ctx, bounds, inset: width, color: hiInner)
+            fillCornerNotches(ctx, bounds, inset: width, color: hiInner, topInset: windowTopInset)
         }
     }
 
     /// A square frame around a window macOS still rounds leaves a sliver of desktop in each
     /// corner. Paint the sliver in the frame's colour, so the window reads as square.
-    private static func fillCornerNotches(_ ctx: CGContext, _ bounds: CGRect, inset: CGFloat, color: NSColor) {
+    private static func fillCornerNotches(_ ctx: CGContext, _ bounds: CGRect, inset: CGFloat, color: NSColor, topInset: CGFloat = 0) {
         let r: CGFloat = 12   // a little over the system radius, to be safe on every macOS
         let inner = bounds.insetBy(dx: inset, dy: inset)
-        guard inner.width > 2 * r, inner.height > 2 * r else { return }
+        guard inner.width > 2 * r, inner.height > 2 * r + topInset else { return }
         ctx.saveGState()
         ctx.setFillColor(color.cgColor)
-        for (cx, cy, x, y) in [(inner.minX + r, inner.minY + r, inner.minX, inner.minY),
+        // CG origin is bottom-left: the first two are the bottom corners, the last two the top
+        // of the window, which lies `topInset` below the frame's top when a bar sits above it.
+        let top = inner.maxY - topInset
+        let corners: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [(inner.minX + r, inner.minY + r, inner.minX, inner.minY),
                                (inner.maxX - r, inner.minY + r, inner.maxX - r, inner.minY),
-                               (inner.minX + r, inner.maxY - r, inner.minX, inner.maxY - r),
-                               (inner.maxX - r, inner.maxY - r, inner.maxX - r, inner.maxY - r)] {
+                               (inner.minX + r, top - r, inner.minX, top - r),
+                               (inner.maxX - r, top - r, inner.maxX - r, top - r)]
+        for (cx, cy, x, y) in corners {
             ctx.saveGState()
             ctx.addRect(CGRect(x: x, y: y, width: r, height: r))
             // A touch smaller than the window's arc, so the hairline macOS draws along the

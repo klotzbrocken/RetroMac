@@ -22,6 +22,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   window's bar keeps up. Known limits: a toolbar that shares the title bar (Safari, Finder)
   loses its top edge under the strip, and a window the size of the screen gets no bar.
 
+- **The title bar sits above the window now, not on it.** For Windows XP and Mac OS 9 the
+  Luna or Platinum bar is added on top of the real window, outside it: the real title bar and
+  its toolbar stay whole and clickable (Finder, Notes, Safari, Mail included), the bar is the
+  window's own to drag and double-click, and the frame goes round both. What is left of the
+  real bar is its three lights, and they disappear under a patch that wears the bar's own
+  colour, photographed off the screen beside them, so light, dark and inactive all match. A
+  window with no room above it is moved down by the bar's height; a zoomed window leaves the
+  bar its room. Snow Leopard and Mac OS X keep the lights-only mode, which is all they need.
+
 - **Title bars, hardened after review.** Every Accessibility request this process makes now
   gives up after half a second instead of six, so a hung app no longer hangs RetroMac (checked
   with a frozen TextEdit: RetroMac answered in 50 ms). Where a window keeps its lights lower
