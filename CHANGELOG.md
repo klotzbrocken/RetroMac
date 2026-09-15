@@ -20,6 +20,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   window's bar keeps up. Known limits: a toolbar that shares the title bar (Safari, Finder)
   loses its top edge under the strip, and a window the size of the screen gets no bar.
 
+- **The Aqua dock's magnification stopped reading from disk.** The name label above the
+  magnified icon looked the app's name up on every mouse move — the app bundle's localized
+  Info.plist for a pinned app, two LaunchServices round trips for a running one — which was a
+  quarter of the main thread's time while the pointer crossed the dock. Names are kept now.
+  The title-bar overlay no longer re-orders its panels every three seconds either, only when
+  the z-order actually changed.
+
 - **The boot screen can always be clicked away, and a stuck switch cannot lock the Mac.**
   The click used to run the waiting theme switch first and take the cover down after, so a
   click sat through the whole switch — and a switch that blocked (an Apple event to a Finder

@@ -423,6 +423,7 @@ final class DockView: NSView {
     }
 
     func rebuildItems() {
+        hoverNames.removeAll()
         itemViews.forEach { $0.removeFromSuperview() }
         itemViews.removeAll()
         taskButtonViews.forEach { $0.removeFromSuperview() }
@@ -3724,16 +3725,23 @@ final class DockView: NSView {
 
     private var hoverLabel: NSTextField?
 
+    /// Names for the hover label, kept per bundle id: the lookup for an unpinned running app is
+    /// two LaunchServices round trips, and this runs on every mouse move while magnifying.
+    /// Cleared whenever the tiles are rebuilt, which is when the set of apps changes.
+    private var hoverNames: [String: String] = [:]
+
     private func nameFor(_ bundleID: String) -> String {
-        if bundleID == "__trash__" { return "Trash" }
-        if bundleID == "__urllauncher__" { return "Link" }
-        if bundleID == "__dashboard__" { return "Dashboard" }
-        if bundleID == "__showdesktop__" { return "Show Desktop" }
-        if let app = AppManager.shared.apps.first(where: { $0.bundleID == bundleID }) { return app.displayName }
-        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first {
-            return app.localizedName ?? bundleID
-        }
-        return bundleID
+        if let cached = hoverNames[bundleID] { return cached }
+        let name: String
+        if bundleID == "__trash__" { name = "Trash" }
+        else if bundleID == "__urllauncher__" { name = "Link" }
+        else if bundleID == "__dashboard__" { name = "Dashboard" }
+        else if bundleID == "__showdesktop__" { name = "Show Desktop" }
+        else if let app = AppManager.shared.apps.first(where: { $0.bundleID == bundleID }) { name = app.displayName }
+        else if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first { name = app.localizedName ?? bundleID }
+        else { name = bundleID }
+        hoverNames[bundleID] = name
+        return name
     }
 
     private func showHoverLabel(text: String, centerX: CGFloat, aboveY: CGFloat) {

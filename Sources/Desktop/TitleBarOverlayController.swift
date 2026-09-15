@@ -198,7 +198,7 @@ final class TitleBarOverlayController {
     // MARK: - Sync
 
     private var resampleTimer: Timer?
-    private var lastFullReorder = Date.distantPast
+    private var lastOrderSignature: [CGWindowID] = []
     private var reorderDue = false
     private var syncInFlight = false
     private var syncPending = false
@@ -229,8 +229,12 @@ final class TitleBarOverlayController {
         guard running, let style else { return }
         let t0 = Date()
         defer { count("sync", seconds: Date().timeIntervalSince(t0)) }
-        reorderDue = Date().timeIntervalSince(lastFullReorder) > 3
-        if reorderDue { lastFullReorder = Date() }
+        // Re-order only when the z-order actually changed since the last pass (the list comes
+        // in z-order). A periodic re-order of every overlay made AppKit revisit our whole
+        // window list every three seconds, dock included.
+        let orderSignature = windows.map { $0.id }
+        reorderDue = orderSignature != lastOrderSignature
+        if reorderDue { lastOrderSignature = orderSignature; count("reorder") }
         var infoByID = [CGWindowID: WindowInfo](minimumCapacity: windows.count)
         for w in windows { infoByID[w.id] = w }
 
