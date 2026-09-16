@@ -218,7 +218,7 @@ final class TitleBarOverlayController {
     }
 
     private func stopOverlays() {
-        for o in overlays.values { o.panel.orderOut(nil); o.patch?.orderOut(nil) }
+        for o in overlays.values { o.panel.alphaValue = 0; o.patch?.alphaValue = 0; o.panel.orderOut(nil); o.patch?.orderOut(nil) }
         overlays.removeAll()
         axWindows.removeAll()
         lightOffsets.removeAll()
@@ -351,6 +351,10 @@ final class TitleBarOverlayController {
     }
 
     private func apply(_ info: WindowInfo, level: Int32, style: Style, isFront: Bool, screens: [NSScreen]) {
+        if let until = leaving[info.id] {
+            if Date() < until { return }
+            leaving.removeValue(forKey: info.id)
+        }
         if Self.isScreenSized(info.bounds, screens: screens) { drop(for: info.id); return }
         let frame: NSRect
         var lights: [ChromeButtonKind: NSRect] = [:]
@@ -708,9 +712,23 @@ final class TitleBarOverlayController {
         zoomedFrom.removeValue(forKey: wid)
         zoomedTo.removeValue(forKey: wid)
         guard let o = overlays[wid] else { return }
+        // Alpha first: an orderOut on a panel ordered relative to another app's window can take
+        // the WindowServer a few hundred milliseconds to honour, and the lights sat over the
+        // minimise genie for exactly that long. Alpha is immediate.
+        o.panel.alphaValue = 0
+        o.patch?.alphaValue = 0
         o.panel.orderOut(nil)
         o.patch?.orderOut(nil)
         overlays.removeValue(forKey: wid)
+    }
+
+    /// A window on its way out by our hand (close, minimise): the overlay goes now, and the
+    /// next second's syncs leave the window alone — its genie is still on screen, and a fresh
+    /// measurement would put the lights straight back over the shrinking picture.
+    private var leaving: [CGWindowID: Date] = [:]
+    private func leave(_ wid: CGWindowID) {
+        leaving[wid] = Date().addingTimeInterval(1)
+        forget(wid)
     }
 
     /// The window is gone (closed, minimised, off the list): overlay and every cache with it.
@@ -928,6 +946,7 @@ final class TitleBarOverlayController {
     }
 
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
+        count("action.\(kind)")
         guard let w = axWindow(wid, pid: pid) else { return }
         let attr: String
         switch kind {
@@ -940,9 +959,12 @@ final class TitleBarOverlayController {
         if AXUIElementCopyAttributeValue(w, attr as CFString, &ref) == .success, let ref {
             // The bar goes before the window does; a bar over a fading window is the one thing
             // that gives the trick away. Comes back on the next sync if the app asked to save.
-            if kind == .close { forget(wid) }
+            // The same for minimise: the WindowServer's minimise event arrives when the genie
+            // has finished, and until then the lights would sit over a shrinking window.
+            if kind == .close || kind == .minimize || kind == .collapse { leave(wid) }
             AXUIElementPerformAction(ref as! AXUIElement, kAXPressAction as CFString)
         } else if attr == kAXMinimizeButtonAttribute {
+            leave(wid)
             AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
         }
     }

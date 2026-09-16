@@ -45,6 +45,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   only appears if the corners are still wanted by then (a launch turns the bars on, off and on
   again while it recovers, and used to fire it prematurely).
 
+- **The lights leave with the window when its own minimise button is pressed.** The
+  WindowServer's minimise event arrives once the genie has finished, and the panel's
+  order-out took a few hundred milliseconds to show, so the lights hung over the shrinking
+  picture. A close or minimise through the overlay now hides its panel at once (alpha, then
+  order-out) and leaves that window alone for a second so no fresh measurement puts the
+  lights back mid-genie. Cmd-M and the native title bar still rely on the late event.
+
 - **Title bars, third audit, and the lights leave the window corners alone.** The lights
   styles no longer write the global corner default (they asked for 5 pt, Snow Leopard's
   rounding): it is a value every app reads at launch and it puts a mask on the app's windows,
