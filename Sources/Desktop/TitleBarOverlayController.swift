@@ -220,11 +220,11 @@ final class TitleBarOverlayController {
         syncInFlight = true
         let generation = syncGeneration
         Self.listQueue.async {
-            let windows = Self.onScreenWindows()
+            let (windows, order) = Self.onScreenWindows()
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.syncInFlight = false
-                if generation == self.syncGeneration { self.finishSync(windows) }
+                if generation == self.syncGeneration { self.finishSync(windows, order: order) }
                 if self.syncPending { self.syncPending = false; self.sync() }
             }
         }
@@ -233,16 +233,18 @@ final class TitleBarOverlayController {
     /// Bumped by stop(), so a list fetched for a run that has ended is thrown away.
     private var syncGeneration = 0
 
-    private func finishSync(_ windows: [WindowInfo]) {
+    private func finishSync(_ windows: [WindowInfo], order: [CGWindowID]) {
         guard running, let style else { return }
         let t0 = Date()
         defer { count("sync", seconds: Date().timeIntervalSince(t0)) }
-        // Re-order only when the z-order actually changed since the last pass (the list comes
-        // in z-order). A periodic re-order of every overlay made AppKit revisit our whole
-        // window list every three seconds, dock included.
-        let orderSignature = windows.map { $0.id }
-        reorderDue = orderSignature != lastOrderSignature
-        if reorderDue { lastOrderSignature = orderSignature; count("reorder") }
+        // Re-order only when the z-order actually changed since the last pass. A periodic
+        // re-order of every overlay made AppKit revisit our whole window list every three
+        // seconds, dock included. The signature is the whole on-screen order, our own panels
+        // included: Chrome opening a tab raises its window over the lights without a reorder
+        // event the WindowServer would tell us about, and a signature of the other apps' windows
+        // alone read as "nothing changed" while the lights sat buried under the tab strip.
+        reorderDue = order != lastOrderSignature
+        if reorderDue { lastOrderSignature = order; count("reorder") }
         var infoByID = [CGWindowID: WindowInfo](minimumCapacity: windows.count)
         for w in windows { infoByID[w.id] = w }
 
@@ -871,15 +873,18 @@ final class TitleBarOverlayController {
         return b
     }
 
-    private static func onScreenWindows() -> [WindowInfo] {
+    /// The other apps' windows worth a bar, and the z-order of everything on screen (ours too).
+    private static func onScreenWindows() -> ([WindowInfo], [CGWindowID]) {
         let opts: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
-        guard let raw = CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String: Any]] else { return [] }
+        guard let raw = CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String: Any]] else { return ([], []) }
         let myPID = getpid()
         var out: [WindowInfo] = []
+        var order: [CGWindowID] = []
         for w in raw {
+            guard let num = w[kCGWindowNumber as String] as? CGWindowID else { continue }
+            if (w[kCGWindowLayer as String] as? Int) == 0 { order.append(num) }
             guard let pid = w[kCGWindowOwnerPID as String] as? pid_t, pid != myPID else { continue }
-            guard let num = w[kCGWindowNumber as String] as? CGWindowID,
-                  let bDict = w[kCGWindowBounds as String] as? [String: Any] else { continue }
+            guard let bDict = w[kCGWindowBounds as String] as? [String: Any] else { continue }
             var b = CGRect.zero
             guard CGRectMakeWithDictionaryRepresentation(bDict as CFDictionary, &b),
                   b.width > 40, b.height > 60 else { continue }
@@ -889,7 +894,7 @@ final class TitleBarOverlayController {
                                   ownerName: (w[kCGWindowOwnerName as String] as? String) ?? "",
                                   bundleID: bundleID(for: pid)))
         }
-        return out
+        return (out, order)
     }
 }
 

@@ -38,15 +38,24 @@ final class RainbowAppleController {
         let s = AppSettings.shared
         let wantShow = s.menuBarAppleStyle != 0 && !s.hideMenuBar
         guard wantShow else { hide(); return }
-        // A hidden/auto-hiding system menu bar means there is no Apple glyph to cover —
-        // the overlay would float over a bare desktop. Checked off-main (shells out).
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let barHidden = SystemUIHelper.isMenuBarAutoHidden()
-            DispatchQueue.main.async {
-                if barHidden { self?.hide() } else { self?.rebuild() }
+        // A theme switch asks several times in a row (the style's didSet, the theme-change
+        // handlers, the dock's own); one answer serves them all. The check below shells out
+        // to System Events, and each answer used to rebuild the windows: the logo blinked
+        // once per caller.
+        updateTimer?.invalidate()
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
+            // A hidden/auto-hiding system menu bar means there is no Apple glyph to cover —
+            // the overlay would float over a bare desktop. Checked off-main (shells out).
+            DispatchQueue.global(qos: .userInitiated).async {
+                let barHidden = SystemUIHelper.isMenuBarAutoHidden()
+                DispatchQueue.main.async {
+                    if barHidden { self?.hide() } else { self?.rebuild() }
+                }
             }
         }
     }
+
+    private var updateTimer: Timer?
 
     func hide() {
         windows.forEach { $0.orderOut(nil) }
@@ -82,11 +91,22 @@ final class RainbowAppleController {
     }
 
     private func rebuild() {
+        // Windows already up for the same screens: move them, do not blink them. Tearing them
+        // down and making new ones on every screen-parameter change (a full-screen window
+        // covering the menu bar is one, the boot screen and a crash are others) took the logo
+        // away for a frame each time.
+        let screens = menuScreens()
+        if !windows.isEmpty, windows.count == screens.count {
+            let img = appleImage()   // the style may have changed (rainbow → aqua)
+            for win in windows { (win.contentView?.subviews.first as? RainbowAppleView)?.image = img }
+            reposition()
+            return
+        }
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
 
         let axFrame = appleMenuFrameCocoa()
-        for screen in menuScreens() {
+        for screen in screens {
             windows.append(makeWindow(itemRect: itemRect(for: screen, axFrame: axFrame)))
         }
 
@@ -117,7 +137,8 @@ final class RainbowAppleController {
             let screen = win.screen ?? NSScreen.main ?? NSScreen.screens.first
             guard let screen else { continue }
             let rect = itemRect(for: screen, axFrame: axFrame)
-            if win.frame != rect { win.setFrame(rect, display: true) }
+            guard win.frame != rect else { continue }
+            win.setFrame(rect, display: false)
             layoutImage(in: win, itemRect: rect)
         }
     }

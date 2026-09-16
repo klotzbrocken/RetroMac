@@ -45,6 +45,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   only appears if the corners are still wanted by then (a launch turns the bars on, off and on
   again while it recovers, and used to fire it prematurely).
 
+- **Chrome's tabs no longer bury the lights.** Opening a tab raises Chrome's window over the
+  Aqua lights without the WindowServer reporting a reorder, and the overlay's own check for a
+  changed z-order looked only at other apps' windows, so nothing put them back until the
+  window moved. The check now covers RetroMac's own panels too; the lights return within a second.
+
+- **The menu-bar Apple logo stopped blinking.** Every screen-parameter change (a full-screen
+  window covering the menu bar, a boot screen, a crash) and every theme switch tore the logo's
+  windows down and made new ones, several times per switch; it now keeps its windows and only
+  moves them, and a burst of update requests is answered once.
+
 - **A crash on a theme that keeps the menu bar no longer ends before it begins.** Covering the
   visible menu bar with the crash's full-screen windows made AppKit report changed screen
   parameters a moment later, which the crash took for a display being unplugged and aborted
