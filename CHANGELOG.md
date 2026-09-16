@@ -45,6 +45,22 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   only appears if the corners are still wanted by then (a launch turns the bars on, off and on
   again while it recovers, and used to fire it prematurely).
 
+- **Title bars, third audit, and the lights leave the window corners alone.** The lights
+  styles no longer write the global corner default (they asked for 5 pt, Snow Leopard's
+  rounding): it is a value every app reads at launch and it puts a mask on the app's windows,
+  under which Webex showed every participant grey while its own camera preview ran. The bars
+  keep it (square corners are their point) and the Settings row says what that can do to a
+  video app started meanwhile. Accessibility reads (the lights' positions, titles) run on a
+  queue of their own now, so an app that does not answer costs its timeout there and not in
+  the dock's magnification; the user's own actions stay where they were. A title fetched
+  through Accessibility is asked for again when its window comes forward (the earlier attempt
+  listened to an event that names no window). A theme change within one style (95 → 98 → Me,
+  a Plus! scheme) redraws the bars at once. Two windows resized within half a second are both
+  re-measured. A late photograph cannot land on a bar rebuilt by a theme switch. A live resize
+  updates that one border instead of the whole list. Aero's glass follows the bar's rounded
+  corners and the frame's sides stop under them. A window moved or shortened to make room for
+  its bar goes back when the bars go off, unless the user has moved it since.
+
 - **Title bars, second audit.** A dictionary of bundle identifiers was written from the
   window-list thread and pruned on the main thread at once (a crash waiting for an app to quit
   mid-sync); it is main-thread only now. A window without buttons was measured again every

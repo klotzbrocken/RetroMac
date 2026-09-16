@@ -542,7 +542,7 @@ struct DockSettingsTab: View {
                     let bars = TitleBarOverlayController.style(for: chrome)?.isBar == true
                     RMRow(label: bars ? "Title bars (experimental)" : "Traffic lights (experimental)",
                           hint: bars
-                            ? "The era's title bar above every window, with its own buttons; the real title bar keeps its toolbar, only the lights are hidden. Windows are drawn square."
+                            ? "The era's title bar above every window, with its own buttons; the real title bar keeps its toolbar, only the lights are hidden. Windows are drawn square, through a setting every app reads when it launches: an app that shows video (Webex, Teams) started while this is on may show grey tiles until it is restarted with it off — excluding it here does not help with that."
                             : "The era's glossy lights over the real ones, and nothing else changes. Close, minimise and zoom work.") {
                         // (Platinum's WindowShade box minimises: a real shade would need the app to allow a 28 pt window.)
                         toggle($settings.themeTitleBars)

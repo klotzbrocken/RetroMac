@@ -73,3 +73,41 @@ final class TitleBarCornerTests: XCTestCase {
         XCTAssertTrue(p.contains(NSPoint(x: 299.5, y: 15)))       // right end present
     }
 }
+
+final class TitleBarCornerKeyTests: XCTestCase {
+    /// The global corner key is asked for under bars only (0.5 = square); the lights leave the
+    /// system's rounding alone, because the key masks every window an app opens after reading
+    /// it, and Webex's received video did not survive that.
+    func testCornerKeyOnlyForBars() {
+        for style in TitleBarOverlayController.Style.allCases {
+            XCTAssertEqual(TitleBarOverlayController.cornerRadius(for: style), style.isBar ? 0.5 : nil, "\(style)")
+        }
+    }
+}
+
+final class TitleBarCacheTests: XCTestCase {
+    /// Only a title that was actually fetched is refreshed when its window comes forward; a
+    /// failure entry keeps its backoff, and a window never asked about needs nothing.
+    func testTitleRefreshOnlyForFetchedTitles() {
+        XCTAssertTrue(TitleBarOverlayController.refreshesTitle("Untitled.rtf"))
+        XCTAssertFalse(TitleBarOverlayController.refreshesTitle(nil))
+    }
+
+    func testBarCornerRadiusPerStyle() {
+        XCTAssertEqual(TitleBarOverlayController.barCornerRadius(for: .luna), 8)
+        XCTAssertEqual(TitleBarOverlayController.barCornerRadius(for: .aero), 6)
+        XCTAssertEqual(TitleBarOverlayController.barCornerRadius(for: .win98), 0)
+        XCTAssertEqual(TitleBarOverlayController.barCornerRadius(for: .platinum), 0)
+    }
+
+    /// The glass mask for Aero: rounded at the top, square at the bottom, stretchable in width.
+    func testAeroGlassMaskShape() {
+        let m = TitleBarOverlayView.topCornersMask(radius: 6, height: 30)
+        XCTAssertEqual(m.capInsets.top, 6); XCTAssertEqual(m.capInsets.bottom, 0)
+        let rep = NSBitmapImageRep(data: m.tiffRepresentation!)!
+        let w = rep.pixelsWide, h = rep.pixelsHigh
+        XCTAssertLessThan(rep.colorAt(x: 0, y: 0)!.alphaComponent, 0.5)          // top-left cut (bitmap y = 0 is the top)
+        XCTAssertGreaterThan(rep.colorAt(x: 0, y: h - 1)!.alphaComponent, 0.5)   // bottom-left square
+        XCTAssertGreaterThan(rep.colorAt(x: w / 2, y: 0)!.alphaComponent, 0.5)   // top edge between the corners
+    }
+}

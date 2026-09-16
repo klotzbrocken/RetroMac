@@ -25,6 +25,7 @@ final class WindowBorderController {
         var onSpace: Bool = false   // did SLSMoveWindowsToManagedSpace succeed? retry until it does
         var hidpi: Bool             // backing scale of the display this border was created for
         var barAbove: CGFloat = 0   // the title bar this frame goes round, 0 when the window has none
+        var pid: pid_t = 0
         init(wid: UInt32, ctx: CGContext, size: CGSize, hidpi: Bool) {
             self.wid = wid; self.ctx = ctx; self.size = size; self.hidpi = hidpi
         }
@@ -287,6 +288,7 @@ final class WindowBorderController {
         guard let ctx = skb_create(Float(f.width), Float(f.height), hd, &wid), wid != 0 else { return }
         let b = SkyBorder(wid: wid, ctx: ctx, size: f.size, hidpi: hd)
         b.barAbove = bar
+        b.pid = pid
         b.onSpace = (skb_send_to_space(b.wid, target) != 0)   // a fresh window is on no space → invisible
         skb_set_frame(b.wid, Float(f.minX), Float(f.minY), Float(f.width), Float(f.height))
         b.origin = f.origin
@@ -307,10 +309,11 @@ final class WindowBorderController {
             return
         }
         let f = outerFrame(g, bar: b.barAbove)
-        // Resize OR a cross-display move to a different backing scale → recreate at the new size/res.
-        // Once per run-loop turn: a live resize sends an event per frame, and every one of them
-        // enumerated and filtered the whole window list.
-        if b.size != f.size || b.hidpi != isHiDPI(for: g) { scheduleSync() }
+        // Resize OR a cross-display move to a different backing scale → recreate at the new
+        // size/res: this one border, from what is already known about it. A live resize sends
+        // an event per frame, and every one of them used to enumerate and filter the whole
+        // window list.
+        if b.size != f.size || b.hidpi != isHiDPI(for: g) { apply(target: target, windowBounds: g, level: b.level, pid: b.pid) }
         else if b.origin != f.origin { skb_move(b.wid, Float(f.minX), Float(f.minY)); b.origin = f.origin }
     }
 
@@ -329,7 +332,8 @@ final class WindowBorderController {
         // Under a Windows bar the caption is the top of the frame, so the ring has no top edge
         // of its own there; a Mac window's bevel ran all the way round, bar included.
         let openTop = b.barAbove > 0 && Self.captionIsTheTop(currentKey)
-        Self.drawBorder(currentStyle, into: b.ctx, size: b.size, openTop: openTop)
+        let inset = b.barAbove > 0 ? TitleBarOverlayController.shared.barCornerRadius : 0
+        Self.drawBorder(currentStyle, into: b.ctx, size: b.size, openTop: openTop, topInset: inset)
     }
 
     /// The chrome families whose title bar is the frame's top: no separate edge above it.
@@ -459,14 +463,16 @@ final class WindowBorderController {
 
     // MARK: - Drawing (into a CGContext, bottom-left origin)
 
-    static func drawBorder(_ style: WindowBorderStyle, into ctx: CGContext, size: CGSize, openTop: Bool = false) {
+    /// `topInset`: under a bar with rounded top corners (Luna, Aero) the sides stop that far
+    /// below the top, or a square nub of frame would show in each rounded corner.
+    static func drawBorder(_ style: WindowBorderStyle, into ctx: CGContext, size: CGSize, openTop: Bool = false, topInset: CGFloat = 0) {
         let bounds = CGRect(origin: .zero, size: size)
         ctx.clear(bounds)                       // transparent background (window has alpha)
         ctx.setShouldAntialias(true)
         defer {
             // An open top: the ring's top band is cleared after drawing, so the sides run up to
             // the frame's top edge and stop there. CG origin is bottom-left; the top is maxY.
-            if openTop { ctx.clear(CGRect(x: 0, y: bounds.maxY - style.width, width: bounds.width, height: style.width)) }
+            if openTop { ctx.clear(CGRect(x: 0, y: bounds.maxY - style.width - topInset, width: bounds.width, height: style.width + topInset)) }
         }
         switch style {
         case let .bevel(hiOuter, hiInner, loInner, loOuter, width, radius):
