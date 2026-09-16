@@ -45,12 +45,17 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   only appears if the corners are still wanted by then (a launch turns the bars on, off and on
   again while it recovers, and used to fire it prematurely).
 
-- **The lights leave with the window when its own minimise button is pressed.** The
-  WindowServer's minimise event arrives once the genie has finished, and the panel's
-  order-out took a few hundred milliseconds to show, so the lights hung over the shrinking
-  picture. A close or minimise through the overlay now hides its panel at once (alpha, then
-  order-out) and leaves that window alone for a second so no fresh measurement puts the
-  lights back mid-genie. Cmd-M and the native title bar still rely on the late event.
+- **The lights leave with the window when its own minimise button is pressed.** Three
+  things kept them on the shrinking picture: the WindowServer's minimise event arrives once
+  the genie has finished (measured: nothing earlier is sent, for any window); the press
+  itself blocked RetroMac's main thread until the app's animation was over, so the panel's
+  disappearance was never committed in time; and a click in the 40 ms before the hover poll
+  made the panel hot went to the real light underneath, minimising natively with our lights
+  still on top. Now every panel takes the mouse from the start (the poll is gone; the view's
+  own tracking area does the hover), a close or minimise through the overlay hides the panel
+  at once and presses the real button off the main thread, and the window is left alone for
+  a second so no fresh measurement puts the lights back mid-genie. Cmd-M and the Dock still
+  have only the late event: there the lights stay for the genie's half second.
 
 - **Title bars, third audit, and the lights leave the window corners alone.** The lights
   styles no longer write the global corner default (they asked for 5 pt, Snow Leopard's

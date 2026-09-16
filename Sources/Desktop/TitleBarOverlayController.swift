@@ -100,7 +100,6 @@ final class TitleBarOverlayController {
     private var axWindows: [CGWindowID: AXUIElement] = [:]
     private var wsTokens: [NSObjectProtocol] = []
     private var syncTimer: Timer?
-    private var hoverTimer: Timer?
 
     // MARK: - Lifecycle
 
@@ -177,16 +176,6 @@ final class TitleBarOverlayController {
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.sync() }
         RunLoop.main.add(t, forMode: .common)
         syncTimer = t
-        // The panels ignore the mouse except over a control, so they get no events of their own
-        // until something notices the pointer arriving and flips them. A global mouse monitor
-        // did that, and took the dock's smoothness with it: from the first change of front
-        // application on, the WindowServer delivered the dock's own mouse moves in bursts (30 a
-        // second with gaps of 200-700 ms instead of a steady stream) for as long as a monitor
-        // for moved events was installed. Asking where the pointer is 25 times a second costs a
-        // handful of rectangle checks and has no such side effect.
-        let hover = Timer(timeInterval: 0.04, repeats: true) { [weak self] _ in self?.pollMouse() }
-        RunLoop.main.add(hover, forMode: .common)
-        hoverTimer = hover
         sync()
     }
 
@@ -198,7 +187,6 @@ final class TitleBarOverlayController {
         let nc = NSWorkspace.shared.notificationCenter
         wsTokens.forEach { nc.removeObserver($0) }
         wsTokens.removeAll()
-        hoverTimer?.invalidate(); hoverTimer = nil
         undoAutoGeometry()   // before the element cache goes
         stopOverlays()
         WindowBorderController.shared.releaseObserversIfIdle()
@@ -398,11 +386,14 @@ final class TitleBarOverlayController {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
-        // A bar is hot over its whole face and sits above the window, where nothing native
-        // needs the click: it takes the mouse from the start. The lights panel covers the
-        // real lights only where it draws, so it waits for the poll to make it hot; a window
-        // that opens under a resting pointer gets that poll right away (`lastPolled`).
-        panel.ignoresMouseEvents = !style.isBar
+        // The panels take the mouse, always. A bar sits above the window, where nothing native
+        // needs the click; the lights panel covers the real lights and a few points around them.
+        // They used to ignore the mouse until something noticed the pointer arriving: first a
+        // global mouse monitor (which cost the dock its smoothness), then a 25 Hz poll — and
+        // a click in the 40 ms before the poll went to the real light underneath, so the
+        // window minimised natively with our lights still sitting on it. The tracking area
+        // gives the view its own hover now.
+        panel.ignoresMouseEvents = false
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary]
@@ -434,11 +425,9 @@ final class TitleBarOverlayController {
         view.onActivate = { [weak self] in self?.activate(info.id, pid: info.pid) }
         view.onDrag = { [weak self] delta in self?.drag(info.id, pid: info.pid, by: delta) }
         view.onDragEnd = { [weak self] in self?.dragOrigin = nil }
-        if !style.isBar { view.onLeave = { [weak panel] in panel?.ignoresMouseEvents = true } }
         panel.contentView = content
         let o = Overlay(panel: panel, view: view, bounds: info.bounds, level: level)
         overlays[info.id] = o
-        lastPolled = NSPoint(x: -1, y: -1)   // route the resting pointer against the new panel
         panel.orderFrontRegardless()
         order(o, above: info.id)
         if style.isBar { makeRoom(for: o, info: info, screens: screens); updatePatch(o, info: info, isFront: isFront) }
@@ -693,7 +682,6 @@ final class TitleBarOverlayController {
                 o.panel.setFrame(f, display: false)
                 o.view.needsDisplay = true
             }
-            lastPolled = NSPoint(x: -1, y: -1)   // the panel may have moved under the pointer
         case PrivateWindowAPI.EVENT_WINDOW_MINIMIZE, PrivateWindowAPI.EVENT_WINDOW_DESTROY:
             forget(wid)
         case PrivateWindowAPI.EVENT_WINDOW_REORDER, PrivateWindowAPI.EVENT_FRONT_CHANGE:
@@ -750,31 +738,6 @@ final class TitleBarOverlayController {
     }
 
     // MARK: - Mouse routing
-
-    /// Only the controls and the dead zone take the mouse; everywhere else the panel is
-    /// transparent to events so the real title bar drags and double-clicks as always.
-    private var lastPolled = NSPoint(x: -1, y: -1)
-
-    private func pollMouse() {
-        let p = NSEvent.mouseLocation
-        guard p != lastPolled, !overlays.isEmpty else { return }
-        lastPolled = p
-        routeMouse(p)
-    }
-
-    private func routeMouse(_ screenPoint: NSPoint) {
-        count("routeMouse")
-        for o in overlays.values {
-            let inside = o.panel.frame.contains(screenPoint)
-            let local = o.view.convert(o.panel.convertPoint(fromScreen: screenPoint), from: nil)
-            // Bars keep the mouse always (see the panel's creation); only the lights flip.
-            if !o.view.isBarPanel {
-                let hot = inside && o.view.isHot(local)
-                if o.panel.ignoresMouseEvents == hot { o.panel.ignoresMouseEvents = !hot }
-            }
-            if inside { o.view.hover(at: local) } else { o.view.hoverEnded() }
-        }
-    }
 
     // MARK: - Driving the real window (Accessibility)
 
@@ -956,16 +919,19 @@ final class TitleBarOverlayController {
         default: return
         }
         var ref: CFTypeRef?
-        if AXUIElementCopyAttributeValue(w, attr as CFString, &ref) == .success, let ref {
-            // The bar goes before the window does; a bar over a fading window is the one thing
-            // that gives the trick away. Comes back on the next sync if the app asked to save.
-            // The same for minimise: the WindowServer's minimise event arrives when the genie
-            // has finished, and until then the lights would sit over a shrinking window.
-            if kind == .close || kind == .minimize || kind == .collapse { leave(wid) }
-            AXUIElementPerformAction(ref as! AXUIElement, kAXPressAction as CFString)
-        } else if attr == kAXMinimizeButtonAttribute {
-            leave(wid)
-            AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+        let button = AXUIElementCopyAttributeValue(w, attr as CFString, &ref) == .success ? ref.map { $0 as! AXUIElement } : nil
+        guard button != nil || attr == kAXMinimizeButtonAttribute else { return }
+        // The bar goes before the window does; a bar over a fading window is the one thing
+        // that gives the trick away. Comes back on the next sync if the app asked to save.
+        // The same for minimise: the WindowServer's minimise event arrives when the genie
+        // has finished, and until then the lights would sit over a shrinking window.
+        leave(wid)
+        // The press itself runs off the main thread: the app answers it only when its
+        // minimise or close animation is over (half a second for the genie), and a main thread
+        // waiting that long would not have committed the panel's disappearance first.
+        Self.axQueue.async {
+            if let button { AXUIElementPerformAction(button, kAXPressAction as CFString) }
+            else { AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
         }
     }
 
@@ -1118,7 +1084,6 @@ final class TitleBarOverlayView: NSView {
     var onActivate: (() -> Void)?
     var onDrag: ((NSPoint) -> Void)?
     var onDragEnd: (() -> Void)?
-    var onLeave: (() -> Void)?
 
     private var style: TitleBarOverlayController.Style = .platinum
     private var title = ""
@@ -1635,9 +1600,7 @@ final class TitleBarOverlayView: NSView {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        let p = convert(event.locationInWindow, from: nil)
-        hover(at: p)
-        if !isHot(p) { onLeave?() }
+        hover(at: convert(event.locationInWindow, from: nil))
     }
 
     override func updateTrackingAreas() {
@@ -1649,7 +1612,6 @@ final class TitleBarOverlayView: NSView {
 
     override func mouseExited(with event: NSEvent) {
         hoverEnded()
-        onLeave?()
     }
 }
 

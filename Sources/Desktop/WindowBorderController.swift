@@ -382,6 +382,9 @@ final class WindowBorderController {
         for e in Set(events) {
             PrivateWindowAPI.register(proc: procPtr, event: e, context: ctx)
         }
+        if ProcessInfo.processInfo.environment["RETROMAC_SLS_EVENT_SCAN"] != nil {
+            for e in UInt32(800)...UInt32(1600) where !events.contains(e) { PrivateWindowAPI.register(proc: procPtr, event: e, context: ctx) }
+        }
     }
 
     fileprivate func handleServerEvent(event: UInt32, wid: CGWindowID) {
@@ -540,6 +543,11 @@ private func borderNotifyProc(_ event: UInt32, _ data: UnsafeMutableRawPointer?,
         wid = data.loadUnaligned(fromByteOffset: 0, as: UInt32.self)
     } else {
         wid = 0
+    }
+    if ProcessInfo.processInfo.environment["RETROMAC_SLS_EVENT_SCAN"] != nil {
+        var words: [UInt32] = []
+        if let data { for i in stride(from: 0, to: min(length, 32), by: 4) where i + 4 <= length { words.append(data.loadUnaligned(fromByteOffset: i, as: UInt32.self)) } }
+        print(String(format: "[SLS] %.3f event %d wid %d len %d words %@", Date().timeIntervalSince1970, event, wid, length, words.description))
     }
     if Thread.isMainThread { controller.handleServerEvent(event: event, wid: wid) }
     else { DispatchQueue.main.async { controller.handleServerEvent(event: event, wid: wid) } }
