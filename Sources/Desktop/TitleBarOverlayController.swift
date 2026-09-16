@@ -65,10 +65,10 @@ final class TitleBarOverlayController {
     /// Whether the real windows are being squared right now (bar styles only).
     var squaresCorners: Bool { running && style?.isBar == true }
     /// The window corner radius the running style asks macOS for: square under a bar (0.5 is
-    /// the smallest value the key takes; 0 means unset), the era's rounding under the lights —
-    /// 10.5 to 10.8 rounded all four corners about 5 pt, and the classic Aqua's rounded top
-    /// with square bottom is not something one radius can say, so it gets the same. Nil when
-    /// nothing runs.
+    /// the smallest value the key takes; 0 means unset), about 5 pt under the lights. That is
+    /// the top of a Mac OS X window from Aqua through Snow Leopard; their bottom corners were
+    /// square until Lion, which one radius for all four corners cannot say, so the bottom
+    /// gets the top's rounding (5 px in the corner, rendered as about 4). Nil when nothing runs.
     var desiredCornerRadius: CGFloat? {
         guard running, let style else { return nil }
         return style.isBar ? 0.5 : 5
