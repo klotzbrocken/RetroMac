@@ -717,6 +717,7 @@ final class TitleBarOverlayController {
     private func leave(_ wid: CGWindowID) {
         leaving[wid] = Date().addingTimeInterval(1)
         forget(wid)
+        WindowBorderController.shared.windowIsLeaving(wid)   // the frame would trail the genie too
     }
 
     /// The window is gone (closed, minimised, off the list): overlay and every cache with it.

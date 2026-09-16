@@ -168,6 +168,17 @@ final class WindowBorderController {
         borders.removeValue(forKey: wid)
     }
 
+    /// The title bar's close or minimise button was pressed: the frame goes now, and the
+    /// window is left without one for a second — the WindowServer reports the minimise only
+    /// when the genie is over, and a poll in between would frame the shrinking picture.
+    func windowIsLeaving(_ wid: CGWindowID) {
+        leaving[wid] = Date().addingTimeInterval(1)
+        guard let b = borders[wid] else { return }
+        skb_destroy(b.wid)
+        borders.removeValue(forKey: wid)
+    }
+    private var leaving: [CGWindowID: Date] = [:]
+
     private var axCounts: [String: Int] = [:]
     private var axCountsSince = Date()
     fileprivate func countAXNotification(_ name: String) {
@@ -257,6 +268,10 @@ final class WindowBorderController {
 
     /// Create or update the border for one target window.
     private func apply(target: CGWindowID, windowBounds: CGRect, level: Int32, pid: pid_t) {
+        if let until = leaving[target] {
+            if Date() < until { return }
+            leaving.removeValue(forKey: target)
+        }
         // Skip full-screen / desktop-sized windows.
         if let scr = NSScreen.screens.first(where: { $0.frame.width >= windowBounds.width }),
            windowBounds.width >= scr.frame.width - 1, windowBounds.height >= scr.frame.height - 1 {

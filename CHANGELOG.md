@@ -54,8 +54,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   still on top. Now every panel takes the mouse from the start (the poll is gone; the view's
   own tracking area does the hover), a close or minimise through the overlay hides the panel
   at once and presses the real button off the main thread, and the window is left alone for
-  a second so no fresh measurement puts the lights back mid-genie. Cmd-M and the Dock still
-  have only the late event: there the lights stay for the genie's half second.
+  a second so no fresh measurement puts the lights back mid-genie; the window border goes
+  with them. Cmd-M and the Dock still have only the late event: there the lights and the
+  frame stay for the genie's half second.
 
 - **Title bars, third audit, and the lights leave the window corners alone.** The lights
   styles no longer write the global corner default (they asked for 5 pt, Snow Leopard's
