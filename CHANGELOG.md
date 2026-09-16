@@ -45,6 +45,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   only appears if the corners are still wanted by then (a launch turns the bars on, off and on
   again while it recovers, and used to fire it prematurely).
 
+- **A crash on a theme that keeps the menu bar no longer ends before it begins.** Covering the
+  visible menu bar with the crash's full-screen windows made AppKit report changed screen
+  parameters a moment later, which the crash took for a display being unplugged and aborted
+  on: on Mac OS 9 (and any theme with the menu bar showing) the bomb never appeared. Screen
+  changes in the first seconds are now ignored, as focus changes already were.
+
 - **The boot screen can always be clicked away, and a stuck switch cannot lock the Mac.**
   The click used to run the waiting theme switch first and take the cover down after, so a
   click sat through the whole switch — and a switch that blocked (an Apple event to a Finder

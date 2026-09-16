@@ -61,6 +61,7 @@ final class CrashDirector {
     /// no-op, so the sleep observer used to survive every teardown and pile up one per crash.
     private var workspaceObservers: [NSObjectProtocol] = []
     private var armedForResign = false
+    private var armedForScreens = false
     private var dumpCounter = 0
     private var blinkOn = true
     /// The clock in a dialog that counts down, in seconds left.
@@ -180,6 +181,8 @@ final class CrashDirector {
         // The activation churn of presenting counts as a resign on some paths, so the abort-on-
         // focus-loss guard only goes live once the dust has settled.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.armedForResign = true }
+        armedForScreens = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in self?.armedForScreens = true }
 
         armLiveness()
 
@@ -830,7 +833,7 @@ final class CrashDirector {
         bootScenario = nil
         didRestart = false
         stills = []
-        armedForResign = false
+        armedForResign = false; armedForScreens = false
         state = .idle
         print(reason == .finished ? "[Crash] finished" : "[Crash] ended (\(reason.rawValue))")
 
@@ -854,7 +857,12 @@ final class CrashDirector {
         })
         observers.append(nc.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
                                         object: nil, queue: .main) { [weak self] _ in
-            self?.abort(.screensChanged)
+            // A grace period, like the one above but longer: covering a visible menu bar with
+            // our full-screen windows makes AppKit report changed screen parameters once the
+            // bar has slid away (the visible frame grew), a second or so in, which ended every
+            // crash on a theme that keeps the menu bar before its error was even on screen.
+            guard let self, self.armedForScreens else { return }
+            self.abort(.screensChanged)
         })
         let wsnc = NSWorkspace.shared.notificationCenter
         workspaceObservers.append(wsnc.addObserver(forName: NSWorkspace.willSleepNotification,
