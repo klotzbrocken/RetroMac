@@ -55,6 +55,8 @@ final class TitleBarOverlayController {
         var patch: NSPanel?
         var patchView: LightsPatchView?
         var patchSampledFront: Bool?   // the front state the sample was taken in
+        var sampleGeneration = 0       // the request whose picture is still wanted
+        var sampleRetryAfter = Date.distantPast   // a failed capture is not repeated every sync
         init(panel: NSPanel, view: TitleBarOverlayView, bounds: CGRect, level: Int32) {
             self.panel = panel; self.view = view; self.bounds = bounds; self.level = level
         }
@@ -76,6 +78,12 @@ final class TitleBarOverlayController {
     /// How much the bar adds above each window while a bar style runs (0 otherwise), for the
     /// border to frame and the zoom to allow for.
     var barAboveHeight: CGFloat { squaresCorners ? Self.stripHeight(style!) : 0 }
+    /// The same for one window: 0 when this window has no bar (excluded app, screen-sized,
+    /// lights style, or not yet measured).
+    func barHeight(for wid: CGWindowID) -> CGFloat {
+        guard let o = overlays[wid], o.view.isBarPanel else { return 0 }
+        return barAboveHeight
+    }
     private var style: Style?
     private var excluded: Set<String> = []
     private var overlays: [CGWindowID: Overlay] = [:]
@@ -206,6 +214,7 @@ final class TitleBarOverlayController {
     // MARK: - Sync
 
     private var resampleTimer: Timer?
+    private var remeasureTimer: Timer?
     private var lastOrderSignature: [CGWindowID] = []
     private var reorderDue = false
     private var syncInFlight = false
@@ -233,18 +242,33 @@ final class TitleBarOverlayController {
     /// Bumped by stop(), so a list fetched for a run that has ended is thrown away.
     private var syncGeneration = 0
 
-    private func finishSync(_ windows: [WindowInfo], order: [CGWindowID]) {
+    private func finishSync(_ list: [WindowInfo], order: [CGWindowID]) {
         guard running, let style else { return }
+        // The permission can go away while we run; without it the bars would keep drawing
+        // buttons that do nothing and patches that swallow clicks on the real lights.
+        guard AXIsProcessTrusted() else { stop(); return }
         let t0 = Date()
         defer { count("sync", seconds: Date().timeIntervalSince(t0)) }
+        var windows = list
+        for i in windows.indices { windows[i].bundleID = Self.bundleID(for: windows[i].pid) }
         // Re-order only when the z-order actually changed since the last pass. A periodic
         // re-order of every overlay made AppKit revisit our whole window list every three
-        // seconds, dock included. The signature is the whole on-screen order, our own panels
-        // included: Chrome opening a tab raises its window over the lights without a reorder
-        // event the WindowServer would tell us about, and a signature of the other apps' windows
-        // alone read as "nothing changed" while the lights sat buried under the tab strip.
-        reorderDue = order != lastOrderSignature
-        if reorderDue { lastOrderSignature = order; count("reorder") }
+        // seconds, dock included. Two things count as a change: the other apps' windows in a
+        // new order, and one of our panels no longer above its window — Chrome opening a tab
+        // raises its window over the lights without a reorder event the WindowServer would
+        // tell us about. (Comparing the whole list including our panels re-ordered every
+        // second: our own re-order changes that list.)
+        let others = windows.map { $0.id }
+        var index = [CGWindowID: Int](minimumCapacity: order.count)
+        for (i, wid) in order.enumerated() { index[wid] = i }
+        let buried = overlays.contains { target, o in
+            guard let t = index[target] else { return false }
+            let p = index[CGWindowID(o.panel.windowNumber)] ?? Int.max
+            let q = o.patch.map { index[CGWindowID($0.windowNumber)] ?? Int.max } ?? 0
+            return p > t || q > t
+        }
+        reorderDue = others != lastOrderSignature || buried
+        if reorderDue { lastOrderSignature = others; count(buried ? "reorder.buried" : "reorder") }
         var infoByID = [CGWindowID: WindowInfo](minimumCapacity: windows.count)
         for w in windows { infoByID[w.id] = w }
 
@@ -275,7 +299,7 @@ final class TitleBarOverlayController {
             suitable.insert(wid)
             apply(info, level: outLevel[i], style: style, isFront: wid == frontWID, screens: screens)
         }
-        for wid in overlays.keys where !suitable.contains(wid) { drop(for: wid) }
+        for wid in overlays.keys where !suitable.contains(wid) { forget(wid) }
     }
 
     /// The screen a window mostly sits on, in Quartz (top-left) coordinates.
@@ -342,7 +366,11 @@ final class TitleBarOverlayController {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
-        panel.ignoresMouseEvents = true
+        // A bar is hot over its whole face and sits above the window, where nothing native
+        // needs the click: it takes the mouse from the start. The lights panel covers the
+        // real lights only where it draws, so it waits for the poll to make it hot; a window
+        // that opens under a resting pointer gets that poll right away (`lastPolled`).
+        panel.ignoresMouseEvents = !style.isBar
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary]
@@ -371,10 +399,11 @@ final class TitleBarOverlayController {
         view.onActivate = { [weak self] in self?.activate(info.id, pid: info.pid) }
         view.onDrag = { [weak self] delta in self?.drag(info.id, pid: info.pid, by: delta) }
         view.onDragEnd = { [weak self] in self?.dragOrigin = nil }
-        view.onLeave = { [weak panel] in panel?.ignoresMouseEvents = true }
+        if !style.isBar { view.onLeave = { [weak panel] in panel?.ignoresMouseEvents = true } }
         panel.contentView = content
         let o = Overlay(panel: panel, view: view, bounds: info.bounds, level: level)
         overlays[info.id] = o
+        lastPolled = NSPoint(x: -1, y: -1)   // route the resting pointer against the new panel
         panel.orderFrontRegardless()
         order(o, above: info.id)
         if style.isBar { makeRoom(for: o, info: info, screens: screens); updatePatch(o, info: info, isFront: isFront) }
@@ -386,13 +415,27 @@ final class TitleBarOverlayController {
     /// bar is part of the window now, and no title bar ever went above the screen. Not while
     /// the user is dragging it with the bar, to avoid a tug of war.
     private func makeRoom(for o: Overlay, info: WindowInfo, screens: [NSScreen]) {
-        guard dragOrigin == nil, let scr = Self.screen(for: info.bounds, screens: screens) else { return }
+        // Not while a drag is on, ours or the app's own: moving a window the user is holding
+        // is a tug of war.
+        guard dragOrigin == nil, NSEvent.pressedMouseButtons == 0,
+              let scr = Self.screen(for: info.bounds, screens: screens) else { return }
         let top = Self.primaryTop(screens)
         let usableTop = top - scr.visibleFrame.maxY   // Quartz y of the first usable row (below the menu bar)
         let need = usableTop + Self.stripHeight(style ?? .luna) - info.bounds.minY
         guard need > 0, let w = axWindow(info.id, pid: info.pid) else { return }
         var p = CGPoint(x: info.bounds.minX, y: info.bounds.minY + need)
         if let pv = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, pv) }
+        // A window as tall as the screen would now end under the taskbar or the Dock: take the
+        // overhang off its height, as far as the app allows.
+        var usableBottom = top - scr.visibleFrame.minY
+        if let bar = DockController.shared.barScreenFrame, bar.intersects(scr.frame), bar.midY < scr.frame.midY {
+            usableBottom = min(usableBottom, top - bar.maxY)
+        }
+        let overhang = info.bounds.maxY + need - usableBottom
+        if overhang > 0 {
+            var sz = CGSize(width: info.bounds.width, height: max(100, info.bounds.height - overhang))
+            if let sv = AXValueCreate(.cgSize, &sz) { AXUIElementSetAttributeValue(w, kAXSizeAttribute as CFString, sv) }
+        }
     }
 
     /// Create or refresh the patch that hides the real lights. The sample is retaken when the
@@ -406,7 +449,9 @@ final class TitleBarOverlayController {
         let rel = CGRect(x: close.minX - 3, y: top - 2, width: last - close.minX + 6, height: bottom - top + 4)
         let quartz = CGRect(x: info.bounds.minX + rel.minX, y: info.bounds.minY + rel.minY, width: rel.width, height: rel.height)
         let frame = Self.appKitFrame(topLeft: quartz, height: quartz.height)
+        var created = false
         if o.patch == nil {
+            created = true
             let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             panel.isOpaque = false
             panel.backgroundColor = .clear
@@ -431,7 +476,7 @@ final class TitleBarOverlayController {
         } else if o.patch!.frame != frame {
             o.patch!.setFrame(frame, display: false)
         }
-        if o.patchSampledFront != isFront {
+        if o.patchSampledFront != isFront, Date() >= o.sampleRetryAfter {
             o.patchSampledFront = isFront
             // A strip of the real bar from the gap between the first two lights: plain on every
             // title bar, and away from the corner, which on a window opened before the bars went
@@ -440,16 +485,31 @@ final class TitleBarOverlayController {
             let gapEnd = (offsets[.minimize]?.minX ?? (close.maxX + 7)) - 2
             let sample = CGRect(x: info.bounds.minX + gapStart, y: quartz.minY, width: max(2, gapEnd - gapStart), height: quartz.height)
             let wid = info.id
-            // The sample lies under the patch itself: hide the patch for the photograph.
+            // The sample lies under the patch itself: hide the patch for the photograph, and
+            // let the mouse through to the real lights until there is a picture to stand in
+            // for them. Only the newest request may deliver: two in flight (front, and back
+            // again) used to let whichever finished last win.
+            o.sampleGeneration += 1
+            let generation = o.sampleGeneration
             o.patch?.alphaValue = 0
+            o.patch?.ignoresMouseEvents = true
             count("sample")
             NativeBarSampler.sample(sample) { [weak self] image in
-                guard let self, let o = self.overlays[wid] else { return }
-                if let image { o.patchView?.image = image }
+                guard let self, let o = self.overlays[wid], o.sampleGeneration == generation else { return }
+                guard let image else {
+                    // No picture: the real lights stay visible and usable, and a later sync
+                    // asks again, not before five seconds have passed.
+                    o.patchSampledFront = nil
+                    o.sampleRetryAfter = Date().addingTimeInterval(5)
+                    self.count("sample.failed")
+                    return
+                }
+                o.patchView?.image = image
                 o.patch?.alphaValue = 1
+                o.patch?.ignoresMouseEvents = false
             }
         }
-        o.patch.map { orderPatch($0, above: info.id) }
+        if created || reorderDue, let patch = o.patch { orderPatch(patch, above: info.id) }
     }
 
     private func orderPatch(_ patch: NSPanel, above target: CGWindowID) {
@@ -545,7 +605,7 @@ final class TitleBarOverlayController {
         switch event {
         case PrivateWindowAPI.EVENT_WINDOW_MOVE, PrivateWindowAPI.EVENT_WINDOW_RESIZE:
             guard let o = overlays[wid], let style else { return }
-            guard let g = PrivateWindowAPI.bounds(of: wid) else { drop(for: wid); return }
+            guard let g = PrivateWindowAPI.bounds(of: wid) else { forget(wid); return }
             let previous = o.bounds
             o.bounds = g
             let f: NSRect
@@ -564,16 +624,31 @@ final class TitleBarOverlayController {
             } else if let offsets = lightOffsets[wid] {
                 f = Self.lightsFrame(for: g, offsets: offsets).0   // the lights do not move inside the window
             } else { return }
+            if event == PrivateWindowAPI.EVENT_WINDOW_RESIZE, previous.size != g.size {
+                // The lights sit where the title bar puts them, and a resize can rebuild that
+                // (a toolbar collapsing, Safari's tab bar): measure again once the window has
+                // come to rest, not on every frame of the drag.
+                remeasureTimer?.invalidate()
+                remeasureTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
+                    guard let self, self.overlays[wid] != nil else { return }
+                    self.lightOffsets.removeValue(forKey: wid)
+                    self.sync()
+                }
+            }
             if f.size == o.panel.frame.size {
                 if f.origin != o.panel.frame.origin { o.panel.setFrameOrigin(f.origin) }   // a move: no redraw
             } else if o.panel.frame != f {
                 o.panel.setFrame(f, display: false)
                 o.view.needsDisplay = true
             }
+            lastPolled = NSPoint(x: -1, y: -1)   // the panel may have moved under the pointer
         case PrivateWindowAPI.EVENT_WINDOW_MINIMIZE, PrivateWindowAPI.EVENT_WINDOW_DESTROY:
-            drop(for: wid)
+            forget(wid)
         case PrivateWindowAPI.EVENT_WINDOW_REORDER, PrivateWindowAPI.EVENT_FRONT_CHANGE:
             for (target, o) in overlays { order(o, above: target) }
+            // A title that came through Accessibility (no name on the window list) is asked
+            // for again when its window comes forward: a document or tab may have changed.
+            if event == PrivateWindowAPI.EVENT_FRONT_CHANGE, titles[wid]?.title != nil { titles.removeValue(forKey: wid) }
             sync()   // the front window changed, and with it which bar draws active
         case PrivateWindowAPI.EVENT_WINDOW_CREATE:
             sync()
@@ -581,16 +656,24 @@ final class TitleBarOverlayController {
         }
     }
 
+    /// Take the overlay away; what was learnt about the window stays. A window that gave no
+    /// measurement keeps its retry schedule this way — dropping that with the overlay meant the
+    /// next sync asked again at once, every second, for every window without buttons.
     func drop(for wid: CGWindowID) {
-        lightOffsets.removeValue(forKey: wid)
-        lightOffsetsRetry.removeValue(forKey: wid)
-        titles.removeValue(forKey: wid)
         zoomedFrom.removeValue(forKey: wid)
         zoomedTo.removeValue(forKey: wid)
         guard let o = overlays[wid] else { return }
         o.panel.orderOut(nil)
         o.patch?.orderOut(nil)
         overlays.removeValue(forKey: wid)
+    }
+
+    /// The window is gone (closed, minimised, off the list): overlay and every cache with it.
+    func forget(_ wid: CGWindowID) {
+        drop(for: wid)
+        lightOffsets.removeValue(forKey: wid)
+        lightOffsetsRetry.removeValue(forKey: wid)
+        titles.removeValue(forKey: wid)
         axWindows.removeValue(forKey: wid)
     }
 
@@ -599,7 +682,7 @@ final class TitleBarOverlayController {
 
     /// Drop every bar whose window is not in `onScreen` (a closed window, reported through AX).
     func dropAll(notIn onScreen: Set<CGWindowID>) {
-        for wid in overlays.keys where !onScreen.contains(wid) { drop(for: wid) }
+        for wid in overlays.keys where !onScreen.contains(wid) { forget(wid) }
     }
 
     // MARK: - Mouse routing
@@ -620,8 +703,11 @@ final class TitleBarOverlayController {
         for o in overlays.values {
             let inside = o.panel.frame.contains(screenPoint)
             let local = o.view.convert(o.panel.convertPoint(fromScreen: screenPoint), from: nil)
-            let hot = inside && o.view.isHot(local)
-            if o.panel.ignoresMouseEvents == hot { o.panel.ignoresMouseEvents = !hot }
+            // Bars keep the mouse always (see the panel's creation); only the lights flip.
+            if !o.view.isBarPanel {
+                let hot = inside && o.view.isHot(local)
+                if o.panel.ignoresMouseEvents == hot { o.panel.ignoresMouseEvents = !hot }
+            }
             if inside { o.view.hover(at: local) } else { o.view.hoverEnded() }
         }
     }
@@ -757,7 +843,7 @@ final class TitleBarOverlayController {
         if AXUIElementCopyAttributeValue(w, attr as CFString, &ref) == .success, let ref {
             // The bar goes before the window does; a bar over a fading window is the one thing
             // that gives the trick away. Comes back on the next sync if the app asked to save.
-            if kind == .close { drop(for: wid) }
+            if kind == .close { forget(wid) }
             AXUIElementPerformAction(ref as! AXUIElement, kAXPressAction as CFString)
         } else if attr == kAXMinimizeButtonAttribute {
             AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
@@ -804,7 +890,12 @@ final class TitleBarOverlayController {
             target = full
             restoring = false
         }
-        let reached = Self.setFrame(target, of: w) ?? target
+        guard let reached = Self.setFrame(target, of: w) else {
+            // The app refused or could not say where it went: no zoom state to remember, and
+            // no restore glyph promising one.
+            if !restoring { zoomedFrom.removeValue(forKey: wid) }
+            return
+        }
         if restoring {
             zoomedFrom.removeValue(forKey: wid)
             zoomedTo.removeValue(forKey: wid)
@@ -833,7 +924,7 @@ final class TitleBarOverlayController {
         guard AXUIElementCopyAttributeValue(w, kAXPositionAttribute as CFString, &pRef) == .success, let pRef,
               AXValueGetValue(pRef as! AXValue, .cgPoint, &rp),
               AXUIElementCopyAttributeValue(w, kAXSizeAttribute as CFString, &sRef) == .success, let sRef,
-              AXValueGetValue(sRef as! AXValue, .cgSize, &rs) else { return target }
+              AXValueGetValue(sRef as! AXValue, .cgSize, &rs) else { return nil }   // set, but unreadable: no state
         return CGRect(origin: rp, size: rs)
     }
 
@@ -862,9 +953,12 @@ final class TitleBarOverlayController {
         let bounds: CGRect
         let title: String
         let ownerName: String
-        let bundleID: String
+        var bundleID = ""   // filled in on the main thread, see `bundleIDs`
     }
 
+    /// Main thread only: the list runs on `listQueue` without touching it, and the terminate
+    /// observer prunes it on main. Both used to share it unsynchronised, and a Swift dictionary
+    /// written from two threads at once is a crash, not a stale value.
     private static var bundleIDs: [pid_t: String] = [:]
     private static func bundleID(for pid: pid_t) -> String {
         if let b = bundleIDs[pid] { return b }
@@ -891,8 +985,7 @@ final class TitleBarOverlayController {
             // kCGWindowName needs Screen Recording, which the shader already has; empty otherwise.
             out.append(WindowInfo(id: num, pid: pid, bounds: b,
                                   title: (w[kCGWindowName as String] as? String) ?? "",
-                                  ownerName: (w[kCGWindowOwnerName as String] as? String) ?? "",
-                                  bundleID: bundleID(for: pid)))
+                                  ownerName: (w[kCGWindowOwnerName as String] as? String) ?? ""))
         }
         return (out, order)
     }
@@ -1048,11 +1141,26 @@ final class TitleBarOverlayView: NSView {
         case .platinum:   drawPlatinum(b)
         case .win31:      drawWin31(b)
         case .win98:      drawWin98(b)
-        case .luna:       drawLuna(b)
-        case .aero:       drawAero(b)
+        case .luna:       Self.topCorners(b, radius: 8).addClip(); drawLuna(b)
+        case .aero:       Self.topCorners(b, radius: 6).addClip(); drawAero(b)
         case .snowLights: drawLights(aqua: false)
         case .aquaLights: drawLights(aqua: true)
         }
+    }
+
+    /// The bar's outline with its two top corners rounded, the bottom square where it meets
+    /// the window. Built from tangents (`appendArc(from:to:radius:)`), which reads the same in
+    /// a flipped view; the angle form once mirrored and cut the right end of the bar off.
+    static func topCorners(_ b: NSRect, radius r: CGFloat) -> NSBezierPath {
+        let p = NSBezierPath()
+        p.move(to: NSPoint(x: b.minX, y: b.maxY))
+        p.line(to: NSPoint(x: b.minX, y: b.minY + r))
+        p.appendArc(from: NSPoint(x: b.minX, y: b.minY), to: NSPoint(x: b.minX + r, y: b.minY), radius: r)
+        p.line(to: NSPoint(x: b.maxX - r, y: b.minY))
+        p.appendArc(from: NSPoint(x: b.maxX, y: b.minY), to: NSPoint(x: b.maxX, y: b.minY + r), radius: r)
+        p.line(to: NSPoint(x: b.maxX, y: b.maxY))
+        p.close()
+        return p
     }
 
     // MARK: System 6

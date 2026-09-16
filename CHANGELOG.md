@@ -45,6 +45,25 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   only appears if the corners are still wanted by then (a launch turns the bars on, off and on
   again while it recovers, and used to fire it prematurely).
 
+- **Title bars, second audit.** A dictionary of bundle identifiers was written from the
+  window-list thread and pruned on the main thread at once (a crash waiting for an app to quit
+  mid-sync); it is main-thread only now. A window without buttons was measured again every
+  second because dropping its overlay also dropped its retry schedule; the schedule survives
+  (1, 2, 4 … 30 s). A bar takes the mouse from the moment it appears, so a window opening under
+  a resting pointer no longer lets the first click through to whatever lies behind; the lights
+  panel is routed right after it appears or moves. The patch over the real lights only shows
+  the newest photograph, and when a capture fails it stays out of the way (the real lights
+  remain usable) instead of catching clicks while showing nothing. An excluded app's window
+  border no longer frames an empty strip above it. The patch is re-ordered only when the
+  order changed, a live resize re-syncs the borders once per turn, and a bar buried under its
+  own window (Chrome's new tab) is detected without re-ordering everything every second. A
+  window pushed down to make room for its bar is shortened when it would end under the
+  taskbar, and never touched while a mouse button is down. Titles read through Accessibility
+  are asked for again when the window comes forward; the lights are re-measured once a resize
+  has settled. A zoom the app refused leaves no restore state behind. The permission going away
+  stops the feature instead of leaving dead buttons. And the Luna and Aero bars round their top
+  corners now that they sit above the window.
+
 - **Chrome's tabs no longer bury the lights.** Opening a tab raises Chrome's window over the
   Aqua lights without the WindowServer reporting a reorder, and the overlay's own check for a
   changed z-order looked only at other apps' windows, so nothing put them back until the

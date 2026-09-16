@@ -56,3 +56,20 @@ final class TitleBarOverlayTests: XCTestCase {
         XCTAssertEqual(TitleBarOverlayController.stripHeight(.platinum), 22, "Platinum's own height, nothing to cover any more")
     }
 }
+
+final class TitleBarCornerTests: XCTestCase {
+    /// The Luna/Aero clip rounds the two top corners (flipped view: y = 0 is the top) and
+    /// keeps the bottom square and the full width — the earlier angle-based arc lost the
+    /// bar's right end.
+    func testTopCornersClipKeepsWidthAndBottom() {
+        let b = NSRect(x: 0, y: 0, width: 300, height: 30)
+        let p = TitleBarOverlayView.topCorners(b, radius: 8)
+        XCTAssertEqual(p.bounds, b)
+        XCTAssertFalse(p.contains(NSPoint(x: 0.5, y: 0.5)))       // top-left corner cut
+        XCTAssertFalse(p.contains(NSPoint(x: 299.5, y: 0.5)))     // top-right corner cut
+        XCTAssertTrue(p.contains(NSPoint(x: 8, y: 0.5)))          // top edge past the corner
+        XCTAssertTrue(p.contains(NSPoint(x: 0.5, y: 29.5)))       // bottom-left square
+        XCTAssertTrue(p.contains(NSPoint(x: 299.5, y: 29.5)))     // bottom-right square
+        XCTAssertTrue(p.contains(NSPoint(x: 299.5, y: 15)))       // right end present
+    }
+}

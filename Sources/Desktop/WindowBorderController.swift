@@ -24,6 +24,7 @@ final class WindowBorderController {
         var origin: CGPoint = CGPoint(x: -99999, y: -99999)
         var onSpace: Bool = false   // did SLSMoveWindowsToManagedSpace succeed? retry until it does
         var hidpi: Bool             // backing scale of the display this border was created for
+        var barAbove: CGFloat = 0   // the title bar this frame goes round, 0 when the window has none
         init(wid: UInt32, ctx: CGContext, size: CGSize, hidpi: Bool) {
             self.wid = wid; self.ctx = ctx; self.size = size; self.hidpi = hidpi
         }
@@ -160,7 +161,7 @@ final class WindowBorderController {
 
     /// Drop a window's border immediately (called the instant AX reports a minimize).
     fileprivate func dropBorder(for wid: CGWindowID) {
-        TitleBarOverlayController.shared.drop(for: wid)
+        TitleBarOverlayController.shared.forget(wid)
         guard let b = borders[wid] else { return }
         skb_destroy(b.wid)
         borders.removeValue(forKey: wid)
@@ -241,10 +242,11 @@ final class WindowBorderController {
     }
 
     /// Border frame (top-left global) = the window grown by the edge width on all sides, and
-    /// by the title bar the overlay puts above the window, so the frame goes round both.
-    private func outerFrame(_ windowBounds: CGRect) -> CGRect {
+    /// by the title bar the overlay puts above this window, so the frame goes round both. A
+    /// window without a bar (an excluded app, one still being measured) gets no room above:
+    /// the global height framed an empty strip over every exception.
+    private func outerFrame(_ windowBounds: CGRect, bar: CGFloat) -> CGRect {
         var b = windowBounds
-        let bar = TitleBarOverlayController.shared.barAboveHeight
         b.origin.y -= bar; b.size.height += bar
         return b.insetBy(dx: -currentStyle.width, dy: -currentStyle.width)
     }
@@ -260,13 +262,15 @@ final class WindowBorderController {
             if let b = borders[target] { skb_destroy(b.wid); borders.removeValue(forKey: target) }
             return
         }
-        let f = outerFrame(windowBounds)
+        let bar = TitleBarOverlayController.shared.barHeight(for: target)
+        let f = outerFrame(windowBounds, bar: bar)
         let hd = isHiDPI(for: windowBounds)
 
         if let b = borders[target] {
             // Recreate on a size OR resolution change (the context is bound to both) — e.g. dragging
-            // the window onto a display with a different backing scale.
-            if b.size != f.size || b.hidpi != hd {
+            // the window onto a display with a different backing scale — and when the bar above
+            // came or went, which changes the drawing as well as the frame.
+            if b.size != f.size || b.hidpi != hd || b.barAbove != bar {
                 skb_destroy(b.wid)
                 borders.removeValue(forKey: target)
             } else {
@@ -282,6 +286,7 @@ final class WindowBorderController {
         var wid: UInt32 = 0
         guard let ctx = skb_create(Float(f.width), Float(f.height), hd, &wid), wid != 0 else { return }
         let b = SkyBorder(wid: wid, ctx: ctx, size: f.size, hidpi: hd)
+        b.barAbove = bar
         b.onSpace = (skb_send_to_space(b.wid, target) != 0)   // a fresh window is on no space → invisible
         skb_set_frame(b.wid, Float(f.minX), Float(f.minY), Float(f.width), Float(f.height))
         b.origin = f.origin
@@ -301,9 +306,11 @@ final class WindowBorderController {
             skb_destroy(b.wid); borders.removeValue(forKey: target)
             return
         }
-        let f = outerFrame(g)
+        let f = outerFrame(g, bar: b.barAbove)
         // Resize OR a cross-display move to a different backing scale → recreate at the new size/res.
-        if b.size != f.size || b.hidpi != isHiDPI(for: g) { sync() }
+        // Once per run-loop turn: a live resize sends an event per frame, and every one of them
+        // enumerated and filtered the whole window list.
+        if b.size != f.size || b.hidpi != isHiDPI(for: g) { scheduleSync() }
         else if b.origin != f.origin { skb_move(b.wid, Float(f.minX), Float(f.minY)); b.origin = f.origin }
     }
 
@@ -311,10 +318,17 @@ final class WindowBorderController {
         for (target, b) in borders { skb_order(b.wid, b.level, target) }
     }
 
+    private var syncScheduled = false
+    private func scheduleSync() {
+        guard !syncScheduled else { return }
+        syncScheduled = true
+        DispatchQueue.main.async { [weak self] in self?.syncScheduled = false; self?.sync() }
+    }
+
     private func drawInto(_ b: SkyBorder) {
         // Under a Windows bar the caption is the top of the frame, so the ring has no top edge
         // of its own there; a Mac window's bevel ran all the way round, bar included.
-        let openTop = TitleBarOverlayController.shared.barAboveHeight > 0 && Self.captionIsTheTop(currentKey)
+        let openTop = b.barAbove > 0 && Self.captionIsTheTop(currentKey)
         Self.drawBorder(currentStyle, into: b.ctx, size: b.size, openTop: openTop)
     }
 
