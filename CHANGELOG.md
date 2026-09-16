@@ -37,6 +37,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   way once it was revealed; it polls now too. Measured with the dock's new cadence log
   (`RETROMAC_DOCK_STATS=1`).
 
+- **The "Classic window corners" hint no longer traps the boot screen.** With the title bars
+  on, the one-time hint ran as a modal alert in the middle of the switch: it sat under the
+  boot cover where nobody could see it, and its modal run loop starved the timer that takes
+  the cover down, so the Windows Me and Mac OS 9 boot animations looped until the unseen OK
+  was found. The hint now waits until the switch has settled and the boot screen is gone, and
+  only appears if the corners are still wanted by then (a launch turns the bars on, off and on
+  again while it recovers, and used to fire it prematurely).
+
 - **The boot screen can always be clicked away, and a stuck switch cannot lock the Mac.**
   The click used to run the waiting theme switch first and take the cover down after, so a
   click sat through the whole switch — and a switch that blocked (an Apple event to a Finder

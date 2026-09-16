@@ -187,7 +187,9 @@ final class TitleBarOverlayController {
         let wanted = squaresCorners
         guard AppSettings.shared.dockEnabled, let theme = ThemeManager.shared.activeTheme else { return }
         SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)
-        if wanted { SystemTweaksAdapter.showCornerHintIfNeeded(for: theme.config, squareCorners: true) }
+        if wanted {
+            SystemTweaksAdapter.showCornerHintIfNeeded(for: theme.config, squareCorners: true) { [weak self] in self?.squaresCorners == true }
+        }
     }
 
     private func stopOverlays() {

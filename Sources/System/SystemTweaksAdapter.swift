@@ -89,21 +89,37 @@ enum SystemTweaksAdapter {
     /// declares window-corner tweaks): the corner radius is a global default each AppKit app reads
     /// only at launch, so it applies to the Finder immediately but to other apps only when they
     /// relaunch — for everything at once the user must log out. Honest, no forced logout.
-    static func showCornerHintIfNeeded(for config: DockThemeConfig, squareCorners: Bool = false) {
-        let key = "classicCornerHintShown"
-        guard !d.bool(forKey: key) else { return }
+    static func showCornerHintIfNeeded(for config: DockThemeConfig, squareCorners: Bool = false,
+                                       stillWanted: @escaping () -> Bool = { true }) {
+        guard !d.bool(forKey: cornerHintKey) else { return }
         let hasCorner = squareCorners || (config.systemTweaks ?? []).contains {
             $0.key == "NSConvolutionOverride1" || $0.key == "NSSplitViewItemGlassMinimumCornerRadius"
         }
         guard hasCorner else { return }
-        d.set(true, forKey: key)
-        let alert = NSAlert()
-        alert.messageText = "Classic window corners"
-        alert.informativeText = "The Finder now uses this era's squarer window corners. Other apps pick them up the next time you open them — to apply the corners everywhere at once, log out and back in. Everything goes back to normal when the theme goes off."
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
+        // Not now: a switch is several steps, and a launch turns the title bars on, off and on
+        // again while it recovers. The hint waits until the switch has settled, the boot screen
+        // is down, and the corners are still wanted. It used to run modal right here: the alert
+        // sat under the boot cover where nobody could see it, and its modal run loop starved the
+        // timer that takes the cover down, so the Windows Me and Mac OS 9 boot animations
+        // looped until the unseen OK was found and clicked.
+        cornerHintTimer?.invalidate()
+        cornerHintTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { t in
+            guard stillWanted() else { t.invalidate(); cornerHintTimer = nil; return }
+            guard NSApp.isRunning, !SplashController.shared.isPresenting, !d.bool(forKey: cornerHintKey) else { return }
+            t.invalidate(); cornerHintTimer = nil
+            d.set(true, forKey: cornerHintKey)
+            let alert = NSAlert()
+            alert.messageText = "Classic window corners"
+            alert.informativeText = "The Finder now uses this era's squarer window corners. Other apps pick them up the next time you open them — to apply the corners everywhere at once, log out and back in. Everything goes back to normal when the theme goes off."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
     }
+
+    private static let cornerHintKey = "classicCornerHintShown"
+    private static var cornerHintTimer: Timer?
 
     /// Crash / force-quit recovery: a leftover snapshot at launch means the previous session
     /// never restored — undo unconditionally. If the theme is still active + the switch on,
