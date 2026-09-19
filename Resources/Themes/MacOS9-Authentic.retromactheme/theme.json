@@ -1,0 +1,249 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.macos9-authentic",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "Mac OS 9.2",
+    "year": 2001
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "macos9"
+  },
+  "name": "Mac OS 9 (authentic)",
+  "systemTweaks": [
+    {
+      "domain": "-g",
+      "key": "NSConvolutionOverride1",
+      "type": "float",
+      "value": "4",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "-g",
+      "key": "NSSplitViewItemGlassMinimumCornerRadius",
+      "type": "float",
+      "value": "4",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.universalaccess",
+      "key": "reduceTransparency",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Dock"
+    },
+    {
+      "domain": "-g",
+      "key": "AppleReduceDesktopTinting",
+      "type": "bool",
+      "value": "true"
+    },
+    {
+      "domain": "-g",
+      "key": "NSSplitViewItemSidebarDefaultsToFloatingAppearance",
+      "type": "bool",
+      "value": "false"
+    },
+    {
+      "domain": "-g",
+      "key": "AppleShowScrollBars",
+      "type": "string",
+      "value": "Always"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "FXPreferredViewStyle",
+      "type": "string",
+      "value": "Nlsv",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "ShowStatusBar",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "ShowPathbar",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "_FXShowPosixPathInTitle",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "-g",
+      "key": "AppleShowAllExtensions",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "DisableAllAnimations",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "-g",
+      "key": "NSAutomaticWindowAnimationsEnabled",
+      "type": "bool",
+      "value": "false"
+    },
+    {
+      "domain": "-g",
+      "key": "NSUseAnimatedFocusRing",
+      "type": "bool",
+      "value": "false"
+    },
+    {
+      "domain": "-g",
+      "key": "NSTableViewDefaultSizeMode",
+      "type": "int",
+      "value": "1",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.dock",
+      "key": "mineffect",
+      "type": "string",
+      "value": "scale",
+      "refresh": "Dock"
+    },
+    {
+      "domain": "com.apple.dock",
+      "key": "launchanim",
+      "type": "bool",
+      "value": "false",
+      "refresh": "Dock"
+    }
+  ],
+  "menuBarApple": "rainbow",
+  "menuBar": {
+    "applicationMenu": true
+  },
+  "version": "1.0",
+  "author": "RetroMac",
+  "splashScreen": "splash.png",
+  "dock": {
+    "height": 26,
+    "iconSize": 16,
+    "padding": 0,
+    "spacing": 0,
+    "cornerRadius": 0,
+    "backgroundColor": "#BBBBBBFF",
+    "borderColor": "#262626FF",
+    "borderWidth": 0,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "alignment": "left",
+    "fullWidth": false,
+    "dockStyle": "controlStripModules",
+    "showClock": false,
+    "showDiskFree": false,
+    "showTrash": false,
+    "showGrip": false,
+    "magnification": false,
+    "edgeOffset": 0,
+    "backgroundImageMode": "tile",
+    "bevelTopColor": "#FFFFFFFF",
+    "bevelBottomColor": "#808080FF",
+    "bevelWidth": 1
+  },
+  "icon": {
+    "renderStyle": "pixelated",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.05
+  },
+  "indicator": {
+    "style": "none",
+    "color": "#000000",
+    "size": 0,
+    "offset": 0
+  },
+  "wallpaper": "wallpaper-finder.jpg",
+  "wallpapers": [
+    {
+      "name": "Mac OS 9 Default",
+      "file": "wallpaper-finder.jpg"
+    },
+    {
+      "name": "Blue Dalmatian",
+      "file": "wallpaper-blue-dalmatian.jpg"
+    },
+    {
+      "name": "Molecule",
+      "file": "wallpaper-molecule.jpg"
+    }
+  ],
+  "desktopIconsSide": "right",
+  "desktopIcons": [
+    {
+      "name": "Macintosh HD",
+      "icon": "harddrive.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Applications",
+      "icon": "folder.png",
+      "type": "appfolder",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Trash",
+      "icon": "trash_empty.png",
+      "iconFull": "trash_full.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": 2
+    }
+  ],
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "lcd-broken-lite",
+  "iconMappings": {
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "safari.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.Notes": "notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.systempreferences": "settings.png",
+    "com.apple.Music": "music.png",
+    "com.apple.Terminal": "terminal.png",
+    "com.apple.TextEdit": "textedit.png",
+    "com.apple.QuickTimePlayerX": "quicktime.png",
+    "com.apple.DiskUtility": "diskutility.png",
+    "com.apple.garageband": "garageband.png",
+    "com.apple.iMovieApp": "imovie.png",
+    "com.apple.Dictionary": "dictionary.png",
+    "com.apple.reminders": "reminders.png"
+  },
+  "screensaver": "flying-toasters",
+  "splashVideo": "boot.mp4",
+  "splashFullscreen": true,
+  "appearance": "light",
+  "accentColor": "graphite"
+}

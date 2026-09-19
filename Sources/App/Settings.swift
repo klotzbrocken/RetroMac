@@ -512,6 +512,18 @@ final class AppSettings: ObservableObject {
     /// Which screen edge the Mac OS Control Strip docks to: "left" (default) or "right".
     /// The strip stays horizontal and sits at the bottom; "right" mirrors the chrome so the
     /// collapse tab / grip faces the screen interior — like the historical Control Strip.
+    /// Mac OS 9 (authentic) Control Strip: how far above the screen's bottom edge it sits, per
+    /// display (keyed by display id), and whether it is collapsed to its tab.
+    @Published var controlStripOffsets: [String: Double] {
+        didSet { defaults.set(controlStripOffsets, forKey: "controlStripOffsets") }
+    }
+    @Published var controlStripCollapsed: Bool {
+        didSet { defaults.set(controlStripCollapsed, forKey: "controlStripCollapsed") }
+    }
+    /// Visible width of the module area in points; 0 = every module.
+    @Published var controlStripVisibleWidth: Double {
+        didSet { defaults.set(controlStripVisibleWidth, forKey: "controlStripVisibleWidth") }
+    }
     @Published var controlStripSide: String {
         didSet { defaults.set(controlStripSide, forKey: "controlStripSide") }
     }
@@ -1141,6 +1153,9 @@ final class AppSettings: ObservableObject {
         themeOrientationOverrides = defaults.dictionary(forKey: "themeOrientationOverrides") as? [String: String] ?? [:]
         themeDockPositionOverride = defaults.dictionary(forKey: "themeDockPositionOverride") as? [String: String] ?? [:]
         controlStripSide = defaults.string(forKey: "controlStripSide") ?? "left"
+        controlStripOffsets = (defaults.dictionary(forKey: "controlStripOffsets") as? [String: Double]) ?? [:]
+        controlStripCollapsed = defaults.bool(forKey: "controlStripCollapsed")
+        controlStripVisibleWidth = defaults.double(forKey: "controlStripVisibleWidth")
         themeDockAutoHide = defaults.dictionary(forKey: "themeDockAutoHide") as? [String: Bool] ?? [:]
         themeWallpaperOverrides = defaults.dictionary(forKey: "themeWallpaperOverrides") as? [String: String] ?? [:]
         themeCustomWallpaper = defaults.dictionary(forKey: "themeCustomWallpaper") as? [String: String] ?? [:]

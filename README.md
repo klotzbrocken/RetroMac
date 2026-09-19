@@ -59,8 +59,9 @@ More, and the videos, at [myretromac.app](https://myretromac.app).
 - **Live Wallpaper Plus** — the shader over wallpaper, desktop icons, dock and Start menu in one
   pass while your windows stay untouched. Nostalgia and work at the same time.
 - **Themes** — Windows 3.1, 95, 98 (with the Plus! schemes), Me, XP, 7; System 6 (true 1-bit),
-  Mac OS 9, Mac OS X Cheetah, Mountain Lion, Snow Leopard; BeOS, OS/2 Warp 4, SGI IRIX, AmigaOS
-  Workbench 4.1, NeXTSTEP, Futurama, and two of the maintainer's own.
+  Mac OS 9 (and an authentic cut with the Control Strip of system modules and the Application
+  menu instead of a dock), Mac OS X Cheetah, Mountain Lion, Snow Leopard; BeOS, OS/2 Warp 4,
+  SGI IRIX, AmigaOS Workbench 4.1, NeXTSTEP, Futurama, and two of the maintainer's own.
 - **Retro Dock and taskbar** — floats over or replaces the system Dock; Start menus in the 9x and
   Luna shapes, Quick Launch, tray with clock, speaker and messenger; per-window task buttons.
 - **Cursors** — the theme's own pointer set, captured and restored exactly when the theme goes off.

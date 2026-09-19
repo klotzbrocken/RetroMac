@@ -643,7 +643,7 @@ final class ThemeManager {
         case "Mac OS 6 classic":
             // System 6: plain white, closed off by a hard black rule.
             return MenuBarStyle(bottom: c(1), top: c(1), rule: c(0), ruleHeight: 1)
-        case "Mac OS 9.2 Classic":
+        case "Mac OS 9.2 Classic", "Mac OS 9 (authentic)":
             // Platinum: flat grey with a white highlight along the top edge.
             return MenuBarStyle(bottom: c(0.867), top: c(0.902), rule: c(0.333))
         case "Mac OS X":

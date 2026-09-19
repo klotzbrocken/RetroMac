@@ -5,6 +5,20 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **New theme: Mac OS 9 (authentic).** The desktop as it was, next to "Mac OS 9.2 Classic",
+  which stays as it is. No dock: programs open from the Finder, and the **Application
+  menu** at the right end of the menu bar (the front app's icon; Hide, Hide Others, Show All,
+  the running apps with a tick at the front one) switches between them. The **Control Strip**
+  along the bottom-left edge holds the system, not programs: AppleTalk turned network
+  connection, File Sharing, colour depth, monitor resolution (with the real modes, and a
+  15-second "keep or revert" after a switch, as the Monitors control panel had), sound volume,
+  the battery on a portable, video mirroring with a second display. The tab at the screen edge
+  collapses the strip and drags it up and down; the size box at the other end sets how much
+  shows; the arrows scroll the rest. Position, width and collapse are remembered. The desktop
+  holds Macintosh HD, Applications and the Trash. Platinum title bars and frames come with the
+  chrome, as in the Classic theme. Theme authors: `dockStyle: "controlStripModules"` and
+  `menuBar.applicationMenu` in docs/THEMES.md.
+
 - **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the
   window borders, when Mac OS 9 or Windows XP is selected: a Platinum or Luna title bar over
   every real window. It is RetroMac's own panel above the window, not a change to the app, and

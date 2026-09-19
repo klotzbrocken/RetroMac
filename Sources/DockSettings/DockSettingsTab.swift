@@ -147,7 +147,7 @@ struct DockSettingsTab: View {
         switch name {
         case "Mountain Lion": return [Color(red: 0.3, green: 0.5, blue: 0.8), Color(red: 0.2, green: 0.4, blue: 0.7)]
         case "Snow Leopard": return [Color(red: 0.45, green: 0.5, blue: 0.58), Color(red: 0.3, green: 0.35, blue: 0.45)]
-        case "Mac OS 9.2 Classic": return [Color(red: 0.78, green: 0.78, blue: 0.8), Color(red: 0.62, green: 0.62, blue: 0.68)]
+        case "Mac OS 9.2 Classic", "Mac OS 9 (authentic)": return [Color(red: 0.78, green: 0.78, blue: 0.8), Color(red: 0.62, green: 0.62, blue: 0.68)]
         case "Windows 98": return [Color(red: 0.0, green: 0.5, blue: 0.5), Color(red: 0.0, green: 0.35, blue: 0.35)]
         case "Windows XP": return [Color(red: 0.0, green: 0.35, blue: 0.75), Color(red: 0.0, green: 0.25, blue: 0.55)]
         case "OS/2 Warp 4": return [Color(red: 0.15, green: 0.15, blue: 0.5), Color(red: 0.1, green: 0.1, blue: 0.35)]
@@ -287,6 +287,27 @@ struct DockSettingsTab: View {
                         }
                         .pickerStyle(.segmented).labelsHidden()
                         .onChange(of: settings.macos9UseDock) { _, _ in reapplySelectedTheme() }
+                    }
+                }
+                if selectedThemeConfig?.isControlStripModules == true {
+                    RMRow(label: "Control Strip",
+                          hint: "System modules along one screen edge, as Mac OS 9 had it: the tab collapses it and drags it up and down, the box at the other end sets how much shows, the arrows scroll. No dock: running apps are in the Application menu at the top right.",
+                          stacked: true) {
+                        HStack {
+                            Picker("", selection: $settings.controlStripSide) {
+                                Text("Left edge").tag("left")
+                                Text("Right edge").tag("right")
+                            }
+                            .pickerStyle(.segmented).labelsHidden()
+                            .onChange(of: settings.controlStripSide) { _, _ in ControlStripController.shared.layout() }
+                            Button("Reset position") {
+                                settings.controlStripOffsets = [:]
+                                settings.controlStripCollapsed = false
+                                settings.controlStripVisibleWidth = 0
+                                ControlStripController.shared.layout()
+                            }
+                            .buttonStyle(RMDefaultButtonStyle())
+                        }
                     }
                 }
                 if selectedThemeConfig?.name == "BeOS" {

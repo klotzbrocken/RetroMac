@@ -12,7 +12,7 @@ extension CursorThemeManager {
     static func cursorSet(for name: String) -> [CursorSlot: CursorFrames]? {
         switch name {
         case "Mac OS 6 classic":                        return loadBundledSet("Cursors/AppleSystem6")
-        case "Mac OS 9.2 Classic":                      return loadBundledSet("Cursors/AppleSystem9")
+        case "Mac OS 9.2 Classic", "Mac OS 9 (authentic)": return loadBundledSet("Cursors/AppleSystem9")
         // The Aqua pointer did not change between 10.0 and 10.8; one set serves all three.
         case "Mac OS X", "Snow Leopard", "Mountain Lion": return loadBundledSet("Cursors/MacOSX")
         // Me had the same black arrow with the white edge that 3.1 had, and no set of its own

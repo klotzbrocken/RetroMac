@@ -102,7 +102,7 @@ Everything under `"dock"`. Sizes are points.
 | `magnification`, `magnificationScale` | Aqua magnification |
 | `windowPreview`, `folderStacks` | Hover previews and folder fans |
 | `borderStyle` | `pacman` or `doomslayer` — the animated dock borders |
-| `dockStyle` | `dock` (default), `controlStrip` (Mac OS 9), `deskbar` (BeOS), `none` (no bar; Windows 3.1's Program Manager and NeXTSTEP bring their own) |
+| `dockStyle` | `dock` (default), `controlStrip` (Mac OS 9.2 Classic: a strip of apps), `controlStripModules` (Mac OS 9 (authentic): a Control Strip of system modules — network, sharing, colours, resolution, volume, battery, mirroring — and no dock at all; it needs `icons/controlstrip-left.png` and `controlstrip-right.png` for the tab and the size box), `deskbar` (BeOS), `none` (no bar; Windows 3.1's Program Manager and NeXTSTEP bring their own) |
 | `appIcon` | RetroMac's own Dock icon while the theme is on, from `icons/` |
 
 `"icon"` holds `renderStyle` (`smooth` or `pixelated` — nearest-neighbour for 16-colour art),
@@ -191,6 +191,7 @@ bundled manifest if you need either; the shapes are in `DockTheme.swift`.
 | `screensaver` | `pipes`, `flowerbox`, `flying-toasters`, `flurry` or `none` |
 | `defaultPreset` | The shader preset the theme suggests |
 | `menuBarApple` | What covers the Apple menu: `off`, `rainbow`, `aqua`, `aqua-classic`, `hell`, `futurama` |
+| `menuBar.applicationMenu` | `true` puts Mac OS 9's Application menu at the right end of the menu bar: the front app's icon, and Hide / Hide Others / Show All / the running apps under it (as far right as macOS lets a status item go) |
 | `hideMenuBarDefault` | `true` hides the menu bar while the theme is on (the Windows themes) |
 | `appearance`, `accentColor` | System appearance (`light`/`dark`) and accent to match when the user allows it |
 | `chromeColors` | A Windows colour scheme (title bars, button face, bevels) for the `win98` chrome; the Plus! themes use it |

@@ -64,6 +64,13 @@ struct DockThemeConfig: Codable {
     var programManager: ProgramManagerConfig? = nil
     var sgiDesktop: SGIDesktopConfig? = nil
     var menuBarApple: String? = nil   // default menu-bar Apple cover for this theme: off|rainbow|aqua|aqua-classic
+    /// What the theme puts on the real menu bar besides the Apple cover.
+    struct MenuBarConfig: Codable {
+        /// Mac OS 9's Application menu at the right end: the front app's icon, and a menu of
+        /// the running apps to switch between (Hide, Hide Others, Show All above it).
+        var applicationMenu: Bool? = nil
+    }
+    var menuBar: MenuBarConfig? = nil
     var hideMenuBarDefault: Bool? = nil   // when set, activating this theme applies it to Settings.hideMenuBar (Win 95/XP hide it)
     /// Which edge the desktop icons start from: "left" or "right" (default). Windows has always
     /// stacked them down the LEFT; the Mac stacks them down the right, and everything here used
@@ -215,7 +222,8 @@ struct DockThemeConfig: Codable {
         var clockFormat: String?       // strftime-style: "h:mm a" (default), "hh:mm:ss a", "HH:mm", etc.
         var clockFontSize: CGFloat?    // explicit clock font size override
         var showDiskFree: Bool?        // show disk free space tray (OS/2 WarpCenter style)
-        var dockStyle: String?         // nil/"dock" (default), "controlStrip" (Mac OS 9 Control Strip)
+        var dockStyle: String?         // nil/"dock" (default), "controlStrip" (Mac OS 9 Control Strip of apps),
+                                       // "controlStripModules" (Mac OS 9 Control Strip of system modules, no dock)
         var windowPreview: Bool?       // hover a running app's icon ~2s → show a (pixel) window preview
         var folderStacks: Bool?        // click a folder dock item → fan out its recent files
         var appIcon: String?           // icons/<file>: app's Dock icon in Dock Mode (theme-aware)
@@ -312,6 +320,11 @@ extension DockThemeConfig {
     var isXPStartMenu: Bool { startMenuStyle == "xp" }
     var hasDiskFree: Bool { dock.showDiskFree == true }
     var isControlStrip: Bool { dock.dockStyle == "controlStrip" }
+    /// Mac OS 9 (authentic): a Control Strip of system modules (network, sharing, colours,
+    /// resolution, volume, battery, mirroring) and no dock at all; running apps are switched
+    /// through the Application menu instead.
+    var isControlStripModules: Bool { dock.dockStyle == "controlStripModules" }
+    var hasApplicationMenu: Bool { menuBar?.applicationMenu == true }
     /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.
     var hasWindowPreview: Bool { dock.windowPreview == true }
     var hasFolderStacks: Bool { dock.folderStacks == true }
@@ -319,7 +332,7 @@ extension DockThemeConfig {
     var isDeskbar: Bool { dock.dockStyle == "deskbar" }
     /// When true, no dock/taskbar bar is shown (e.g. Windows 3.1 Program Manager desktop,
     /// the BeOS Deskbar, or NeXTSTEP — all provide their own panel instead of RetroMac's DockView).
-    var hidesDock: Bool { dock.dockStyle == "none" || dock.dockStyle == "deskbar" || isNextStep }
+    var hidesDock: Bool { dock.dockStyle == "none" || dock.dockStyle == "deskbar" || isControlStripModules || isNextStep }
 
     /// NeXTSTEP theme: shows the always-on-screen vertical Workspace menu (top-left). Gated on the
     /// declared chrome so only the NeXT theme brings up that panel.
