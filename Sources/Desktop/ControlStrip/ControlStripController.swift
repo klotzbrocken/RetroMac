@@ -157,6 +157,12 @@ final class ControlStripController {
         guard let view, let window = view.window else { return }
         let onScreen = window.convertToScreen(view.convert(anchor, to: nil))
         if let menu = module.menu() {
+            // A module with one thing to do does it; only a choice gets a menu.
+            let actions = menu.items.filter { $0.isEnabled && $0.action != nil && !$0.isSeparatorItem }
+            if actions.count == 1, let only = actions.first, let action = only.action {
+                NSApp.sendAction(action, to: only.target, from: only)
+                return
+            }
             // The module's menu, drawn Platinum; from the bottom of the screen it opens upward.
             PlatinumMenuController.shared.ignoreClickWindow = window
             PlatinumMenuController.shared.show(PlatinumMenuItem.rows(of: menu), below: onScreen)

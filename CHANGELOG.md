@@ -27,7 +27,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   highlight, fly-out submenus that scroll with arrows when they outgrow the screen), with the
   theme's own pictures on the first level; this macOS shows no images in an NSMenu at all. The
   strip goes under the Live Wallpaper Plus shader like the dock does, at twice its 1× size,
-  on the bottom edge. Theme authors: `dockStyle: "controlStripModules"`,
+  on the bottom edge. A module with one thing to do (network, sharing, the battery: open its
+  settings) does it on the click; only a choice gets a menu. The sound module stands up the
+  slider of its day: press, drag, let go — Platinum track, seven ticks, the round-shouldered
+  knob — not the Windows tray's popup. Theme authors: `dockStyle: "controlStripModules"`,
   `menuBar.applicationMenu` and `menuBar.appleMenu` in docs/THEMES.md.
 
 - **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the

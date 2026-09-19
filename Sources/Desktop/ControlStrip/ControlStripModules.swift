@@ -384,9 +384,10 @@ final class VolumeModule: ControlStripModule {
     }
     func draw(in rect: NSRect) { StripArt.draw(StripArt.speaker(level: level), at: rect.origin) }
     func menu() -> NSMenu? { nil }
+    /// Press, drag, release: the Platinum slider stands up above the module for the drag.
     func click(anchor: NSRect) {
-        VolumePopup.shared.onChange = { [weak self] in self?.refresh() }
-        VolumePopup.shared.toggle(anchor: anchor)
+        PlatinumVolumeSlider.shared.onChange = { [weak self] in self?.refresh() }
+        PlatinumVolumeSlider.shared.begin(above: anchor)
     }
 }
 
