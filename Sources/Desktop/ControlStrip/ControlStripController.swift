@@ -154,10 +154,45 @@ final class ControlStripController {
 
     // MARK: Interaction (from the view)
 
+    /// The tab was clicked: the strip rolls in or out, the way it did — a third of a second,
+    /// the modules sliding out from behind the tab (or back under it), not a cut.
     func toggleCollapsed() {
-        AppSettings.shared.controlStripCollapsed.toggle()
-        layout()
+        guard let panel, let view, let screen, rollTimer == nil else { return }
+        let right = AppSettings.shared.controlStripSide == "right"
+        let collapsing = !AppSettings.shared.controlStripCollapsed
+        if !collapsing { AppSettings.shared.controlStripCollapsed = false }   // draw the full strip while it unrolls
+        let full = ControlStripView.windowWidth(view.preferredWidth(collapsed: false,
+                                                                    visible: CGFloat(AppSettings.shared.controlStripVisibleWidth), modules: available))
+        let tab = ControlStripView.windowWidth(view.tabWidth)
+        let from = collapsing ? full : tab, to = collapsing ? tab : full
+        let y = panel.frame.minY
+        // The view keeps the full layout; the window is the roller blind over it.
+        view.frame = NSRect(x: 0, y: 0, width: full, height: ControlStripView.height)
+        view.mirrored = right
+        view.needsDisplay = true
+        let start = CACurrentMediaTime()
+        let duration = 0.35
+        func step(_ w: CGFloat) {
+            let x = right ? screen.frame.maxX - w : screen.frame.minX
+            panel.setFrame(NSRect(x: x, y: y, width: w, height: ControlStripView.height), display: false)
+            view.frame.origin.x = right ? w - full : 0   // right edge: the tab end stays at the edge
+        }
+        step(from)
+        let t = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] timer in
+            let p = min(1, (CACurrentMediaTime() - start) / duration)
+            let e = p < 0.5 ? 2 * p * p : 1 - pow(-2 * p + 2, 2) / 2   // ease in, ease out
+            step(from + (to - from) * CGFloat(e))
+            if p >= 1 {
+                timer.invalidate()
+                self?.rollTimer = nil
+                if collapsing { AppSettings.shared.controlStripCollapsed = true }
+                self?.layout()
+            }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        rollTimer = t
     }
+    private var rollTimer: Timer?
 
     func dragged(by dy: CGFloat) {
         guard let screen else { return }

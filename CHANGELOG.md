@@ -36,7 +36,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   device); Video Mirroring is always on the strip and says when it lacks a second display.
   Option- or Control-drag rearranges a module or moves the whole strip to either edge and up
   and down it, as the original did; the order is remembered. A second click on a module closes
-  its open menu. The strip is 48 pt tall. Theme authors: `dockStyle: "controlStripModules"`,
+  its open menu. The strip is 48 pt tall, and its tab rolls it out and in over a third of a
+  second, the modules sliding from behind the tab, as the strip of the Classic theme does. Theme authors: `dockStyle: "controlStripModules"`,
   `menuBar.applicationMenu` and `menuBar.appleMenu` in docs/THEMES.md.
 
 - **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the
