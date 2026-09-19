@@ -56,8 +56,8 @@ final class ControlStripTests: XCTestCase {
     }
 
     func testAvailabilityRules() {
-        // Mirroring needs a second display; on a one-display machine it hides.
-        XCTAssertEqual(MirroringModule().isAvailable, MirroringModule.displayCount() >= 2)
+        // Mirroring stays on the strip; its menu says when there is no second display.
+        XCTAssertTrue(MirroringModule().isAvailable)
         // The battery hides where there is none.
         let b = BatteryModule(); b.refresh()
         XCTAssertEqual(b.isAvailable, BatteryModule.read().0 != nil)
@@ -82,7 +82,8 @@ final class ControlStripTests: XCTestCase {
 
     func testPixelArtIsSixteenSquare() {
         for art in [StripArt.network, StripArt.sharing, StripArt.colours, StripArt.monitor, StripArt.mirroring,
-                    StripArt.speaker(level: 3), StripArt.battery(fraction: 0.5, charging: true)] {
+                    StripArt.speaker(level: 3), StripArt.battery(fraction: 0.5, charging: true),
+                    KeychainModule.art, MediaBayModule.art, PrinterModule.art, SoundSourceModule.art] {
             XCTAssertEqual(art.count, 16)
             for row in art { XCTAssertEqual(row.count, 16) }
         }

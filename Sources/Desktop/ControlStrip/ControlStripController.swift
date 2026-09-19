@@ -15,8 +15,12 @@ final class ControlStripController {
     private var tickTimer: Timer?
     private var observers: [NSObjectProtocol] = []
     private var lastRefresh: [String: Date] = [:]
-    let modules: [ControlStripModule] = [NetworkModule(), SharingModule(), ColourDepthModule(),
-                                         ResolutionModule(), VolumeModule(), BatteryModule(), MirroringModule()]
+    /// Every module, in the order a fresh Mac OS 9 strip had them (alphabetical by module
+    /// name: AppleTalk, Battery, CD/Media Bay, File Sharing, Keychain, Monitor BitDepth,
+    /// Monitor Resolution, Printer Selector, Sound Volume, SoundSource, Video Mirroring).
+    let modules: [ControlStripModule] = [NetworkModule(), BatteryModule(), MediaBayModule(), SharingModule(), KeychainModule(),
+                                         ColourDepthModule(), ResolutionModule(), PrinterModule(), VolumeModule(),
+                                         SoundSourceModule(), MirroringModule()]
 
     private init() {}
 
@@ -95,8 +99,34 @@ final class ControlStripController {
         return String(id)
     }
 
-    /// Modules that have something to show right now, in Control Strip order.
-    var available: [ControlStripModule] { modules.filter { $0.isAvailable } }
+    /// Modules that have something to show right now, in the user's order (Option-drag), the
+    /// default order for the rest.
+    var available: [ControlStripModule] {
+        let order = AppSettings.shared.controlStripModuleOrder
+        let sorted = modules.sorted { a, b in
+            let ia = order.firstIndex(of: a.id) ?? (order.count + (modules.firstIndex { $0 === a } ?? 0))
+            let ib = order.firstIndex(of: b.id) ?? (order.count + (modules.firstIndex { $0 === b } ?? 0))
+            return ia < ib
+        }
+        return sorted.filter { $0.isAvailable }
+    }
+
+    /// Option-drag of a module: it goes where it was dropped, before the module under the pointer.
+    func move(_ module: ControlStripModule, before target: ControlStripModule?) {
+        var order = available.map { $0.id }
+        order.removeAll { $0 == module.id }
+        if let target, let i = order.firstIndex(of: target.id) { order.insert(module.id, at: i) } else { order.append(module.id) }
+        AppSettings.shared.controlStripModuleOrder = order
+        layout()
+    }
+
+    /// Option-drag of the strip: to either edge, and up and down it.
+    func moved(toScreenPoint p: NSPoint, dy: CGFloat) {
+        guard let screen else { return }
+        let side = p.x < screen.frame.midX ? "left" : "right"
+        if AppSettings.shared.controlStripSide != side { AppSettings.shared.controlStripSide = side }
+        dragged(by: dy)
+    }
 
     func layout() {
         guard let panel, let view, let screen else { return }
@@ -153,9 +183,16 @@ final class ControlStripController {
         layout()
     }
 
+    private weak var menuModule: ControlStripModule?
+
     func activate(_ module: ControlStripModule, anchor: NSRect) {
         guard let view, let window = view.window else { return }
         let onScreen = window.convertToScreen(view.convert(anchor, to: nil))
+        // A second click on the module whose menu is open closes it.
+        if PlatinumMenuController.shared.isOpen, menuModule === module {
+            PlatinumMenuController.shared.dismissAll(); menuModule = nil; return
+        }
+        menuModule = nil
         if let menu = module.menu() {
             // A module with one thing to do does it; only a choice gets a menu.
             let actions = menu.items.filter { $0.isEnabled && $0.action != nil && !$0.isSeparatorItem }
@@ -166,6 +203,7 @@ final class ControlStripController {
             // The module's menu, drawn Platinum; from the bottom of the screen it opens upward.
             PlatinumMenuController.shared.ignoreClickWindow = window
             PlatinumMenuController.shared.show(PlatinumMenuItem.rows(of: menu), below: onScreen)
+            menuModule = module
         } else {
             module.click(anchor: onScreen)
         }
@@ -249,7 +287,7 @@ final class ControlStripView: NSView {
     /// 1920-wide display is a sliver nobody can hit. Every measure below is in 1× units; the
     /// view scales its drawing and divides the mouse by `scale`.
     static let scale: CGFloat = 2
-    static let baseHeight: CGFloat = 26
+    static let baseHeight: CGFloat = 24
     static var height: CGFloat { baseHeight * scale }
     static let scrollCell: CGFloat = 12
     static let groove: CGFloat = 2
@@ -389,13 +427,26 @@ final class ControlStripView: NSView {
 
     // MARK: Mouse
 
-    private enum Drag { case none, tab(startY: CGFloat, moved: Bool), size(startX: CGFloat, startWidth: CGFloat) }
+    private enum Drag {
+        case none
+        case tab(startY: CGFloat, moved: Bool)
+        case size(startX: CGFloat, startWidth: CGFloat)
+        case module(ControlStripModule, startX: CGFloat)   // Option-drag: rearrange
+        case strip(startY: CGFloat)                         // Option-drag: move the strip
+    }
+    private var dragTarget: ControlStripModule?
     private var drag = Drag.none
 
     override func mouseDown(with event: NSEvent) {
         let raw = convert(event.locationInWindow, from: nil)
         let p = NSPoint(x: raw.x / Self.scale, y: raw.y / Self.scale)
         let screenP = NSEvent.mouseLocation
+        // Option or Control held: rearrange a module, or move the whole strip along the edges.
+        if !event.modifierFlags.intersection([.option, .control]).isEmpty {
+            if !collapsed, let (m, _) = placedModules().first(where: { $0.1.contains(p) }) { drag = .module(m, startX: screenP.x) }
+            else { drag = .strip(startY: screenP.y) }
+            return
+        }
         if tabRect.contains(p) { drag = .tab(startY: screenP.y, moved: false); return }
         guard !collapsed else { return }
         if sizeBoxRect.contains(p) {
@@ -420,12 +471,27 @@ final class ControlStripView: NSView {
         case .size(let startX, let startWidth):
             let dx = (screenP.x - startX) / Self.scale
             controller.resized(to: startWidth + (mirrored ? -dx : dx))
+        case .module:
+            // The module under the pointer is where the dragged one will go.
+            let raw = convert(event.locationInWindow, from: nil)
+            let p = NSPoint(x: raw.x / Self.scale, y: raw.y / Self.scale)
+            dragTarget = placedModules().min { abs($0.1.midX - p.x) < abs($1.1.midX - p.x) }?.0   // the nearest, grooves included
+        case .strip(let startY):
+            let dy = screenP.y - startY
+            drag = .strip(startY: screenP.y)
+            controller.moved(toScreenPoint: screenP, dy: dy)
         case .none: break
         }
     }
 
     override func mouseUp(with event: NSEvent) {
-        if case .tab(_, let moved) = drag, !moved { controller.toggleCollapsed() }
+        switch drag {
+        case .tab(_, let moved): if !moved { controller.toggleCollapsed() }
+        case .module(let m, _):
+            if let target = dragTarget, target !== m { controller.move(m, before: target) }
+        default: break
+        }
+        dragTarget = nil
         drag = .none
     }
 }

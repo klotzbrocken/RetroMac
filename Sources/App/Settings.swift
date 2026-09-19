@@ -524,6 +524,10 @@ final class AppSettings: ObservableObject {
     @Published var controlStripVisibleWidth: Double {
         didSet { defaults.set(controlStripVisibleWidth, forKey: "controlStripVisibleWidth") }
     }
+    /// The modules' order (ids), as the user arranged them with Option-drag; empty = the default.
+    @Published var controlStripModuleOrder: [String] {
+        didSet { defaults.set(controlStripModuleOrder, forKey: "controlStripModuleOrder") }
+    }
     @Published var controlStripSide: String {
         didSet { defaults.set(controlStripSide, forKey: "controlStripSide") }
     }
@@ -1156,6 +1160,7 @@ final class AppSettings: ObservableObject {
         controlStripOffsets = (defaults.dictionary(forKey: "controlStripOffsets") as? [String: Double]) ?? [:]
         controlStripCollapsed = defaults.bool(forKey: "controlStripCollapsed")
         controlStripVisibleWidth = defaults.double(forKey: "controlStripVisibleWidth")
+        controlStripModuleOrder = defaults.stringArray(forKey: "controlStripModuleOrder") ?? []
         themeDockAutoHide = defaults.dictionary(forKey: "themeDockAutoHide") as? [String: Bool] ?? [:]
         themeWallpaperOverrides = defaults.dictionary(forKey: "themeWallpaperOverrides") as? [String: String] ?? [:]
         themeCustomWallpaper = defaults.dictionary(forKey: "themeCustomWallpaper") as? [String: String] ?? [:]

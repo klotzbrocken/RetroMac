@@ -2,6 +2,7 @@ import AppKit
 import CoreGraphics
 import IOKit.ps
 import SystemConfiguration
+import CoreAudio
 
 /// One module of the Mac OS 9 Control Strip: a small picture with a state, and a menu that
 /// pops up when it is clicked. The originals lived in "Control Strip Modules"; these are
@@ -436,7 +437,7 @@ final class BatteryModule: ControlStripModule {
 /// Video mirroring, with two or more displays.
 final class MirroringModule: ControlStripModule {
     let id = "mirroring"
-    var isAvailable: Bool { Self.displayCount() >= 2 }
+    var isAvailable: Bool { true }   // on the strip as it was; with one display the menu says so
     var width: CGFloat { 20 }
     private(set) var isOn = false
 
@@ -462,6 +463,10 @@ final class MirroringModule: ControlStripModule {
         let m = NSMenu()
         let i = m.addItem(withTitle: isOn ? "Turn Mirroring Off" : "Turn Mirroring On", action: #selector(toggle), keyEquivalent: "")
         i.target = self
+        if Self.displayCount() < 2 {
+            i.isEnabled = false
+            let note = m.addItem(withTitle: "Needs a second display", action: nil, keyEquivalent: ""); note.isEnabled = false
+        }
         m.addItem(.separator())
         m.addItem(ControlStripActions.item("Open Displays Settings…", url: "x-apple.systempreferences:com.apple.Displays-Settings.extension"))
         return m
@@ -495,5 +500,263 @@ enum ControlStripActions {
         @objc func open(_ sender: NSMenuItem) {
             if let s = sender.representedObject as? String, let u = URL(string: s) { NSWorkspace.shared.open(u) }
         }
+    }
+}
+
+// MARK: - The rest of a Mac OS 9 strip
+
+/// Keychain: the strip's padlock. Locking every keychain is what the module did; the rest
+/// opens Passwords (or Keychain Access on a Mac without it).
+final class KeychainModule: ControlStripModule {
+    let id = "keychain"
+    var isAvailable: Bool { true }
+    var width: CGFloat { 20 }
+    static let art = [
+        "................",
+        ".....######.....",
+        "....##....##....",
+        "....#......#....",
+        "....#......#....",
+        "....#......#....",
+        "..############..",
+        "..#wwwwwwwwww#..",
+        "..#wwwwwwwwww#..",
+        "..#wwwww#wwww#..",
+        "..#wwww###www#..",
+        "..#wwwww#wwww#..",
+        "..#wwwww#wwww#..",
+        "..#wwwwwwwwww#..",
+        "..############..",
+        "................",
+    ]
+    func draw(in rect: NSRect) { StripArt.draw(Self.art, at: rect.origin) }
+    func menu() -> NSMenu? {
+        let m = NSMenu()
+        let lock = m.addItem(withTitle: "Lock All Keychains", action: #selector(lockAll), keyEquivalent: "")
+        lock.target = self
+        m.addItem(.separator())
+        let passwords = "/System/Applications/Passwords.app"
+        let keychainAccess = "/System/Library/CoreServices/Applications/Keychain Access.app"
+        let path = FileManager.default.fileExists(atPath: passwords) ? passwords : keychainAccess
+        let open = m.addItem(withTitle: path == passwords ? "Open Passwords…" : "Open Keychain Access…", action: #selector(openApp(_:)), keyEquivalent: "")
+        open.target = self; open.representedObject = path
+        return m
+    }
+    @objc private func lockAll() {
+        let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/security"); p.arguments = ["lock-keychain", "-a"]
+        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+        try? p.run()
+    }
+    @objc private func openApp(_ sender: NSMenuItem) {
+        guard let p = sender.representedObject as? String else { return }
+        NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: p), configuration: NSWorkspace.OpenConfiguration())
+    }
+}
+
+/// Media Bay: what sits in the PowerBook's bay — today, the removable volumes on the desk,
+/// each with an Eject.
+final class MediaBayModule: ControlStripModule {
+    let id = "mediabay"
+    var isAvailable: Bool { true }
+    var width: CGFloat { 20 }
+    var refreshInterval: TimeInterval { 5 }
+    private(set) var volumes: [(name: String, url: URL)] = []
+
+    func refresh() { volumes = Self.removableVolumes() }
+
+    static func removableVolumes() -> [(name: String, url: URL)] {
+        let keys: [URLResourceKey] = [.volumeIsRemovableKey, .volumeIsEjectableKey, .volumeIsInternalKey, .volumeLocalizedNameKey]
+        let urls = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) ?? []
+        return urls.compactMap { u in
+            guard let v = try? u.resourceValues(forKeys: Set(keys)),
+                  (v.volumeIsRemovable == true || v.volumeIsEjectable == true || v.volumeIsInternal == false) else { return nil }
+            return (v.volumeLocalizedName ?? u.lastPathComponent, u)
+        }
+    }
+
+    static let art = [
+        "................",
+        "................",
+        "................",
+        "..############..",
+        "..#..........#..",
+        "..#.wwwwwwww.#..",
+        "..#.wwwwwwww.#..",
+        "..#.wwwwwwww.#..",
+        "..#..........#..",
+        "..############..",
+        "..#dddddddddd#..",
+        "..############..",
+        "................",
+        "................",
+        "................",
+        "................",
+    ]
+    func draw(in rect: NSRect) {
+        StripArt.draw(Self.art, at: rect.origin)
+        if !volumes.isEmpty {   // something in the bay: the slot lights up
+            NSColor(red: 0.15, green: 0.65, blue: 0.2, alpha: 1).setFill()
+            NSRect(x: rect.minX + 4, y: rect.minY + 10, width: 8, height: 1).fill()
+        }
+    }
+    func menu() -> NSMenu? {
+        let m = NSMenu()
+        if volumes.isEmpty {
+            let none = m.addItem(withTitle: "Nothing in the bay", action: nil, keyEquivalent: ""); none.isEnabled = false
+            return m
+        }
+        for v in volumes {
+            let i = m.addItem(withTitle: "Eject \(v.name)", action: #selector(eject(_:)), keyEquivalent: "")
+            i.target = self; i.representedObject = v.url
+        }
+        return m
+    }
+    @objc private func eject(_ sender: NSMenuItem) {
+        guard let u = sender.representedObject as? URL else { return }
+        try? NSWorkspace.shared.unmountAndEjectDevice(at: u)
+        refresh()
+    }
+}
+
+/// Printer Selector: the default printer, and the others to choose from.
+final class PrinterModule: ControlStripModule {
+    let id = "printer"
+    var isAvailable: Bool { !NSPrinter.printerNames.isEmpty }
+    var width: CGFloat { 20 }
+    var refreshInterval: TimeInterval { 30 }
+    private(set) var current = ""
+    func refresh() { current = NSPrintInfo.shared.printer.name }
+    static let art = [
+        "................",
+        ".....######.....",
+        ".....#wwww#.....",
+        ".....#wwww#.....",
+        ".....#wwww#.....",
+        "..############..",
+        "..#dddddddddd#..",
+        "..#dddddddddd#..",
+        "..#dddddddddd#..",
+        "..############..",
+        ".....######.....",
+        ".....#wwww#.....",
+        ".....#wwww#.....",
+        ".....######.....",
+        "................",
+        "................",
+    ]
+    func draw(in rect: NSRect) { StripArt.draw(Self.art, at: rect.origin) }
+    func menu() -> NSMenu? {
+        let m = NSMenu()
+        for name in NSPrinter.printerNames {
+            let i = m.addItem(withTitle: name, action: #selector(choose(_:)), keyEquivalent: "")
+            i.target = self; i.representedObject = name
+            i.state = name == current ? .on : .off
+        }
+        m.addItem(.separator())
+        m.addItem(ControlStripActions.item("Open Printers & Scanners…", url: "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension"))
+        return m
+    }
+    @objc private func choose(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        // The queue name, not the display name, is what lpoptions wants.
+        let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/lpoptions")
+        p.arguments = ["-d", name.replacingOccurrences(of: " ", with: "_")]
+        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+        try? p.run(); p.waitUntilExit()
+        refresh()
+    }
+}
+
+/// SoundSource: where the sound goes — the output device, and the input beside it.
+final class SoundSourceModule: ControlStripModule {
+    let id = "soundsource"
+    var isAvailable: Bool { true }
+    var width: CGFloat { 20 }
+    var refreshInterval: TimeInterval { 10 }
+    private(set) var outputs: [(name: String, id: AudioDeviceID)] = []
+    private(set) var inputs: [(name: String, id: AudioDeviceID)] = []
+    private(set) var currentOutput: AudioDeviceID = 0
+    private(set) var currentInput: AudioDeviceID = 0
+
+    func refresh() {
+        let all = Self.devices()
+        outputs = all.filter { Self.streams($0.id, input: false) > 0 }
+        inputs = all.filter { Self.streams($0.id, input: true) > 0 }
+        currentOutput = Self.defaultDevice(input: false)
+        currentInput = Self.defaultDevice(input: true)
+    }
+
+    static func devices() -> [(name: String, id: AudioDeviceID)] {
+        var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDevices, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size) == noErr else { return [] }
+        var ids = [AudioDeviceID](repeating: 0, count: Int(size) / MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &ids) == noErr else { return [] }
+        return ids.compactMap { id in
+            var nameAddr = AudioObjectPropertyAddress(mSelector: kAudioObjectPropertyName, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+            var name: CFString = "" as CFString
+            var nsize = UInt32(MemoryLayout<CFString>.size)
+            guard AudioObjectGetPropertyData(id, &nameAddr, 0, nil, &nsize, &name) == noErr else { return nil }
+            return (name as String, id)
+        }
+    }
+    static func streams(_ id: AudioDeviceID, input: Bool) -> Int {
+        var addr = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyStreams, mScope: input ? kAudioObjectPropertyScopeInput : kAudioObjectPropertyScopeOutput, mElement: kAudioObjectPropertyElementMain)
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(id, &addr, 0, nil, &size) == noErr else { return 0 }
+        return Int(size) / MemoryLayout<AudioStreamID>.size
+    }
+    static func defaultDevice(input: Bool) -> AudioDeviceID {
+        var addr = AudioObjectPropertyAddress(mSelector: input ? kAudioHardwarePropertyDefaultInputDevice : kAudioHardwarePropertyDefaultOutputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var id: AudioDeviceID = 0
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &id)
+        return id
+    }
+    static func setDefault(_ id: AudioDeviceID, input: Bool) {
+        var addr = AudioObjectPropertyAddress(mSelector: input ? kAudioHardwarePropertyDefaultInputDevice : kAudioHardwarePropertyDefaultOutputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var v = id
+        AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, UInt32(MemoryLayout<AudioDeviceID>.size), &v)
+    }
+
+    static let art = [
+        "................",
+        "................",
+        "......##........",
+        ".....#ww#.......",
+        ".....#ww#.......",
+        ".....#ww#.......",
+        ".....#ww#.......",
+        "...#.#ww#.#.....",
+        "...#.####.#.....",
+        "...#......#.....",
+        "....######......",
+        "......##........",
+        "......##........",
+        "....######......",
+        "................",
+        "................",
+    ]
+    func draw(in rect: NSRect) { StripArt.draw(Self.art, at: rect.origin) }
+    func menu() -> NSMenu? {
+        let m = NSMenu()
+        let outHead = m.addItem(withTitle: "Output", action: nil, keyEquivalent: ""); outHead.isEnabled = false
+        for d in outputs {
+            let i = m.addItem(withTitle: d.name, action: #selector(pickOutput(_:)), keyEquivalent: "")
+            i.target = self; i.representedObject = NSNumber(value: d.id); i.state = d.id == currentOutput ? .on : .off
+        }
+        m.addItem(.separator())
+        let inHead = m.addItem(withTitle: "Input", action: nil, keyEquivalent: ""); inHead.isEnabled = false
+        for d in inputs {
+            let i = m.addItem(withTitle: d.name, action: #selector(pickInput(_:)), keyEquivalent: "")
+            i.target = self; i.representedObject = NSNumber(value: d.id); i.state = d.id == currentInput ? .on : .off
+        }
+        return m
+    }
+    @objc private func pickOutput(_ sender: NSMenuItem) {
+        if let n = sender.representedObject as? NSNumber { Self.setDefault(n.uint32Value, input: false); refresh() }
+    }
+    @objc private func pickInput(_ sender: NSMenuItem) {
+        if let n = sender.representedObject as? NSNumber { Self.setDefault(n.uint32Value, input: true); refresh() }
     }
 }
