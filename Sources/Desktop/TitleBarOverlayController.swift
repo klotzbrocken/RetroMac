@@ -140,6 +140,7 @@ final class TitleBarOverlayController {
             }
             // Same style, other theme (95 → 98 → Me, a Plus! scheme): the colours come from the
             // theme at draw time, so every bar draws again.
+            Self.classicIcons.removeAll()   // another theme, other pictures
             for o in overlays.values { o.view.needsDisplay = true }
             sync()
             return
@@ -164,6 +165,7 @@ final class TitleBarOverlayController {
                 if name == NSWorkspace.didTerminateApplicationNotification, let pid = app?.processIdentifier {
                     Self.bundleIDs.removeValue(forKey: pid)
                     Self.icons.removeValue(forKey: pid)
+                    Self.classicIcons.removeValue(forKey: pid)
                 } else if let pid = app?.processIdentifier {
                     // A new or re-activated app needs its AX observer (closed/minimised windows)
                     // whether or not the borders are running.
@@ -362,7 +364,14 @@ final class TitleBarOverlayController {
             (frame, lights) = Self.lightsFrame(for: info.bounds, offsets: offsets)
         }
         let title = drawStyle.isBar ? title(for: info) : ""
-        let icon = drawStyle.isWindows && drawStyle != .win31 ? Self.icon(for: info.pid) : nil
+        let icon: NSImage?
+        if drawStyle == .platinum {
+            icon = Self.classicIcon(for: info.pid)   // the theme's icon, or its generic one
+        } else if drawStyle.isWindows && drawStyle != .win31 {
+            icon = Self.icon(for: info.pid)
+        } else {
+            icon = nil
+        }
         let zoomed = zoomedTo[info.id] != nil
 
         if let o = overlays[info.id] {
@@ -892,6 +901,15 @@ final class TitleBarOverlayController {
     }
 
     private static var icons: [pid_t: NSImage] = [:]
+    private static var classicIcons: [pid_t: NSImage] = [:]
+    private static func classicIcon(for pid: pid_t) -> NSImage? {
+        if let i = classicIcons[pid] { return i }
+        let bid = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
+        guard let i = ThemeManager.shared.activeTheme?.classicAppIcon(for: bid) ?? icon(for: pid) else { return nil }
+        classicIcons[pid] = i
+        return i
+    }
+
     private static func icon(for pid: pid_t) -> NSImage? {
         if let i = icons[pid] { return i }
         guard let i = NSRunningApplication(processIdentifier: pid)?.icon else { return nil }
@@ -1149,12 +1167,8 @@ final class TitleBarOverlayView: NSView {
                 buttonRects.append((kind, r))
             }
         case .platinum:
-            let s = ClassicMacChrome.boxSize
-            let y = ((h - s) / 2).rounded()
-            let close = NSRect(x: 8, y: y, width: s, height: s)
-            let zoom = NSRect(x: w - 7 - s, y: y, width: s, height: s)
-            let collapse = NSRect(x: zoom.minX - 5 - s, y: y, width: s, height: s)
-            for (k, r) in [(ChromeButtonKind.close, close), (.collapse, collapse), (.zoom, zoom)] {
+            let boxes = PlatinumBar.boxRects(width: w)
+            for (k, r) in [(ChromeButtonKind.close, boxes.close), (.collapse, boxes.collapse), (.zoom, boxes.zoom)] {
                 tracker.add(k, r.insetBy(dx: -3, dy: -3), interactive: true)
                 buttonRects.append((k, r))
             }
@@ -1503,31 +1517,19 @@ final class TitleBarOverlayView: NSView {
         }
     }
 
-    /// The bar the widget windows (`WebAppChromeView.drawMacClassic`) draw, line for line:
-    /// plate, pinstripes, the three boxes, the plaque, the shadow line, the black frame — in
-    /// every state. (Mac OS 9 drew an inactive window's bar plain; the widgets never do, and
-    /// the two are meant to be indistinguishable.)
+    /// The bar the Applications widget draws (os9.ca's CSS), line for line — see `PlatinumBar`.
+    /// The proxy icon before the title is the theme's icon for the app, as the widget shows a
+    /// folder before "Applications".
     private func drawPlatinum(_ b: NSRect) {
-        ClassicMacChrome.face.setFill(); b.fill()
-        let font = ChromeStyleFactory.macClassic().titleFont
-        ClassicMacChrome.pinstripes(in: b)
+        PlatinumBar.drawBar(b, active: isFront)
         for (k, r) in buttonRects {
-            ClassicMacChrome.bevelBox(r, state: tracker.state(for: k))
-            if k == .zoom { ClassicMacChrome.zoomGlyph(in: r) }
-            if k == .collapse { ClassicMacChrome.collapseGlyph(in: r) }
+            PlatinumBar.drawBox(r, active: isFront, state: tracker.state(for: k))
+            if k == .zoom { PlatinumBar.zoomGlyph(in: r, active: isFront) }
+            if k == .collapse { PlatinumBar.collapseGlyph(in: r, active: isFront) }
         }
-        // The plaque stays between the close box and the collapse box, whatever the title's length.
         let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 8
-        let right = (buttonRects.first { $0.0 == .collapse }?.1.minX ?? b.width) - 8
-        ClassicMacChrome.titlePlaque(title, bar: b, font: font, maxWidth: max(0, right - left))
-        ClassicMacChrome.botShadow.setFill()
-        NSRect(x: 0, y: b.height - 1, width: b.width, height: 1).fill()
-        // The 1 px black frame the widget windows draw round themselves: top and sides here,
-        // the window border carries it on down the sides when it is on.
-        NSColor.black.setFill()
-        NSRect(x: 0, y: 0, width: b.width, height: 1).fill()
-        NSRect(x: 0, y: 0, width: 1, height: b.height).fill()
-        NSRect(x: b.width - 1, y: 0, width: 1, height: b.height).fill()
+        let right = (buttonRects.first { $0.0 == .zoom }?.1.minX ?? b.width) - 8
+        PlatinumBar.drawTitle(title, icon: icon, in: b, active: isFront, minX: left, maxX: right)
     }
 
     private func drawLuna(_ b: NSRect) {

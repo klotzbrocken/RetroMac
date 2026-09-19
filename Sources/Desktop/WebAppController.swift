@@ -731,31 +731,24 @@ final class WebAppChromeView: NSView {
 
     // ---- Classic Mac (System 6 / Platinum) — shared look with the TV window via ClassicMacChrome ----
     private func drawMacClassic(_ ctx: CGContext, _ b: NSRect) {
-        let cs = chromeStyle ?? ChromeStyleFactory.macClassic()
         NSColor.white.setFill(); ctx.fill(b)                       // window body
-        let bar = NSRect(x: 0, y: 0, width: b.width, height: titleH)   // flipped: title bar at top
-        ClassicMacChrome.face.setFill(); ctx.fill(bar)
-        ClassicMacChrome.pinstripes(in: bar)
         NSColor.black.setStroke(); NSBezierPath(rect: b.insetBy(dx: 0.5, dy: 0.5)).stroke()  // 1px frame
-        // light-purple shadow line on the content-facing edge of the bar
-        ClassicMacChrome.botShadow.setFill(); ctx.fill(NSRect(x: 0, y: bar.maxY, width: b.width, height: 1))
-
-        // control boxes: close LEFT (functional), collapse + zoom RIGHT (decorative on a web window)
-        let boxS = ClassicMacChrome.boxSize
-        let boxY = (titleH - boxS) / 2
-        let closeR    = NSRect(x: cs.buttonInset, y: boxY, width: boxS, height: boxS)
-        let zoomR     = NSRect(x: b.width - 7 - boxS, y: boxY, width: boxS, height: boxS)
-        let collapseR = NSRect(x: zoomR.minX - cs.buttonSpacing - boxS, y: boxY, width: boxS, height: boxS)
+        // The bar as the Applications widget draws it (`PlatinumBar`, from os9.ca's CSS), so
+        // every Platinum window in RetroMac wears the same one.
+        let bar = NSRect(x: 0, y: 0, width: b.width, height: titleH)   // flipped: title bar at top
+        PlatinumBar.drawBar(bar, active: true)
+        let boxes = PlatinumBar.boxRects(width: b.width)
         tracker.reset()
-        tracker.add(.close, closeR.insetBy(dx: -4, dy: -4), interactive: true)
-        tracker.add(.collapse, collapseR, interactive: false)
-        tracker.add(.zoom, zoomR, interactive: false)
-        ClassicMacChrome.bevelBox(closeR, state: tracker.state(for: .close))
-        ClassicMacChrome.bevelBox(collapseR, state: .normal)
-        ClassicMacChrome.bevelBox(zoomR, state: .normal)
-        ClassicMacChrome.zoomGlyph(in: zoomR)
-        ClassicMacChrome.collapseGlyph(in: collapseR)
-        ClassicMacChrome.titlePlaque(title, bar: bar, font: cs.titleFont)
+        tracker.add(.close, boxes.close.insetBy(dx: -4, dy: -4), interactive: true)
+        tracker.add(.collapse, boxes.collapse, interactive: false)
+        tracker.add(.zoom, boxes.zoom, interactive: false)
+        PlatinumBar.drawBox(boxes.close, active: true, state: tracker.state(for: .close))
+        PlatinumBar.drawBox(boxes.collapse, active: true)
+        PlatinumBar.drawBox(boxes.zoom, active: true)
+        PlatinumBar.zoomGlyph(in: boxes.zoom, active: true)
+        PlatinumBar.collapseGlyph(in: boxes.collapse, active: true)
+        let proxy = iconImage.map { img -> NSImage in let c = img.copy() as! NSImage; c.size = NSSize(width: 16, height: 16); return c }
+        PlatinumBar.drawTitle(title, icon: proxy, in: bar, active: true, minX: boxes.close.maxX + 8, maxX: boxes.zoom.minX - 8)
         closeHit = .zero   // close is tracked via `tracker`
     }
 

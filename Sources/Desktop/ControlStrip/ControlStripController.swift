@@ -52,6 +52,7 @@ final class ControlStripController {
             p.contentView = v
             panel = p
             view = v
+            applyLevel()
             (modules.first { $0.id == "resolution" } as? ResolutionModule)?.onSwitched = { [weak self] before in self?.offerRevert(to: before) }
         }
         for m in modules { m.refresh(); lastRefresh[m.id] = Date() }
@@ -72,6 +73,19 @@ final class ControlStripController {
                 self?.updateVisibilityForSpace()
             })
         }
+    }
+
+    /// Under the desktop-scope shader (Live Wallpaper Plus) the strip goes below the
+    /// application windows, into the band the shader captures, so it is drawn through the
+    /// CRT like the desktop and the dock are — otherwise it sat on top of the effect, sharp.
+    private(set) var loweredForDesktopShader = false
+    func setLoweredForDesktopShader(_ lowered: Bool) {
+        guard loweredForDesktopShader != lowered else { return }
+        loweredForDesktopShader = lowered
+        applyLevel()
+    }
+    private func applyLevel() {
+        panel?.level = NSWindow.Level(rawValue: loweredForDesktopShader ? Int(CGWindowLevelForKey(.normalWindow)) - 3 : 24)
     }
 
     /// The screen the strip lives on: the primary display.
@@ -140,11 +154,14 @@ final class ControlStripController {
     }
 
     func activate(_ module: ControlStripModule, anchor: NSRect) {
-        guard let view else { return }
+        guard let view, let window = view.window else { return }
+        let onScreen = window.convertToScreen(view.convert(anchor, to: nil))
         if let menu = module.menu() {
-            menu.popUp(positioning: nil, at: NSPoint(x: anchor.minX, y: 0), in: view)
+            // The module's menu, drawn Platinum; from the bottom of the screen it opens upward.
+            PlatinumMenuController.shared.ignoreClickWindow = window
+            PlatinumMenuController.shared.show(PlatinumMenuItem.rows(of: menu), below: onScreen)
         } else {
-            module.click(anchor: view.window.map { $0.convertToScreen(view.convert(anchor, to: nil)) } ?? anchor)
+            module.click(anchor: onScreen)
         }
     }
 

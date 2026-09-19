@@ -4,60 +4,108 @@ import AppKit
 /// hands the click over when the theme declares `menuBar.appleMenu`). The items are the ones a
 /// fresh Mac OS 9 had, each pointed at what macOS has today; Recent Applications, Recent
 /// Documents and Favorites come from the same lists the Finder keeps.
-final class AppleMenuController: NSObject, NSMenuDelegate {
+final class AppleMenuController {
 
     static let shared = AppleMenuController()
-    private override init() { super.init() }
-
-    private let menu = NSMenu()
+    private init() {}
 
     func popUp(below rect: NSRect, in window: NSWindow) {
-        menu.delegate = self
-        menuNeedsUpdate(menu)
-        // Below the Apple item, left-aligned with it, the way the real menu drops.
-        let origin = NSPoint(x: rect.minX, y: rect.minY)
-        menu.popUp(positioning: nil, at: window.convertPoint(fromScreen: origin), in: window.contentView)
+        PlatinumMenuController.shared.ignoreClickWindow = window
+        PlatinumMenuController.shared.show(items(), below: rect)
     }
 
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.removeAllItems()
-        menu.addItem(open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension"))
-        menu.addItem(.separator())
-        menu.addItem(submenu("Applications", Self.applications()))
-        menu.addItem(app("Apple System Profiler", "/System/Applications/Utilities/System Information.app"))
-        menu.addItem(app("Calculator", "/System/Applications/Calculator.app"))
-        menu.addItem(open("Chooser", "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension"))
-        menu.addItem(submenu("Control Panels", Self.controlPanels()))
-        menu.addItem(submenu("Favorites", Self.sharedList("FavoriteItems")))
-        menu.addItem(file("Network Browser", "/Network"))
-        menu.addItem(submenu("Recent Applications", Self.sharedList("RecentApplications")))
-        menu.addItem(submenu("Recent Documents", Self.sharedList("RecentDocuments")))
-        menu.addItem(submenu("Recent Servers", Self.sharedList("RecentServers")))
-        menu.addItem(app("Sherlock 2", "/System/Library/CoreServices/Spotlight.app"))
-        menu.addItem(app("Stickies", "/System/Applications/Stickies.app"))
+    /// The menu of the day, first level in the theme's own pictures (icons/…).
+    func items() -> [PlatinumMenuItem] {
+        [open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
+         .separator(),
+         submenu("Applications", Self.applications(), icon: "folder.png"),
+         app("Apple System Profiler", "/System/Applications/Utilities/System Information.app", icon: "profiler.png"),
+         app("Calculator", "/System/Applications/Calculator.app", icon: "calculator.png"),
+         open("Chooser", "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension", icon: "chooser.png"),
+         submenu("Control Panels", Self.controlPanels(), icon: "settings.png"),
+         submenu("Favorites", Self.sharedList("FavoriteItems"), icon: "favorites.png"),
+         file("Network Browser", "/Network", icon: "network.png"),
+         submenu("Recent Applications", Self.sharedList("RecentApplications"), icon: "recent-apps.png"),
+         submenu("Recent Documents", Self.sharedList("RecentDocuments"), icon: "recent-docs.png"),
+         submenu("Recent Servers", Self.sharedList("RecentServers"), icon: "recent-servers.png"),
+         app("Sherlock 2", "/System/Library/CoreServices/Spotlight.app", icon: "sherlock.png"),
+         app("Stickies", "/System/Applications/Stickies.app", icon: "stickies.png")]
     }
 
     // MARK: Items
 
-    private func open(_ title: String, _ url: String) -> NSMenuItem {
+    private func open(_ title: String, _ url: String, icon: String? = nil) -> PlatinumMenuItem {
+        .action(title, icon: icon.flatMap { Self.themeIcon($0) }) { Self.openTarget(url) }
+    }
+    private func app(_ title: String, _ path: String, icon: String? = nil) -> PlatinumMenuItem {
+        .action(title, icon: icon.flatMap { Self.themeIcon($0) } ?? Self.smallIcon(forPath: path),
+                dimmed: !FileManager.default.fileExists(atPath: path)) { Self.openTarget(path) }
+    }
+    private func file(_ title: String, _ path: String, icon: String? = nil) -> PlatinumMenuItem {
+        .action(title, icon: icon.flatMap { Self.themeIcon($0) }) { Self.openTarget(path) }
+    }
+    private func submenu(_ title: String, _ entries: [(title: String, path: String)], icon: String? = nil) -> PlatinumMenuItem {
+        var rows: [PlatinumMenuItem] = entries.map { e in
+            .action(e.title, icon: e.path.hasPrefix("x-apple") ? nil : Self.smallIcon(forPath: e.path)) { Self.openTarget(e.path) }
+        }
+        if rows.isEmpty { rows = [.label("None")] }
+        return .submenu(title, icon: icon.flatMap { Self.themeIcon($0) }, rows)
+    }
+
+    /// A Settings pane URL, an application, or a file or folder.
+    static func openTarget(_ target: String) {
+        if target.hasPrefix("x-apple"), let u = URL(string: target) { NSWorkspace.shared.open(u); return }
+        let url = URL(fileURLWithPath: target)
+        if target.hasSuffix(".app") {
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        } else {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// The pictures the theme does not have yet, and what stands in for them meanwhile.
+    static let standIns: [String: String] = [
+        "profiler.png": "memory.png", "chooser.png": "printer.png", "favorites.png": "folder.png",
+        "recent-apps.png": "folder.png", "recent-docs.png": "folder.png", "recent-servers.png": "network.png",
+        "calculator.png": "generic.png", "stickies.png": "notes.png",
+    ]
+
+    /// A 16 pt picture from the theme's icons folder, for the first-level items; a picture
+    /// the theme lacks falls back to its stand-in, then to the theme's generic icon.
+    static func themeIcon(_ name: String) -> NSImage? {
+        guard let theme = ThemeManager.shared.activeTheme else { return nil }
+        for candidate in [name, standIns[name], theme.config.fallbackIcon].compactMap({ $0 }) {
+            if let u = theme.iconResource(candidate), let i = NSImage(contentsOf: u) {
+                let out = i.copy() as? NSImage
+                out?.size = NSSize(width: 16, height: 16)
+                return out
+            }
+        }
+        return nil
+    }
+
+    private func open(_ title: String, _ url: String, icon: String? = nil) -> NSMenuItem {
         let i = NSMenuItem(title: title, action: #selector(openURL(_:)), keyEquivalent: "")
         i.target = self; i.representedObject = url
+        i.image = icon.flatMap { Self.themeIcon($0) }
         return i
     }
-    private func app(_ title: String, _ path: String) -> NSMenuItem {
+    private func app(_ title: String, _ path: String, icon: String? = nil) -> NSMenuItem {
         let i = NSMenuItem(title: title, action: #selector(openPath(_:)), keyEquivalent: "")
         i.target = self; i.representedObject = path
-        i.image = Self.smallIcon(forPath: path)
+        i.image = icon.flatMap { Self.themeIcon($0) } ?? Self.smallIcon(forPath: path)
         i.isEnabled = FileManager.default.fileExists(atPath: path)
         return i
     }
-    private func file(_ title: String, _ path: String) -> NSMenuItem {
+    private func file(_ title: String, _ path: String, icon: String? = nil) -> NSMenuItem {
         let i = NSMenuItem(title: title, action: #selector(openPath(_:)), keyEquivalent: "")
         i.target = self; i.representedObject = path
+        i.image = icon.flatMap { Self.themeIcon($0) }
         return i
     }
-    private func submenu(_ title: String, _ entries: [(title: String, path: String)]) -> NSMenuItem {
+    private func submenu(_ title: String, _ entries: [(title: String, path: String)], icon: String? = nil) -> NSMenuItem {
         let i = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        i.image = icon.flatMap { Self.themeIcon($0) }
         let m = NSMenu(title: title)
         if entries.isEmpty {
             let none = m.addItem(withTitle: "None", action: nil, keyEquivalent: "")
@@ -89,12 +137,15 @@ final class AppleMenuController: NSObject, NSMenuDelegate {
     /// 16 pt icon: the theme's own for an app it knows (the Finder, TextEdit…), else the file's.
     static func smallIcon(forPath path: String) -> NSImage? {
         var img: NSImage?
-        if path.hasSuffix(".app"), let bid = Bundle(path: path)?.bundleIdentifier,
-           let u = ThemeManager.shared.activeTheme?.iconURL(for: bid), let themed = NSImage(contentsOf: u) {
-            img = themed
-        } else {
-            img = NSWorkspace.shared.icon(forFile: path)
+        if path.hasSuffix(".app") {
+            img = ThemeManager.shared.activeTheme?.classicAppIcon(for: Bundle(path: path)?.bundleIdentifier)
+        } else if let theme = ThemeManager.shared.activeTheme {
+            // Folders and documents in the theme's own drawing, as the Finder of the day.
+            var isDir: ObjCBool = false
+            FileManager.default.fileExists(atPath: path, isDirectory: &isDir)
+            img = theme.iconResource(isDir.boolValue ? "folder.png" : "document.png").flatMap { NSImage(contentsOf: $0) }
         }
+        if img == nil { img = NSWorkspace.shared.icon(forFile: path) }
         let out = img?.copy() as? NSImage
         out?.size = NSSize(width: 16, height: 16)
         return out

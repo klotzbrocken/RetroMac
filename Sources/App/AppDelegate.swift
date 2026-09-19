@@ -1723,6 +1723,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         permissionPollTimer?.invalidate()   // stop waiting for Screen Recording if we're turning off
         permissionPollTimer = nil
         DockController.shared.setLoweredForDesktopShader(false)
+        ControlStripController.shared.setLoweredForDesktopShader(false)
         overlayController?.stop()
         overlayController = nil
         crtLiteOverlay?.stop()
@@ -1787,6 +1788,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         overlayStartTask?.cancel()
         overlayStartTask = nil
         DockController.shared.setLoweredForDesktopShader(false)
+        ControlStripController.shared.setLoweredForDesktopShader(false)
         overlayController?.stop()
         overlayController = nil
         crtLiteOverlay?.stop()
@@ -1841,6 +1843,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Before the overlay exists, so the dock is already in the band the capture covers and
         // is in the window list the filter is built from.
         DockController.shared.setLoweredForDesktopShader(true)
+        ControlStripController.shared.setLoweredForDesktopShader(true)
         overlayStartTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -1876,6 +1879,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // and without a theme running there are none.
                 await MainActor.run {
                     DockController.shared.setLoweredForDesktopShader(false)
+                    ControlStripController.shared.setLoweredForDesktopShader(false)
                     self.startWallpaperShaderOnly(presetID: presetID, effective: effective)
                 }
             }

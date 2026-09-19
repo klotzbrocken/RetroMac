@@ -94,3 +94,113 @@ enum ClassicMacChrome {
         return min(full, limit) + 16
     }
 }
+
+// MARK: - The bar as os9.ca draws it
+
+/// The Platinum title bar exactly as the Applications widget has it, which takes its CSS from
+/// os9.ca's window.min.css: a #DADADA bar inside a 1 px black frame with a white/grey bevel,
+/// a 12 px band of white/#737373 pinstripes 5 px down, gradient-faced boxes with a dark
+/// outline and their own drop shadow, and the title (with a proxy icon) on a gap in the
+/// stripes. Flipped coordinates (y grows down); the bar's bottom edge joins the window.
+enum PlatinumBar {
+    static let bar       = NSColor(srgbRed: 0.855, green: 0.855, blue: 0.855, alpha: 1)   // #DADADA
+    static let stripeLt  = NSColor.white
+    static let stripeDk  = NSColor(srgbRed: 0.451, green: 0.451, blue: 0.451, alpha: 1)   // #737373
+    static let frame     = NSColor.black
+    static let frameBlur = NSColor(srgbRed: 0.322, green: 0.322, blue: 0.322, alpha: 1)   // #525252
+    static let bevelHi   = NSColor.white
+    static let bevelLo   = NSColor(srgbRed: 0.6, green: 0.6, blue: 0.6, alpha: 1)         // #999999
+    static let boxLine   = NSColor(srgbRed: 0.133, green: 0.133, blue: 0.133, alpha: 1)   // #222222
+    static let glyph     = NSColor(srgbRed: 0.125, green: 0.125, blue: 0.125, alpha: 1)   // #202020
+    static let boxSize: CGFloat = 11   // 9 px face + 1 px outline each side
+    static let height: CGFloat = 22
+
+    private static func fill(_ r: NSRect, _ c: NSColor) { c.setFill(); r.fill() }
+
+    /// The boxes' places in a bar of `width`: close 5 px in from the left, the zoom and the
+    /// collapse box at the right with the widget's margins, all 4 px down from the top line.
+    static func boxRects(width w: CGFloat) -> (close: NSRect, zoom: NSRect, collapse: NSRect) {
+        let s = boxSize, y: CGFloat = 5
+        let close = NSRect(x: 6, y: y, width: s, height: s)
+        let collapse = NSRect(x: w - 6 - s, y: y, width: s, height: s)
+        let zoom = NSRect(x: collapse.minX - 8 - s, y: y, width: s, height: s)
+        return (close, zoom, collapse)
+    }
+
+    /// The bar's own picture: fill, frame, bevel, stripes. Boxes and title go on top.
+    static func drawBar(_ b: NSRect, active: Bool) {
+        fill(b, bar)
+        // Frame: top and both sides (the bottom joins the window), and the bevel inside it.
+        let line = active ? frame : frameBlur
+        fill(NSRect(x: b.minX, y: b.minY, width: b.width, height: 1), line)
+        fill(NSRect(x: b.minX, y: b.minY, width: 1, height: b.height), line)
+        fill(NSRect(x: b.maxX - 1, y: b.minY, width: 1, height: b.height), line)
+        fill(NSRect(x: b.minX + 1, y: b.minY + 1, width: b.width - 3, height: 1), bevelHi)
+        fill(NSRect(x: b.minX + 1, y: b.minY + 1, width: 1, height: b.height - 1), bevelHi)
+        fill(NSRect(x: b.maxX - 2, y: b.minY + 1, width: 1, height: b.height - 1), bevelLo)
+        // The pinstripe band: 12 rows from 5 px down, white and grey by turns.
+        for row in 0..<12 {
+            fill(NSRect(x: b.minX + 2, y: b.minY + 5 + CGFloat(row), width: b.width - 4, height: 1), row % 2 == 0 ? stripeLt : stripeDk)
+        }
+    }
+
+    /// One control box. Active: outline #222, a diagonal #999→white face, a 1 px inset
+    /// (#CCC top-left, #888 bottom-right) and a drop shadow (#808080 above-left, white
+    /// below-right). Inactive: the outline goes #525252 and the shadows go.
+    static func drawBox(_ r: NSRect, active: Bool, state: ChromeButtonState = .normal) {
+        if active {
+            fill(NSRect(x: r.minX - 1, y: r.minY - 1, width: r.width + 1, height: 1), NSColor(white: 0.502, alpha: 1))
+            fill(NSRect(x: r.minX - 1, y: r.minY - 1, width: 1, height: r.height + 1), NSColor(white: 0.502, alpha: 1))
+            fill(NSRect(x: r.minX, y: r.maxY, width: r.width + 1, height: 1), .white)
+            fill(NSRect(x: r.maxX, y: r.minY, width: 1, height: r.height + 1), .white)
+        }
+        fill(r, active ? boxLine : frameBlur)
+        let face = r.insetBy(dx: 1, dy: 1)
+        let pressed = state == .pressed
+        let start = NSColor(white: pressed ? 0.45 : 0.6, alpha: 1), end = NSColor(white: pressed ? 0.85 : 1.0, alpha: 1)
+        NSGradient(starting: pressed ? end : start, ending: pressed ? start : end)?.draw(in: face, angle: 45)
+        if active {
+            fill(NSRect(x: face.minX, y: face.minY, width: face.width, height: 1), NSColor(white: 0.8, alpha: 1))
+            fill(NSRect(x: face.minX, y: face.minY, width: 1, height: face.height), NSColor(white: 0.8, alpha: 1))
+            fill(NSRect(x: face.minX, y: face.maxY - 1, width: face.width, height: 1), NSColor(white: 0.533, alpha: 1))
+            fill(NSRect(x: face.maxX - 1, y: face.minY, width: 1, height: face.height), NSColor(white: 0.533, alpha: 1))
+        }
+    }
+
+    /// The zoom glyph: the bottom and right edge of a 5 px square in the face's top-left corner.
+    static func zoomGlyph(in r: NSRect, active: Bool) {
+        let c = active ? glyph : frameBlur
+        fill(NSRect(x: r.minX + 2, y: r.minY + 6, width: 5, height: 1), c)
+        fill(NSRect(x: r.minX + 6, y: r.minY + 2, width: 1, height: 5), c)
+    }
+
+    /// The collapse glyph: two lines across the face, a row apart.
+    static func collapseGlyph(in r: NSRect, active: Bool) {
+        let c = active ? glyph : frameBlur
+        fill(NSRect(x: r.minX + 2, y: r.minY + 5, width: r.width - 4, height: 1), c)
+        fill(NSRect(x: r.minX + 2, y: r.minY + 7, width: r.width - 4, height: 1), c)
+    }
+
+    /// The title on its gap in the stripes: a #DADADA plaque, 15 px tall, the proxy icon at 16 px
+    /// before the text, Charcoal 13; an inactive bar shows it at half strength. Kept between
+    /// `minX` and `maxX`, the title shortened in the middle when it would not fit.
+    static func drawTitle(_ title: String, icon: NSImage?, in b: NSRect, active: Bool, minX: CGFloat, maxX: CGFloat) {
+        let font = NSFont(name: "Charcoal", size: 13) ?? NSFont(name: "ChicagoFLF", size: 13) ?? .systemFont(ofSize: 13)
+        let colour = NSColor.black.withAlphaComponent(active ? 1 : 0.5)
+        let style = NSMutableParagraphStyle(); style.lineBreakMode = .byTruncatingMiddle
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: colour, .paragraphStyle: style]
+        let iconW: CGFloat = icon == nil ? 0 : 21   // 16 px icon and its gap
+        let textLimit = max(0, (maxX - minX) - 16 - iconW)
+        let textW = min(title.size(withAttributes: attrs).width.rounded(.up), textLimit)
+        let plaqueW = textW + 16 + iconW
+        let px = (b.midX - plaqueW / 2).rounded()
+        let plaque = NSRect(x: px, y: b.minY + 4, width: plaqueW, height: 15)
+        fill(plaque, bar)
+        if let icon {
+            icon.draw(in: NSRect(x: px + 5, y: b.minY + 3, width: 16, height: 16), from: .zero, operation: .sourceOver,
+                      fraction: active ? 1 : 0.5, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
+        }
+        let textH = font.ascender - font.descender
+        (title as NSString).draw(in: NSRect(x: px + 8 + iconW, y: b.minY + (height - textH) / 2, width: textW, height: textH), withAttributes: attrs)
+    }
+}

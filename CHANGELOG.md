@@ -22,7 +22,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   from the Finder's own. The Application menu shows the theme's icon for apps it knows and
   the app's name beside it, as Mac OS 8.5 onwards did. The Platinum title bar over real
   windows is drawn line for line like the widget windows' bar, in every state; the theme
-  readme's bar is Platinum too. Theme authors: `dockStyle: "controlStripModules"`,
+  readme's bar is Platinum too. The menus themselves — the Apple menu, the Application menu,
+  the Control Strip modules' — are drawn by RetroMac in Platinum (#DADADA, Charcoal, the blue
+  highlight, fly-out submenus that scroll with arrows when they outgrow the screen), with the
+  theme's own pictures on the first level; this macOS shows no images in an NSMenu at all. The
+  strip goes under the Live Wallpaper Plus shader like the dock does, at twice its 1× size,
+  on the bottom edge. Theme authors: `dockStyle: "controlStripModules"`,
   `menuBar.applicationMenu` and `menuBar.appleMenu` in docs/THEMES.md.
 
 - **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the

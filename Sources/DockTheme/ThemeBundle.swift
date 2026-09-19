@@ -166,6 +166,15 @@ final class ThemeBundle {
         return nil
     }
 
+    /// The theme's picture of an app for its menus and bars: the mapped icon when the theme
+    /// knows the app, else the theme's generic application icon (`fallbackIcon`). Nil only for
+    /// a theme without one — then the caller shows the real icon.
+    func classicAppIcon(for bundleID: String?) -> NSImage? {
+        if let bundleID, let u = iconURL(for: bundleID), let i = NSImage(contentsOf: u) { return i }
+        if let u = iconResource(config.fallbackIcon), let i = NSImage(contentsOf: u) { return i }
+        return nil
+    }
+
     func iconURL(for bundleID: String) -> URL? {
         if let direct = iconResource(config.iconMappings[bundleID]) { return direct }
         // Folder items in the dock carry a synthetic id built from an absolute path

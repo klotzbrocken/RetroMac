@@ -5,7 +5,7 @@ import AppKit
 /// ticked. macOS lets a menu-bar item sit only as far right as its own status items allow, so
 /// this is a status item, as close to the corner as it gets. Shown by themes that declare
 /// `menuBar.applicationMenu` (Mac OS 9 (authentic)).
-final class ApplicationMenuController: NSObject, NSMenuDelegate {
+final class ApplicationMenuController: NSObject {
 
     static let shared = ApplicationMenuController()
 
@@ -32,9 +32,8 @@ final class ApplicationMenuController: NSObject, NSMenuDelegate {
             let i = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
             i.button?.imagePosition = .imageLeading   // Mac OS 8.5 onwards: the icon and the name
             i.button?.toolTip = "Application menu"
-            let menu = NSMenu()
-            menu.delegate = self
-            i.menu = menu
+            i.button?.target = self
+            i.button?.action = #selector(open)
             item = i
         }
         if observers.isEmpty {
@@ -61,8 +60,7 @@ final class ApplicationMenuController: NSObject, NSMenuDelegate {
     /// The theme's own icon for an app it knows (the Finder's, TextEdit's…), the app's icon
     /// otherwise, at 16 pt.
     static func classicIcon(for app: NSRunningApplication?) -> NSImage? {
-        var img: NSImage?
-        if let bid = app?.bundleIdentifier, let u = ThemeManager.shared.activeTheme?.iconURL(for: bid) { img = NSImage(contentsOf: u) }
+        var img = ThemeManager.shared.activeTheme?.classicAppIcon(for: app?.bundleIdentifier)
         if img == nil { img = app?.icon ?? NSImage(named: NSImage.applicationIconName) }
         let out = img?.copy() as? NSImage
         out?.size = NSSize(width: 16, height: 16)
@@ -90,42 +88,26 @@ final class ApplicationMenuController: NSObject, NSMenuDelegate {
         return out
     }
 
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.removeAllItems()
+    /// The menu, Platinum-drawn, below the item; the item's own click closes it again.
+    @objc private func open() {
+        guard let button = item?.button, let window = button.window else { return }
+        let menu = PlatinumMenuController.shared
+        if menu.isOpen { menu.dismissAll(); return }
         let front = NSWorkspace.shared.frontmostApplication
         let apps = Self.listedApps(NSWorkspace.shared.runningApplications)
-        let hide = menu.addItem(withTitle: "Hide \(front?.localizedName ?? "Application")", action: #selector(hideFront), keyEquivalent: "")
-        hide.target = self
-        hide.isEnabled = front != nil && front?.bundleIdentifier != Bundle.main.bundleIdentifier
-        let others = menu.addItem(withTitle: "Hide Others", action: #selector(hideOthers), keyEquivalent: "")
-        others.target = self
-        let all = menu.addItem(withTitle: "Show All", action: #selector(showAll), keyEquivalent: "")
-        all.target = self
-        menu.addItem(.separator())
+        var rows: [PlatinumMenuItem] = [
+            .action("Hide \(front?.localizedName ?? "Application")", dimmed: front == nil || front?.bundleIdentifier == Bundle.main.bundleIdentifier) { front?.hide() },
+            .action("Hide Others") { for app in apps where app != front { app.hide() } },
+            .action("Show All") { for app in apps where app.isHidden { app.unhide() } },
+            .separator(),
+        ]
         for app in apps {
-            let i = menu.addItem(withTitle: app.localizedName ?? "?", action: #selector(activate(_:)), keyEquivalent: "")
-            i.target = self
-            i.representedObject = app
-            i.image = Self.classicIcon(for: app)
-            i.state = app == front ? .on : .off
-            if app.isHidden { i.attributedTitle = NSAttributedString(string: app.localizedName ?? "?", attributes: [.foregroundColor: NSColor.tertiaryLabelColor]) }
+            rows.append(.action(app.localizedName ?? "?", icon: Self.classicIcon(for: app), ticked: app == front, dimmed: false) {
+                if app.isHidden { app.unhide() }
+                app.activate(options: [])
+            })
         }
-    }
-
-    @objc private func activate(_ sender: NSMenuItem) {
-        guard let app = sender.representedObject as? NSRunningApplication else { return }
-        if app.isHidden { app.unhide() }
-        app.activate(options: [])
-    }
-
-    @objc private func hideFront() { NSWorkspace.shared.frontmostApplication?.hide() }
-
-    @objc private func hideOthers() {
-        let front = NSWorkspace.shared.frontmostApplication
-        for app in Self.listedApps(NSWorkspace.shared.runningApplications) where app != front { app.hide() }
-    }
-
-    @objc private func showAll() {
-        for app in Self.listedApps(NSWorkspace.shared.runningApplications) where app.isHidden { app.unhide() }
+        menu.ignoreClickWindow = window
+        menu.show(rows, below: window.convertToScreen(button.convert(button.bounds, to: nil)))
     }
 }
