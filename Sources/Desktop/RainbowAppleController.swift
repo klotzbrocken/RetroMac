@@ -98,7 +98,11 @@ final class RainbowAppleController {
         let screens = menuScreens()
         if !windows.isEmpty, windows.count == screens.count {
             let img = appleImage()   // the style may have changed (rainbow → aqua)
-            for win in windows { (win.contentView?.subviews.first as? RainbowAppleView)?.image = img }
+            let takes = ThemeManager.shared.activeTheme?.config.hasAppleMenu ?? false
+            for win in windows {
+                win.ignoresMouseEvents = !takes
+                if let v = win.contentView?.subviews.first as? RainbowAppleView { v.image = img; v.takesClicks = takes }
+            }
             reposition()
             return
         }
@@ -149,12 +153,19 @@ final class RainbowAppleController {
         win.isOpaque = false
         win.backgroundColor = .clear
         win.hasShadow = false
-        win.ignoresMouseEvents = true
+        // A theme with its own Apple menu (Mac OS 9 (authentic)) takes the click; every
+        // other theme lets it fall through to the real Apple menu underneath.
+        win.ignoresMouseEvents = !(ThemeManager.shared.activeTheme?.config.hasAppleMenu ?? false)
         win.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) + 1)
         win.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         let content = NSView(frame: NSRect(origin: .zero, size: itemRect.size))
         let iv = RainbowAppleView()
         iv.image = appleImage()
+        iv.takesClicks = !win.ignoresMouseEvents
+        iv.onClick = { [weak win] in
+            guard let win else { return }
+            AppleMenuController.shared.popUp(below: win.frame, in: win)
+        }
         content.addSubview(iv)
         win.contentView = content
         layoutImage(in: win, itemRect: itemRect)
@@ -321,7 +332,10 @@ final class RainbowAppleController {
 /// result NSImageView's default minification produced.
 private final class RainbowAppleView: NSView {
     var image: NSImage? { didSet { needsDisplay = true } }
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }   // never intercept clicks
+    var takesClicks = false
+    var onClick: (() -> Void)?
+    override func hitTest(_ point: NSPoint) -> NSView? { takesClicks ? super.hitTest(point) : nil }   // only a theme's own Apple menu intercepts
+    override func mouseDown(with event: NSEvent) { if takesClicks { onClick?() } }
     override func draw(_ dirtyRect: NSRect) {
         guard let image else { return }
         NSGraphicsContext.current?.imageInterpolation = .high

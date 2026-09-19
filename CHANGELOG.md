@@ -15,9 +15,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   the battery on a portable, video mirroring with a second display. The tab at the screen edge
   collapses the strip and drags it up and down; the size box at the other end sets how much
   shows; the arrows scroll the rest. Position, width and collapse are remembered. The desktop
-  holds Macintosh HD, Applications and the Trash. Platinum title bars and frames come with the
-  chrome, as in the Classic theme. Theme authors: `dockStyle: "controlStripModules"` and
-  `menuBar.applicationMenu` in docs/THEMES.md.
+  holds Macintosh HD, Applications and the Trash. The Apple cover opens the **Apple menu** of
+  the day — About This Computer, Applications, Apple System Profiler, Calculator, Chooser,
+  Control Panels, Favorites, Network Browser, Recent Applications, Recent Documents, Recent
+  Servers, Sherlock 2, Stickies — each pointed at what macOS has now, the recent lists read
+  from the Finder's own. The Application menu shows the theme's icon for apps it knows and
+  the app's name beside it, as Mac OS 8.5 onwards did. The Platinum title bar over real
+  windows is drawn line for line like the widget windows' bar, in every state; the theme
+  readme's bar is Platinum too. Theme authors: `dockStyle: "controlStripModules"`,
+  `menuBar.applicationMenu` and `menuBar.appleMenu` in docs/THEMES.md.
 
 - **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the
   window borders, when Mac OS 9 or Windows XP is selected: a Platinum or Luna title bar over

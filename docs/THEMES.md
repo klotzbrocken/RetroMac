@@ -191,6 +191,7 @@ bundled manifest if you need either; the shapes are in `DockTheme.swift`.
 | `screensaver` | `pipes`, `flowerbox`, `flying-toasters`, `flurry` or `none` |
 | `defaultPreset` | The shader preset the theme suggests |
 | `menuBarApple` | What covers the Apple menu: `off`, `rainbow`, `aqua`, `aqua-classic`, `hell`, `futurama` |
+| `menuBar.appleMenu` | `true` makes the Apple cover a menu of its own — Mac OS 9's: About This Computer, Applications, Apple System Profiler, Calculator, Chooser, Control Panels, Favorites, Network Browser, Recent Applications / Documents / Servers, Sherlock 2, Stickies — each pointed at what macOS has today |
 | `menuBar.applicationMenu` | `true` puts Mac OS 9's Application menu at the right end of the menu bar: the front app's icon, and Hide / Hide Others / Show All / the running apps under it (as far right as macOS lets a status item go) |
 | `hideMenuBarDefault` | `true` hides the menu bar while the theme is on (the Windows themes) |
 | `appearance`, `accentColor` | System appearance (`light`/`dark`) and accent to match when the user allows it |

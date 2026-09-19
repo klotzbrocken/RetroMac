@@ -7,7 +7,12 @@
   html, body { margin:0; padding:0; }
   body { background:#7d7d85; font-family:"Charcoal", "Helvetica Neue", Geneva, sans-serif; color:#222; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
   .win { max-width:640px; margin:0 auto; background:#dcdce2; border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #8a8a92;border-bottom:1px solid #8a8a92; box-shadow:0 10px 34px rgba(0,0,0,.38);  }
-  .titlebar { background:linear-gradient(#f0f0f4,#c8c8d0);color:#222;padding:5px 10px;font-size:13px;font-weight:700;text-align:center;border-bottom:1px solid #9a9aa2; }
+  /* Platinum, the same bar ClassicMacChrome draws: #F3F3F3 plate, 1 px pinstripes (#F4F4F4/#7D7D7D),
+     the title on a #DCDCDC plaque, a #B3B3DA shadow line under the bar, a 1 px black frame. */
+  .titlebar { position:relative; height:22px; line-height:22px; padding:0; text-align:center; font:12px "Charcoal","ChicagoFLF",Geneva,sans-serif; color:#000;
+    background:#f3f3f3 repeating-linear-gradient(to bottom, #f4f4f4 0 1px, #7d7d7d 1px 2px); background-clip:content-box; border-bottom:1px solid #b3b3da; }
+  .titlebar .tb-title { display:inline-block; background:#dcdcdc; padding:0 8px; height:22px; line-height:22px; }
+  .win { border:1px solid #000; box-shadow:0 10px 34px rgba(0,0,0,.38); }
   .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
   .body { padding:22px 26px 26px; }
   .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }

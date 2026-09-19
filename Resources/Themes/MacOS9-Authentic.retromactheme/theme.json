@@ -133,7 +133,8 @@
   ],
   "menuBarApple": "rainbow",
   "menuBar": {
-    "applicationMenu": true
+    "applicationMenu": true,
+    "appleMenu": true
   },
   "version": "1.0",
   "author": "RetroMac",
@@ -245,5 +246,6 @@
   "splashVideo": "boot.mp4",
   "splashFullscreen": true,
   "appearance": "light",
-  "accentColor": "graphite"
+  "accentColor": "graphite",
+  "desktopIconSize": 32
 }

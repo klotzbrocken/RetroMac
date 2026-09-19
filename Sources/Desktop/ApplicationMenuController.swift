@@ -29,8 +29,8 @@ final class ApplicationMenuController: NSObject, NSMenuDelegate {
 
     private func show() {
         if item == nil {
-            let i = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-            i.button?.imagePosition = .imageOnly
+            let i = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+            i.button?.imagePosition = .imageLeading   // Mac OS 8.5 onwards: the icon and the name
             i.button?.toolTip = "Application menu"
             let menu = NSMenu()
             menu.delegate = self
@@ -50,9 +50,23 @@ final class ApplicationMenuController: NSObject, NSMenuDelegate {
     private func refreshIcon() {
         guard let button = item?.button else { return }
         let front = NSWorkspace.shared.frontmostApplication
-        let icon = (front?.icon ?? NSImage(named: NSImage.applicationIconName))?.copy() as? NSImage
-        icon?.size = NSSize(width: 16, height: 16)
-        button.image = icon
+        // RetroMac's own panels (settings, the readme) briefly make it the front app; the
+        // menu keeps showing the app the user was in, as an accessory would.
+        if front?.bundleIdentifier == Bundle.main.bundleIdentifier, button.image != nil { return }
+        button.image = Self.classicIcon(for: front)
+        button.title = front?.localizedName ?? ""
+        button.font = NSFont(name: "Charcoal", size: 12) ?? NSFont(name: "ChicagoFLF", size: 12) ?? .menuBarFont(ofSize: 0)
+    }
+
+    /// The theme's own icon for an app it knows (the Finder's, TextEdit's…), the app's icon
+    /// otherwise, at 16 pt.
+    static func classicIcon(for app: NSRunningApplication?) -> NSImage? {
+        var img: NSImage?
+        if let bid = app?.bundleIdentifier, let u = ThemeManager.shared.activeTheme?.iconURL(for: bid) { img = NSImage(contentsOf: u) }
+        if img == nil { img = app?.icon ?? NSImage(named: NSImage.applicationIconName) }
+        let out = img?.copy() as? NSImage
+        out?.size = NSSize(width: 16, height: 16)
+        return out
     }
 
     // MARK: Menu
@@ -92,9 +106,7 @@ final class ApplicationMenuController: NSObject, NSMenuDelegate {
             let i = menu.addItem(withTitle: app.localizedName ?? "?", action: #selector(activate(_:)), keyEquivalent: "")
             i.target = self
             i.representedObject = app
-            let icon = app.icon?.copy() as? NSImage
-            icon?.size = NSSize(width: 16, height: 16)
-            i.image = icon
+            i.image = Self.classicIcon(for: app)
             i.state = app == front ? .on : .off
             if app.isHidden { i.attributedTitle = NSAttributedString(string: app.localizedName ?? "?", attributes: [.foregroundColor: NSColor.tertiaryLabelColor]) }
         }

@@ -90,12 +90,12 @@ final class ControlStripController {
            let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID {
             res.display = id
         }
-        let width = view.preferredWidth(collapsed: AppSettings.shared.controlStripCollapsed,
-                                        visible: CGFloat(AppSettings.shared.controlStripVisibleWidth),
-                                        modules: available)
+        let width = ControlStripView.windowWidth(view.preferredWidth(collapsed: AppSettings.shared.controlStripCollapsed,
+                                                                     visible: CGFloat(AppSettings.shared.controlStripVisibleWidth),
+                                                                     modules: available))
         let right = AppSettings.shared.controlStripSide == "right"
         let x = right ? screen.frame.maxX - width : screen.frame.minX
-        let y = Self.clampedY(offset: CGFloat(AppSettings.shared.controlStripOffsets[screenKey] ?? 12), screen: screen)
+        let y = Self.clampedY(offset: CGFloat(AppSettings.shared.controlStripOffsets[screenKey] ?? 0), screen: screen)
         panel.setFrame(NSRect(x: x, y: y, width: width, height: ControlStripView.height), display: true)
         view.frame = NSRect(origin: .zero, size: NSSize(width: width, height: ControlStripView.height))
         view.mirrored = right
@@ -117,7 +117,7 @@ final class ControlStripController {
 
     func dragged(by dy: CGFloat) {
         guard let screen else { return }
-        let now = CGFloat(AppSettings.shared.controlStripOffsets[screenKey] ?? 12)
+        let now = CGFloat(AppSettings.shared.controlStripOffsets[screenKey] ?? 0)
         let wanted = now + dy
         let clamped = Self.clampedY(offset: wanted, screen: screen) - screen.frame.minY
         AppSettings.shared.controlStripOffsets[screenKey] = Double(clamped)
@@ -222,7 +222,12 @@ final class ControlStripController {
 // MARK: - The view
 
 final class ControlStripView: NSView {
-    static let height: CGFloat = 26
+    /// Drawn at twice its 1× size: the strip was 26 px on a 640×480 screen, and 26 pt on a
+    /// 1920-wide display is a sliver nobody can hit. Every measure below is in 1× units; the
+    /// view scales its drawing and divides the mouse by `scale`.
+    static let scale: CGFloat = 2
+    static let baseHeight: CGFloat = 26
+    static var height: CGFloat { baseHeight * scale }
     static let scrollCell: CGFloat = 12
     static let groove: CGFloat = 2
 
@@ -244,7 +249,7 @@ final class ControlStripView: NSView {
 
     private func capWidth(_ img: NSImage?, fallback: CGFloat) -> CGFloat {
         guard let img, img.size.height > 0 else { return fallback }
-        return (img.size.width / img.size.height * Self.height).rounded()
+        return (img.size.width / img.size.height * Self.baseHeight).rounded()
     }
     var tabWidth: CGFloat { capWidth(tabImage, fallback: 16) }
     var sizeBoxWidth: CGFloat { capWidth(sizeBoxImage, fallback: 19) }
@@ -261,19 +266,23 @@ final class ControlStripView: NSView {
         let shown = visible > 0 ? min(visible, all) : all
         return tabWidth + Self.scrollCell + Self.groove + shown + Self.groove + Self.scrollCell + sizeBoxWidth
     }
+    /// Window width in points for a 1× layout width.
+    static func windowWidth(_ base: CGFloat) -> CGFloat { base * scale }
+    /// The 1× bounds the layout works in.
+    private var base: NSRect { NSRect(x: 0, y: 0, width: bounds.width / Self.scale, height: Self.baseHeight) }
 
     // Regions, in unmirrored (tab on the left) coordinates; `x(_:)` mirrors them.
-    private func x(_ r: NSRect) -> NSRect { mirrored ? NSRect(x: bounds.width - r.maxX, y: r.minY, width: r.width, height: r.height) : r }
+    private func x(_ r: NSRect) -> NSRect { mirrored ? NSRect(x: base.width - r.maxX, y: r.minY, width: r.width, height: r.height) : r }
     private var collapsed: Bool { AppSettings.shared.controlStripCollapsed }
-    private var tabRect: NSRect { x(NSRect(x: 0, y: 0, width: tabWidth, height: Self.height)) }
-    private var leftArrowRect: NSRect { x(NSRect(x: tabWidth, y: 0, width: Self.scrollCell, height: Self.height)) }
+    private var tabRect: NSRect { x(NSRect(x: 0, y: 0, width: tabWidth, height: Self.baseHeight)) }
+    private var leftArrowRect: NSRect { x(NSRect(x: tabWidth, y: 0, width: Self.scrollCell, height: Self.baseHeight)) }
     private var moduleArea: NSRect {
         let start = tabWidth + Self.scrollCell + Self.groove
-        let end = bounds.width - sizeBoxWidth - Self.scrollCell - Self.groove
-        return x(NSRect(x: start, y: 0, width: max(0, end - start), height: Self.height))
+        let end = base.width - sizeBoxWidth - Self.scrollCell - Self.groove
+        return x(NSRect(x: start, y: 0, width: max(0, end - start), height: Self.baseHeight))
     }
-    private var rightArrowRect: NSRect { x(NSRect(x: bounds.width - sizeBoxWidth - Self.scrollCell, y: 0, width: Self.scrollCell, height: Self.height)) }
-    private var sizeBoxRect: NSRect { x(NSRect(x: bounds.width - sizeBoxWidth, y: 0, width: sizeBoxWidth, height: Self.height)) }
+    private var rightArrowRect: NSRect { x(NSRect(x: base.width - sizeBoxWidth - Self.scrollCell, y: 0, width: Self.scrollCell, height: Self.baseHeight)) }
+    private var sizeBoxRect: NSRect { x(NSRect(x: base.width - sizeBoxWidth, y: 0, width: sizeBoxWidth, height: Self.baseHeight)) }
 
     /// The modules on show, with their cells, from the scroll index on until the area is full.
     private func placedModules() -> [(ControlStripModule, NSRect)] {
@@ -283,8 +292,8 @@ final class ControlStripView: NSView {
         var cursor: CGFloat = 0
         for m in mods.dropFirst(min(scrollIndex, mods.count)) {
             if cursor + m.width > area.width + 0.5 { break }
-            let r = mirrored ? NSRect(x: area.maxX - cursor - m.width, y: 0, width: m.width, height: Self.height)
-                             : NSRect(x: area.minX + cursor, y: 0, width: m.width, height: Self.height)
+            let r = mirrored ? NSRect(x: area.maxX - cursor - m.width, y: 0, width: m.width, height: Self.baseHeight)
+                             : NSRect(x: area.minX + cursor, y: 0, width: m.width, height: Self.baseHeight)
             out.append((m, r))
             cursor += m.width + Self.groove
         }
@@ -296,6 +305,7 @@ final class ControlStripView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         ctx.interpolationQuality = .none
+        ctx.scaleBy(x: Self.scale, y: Self.scale)   // everything below is in 1× units
         let platinum = NSColor(calibratedWhite: 0.733, alpha: 1)
         let border = NSColor(calibratedWhite: 0.149, alpha: 1)
         let light = NSColor.white
@@ -305,14 +315,14 @@ final class ControlStripView: NSView {
         if collapsed { return }
         // The ledge: platinum with the dark edge and the bevel, between tab and size box.
         let ledge = mirrored
-            ? NSRect(x: sizeBoxRect.maxX, y: 0, width: tabRect.minX - sizeBoxRect.maxX, height: Self.height)
-            : NSRect(x: tabRect.maxX, y: 0, width: sizeBoxRect.minX - tabRect.maxX, height: Self.height)
+            ? NSRect(x: sizeBoxRect.maxX, y: 0, width: tabRect.minX - sizeBoxRect.maxX, height: Self.baseHeight)
+            : NSRect(x: tabRect.maxX, y: 0, width: sizeBoxRect.minX - tabRect.maxX, height: Self.baseHeight)
         platinum.setFill(); ledge.fill()
         border.setFill()
         NSRect(x: ledge.minX, y: 0, width: ledge.width, height: 1).fill()
-        NSRect(x: ledge.minX, y: Self.height - 1, width: ledge.width, height: 1).fill()
+        NSRect(x: ledge.minX, y: Self.baseHeight - 1, width: ledge.width, height: 1).fill()
         light.setFill(); NSRect(x: ledge.minX, y: 1, width: ledge.width, height: 2).fill()
-        shadow.setFill(); NSRect(x: ledge.minX, y: Self.height - 3, width: ledge.width, height: 2).fill()
+        shadow.setFill(); NSRect(x: ledge.minX, y: Self.baseHeight - 3, width: ledge.width, height: 2).fill()
         drawCap(sizeBoxImage, in: sizeBoxRect, flip: mirrored)
         // Arrows: dark when there is something to scroll to, faint otherwise.
         drawArrow(in: leftArrowRect, pointsLeft: !mirrored, enabled: mirrored ? canScrollOn : canScrollBack)
@@ -323,7 +333,7 @@ final class ControlStripView: NSView {
         // Modules, each 16 pt tall picture centred, a groove between neighbours.
         let placed = placedModules()
         for (i, (m, r)) in placed.enumerated() {
-            m.draw(in: NSRect(x: r.minX + 2, y: (Self.height - 16) / 2, width: r.width - 2, height: 16))
+            m.draw(in: NSRect(x: r.minX + 2, y: (Self.baseHeight - 16) / 2, width: r.width - 2, height: 16))
             if i < placed.count - 1 { drawGroove(at: mirrored ? r.minX - Self.groove : r.maxX) }
         }
     }
@@ -337,8 +347,8 @@ final class ControlStripView: NSView {
     }
 
     private func drawGroove(at x: CGFloat) {
-        NSColor(calibratedWhite: 0.55, alpha: 1).setFill(); NSRect(x: x, y: 3, width: 1, height: Self.height - 6).fill()
-        NSColor(calibratedWhite: 0.92, alpha: 1).setFill(); NSRect(x: x + 1, y: 3, width: 1, height: Self.height - 6).fill()
+        NSColor(calibratedWhite: 0.55, alpha: 1).setFill(); NSRect(x: x, y: 3, width: 1, height: Self.baseHeight - 6).fill()
+        NSColor(calibratedWhite: 0.92, alpha: 1).setFill(); NSRect(x: x + 1, y: 3, width: 1, height: Self.baseHeight - 6).fill()
     }
 
     private func drawArrow(in rect: NSRect, pointsLeft: Bool, enabled: Bool) {
@@ -360,7 +370,8 @@ final class ControlStripView: NSView {
     private var drag = Drag.none
 
     override func mouseDown(with event: NSEvent) {
-        let p = convert(event.locationInWindow, from: nil)
+        let raw = convert(event.locationInWindow, from: nil)
+        let p = NSPoint(x: raw.x / Self.scale, y: raw.y / Self.scale)
         let screenP = NSEvent.mouseLocation
         if tabRect.contains(p) { drag = .tab(startY: screenP.y, moved: false); return }
         guard !collapsed else { return }
@@ -369,7 +380,9 @@ final class ControlStripView: NSView {
         }
         if leftArrowRect.contains(p) { controller.scroll(by: mirrored ? 1 : -1); return }
         if rightArrowRect.contains(p) { controller.scroll(by: mirrored ? -1 : 1); return }
-        if let (m, r) = placedModules().first(where: { $0.1.contains(p) }) { controller.activate(m, anchor: r) }
+        if let (m, r) = placedModules().first(where: { $0.1.contains(p) }) {
+            controller.activate(m, anchor: NSRect(x: r.minX * Self.scale, y: r.minY * Self.scale, width: r.width * Self.scale, height: r.height * Self.scale))
+        }
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -382,7 +395,7 @@ final class ControlStripView: NSView {
                 controller.dragged(by: dy)
             }
         case .size(let startX, let startWidth):
-            let dx = screenP.x - startX
+            let dx = (screenP.x - startX) / Self.scale
             controller.resized(to: startWidth + (mirrored ? -dx : dx))
         case .none: break
         }

@@ -69,6 +69,9 @@ struct DockThemeConfig: Codable {
         /// Mac OS 9's Application menu at the right end: the front app's icon, and a menu of
         /// the running apps to switch between (Hide, Hide Others, Show All above it).
         var applicationMenu: Bool? = nil
+        /// The Apple menu of Mac OS 9 under the Apple cover: About This Computer, Applications,
+        /// Calculator, Chooser, Control Panels, Favorites, Recent Applications/Documents/Servers…
+        var appleMenu: Bool? = nil
     }
     var menuBar: MenuBarConfig? = nil
     var hideMenuBarDefault: Bool? = nil   // when set, activating this theme applies it to Settings.hideMenuBar (Win 95/XP hide it)
@@ -325,6 +328,7 @@ extension DockThemeConfig {
     /// through the Application menu instead.
     var isControlStripModules: Bool { dock.dockStyle == "controlStripModules" }
     var hasApplicationMenu: Bool { menuBar?.applicationMenu == true }
+    var hasAppleMenu: Bool { menuBar?.appleMenu == true }
     /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.
     var hasWindowPreview: Bool { dock.windowPreview == true }
     var hasFolderStacks: Bool { dock.folderStacks == true }

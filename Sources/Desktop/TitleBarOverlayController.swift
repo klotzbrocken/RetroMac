@@ -1127,7 +1127,7 @@ final class TitleBarOverlayView: NSView {
     /// bar shows no boxes, so it has none to hit; its dead zone still takes the click, to
     /// activate the window.
     func isHot(_ p: NSPoint) -> Bool {
-        let boxesShown = isFront || style != .platinum
+        let boxesShown = true   // the Platinum boxes are drawn in every state now, like the widgets'
         if boxesShown, buttonRects.contains(where: { $0.1.insetBy(dx: -3, dy: -3).contains(p) }) { return true }
         return deadZone.contains(p)
     }
@@ -1155,7 +1155,7 @@ final class TitleBarOverlayView: NSView {
             let zoom = NSRect(x: w - 7 - s, y: y, width: s, height: s)
             let collapse = NSRect(x: zoom.minX - 5 - s, y: y, width: s, height: s)
             for (k, r) in [(ChromeButtonKind.close, close), (.collapse, collapse), (.zoom, zoom)] {
-                tracker.add(k, r.insetBy(dx: -3, dy: -3), interactive: isFront)
+                tracker.add(k, r.insetBy(dx: -3, dy: -3), interactive: true)
                 buttonRects.append((k, r))
             }
         case .system6:
@@ -1503,28 +1503,31 @@ final class TitleBarOverlayView: NSView {
         }
     }
 
+    /// The bar the widget windows (`WebAppChromeView.drawMacClassic`) draw, line for line:
+    /// plate, pinstripes, the three boxes, the plaque, the shadow line, the black frame — in
+    /// every state. (Mac OS 9 drew an inactive window's bar plain; the widgets never do, and
+    /// the two are meant to be indistinguishable.)
     private func drawPlatinum(_ b: NSRect) {
         ClassicMacChrome.face.setFill(); b.fill()
         let font = ChromeStyleFactory.macClassic().titleFont
-        if isFront {
-            ClassicMacChrome.pinstripes(in: b)
-            for (k, r) in buttonRects {
-                ClassicMacChrome.bevelBox(r, state: tracker.state(for: k))
-                if k == .zoom { ClassicMacChrome.zoomGlyph(in: r) }
-                if k == .collapse { ClassicMacChrome.collapseGlyph(in: r) }
-            }
-            // The plaque stays between the close box and the collapse box, whatever the title's length.
-            let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 8
-            let right = (buttonRects.first { $0.0 == .collapse }?.1.minX ?? b.width) - 8
-            ClassicMacChrome.titlePlaque(title, bar: b, font: font, maxWidth: max(0, right - left))
-        } else {
-            // An inactive Platinum window: plain plate, no boxes, grey title.
-            let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor(calibratedWhite: 0.45, alpha: 1)]
-            let s = title.size(withAttributes: attrs)
-            (title as NSString).draw(at: NSPoint(x: (b.width - s.width) / 2, y: (b.height - s.height) / 2), withAttributes: attrs)
+        ClassicMacChrome.pinstripes(in: b)
+        for (k, r) in buttonRects {
+            ClassicMacChrome.bevelBox(r, state: tracker.state(for: k))
+            if k == .zoom { ClassicMacChrome.zoomGlyph(in: r) }
+            if k == .collapse { ClassicMacChrome.collapseGlyph(in: r) }
         }
+        // The plaque stays between the close box and the collapse box, whatever the title's length.
+        let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 8
+        let right = (buttonRects.first { $0.0 == .collapse }?.1.minX ?? b.width) - 8
+        ClassicMacChrome.titlePlaque(title, bar: b, font: font, maxWidth: max(0, right - left))
         ClassicMacChrome.botShadow.setFill()
         NSRect(x: 0, y: b.height - 1, width: b.width, height: 1).fill()
+        // The 1 px black frame the widget windows draw round themselves: top and sides here,
+        // the window border carries it on down the sides when it is on.
+        NSColor.black.setFill()
+        NSRect(x: 0, y: 0, width: b.width, height: 1).fill()
+        NSRect(x: 0, y: 0, width: 1, height: b.height).fill()
+        NSRect(x: b.width - 1, y: 0, width: 1, height: b.height).fill()
     }
 
     private func drawLuna(_ b: NSRect) {
