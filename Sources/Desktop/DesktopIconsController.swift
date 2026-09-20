@@ -214,7 +214,7 @@ final class DesktopIconsController {
                 ? loadIconImageByName(entry.iconFull!, theme: theme, size: iSize) : nil
 
             let view = DesktopIconView(entry: entry, image: iconImage, fullImage: fullImage,
-                                       iconSize: iSize, isPixelated: isPixelated)
+                                       iconSize: iSize, isPixelated: isPixelated, labelStyle: ThemeManager.shared.activeTheme?.config.desktopLabel)
             view.target = self
             view.action = #selector(iconDoubleClicked(_:))
             view.onMoved = { [weak self] v in self?.iconMoved(v) }

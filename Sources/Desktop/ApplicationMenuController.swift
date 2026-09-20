@@ -54,7 +54,7 @@ final class ApplicationMenuController: NSObject {
         if front?.bundleIdentifier == Bundle.main.bundleIdentifier, button.image != nil { return }
         button.image = Self.classicIcon(for: front)
         button.title = front?.localizedName ?? ""
-        button.font = NSFont(name: "Charcoal", size: 12) ?? NSFont(name: "ChicagoFLF", size: 12) ?? .menuBarFont(ofSize: 0)
+        button.font = RetroFonts.chicago(16)
     }
 
     /// The theme's own icon for an app it knows (the Finder's, TextEdit's…), the app's icon

@@ -247,5 +247,11 @@
   "splashFullscreen": true,
   "appearance": "light",
   "accentColor": "graphite",
-  "desktopIconSize": 32
+  "desktopIconSize": 32,
+  "desktopLabel": {
+    "font": "PixelOperator",
+    "size": 16,
+    "color": "#000000",
+    "background": "#CFCFE1"
+  }
 }

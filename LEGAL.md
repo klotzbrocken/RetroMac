@@ -22,6 +22,8 @@ to support the project; it does not change the licence of anything in this repos
 |---|---|---|
 | Sparkle (updates) | `Package.swift` | MIT, © Sparkle Project |
 | Px437 IBM VGA 9x16 (text-mode crash screens) | `Resources/Fonts/` | CC BY-SA 4.0, VileR, [int10h.org](https://int10h.org/oldschool-pc-fonts/) |
+| ChiKareGo2 (Chicago 12 as a bitmap face: the Platinum menus and the Application menu of Mac OS 9 (authentic), the Applications widget's list) | `Resources/Fonts/ChiKareGo2.ttf`, `Resources/Widgets/AppFolder/ChiKareGo2.woff2` | CC BY, Giles Booth, [BitFontMaker2 gallery #3780](https://www.pentacom.jp/pentacom/bitfontmaker2/gallery/?id=3780) |
+| Pixel Operator (desktop icon labels of Mac OS 9 (authentic)) | `Resources/Fonts/PixelOperator.ttf` | CC0 1.0, Jayvee Enaguas, [fontlibrary.org](https://fontlibrary.org/en/font/pixel-operator) — full text in `PixelOperator-LICENSE.txt` |
 | Retrosmart cursor set (Windows 3.1, 95, Me pointers) | `Resources/Cursors/Retrosmart`, `Resources/Cursors/Windows95` | GPL v3 |
 | XP.css caption buttons | `Resources/Chrome/winxp/` | MIT, © 2020 Adam Hammad, Jordan Scales |
 | 7.css colours and gradients | `Sources/Desktop/` (drawn natively) | MIT, © 2021 Khang Nguyen Duy |

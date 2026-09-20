@@ -47,9 +47,10 @@ final class PlatinumMenuController {
     private var localMonitor: Any?
     private init() {}
 
-    static let rowHeight: CGFloat = 19
+    static let rowHeight: CGFloat = 20
     static let separatorHeight: CGFloat = 9
-    static var font: NSFont { NSFont(name: "Charcoal", size: 12) ?? NSFont(name: "ChicagoFLF", size: 12) ?? .systemFont(ofSize: 12) }
+    /// Chicago 12 of the day: ChiKareGo2 at its 16 px bitmap size.
+    static var font: NSFont { RetroFonts.chicago(16) }
     /// A window whose clicks must not dismiss (the button that opens the menu toggles it itself).
     weak var ignoreClickWindow: NSWindow?
     var isOpen: Bool { !panels.isEmpty }

@@ -61,6 +61,16 @@ struct DockThemeConfig: Codable {
     var iconMappings: [String: String]
     var desktopIcons: [DesktopIconEntry]? = nil
     var desktopIconSize: CGFloat? = nil        // per-theme desktop icon size (e.g. Win98: 40)
+    /// How the desktop icons are labelled: a shipped or installed font by PostScript name, its
+    /// size, the text colour, and a colour behind the text (Mac OS 9's label plate). Absent →
+    /// white system text with a shadow.
+    struct DesktopLabelStyle: Codable {
+        var font: String? = nil
+        var size: CGFloat? = nil
+        var color: String? = nil
+        var background: String? = nil
+    }
+    var desktopLabel: DesktopLabelStyle? = nil
     var programManager: ProgramManagerConfig? = nil
     var sgiDesktop: SGIDesktopConfig? = nil
     var menuBarApple: String? = nil   // default menu-bar Apple cover for this theme: off|rainbow|aqua|aqua-classic

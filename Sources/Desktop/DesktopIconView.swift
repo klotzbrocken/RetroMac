@@ -17,13 +17,17 @@ final class DesktopIconView: NSView {
     private var emptyImage: NSImage
     private var fullImage: NSImage?
 
+    /// The theme's label plate colour, drawn behind the text (nil: shadowed white text).
+    private let labelPlate: NSColor?
+
     init(entry: DockThemeConfig.DesktopIconEntry, image: NSImage, fullImage: NSImage?,
-         iconSize: CGFloat, isPixelated: Bool) {
+         iconSize: CGFloat, isPixelated: Bool, labelStyle: DockThemeConfig.DesktopLabelStyle? = nil) {
         self.entry = entry
         self.iconSize = iconSize
         self.isPixelated = isPixelated
         self.emptyImage = image
         self.fullImage = fullImage
+        self.labelPlate = labelStyle?.background.map { NSColor.fromHex($0) }
 
         // Image view
         imageView = NSImageView()
@@ -47,12 +51,19 @@ final class DesktopIconView: NSView {
         label.backgroundColor = .clear
         label.drawsBackground = false
 
-        // Drop shadow on label text for readability on desktop
-        let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(0.85)
-        shadow.shadowOffset = NSSize(width: 1, height: -1)
-        shadow.shadowBlurRadius = 2
-        label.shadow = shadow
+        if let style = labelStyle {
+            // The theme's own lettering: its font, its colour, and no shadow — the plate
+            // behind the text (drawn in `draw`) is what keeps it readable.
+            if let name = style.font, let f = RetroFonts.named(name, size: style.size ?? 16) { label.font = f }
+            label.textColor = style.color.map { NSColor.fromHex($0) } ?? .black
+        } else {
+            // Drop shadow on label text for readability on desktop
+            let shadow = NSShadow()
+            shadow.shadowColor = NSColor.black.withAlphaComponent(0.85)
+            shadow.shadowOffset = NSSize(width: 1, height: -1)
+            shadow.shadowBlurRadius = 2
+            label.shadow = shadow
+        }
 
         super.init(frame: .zero)
 
@@ -76,22 +87,30 @@ final class DesktopIconView: NSView {
         label.frame = NSRect(x: -8, y: labelY, width: w + 16, height: labelH)
     }
 
+    /// The rectangle hugging the label's text (one or two lines), for the plate and the highlight.
+    private var textRect: NSRect {
+        let font = label.font ?? NSFont.systemFont(ofSize: 11, weight: .medium)
+        let textW = ceil((entry.name as NSString).size(withAttributes: [.font: font]).width)
+        let lineH = ceil(font.ascender - font.descender + font.leading)
+        let lf = label.frame
+        let twoLines = textW > (lf.width - 4)
+        let w = twoLines ? lf.width : min(textW + 8, lf.width)
+        let h = (twoLines ? lineH * 2 : lineH) + 4
+        // The label wraps to ≤2 lines and is TOP-aligned in its frame, so anchor to the top
+        // of the label (not its vertical centre) to hug the text.
+        return NSRect(x: lf.midX - w / 2, y: lf.maxY - h + 2, width: w, height: h)
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         if isSelected {
             // Highlight hugs the LABEL TEXT only (the word), not the full two-line cell.
-            let font = label.font ?? NSFont.systemFont(ofSize: 11, weight: .medium)
-            let textW = ceil((entry.name as NSString).size(withAttributes: [.font: font]).width)
-            let lineH = ceil(font.ascender - font.descender + font.leading)
-            let lf = label.frame
-            let twoLines = textW > (lf.width - 4)
-            let hiW = twoLines ? lf.width : min(textW + 8, lf.width)
-            let hiH = (twoLines ? lineH * 2 : lineH) + 4
-            // The label wraps to ≤2 lines and is TOP-aligned in its frame, so anchor the
-            // highlight to the top of the label (not its vertical centre) to hug the text.
-            let hiRect = NSRect(x: lf.midX - hiW / 2, y: lf.maxY - hiH + 2, width: hiW, height: hiH)
             NSColor.selectedContentBackgroundColor.withAlphaComponent(0.85).setFill()
-            NSBezierPath(roundedRect: hiRect, xRadius: 3, yRadius: 3).fill()
+            NSBezierPath(roundedRect: textRect, xRadius: 3, yRadius: 3).fill()
+        } else if let plate = labelPlate {
+            // Mac OS 9: the name sits on a plate of the label colour, square-cornered.
+            plate.setFill()
+            textRect.fill()
         }
     }
 

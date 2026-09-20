@@ -41,7 +41,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   The modules end in the small black triangle the originals had, the scroll arrows are the
   hollow Platinum arrows, and the keychain, colour-depth, printer and speaker modules wear
   the era's pictures (`icons/strip-<module>.png`; a module without one draws its own). The
-  menu-bar band on the wallpaper is flat #DDDDDD. Theme authors: `dockStyle: "controlStripModules"`,
+  menu-bar band on the wallpaper is flat #DDDDDD. The Platinum menus and the Application
+  menu are set in ChiKareGo2 (Giles Booth, CC BY), Chicago 12 as a bitmap face; the desktop
+  icons are labelled in Pixel Operator (Jayvee Enaguas, CC0) on a `#CFCFE1` plate, through the
+  new `desktopLabel` manifest key. Both faces ship in Resources/Fonts with their licences. Theme authors: `dockStyle: "controlStripModules"`,
   `menuBar.applicationMenu` and `menuBar.appleMenu` in docs/THEMES.md.
 
 - **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the
