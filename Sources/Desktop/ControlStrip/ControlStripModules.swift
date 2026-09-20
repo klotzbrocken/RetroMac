@@ -20,6 +20,8 @@ protocol ControlStripModule: AnyObject {
     func menu() -> NSMenu?
     /// A click that is not a menu (the volume slider).
     func click(anchor: NSRect)
+    /// The text beside the picture (resolution, battery), when the theme supplies the picture.
+    func drawText(in rect: NSRect)
     /// How often the state is read again; 0 = only on events.
     var refreshInterval: TimeInterval { get }
     /// Read the state again (called on the timer and on screen changes).
@@ -28,6 +30,7 @@ protocol ControlStripModule: AnyObject {
 
 extension ControlStripModule {
     func click(anchor: NSRect) {}
+    func drawText(in rect: NSRect) {}
     var refreshInterval: TimeInterval { 0 }
     func refresh() {}
 }
@@ -331,6 +334,9 @@ final class ResolutionModule: ControlStripModule {
 
     func draw(in rect: NSRect) {
         StripArt.draw(StripArt.monitor, at: rect.origin)
+        drawText(in: rect)
+    }
+    func drawText(in rect: NSRect) {
         (label as NSString).draw(at: NSPoint(x: rect.minX + 20, y: rect.minY + 1), withAttributes: Self.font)
     }
 
@@ -421,6 +427,9 @@ final class BatteryModule: ControlStripModule {
 
     func draw(in rect: NSRect) {
         StripArt.draw(StripArt.battery(fraction: fraction ?? 0, charging: charging), at: rect.origin)
+        drawText(in: rect)
+    }
+    func drawText(in rect: NSRect) {
         (text as NSString).draw(at: NSPoint(x: rect.minX + 20, y: rect.minY + 1), withAttributes: ResolutionModule.font)
     }
 

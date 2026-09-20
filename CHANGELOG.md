@@ -37,7 +37,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Option- or Control-drag rearranges a module or moves the whole strip to either edge and up
   and down it, as the original did; the order is remembered. A second click on a module closes
   its open menu. The strip is 48 pt tall, and its tab rolls it out and in over a third of a
-  second, the modules sliding from behind the tab, as the strip of the Classic theme does. Theme authors: `dockStyle: "controlStripModules"`,
+  second, the modules sliding from behind the tab, as the strip of the Classic theme does.
+  The modules end in the small black triangle the originals had, the scroll arrows are the
+  hollow Platinum arrows, and the keychain, colour-depth, printer and speaker modules wear
+  the era's pictures (`icons/strip-<module>.png`; a module without one draws its own). The
+  menu-bar band on the wallpaper is flat #DDDDDD. Theme authors: `dockStyle: "controlStripModules"`,
   `menuBar.applicationMenu` and `menuBar.appleMenu` in docs/THEMES.md.
 
 - **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the

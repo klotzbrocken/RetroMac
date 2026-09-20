@@ -102,7 +102,7 @@ Everything under `"dock"`. Sizes are points.
 | `magnification`, `magnificationScale` | Aqua magnification |
 | `windowPreview`, `folderStacks` | Hover previews and folder fans |
 | `borderStyle` | `pacman` or `doomslayer` — the animated dock borders |
-| `dockStyle` | `dock` (default), `controlStrip` (Mac OS 9.2 Classic: a strip of apps), `controlStripModules` (Mac OS 9 (authentic): a Control Strip of system modules — network, sharing, colours, resolution, volume, battery, mirroring — and no dock at all; it needs `icons/controlstrip-left.png` and `controlstrip-right.png` for the tab and the size box), `deskbar` (BeOS), `none` (no bar; Windows 3.1's Program Manager and NeXTSTEP bring their own) |
+| `dockStyle` | `dock` (default), `controlStrip` (Mac OS 9.2 Classic: a strip of apps), `controlStripModules` (Mac OS 9 (authentic): a Control Strip of system modules — network, battery, media bay, sharing, keychain, colours, resolution, printer, volume, sound source, mirroring — and no dock at all; it needs `icons/controlstrip-left.png` and `controlstrip-right.png` for the tab and the size box, and takes `icons/strip-<module id>.png` (32 px) for a module's picture and `strip-arrow-left/right.png` (24 px) for the scroll arrows), `deskbar` (BeOS), `none` (no bar; Windows 3.1's Program Manager and NeXTSTEP bring their own) |
 | `appIcon` | RetroMac's own Dock icon while the theme is on, from `icons/` |
 
 `"icon"` holds `renderStyle` (`smooth` or `pixelated` — nearest-neighbour for 16-colour art),

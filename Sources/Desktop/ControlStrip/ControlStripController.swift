@@ -330,6 +330,13 @@ final class ControlStripView: NSView {
     private unowned let controller: ControlStripController
     private let tabImage: NSImage?
     private let sizeBoxImage: NSImage?
+    /// The theme's own pictures for modules (`icons/strip-<id>.png`, 32 px for the 2× strip) and
+    /// for the scroll arrows; a module without one draws its built-in pixel art.
+    private let pictures: [String: NSImage]
+    private let arrowLeft: NSImage?
+    private let arrowRight: NSImage?
+    /// Every module ends in the small black triangle the originals had; this is its room.
+    static let triangleRoom: CGFloat = 8
     var mirrored = false          // right edge: the tab is on the right, everything reads mirrored
     var scrollIndex = 0
 
@@ -339,6 +346,13 @@ final class ControlStripView: NSView {
         self.controller = controller
         tabImage = theme.iconResource("controlstrip-left.png").flatMap { NSImage(contentsOf: $0) }
         sizeBoxImage = theme.iconResource("controlstrip-right.png").flatMap { NSImage(contentsOf: $0) }
+        var pics: [String: NSImage] = [:]
+        for m in controller.modules {
+            if let u = theme.iconResource("strip-\(m.id).png"), let i = NSImage(contentsOf: u) { pics[m.id] = i }
+        }
+        pictures = pics
+        arrowLeft = theme.iconResource("strip-arrow-left.png").flatMap { NSImage(contentsOf: $0) }
+        arrowRight = theme.iconResource("strip-arrow-right.png").flatMap { NSImage(contentsOf: $0) }
         super.init(frame: NSRect(x: 0, y: 0, width: 200, height: Self.height))
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -350,8 +364,10 @@ final class ControlStripView: NSView {
     var tabWidth: CGFloat { capWidth(tabImage, fallback: 16) }
     var sizeBoxWidth: CGFloat { capWidth(sizeBoxImage, fallback: 19) }
 
+    /// A module's cell: its own width and the triangle's room.
+    static func cell(_ m: ControlStripModule) -> CGFloat { m.width + triangleRoom }
     func modulesWidth(_ modules: [ControlStripModule]) -> CGFloat {
-        modules.reduce(0) { $0 + $1.width } + CGFloat(max(0, modules.count - 1)) * Self.groove
+        modules.reduce(0) { $0 + Self.cell($1) } + CGFloat(max(0, modules.count - 1)) * Self.groove
     }
 
     /// Window width for a state: the tab alone when collapsed; otherwise tab, arrows, the
@@ -387,11 +403,12 @@ final class ControlStripView: NSView {
         let area = moduleArea
         var cursor: CGFloat = 0
         for m in mods.dropFirst(min(scrollIndex, mods.count)) {
-            if cursor + m.width > area.width + 0.5 { break }
-            let r = mirrored ? NSRect(x: area.maxX - cursor - m.width, y: 0, width: m.width, height: Self.baseHeight)
-                             : NSRect(x: area.minX + cursor, y: 0, width: m.width, height: Self.baseHeight)
+            let cw = Self.cell(m)
+            if cursor + cw > area.width + 0.5 { break }
+            let r = mirrored ? NSRect(x: area.maxX - cursor - cw, y: 0, width: cw, height: Self.baseHeight)
+                             : NSRect(x: area.minX + cursor, y: 0, width: cw, height: Self.baseHeight)
             out.append((m, r))
-            cursor += m.width + Self.groove
+            cursor += cw + Self.groove
         }
         return out
     }
@@ -420,7 +437,8 @@ final class ControlStripView: NSView {
         light.setFill(); NSRect(x: ledge.minX, y: 1, width: ledge.width, height: 2).fill()
         shadow.setFill(); NSRect(x: ledge.minX, y: Self.baseHeight - 3, width: ledge.width, height: 2).fill()
         drawCap(sizeBoxImage, in: sizeBoxRect, flip: mirrored)
-        // Arrows: dark when there is something to scroll to, faint otherwise.
+        // Arrows, from the theme's pictures (the hollow Platinum arrows) when it has them:
+        // full when there is something to scroll to, faint otherwise.
         drawArrow(in: leftArrowRect, pointsLeft: !mirrored, enabled: mirrored ? canScrollOn : canScrollBack)
         drawArrow(in: rightArrowRect, pointsLeft: mirrored, enabled: mirrored ? canScrollBack : canScrollOn)
         // Grooves either side of the module area.
@@ -429,7 +447,19 @@ final class ControlStripView: NSView {
         // Modules, each 16 pt tall picture centred, a groove between neighbours.
         let placed = placedModules()
         for (i, (m, r)) in placed.enumerated() {
-            m.draw(in: NSRect(x: r.minX + 2, y: (Self.baseHeight - 16) / 2, width: r.width - 2, height: 16))
+            let picture = NSRect(x: r.minX + 2, y: (Self.baseHeight - 16) / 2, width: r.width - 2 - Self.triangleRoom, height: 16)
+            if let img = pictures[m.id] {
+                img.draw(in: NSRect(x: picture.minX, y: picture.minY, width: 16, height: 16), from: .zero, operation: .sourceOver,
+                         fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
+                m.drawText(in: picture)
+            } else {
+                m.draw(in: picture)
+            }
+            // The module's black triangle, at its right end.
+            let t = NSBezierPath()
+            let tx = r.maxX - 6, ty = Self.baseHeight / 2
+            t.move(to: NSPoint(x: tx, y: ty - 3.5)); t.line(to: NSPoint(x: tx + 4, y: ty)); t.line(to: NSPoint(x: tx, y: ty + 3.5)); t.close()
+            NSColor.black.setFill(); t.fill()
             if i < placed.count - 1 { drawGroove(at: mirrored ? r.minX - Self.groove : r.maxX) }
         }
     }
@@ -448,6 +478,12 @@ final class ControlStripView: NSView {
     }
 
     private func drawArrow(in rect: NSRect, pointsLeft: Bool, enabled: Bool) {
+        if let img = pointsLeft ? arrowLeft : arrowRight {
+            let s: CGFloat = 12
+            img.draw(in: NSRect(x: rect.midX - s / 2, y: rect.midY - s / 2, width: s, height: s), from: .zero, operation: .sourceOver,
+                     fraction: enabled ? 1 : 0.4, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
+            return
+        }
         let p = NSBezierPath()
         let cx = rect.midX, cy = rect.midY
         if pointsLeft {
