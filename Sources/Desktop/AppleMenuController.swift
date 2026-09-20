@@ -10,6 +10,7 @@ final class AppleMenuController {
     private init() {}
 
     func popUp(below rect: NSRect, in window: NSWindow) {
+        if PlatinumMenuController.shared.isOpen { PlatinumMenuController.shared.dismissAll(); return }
         PlatinumMenuController.shared.ignoreClickWindow = window
         PlatinumMenuController.shared.show(items(), below: rect)
     }

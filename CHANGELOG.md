@@ -36,16 +36,21 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   device); Video Mirroring is always on the strip and says when it lacks a second display.
   Option- or Control-drag rearranges a module or moves the whole strip to either edge and up
   and down it, as the original did; the order is remembered. A second click on a module closes
-  its open menu. The strip is 48 pt tall, and its tab rolls it out and in over a third of a
-  second, the modules sliding from behind the tab, as the strip of the Classic theme does.
+  its open menu. The strip is 24 pt tall as on a 1× screen — the size of the desktop icons'
+  labels and the menus — and Settings ▸ Dock ▸ Control Strip makes it twice that; its tab
+  rolls it out and in over a third of a second, the modules sliding from behind the tab, as
+  the strip of the Classic theme does.
   The modules end in the small black triangle the originals had, the scroll arrows are the
   hollow Platinum arrows, and the keychain, colour-depth, printer and speaker modules wear
   the era's pictures (`icons/strip-<module>.png`; a module without one draws its own). The
   menu-bar band on the wallpaper is flat #DDDDDD. The Platinum menus and the Application
   menu are set in ChiKareGo2 (Giles Booth, CC BY), Chicago 12 as a bitmap face; the desktop
   icons are labelled in Pixel Operator (Jayvee Enaguas, CC0) on a `#CFCFE1` plate, through the
-  new `desktopLabel` manifest key. Both faces ship in Resources/Fonts with their licences. Theme authors: `dockStyle: "controlStripModules"`,
-  `menuBar.applicationMenu` and `menuBar.appleMenu` in docs/THEMES.md.
+  new `desktopLabel` manifest key, with air between icon and plate. Both faces ship in
+  Resources/Fonts with their licences. The Platinum menus scroll with the trackpad or wheel,
+  not only by their arrows, and a second click on the Apple cover closes the Apple menu.
+  Theme authors: `dockStyle: "controlStripModules"`, `menuBar.applicationMenu` and
+  `menuBar.appleMenu` in docs/THEMES.md.
 
 - **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the
   window borders, when Mac OS 9 or Windows XP is selected: a Platinum or Luna title bar over

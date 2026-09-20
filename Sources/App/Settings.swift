@@ -524,6 +524,11 @@ final class AppSettings: ObservableObject {
     @Published var controlStripVisibleWidth: Double {
         didSet { defaults.set(controlStripVisibleWidth, forKey: "controlStripVisibleWidth") }
     }
+    /// The strip's size: 1 = the 24 pt of a 1× screen, 2 = twice that. Whole numbers only, so
+    /// the pixel art stays pixel art.
+    @Published var controlStripScale: Double {
+        didSet { defaults.set(controlStripScale, forKey: "controlStripScale") }
+    }
     /// The modules' order (ids), as the user arranged them with Option-drag; empty = the default.
     @Published var controlStripModuleOrder: [String] {
         didSet { defaults.set(controlStripModuleOrder, forKey: "controlStripModuleOrder") }
@@ -1161,6 +1166,8 @@ final class AppSettings: ObservableObject {
         controlStripCollapsed = defaults.bool(forKey: "controlStripCollapsed")
         controlStripVisibleWidth = defaults.double(forKey: "controlStripVisibleWidth")
         controlStripModuleOrder = defaults.stringArray(forKey: "controlStripModuleOrder") ?? []
+        let scale = defaults.double(forKey: "controlStripScale")
+        controlStripScale = scale >= 1 ? scale : 1
         themeDockAutoHide = defaults.dictionary(forKey: "themeDockAutoHide") as? [String: Bool] ?? [:]
         themeWallpaperOverrides = defaults.dictionary(forKey: "themeWallpaperOverrides") as? [String: String] ?? [:]
         themeCustomWallpaper = defaults.dictionary(forKey: "themeCustomWallpaper") as? [String: String] ?? [:]

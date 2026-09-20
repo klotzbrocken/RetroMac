@@ -310,6 +310,21 @@ private final class PlatinumMenuView: NSView {
 
     override func mouseExited(with event: NSEvent) { disarmScroll() /* the highlight stays so a submenu remains reachable */ }
 
+    /// The trackpad rolls a long menu too: a row per 12 points of travel.
+    private var wheelRemainder: CGFloat = 0
+    override func scrollWheel(with event: NSEvent) {
+        guard scrolls else { return }
+        // Natural scrolling arrives already inverted: a positive delta means "show what
+        // is above", exactly as a document scrolls.
+        wheelRemainder += event.scrollingDeltaY
+        let rows = Int(wheelRemainder / 12)
+        if rows != 0 {
+            wheelRemainder -= CGFloat(rows) * 12
+            scroll(by: -rows)
+            mouseMoved(with: event)   // re-evaluate the row under the pointer
+        }
+    }
+
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if scrolls, !rowBand.contains(p) { return }

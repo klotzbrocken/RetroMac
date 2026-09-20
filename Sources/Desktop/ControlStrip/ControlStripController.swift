@@ -318,10 +318,10 @@ final class ControlStripController {
 // MARK: - The view
 
 final class ControlStripView: NSView {
-    /// Drawn at twice its 1× size: the strip was 26 px on a 640×480 screen, and 26 pt on a
-    /// 1920-wide display is a sliver nobody can hit. Every measure below is in 1× units; the
-    /// view scales its drawing and divides the mouse by `scale`.
-    static let scale: CGFloat = 2
+    /// The strip's size: 24 pt as on a 1× screen, or twice that (Settings, whole numbers so
+    /// the pixel art stays pixel art). Every measure below is in 1× units; the view scales its
+    /// drawing and divides the mouse by `scale`.
+    static var scale: CGFloat { CGFloat(max(1, AppSettings.shared.controlStripScale.rounded())) }
     static let baseHeight: CGFloat = 24
     static var height: CGFloat { baseHeight * scale }
     static let scrollCell: CGFloat = 12

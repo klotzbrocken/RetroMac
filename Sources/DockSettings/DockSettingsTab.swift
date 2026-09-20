@@ -300,6 +300,12 @@ struct DockSettingsTab: View {
                             }
                             .pickerStyle(.segmented).labelsHidden()
                             .onChange(of: settings.controlStripSide) { _, _ in ControlStripController.shared.layout() }
+                            Picker("", selection: $settings.controlStripScale) {
+                                Text("Small").tag(1.0)
+                                Text("Large").tag(2.0)
+                            }
+                            .pickerStyle(.segmented).labelsHidden()
+                            .onChange(of: settings.controlStripScale) { _, _ in ControlStripController.shared.layout() }
                             Button("Reset position") {
                                 settings.controlStripOffsets = [:]
                                 settings.controlStripCollapsed = false

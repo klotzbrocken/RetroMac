@@ -82,8 +82,10 @@ final class DesktopIconView: NSView {
 
         let labelH: CGFloat = 30
         // Label hugs the icon; the remaining cell space below becomes spacing to the
-        // NEXT row (instead of a growing icon→label gap).
-        let labelY = max(0, bounds.height - iconSize - 4 - labelH)
+        // NEXT row (instead of a growing icon→label gap). A plate needs a little more air
+        // than shadowed text, or it touches the icon.
+        let gap: CGFloat = labelPlate == nil ? 4 : 9
+        let labelY = max(0, bounds.height - iconSize - gap - labelH)
         label.frame = NSRect(x: -8, y: labelY, width: w + 16, height: labelH)
     }
 
@@ -97,8 +99,10 @@ final class DesktopIconView: NSView {
         let w = twoLines ? lf.width : min(textW + 8, lf.width)
         let h = (twoLines ? lineH * 2 : lineH) + 4
         // The label wraps to ≤2 lines and is TOP-aligned in its frame, so anchor to the top
-        // of the label (not its vertical centre) to hug the text.
-        return NSRect(x: lf.midX - w / 2, y: lf.maxY - h + 2, width: w, height: h)
+        // of the label (not its vertical centre) to hug the text. The highlight may lean
+        // 2 pt above the frame; the plate stays inside it, clear of the icon.
+        let lift: CGFloat = labelPlate == nil ? 2 : 0
+        return NSRect(x: lf.midX - w / 2, y: lf.maxY - h + lift, width: w, height: h)
     }
 
     override func draw(_ dirtyRect: NSRect) {
