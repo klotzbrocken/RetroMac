@@ -302,6 +302,7 @@ struct DockSettingsTab: View {
                             .onChange(of: settings.controlStripSide) { _, _ in ControlStripController.shared.layout() }
                             Picker("", selection: $settings.controlStripScale) {
                                 Text("Small").tag(1.0)
+                                Text("Medium").tag(1.5)
                                 Text("Large").tag(2.0)
                             }
                             .pickerStyle(.segmented).labelsHidden()

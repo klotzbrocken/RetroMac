@@ -318,10 +318,12 @@ final class ControlStripController {
 // MARK: - The view
 
 final class ControlStripView: NSView {
-    /// The strip's size: 24 pt as on a 1× screen, or twice that (Settings, whole numbers so
-    /// the pixel art stays pixel art). Every measure below is in 1× units; the view scales its
-    /// drawing and divides the mouse by `scale`.
-    static var scale: CGFloat { CGFloat(max(1, AppSettings.shared.controlStripScale.rounded())) }
+    /// The strip's size: 1× is the 24 pt of a 1× screen, 1.5× (the default, 36 pt) and 2× are
+    /// Settings' Medium and Large. Half steps only: on a Retina screen every 1× pixel is then
+    /// a whole number of device pixels, and the pixel art stays pixel art. Every measure below
+    /// is in 1× units; the view scales its drawing and divides the mouse by `scale`.
+    static var scale: CGFloat { Self.scale(for: AppSettings.shared.controlStripScale) }
+    static func scale(for setting: Double) -> CGFloat { CGFloat(min(2, max(1, (setting * 2).rounded() / 2))) }
     static let baseHeight: CGFloat = 24
     static var height: CGFloat { baseHeight * scale }
     static let scrollCell: CGFloat = 12

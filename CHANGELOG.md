@@ -21,8 +21,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Servers, Sherlock 2, Stickies — each pointed at what macOS has now, the recent lists read
   from the Finder's own. The Application menu shows the theme's icon for apps it knows and
   the app's name beside it, as Mac OS 8.5 onwards did. The Platinum title bar over real
-  windows is drawn line for line like the widget windows' bar, in every state; the theme
-  readme's bar is Platinum too. The menus themselves — the Apple menu, the Application menu,
+  windows is drawn line for line like the widget windows' bar, in every state, and stands a
+  point out on each side, on the hairline macOS draws round every window, so its frame is
+  flush with the window as seen (with the window border on, the border covers that line and
+  the bar is exactly the window's width); the theme readme's bar is Platinum too. The menus themselves — the Apple menu, the Application menu,
   the Control Strip modules' — are drawn by RetroMac in Platinum (#DADADA, Charcoal, the blue
   highlight, fly-out submenus that scroll with arrows when they outgrow the screen), with the
   theme's own pictures on the first level; this macOS shows no images in an NSMenu at all. The
@@ -36,8 +38,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   device); Video Mirroring is always on the strip and says when it lacks a second display.
   Option- or Control-drag rearranges a module or moves the whole strip to either edge and up
   and down it, as the original did; the order is remembered. A second click on a module closes
-  its open menu. The strip is 24 pt tall as on a 1× screen — the size of the desktop icons'
-  labels and the menus — and Settings ▸ Dock ▸ Control Strip makes it twice that; its tab
+  its open menu. The strip is 36 pt tall, one and a half times its 1× size — in step with the
+  desktop icons' labels and the menus — and Settings ▸ Dock ▸ Control Strip has Small (24 pt)
+  and Large (48 pt) as well; its tab
   rolls it out and in over a third of a second, the modules sliding from behind the tab, as
   the strip of the Classic theme does.
   The modules end in the small black triangle the originals had, the scroll arrows are the

@@ -617,9 +617,19 @@ final class TitleBarOverlayController {
 
     /// The bar's frame: a strip of the theme's height directly above the window, as wide as
     /// the window. The border, when on, frames window and bar together.
-    static func barFrame(for bounds: CGRect, style: Style) -> NSRect {
+    ///
+    /// macOS draws a hairline round every window just outside its bounds (part of the shadow;
+    /// a window captured without one has none), so on screen the window is a point wider than
+    /// it says. The Platinum bar's own black frame line stands on that hairline — a point out
+    /// on each side — or the bar reads as set in from the window under it. Not when the window
+    /// border is on: it covers the hairline, and window and bar share the border.
+    static func barFrame(for bounds: CGRect, style: Style, overhang: CGFloat? = nil) -> NSRect {
         let h = stripHeight(style)
-        return appKitFrame(topLeft: CGRect(x: bounds.minX, y: bounds.minY - h, width: bounds.width, height: h), height: h)
+        let overhang = overhang ?? platinumOverhang(for: style)
+        return appKitFrame(topLeft: CGRect(x: bounds.minX - overhang, y: bounds.minY - h, width: bounds.width + 2 * overhang, height: h), height: h)
+    }
+    static func platinumOverhang(for style: Style) -> CGFloat {
+        style == .platinum && !AppSettings.shared.themeWindowBorders ? 1 : 0
     }
 
     // MARK: - Events from the WindowServer (forwarded by WindowBorderController)

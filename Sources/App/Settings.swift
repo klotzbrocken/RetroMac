@@ -524,8 +524,8 @@ final class AppSettings: ObservableObject {
     @Published var controlStripVisibleWidth: Double {
         didSet { defaults.set(controlStripVisibleWidth, forKey: "controlStripVisibleWidth") }
     }
-    /// The strip's size: 1 = the 24 pt of a 1× screen, 2 = twice that. Whole numbers only, so
-    /// the pixel art stays pixel art.
+    /// The strip's size: 1 = the 24 pt of a 1× screen, 1.5 (the default) and 2 = one and a
+    /// half and twice that. Half steps only, so the pixel art stays pixel art.
     @Published var controlStripScale: Double {
         didSet { defaults.set(controlStripScale, forKey: "controlStripScale") }
     }
@@ -1167,7 +1167,7 @@ final class AppSettings: ObservableObject {
         controlStripVisibleWidth = defaults.double(forKey: "controlStripVisibleWidth")
         controlStripModuleOrder = defaults.stringArray(forKey: "controlStripModuleOrder") ?? []
         let scale = defaults.double(forKey: "controlStripScale")
-        controlStripScale = scale >= 1 ? scale : 1
+        controlStripScale = scale >= 1 ? scale : 1.5
         themeDockAutoHide = defaults.dictionary(forKey: "themeDockAutoHide") as? [String: Bool] ?? [:]
         themeWallpaperOverrides = defaults.dictionary(forKey: "themeWallpaperOverrides") as? [String: String] ?? [:]
         themeCustomWallpaper = defaults.dictionary(forKey: "themeCustomWallpaper") as? [String: String] ?? [:]

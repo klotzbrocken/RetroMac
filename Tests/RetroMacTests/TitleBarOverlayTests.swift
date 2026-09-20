@@ -55,6 +55,27 @@ final class TitleBarOverlayTests: XCTestCase {
         XCTAssertNil(TitleBarOverlayController.style(for: "beos"))
         XCTAssertEqual(TitleBarOverlayController.stripHeight(.platinum), 22, "Platinum's own height, nothing to cover any more")
     }
+
+    /// The Platinum bar stands a point out on each side, on the hairline macOS draws round
+    /// the window, so its frame line is flush with the window as seen; other bars, and the
+    /// Platinum bar with the window border on, are exactly as wide as the window.
+    func testPlatinumBarOverhangsTheHairline() {
+        let bounds = CGRect(x: 100, y: 200, width: 400, height: 300)   // Quartz, top-left origin
+        let plain = TitleBarOverlayController.barFrame(for: bounds, style: .platinum, overhang: 0)
+        let out = TitleBarOverlayController.barFrame(for: bounds, style: .platinum, overhang: 1)
+        XCTAssertEqual(out.minX, plain.minX - 1)
+        XCTAssertEqual(out.width, plain.width + 2)
+        XCTAssertEqual(out.height, 22)
+        XCTAssertEqual(out.minY, plain.minY)
+        XCTAssertEqual(TitleBarOverlayController.platinumOverhang(for: .luna), 0)
+        XCTAssertEqual(TitleBarOverlayController.platinumOverhang(for: .win98), 0)
+        let saved = AppSettings.shared.themeWindowBorders
+        defer { AppSettings.shared.themeWindowBorders = saved }
+        AppSettings.shared.themeWindowBorders = false
+        XCTAssertEqual(TitleBarOverlayController.platinumOverhang(for: .platinum), 1)
+        AppSettings.shared.themeWindowBorders = true
+        XCTAssertEqual(TitleBarOverlayController.platinumOverhang(for: .platinum), 0, "the border covers the hairline")
+    }
 }
 
 final class TitleBarCornerTests: XCTestCase {

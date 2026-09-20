@@ -48,19 +48,22 @@ final class ControlStripTests: XCTestCase {
         XCTAssertEqual(view.preferredWidth(collapsed: true, visible: 0, modules: mods), view.tabWidth)
     }
 
-    /// The strip is 24 pt as on a 1× screen unless the setting doubles it; whole steps only,
-    /// and nothing below 1×.
+    /// The strip is 36 pt (1.5×) unless the setting says Small (1×) or Large (2×); half steps
+    /// only, nothing below 1× or above 2×.
     func testScaleFollowsTheSetting() {
+        XCTAssertEqual(ControlStripView.scale(for: 1), 1)
+        XCTAssertEqual(ControlStripView.scale(for: 1.5), 1.5)
+        XCTAssertEqual(ControlStripView.scale(for: 2), 2)
+        XCTAssertEqual(ControlStripView.scale(for: 0.3), 1, "never smaller than 1×")
+        XCTAssertEqual(ControlStripView.scale(for: 3), 2, "never larger than 2×")
+        XCTAssertEqual(ControlStripView.scale(for: 1.3), 1.5, "half steps")
         let saved = AppSettings.shared.controlStripScale
         defer { AppSettings.shared.controlStripScale = saved }
-        AppSettings.shared.controlStripScale = 1
-        XCTAssertEqual(ControlStripView.height, 24)
-        XCTAssertEqual(ControlStripView.windowWidth(100), 100)
+        AppSettings.shared.controlStripScale = 1.5
+        XCTAssertEqual(ControlStripView.height, 36)
+        XCTAssertEqual(ControlStripView.windowWidth(100), 150)
         AppSettings.shared.controlStripScale = 2
         XCTAssertEqual(ControlStripView.height, 48)
-        XCTAssertEqual(ControlStripView.windowWidth(100), 200)
-        AppSettings.shared.controlStripScale = 0.3
-        XCTAssertEqual(ControlStripView.height, 24, "never smaller than 1×")
     }
 
     func testVerticalPositionStaysOnScreen() throws {
