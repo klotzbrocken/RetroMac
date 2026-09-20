@@ -978,6 +978,13 @@ final class SettingsWindowController {
         // otherwise in Dark Mode SwiftUI still resolves text as white while the aqua field
         // backgrounds are light — e.g. a pasted license key was white-on-white in Activate.
         let hostingView = NSHostingView(rootView: SettingsView(updater: updater!).preferredColorScheme(.light))
+        // The window is full-size-content: the sidebar's brand mark leaves room for the
+        // traffic lights itself, so nothing here is safe area. Left to the hosting view, this
+        // macOS lays the fixed 700 × 640 pt view out inside the window's content layout rect
+        // (the title bar and the rounded sides taken off), centred and cut 9 pt at each side:
+        // the sidebar 191 pt wide, the header's buttons at the very edge, 32 pt of window
+        // below the view.
+        hostingView.safeAreaRegions = []
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 700, height: 640),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],

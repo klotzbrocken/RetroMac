@@ -20,7 +20,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Control Panels, Favorites, Network Browser, Recent Applications, Recent Documents, Recent
   Servers, Sherlock 2, Stickies — each pointed at what macOS has now, the recent lists read
   from the Finder's own. The Application menu shows the theme's icon for apps it knows and
-  the app's name beside it, as Mac OS 8.5 onwards did. The Platinum title bar over real
+  the app's name beside it, as Mac OS 8.5 onwards did; an app picked there comes to the
+  front with every one of its windows, and one whose windows are all minimised gets its
+  first back. A window minimised under this theme — the bar's box or ⌘M — does not shrink
+  into the corner where the hidden Dock is: its picture, bar and all, zooms away to the top
+  of the desktop and is gone, the zoom rectangles of the day; a still of what lies under it
+  hides the real minimise meanwhile. The Platinum title bar over real
   windows is drawn line for line like the widget windows' bar, in every state, and stands a
   point out on each side, on the hairline macOS draws round every window, so its frame is
   flush with the window as seen (with the window border on, the border covers that line and
@@ -53,7 +58,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Resources/Fonts with their licences. The Platinum menus scroll with the trackpad or wheel,
   not only by their arrows, and a second click on the Apple cover closes the Apple menu.
   Theme authors: `dockStyle: "controlStripModules"`, `menuBar.applicationMenu` and
-  `menuBar.appleMenu` in docs/THEMES.md.
+  `menuBar.appleMenu` in docs/THEMES.md. Settings ▸ Themes was cut off 9 pt at both
+  sides under this theme (a row with two segmented controls and a button outgrew the pane
+  and the whole view with it); the size picker has its own row now.
 
 - **Experiment: title bars in theme style.** Under Themes ▸ System integration, next to the
   window borders, when Mac OS 9 or Windows XP is selected: a Platinum or Luna title bar over

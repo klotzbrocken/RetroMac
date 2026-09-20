@@ -300,13 +300,6 @@ struct DockSettingsTab: View {
                             }
                             .pickerStyle(.segmented).labelsHidden()
                             .onChange(of: settings.controlStripSide) { _, _ in ControlStripController.shared.layout() }
-                            Picker("", selection: $settings.controlStripScale) {
-                                Text("Small").tag(1.0)
-                                Text("Medium").tag(1.5)
-                                Text("Large").tag(2.0)
-                            }
-                            .pickerStyle(.segmented).labelsHidden()
-                            .onChange(of: settings.controlStripScale) { _, _ in ControlStripController.shared.layout() }
                             Button("Reset position") {
                                 settings.controlStripOffsets = [:]
                                 settings.controlStripCollapsed = false
@@ -315,6 +308,18 @@ struct DockSettingsTab: View {
                             }
                             .buttonStyle(RMDefaultButtonStyle())
                         }
+                    }
+                    // Its own row: two segmented controls and a button side by side outgrow the
+                    // pane, and the whole settings view is then cut off at both edges.
+                    RMRow(label: "Control Strip size",
+                          hint: "Medium is one and a half times the strip of a 1× screen, in step with the desktop icons and the menus.") {
+                        Picker("", selection: $settings.controlStripScale) {
+                            Text("Small").tag(1.0)
+                            Text("Medium").tag(1.5)
+                            Text("Large").tag(2.0)
+                        }
+                        .pickerStyle(.segmented).labelsHidden()
+                        .onChange(of: settings.controlStripScale) { _, _ in ControlStripController.shared.layout() }
                     }
                 }
                 if selectedThemeConfig?.name == "BeOS" {

@@ -69,6 +69,29 @@ final class ApplicationMenuController: NSObject {
 
     // MARK: Menu
 
+    /// As Mac OS 9 did on the pick: the application comes to the front with every one of its
+    /// windows, not just the last one used. An app whose windows are all minimised (the Dock is
+    /// out of sight under this theme, so they would stay lost) gets its first one back.
+    static func bringForward(_ app: NSRunningApplication) {
+        if app.isHidden { app.unhide() }
+        app.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+        guard AXIsProcessTrusted() else { return }
+        let ax = AXUIElementCreateApplication(app.processIdentifier)
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(ax, kAXWindowsAttribute as CFString, &value) == .success,
+              let windows = value as? [AXUIElement], !windows.isEmpty else { return }
+        func minimised(_ w: AXUIElement) -> Bool {
+            var v: CFTypeRef?
+            return AXUIElementCopyAttributeValue(w, kAXMinimizedAttribute as CFString, &v) == .success && (v as? Bool) == true
+        }
+        let shown = windows.filter { !minimised($0) }
+        let raise = shown.isEmpty ? [windows[0]] : shown
+        for w in raise {
+            AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+            AXUIElementPerformAction(w, kAXRaiseAction as CFString)
+        }
+    }
+
     /// The running applications the menu lists: regular apps, RetroMac itself excluded,
     /// in the order the workspace reports them.
     static func listedApps(_ apps: [NSRunningApplication]) -> [NSRunningApplication] {
@@ -103,8 +126,7 @@ final class ApplicationMenuController: NSObject {
         ]
         for app in apps {
             rows.append(.action(app.localizedName ?? "?", icon: Self.classicIcon(for: app), ticked: app == front, dimmed: false) {
-                if app.isHidden { app.unhide() }
-                app.activate(options: [])
+                Self.bringForward(app)
             })
         }
         menu.ignoreClickWindow = window

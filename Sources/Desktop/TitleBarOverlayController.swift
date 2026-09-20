@@ -51,14 +51,15 @@ final class TitleBarOverlayController {
         let view: TitleBarOverlayView
         var bounds: CGRect          // target bounds, top-left global
         var level: Int32
+        let pid: pid_t
         /// The panel over the real lights (bar styles only): a photograph of the bar beside them.
         var patch: NSPanel?
         var patchView: LightsPatchView?
         var patchSampledFront: Bool?   // the front state the sample was taken in
         var sampleGeneration = 0       // the request whose picture is still wanted
         var sampleRetryAfter = Date.distantPast   // a failed capture is not repeated every sync
-        init(panel: NSPanel, view: TitleBarOverlayView, bounds: CGRect, level: Int32) {
-            self.panel = panel; self.view = view; self.bounds = bounds; self.level = level
+        init(panel: NSPanel, view: TitleBarOverlayView, bounds: CGRect, level: Int32, pid: pid_t) {
+            self.panel = panel; self.view = view; self.bounds = bounds; self.level = level; self.pid = pid
         }
     }
 
@@ -142,11 +143,13 @@ final class TitleBarOverlayController {
             // theme at draw time, so every bar draws again.
             Self.classicIcons.removeAll()   // another theme, other pictures
             for o in overlays.values { o.view.needsDisplay = true }
+            takeCommandM()
             sync()
             return
         }
         style = newStyle
         running = true
+        takeCommandM()
         // A hung app must not hang RetroMac: every Accessibility request this process makes
         // gives up after half a second instead of the six-second default. Process-wide, which
         // also covers the observers and the minimised-window tracker.
@@ -184,6 +187,7 @@ final class TitleBarOverlayController {
     private func stop() {
         guard running else { return }
         running = false
+        MinimizeZoom.shared.setHotKey(false)
         syncGeneration += 1
         syncTimer?.invalidate(); syncTimer = nil
         let nc = NSWorkspace.shared.notificationCenter
@@ -193,6 +197,25 @@ final class TitleBarOverlayController {
         stopOverlays()
         WindowBorderController.shared.releaseObserversIfIdle()
         squareTheRealCorners()   // reconciles without the corner key now
+    }
+
+    /// Under the theme without a dock, ⌘M minimises the front window the way the bar's box
+    /// does — the picture zooms away, no shrinking into a corner (`MinimizeZoom`).
+    private func takeCommandM() {
+        MinimizeZoom.shared.onCommandM = { [weak self] in self?.minimizeFront() }
+        MinimizeZoom.shared.setHotKey(MinimizeZoom.wanted && style?.isBar == true)
+    }
+
+    /// ⌘M: the front window with a bar goes through the bar's own minimise; one without (an
+    /// app left alone, a panel) is minimised plainly, so the key is never dead.
+    func minimizeFront() {
+        if let o = overlays[frontWindowID] { perform(.minimize, on: frontWindowID, pid: o.pid); return }
+        guard let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier else { return }
+        var ref: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(AXUIElementCreateApplication(pid), kAXFocusedWindowAttribute as CFString, &ref) == .success,
+              let ref else { return }
+        let w = ref as! AXUIElement
+        Self.axQueue.async { AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
     }
 
     /// Write (or withdraw) the corner key through the adapter that handles the theme's own
@@ -435,7 +458,7 @@ final class TitleBarOverlayController {
         view.onDrag = { [weak self] delta in self?.drag(info.id, pid: info.pid, by: delta) }
         view.onDragEnd = { [weak self] in self?.dragOrigin = nil }
         panel.contentView = content
-        let o = Overlay(panel: panel, view: view, bounds: info.bounds, level: level)
+        let o = Overlay(panel: panel, view: view, bounds: info.bounds, level: level, pid: info.pid)
         overlays[info.id] = o
         panel.orderFrontRegardless()
         order(o, above: info.id)
@@ -950,6 +973,12 @@ final class TitleBarOverlayController {
         var ref: CFTypeRef?
         let button = AXUIElementCopyAttributeValue(w, attr as CFString, &ref) == .success ? ref.map { $0 as! AXUIElement } : nil
         guard button != nil || attr == kAXMinimizeButtonAttribute else { return }
+        // Under the theme without a dock the window zooms away in picture, a still of the
+        // desktop under it hiding the real minimise; photographed while the bar still stands.
+        var zoomed = false
+        if attr == kAXMinimizeButtonAttribute, MinimizeZoom.wanted, let o = overlays[wid] {
+            zoomed = MinimizeZoom.shared.begin(wid: wid, windowBounds: o.bounds, bar: o.panel, barView: o.view, patch: o.patch)
+        }
         // The bar goes before the window does; a bar over a fading window is the one thing
         // that gives the trick away. Comes back on the next sync if the app asked to save.
         // The same for minimise: the WindowServer's minimise event arrives when the genie
@@ -961,6 +990,7 @@ final class TitleBarOverlayController {
         Self.axQueue.async {
             if let button { AXUIElementPerformAction(button, kAXPressAction as CFString) }
             else { AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
+            if zoomed { DispatchQueue.main.async { MinimizeZoom.shared.end() } }
         }
     }
 
