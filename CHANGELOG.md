@@ -3,7 +3,7 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## Unreleased
+## 2.8.6
 
 - **New theme: Mac OS 9 (authentic).** The desktop as it was, next to "Mac OS 9.2 Classic",
   which stays as it is. No dock: programs open from the Finder, and the **Application

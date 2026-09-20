@@ -119,38 +119,34 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Windows Me in detail, crashes that never crash, a shader over the whole desktop")
+                Text("Mac OS 9 as it was, a title bar over every window, and a dock that stays smooth")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("desktopcomputer", .blue, "Windows Me, gone over in detail",
-                            "The boot screen is the animated Me logo instead of a still, three original wallpapers come along, and Defrag is its own program on the desktop. Folder windows are Explorer now \u{2014} back, forward, up, an address bar, the info panel and a status line that counts what is in the folder.")
-                    feature("slider.horizontal.below.rectangle", .cyan, "\u{2026} down to the small things",
-                            "The tray carries the theme\u{2019}s colour instead of a foreign grey and its icons share one rhythm instead of three different gaps. Mute shows as a red prohibition sign rather than a washed-out speaker. Quick launch stops growing under the pointer, because Windows never did that. Desktop icons start at the left. The calculator has its original key colours and the memory indicator it was missing. Three wrong icons are replaced \u{2014} Me showed the macOS Finder for the file manager and a Terminal for the command prompt \u{2014} and the tray messenger is yours to pick, MSN or ICQ.")
-                    feature("exclamationmark.triangle.fill", .red, "Retro Glitches & Crashes",
-                            "Failure, in period: the Windows 9x blue screen, the Illegal Operation dialog with its expandable register dump, the XP and 7 stop error with a counting memory dump, the Mac OS bomb. The desktop freezes, the message appears, and the way out is the one the machine offered at the time.")
-                    feature("lock.shield.fill", .orange, "\u{2026} and nothing actually crashes",
-                            "No program is quit, no document closed, no restart triggered. The frozen desktop is a photograph of itself, laid on top; force-quit RetroMac mid-crash and you are back at your untouched work instantly. Trigger it by hand, or on a schedule from very rare to chaotic \u{2014} and never while you are screen sharing, presenting or on camera.")
-                    feature("photo.on.rectangle.angled", .purple, "Live Wallpaper covers the whole desktop",
-                            "One switch runs the selected shader over the desktop picture, RetroMac\u{2019}s own desktop icons, the retro dock and an open start menu \u{2014} in a single pass, so the scanlines run through all of them instead of restarting in each. Application windows are never touched. While it is on, the retro taskbar sits behind them, which is what puts it in the same pass as the desktop.")
-                    feature("gamecontroller.fill", .green, "The Game Library",
-                            "A cover gallery for everything RetroMac can start. It installs the engine, names the file that engine needs, and looks in your Steam library for the copy you already own, external drives included. What the rights holder released for sharing it fetches itself: Freedoom and the shareware episodes of Doom, Heretic, Duke Nukem 3D, Quake, Quake II and Shadow Warrior. Full versions it does not fetch, and the card says so.")
-                    feature("tv.fill", .teal, "Television, and a drive that sounds like one",
-                            "The channel list is cleaned out \u{2014} dead streams gone, XITE and six retro channels in. Defrag got the drive to go with it: the spindle spins up when you press Start and coasts down when you stop, synthesised rather than recorded and tied to the display, so a freshly fragmented disk stutters and an almost sorted one only ticks.")
+                    feature("menubar.rectangle", .blue, "Mac OS 9 (authentic)",
+                            "A second Mac OS 9, next to the Classic theme, laid out the way the machine was: no dock. The Control Strip at the bottom edge holds the system \u{2014} network, battery, media bay, sharing, keychain, colour depth, monitor resolution (it really switches, with the old keep-or-revert question), printer, sound volume with the slider of its day, sound source, video mirroring \u{2014} and rolls in and out under its tab. Option-drag rearranges the modules or moves the strip.")
+                    feature("apple.logo", .gray, "\u{2026} with the menus of the day",
+                            "The Application menu at the right end of the menu bar switches programs, the front one\u{2019}s icon and name beside it. The Apple menu opens the menu of the day \u{2014} About This Computer, Applications, Control Panels, Recent Applications, Recent Documents, Sherlock 2 \u{2014} each pointed at what macOS has now. All of it drawn in Platinum, with Chicago as a bitmap face; the desktop holds Macintosh HD, Applications and the Trash on the pale label plate. A minimised window does not shrink into a corner: it zooms away to the top of the desktop and is gone.")
+                    feature("macwindow", .purple, "Experiment: title bars in theme style",
+                            "Under Themes \u{25B8} System integration: a Platinum or Luna title bar over every real window, or Aqua and Snow Leopard traffic lights in place of the modern ones. RetroMac\u{2019}s own panel above the window, not a change to the app; close, minimise, zoom the way the era did and dragging all go through Accessibility, and apps can be left alone. An experiment: a toolbar that shares the title bar (Safari, Finder) loses its top edge, and a window the size of the screen gets no bar.")
+                    feature("dock.rectangle", .green, "The dock stays smooth",
+                            "With the title bars on, the dock\u{2019}s magnification juddered: the pointer was watched through a global mouse monitor, and from the first change of front app on, the WindowServer handed the dock its mouse moves in bursts. The monitor is gone. The Aqua dock also stopped looking every app\u{2019}s name up on disk on every mouse move, and the dock\u{2019}s own auto-hide no longer watches the pointer that way either.")
                     feature("wrench.and.screwdriver.fill", .gray, "And a long list of fixes",
-                            "Cancelling a download now cancels it. \u{201C}Forget\u{201D} no longer meant \u{201C}delete\u{201D}. Crashes set to chaotic actually happen. The muted tray speaker is visible again. The calculator\u{2019}s top strip is the same width as the rest of its window. The Mac OS crash alerts line up and every one has an icon. The menu-bar tint comes back after a display is connected or unplugged. Quake II\u{2019}s demo download works again. And the credits say what is true.")
+                            "The \u{201C}Classic window corners\u{201D} hint no longer traps the Windows Me and Mac OS 9 boot animation in a loop. The lights and the frame leave with a window that is minimised or closed from the bar. A new Chrome tab no longer buries the lights, and the menu-bar Apple logo stopped blinking. A crash on a theme that keeps the menu bar runs to the end. The boot screen can always be clicked away, and a stuck switch cannot lock the Mac. Paint, Solitaire, Minesweeper, Internet Explorer and 3D Pinball open again from 98.js.org.")
 
                     sectionHeader("Also in 2.8")
 
-                    feature("macwindow", .blue, "Snow Leopard has its own chrome",
-                            "10.6 no longer borrows Cheetah\u{2019}s early-Aqua look. The title bar is measured off the original \u{2014} unified grey, flat traffic lights, the separator along the bottom \u{2014} with blue gel scrollers, period-correct icons and the striped Macintosh HD.")
-                    feature("square.grid.2x2.fill", .indigo, "Dashboard is back",
-                            "The widget layer macOS dropped in Catalina, rebuilt. \u{2303}F12 brings up Clock, Calculator, Weather, Calendar, Stickies, a Google search pill and a CPU monitor. Add and remove them from the bar, drag them where you like, and they stay put.")
-                    feature("rectangle.3.group.fill", .teal, "Expos\u{00E9} and Stacks",
-                            "Every window shrunk so none overlap, each card travelling from where its window actually sits: \u{2303}F9 for all, \u{2303}F10 for the front app, or hold a dock icon. Applications and Downloads open as a grid with real Quick Look previews, hanging from the callout nose that points back at the dock icon.")
-                    feature("waveform.path.ecg", .pink, "Phosphor persistence",
-                            "Afterglow across frames, applied to the signal ahead of the mask, in every Metal renderer. Bright things trail the way a real tube trails.")
+                    feature("desktopcomputer", .blue, "Windows Me, gone over in detail",
+                            "The animated Me boot logo, three original wallpapers, Defrag as its own program, and folder windows that are Explorer now \u{2014} back, forward, up, an address bar, the info panel and a status line.")
+                    feature("exclamationmark.triangle.fill", .red, "Retro Glitches & Crashes",
+                            "Failure, in period: the Windows 9x blue screen, the Illegal Operation dialog, the XP and 7 stop error, the Mac OS bomb. Nothing actually crashes \u{2014} the frozen desktop is a photograph of itself, laid on top. By hand, or on a schedule from very rare to chaotic.")
+                    feature("photo.on.rectangle.angled", .purple, "Live Wallpaper covers the whole desktop",
+                            "One switch runs the selected shader over the desktop picture, RetroMac\u{2019}s own desktop icons, the retro dock and an open start menu in a single pass. Application windows are never touched.")
+                    feature("gamecontroller.fill", .green, "The Game Library",
+                            "A cover gallery for everything RetroMac can start: it installs the engine, finds the copy in your Steam library, and fetches what the rights holder released for sharing \u{2014} Freedoom and the shareware episodes of Doom, Heretic, Duke Nukem 3D, Quake, Quake II and Shadow Warrior.")
+                    feature("square.grid.2x2.fill", .indigo, "Snow Leopard chrome, Dashboard, Expos\u{00E9}, phosphor persistence",
+                            "10.6 measured off the original; the widget layer macOS dropped in Catalina, rebuilt (\u{2303}F12); every window shrunk so none overlap (\u{2303}F9, \u{2303}F10, or hold a dock icon); afterglow across frames in every Metal renderer.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
