@@ -39,9 +39,9 @@ final class ControlStripTests: XCTestCase {
     func testStripWidthFromModules() throws {
         let t = try XCTUnwrap(authenticTheme())
         let view = ControlStripView(theme: t, controller: ControlStripController.shared)
-        let mods: [ControlStripModule] = [ColourDepthModule(), NetworkModule(), SharingModule()]   // 20 pt each
+        let mods: [ControlStripModule] = [ColourDepthModule(), NetworkModule(), SharingModule()]   // 20 pt each, plus the triangle's 8
         let all = view.modulesWidth(mods)
-        XCTAssertEqual(all, 20 * 3 + 2 * 2)
+        XCTAssertEqual(all, (20 + 8) * 3 + 2 * 2)
         let full = view.preferredWidth(collapsed: false, visible: 0, modules: mods)
         XCTAssertEqual(full, view.tabWidth + 12 + 2 + all + 2 + 12 + view.sizeBoxWidth)
         XCTAssertEqual(view.preferredWidth(collapsed: false, visible: 30, modules: mods), full - (all - 30), "the size box shows a part")
