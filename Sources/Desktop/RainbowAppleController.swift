@@ -38,6 +38,14 @@ final class RainbowAppleController {
         let s = AppSettings.shared
         let wantShow = s.menuBarAppleStyle != 0 && !s.hideMenuBar
         guard wantShow else { hide(); return }
+        // Whether the cover takes the click (a theme with its own Apple menu) is settled now,
+        // not after the debounce and the System Events round trip below: a cover made before
+        // the theme came up ignored the mouse for seconds after the switch.
+        let takes = ThemeManager.shared.activeTheme?.config.hasAppleMenu ?? false
+        for win in windows {
+            win.ignoresMouseEvents = !takes
+            if let v = win.contentView?.subviews.first as? RainbowAppleView { v.takesClicks = takes }
+        }
         // A theme switch asks several times in a row (the style's didSet, the theme-change
         // handlers, the dock's own); one answer serves them all. The check below shells out
         // to System Events, and each answer used to rebuild the windows: the logo blinked
@@ -148,8 +156,11 @@ final class RainbowAppleController {
     }
 
     private func makeWindow(itemRect: NSRect) -> NSWindow {
-        let win = NSWindow(contentRect: itemRect, styleMask: .borderless,
-                           backing: .buffered, defer: false)
+        // A non-activating panel: the click on the cover must reach the view while another
+        // app is in front (a plain window only activated RetroMac on the first click and
+        // swallowed it), and it must not take the front app's focus away.
+        let win = NSPanel(contentRect: itemRect, styleMask: [.borderless, .nonactivatingPanel],
+                          backing: .buffered, defer: false)
         win.isOpaque = false
         win.backgroundColor = .clear
         win.hasShadow = false
@@ -246,6 +257,13 @@ final class RainbowAppleController {
             imageCache["futurama_apple"] = img
             return img
         }
+        // The 1-bit Mac's apple: solid black (System 7.1 (authentic)).
+        if AppSettings.shared.menuBarAppleStyle == 6 {
+            if let c = imageCache["mono_apple"] { return c }
+            let img = drawnSolidApple(.black)
+            imageCache["mono_apple"] = img
+            return img
+        }
         let name: String
         switch AppSettings.shared.menuBarAppleStyle {
         case 2: name = "aqua_apple"
@@ -335,6 +353,7 @@ private final class RainbowAppleView: NSView {
     var takesClicks = false
     var onClick: (() -> Void)?
     override func hitTest(_ point: NSPoint) -> NSView? { takesClicks ? super.hitTest(point) : nil }   // only a theme's own Apple menu intercepts
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { takesClicks }   // the first click counts, whoever is in front
     override func mouseDown(with event: NSEvent) { if takesClicks { onClick?() } }
     override func draw(_ dirtyRect: NSRect) {
         guard let image else { return }

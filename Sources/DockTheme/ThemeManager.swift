@@ -640,8 +640,8 @@ final class ThemeManager {
         guard theme.family?.id == "apple", theme.hideMenuBarDefault != true else { return nil }
         func c(_ v: CGFloat) -> NSColor { NSColor(srgbRed: v, green: v, blue: v, alpha: 1) }
         switch theme.name {
-        case "Mac OS 6 classic":
-            // System 6: plain white, closed off by a hard black rule.
+        case "Mac OS 6 classic", "System 7.1 (authentic)":
+            // System 6 and 7 in 1 bit: plain white, closed off by a hard black rule.
             return MenuBarStyle(bottom: c(1), top: c(1), rule: c(0), ruleHeight: 1)
         case "Mac OS 9.2 Classic":
             // Platinum: flat grey with a white highlight along the top edge.

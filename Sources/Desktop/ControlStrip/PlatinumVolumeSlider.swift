@@ -77,18 +77,21 @@ final class PlatinumVolumeSlider {
 
         override func draw(_ dirtyRect: NSRect) {
             let b = bounds
-            PlatinumBar.bar.setFill(); b.fill()
+            let mono = MonoArt.active
+            (mono ? NSColor.white : PlatinumBar.bar).setFill(); b.fill()
             NSColor.black.setFill()
             NSRect(x: 0, y: 0, width: b.width, height: 1).fill(); NSRect(x: 0, y: b.height - 1, width: b.width, height: 1).fill()
             NSRect(x: 0, y: 0, width: 1, height: b.height).fill(); NSRect(x: b.width - 1, y: 0, width: 1, height: b.height).fill()
-            NSColor.white.setFill()
-            NSRect(x: 1, y: b.height - 2, width: b.width - 2, height: 1).fill(); NSRect(x: 1, y: 1, width: 1, height: b.height - 2).fill()
-            NSColor(white: 0.6, alpha: 1).setFill()
-            NSRect(x: 1, y: 1, width: b.width - 2, height: 1).fill(); NSRect(x: b.width - 2, y: 1, width: 1, height: b.height - 2).fill()
-            // The track: sunken, dark on the top-left, light on the bottom-right.
+            if !mono {
+                NSColor.white.setFill()
+                NSRect(x: 1, y: b.height - 2, width: b.width - 2, height: 1).fill(); NSRect(x: 1, y: 1, width: 1, height: b.height - 2).fill()
+                NSColor(white: 0.6, alpha: 1).setFill()
+                NSRect(x: 1, y: 1, width: b.width - 2, height: 1).fill(); NSRect(x: b.width - 2, y: 1, width: 1, height: b.height - 2).fill()
+            }
+            // The track: sunken, dark on the top-left, light on the bottom-right; dithered on 1 bit.
             let t = trackRect
-            NSColor(white: 0.5, alpha: 1).setFill(); t.fill()
-            NSColor(white: 0.85, alpha: 1).setFill(); t.insetBy(dx: 1, dy: 1).fill()
+            (mono ? MonoArt.gray : NSColor(white: 0.5, alpha: 1)).setFill(); t.fill()
+            (mono ? MonoArt.gray : NSColor(white: 0.85, alpha: 1)).setFill(); t.insetBy(dx: 1, dy: 1).fill()
             NSColor.black.setFill()
             NSRect(x: t.minX, y: t.minY, width: 1, height: t.height).fill(); NSRect(x: t.minX, y: t.maxY - 1, width: t.width, height: 1).fill()
             NSColor.white.setFill()
@@ -103,8 +106,9 @@ final class PlatinumVolumeSlider {
             let ky = t.minY + (t.height - 10) * level
             let knob = NSRect(x: t.midX - 7, y: ky, width: 14, height: 10)
             let path = NSBezierPath(roundedRect: knob, xRadius: 2, yRadius: 2)
-            NSGradient(starting: NSColor(white: 1, alpha: 1), ending: NSColor(white: 0.6, alpha: 1))?.draw(in: path, angle: -90)
-            NSColor(white: 0.133, alpha: 1).setStroke(); path.lineWidth = 1; path.stroke()
+            if mono { NSColor.white.setFill(); path.fill() }
+            else { NSGradient(starting: NSColor(white: 1, alpha: 1), ending: NSColor(white: 0.6, alpha: 1))?.draw(in: path, angle: -90) }
+            (mono ? NSColor.black : NSColor(white: 0.133, alpha: 1)).setStroke(); path.lineWidth = 1; path.stroke()
             let pointer = NSBezierPath()
             pointer.move(to: NSPoint(x: knob.minX, y: knob.minY + 2)); pointer.line(to: NSPoint(x: knob.minX - 3, y: knob.midY)); pointer.line(to: NSPoint(x: knob.minX, y: knob.maxY - 2)); pointer.close()
             NSColor(white: 0.133, alpha: 1).setFill(); pointer.fill()

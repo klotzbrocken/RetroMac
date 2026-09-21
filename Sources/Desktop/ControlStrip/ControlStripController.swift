@@ -71,6 +71,7 @@ final class ControlStripController {
             observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
                 guard let self else { return }
                 for m in self.modules { m.refresh() }
+                self.view?.invalidateMonoArt()
                 self.layout()
             })
             observers.append(NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -251,7 +252,7 @@ final class ControlStripController {
                 m.refresh(); lastRefresh[m.id] = Date(); changed = true
             }
         }
-        if changed { layout() }
+        if changed { view?.invalidateMonoArt(); layout() }
     }
 
     private func updateVisibilityForSpace() {
@@ -341,20 +342,26 @@ final class ControlStripView: NSView {
     static let triangleRoom: CGFloat = 8
     var mirrored = false          // right edge: the tab is on the right, everything reads mirrored
     var scrollIndex = 0
+    /// Black and white, as the 1-bit Mac drew it (`menuBar.monochrome`): white ledge, black
+    /// lines, dotted grooves, every picture dithered to 1 bit.
+    let mono: Bool
 
     override var isFlipped: Bool { true }
 
     init(theme: ThemeBundle, controller: ControlStripController) {
         self.controller = controller
-        tabImage = theme.iconResource("controlstrip-left.png").flatMap { NSImage(contentsOf: $0) }
-        sizeBoxImage = theme.iconResource("controlstrip-right.png").flatMap { NSImage(contentsOf: $0) }
+        let isMono = theme.config.hasMonochromeMenus
+        mono = isMono
+        let bit: (NSImage?) -> NSImage? = { img in (isMono ? img.map(MonoArt.oneBit) : img) }
+        tabImage = bit(theme.iconResource("controlstrip-left.png").flatMap { NSImage(contentsOf: $0) })
+        sizeBoxImage = bit(theme.iconResource("controlstrip-right.png").flatMap { NSImage(contentsOf: $0) })
         var pics: [String: NSImage] = [:]
         for m in controller.modules {
             if let u = theme.iconResource("strip-\(m.id).png"), let i = NSImage(contentsOf: u) { pics[m.id] = i }
         }
         pictures = pics
-        arrowLeft = theme.iconResource("strip-arrow-left.png").flatMap { NSImage(contentsOf: $0) }
-        arrowRight = theme.iconResource("strip-arrow-right.png").flatMap { NSImage(contentsOf: $0) }
+        arrowLeft = bit(theme.iconResource("strip-arrow-left.png").flatMap { NSImage(contentsOf: $0) })
+        arrowRight = bit(theme.iconResource("strip-arrow-right.png").flatMap { NSImage(contentsOf: $0) })
         super.init(frame: NSRect(x: 0, y: 0, width: 200, height: Self.height))
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -421,10 +428,10 @@ final class ControlStripView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         ctx.interpolationQuality = .none
         ctx.scaleBy(x: Self.scale, y: Self.scale)   // everything below is in 1× units
-        let platinum = NSColor(calibratedWhite: 0.733, alpha: 1)
-        let border = NSColor(calibratedWhite: 0.149, alpha: 1)
+        let platinum = mono ? NSColor.white : NSColor(calibratedWhite: 0.733, alpha: 1)
+        let border = mono ? NSColor.black : NSColor(calibratedWhite: 0.149, alpha: 1)
         let light = NSColor.white
-        let shadow = NSColor(calibratedWhite: 0.502, alpha: 1)
+        let shadow = mono ? NSColor.white : NSColor(calibratedWhite: 0.502, alpha: 1)
         // The tab, from the theme's own picture (mirrored on the right edge).
         drawCap(tabImage, in: tabRect, flip: mirrored)
         if collapsed { return }
@@ -451,9 +458,16 @@ final class ControlStripView: NSView {
         for (i, (m, r)) in placed.enumerated() {
             let picture = NSRect(x: r.minX + 2, y: (Self.baseHeight - 16) / 2, width: r.width - 2 - Self.triangleRoom, height: 16)
             if let img = pictures[m.id] {
-                img.draw(in: NSRect(x: picture.minX, y: picture.minY, width: 16, height: 16), from: .zero, operation: .sourceOver,
-                         fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
+                let shown = mono ? monoPicture(m.id, img) : img
+                shown.draw(in: NSRect(x: picture.minX, y: picture.minY, width: 16, height: 16), from: .zero, operation: .sourceOver,
+                           fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
                 m.drawText(in: picture)
+            } else if mono {
+                // The module's own colour pixel art, dithered to 1 bit on the way to the screen.
+                if let img = monoArt(for: m, size: picture.size) {
+                    img.draw(in: picture, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true,
+                             hints: [.interpolation: NSImageInterpolation.none])
+                }
             } else {
                 m.draw(in: picture)
             }
@@ -474,7 +488,32 @@ final class ControlStripView: NSView {
         ctx.restoreGState()
     }
 
+    private var monoArtCache: [String: NSImage] = [:]
+    /// The theme's picture in 1 bit at the pixels it will be shown at (16 pt × the strip's
+    /// scale × the screen's).
+    private func monoPicture(_ id: String, _ img: NSImage) -> NSImage {
+        let px = Self.scale * (window?.backingScaleFactor ?? 2)
+        let key = "pic-\(id)-\(px)"
+        if let c = monoArtCache[key] { return c }
+        let bit = MonoArt.oneBit(img, points: 16, scale: px)
+        monoArtCache[key] = bit
+        return bit
+    }
+    private func monoArt(for m: ControlStripModule, size: NSSize) -> NSImage? {
+        let key = "\(m.id)-\(Int(size.width))"
+        if let c = monoArtCache[key] { return c }
+        let img = MonoArt.oneBit(size: size, scale: Self.scale * (window?.backingScaleFactor ?? 2)) { r in m.draw(in: r) }
+        monoArtCache[key] = img
+        return img
+    }
+    /// A module that shows state (battery, resolution) draws again: its 1-bit picture must too.
+    func invalidateMonoArt() { monoArtCache.removeAll() }
+
     private func drawGroove(at x: CGFloat) {
+        if mono {
+            MonoArt.dots.setFill(); NSRect(x: x, y: 3, width: 1, height: Self.baseHeight - 6).fill()
+            return
+        }
         NSColor(calibratedWhite: 0.55, alpha: 1).setFill(); NSRect(x: x, y: 3, width: 1, height: Self.baseHeight - 6).fill()
         NSColor(calibratedWhite: 0.92, alpha: 1).setFill(); NSRect(x: x + 1, y: 3, width: 1, height: Self.baseHeight - 6).fill()
     }
@@ -494,7 +533,8 @@ final class ControlStripView: NSView {
             p.move(to: NSPoint(x: cx - 3, y: cy - 4)); p.line(to: NSPoint(x: cx + 3, y: cy)); p.line(to: NSPoint(x: cx - 3, y: cy + 4))
         }
         p.close()
-        (enabled ? NSColor(calibratedWhite: 0.2, alpha: 1) : NSColor(calibratedWhite: 0.6, alpha: 1)).setFill()
+        if mono { (enabled ? NSColor.black : MonoArt.gray).setFill() }
+        else { (enabled ? NSColor(calibratedWhite: 0.2, alpha: 1) : NSColor(calibratedWhite: 0.6, alpha: 1)).setFill() }
         p.fill()
     }
 

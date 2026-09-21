@@ -73,7 +73,7 @@ struct DockThemeConfig: Codable {
     var desktopLabel: DesktopLabelStyle? = nil
     var programManager: ProgramManagerConfig? = nil
     var sgiDesktop: SGIDesktopConfig? = nil
-    var menuBarApple: String? = nil   // default menu-bar Apple cover for this theme: off|rainbow|aqua|aqua-classic
+    var menuBarApple: String? = nil   // default menu-bar Apple cover for this theme: off|rainbow|aqua|aqua-classic|hell|futurama|mono
     /// What the theme puts on the real menu bar besides the Apple cover.
     struct MenuBarConfig: Codable {
         /// Mac OS 9's Application menu at the right end: the front app's icon, and a menu of
@@ -82,6 +82,9 @@ struct DockThemeConfig: Codable {
         /// The Apple menu of Mac OS 9 under the Apple cover: About This Computer, Applications,
         /// Calculator, Chooser, Control Panels, Favorites, Recent Applications/Documents/Servers…
         var appleMenu: Bool? = nil
+        /// The menus, the Control Strip and the volume slider in black and white, as a 1-bit
+        /// Mac drew them (System 7.1 (authentic)): white faces, black lines, dithered greys.
+        var monochrome: Bool? = nil
     }
     var menuBar: MenuBarConfig? = nil
     var hideMenuBarDefault: Bool? = nil   // when set, activating this theme applies it to Settings.hideMenuBar (Win 95/XP hide it)
@@ -320,6 +323,7 @@ extension DockThemeConfig {
         case "aqua-classic", "aquaclassic", "classic": return 3
         case "hell", "apple-hell", "doom": return 4
         case "futurama", "teal": return 5
+        case "mono", "black", "system7": return 6
         default: return nil
         }
     }
@@ -339,6 +343,7 @@ extension DockThemeConfig {
     var isControlStripModules: Bool { dock.dockStyle == "controlStripModules" }
     var hasApplicationMenu: Bool { menuBar?.applicationMenu == true }
     var hasAppleMenu: Bool { menuBar?.appleMenu == true }
+    var hasMonochromeMenus: Bool { menuBar?.monochrome == true }
     /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.
     var hasWindowPreview: Bool { dock.windowPreview == true }
     var hasFolderStacks: Bool { dock.folderStacks == true }

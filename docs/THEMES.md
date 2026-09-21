@@ -190,10 +190,11 @@ bundled manifest if you need either; the shapes are in `DockTheme.swift`.
 | `splashWelcome` | `true` draws the "Welcome to Macintosh" screen (System 6) |
 | `screensaver` | `pipes`, `flowerbox`, `flying-toasters`, `flurry` or `none` |
 | `defaultPreset` | The shader preset the theme suggests |
-| `menuBarApple` | What covers the Apple menu: `off`, `rainbow`, `aqua`, `aqua-classic`, `hell`, `futurama` |
+| `menuBarApple` | What covers the Apple menu: `off`, `rainbow`, `aqua`, `aqua-classic`, `hell`, `futurama`, `mono` (solid black, the 1-bit Mac's) |
 | `desktopLabel` | How the desktop icons are labelled: `font` (PostScript name of an installed or shipped face — `PixelOperator`, `ChiKareGo2`, `Px437_IBM_VGA_9x16`), `size`, `color`, and `background`, a plate behind the text (Mac OS 9 (authentic): Pixel Operator 16 on `#CFCFE1`). Absent: white system text with a shadow |
 | `menuBar.appleMenu` | `true` makes the Apple cover a menu of its own — Mac OS 9's: About This Computer, Applications, Apple System Profiler, Calculator, Chooser, Control Panels, Favorites, Network Browser, Recent Applications / Documents / Servers, Sherlock 2, Stickies — each pointed at what macOS has today |
 | `menuBar.applicationMenu` | `true` puts Mac OS 9's Application menu at the right end of the menu bar: the front app's icon, and Hide / Hide Others / Show All / the running apps under it (as far right as macOS lets a status item go) |
+| `menuBar.monochrome` | `true` draws the Apple menu, the Application menu, the Control Strip modules' menus, the strip itself and the volume slider in black and white, as a 1-bit Mac did (System 7.1 (authentic)): white faces in a black line, the selected row inverted, greys as the dither pattern, every picture — the theme's strip pictures, the module art, the menu icons — dithered to 1 bit on the way to the screen |
 | `hideMenuBarDefault` | `true` hides the menu bar while the theme is on (the Windows themes) |
 | `appearance`, `accentColor` | System appearance (`light`/`dark`) and accent to match when the user allows it |
 | `chromeColors` | A Windows colour scheme (title bars, button face, bevels) for the `win98` chrome; the Plus! themes use it |

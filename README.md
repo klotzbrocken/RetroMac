@@ -58,7 +58,7 @@ More, and the videos, at [myretromac.app](https://myretromac.app).
   own Metal presets ([docs/CUSTOM-SHADERS.md](docs/CUSTOM-SHADERS.md)).
 - **Live Wallpaper Plus** — the shader over wallpaper, desktop icons, dock and Start menu in one
   pass while your windows stay untouched. Nostalgia and work at the same time.
-- **Themes** — Windows 3.1, 95, 98 (with the Plus! schemes), Me, XP, 7; System 6 (true 1-bit),
+- **Themes** — Windows 3.1, 95, 98 (with the Plus! schemes), Me, XP, 7; System 6 (true 1-bit), System 7.1 (authentic: the Control Strip, the Application menu and the Apple menu, all in 1 bit),
   Mac OS 9 (and an authentic cut with the Control Strip of system modules and the Application
   menu instead of a dock), Mac OS X Cheetah, Mountain Lion, Snow Leopard; BeOS, OS/2 Warp 4,
   SGI IRIX, AmigaOS Workbench 4.1, NeXTSTEP, Futurama, and two of the maintainer's own.

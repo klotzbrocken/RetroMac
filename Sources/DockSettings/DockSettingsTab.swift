@@ -148,6 +148,7 @@ struct DockSettingsTab: View {
         case "Mountain Lion": return [Color(red: 0.3, green: 0.5, blue: 0.8), Color(red: 0.2, green: 0.4, blue: 0.7)]
         case "Snow Leopard": return [Color(red: 0.45, green: 0.5, blue: 0.58), Color(red: 0.3, green: 0.35, blue: 0.45)]
         case "Mac OS 9.2 Classic", "Mac OS 9 (authentic)": return [Color(red: 0.78, green: 0.78, blue: 0.8), Color(red: 0.62, green: 0.62, blue: 0.68)]
+        case "System 7.1 (authentic)": return [Color(white: 1.0), Color(white: 0.15)]
         case "Windows 98": return [Color(red: 0.0, green: 0.5, blue: 0.5), Color(red: 0.0, green: 0.35, blue: 0.35)]
         case "Windows XP": return [Color(red: 0.0, green: 0.35, blue: 0.75), Color(red: 0.0, green: 0.25, blue: 0.55)]
         case "OS/2 Warp 4": return [Color(red: 0.15, green: 0.15, blue: 0.5), Color(red: 0.1, green: 0.1, blue: 0.35)]

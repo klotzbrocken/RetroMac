@@ -27,6 +27,50 @@ final class ControlStripTests: XCTestCase {
         XCTAssertNotNil(t.iconResource("controlstrip-right.png"))
     }
 
+    /// System 7.1 (authentic): the same strip, menus and desktop as Mac OS 9 (authentic), in 1 bit.
+    func testSystem7ManifestMirrorsMacOS9InOneBit() throws {
+        let t = try XCTUnwrap(theme("MacOS7-Authentic.retromactheme"), "the theme bundle loads")
+        XCTAssertEqual(t.config.name, "System 7.1 (authentic)")
+        XCTAssertTrue(t.config.isControlStripModules)
+        XCTAssertTrue(t.config.hidesDock)
+        XCTAssertTrue(t.config.hasApplicationMenu)
+        XCTAssertTrue(t.config.hasAppleMenu)
+        XCTAssertTrue(t.config.hasMonochromeMenus)
+        XCTAssertEqual(t.config.menuBarAppleStyleDefault, 6, "the solid black apple")
+        XCTAssertEqual(t.config.chrome?.style, "macos6", "the 1-bit title bars and frames")
+        XCTAssertEqual(t.config.desktopIcons?.map { $0.name }, ["Macintosh HD", "Applications", "Trash"])
+        XCTAssertEqual(t.config.desktopIconSize, 32)
+        XCTAssertEqual(t.config.desktopLabel?.background, "#FFFFFF")
+        XCTAssertNotNil(t.iconResource("controlstrip-left.png"))
+        XCTAssertNotNil(t.iconResource("strip-volume.png"))
+        XCTAssertNotNil(t.iconResource("computer.png"))
+        let os9 = try XCTUnwrap(authenticTheme())
+        XCTAssertEqual(t.config.desktopIconSize, os9.config.desktopIconSize, "size and behaviour come from Mac OS 9 (authentic)")
+        XCTAssertEqual(t.config.dock.dockStyle, os9.config.dock.dockStyle)
+        XCTAssertFalse(os9.config.hasMonochromeMenus)
+        XCTAssertFalse(try XCTUnwrap(theme("MacOS6-Classic.retromactheme")).config.isControlStripModules, "System 6 stays as it was")
+    }
+
+    /// The 1-bit pass leaves only black, white and clear behind, at the pixel count asked for.
+    func testOneBitIsBlackWhiteAndClear() {
+        let src = NSImage(size: NSSize(width: 64, height: 64))
+        src.lockFocus()
+        NSColor(deviceRed: 0.1, green: 0.1, blue: 0.2, alpha: 1).setFill(); NSRect(x: 0, y: 0, width: 64, height: 32).fill()
+        NSColor(deviceWhite: 0.95, alpha: 1).setFill(); NSRect(x: 0, y: 32, width: 64, height: 32).fill()
+        src.unlockFocus()
+        let bit = MonoArt.oneBit(src, points: 16, scale: 2)
+        let rep = try! XCTUnwrap(bit.representations.first as? NSBitmapImageRep)
+        XCTAssertEqual(rep.pixelsWide, 32)
+        var blacks = 0, whites = 0
+        for y in 0..<rep.pixelsHigh { for x in 0..<rep.pixelsWide {
+            let c = rep.colorAt(x: x, y: y)!
+            if c.alphaComponent < 0.5 { continue }
+            XCTAssertTrue((c.redComponent == 0 || c.redComponent == 1) && c.redComponent == c.greenComponent && c.greenComponent == c.blueComponent, "only black and white")
+            if c.redComponent == 0 { blacks += 1 } else { whites += 1 }
+        } }
+        XCTAssertGreaterThan(blacks, 0); XCTAssertGreaterThan(whites, 0, "the light half goes white, the dark half black")
+    }
+
     func testClassicThemeIsUntouched() throws {
         let t = try XCTUnwrap(theme("MacOS9-Classic.retromactheme"))
         XCTAssertTrue(t.config.isControlStrip)

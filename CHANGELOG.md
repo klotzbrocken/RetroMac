@@ -3,6 +3,30 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+- **New theme: System 7.1 (authentic).** The 1-bit Mac of the PowerBook years, built the way
+  "Mac OS 9 (authentic)" is: no dock, the **Control Strip** of system modules along the bottom
+  edge (the same modules, sizes and behaviour — the tab, Option-drag, the size box, the
+  slider), the **Application menu** at the right end of the menu bar and the **Apple menu**
+  of the day — and every one of them in black and white. A theme says `menuBar.monochrome`
+  and gets: white menus in a black line with the 1 px shadow, the selected row inverted, greys
+  as the era's dither pattern, a white strip with dotted grooves, and every picture — the
+  theme's own strip pictures, the modules' pixel art, the menu icons — put through a 1-bit
+  pass on its way to the screen (dark and light straight to black and white, only the middle
+  greys dithered; large icons are thresholded first and then reduced block by block, so a
+  thin line survives the way down to 16 px). The Apple cover is a solid black apple
+  (`menuBarApple: mono`), the menu bar white with the black rule, the desktop icons labelled
+  in Chicago on white. System 6 stays exactly as it was; the new theme is a copy of it with
+  the manifest of the Mac OS 9 (authentic) desktop. Theme authors: `menuBar.monochrome` in
+  docs/THEMES.md.
+
+- **The Apple cover takes the first click.** A theme's own Apple menu did not open while
+  another app was in front: the cover was a plain window, so the first click only activated
+  RetroMac and was swallowed, and a cover made before the theme came up ignored the mouse
+  until a later refresh. It is a non-activating panel now that accepts the first click, and
+  whether it takes clicks is settled the moment the theme changes.
+
 ## 2.8.6
 
 - **New theme: Mac OS 9 (authentic).** The desktop as it was, next to "Mac OS 9.2 Classic",

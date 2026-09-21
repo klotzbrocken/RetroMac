@@ -600,7 +600,7 @@ struct LauncherView: View {
         .contentShape(Rectangle())
         // Cycle through all six styles incl. Futurama (teal): Off → Rainbow → Aqua → Aqua
         // Classic → Apple Hell → Futurama → Off.
-        .onTapGesture { settings.menuBarAppleStyle = (settings.menuBarAppleStyle + 1) % 6 }
+        .onTapGesture { settings.menuBarAppleStyle = (settings.menuBarAppleStyle + 1) % 7 }
     }
 
     private var shaderPicker: some View {

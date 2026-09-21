@@ -40,7 +40,8 @@ enum CrashEra: String, CaseIterable {
         case "com.retromac.microsoft.windowsme": return .winMe
         case "com.retromac.microsoft.windowsxp": return .winXP
         case "com.retromac.microsoft.windows7":  return .win7
-        case "com.retromac.apple.system6":       return .macos6
+        case "com.retromac.apple.system6",
+             "com.retromac.apple.system7-authentic": return .macos6
         case "com.retromac.apple.macos9":        return .macos9
         // Cheetah's panic was still a text console; the grey curtain everyone pictures arrived
         // with Panther and stayed through Snow Leopard and Mountain Lion.
