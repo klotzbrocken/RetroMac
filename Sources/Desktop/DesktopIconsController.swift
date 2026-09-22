@@ -86,14 +86,22 @@ final class DesktopIconsController {
         // under the hard disk, the way the Finder's desktop showed them.
         if let i = entries.firstIndex(where: { $0.type == "volumes" }) {
             let template = entries.remove(at: i)
-            var row = template.gridY ?? 1
-            for vol in Self.mountedVolumes() {
+            let first = template.gridY ?? 1
+            let column = template.gridX ?? 0
+            let volumes = Self.mountedVolumes()
+            // The volumes take their rows; everything that stood below them in the same column
+            // closes up right under the last one, so no name lands on another and no gap is
+            // left behind. Rows counted from the bottom (negative) stay where they are.
+            let following = entries.indices
+                .filter { (entries[$0].gridX ?? 0) == column && (entries[$0].gridY ?? 0) > first }
+                .sorted { (entries[$0].gridY ?? 0) < (entries[$1].gridY ?? 0) }
+            for (n, j) in following.enumerated() { entries[j].gridY = first + volumes.count + n }
+            for (n, vol) in volumes.enumerated() {
                 var e = DockThemeConfig.DesktopIconEntry(name: vol.lastPathComponent, icon: template.icon, type: "folder")
                 e.path = vol.path
-                e.gridX = template.gridX ?? 0
-                e.gridY = row
-                entries.insert(e, at: i)
-                row += 1
+                e.gridX = column
+                e.gridY = first + n
+                entries.insert(e, at: i + n)
             }
         }
         if entries.isEmpty {

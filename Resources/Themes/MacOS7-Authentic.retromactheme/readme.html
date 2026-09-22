@@ -7,7 +7,10 @@
   html, body { margin:0; padding:0; }
   body { background:#8a8a8a; font-family:"Helvetica Neue", "Charcoal", Geneva, sans-serif; color:#000; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
   .win { max-width:640px; margin:0 auto; background:#ffffff; border:2px solid #000; box-shadow:0 10px 34px rgba(0,0,0,.38);  }
-  .titlebar { background:#fff;color:#000;padding:5px 10px;font-size:13px;font-weight:700;border-bottom:2px solid #000;text-align:center; }
+  /* System 7's own bar: the racing stripes with the title on a white plaque that interrupts them. */
+  .titlebar { background:repeating-linear-gradient(#000 0 1px, #fff 1px 3px);color:#000;padding:5px 10px;font-size:13px;font-weight:700;
+              border-bottom:2px solid #000;text-align:center;position:relative; }
+  .titlebar .tb-title { background:#fff;padding:0 10px; }
   .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
   .body { padding:22px 26px 26px; }
   .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }

@@ -862,8 +862,9 @@ final class ThemeManager {
             if let img = NSImage(contentsOf: iconURL) {
                 img.size = NSSize(width: size, height: size)
                 // Mapped/custom artwork is shown crisp (hi-res) — only un-mapped system
-                // apps get auto-pixelated (below) so they blend into a pixel theme.
-                return img
+                // apps get auto-pixelated (below) so they blend into a pixel theme. A
+                // four-grey theme snaps even its own artwork, so nothing is outside the four.
+                return theme.config.hasFourGreys ? FourGrays.quantize(img, points: size) : img
             }
         }
 
@@ -891,6 +892,9 @@ final class ThemeManager {
             if activeTheme?.config.icon.monochrome == true {
                 icon = grayscaled(icon, size: size)
             }
+            // A four-grey theme goes further: the icon is snapped to #000/#555/#AAA/#FFF,
+            // at the pixels it will be shown at, so nothing on screen is outside the palette.
+            if activeTheme?.config.hasFourGreys == true { icon = FourGrays.quantize(icon, points: size) }
             return icon
         }
 
@@ -906,6 +910,7 @@ final class ThemeManager {
         var img = image
         if activeTheme?.config.isPixelated == true { img = pixelated(img, to: size) }
         if activeTheme?.config.icon.monochrome == true { img = grayscaled(img, size: size) }
+        if activeTheme?.config.hasFourGreys == true { img = FourGrays.quantize(img, points: size) }
         return img
     }
 

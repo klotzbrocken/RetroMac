@@ -24,7 +24,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Application menu (`menuBar.applicationMenuIconOnly`), the Balloon Help `?` balloon
   (`menuBar.balloonHelp`) and the Apple menu of the day. Windows use their own `system7`
   chrome — the racing-stripe title bar with the close box left and the zoom box right, the
-  1 px black frame, and System 7's grey scroll bars and grow box. Battery reads slowly,
+  1 px black frame, and System 7's grey scroll bars and grow box; the Applications window and
+  the theme's Read Me wear it too. Every icon RetroMac draws under the theme is snapped to the
+  four greys, not merely desaturated: the dock, the desktop, the Applications grid and the
+  menus. The strip's modules are drawn for it — the AppleTalk network, the battery with its
+  charge, the shared folder, the disk, the plug, the crescent and the speaker, each with the
+  four greys and the era's outline. Battery reads slowly,
   volume and network on their events, and every scaled picture is cached.
 
 - **Starfield Simulation.** The Windows 2000 screen saver, for every theme: white squares

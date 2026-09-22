@@ -616,7 +616,14 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         img.draw(in: NSRect(x: pad, y: pad, width: CGFloat(side) - 2 * pad, height: CGFloat(side) - 2 * pad),
                  from: .zero, operation: .sourceOver, fraction: 1.0)
         NSGraphicsContext.restoreGraphicsState()
-        guard let png = rep.representation(using: .png, properties: [:]) else { return nil }
+        // A four-grey theme's grid is in the four greys too — the same snap the dock and the
+        // desktop get, done once here rather than in every page.
+        var out = rep
+        if ThemeManager.shared.activeTheme?.config.hasFourGreys == true {
+            let img = NSImage(size: NSSize(width: side, height: side)); img.addRepresentation(rep)
+            if let snapped = FourGrays.quantize(img, points: CGFloat(side), scale: 1).representations.first as? NSBitmapImageRep { out = snapped }
+        }
+        guard let png = out.representation(using: .png, properties: [:]) else { return nil }
         return "data:image/png;base64," + png.base64EncodedString()
     }
 

@@ -692,7 +692,7 @@
   window.setApps=function(list){ apps=Array.isArray(list)?list:[]; buildGrid(); };
   window.setDiskFree=function(s){ availSpace=s||''; const m9=document.getElementById('m9info'); if(m9) m9.textContent=apps.length+' items'+(availSpace?', '+availSpace:''); };
   // Host sets the chrome theme ('beos' default · 'macos9' = Platinum Finder window).
-  window.setTheme=function(k){ var t=k||'beos'; document.body.className='theme-'+t+(t==='win7'?' theme-winxp':'')+(t==='snowleopard'?' theme-macosx':''); buildGrid(); };
+  window.setTheme=function(k){ var t=k||'beos'; document.body.className='theme-'+t+(t==='win7'?' theme-winxp':'')+(t==='snowleopard'?' theme-macosx':'')+(t==='system7'?' theme-macos6':''); buildGrid(); };
   window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
   // Host sets the window title across all three chromes (BeOS tab / Mac OS 9 plaque / XP caption).
   window.setTitle=function(t){

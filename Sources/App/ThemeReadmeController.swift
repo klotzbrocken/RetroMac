@@ -147,12 +147,13 @@ final class ThemeReadmeController: NSObject, WKScriptMessageHandler, WKNavigatio
     private static func closeButtonJS(for key: String) -> String {
         // Per-family look: Aero/XP red, classic-Windows silver caption, Mac red traffic dot, neutral.
         // "snowleopard" is a Mac key too, it just doesn't start with "macos".
-        let isMac = key.hasPrefix("macos") || key == "snowleopard"
+        let isMac = key.hasPrefix("macos") || key == "snowleopard" || key == "system7"
         let variant: String
         switch key {
         case "win7", "winxp":            variant = "winRed"
         case "win98", "win31":           variant = "winSilver"
         case "macos9":                   variant = "platinumBox"   // the close box, left, as on every Platinum bar
+        case "macos6", "system7":        variant = "classicBox"    // the hollow square of the 1-bit Mac, left
         default:                         variant = isMac ? "macDot" : "neutral"
         }
         return """
@@ -181,6 +182,10 @@ final class ThemeReadmeController: NSObject, WKScriptMessageHandler, WKNavigatio
             // ClassicMacChrome.bevelBox: #D8D8D8 face, #2A2A2A outline, white inner highlight, 11 px.
             b.style.cssText = base + 'top:50%;left:8px;transform:translateY(-50%);width:11px;height:11px;'
               + 'background:#d8d8d8;border:1px solid #2a2a2a;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #fff;border-radius:0;color:transparent;font-size:0;';
+          } else if (v === 'classicBox') {
+            // The 1-bit Mac's close box: a hollow black square on white, top-left, 15 px.
+            b.style.cssText = base + 'top:50%;left:8px;transform:translateY(-50%);width:13px;height:13px;'
+              + 'background:#fff;border:2px solid #000;border-radius:0;color:transparent;font-size:0;box-shadow:none;';
           } else if (v === 'winRed') {
             b.textContent = '\\u2715';
             b.style.cssText = base + 'top:6px;right:8px;width:26px;height:18px;color:#fff;font:700 12px \"Segoe UI\",Arial,sans-serif;'
