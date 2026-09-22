@@ -134,6 +134,37 @@ enum FourGrays {
         return nil
     }
 
+    /// An icon for a four-grey theme: grey, but with every grey there is. The theme's surfaces
+    /// (menus, strip, frames) keep to the four; pictures snapped to the four came out as
+    /// blotches, so a picture only loses its colour. Resampled smoothly to the pixels it is
+    /// shown at, then turned to luminance byte by byte; alpha is kept as it is.
+    static func greyscale(_ image: NSImage, points: CGFloat, scale: CGFloat = 2) -> NSImage {
+        let px = max(1, Int((points * scale).rounded()))
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8, samplesPerPixel: 4,
+                                         hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+              let bytes = rep.bitmapData else { return image }
+        rep.size = NSSize(width: points, height: points)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        NSGraphicsContext.current?.imageInterpolation = .high
+        image.draw(in: NSRect(x: 0, y: 0, width: points, height: points), from: .zero, operation: .copy, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+        // The rep is premultiplied RGBA; luminance of premultiplied values is the premultiplied
+        // luminance, so the grey stays correctly weighted by its alpha.
+        let row = rep.bytesPerRow
+        for y in 0..<px {
+            var p = bytes + y * row
+            for _ in 0..<px {
+                let lum = UInt8((Int(p[0]) * 77 + Int(p[1]) * 151 + Int(p[2]) * 28) >> 8)
+                p[0] = lum; p[1] = lum; p[2] = lum
+                p += 4
+            }
+        }
+        let img = NSImage(size: NSSize(width: points, height: points))
+        img.addRepresentation(rep)
+        return img
+    }
+
     /// Draw with `body` (flipped coordinates, as the strip's modules draw) into a `size` picture
     /// at `scale`, and return it in the four greys.
     static func quantize(size: NSSize, scale: CGFloat, _ body: @escaping (NSRect) -> Void) -> NSImage? {

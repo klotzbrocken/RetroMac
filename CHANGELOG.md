@@ -25,12 +25,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   (`menuBar.balloonHelp`) and the Apple menu of the day. Windows use their own `system7`
   chrome — the racing-stripe title bar with the close box left and the zoom box right, the
   1 px black frame, and System 7's grey scroll bars and grow box; the Applications window and
-  the theme's Read Me wear it too. Every icon RetroMac draws under the theme is snapped to the
-  four greys, not merely desaturated: the dock, the desktop, the Applications grid and the
-  menus — the Apple menu wears Mac OS 9 (authentic)'s own pictures, in grey. The menus open
+  the theme's Read Me wear it too. Every icon RetroMac draws under the theme is grey — in every
+  grey there is, smoothly resampled, while the surfaces around them (menus, strip, frames)
+  keep to the four; pictures snapped to four greys came out as blotches. That holds for the
+  dock, the desktop, the Applications grid and the menus — the Apple menu wears Mac OS 9 (authentic)'s own pictures, in grey. The menus open
   at once: the Apple menu's submenus (the Applications folder, Control Panels, Favorites and
   the three recent lists) are read when they open rather than when the menu is built, every
-  picture is snapped once and kept, and the snap itself now works on the raw bytes — one
+  picture is converted once and kept, and the conversion works on the raw bytes — one
   512 px icon used to mean a quarter of a million NSColor objects, which is what made the
   Apple menu, the Application menu and Balloon Help crawl. The strip's modules are drawn for it — the AppleTalk network, the battery with its
   charge, the shared folder, the disk, the plug, the crescent and the speaker, each with the

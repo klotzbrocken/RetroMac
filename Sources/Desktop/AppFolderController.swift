@@ -621,7 +621,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         var out = rep
         if ThemeManager.shared.activeTheme?.config.hasFourGreys == true {
             let img = NSImage(size: NSSize(width: side, height: side)); img.addRepresentation(rep)
-            if let snapped = FourGrays.quantize(img, points: CGFloat(side), scale: 1).representations.first as? NSBitmapImageRep { out = snapped }
+            if let grey = FourGrays.greyscale(img, points: CGFloat(side), scale: 1).representations.first as? NSBitmapImageRep { out = grey }
         }
         guard let png = out.representation(using: .png, properties: [:]) else { return nil }
         return "data:image/png;base64," + png.base64EncodedString()

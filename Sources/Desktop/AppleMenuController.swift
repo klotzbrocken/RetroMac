@@ -94,7 +94,7 @@ final class AppleMenuController {
     /// One 16 pt picture, in the theme's own palette: a four-grey theme snaps it once, here,
     /// rather than every time a menu is drawn.
     private static func prepared(_ image: NSImage, theme: ThemeBundle) -> NSImage {
-        if theme.config.hasFourGreys { return FourGrays.quantize(image, points: 16, scale: 2) }
+        if theme.config.hasFourGreys { return FourGrays.greyscale(image, points: 16, scale: 2) }
         let out = (image.copy() as? NSImage) ?? image
         out.size = NSSize(width: 16, height: 16)
         return out

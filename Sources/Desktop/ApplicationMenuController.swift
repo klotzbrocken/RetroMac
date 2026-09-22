@@ -131,7 +131,7 @@ final class ApplicationMenuController: NSObject {
         // front application changes.
         let out: NSImage
         if theme?.config.hasFourGreys == true {
-            out = FourGrays.quantize(img, points: 16, scale: 2)
+            out = FourGrays.greyscale(img, points: 16, scale: 2)
         } else {
             out = (img.copy() as? NSImage) ?? img
             out.size = NSSize(width: 16, height: 16)

@@ -184,7 +184,7 @@ private final class PlatinumMenuView: NSView {
     private var monoIcons: [Int: NSImage] = [:]
     private func monoIcon(_ row: Int, _ icon: NSImage) -> NSImage {
         if let c = monoIcons[row] { return c }
-        let bit = FourGrays.quantize(icon, points: 16, scale: window?.backingScaleFactor ?? 2); monoIcons[row] = bit; return bit
+        let bit = FourGrays.greyscale(icon, points: 16, scale: window?.backingScaleFactor ?? 2); monoIcons[row] = bit; return bit
     }
     private var face: NSColor { mono ? .white : NSColor(srgbRed: 0.855, green: 0.855, blue: 0.855, alpha: 1) }      // #DADADA
     private var highlight: NSColor { mono ? .black : NSColor(srgbRed: 0.2, green: 0.4, blue: 0.8, alpha: 1) }      // the Platinum "Blue" highlight
