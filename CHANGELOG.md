@@ -21,6 +21,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   the manifest of the Mac OS 9 (authentic) desktop. Theme authors: `menuBar.monochrome` in
   docs/THEMES.md.
 
+- **A leftover square-corner setting is cleaned up.** The title bars' corner value
+  (`NSConvolutionOverride1` = 0.5, the smallest the key takes) could outlive RetroMac: a
+  session killed outright never restored it, and a second RetroMac running beside it (a
+  development build next to the release) snapshotted that 0.5 as the user's "original" and
+  put it back on every restore — every app then opened with square corners, theme or no
+  theme. Nobody sets 0.5 by hand, so at launch an untracked 0.5 is deleted (and the Finder
+  refreshed), and a 0.5 found while snapshotting is recorded as "unset".
+
 - **The Apple cover takes the first click.** A theme's own Apple menu did not open while
   another app was in front: the cover was a plain window, so the first click only activated
   RetroMac and was swallowed, and a cover made before the theme came up ignored the mouse

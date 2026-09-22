@@ -125,8 +125,22 @@ enum SystemTweaksAdapter {
     /// never restored — undo unconditionally. If the theme is still active + the switch on,
     /// `applyWallpaper()` → `apply()` re-applies right after, so this can't fight a live theme.
     static func restoreIfNeeded() {
-        guard d.bool(forKey: snapKey) else { return }
-        restore()
+        if d.bool(forKey: snapKey) { restore() }
+        queue.async { dropOrphanedSquareCorners() }
+    }
+
+    /// The overlay's corner value (0.5) left on the system with nothing tracking it: a session
+    /// killed outright, or two RetroMacs (a dev build beside the release) where the second
+    /// snapshotted the first one's 0.5 as the "original" and put it back on restore. Nobody
+    /// sets 0.5 by hand, so an untracked 0.5 is ours and goes; every other value is the user's.
+    private static func dropOrphanedSquareCorners() {
+        let stored = (d.array(forKey: origKey) as? [[String: String]]) ?? []
+        let tracked = stored.contains { $0["domain"] == "-g" && $0["key"] == "NSConvolutionOverride1" }
+        guard !tracked, let value = SystemBridge.shared.readDefault("-g", "NSConvolutionOverride1"),
+              Double(value) == 0.5 else { return }
+        print("[SystemTweaks] untracked NSConvolutionOverride1=0.5 (ours, from a session that never restored): deleting")
+        _ = SystemBridge.shared.runDefaults(["delete", "-g", "NSConvolutionOverride1"])
+        for app in refreshTargets(domain: "-g", refresh: "Finder") { _ = SystemBridge.shared.killall(app) }
     }
 
     // MARK: - Core
@@ -184,7 +198,11 @@ enum SystemTweaksAdapter {
         //    system with nothing recording how to undo it (e.g. the Finder font/view size stays
         //    stuck after a crash, since the next launch has no snapshot to revert).
         for t in target where !storedIDs.contains(id(t.domain, t.key)) {
-            let orig = sb.readDefault(t.domain, t.key) ?? ""   // "" ⇒ was unset ⇒ restore deletes
+            var orig = sb.readDefault(t.domain, t.key) ?? ""   // "" ⇒ was unset ⇒ restore deletes
+            // 0.5 on the corner key is the overlay's own, never the user's: another RetroMac
+            // (a dev build beside the release) or a session that never restored left it there.
+            // Snapshotting it as the original would put it back for good on every restore.
+            if t.domain == "-g", t.key == "NSConvolutionOverride1", Double(orig) == 0.5 { orig = "" }
             stored.append([
                 "domain": t.domain, "key": t.key, "type": t.type,
                 "orig": orig, "refresh": t.refresh ?? ""
