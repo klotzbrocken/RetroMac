@@ -152,18 +152,18 @@ private final class PlatinumMenuView: NSView {
 
     private let rowH = PlatinumMenuController.rowHeight
     private let sepH = PlatinumMenuController.separatorHeight
-    /// Black and white (System 7.1 (authentic)): a white menu in a black line with a 1 px
-    /// shadow, the selected row inverted, dimmed rows in the dither grey; else Platinum.
-    private let mono = MonoArt.active
+    /// Four greys (System 7.1 (authentic)): a white menu in a black line with a 1 px shadow,
+    /// the selected row inverted, dimmed rows in #AAAAAA; else Platinum.
+    private let mono = FourGrays.active
     /// The rows' icons in 1 bit, converted once per menu (the conversion walks every pixel).
     private var monoIcons: [Int: NSImage] = [:]
     private func monoIcon(_ row: Int, _ icon: NSImage) -> NSImage {
         if let c = monoIcons[row] { return c }
-        let bit = MonoArt.oneBit(icon, points: 16, scale: window?.backingScaleFactor ?? 2); monoIcons[row] = bit; return bit
+        let bit = FourGrays.quantize(icon, points: 16, scale: window?.backingScaleFactor ?? 2); monoIcons[row] = bit; return bit
     }
     private var face: NSColor { mono ? .white : NSColor(srgbRed: 0.855, green: 0.855, blue: 0.855, alpha: 1) }      // #DADADA
     private var highlight: NSColor { mono ? .black : NSColor(srgbRed: 0.2, green: 0.4, blue: 0.8, alpha: 1) }      // the Platinum "Blue" highlight
-    private var textDim: NSColor { mono ? MonoArt.gray : NSColor(srgbRed: 0.5, green: 0.5, blue: 0.5, alpha: 1) }
+    private var textDim: NSColor { mono ? FourGrays.light : NSColor(srgbRed: 0.5, green: 0.5, blue: 0.5, alpha: 1) }
     private let iconColumn: CGFloat = 26
 
     var intrinsicSize: NSSize {
@@ -236,7 +236,7 @@ private final class PlatinumMenuView: NSView {
             if scrolls, r.maxY <= rowBand.minY || r.minY >= rowBand.maxY { continue }
             if isSeparator(it) {
                 if mono {
-                    MonoArt.gray.setFill(); NSRect(x: r.minX + 1, y: r.midY.rounded(), width: r.width - 2, height: 1).fill()
+                    FourGrays.dark.setFill(); NSRect(x: r.minX + 1, y: r.midY.rounded(), width: r.width - 2, height: 1).fill()
                     continue
                 }
                 NSColor(white: 0.6, alpha: 1).setFill(); NSRect(x: r.minX + 1, y: r.midY.rounded() - 1, width: r.width - 2, height: 1).fill()
@@ -282,7 +282,7 @@ private final class PlatinumMenuView: NSView {
                 if up { p.move(to: NSPoint(x: cx - 4, y: cy + 2)); p.line(to: NSPoint(x: cx, y: cy - 2)); p.line(to: NSPoint(x: cx + 4, y: cy + 2)) }
                 else { p.move(to: NSPoint(x: cx - 4, y: cy - 2)); p.line(to: NSPoint(x: cx, y: cy + 2)); p.line(to: NSPoint(x: cx + 4, y: cy - 2)) }
                 p.close()
-                (on ? NSColor.black : (mono ? MonoArt.gray : NSColor(white: 0.6, alpha: 1))).setFill(); p.fill()
+                (on ? NSColor.black : (mono ? FourGrays.light : NSColor(white: 0.6, alpha: 1))).setFill(); p.fill()
             }
         }
     }

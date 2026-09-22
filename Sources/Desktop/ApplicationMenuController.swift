@@ -10,6 +10,9 @@ final class ApplicationMenuController: NSObject {
     static let shared = ApplicationMenuController()
 
     private var item: NSStatusItem?
+    /// System 7's Balloon Help: its own little item left of the Application menu, as the
+    /// question-mark menu sat there.
+    private var balloon: NSStatusItem?
     private var observers: [NSObjectProtocol] = []
 
     private override init() { super.init() }
@@ -25,6 +28,8 @@ final class ApplicationMenuController: NSObject {
         observers.removeAll()
         if let item { NSStatusBar.system.removeStatusItem(item) }
         item = nil
+        if let balloon { NSStatusBar.system.removeStatusItem(balloon) }
+        balloon = nil
     }
 
     private func show() {
@@ -43,7 +48,61 @@ final class ApplicationMenuController: NSObject {
                 observers.append(nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.refreshIcon() })
             }
         }
+        showBalloonHelpIfWanted()
         refreshIcon()
+    }
+
+    /// The Balloon Help item: the era's question mark in a speech balloon, and the menu it had
+    /// (Show/Hide Balloons, and macOS's own help for the front app).
+    private func showBalloonHelpIfWanted() {
+        guard ThemeManager.shared.activeTheme?.config.hasBalloonHelp == true else {
+            if let balloon { NSStatusBar.system.removeStatusItem(balloon) }
+            balloon = nil
+            return
+        }
+        guard balloon == nil else { return }
+        let i = NSStatusBar.system.statusItem(withLength: 26)
+        i.button?.image = Self.balloonImage()
+        i.button?.toolTip = "Balloon Help"
+        i.button?.target = self
+        i.button?.action = #selector(openBalloonHelp)
+        balloon = i
+    }
+
+    /// The balloon, drawn: a rounded speech balloon with a question mark, in black on nothing.
+    static func balloonImage() -> NSImage {
+        let size = NSSize(width: 18, height: 16)
+        let img = NSImage(size: size)
+        img.lockFocus()
+        let body = NSBezierPath(roundedRect: NSRect(x: 1, y: 4, width: 16, height: 11), xRadius: 5, yRadius: 5)
+        let tail = NSBezierPath()
+        tail.move(to: NSPoint(x: 5, y: 5)); tail.line(to: NSPoint(x: 4, y: 0)); tail.line(to: NSPoint(x: 9, y: 4)); tail.close()
+        NSColor.black.setStroke(); NSColor.white.setFill()
+        body.fill(); tail.fill()
+        body.lineWidth = 1.5; body.stroke(); tail.lineWidth = 1.5; tail.stroke()
+        let mark = "?" as NSString
+        let font = RetroFonts.chicago(12)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
+        let s = mark.size(withAttributes: attrs)
+        mark.draw(at: NSPoint(x: (size.width - s.width) / 2, y: 4 + (11 - s.height) / 2), withAttributes: attrs)
+        img.unlockFocus()
+        img.isTemplate = false
+        return img
+    }
+
+    @objc private func openBalloonHelp() {
+        guard let button = balloon?.button, let window = button.window else { return }
+        let menu = PlatinumMenuController.shared
+        if menu.isOpen { menu.dismissAll(); return }
+        let front = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Application"
+        let rows: [PlatinumMenuItem] = [
+            .label("Balloon Help is macOS's own help now"),
+            .separator(),
+            .action("\(front) Help") { NSApp.activate(ignoringOtherApps: false); NSHelpManager.shared.openHelpAnchor("", inBook: nil) },
+            .action("macOS Help") { if let u = URL(string: "help:openbook=com.apple.machelp") { NSWorkspace.shared.open(u) } },
+        ]
+        menu.ignoreClickWindow = window
+        menu.show(rows, below: window.convertToScreen(button.convert(button.bounds, to: nil)))
     }
 
     private func refreshIcon() {
@@ -53,7 +112,9 @@ final class ApplicationMenuController: NSObject {
         // menu keeps showing the app the user was in, as an accessory would.
         if front?.bundleIdentifier == Bundle.main.bundleIdentifier, button.image != nil { return }
         button.image = Self.classicIcon(for: front)
-        button.title = front?.localizedName ?? ""
+        // System 7.1 showed the icon alone; 8.5 put the name beside it.
+        let iconOnly = ThemeManager.shared.activeTheme?.config.applicationMenuIsIconOnly == true
+        button.title = iconOnly ? "" : (front?.localizedName ?? "")
         button.font = RetroFonts.chicago(16)
     }
 

@@ -12,7 +12,7 @@
   },
   "experienceLevel": "full",
   "chrome": {
-    "style": "macos6"
+    "style": "system7"
   },
   "name": "System 7.1 (authentic)",
   "splashWelcome": true,
@@ -154,7 +154,16 @@
     "showTrash": false,
     "showGrip": false,
     "magnification": false,
-    "edgeOffset": 0
+    "edgeOffset": 0,
+    "stripModules": [
+      "appletalk",
+      "battery",
+      "sharing",
+      "hdspindown",
+      "power",
+      "sleep",
+      "volume"
+    ]
   },
   "icon": {
     "renderStyle": "pixelated",
@@ -174,7 +183,7 @@
   "wallpaperTiled": true,
   "wallpapers": [
     {
-      "name": "System 6 Pattern",
+      "name": "50% Grey",
       "file": "wallpaper-tile.png"
     },
     {
@@ -182,44 +191,16 @@
       "file": "wallpaper-pattern-01.png"
     },
     {
-      "name": "Diagonal Weave",
+      "name": "Grey Weave",
       "file": "wallpaper-pattern-02.png"
     },
     {
-      "name": "Pinstripes",
+      "name": "Bands",
       "file": "wallpaper-pattern-03.png"
     },
     {
-      "name": "Basket",
-      "file": "wallpaper-pattern-04.png"
-    },
-    {
-      "name": "Crosshatch",
-      "file": "wallpaper-pattern-05.png"
-    },
-    {
       "name": "Bricks",
-      "file": "wallpaper-pattern-06.png"
-    },
-    {
-      "name": "Waves",
-      "file": "wallpaper-pattern-07.png"
-    },
-    {
-      "name": "Checker Sparse",
-      "file": "wallpaper-pattern-08.png"
-    },
-    {
-      "name": "Herringbone",
-      "file": "wallpaper-pattern-09.png"
-    },
-    {
-      "name": "Dense Dots",
-      "file": "wallpaper-pattern-10.png"
-    },
-    {
-      "name": "Heavy Weave",
-      "file": "wallpaper-pattern-11.png"
+      "file": "wallpaper-pattern-04.png"
     }
   ],
   "desktopIcons": [
@@ -232,11 +213,18 @@
       "gridY": 0
     },
     {
+      "name": "Volumes",
+      "icon": "harddrive.png",
+      "type": "volumes",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
       "name": "Applications",
       "icon": "folder.png",
       "type": "appfolder",
       "gridX": 0,
-      "gridY": 1
+      "gridY": 4
     },
     {
       "name": "Trash",
@@ -244,7 +232,7 @@
       "iconFull": "trash_full.png",
       "type": "trash",
       "gridX": 0,
-      "gridY": 2
+      "gridY": -1
     }
   ],
   "fallbackIcon": "generic.png",
@@ -297,8 +285,10 @@
   "desktopIconSize": 32,
   "menuBar": {
     "applicationMenu": true,
+    "applicationMenuIconOnly": true,
     "appleMenu": true,
-    "monochrome": true
+    "balloonHelp": true,
+    "palette": "grays4"
   },
   "desktopIconsSide": "right",
   "desktopLabel": {

@@ -492,6 +492,7 @@ final class WebAppChromeView: NSView {
         case "win7":   style = .win7;       chromeStyle = ChromeStyleFactory.win7()
         case "macos9": style = .macClassic; chromeStyle = ChromeStyleFactory.macClassic()
         case "macos6": style = .system6;    chromeStyle = ChromeStyleFactory.system6()
+        case "system7": style = .system6;   chromeStyle = ChromeStyleFactory.system7()
         case "nextstep": style = .nextstep; chromeStyle = ChromeStyleFactory.nextstep()
         case "snowleopard": style = .snowLeopard; chromeStyle = ChromeStyleFactory.snowLeopard()
         case "futurama": style = .futurama; chromeStyle = nil

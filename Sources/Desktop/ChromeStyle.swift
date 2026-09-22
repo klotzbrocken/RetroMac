@@ -126,6 +126,7 @@ enum ChromeStyleFactory {
         case "win7":   return win7()         // Windows 7 Aero glass (7.css recipe)
         case "macos9": return macClassic()   // Mac OS 9 Platinum
         case "macos6": return system6()      // authentic 1-bit System 6 (System6Chrome)
+        case "system7": return system7()     // System 7.1 in four greys (System7Chrome)
         case "win98":  return win98()
         case "nextstep": return nextstep()
         case "snowleopard": return snowLeopard()
@@ -219,6 +220,20 @@ enum ChromeStyleFactory {
             titleAlignment: .center,
             windowFill: .white, captionGradient: nil, captionFill: .white,
             buttons: [ ChromeButton(.close, interactive: true, render: .native) ])
+    }
+
+    // System 7.1 — the same racing-stripe bar, with the zoom box System 7 added on the right.
+    static func system7() -> ChromeStyle {
+        return ChromeStyle(
+            titleHeight: 20, windowBorder: 0,
+            buttonSize: NSSize(width: System7Chrome.boxSize, height: System7Chrome.boxSize),
+            buttonSpacing: 6, buttonInset: 8,
+            cornerRadius: 0, buttonSide: .left,
+            titleFont: System7Chrome.titleFont, titleColor: .black, titleShadow: false,
+            titleAlignment: .center,
+            windowFill: .white, captionGradient: nil, captionFill: .white,
+            buttons: [ ChromeButton(.close, interactive: true, render: .native),
+                       ChromeButton(.maximize, interactive: true, render: .native) ])
     }
 
     // Values lifted verbatim from `WebAppChromeView.drawXP` + `WinXPTVChromeView`.

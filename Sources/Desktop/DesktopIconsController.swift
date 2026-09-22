@@ -82,11 +82,36 @@ final class DesktopIconsController {
             e.gridY = (col0Rows.max() ?? -1) + 1
             entries.append(e)
         }
+        // A theme that asks for them (`type: "volumes"`) gets one icon per mounted volume
+        // under the hard disk, the way the Finder's desktop showed them.
+        if let i = entries.firstIndex(where: { $0.type == "volumes" }) {
+            let template = entries.remove(at: i)
+            var row = template.gridY ?? 1
+            for vol in Self.mountedVolumes() {
+                var e = DockThemeConfig.DesktopIconEntry(name: vol.lastPathComponent, icon: template.icon, type: "folder")
+                e.path = vol.path
+                e.gridX = template.gridX ?? 0
+                e.gridY = row
+                entries.insert(e, at: i)
+                row += 1
+            }
+        }
         if entries.isEmpty {
             hide()
             return
         }
         show(entries: entries)
+    }
+
+    /// The volumes on the desktop beside the startup disk: what the Finder showed — mounted,
+    /// browsable, not the boot volume itself.
+    static func mountedVolumes() -> [URL] {
+        let keys: [URLResourceKey] = [.volumeIsRootFileSystemKey, .volumeIsBrowsableKey, .volumeIsInternalKey]
+        let all = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) ?? []
+        return all.filter { url in
+            let v = try? url.resourceValues(forKeys: Set(keys))
+            return (v?.volumeIsBrowsable ?? false) && !(v?.volumeIsRootFileSystem ?? false)
+        }.sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
     }
 
     /// A period-appropriate document icon for the "Read Me" shortcut: the first of these that the
@@ -235,7 +260,11 @@ final class DesktopIconsController {
                 let x = iconsFromLeft
                     ? visibleFrame.minX + marginX + (CGFloat(col) * cw) - screenFrame.origin.x
                     : visibleFrame.maxX - marginX - cw - (CGFloat(col) * cw) - screenFrame.origin.x
-                let y = visibleFrame.maxY - marginY - ch - (CGFloat(row) * ch) - screenFrame.origin.y
+                // A negative row counts from the bottom edge instead of the top (-1 is the
+                // bottom row): the Trash sat down there whatever the screen's size was.
+                let y = row < 0
+                    ? visibleFrame.minY + marginY + (CGFloat(-row - 1) * ch) - screenFrame.origin.y
+                    : visibleFrame.maxY - marginY - ch - (CGFloat(row) * ch) - screenFrame.origin.y
                 view.frame = NSRect(x: x, y: y, width: cw, height: ch)
             }
             contentView.addSubview(view)

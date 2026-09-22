@@ -107,6 +107,7 @@ final class TitleBarOverlayController {
     static func style(for key: String) -> Style? {
         switch key {
         case "macos6":      return .system6
+        case "system7":     return .system6   // the same racing-stripe bar, drawn in the four greys
         case "macos9":      return .platinum
         case "win31":       return .win31
         case "win98":       return .win98      // Windows 95, 98 and Me

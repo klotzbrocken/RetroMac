@@ -5,21 +5,27 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
-- **New theme: System 7.1 (authentic).** The 1-bit Mac of the PowerBook years, built the way
-  "Mac OS 9 (authentic)" is: no dock, the **Control Strip** of system modules along the bottom
-  edge (the same modules, sizes and behaviour — the tab, Option-drag, the size box, the
-  slider), the **Application menu** at the right end of the menu bar and the **Apple menu**
-  of the day — and every one of them in black and white. A theme says `menuBar.monochrome`
-  and gets: white menus in a black line with the 1 px shadow, the selected row inverted, greys
-  as the era's dither pattern, a white strip with dotted grooves, and every picture — the
-  theme's own strip pictures, the modules' pixel art, the menu icons — put through a 1-bit
-  pass on its way to the screen (dark and light straight to black and white, only the middle
-  greys dithered; large icons are thresholded first and then reduced block by block, so a
-  thin line survives the way down to 16 px). The Apple cover is a solid black apple
-  (`menuBarApple: mono`), the menu bar white with the black rule, the desktop icons labelled
-  in Chicago on white. System 6 stays exactly as it was; the new theme is a copy of it with
-  the manifest of the Mac OS 9 (authentic) desktop. Theme authors: `menuBar.monochrome` in
-  docs/THEMES.md.
+- **New theme: System 7.1 (authentic).** The PowerBook 150's screen on today's desktop: a
+  fixed palette of four greys — `#000000`, `#555555`, `#AAAAAA`, `#FFFFFF` — and nothing
+  outside it. No colour, no gradient, no antialiasing on a theme surface, every picture
+  snapped to the four and every scaled bitmap reduced nearest-neighbour (a manifest says
+  `menuBar.palette: "grays4"`). The resolution and the desktop are the ones you have: the
+  desktop pattern tiles across whatever the screen is, and windows keep their places.
+  The **Control Strip** carries the seven modules a PowerBook had, in its order — AppleTalk,
+  Battery Monitor, File Sharing, HD Spin Down, Power Settings, Sleep Now, Sound Volume — and
+  none of Mac OS 9's (no keychain, media bay, colour depth, resolution, printer, sound source
+  or mirroring); a theme picks its own set with `dock.stripModules`. Sizes and behaviour are
+  Mac OS 9 (authentic)'s: the tab rolls it out and in, the size box sets how much shows,
+  Option-drag rearranges the modules or moves the strip, and a module is never stretched.
+  The **desktop** has Macintosh HD at the top right, the Trash at the bottom right whatever
+  the screen's size (a negative `gridY` counts from the bottom now), the Applications folder,
+  and one icon per mounted volume under the hard disk (`type: "volumes"`); a selected name
+  inverts rather than taking the accent colour. The **menu bar** has System 7.1's icon-only
+  Application menu (`menuBar.applicationMenuIconOnly`), the Balloon Help `?` balloon
+  (`menuBar.balloonHelp`) and the Apple menu of the day. Windows use their own `system7`
+  chrome — the racing-stripe title bar with the close box left and the zoom box right, the
+  1 px black frame, and System 7's grey scroll bars and grow box. Battery reads slowly,
+  volume and network on their events, and every scaled picture is cached.
 
 - **Starfield Simulation.** The Windows 2000 screen saver, for every theme: white squares
   streaming out of the centre of a black screen, drawn as the original drew them (the far

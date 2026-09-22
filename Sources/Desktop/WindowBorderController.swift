@@ -449,7 +449,7 @@ final class WindowBorderController {
         case "macos9":
             return .bevel(hiOuter: NSColor.fromHex("#FFFFFF"), hiInner: NSColor.fromHex("#E4E4E8"),
                           loInner: NSColor.fromHex("#9A9AA2"), loOuter: NSColor.fromHex("#5A5A62"), width: 3, radius: R)
-        case "macos6":
+        case "macos6", "system7":
             return .solid(color: .black, width: 2, topRadius: R, bottomRadius: R)
         case "win31":
             // Windows 3.1 had a flat (pre-3D) window frame with a crisp dark outline.

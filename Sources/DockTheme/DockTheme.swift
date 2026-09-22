@@ -79,12 +79,18 @@ struct DockThemeConfig: Codable {
         /// Mac OS 9's Application menu at the right end: the front app's icon, and a menu of
         /// the running apps to switch between (Hide, Hide Others, Show All above it).
         var applicationMenu: Bool? = nil
+        /// System 7.1's Application menu showed the icon alone; 8.5 added the name beside it.
+        var applicationMenuIconOnly: Bool? = nil
+        /// System 7's Balloon Help menu, between the Application menu and the rest.
+        var balloonHelp: Bool? = nil
         /// The Apple menu of Mac OS 9 under the Apple cover: About This Computer, Applications,
         /// Calculator, Chooser, Control Panels, Favorites, Recent Applications/Documents/Servers…
         var appleMenu: Bool? = nil
-        /// The menus, the Control Strip and the volume slider in black and white, as a 1-bit
-        /// Mac drew them (System 7.1 (authentic)): white faces, black lines, dithered greys.
-        var monochrome: Bool? = nil
+        /// The palette every theme surface is limited to. `"grays4"` is the PowerBook 150's
+        /// four greys (#000000, #555555, #AAAAAA, #FFFFFF): the menus, the Control Strip, the
+        /// volume slider and every picture they show are snapped to those four, with no
+        /// gradients and no antialiasing (System 7.1 (authentic)).
+        var palette: String? = nil
     }
     var menuBar: MenuBarConfig? = nil
     var hideMenuBarDefault: Bool? = nil   // when set, activating this theme applies it to Settings.hideMenuBar (Win 95/XP hide it)
@@ -243,6 +249,9 @@ struct DockThemeConfig: Codable {
         var windowPreview: Bool?       // hover a running app's icon ~2s → show a (pixel) window preview
         var folderStacks: Bool?        // click a folder dock item → fan out its recent files
         var appIcon: String?           // icons/<file>: app's Dock icon in Dock Mode (theme-aware)
+        /// The Control Strip modules this theme shows, by id and in its own order
+        /// (`["appletalk", "battery", …]`). Absent: every module RetroMac has.
+        var stripModules: [String]?
     }
 
     struct IconStyle: Codable {
@@ -323,7 +332,7 @@ extension DockThemeConfig {
         case "aqua-classic", "aquaclassic", "classic": return 3
         case "hell", "apple-hell", "doom": return 4
         case "futurama", "teal": return 5
-        case "mono", "black", "system7": return 6
+        case "mono", "black", "system7": return 6   // the 1-bit Mac's solid black apple
         default: return nil
         }
     }
@@ -342,8 +351,12 @@ extension DockThemeConfig {
     /// through the Application menu instead.
     var isControlStripModules: Bool { dock.dockStyle == "controlStripModules" }
     var hasApplicationMenu: Bool { menuBar?.applicationMenu == true }
+    var applicationMenuIsIconOnly: Bool { menuBar?.applicationMenuIconOnly == true }
+    var hasBalloonHelp: Bool { menuBar?.balloonHelp == true }
     var hasAppleMenu: Bool { menuBar?.appleMenu == true }
-    var hasMonochromeMenus: Bool { menuBar?.monochrome == true }
+    var hasFourGreys: Bool { menuBar?.palette?.lowercased() == "grays4" }
+    /// The Control Strip modules this theme wants, in its own order; nil = all of them.
+    var stripModuleIDs: [String]? { dock.stripModules }
     /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.
     var hasWindowPreview: Bool { dock.windowPreview == true }
     var hasFolderStacks: Bool { dock.folderStacks == true }

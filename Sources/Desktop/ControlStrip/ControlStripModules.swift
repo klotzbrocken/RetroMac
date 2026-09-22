@@ -62,6 +62,82 @@ enum StripArt {
         }
     }
 
+    /// A PowerBook's internal disk.
+    static let hardDisk = [
+        "................",
+        "................",
+        "..############..",
+        "..#wwwwwwwwww#..",
+        "..#w########w#..",
+        "..#w#gggggg#w#..",
+        "..#w#gggggg#w#..",
+        "..#w########w#..",
+        "..#wwwwwwwwww#..",
+        "..#w######wwd#..",
+        "..#wwwwwwwwww#..",
+        "..############..",
+        "................",
+        "................",
+        "................",
+        "................",
+    ]
+    /// Power Settings on the adapter: the two-prong plug, cord hanging down.
+    static let powerPlug = [
+        "................",
+        "................",
+        "....#......#....",
+        "....#......#....",
+        "....#......#....",
+        "..############..",
+        "..#wwwwwwwwww#..",
+        "..#wwwwwwwwww#..",
+        "..############..",
+        "....########....",
+        ".......##.......",
+        ".......##.......",
+        "......###.......",
+        "....###.........",
+        "....##..........",
+        "................",
+    ]
+    /// Power Settings on the battery: the cell, half full.
+    static let powerBattery = [
+        "................",
+        "................",
+        "................",
+        ".....######.....",
+        "..############..",
+        "..#wwwwwwwwww#..",
+        "..#wwwww######..",
+        "..#wwwww#ggg##..",
+        "..#wwwww#ggg##..",
+        "..#wwwww######..",
+        "..#wwwwwwwwww#..",
+        "..############..",
+        "................",
+        "................",
+        "................",
+        "................",
+    ]
+    /// Sleep Now: the crescent moon the era used for sleep.
+    static let sleep = [
+        "................",
+        "......####......",
+        "....##gggg##....",
+        "...#gggggggg#...",
+        "..#gggggggggg#..",
+        "..#gggggg####g#.",
+        ".#gggggg##...##.",
+        ".#gggggg#.......",
+        ".#gggggg#.......",
+        ".#gggggg##...##.",
+        "..#gggggg####g#.",
+        "..#gggggggggg#..",
+        "...#gggggggg#...",
+        "....##gggg##....",
+        "......####......",
+        "................",
+    ]
     static let network = [
         "................",
         "....########....",
@@ -767,5 +843,107 @@ final class SoundSourceModule: ControlStripModule {
     }
     @objc private func pickInput(_ sender: NSMenuItem) {
         if let n = sender.representedObject as? NSNumber { Self.setDefault(n.uint32Value, input: true); refresh() }
+    }
+}
+
+// MARK: - The System 7 strip's own modules
+
+/// HD Spin Down: the module that put the internal disk to sleep on a PowerBook. macOS decides
+/// that itself (Energy Saver's "Put hard disks to sleep"), and only root may change it, so the
+/// module shows what the setting is now and opens the pane.
+final class HDSpinDownModule: ControlStripModule {
+    let id = "hdspindown"
+    var isAvailable: Bool { true }
+    var width: CGFloat { 20 }
+    var refreshInterval: TimeInterval { 120 }   // a setting, not a reading: rarely
+    private(set) var minutes: Int?
+
+    func refresh() { minutes = Self.diskSleepMinutes() }
+
+    /// `pmset -g` prints the live settings; `disksleep` is the spin-down time in minutes
+    /// (0 = never). No privileges needed to read it.
+    static func diskSleepMinutes() -> Int? {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+        p.arguments = ["-g"]
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = FileHandle.nullDevice
+        do { try p.run() } catch { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        guard let text = String(data: data, encoding: .utf8) else { return nil }
+        for line in text.split(separator: "\n") {
+            let parts = line.split(whereSeparator: { $0 == " " || $0 == "\t" }).map(String.init)
+            if parts.first == "disksleep", parts.count > 1 { return Int(parts[1]) }
+        }
+        return nil
+    }
+
+    func draw(in rect: NSRect) { StripArt.draw(StripArt.hardDisk, at: rect.origin) }
+
+    func menu() -> NSMenu? {
+        let m = NSMenu()
+        let state: String
+        switch minutes {
+        case .some(0): state = "Disks never spin down"
+        case .some(let n): state = "Disks spin down after \(n) min"
+        default: state = "Spin-down time unknown"
+        }
+        m.addItem(withTitle: state, action: nil, keyEquivalent: "")
+        m.addItem(.separator())
+        m.addItem(ControlStripActions.item("Open Energy Settings…", url: "x-apple.systempreferences:com.apple.Battery-Settings.extension"))
+        return m
+    }
+}
+
+/// Power Settings: where the Mac's power is coming from, and the pane that governs it.
+final class PowerModule: ControlStripModule {
+    let id = "power"
+    var isAvailable: Bool { true }
+    var width: CGFloat { 20 }
+    var refreshInterval: TimeInterval { 30 }
+    private(set) var onBattery = false
+    private(set) var hasBattery = false
+
+    func refresh() {
+        hasBattery = BatteryModule.read().0 != nil
+        // What is actually running the Mac right now, not what the battery is doing: a full
+        // battery on the adapter reports "not charging", which is not the same as unplugged.
+        let source = IOPSGetProvidingPowerSourceType(IOPSCopyPowerSourcesInfo()?.takeRetainedValue())?.takeRetainedValue() as String?
+        onBattery = source == kIOPSBatteryPowerValue
+    }
+
+    func draw(in rect: NSRect) { StripArt.draw(onBattery ? StripArt.powerBattery : StripArt.powerPlug, at: rect.origin) }
+
+    func menu() -> NSMenu? {
+        let m = NSMenu()
+        let source = !hasBattery ? "Power adapter" : (onBattery ? "Battery power" : "Power adapter")
+        m.addItem(withTitle: "Source: \(source)", action: nil, keyEquivalent: "")
+        m.addItem(.separator())
+        m.addItem(ControlStripActions.item("Open Energy Settings…", url: "x-apple.systempreferences:com.apple.Battery-Settings.extension"))
+        m.addItem(ControlStripActions.item("Open Lock Screen Settings…", url: "x-apple.systempreferences:com.apple.Lock-Screen-Settings.extension"))
+        return m
+    }
+}
+
+/// Sleep Now: the one-click module. No menu — the click does it, as the original did.
+final class SleepNowModule: ControlStripModule {
+    let id = "sleep"
+    var isAvailable: Bool { true }
+    var width: CGFloat { 20 }
+
+    func draw(in rect: NSRect) { StripArt.draw(StripArt.sleep, at: rect.origin) }
+
+    func menu() -> NSMenu? { nil }
+
+    func click(anchor: NSRect) {
+        // `pmset sleepnow` is the user-level way to sleep the Mac; the module's whole purpose.
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+        p.arguments = ["sleepnow"]
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        try? p.run()
     }
 }

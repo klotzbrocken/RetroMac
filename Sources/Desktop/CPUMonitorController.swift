@@ -376,7 +376,7 @@ final class DragOverlayView: NSView {
         // themes get this gesture (Windows double-click means maximise, not shade).
         if event.clickCount == 2 {
             let k = RetroFrameTheme.key()
-            if k == "macos9" || k == "macos6" { onCollapse?(); return }
+            if k == "macos9" || k == "macos6" || k == "system7" { onCollapse?(); return }
         }
         window?.performDrag(with: event)
     }

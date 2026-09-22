@@ -27,48 +27,85 @@ final class ControlStripTests: XCTestCase {
         XCTAssertNotNil(t.iconResource("controlstrip-right.png"))
     }
 
-    /// System 7.1 (authentic): the same strip, menus and desktop as Mac OS 9 (authentic), in 1 bit.
-    func testSystem7ManifestMirrorsMacOS9InOneBit() throws {
+    /// System 7.1 (authentic): the Mac OS 9 (authentic) desktop in the four greys, with the
+    /// PowerBook's own seven strip modules and its own window style.
+    func testSystem7ManifestMirrorsMacOS9InFourGreys() throws {
         let t = try XCTUnwrap(theme("MacOS7-Authentic.retromactheme"), "the theme bundle loads")
         XCTAssertEqual(t.config.name, "System 7.1 (authentic)")
         XCTAssertTrue(t.config.isControlStripModules)
         XCTAssertTrue(t.config.hidesDock)
         XCTAssertTrue(t.config.hasApplicationMenu)
         XCTAssertTrue(t.config.hasAppleMenu)
-        XCTAssertTrue(t.config.hasMonochromeMenus)
+        XCTAssertTrue(t.config.hasFourGreys, "every theme surface is limited to the four greys")
+        XCTAssertTrue(t.config.applicationMenuIsIconOnly, "System 7.1 showed the icon alone")
+        XCTAssertTrue(t.config.hasBalloonHelp)
         XCTAssertEqual(t.config.menuBarAppleStyleDefault, 6, "the solid black apple")
-        XCTAssertEqual(t.config.chrome?.style, "macos6", "the 1-bit title bars and frames")
-        XCTAssertEqual(t.config.desktopIcons?.map { $0.name }, ["Macintosh HD", "Applications", "Trash"])
+        XCTAssertEqual(t.config.chrome?.style, "system7", "its own window style")
+        XCTAssertEqual(t.config.desktopIcons?.map { $0.name }, ["Macintosh HD", "Volumes", "Applications", "Trash"])
+        XCTAssertEqual(t.config.desktopIcons?.last?.gridY, -1, "the Trash sits on the bottom row, whatever the screen")
         XCTAssertEqual(t.config.desktopIconSize, 32)
         XCTAssertEqual(t.config.desktopLabel?.background, "#FFFFFF")
         XCTAssertNotNil(t.iconResource("controlstrip-left.png"))
-        XCTAssertNotNil(t.iconResource("strip-volume.png"))
         XCTAssertNotNil(t.iconResource("computer.png"))
+        XCTAssertNil(t.iconResource("strip-volume.png"), "no borrowed Platinum pictures: the modules draw their own")
+
         let os9 = try XCTUnwrap(authenticTheme())
         XCTAssertEqual(t.config.desktopIconSize, os9.config.desktopIconSize, "size and behaviour come from Mac OS 9 (authentic)")
         XCTAssertEqual(t.config.dock.dockStyle, os9.config.dock.dockStyle)
-        XCTAssertFalse(os9.config.hasMonochromeMenus)
+        XCTAssertFalse(os9.config.hasFourGreys)
+        XCTAssertNil(os9.config.stripModuleIDs, "Mac OS 9 (authentic) keeps every module")
         XCTAssertFalse(try XCTUnwrap(theme("MacOS6-Classic.retromactheme")).config.isControlStripModules, "System 6 stays as it was")
     }
 
-    /// The 1-bit pass leaves only black, white and clear behind, at the pixel count asked for.
-    func testOneBitIsBlackWhiteAndClear() {
+    /// The seven modules a PowerBook's strip had, in its order, and none of the Mac OS 9 ones.
+    func testSystem7StripHasThePowerBookModules() throws {
+        let t = try XCTUnwrap(theme("MacOS7-Authentic.retromactheme"))
+        let ids = try XCTUnwrap(t.config.stripModuleIDs)
+        XCTAssertEqual(ids, ["appletalk", "battery", "sharing", "hdspindown", "power", "sleep", "volume"])
+        let built = ids.compactMap { ControlStripController.makeModule($0)?.id }
+        XCTAssertEqual(built, ["network", "battery", "sharing", "hdspindown", "power", "sleep", "volume"])
+        for gone in ["keychain", "mediabay", "colours", "resolution", "printer", "soundsource", "mirroring"] {
+            XCTAssertFalse(built.contains(gone), "\(gone) was not on a System 7 strip")
+        }
+        XCTAssertNil(ControlStripController.makeModule("nonesuch"), "an unknown id is skipped, not guessed at")
+    }
+
+    /// Nothing leaves the four greys, at the pixel count asked for, and a picture with four
+    /// tones lands on all four rather than collapsing to black and white.
+    func testFourGreysAreTheOnlyColoursLeft() throws {
         let src = NSImage(size: NSSize(width: 64, height: 64))
         src.lockFocus()
-        NSColor(deviceRed: 0.1, green: 0.1, blue: 0.2, alpha: 1).setFill(); NSRect(x: 0, y: 0, width: 64, height: 32).fill()
-        NSColor(deviceWhite: 0.95, alpha: 1).setFill(); NSRect(x: 0, y: 32, width: 64, height: 32).fill()
+        let bands: [NSColor] = [NSColor(deviceWhite: 0.02, alpha: 1),
+                                NSColor(deviceWhite: 0.33, alpha: 1),
+                                NSColor(deviceWhite: 0.68, alpha: 1),
+                                NSColor(deviceWhite: 0.98, alpha: 1)]
+        for (i, c) in bands.enumerated() {
+            c.setFill()
+            NSRect(x: 0, y: CGFloat(i) * 16, width: 64, height: 16).fill()
+        }
         src.unlockFocus()
-        let bit = MonoArt.oneBit(src, points: 16, scale: 2)
-        let rep = try! XCTUnwrap(bit.representations.first as? NSBitmapImageRep)
+
+        let out = FourGrays.quantize(src, points: 16, scale: 2)
+        let rep = try XCTUnwrap(out.representations.first as? NSBitmapImageRep)
         XCTAssertEqual(rep.pixelsWide, 32)
-        var blacks = 0, whites = 0
-        for y in 0..<rep.pixelsHigh { for x in 0..<rep.pixelsWide {
-            let c = rep.colorAt(x: x, y: y)!
-            if c.alphaComponent < 0.5 { continue }
-            XCTAssertTrue((c.redComponent == 0 || c.redComponent == 1) && c.redComponent == c.greenComponent && c.greenComponent == c.blueComponent, "only black and white")
-            if c.redComponent == 0 { blacks += 1 } else { whites += 1 }
-        } }
-        XCTAssertGreaterThan(blacks, 0); XCTAssertGreaterThan(whites, 0, "the light half goes white, the dark half black")
+        let allowed: Set<Int> = [0, 0x55, 0xAA, 0xFF]
+        var seen = Set<Int>()
+        for y in 0..<rep.pixelsHigh {
+            for x in 0..<rep.pixelsWide {
+                let c = try XCTUnwrap(rep.colorAt(x: x, y: y))
+                if c.alphaComponent < 0.5 { continue }
+                let v = Int((c.redComponent * 255).rounded())
+                XCTAssertTrue(allowed.contains(v), "\(v) is not one of the four greys")
+                let isGrey = abs(c.redComponent - c.greenComponent) < 0.001 && abs(c.greenComponent - c.blueComponent) < 0.001
+                XCTAssertTrue(isGrey, "grey, never a colour")
+                seen.insert(v)
+            }
+        }
+        XCTAssertEqual(seen, allowed, "all four are used, none is dithered away")
+        XCTAssertEqual(FourGrays.snap(0.0), FourGrays.black)
+        XCTAssertEqual(FourGrays.snap(0.36), FourGrays.dark)
+        XCTAssertEqual(FourGrays.snap(0.62), FourGrays.light)
+        XCTAssertEqual(FourGrays.snap(1.0), FourGrays.white)
     }
 
     func testClassicThemeIsUntouched() throws {

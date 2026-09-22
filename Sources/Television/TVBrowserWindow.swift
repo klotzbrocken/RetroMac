@@ -278,7 +278,7 @@ final class TVBrowserWindow: NSObject {
     /// Mac System 6 theme: borderless 1-bit B/W window — racing-stripe title bar, hollow close
     /// box left, no zoom/collapse; content inset below the bar.
     private func applySystem6Chrome(_ win: NSWindow, title: String) {
-        guard RetroFrameTheme.key() == "macos6", let content = win.contentView else { return }
+        guard ["macos6", "system7"].contains(RetroFrameTheme.key()), let content = win.contentView else { return }
         let bar = System6TVChromeView.barH
         let size = win.frame.size
         win.styleMask = [.borderless, .resizable]

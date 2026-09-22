@@ -15,12 +15,31 @@ final class ControlStripController {
     private var tickTimer: Timer?
     private var observers: [NSObjectProtocol] = []
     private var lastRefresh: [String: Date] = [:]
-    /// Every module, in the order a fresh Mac OS 9 strip had them (alphabetical by module
-    /// name: AppleTalk, Battery, CD/Media Bay, File Sharing, Keychain, Monitor BitDepth,
-    /// Monitor Resolution, Printer Selector, Sound Volume, SoundSource, Video Mirroring).
-    let modules: [ControlStripModule] = [NetworkModule(), BatteryModule(), MediaBayModule(), SharingModule(), KeychainModule(),
-                                         ColourDepthModule(), ResolutionModule(), PrinterModule(), VolumeModule(),
-                                         SoundSourceModule(), MirroringModule()]
+    /// Every module RetroMac has, by id. A theme takes the ones it had (`dock.stripModules`),
+    /// in its own order; without the key it gets the Mac OS 9 set below, in the order a fresh
+    /// Mac OS 9 strip had them (alphabetical by module name).
+    static func makeModule(_ id: String) -> ControlStripModule? {
+        switch id {
+        case "network", "appletalk": return NetworkModule()
+        case "battery":       return BatteryModule()
+        case "mediabay":      return MediaBayModule()
+        case "sharing":       return SharingModule()
+        case "keychain":      return KeychainModule()
+        case "colours":       return ColourDepthModule()
+        case "resolution":    return ResolutionModule()
+        case "printer":       return PrinterModule()
+        case "volume":        return VolumeModule()
+        case "soundsource":   return SoundSourceModule()
+        case "mirroring":     return MirroringModule()
+        case "hdspindown":    return HDSpinDownModule()
+        case "power":         return PowerModule()
+        case "sleep":         return SleepNowModule()
+        default:              return nil
+        }
+    }
+    static let macOS9Order = ["network", "battery", "mediabay", "sharing", "keychain",
+                              "colours", "resolution", "printer", "volume", "soundsource", "mirroring"]
+    private(set) var modules: [ControlStripModule] = macOS9Order.compactMap { makeModule($0) }
 
     private init() {}
 
@@ -42,6 +61,13 @@ final class ControlStripController {
         view = nil
     }
 
+    /// The modules the theme asks for, in its order; an unknown id is skipped.
+    private func adoptModules(of theme: ThemeBundle) {
+        let ids = theme.config.stripModuleIDs ?? Self.macOS9Order
+        let built = ids.compactMap { Self.makeModule($0) }
+        modules = built.isEmpty ? Self.macOS9Order.compactMap { Self.makeModule($0) } : built
+    }
+
     private func show(theme: ThemeBundle) {
         if panel == nil {
             let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: ControlStripView.height),
@@ -52,6 +78,7 @@ final class ControlStripController {
             p.hasShadow = false
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.hidesOnDeactivate = false
+            adoptModules(of: theme)
             let v = ControlStripView(theme: theme, controller: self)
             p.contentView = v
             panel = p
@@ -342,17 +369,17 @@ final class ControlStripView: NSView {
     static let triangleRoom: CGFloat = 8
     var mirrored = false          // right edge: the tab is on the right, everything reads mirrored
     var scrollIndex = 0
-    /// Black and white, as the 1-bit Mac drew it (`menuBar.monochrome`): white ledge, black
-    /// lines, dotted grooves, every picture dithered to 1 bit.
+    /// The four greys of the PowerBook 150 (`menuBar.palette: "grays4"`): a white ledge with
+    /// black edges, #AAAAAA grooves, and every picture snapped to the four.
     let mono: Bool
 
     override var isFlipped: Bool { true }
 
     init(theme: ThemeBundle, controller: ControlStripController) {
         self.controller = controller
-        let isMono = theme.config.hasMonochromeMenus
+        let isMono = theme.config.hasFourGreys
         mono = isMono
-        let bit: (NSImage?) -> NSImage? = { img in (isMono ? img.map(MonoArt.oneBit) : img) }
+        let bit: (NSImage?) -> NSImage? = { img in (isMono ? img.map(FourGrays.quantize) : img) }
         tabImage = bit(theme.iconResource("controlstrip-left.png").flatMap { NSImage(contentsOf: $0) })
         sizeBoxImage = bit(theme.iconResource("controlstrip-right.png").flatMap { NSImage(contentsOf: $0) })
         var pics: [String: NSImage] = [:]
@@ -428,10 +455,10 @@ final class ControlStripView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         ctx.interpolationQuality = .none
         ctx.scaleBy(x: Self.scale, y: Self.scale)   // everything below is in 1× units
-        let platinum = mono ? NSColor.white : NSColor(calibratedWhite: 0.733, alpha: 1)
-        let border = mono ? NSColor.black : NSColor(calibratedWhite: 0.149, alpha: 1)
-        let light = NSColor.white
-        let shadow = mono ? NSColor.white : NSColor(calibratedWhite: 0.502, alpha: 1)
+        let platinum = mono ? FourGrays.white : NSColor(calibratedWhite: 0.733, alpha: 1)
+        let border = mono ? FourGrays.black : NSColor(calibratedWhite: 0.149, alpha: 1)
+        let light = mono ? FourGrays.white : NSColor.white
+        let shadow = mono ? FourGrays.light : NSColor(calibratedWhite: 0.502, alpha: 1)
         // The tab, from the theme's own picture (mirrored on the right edge).
         drawCap(tabImage, in: tabRect, flip: mirrored)
         if collapsed { return }
@@ -495,14 +522,14 @@ final class ControlStripView: NSView {
         let px = Self.scale * (window?.backingScaleFactor ?? 2)
         let key = "pic-\(id)-\(px)"
         if let c = monoArtCache[key] { return c }
-        let bit = MonoArt.oneBit(img, points: 16, scale: px)
+        let bit = FourGrays.quantize(img, points: 16, scale: px)
         monoArtCache[key] = bit
         return bit
     }
     private func monoArt(for m: ControlStripModule, size: NSSize) -> NSImage? {
         let key = "\(m.id)-\(Int(size.width))"
         if let c = monoArtCache[key] { return c }
-        let img = MonoArt.oneBit(size: size, scale: Self.scale * (window?.backingScaleFactor ?? 2)) { r in m.draw(in: r) }
+        let img = FourGrays.quantize(size: size, scale: Self.scale * (window?.backingScaleFactor ?? 2)) { r in m.draw(in: r) }
         monoArtCache[key] = img
         return img
     }
@@ -511,7 +538,7 @@ final class ControlStripView: NSView {
 
     private func drawGroove(at x: CGFloat) {
         if mono {
-            MonoArt.dots.setFill(); NSRect(x: x, y: 3, width: 1, height: Self.baseHeight - 6).fill()
+            FourGrays.light.setFill(); NSRect(x: x, y: 3, width: 1, height: Self.baseHeight - 6).fill()
             return
         }
         NSColor(calibratedWhite: 0.55, alpha: 1).setFill(); NSRect(x: x, y: 3, width: 1, height: Self.baseHeight - 6).fill()
@@ -533,7 +560,7 @@ final class ControlStripView: NSView {
             p.move(to: NSPoint(x: cx - 3, y: cy - 4)); p.line(to: NSPoint(x: cx + 3, y: cy)); p.line(to: NSPoint(x: cx - 3, y: cy + 4))
         }
         p.close()
-        if mono { (enabled ? NSColor.black : MonoArt.gray).setFill() }
+        if mono { (enabled ? FourGrays.black : FourGrays.light).setFill() }
         else { (enabled ? NSColor(calibratedWhite: 0.2, alpha: 1) : NSColor(calibratedWhite: 0.6, alpha: 1)).setFill() }
         p.fill()
     }
