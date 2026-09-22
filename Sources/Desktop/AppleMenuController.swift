@@ -19,16 +19,16 @@ final class AppleMenuController {
     func items() -> [PlatinumMenuItem] {
         [open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
          .separator(),
-         submenu("Applications", Self.applications(), icon: "folder.png"),
+         submenu("Applications", icon: themeIcon("folder.png")) { Self.entries(Self.applications()) },
          app("Apple System Profiler", "/System/Applications/Utilities/System Information.app", icon: "profiler.png"),
          app("Calculator", "/System/Applications/Calculator.app", icon: "calculator.png"),
          open("Chooser", "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension", icon: "chooser.png"),
-         submenu("Control Panels", Self.controlPanels(), icon: "settings.png"),
-         submenu("Favorites", Self.sharedList("FavoriteItems"), icon: "favorites.png"),
+         submenu("Control Panels", icon: themeIcon("settings.png")) { Self.entries(Self.controlPanels()) },
+         submenu("Favorites", icon: themeIcon("favorites.png")) { Self.entries(Self.sharedList("FavoriteItems")) },
          file("Network Browser", "/Network", icon: "network.png"),
-         submenu("Recent Applications", Self.sharedList("RecentApplications"), icon: "recent-apps.png"),
-         submenu("Recent Documents", Self.sharedList("RecentDocuments"), icon: "recent-docs.png"),
-         submenu("Recent Servers", Self.sharedList("RecentServers"), icon: "recent-servers.png"),
+         submenu("Recent Applications", icon: themeIcon("recent-apps.png")) { Self.entries(Self.sharedList("RecentApplications")) },
+         submenu("Recent Documents", icon: themeIcon("recent-docs.png")) { Self.entries(Self.sharedList("RecentDocuments")) },
+         submenu("Recent Servers", icon: themeIcon("recent-servers.png")) { Self.entries(Self.sharedList("RecentServers")) },
          app("Sherlock 2", "/System/Library/CoreServices/Spotlight.app", icon: "sherlock.png"),
          app("Stickies", "/System/Applications/Stickies.app", icon: "stickies.png")]
     }
@@ -45,12 +45,17 @@ final class AppleMenuController {
     private func file(_ title: String, _ path: String, icon: String? = nil) -> PlatinumMenuItem {
         .action(title, icon: icon.flatMap { Self.themeIcon($0) }) { Self.openTarget(path) }
     }
-    private func submenu(_ title: String, _ entries: [(title: String, path: String)], icon: String? = nil) -> PlatinumMenuItem {
-        var rows: [PlatinumMenuItem] = entries.map { e in
-            .action(e.title, icon: e.path.hasPrefix("x-apple") ? nil : Self.smallIcon(forPath: e.path)) { Self.openTarget(e.path) }
+    /// A submenu row built on the way in (`PlatinumMenuItem.submenu(_:icon:rows:)`).
+    private func submenu(_ title: String, icon: NSImage?, _ rows: @escaping () -> [PlatinumMenuItem]) -> PlatinumMenuItem {
+        .submenu(title, icon: icon, rows: rows)
+    }
+    private func themeIcon(_ name: String) -> NSImage? { Self.themeIcon(name) }
+
+    /// A list of places as menu rows, each with the small icon of its file.
+    static func entries(_ entries: [(title: String, path: String)]) -> [PlatinumMenuItem] {
+        entries.map { e in
+            .action(e.title, icon: e.path.hasPrefix("x-apple") ? nil : smallIcon(forPath: e.path)) { openTarget(e.path) }
         }
-        if rows.isEmpty { rows = [.label("None")] }
-        return .submenu(title, icon: icon.flatMap { Self.themeIcon($0) }, rows)
     }
 
     /// A Settings pane URL, an application, or a file or folder.
@@ -75,15 +80,31 @@ final class AppleMenuController {
     /// the theme lacks falls back to its stand-in, then to the theme's generic icon.
     static func themeIcon(_ name: String) -> NSImage? {
         guard let theme = ThemeManager.shared.activeTheme else { return nil }
+        let key = "\(theme.stableID)|theme|\(name)" as NSString
+        if let hit = iconCache.object(forKey: key) { return hit }
         for candidate in [name, standIns[name], theme.config.fallbackIcon].compactMap({ $0 }) {
-            if let u = theme.iconResource(candidate), let i = NSImage(contentsOf: u) {
-                let out = i.copy() as? NSImage
-                out?.size = NSSize(width: 16, height: 16)
-                return out
-            }
+            guard let u = theme.iconResource(candidate), let i = NSImage(contentsOf: u) else { continue }
+            let out = prepared(i, theme: theme)
+            iconCache.setObject(out, forKey: key)
+            return out
         }
         return nil
     }
+
+    /// One 16 pt picture, in the theme's own palette: a four-grey theme snaps it once, here,
+    /// rather than every time a menu is drawn.
+    private static func prepared(_ image: NSImage, theme: ThemeBundle) -> NSImage {
+        if theme.config.hasFourGreys { return FourGrays.quantize(image, points: 16, scale: 2) }
+        let out = (image.copy() as? NSImage) ?? image
+        out.size = NSSize(width: 16, height: 16)
+        return out
+    }
+
+    /// Menu pictures, kept between openings: building them is a file read and, in a four-grey
+    /// theme, a pass over the picture.
+    private static let iconCache: NSCache<NSString, NSImage> = {
+        let c = NSCache<NSString, NSImage>(); c.countLimit = 400; return c
+    }()
 
     private func open(_ title: String, _ url: String, icon: String? = nil) -> NSMenuItem {
         let i = NSMenuItem(title: title, action: #selector(openURL(_:)), keyEquivalent: "")
@@ -137,6 +158,9 @@ final class AppleMenuController {
 
     /// 16 pt icon: the theme's own for an app it knows (the Finder, TextEdit…), else the file's.
     static func smallIcon(forPath path: String) -> NSImage? {
+        let themeID = ThemeManager.shared.activeTheme?.stableID ?? "-"
+        let key = "\(themeID)|path|\(path)" as NSString
+        if let hit = iconCache.object(forKey: key) { return hit }
         var img: NSImage?
         if path.hasSuffix(".app") {
             img = ThemeManager.shared.activeTheme?.classicAppIcon(for: Bundle(path: path)?.bundleIdentifier)
@@ -147,8 +171,9 @@ final class AppleMenuController {
             img = theme.iconResource(isDir.boolValue ? "folder.png" : "document.png").flatMap { NSImage(contentsOf: $0) }
         }
         if img == nil { img = NSWorkspace.shared.icon(forFile: path) }
-        let out = img?.copy() as? NSImage
-        out?.size = NSSize(width: 16, height: 16)
+        guard let img else { return nil }
+        let out = ThemeManager.shared.activeTheme.map { prepared(img, theme: $0) } ?? img
+        iconCache.setObject(out, forKey: key)
         return out
     }
 

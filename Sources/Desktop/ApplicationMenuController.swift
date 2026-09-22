@@ -121,12 +121,29 @@ final class ApplicationMenuController: NSObject {
     /// The theme's own icon for an app it knows (the Finder's, TextEdit's…), the app's icon
     /// otherwise, at 16 pt.
     static func classicIcon(for app: NSRunningApplication?) -> NSImage? {
-        var img = ThemeManager.shared.activeTheme?.classicAppIcon(for: app?.bundleIdentifier)
+        let theme = ThemeManager.shared.activeTheme
+        let key = "\(theme?.stableID ?? "-")|app|\(app?.bundleIdentifier ?? "-")" as NSString
+        if let hit = iconCache.object(forKey: key) { return hit }
+        var img = theme?.classicAppIcon(for: app?.bundleIdentifier)
         if img == nil { img = app?.icon ?? NSImage(named: NSImage.applicationIconName) }
-        let out = img?.copy() as? NSImage
-        out?.size = NSSize(width: 16, height: 16)
+        guard let img else { return nil }
+        // A four-grey theme snaps it once, here; the menu is redrawn far more often than the
+        // front application changes.
+        let out: NSImage
+        if theme?.config.hasFourGreys == true {
+            out = FourGrays.quantize(img, points: 16, scale: 2)
+        } else {
+            out = (img.copy() as? NSImage) ?? img
+            out.size = NSSize(width: 16, height: 16)
+        }
+        iconCache.setObject(out, forKey: key)
         return out
     }
+
+    /// The menu's pictures, kept between openings (one per app, per theme).
+    private static let iconCache: NSCache<NSString, NSImage> = {
+        let c = NSCache<NSString, NSImage>(); c.countLimit = 200; return c
+    }()
 
     // MARK: Menu
 

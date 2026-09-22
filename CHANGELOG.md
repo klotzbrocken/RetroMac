@@ -27,7 +27,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   1 px black frame, and System 7's grey scroll bars and grow box; the Applications window and
   the theme's Read Me wear it too. Every icon RetroMac draws under the theme is snapped to the
   four greys, not merely desaturated: the dock, the desktop, the Applications grid and the
-  menus. The strip's modules are drawn for it — the AppleTalk network, the battery with its
+  menus — the Apple menu wears Mac OS 9 (authentic)'s own pictures, in grey. The menus open
+  at once: the Apple menu's submenus (the Applications folder, Control Panels, Favorites and
+  the three recent lists) are read when they open rather than when the menu is built, every
+  picture is snapped once and kept, and the snap itself now works on the raw bytes — one
+  512 px icon used to mean a quarter of a million NSColor objects, which is what made the
+  Apple menu, the Application menu and Balloon Help crawl. The strip's modules are drawn for it — the AppleTalk network, the battery with its
   charge, the shared folder, the disk, the plug, the crescent and the speaker, each with the
   four greys and the era's outline. Battery reads slowly,
   volume and network on their events, and every scaled picture is cached.

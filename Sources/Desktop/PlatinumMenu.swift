@@ -9,6 +9,10 @@ struct PlatinumMenuItem {
     enum Kind {
         case action(() -> Void)
         case submenu([PlatinumMenuItem])
+        /// A submenu whose rows are read when it opens, not when the menu is built: the
+        /// Applications folder, the recent lists and the Finder's shared files all cost a
+        /// disk walk, and doing all of them up front is what made the Apple menu slow.
+        case lazySubmenu(() -> [PlatinumMenuItem])
         case separator
     }
     var title: String
@@ -24,7 +28,28 @@ struct PlatinumMenuItem {
     static func submenu(_ title: String, icon: NSImage? = nil, _ items: [PlatinumMenuItem]) -> PlatinumMenuItem {
         PlatinumMenuItem(title: title, icon: icon, kind: .submenu(items))
     }
+    /// A submenu built on the way in, when the row is hovered or clicked.
+    static func submenu(_ title: String, icon: NSImage? = nil, rows: @escaping () -> [PlatinumMenuItem]) -> PlatinumMenuItem {
+        PlatinumMenuItem(title: title, icon: icon, kind: .lazySubmenu(rows))
+    }
     static func label(_ title: String) -> PlatinumMenuItem { PlatinumMenuItem(title: title, kind: .action({}), dimmed: true) }
+
+    var isSubmenu: Bool {
+        if case .submenu = kind { return true }
+        if case .lazySubmenu = kind { return true }
+        return false
+    }
+    /// The submenu's rows, built now for a lazy one. Empty submenus still open, with "None",
+    /// so a row never looks broken.
+    func submenuRows() -> [PlatinumMenuItem]? {
+        switch kind {
+        case .submenu(let rows): return rows
+        case .lazySubmenu(let build):
+            let rows = build()
+            return rows.isEmpty ? [.label("None")] : rows
+        default: return nil
+        }
+    }
 
     /// An NSMenu's rows as Platinum rows (a module's menu, built the AppKit way): the same
     /// titles, ticks and enabling, the action sent to its target.
@@ -266,7 +291,7 @@ private final class PlatinumMenuView: NSView {
             let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: colour]
             let ts = it.title.size(withAttributes: attrs)
             it.title.draw(at: NSPoint(x: x, y: (r.midY - ts.height / 2).rounded()), withAttributes: attrs)
-            if case .submenu = it.kind {
+            if it.isSubmenu {
                 let ax = r.maxX - 12, ay = r.midY
                 let p = NSBezierPath()
                 p.move(to: NSPoint(x: ax, y: ay - 4)); p.line(to: NSPoint(x: ax + 5, y: ay)); p.line(to: NSPoint(x: ax, y: ay + 4)); p.close()
@@ -322,7 +347,7 @@ private final class PlatinumMenuView: NSView {
         if old != hovered {
             needsDisplay = true
             controller?.closeDeeperThan(level)
-            if hovered >= 0, case .submenu(let sub) = items[hovered].kind { openChild(sub, rowIndex: hovered) }
+            if hovered >= 0, let sub = items[hovered].submenuRows() { openChild(sub, rowIndex: hovered) }
         }
     }
 
@@ -349,7 +374,8 @@ private final class PlatinumMenuView: NSView {
         for i in items.indices where rowRect(i).contains(p) {
             switch items[i].kind {
             case .action(let run): if !items[i].dimmed { controller?.dismissAll(); run() }
-            case .submenu(let sub): openChild(sub, rowIndex: i)
+            case .submenu, .lazySubmenu:
+                if let sub = items[i].submenuRows() { openChild(sub, rowIndex: i) }
             case .separator: break
             }
             return

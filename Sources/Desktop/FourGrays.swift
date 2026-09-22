@@ -30,23 +30,75 @@ enum FourGrays {
         return best.color
     }
 
-    /// `image` with every pixel snapped to the four greys; transparent pixels stay transparent.
-    /// Not cached here (an image object outlives its identity): callers keep the result.
+    /// The snap table: a byte's luminance to one of the four, built once.
+    private static let table: [UInt8] = (0...255).map { v -> UInt8 in
+        let levels: [UInt8] = [0, 0x55, 0xAA, 0xFF]
+        return levels.min { abs(Int($0) - Int(v)) < abs(Int($1) - Int(v)) } ?? 0
+    }
+
+    /// `image` with every pixel snapped to the four greys, at its own size.
     static func quantize(_ image: NSImage) -> NSImage {
-        guard let src = deviceRGB(image) else { return image }
+        quantize(image, points: image.size.width > 0 ? image.size.width : 16, scale: 1, keepSize: true)
+    }
+
+    /// `image` at `points`, shown at `scale` device pixels each, in the four greys. The picture
+    /// is reduced block by block (nearest neighbour, never smoothed): a block takes its own
+    /// average, and a block with a thin dark line in it keeps the line.
+    ///
+    /// Byte by byte, not colour by colour: `colorAt`/`setColor` allocate an NSColor per pixel,
+    /// which on a 512 px icon is a quarter of a million objects — that is what made the Apple
+    /// menu crawl once every icon went through here.
+    static func quantize(_ image: NSImage, points: CGFloat, scale: CGFloat = 2, keepSize: Bool = false) -> NSImage {
+        guard let src = deviceRGB(image), let srcBytes = src.bitmapData else { return image }
         let w = src.pixelsWide, h = src.pixelsHigh
-        guard let out = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h, bitsPerSample: 8, samplesPerPixel: 4,
-                                         hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return image }
-        for y in 0..<h {
-            for x in 0..<w {
-                guard let c = src.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB), c.alphaComponent >= 0.5 else {
-                    out.setColor(clear, atX: x, y: y); continue
+        let srcRow = src.bytesPerRow, srcPix = src.samplesPerPixel
+        let targetW = keepSize ? w : max(1, min(w, Int((points * scale).rounded())))
+        let targetH = keepSize ? h : max(1, min(h, Int((points * scale).rounded())))
+        guard let out = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: targetW, pixelsHigh: targetH,
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+              let outBytes = out.bitmapData else { return image }
+        let outRow = out.bytesPerRow
+        let alphaFirst = src.bitmapFormat.contains(.alphaFirst)
+        let premultiplied = !src.bitmapFormat.contains(.alphaNonpremultiplied)
+
+        for ty in 0..<targetH {
+            let y0 = ty * h / targetH, y1 = max(y0 + 1, (ty + 1) * h / targetH)
+            for tx in 0..<targetW {
+                let x0 = tx * w / targetW, x1 = max(x0 + 1, (tx + 1) * w / targetW)
+                var opaque = 0, total = 0, sum = 0, darkest = 255
+                for y in y0..<y1 {
+                    var p = srcBytes + y * srcRow + x0 * srcPix
+                    for _ in x0..<x1 {
+                        total += 1
+                        let a = Int(alphaFirst ? p[0] : p[srcPix - 1])
+                        if a >= 128 {
+                            opaque += 1
+                            let o = alphaFirst ? 1 : 0
+                            var r = Int(p[o]), g = Int(p[o + 1]), b = Int(p[o + 2])
+                            // Premultiplied bytes are darker than the colour is; undo that
+                            // before deciding which grey the pixel belongs to.
+                            if premultiplied, a > 0, a < 255 {
+                                r = min(255, r * 255 / a); g = min(255, g * 255 / a); b = min(255, b * 255 / a)
+                            }
+                            let lum = (r * 77 + g * 151 + b * 28) >> 8
+                            sum += lum
+                            if lum < darkest { darkest = lum }
+                        }
+                        p += srcPix
+                    }
                 }
-                let lum = Double(0.299 * c.redComponent + 0.587 * c.greenComponent + 0.114 * c.blueComponent)
-                out.setColor(snap(lum), atX: x, y: y)
+                let o = outBytes + ty * outRow + tx * 4
+                if opaque * 2 < total { o[0] = 0; o[1] = 0; o[2] = 0; o[3] = 0; continue }
+                let mean = sum / max(1, opaque)
+                let value = (darkest < 128 && mean - darkest > 50) ? darkest : mean
+                let g = table[value]
+                o[0] = g; o[1] = g; o[2] = g; o[3] = 255
             }
         }
-        let img = NSImage(size: image.size)
+        let size = keepSize ? image.size : NSSize(width: points, height: points)
+        out.size = size
+        let img = NSImage(size: size)
         img.addRepresentation(out)
         return img
     }
@@ -80,45 +132,6 @@ enum FourGrays {
         if let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
            let rep = usable(NSBitmapImageRep(cgImage: cg)) { return rep }
         return nil
-    }
-
-    /// `image` at `points`, shown at `scale` device pixels each, in the four greys. The picture
-    /// is reduced block by block (nearest neighbour, never smoothed): a block is as dark as its
-    /// darkest quarter, so a 1 px line of a 256 px icon is still a line at 16 pt.
-    static func quantize(_ image: NSImage, points: CGFloat, scale: CGFloat = 2) -> NSImage {
-        let big = quantize(image)
-        guard let src = big.representations.first as? NSBitmapImageRep else { return big }
-        let target = max(8, Int(points * scale))
-        let w = src.pixelsWide, h = src.pixelsHigh
-        guard w > target, h > target else { big.size = NSSize(width: points, height: points); return big }
-        guard let out = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: target, pixelsHigh: target, bitsPerSample: 8, samplesPerPixel: 4,
-                                         hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return big }
-        for ty in 0..<target {
-            for tx in 0..<target {
-                let x0 = tx * w / target, x1 = max(x0 + 1, (tx + 1) * w / target)
-                let y0 = ty * h / target, y1 = max(y0 + 1, (ty + 1) * h / target)
-                var opaque = 0, total = 0
-                var darkest = 1.0
-                var sum = 0.0
-                for y in y0..<y1 { for x in x0..<x1 {
-                    total += 1
-                    guard let c = src.colorAt(x: x, y: y), c.alphaComponent >= 0.5 else { continue }
-                    opaque += 1
-                    let v = Double(c.redComponent)
-                    sum += v
-                    if v < darkest { darkest = v }
-                } }
-                if opaque * 2 < total { out.setColor(clear, atX: tx, y: ty); continue }
-                // A block with any real ink in it keeps that ink (a thin line survives); an
-                // even block takes its own average.
-                let mean = sum / Double(max(1, opaque))
-                out.setColor(snap(darkest < 0.5 && mean - darkest > 0.2 ? darkest : mean), atX: tx, y: ty)
-            }
-        }
-        out.size = NSSize(width: points, height: points)
-        let img = NSImage(size: NSSize(width: points, height: points))
-        img.addRepresentation(out)
-        return img
     }
 
     /// Draw with `body` (flipped coordinates, as the strip's modules draw) into a `size` picture
