@@ -129,7 +129,9 @@ struct DesktopSettingsTab: View {
                     }
                 }
                 RMRow(label: "Apple logo",
-                      hint: "A retro Apple over the system one. Also cycled from the flyout.",
+                      hint: RainbowAppleController.canPlaceCover
+                        ? "A retro Apple over the system one. Also cycled from the flyout."
+                        : "Needs the Accessibility permission (General): the cover is placed by asking the menu bar where the Apple is, and without that it would sit in the wrong place — so it stays off.",
                       isLast: true) {
                     Picker("", selection: $settings.menuBarAppleStyle) {
                         Text("Off").tag(0)
@@ -138,8 +140,10 @@ struct DesktopSettingsTab: View {
                         Text("Aqua Classic").tag(3)
                         Text("Apple Hell").tag(4)
                         Text("Futurama").tag(5)
+                        Text("Black (1-bit)").tag(6)
                     }
                     .labelsHidden().pickerStyle(.menu).frame(width: 140)
+                    .disabled(!RainbowAppleController.canPlaceCover)
                 }
             }
         }

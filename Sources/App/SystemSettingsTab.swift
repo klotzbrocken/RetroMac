@@ -28,6 +28,7 @@ struct SystemSettingsTab: View {
                 setupCard
                 startupCard
                 permissionsCard
+                defaultsCard
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
@@ -42,6 +43,30 @@ struct SystemSettingsTab: View {
                   isLast: true) {
                 Button("Re-run\u{2026}") {
                     (NSApp.delegate as? AppDelegate)?.openSetupWizard()
+                }
+                .buttonStyle(RMDefaultButtonStyle())
+            }
+        }
+    }
+
+    /// The emergency exit: everything RetroMac can change about the system, back to macOS.
+    private var defaultsCard: some View {
+        RMCard(title: "macOS defaults",
+               subtitle: "If something stayed behind — cursors, square window corners, a hidden or moved Dock — this puts the system back, whether or not RetroMac remembers changing it.",
+               bodyPadding: 0) {
+            RMRow(label: "Restore macOS defaults",
+                  hint: "Turns the theme and the shader off, then restores the cursors, the window corners and every Finder and animation default, the Dock (shown, bottom, Genie), the menu bar, the desktop icons, the wallpaper, the appearance and the Terminal profile.",
+                  isLast: true) {
+                Button("Restore\u{2026}") {
+                    let alert = NSAlert()
+                    alert.messageText = "Restore macOS defaults?"
+                    alert.informativeText = "The theme and the shader are turned off, and cursors, window corners, the Dock, the menu bar, the desktop icons, the wallpaper, the appearance and the Terminal profile go back to macOS — including settings you may have chosen yourself (the Finder's view style, the Dock's position). RetroMac's own settings stay."
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: "Restore")
+                    alert.addButton(withTitle: "Cancel")
+                    if alert.runModal() == .alertFirstButtonReturn {
+                        (NSApp.delegate as? AppDelegate)?.restoreMacOSDefaults()
+                    }
                 }
                 .buttonStyle(RMDefaultButtonStyle())
             }

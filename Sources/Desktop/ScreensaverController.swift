@@ -3,7 +3,8 @@ import WebKit
 
 /// Per-theme screensaver. After `screensaverIdleMinutes` of no input it covers every screen
 /// with a fullscreen WKWebView running the theme's chosen saver (3D Pipes / FlowerBox via
-/// 98.js at runtime, or the bundled Flying Toasters / Flurry). Any input dismisses it.
+/// 98.js at runtime, or the bundled Flying Toasters / Flurry / Starfield Simulation). Any
+/// input dismisses it.
 /// Idle + dismiss are detected by polling the system-wide input clock — no extra permissions,
 /// no global event monitors.
 final class ScreensaverController: NSObject, WKNavigationDelegate {
@@ -127,6 +128,8 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
             return Bundle.main.resourceURL?.appendingPathComponent("Widgets/Screensavers/FlyingToasters/index.html")
         case "flurry":
             return Bundle.main.resourceURL?.appendingPathComponent("Widgets/Screensavers/Flurry/index.html")
+        case "starfield":
+            return Bundle.main.resourceURL?.appendingPathComponent("Widgets/Screensavers/Starfield/index.html")
         default:
             return nil
         }
@@ -156,5 +159,6 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
         ("flowerbox", "3D FlowerBox"),
         ("flying-toasters", "Flying Toasters"),
         ("flurry", "Flurry"),
+        ("starfield", "Starfield Simulation"),
     ]
 }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds the four RetroMac screensavers as REAL macOS .saver bundles.
+# Builds the RetroMac screensavers as REAL macOS .saver bundles.
 # Each bundle is a WKWebView host (scripts/saver/RetroMacSaverView.swift) plus the
 # same HTML/canvas saver the in-app screensaver uses.
 # Output: Resources/Savers/<Name>.saver (shipped in the app; installed from Settings).
@@ -17,6 +17,7 @@ SAVERS=(
   "RetroMac FlowerBox:FlowerBox"
   "RetroMac Flying Toasters:FlyingToasters"
   "RetroMac Flurry:Flurry"
+  "RetroMac Starfield:Starfield"
 )
 
 # Compile once per arch, lipo into a universal loadable library.

@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+  canvas { display: block; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+/* Starfield Simulation — the Windows 2000 screen saver (ssstars.scr, 5.00.2195.6601).
+   The simulation follows the constants Ilya Kalimulin recovered from the binary for his
+   macOS port (github.com/ilirium/starfield_simulation_screensaver_win2k_for_macos, MIT):
+   Z far plane 0xA00, star size (zFar - z) / 0x280 + 1, a 50 ms timer, the speed ramping
+   toward (warp + 1) * 10 one unit per star per tick, the MSVC rand() the saver inlined, and
+   truncating integer division everywhere, which is what gives the motion its slight step
+   near the centre. White squares on black, no antialiasing — PatBlt, not a pen. */
+const cv = document.getElementById('c'), ctx = cv.getContext('2d', { alpha: false });
+
+const Z_FAR = 2560, SIZE_DIVISOR = 640, TICK_MS = 50;
+const DENSITY = 25;          // the saver's default (10…200)
+const WARP = 5;              // the saver's default (0…10)
+const TARGET = (WARP + 1) * 10;
+
+let W = 0, H = 0, cx = 0, cy = 0;
+let stars = [];
+let speed = 0;
+// The Visual C++ runtime's rand(), as the saver inlined it; seeded from the clock so two
+// runs do not draw the same sky.
+let seed = (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0;
+function rand16() { seed = (Math.imul(seed, 0x343FD) + 0x269EC3) >>> 0; return (seed >>> 16) & 0xFFFF; }
+function trunc(a, b) { const q = a / b; return q < 0 ? Math.ceil(q) : Math.floor(q); }
+
+function respawn(s) {
+  if (W !== 0 && H !== 0) { s.x = rand16() % W - cx; s.y = rand16() % H - cy; }
+  else { s.x = 0; s.y = 0; }
+  s.z = Z_FAR;
+}
+function configure() {
+  // The saver's stars were 1…5 px on a 640 px CRT; the field is simulated at that scale and
+  // drawn scaled up, so a star on a 5K display is as coarse as the one people remember.
+  const scale = Math.max(1, Math.floor(innerWidth / 640));
+  cv.width = Math.floor(innerWidth / scale); cv.height = Math.floor(innerHeight / scale);
+  cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+  W = cv.width; H = cv.height; cx = trunc(W, 2); cy = trunc(H, 2);
+  stars = [];
+  for (let i = 0; i < DENSITY; i++) { const s = { x: 0, y: 0, z: Z_FAR }; respawn(s); stars.push(s); }
+}
+configure(); addEventListener('resize', configure);
+
+function step() {
+  for (const s of stars) {
+    if (speed < TARGET) speed += 1; else if (speed > TARGET) speed -= 1;
+    s.z -= speed;
+    if (s.z < 0) s.z = 0;
+    if (s.z === 0) respawn(s);          // the original respawns here rather than clamping to 1
+    const px = trunc(s.x * Z_FAR, s.z) + cx, py = trunc(s.y * Z_FAR, s.z) + cy;
+    if (px < 0 || py < 0 || px > W || py > H) respawn(s);
+  }
+}
+function draw() {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fff';
+  for (const s of stars) {
+    const px = trunc(s.x * Z_FAR, s.z) + cx, py = trunc(s.y * Z_FAR, s.z) + cy;
+    const side = trunc(Z_FAR - s.z, SIZE_DIVISOR) + 1;
+    ctx.fillRect(px, py, side, side);
+  }
+}
+// The saver ran on a 50 ms timer, 20 ticks a second; the frame is drawn once per tick.
+let last = performance.now();
+function loop(now) {
+  while (now - last >= TICK_MS) { step(); last += TICK_MS; }
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

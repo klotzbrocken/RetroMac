@@ -1113,14 +1113,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Monochrome lock icon for premium presets
         let lockIcon = sfIcon("lock.fill", scale: .small)
 
+        // Without Screen Recording only the Lite presets (and the wallpaper scope, which
+        // never captures the screen) can run: the full shaders are shown but greyed, with
+        // one line saying why, instead of being picked and failing.
+        let captureMissing = !CGPreflightScreenCaptureAccess() && !isWallpaperOnlyScope
+
         // Basic (Free) — quick-access folder with all free presets + Surprise
         let basicItem = NSMenuItem(title: "Basic (Free)", action: nil, keyEquivalent: "")
         basicItem.image = sfIcon("star.circle")
         let basicMenu = NSMenu()
+        basicMenu.autoenablesItems = false
 
         let surpriseItem = NSMenuItem(title: "Surprise!", action: #selector(selectSurprisePreset), keyEquivalent: "")
         surpriseItem.target = self
         surpriseItem.image = sfIcon("dice")
+        surpriseItem.isEnabled = !captureMissing
         basicMenu.addItem(surpriseItem)
         basicMenu.addItem(NSMenuItem.separator())
 
@@ -1130,6 +1137,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let item = NSMenuItem(title: preset.displayName, action: #selector(selectPreset(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = preset.id
+            item.isEnabled = !captureMissing || Self.isLitePreset(preset.id)
             if preset.id == currentPresetName { item.state = .on }
             basicMenu.addItem(item)
         }
@@ -1157,16 +1165,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         presetsMenu.addItem(NSMenuItem.separator())
 
+        if captureMissing {
+            let note = NSMenuItem(title: "Full shaders need Screen Recording (General)", action: nil, keyEquivalent: "")
+            note.isEnabled = false
+            presetsMenu.addItem(note)
+        }
+
         // Category submenus (alphabetical within each; Lite already shown above the divider)
         for (category, presets) in PresetRegistry.categorizedPresets where category != .lite {
             let catItem = NSMenuItem(title: category.rawValue, action: nil, keyEquivalent: "")
             let catMenu = NSMenu()
+            catMenu.autoenablesItems = false
             for preset in presets.sorted(by: byName) {
                 let isFree = LicenseManager.freePresetIDs.contains(preset.id)
                 let locked = !isFree && !lm.hasAllPresets
                 let item = NSMenuItem(title: preset.displayName, action: #selector(selectPreset(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = preset.id
+                item.isEnabled = !captureMissing
                 if preset.id == currentPresetName { item.state = .on }
                 if locked { item.image = lockIcon }
                 catMenu.addItem(item)
@@ -1183,11 +1199,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let catItem = NSMenuItem(title: "Custom", action: nil, keyEquivalent: "")
             if !lm.hasAllPresets { catItem.image = lockIcon }
             let catMenu = NSMenu()
+            catMenu.autoenablesItems = false
             for preset in custom {
                 let locked = !lm.hasAllPresets
                 let item = NSMenuItem(title: preset.displayName, action: #selector(selectPreset(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = preset.id
+                item.isEnabled = !captureMissing
                 if preset.id == currentPresetName { item.state = .on }
                 if locked { item.image = lockIcon }
                 catMenu.addItem(item)
@@ -2956,6 +2974,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         retroModeActive = false
         rebuildMenu()
+    }
+
+    /// Settings ▸ General ▸ "macOS defaults": the theme and the shader go off, Retro Mode
+    /// ends, and `SystemDefaultsRestorer` puts the system back regardless of what RetroMac
+    /// remembers changing. Confirmed by the caller.
+    func restoreMacOSDefaults() {
+        if retroModeActive { toggleRetroMode() }
+        disableTheme()
+        let report = SystemDefaultsRestorer.restoreEverything()
+        rebuildMenu()
+        let alert = NSAlert()
+        alert.messageText = "macOS defaults restored"
+        alert.informativeText = report.text + "\n\nApps already open keep their window corners until you open them again; log out and back in to apply everything at once."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     @objc private func disableTheme() {

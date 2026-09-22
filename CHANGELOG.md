@@ -21,6 +21,27 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   the manifest of the Mac OS 9 (authentic) desktop. Theme authors: `menuBar.monochrome` in
   docs/THEMES.md.
 
+- **Starfield Simulation.** The Windows 2000 screen saver, for every theme: white squares
+  streaming out of the centre of a black screen, drawn as the original drew them (the far
+  plane, the star sizes, the 20 ticks a second, the speed ramp and the integer arithmetic
+  follow Ilya Kalimulin's disassembly of `ssstars.scr`, MIT — LEGAL.md). In the screensaver
+  picker of every theme, and as a real macOS `.saver` module with the others.
+
+- **The Apple cover stays off without Accessibility.** The retro Apple in the menu bar is
+  placed by asking the menu bar where the Apple is, which takes the Accessibility permission;
+  without it the cover could only guess and sat beside the real Apple or half over the first
+  menu. Now it is not shown at all, and the Apple-logo picker under Desktop is greyed with the
+  reason. In the same spirit the Shader Presets menu greys every full shader (and Surprise)
+  while Screen Recording is missing and says why, leaving the Lite presets, and everything
+  in the wallpaper scope, which never captures the screen.
+
+- **Settings ▸ General ▸ "macOS defaults".** The emergency exit: turns the theme and the
+  shader off and puts the system back whether or not RetroMac remembers changing it — the
+  cursors from the factory capture, every Finder, window-corner and animation default a
+  theme may write (deleted, so macOS uses its own), the Dock (shown, bottom, Genie), the menu
+  bar, the desktop icons, the wallpaper, the appearance and the Terminal profile. Confirmed
+  first, since it also resets those defaults where the user had set them.
+
 - **A leftover square-corner setting is cleaned up.** The title bars' corner value
   (`NSConvolutionOverride1` = 0.5, the smallest the key takes) could outlive RetroMac: a
   session killed outright never restored it, and a second RetroMac running beside it (a

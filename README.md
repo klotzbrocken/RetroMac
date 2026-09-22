@@ -71,7 +71,7 @@ More, and the videos, at [myretromac.app](https://myretromac.app).
   the Sad Mac, the update that will not finish), and small moments that pass on their own. No
   app is quit, no document closed, no restart issued. Esc always ends it.
 - **Boot screens and screensavers** — each theme boots the way its machine did; Pipes, FlowerBox,
-  Flying Toasters and Flurry, also installable as real macOS savers.
+  Flying Toasters, Flurry and the Windows 2000 Starfield Simulation, also installable as real macOS savers.
 - **Retro TV** — YouTube, IPTV streams and bookmarks inside a television with the CRT on.
 - **Games** — Doom, Heretic, Quake, Quake II and Duke Nukem 3D through their free engines with
   the shareware episodes downloaded for you; Warcraft I and II on the bundled Stratagus engine

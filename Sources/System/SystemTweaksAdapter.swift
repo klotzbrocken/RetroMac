@@ -41,6 +41,11 @@ enum SystemTweaksAdapter {
         "com.apple.universalaccess\treduceTransparency",
     ]
 
+    /// Every `(domain, key)` a theme or the title bars may write, for the emergency restore.
+    static var allTweakKeys: [(domain: String, key: String)] {
+        allowedKeys.sorted().map { let p = $0.split(separator: "\t"); return (String(p[0]), String(p[1])) }
+    }
+
     /// Whether a tweak is on the cosmetic allowlist. `internal` so tests can exercise it directly.
     static func isTweakAllowed(_ t: DockThemeConfig.SystemTweak) -> Bool {
         allowedKeys.contains(t.domain + "\t" + t.key)

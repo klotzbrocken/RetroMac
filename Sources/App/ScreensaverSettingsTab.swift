@@ -84,7 +84,7 @@ struct ScreensaverSettingsTab: View {
                 }
 
                 RMCard(title: "macOS screensavers",
-                       subtitle: "Pipes, FlowerBox, Flying Toasters and Flurry as real .saver modules for System Settings \u{25B8} Screen Saver.",
+                       subtitle: "Pipes, FlowerBox, Flying Toasters, Flurry and Starfield Simulation as real .saver modules for System Settings \u{25B8} Screen Saver.",
                        bodyPadding: 0) {
                     RMRow(label: "Install",
                           hint: installMessage.isEmpty ? nil : installMessage,

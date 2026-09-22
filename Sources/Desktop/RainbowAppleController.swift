@@ -36,7 +36,10 @@ final class RainbowAppleController {
     /// and a menu bar is visible. Driven by `menuBarAppleStyle` (flyout cycle + Settings).
     func update() {
         let s = AppSettings.shared
-        let wantShow = s.menuBarAppleStyle != 0 && !s.hideMenuBar
+        // The cover is placed by asking the menu bar (through Accessibility) where the Apple
+        // is; without the permission it could only guess, and a guessed cover sits beside the
+        // real Apple or half over the first menu. Better none at all — Settings says why.
+        let wantShow = s.menuBarAppleStyle != 0 && !s.hideMenuBar && Self.canPlaceCover
         guard wantShow else { hide(); return }
         // Whether the cover takes the click (a theme with its own Apple menu) is settled now,
         // not after the debounce and the System Events round trip below: a cover made before
@@ -64,6 +67,9 @@ final class RainbowAppleController {
     }
 
     private var updateTimer: Timer?
+
+    /// Whether the cover can be placed at all: Accessibility grants the menu bar's geometry.
+    static var canPlaceCover: Bool { AXIsProcessTrusted() }
 
     func hide() {
         windows.forEach { $0.orderOut(nil) }

@@ -29,6 +29,7 @@ to support the project; it does not change the licence of anything in this repos
 | 7.css colours and gradients | `Sources/Desktop/` (drawn natively) | MIT, © 2021 Khang Nguyen Duy |
 | three.js (Pipes screensaver, Hover) | `Resources/Widgets/Screensavers/Pipes/lib`, `Resources/Widgets/Hover/scripts` | MIT |
 | Flurry-WebGL (Flurry screensaver) | `Resources/Widgets/Screensavers/Flurry` | MIT, © 2014 Roy Adrian Curtis, derived with permission from Calum Robinson's Flurry |
+| Starfield Simulation (the Windows 2000 screen saver) | `Resources/Widgets/Screensavers/Starfield` | RetroMac's own canvas port; the simulation's constants and integer arithmetic follow Ilya Kalimulin's macOS port (github.com/ilirium/starfield_simulation_screensaver_win2k_for_macos, MIT, © 2026 Ilya Kalimulin). The Windows saver itself is Microsoft's |
 | Stratagus / Wargus / War1gus (the Warcraft engine) | `vendor/peonpad`, `vendor/war1gus` (submodules) | GPL v2 |
 | Pac-Man clone (BeOS demo) | `vendor/pacman` | GPL v2, see its README |
 | Shader presets | `Sources/Shaders/`, listed in About ▸ Shader Credits | Per preset: GPL-2.0 (zfast-crt, crt-geom, crt-royale-lite, crt-gdv-mini-ultra, retro-crisis, crt-easymode), MIT (crt-lottes, crt-hyllian-glow), CC BY-NC-SA 3.0 (newpixie-crt), Apache-2.0/MIT (NLO VHS SP, parameters only), and RetroMac's own |
