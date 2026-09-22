@@ -35,7 +35,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   512 px icon used to mean a quarter of a million NSColor objects, which is what made the
   Apple menu, the Application menu and Balloon Help crawl. The strip's modules are drawn for it — the AppleTalk network, the battery with its
   charge, the shared folder, the disk, the plug, the crescent and the speaker, each with the
-  four greys and the era's outline. Battery reads slowly,
+  era's black outline and shaded in full greyscale like the icons; only the strip's ledge,
+  grooves and frame keep to the four. Battery reads slowly,
   volume and network on their events, and every scaled picture is cached.
 
 - **Starfield Simulation.** The Windows 2000 screen saver, for every theme: white squares

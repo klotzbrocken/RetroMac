@@ -370,7 +370,7 @@ final class ControlStripView: NSView {
     var mirrored = false          // right edge: the tab is on the right, everything reads mirrored
     var scrollIndex = 0
     /// The four greys of the PowerBook 150 (`menuBar.palette: "grays4"`): a white ledge with
-    /// black edges, #AAAAAA grooves, and every picture snapped to the four.
+    /// black edges and #AAAAAA grooves; the modules and the pictures in greyscale, every grey.
     let mono: Bool
 
     override var isFlipped: Bool { true }
@@ -379,7 +379,8 @@ final class ControlStripView: NSView {
         self.controller = controller
         let isMono = theme.config.hasFourGreys
         mono = isMono
-        let bit: (NSImage?) -> NSImage? = { img in (isMono ? img.map(FourGrays.quantize) : img) }
+        // The tab, the size box and the arrows are pictures: grey, every grey, pixel for pixel.
+        let bit: (NSImage?) -> NSImage? = { img in (isMono ? img.map { FourGrays.greyscalePixels($0) } : img) }
         tabImage = bit(theme.iconResource("controlstrip-left.png").flatMap { NSImage(contentsOf: $0) })
         sizeBoxImage = bit(theme.iconResource("controlstrip-right.png").flatMap { NSImage(contentsOf: $0) })
         var pics: [String: NSImage] = [:]
@@ -522,14 +523,14 @@ final class ControlStripView: NSView {
         let px = Self.scale * (window?.backingScaleFactor ?? 2)
         let key = "pic-\(id)-\(px)"
         if let c = monoArtCache[key] { return c }
-        let bit = FourGrays.quantize(img, points: 16, scale: px)
+        let bit = FourGrays.greyscale(img, points: 16, scale: px)
         monoArtCache[key] = bit
         return bit
     }
     private func monoArt(for m: ControlStripModule, size: NSSize) -> NSImage? {
         let key = "\(m.id)-\(Int(size.width))"
         if let c = monoArtCache[key] { return c }
-        let img = FourGrays.quantize(size: size, scale: Self.scale * (window?.backingScaleFactor ?? 2)) { r in m.draw(in: r) }
+        let img = FourGrays.greyscale(size: size, scale: Self.scale * (window?.backingScaleFactor ?? 2)) { r in m.draw(in: r) }
         monoArtCache[key] = img
         return img
     }

@@ -165,6 +165,53 @@ enum FourGrays {
         return img
     }
 
+    /// Draw with `body` (flipped coordinates, as the strip's modules draw) into a `size`
+    /// picture at `scale`, and return it in greyscale with every grey kept — the strip's
+    /// modules, as the icons are.
+    static func greyscale(size: NSSize, scale: CGFloat, _ body: @escaping (NSRect) -> Void) -> NSImage? {
+        let canvas = FlippedCanvas(frame: NSRect(x: 0, y: 0, width: size.width * scale, height: size.height * scale))
+        canvas.scale = scale
+        canvas.body = body
+        guard let rep = canvas.bitmapImageRepForCachingDisplay(in: canvas.bounds) else { return nil }
+        canvas.cacheDisplay(in: canvas.bounds, to: rep)
+        let img = NSImage(size: canvas.bounds.size)
+        img.addRepresentation(rep)
+        // Same pixel count, same crisp edges: the art is pixel art, only its colour goes.
+        return greyscalePixels(img, size: size)
+    }
+
+    /// `image` in greyscale at its own pixels, shown at `size` — for pixel art, where a smooth
+    /// resample would blur the edges.
+    static func greyscalePixels(_ image: NSImage, size: NSSize? = nil) -> NSImage {
+        guard let src = deviceRGB(image) else { return image }
+        let w = src.pixelsWide, h = src.pixelsHigh
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h, bitsPerSample: 8, samplesPerPixel: 4,
+                                         hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+              let out = rep.bitmapData, let inp = src.bitmapData else { return image }
+        let srcRow = src.bytesPerRow, srcPix = src.samplesPerPixel, outRow = rep.bytesPerRow
+        let alphaFirst = src.bitmapFormat.contains(.alphaFirst)
+        let premultiplied = !src.bitmapFormat.contains(.alphaNonpremultiplied)
+        for y in 0..<h {
+            var p = inp + y * srcRow
+            var q = out + y * outRow
+            for _ in 0..<w {
+                let a = Int(alphaFirst ? p[0] : p[srcPix - 1])
+                let o = alphaFirst ? 1 : 0
+                // The output rep is premultiplied: luminance of premultiplied RGB is the
+                // premultiplied grey. A non-premultiplied source is premultiplied on the way.
+                var lum = (Int(p[o]) * 77 + Int(p[o + 1]) * 151 + Int(p[o + 2]) * 28) >> 8
+                if !premultiplied { lum = lum * a / 255 }
+                q[0] = UInt8(lum); q[1] = UInt8(lum); q[2] = UInt8(lum); q[3] = UInt8(a)
+                p += srcPix; q += 4
+            }
+        }
+        let shown = size ?? image.size
+        rep.size = shown
+        let img = NSImage(size: shown)
+        img.addRepresentation(rep)
+        return img
+    }
+
     /// Draw with `body` (flipped coordinates, as the strip's modules draw) into a `size` picture
     /// at `scale`, and return it in the four greys.
     static func quantize(size: NSSize, scale: CGFloat, _ body: @escaping (NSRect) -> Void) -> NSImage? {
