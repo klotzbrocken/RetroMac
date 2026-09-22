@@ -47,9 +47,14 @@ final class ControlStripTests: XCTestCase {
         XCTAssertEqual(t.config.desktopLabel?.background, "#FFFFFF")
         XCTAssertNotNil(t.iconResource("controlstrip-left.png"))
         XCTAssertNotNil(t.iconResource("computer.png"))
-        XCTAssertNil(t.iconResource("strip-volume.png"), "no borrowed Platinum pictures: the modules draw their own")
 
         let os9 = try XCTUnwrap(authenticTheme())
+        // The strip wears Mac OS 9 (authentic)'s pictures, shown in grey.
+        for name in ["strip-volume.png", "strip-arrow-left.png", "strip-arrow-right.png"] {
+            let mine = try XCTUnwrap(t.iconResource(name).flatMap { try? Data(contentsOf: $0) }, name)
+            let theirs = try XCTUnwrap(os9.iconResource(name).flatMap { try? Data(contentsOf: $0) }, name)
+            XCTAssertEqual(mine, theirs, "\(name) is Mac OS 9 (authentic)'s own")
+        }
         XCTAssertEqual(t.config.desktopIconSize, os9.config.desktopIconSize, "size and behaviour come from Mac OS 9 (authentic)")
         XCTAssertEqual(t.config.dock.dockStyle, os9.config.dock.dockStyle)
         XCTAssertFalse(os9.config.hasFourGreys)

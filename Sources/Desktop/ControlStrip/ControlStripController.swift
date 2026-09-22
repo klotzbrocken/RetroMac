@@ -491,7 +491,7 @@ final class ControlStripView: NSView {
                            fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
                 m.drawText(in: picture)
             } else if mono {
-                // The module's own colour pixel art, dithered to 1 bit on the way to the screen.
+                // The module's own pixel art — Mac OS 9 (authentic)'s — in grey on the way to the screen.
                 if let img = monoArt(for: m, size: picture.size) {
                     img.draw(in: picture, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true,
                              hints: [.interpolation: NSImageInterpolation.none])
@@ -517,15 +517,14 @@ final class ControlStripView: NSView {
     }
 
     private var monoArtCache: [String: NSImage] = [:]
-    /// The theme's picture in 1 bit at the pixels it will be shown at (16 pt × the strip's
-    /// scale × the screen's).
+    /// The theme's picture in grey, pixel for pixel, shown nearest-neighbour like the colour
+    /// strip shows it.
     private func monoPicture(_ id: String, _ img: NSImage) -> NSImage {
-        let px = Self.scale * (window?.backingScaleFactor ?? 2)
-        let key = "pic-\(id)-\(px)"
+        let key = "pic-\(id)"
         if let c = monoArtCache[key] { return c }
-        let bit = FourGrays.greyscale(img, points: 16, scale: px)
-        monoArtCache[key] = bit
-        return bit
+        let grey = FourGrays.greyscalePixels(img)
+        monoArtCache[key] = grey
+        return grey
     }
     private func monoArt(for m: ControlStripModule, size: NSSize) -> NSImage? {
         let key = "\(m.id)-\(Int(size.width))"
@@ -534,7 +533,7 @@ final class ControlStripView: NSView {
         monoArtCache[key] = img
         return img
     }
-    /// A module that shows state (battery, resolution) draws again: its 1-bit picture must too.
+    /// A module that shows state (battery, resolution) draws again: its grey picture must too.
     func invalidateMonoArt() { monoArtCache.removeAll() }
 
     private func drawGroove(at x: CGFloat) {

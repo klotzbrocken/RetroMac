@@ -65,58 +65,61 @@ enum StripArt {
         }
     }
 
-    /// HD Spin Down: the internal disk, its platter showing.
+    // The PowerBook's own modules, drawn like Mac OS 9 (authentic)'s: a black outline, white
+    // faces, a touch of colour — the four-grey theme shows them in grey like the rest.
+
+    /// HD Spin Down: the internal disk, its activity light on.
     static let hardDisk = [
         "................",
         "................",
         "................",
-        "..############..",
-        "..#wwwwwwwwwl#..",
-        "..#wllllllllm#..",
-        "..#wlgggggggm#..",
-        "..#lmmmmmmmmm#..",
-        "..############..",
-        "..#wwwwwwwwwl#..",
-        "..#dd#####l#m#..",
-        "..############..",
         "................",
+        ".##############.",
+        ".#wwwwwwwwwwww#.",
+        ".#wwwwwwwwwwww#.",
+        ".#wwwwwwwwwwww#.",
+        ".##############.",
+        ".#wwwwwwwwwwww#.",
+        ".#wnnwwwwwwwww#.",
+        ".#wwwwwwwwwwww#.",
+        ".##############.",
         "................",
         "................",
         "................",
     ]
-    /// Power Settings on the adapter: the two-prong plug, cord hanging down.
+    /// Power Settings on the adapter: the two-prong plug, its cord hanging down.
     static let powerPlug = [
         "................",
-        "................",
-        ".....#..#.......",
-        ".....#..#.......",
-        ".....#..#.......",
-        "...########.....",
-        "...#wwwwwl#.....",
-        "...#wllllm#.....",
-        "...#lggggm#.....",
-        "...#lmmmmm#.....",
-        "...########.....",
-        "......#m........",
-        "......#m........",
+        "....##..##......",
+        "....##..##......",
+        "....##..##......",
+        "..##########....",
+        "..#wwwwwwww#....",
+        "..#wwwwwwww#....",
+        "..#wwwwwwww#....",
+        "...#wwwwww#.....",
+        "....######......",
         "......##........",
-        "................",
+        "......##........",
+        "......##........",
+        ".......##.......",
+        "........###.....",
         "................",
     ]
-    /// Power Settings on the battery: the cell, half full, in the four greys.
+    /// Power Settings on the battery: the cell, half full, as the Battery module draws it.
     static let powerBattery = [
         "................",
         "................",
         "................",
-        ".....####.......",
-        "..###########...",
-        "..#wwwwwwwww#...",
-        "..#ddddd#ggg#...",
-        "..#ddddd#ggg#...",
-        "..#ddddd#ggg#...",
-        "..#ddddd#ggg#...",
-        "..#wwwwwwwww#...",
-        "..###########...",
+        "................",
+        "...###########..",
+        "...#####wwwww##.",
+        "...#####wwwww#w#",
+        "...#####wwwww#w#",
+        "...#####wwwww#w#",
+        "...#####wwwww##.",
+        "...###########..",
+        "................",
         "................",
         "................",
         "................",
@@ -125,56 +128,56 @@ enum StripArt {
     /// Sleep Now: the crescent moon the era used for sleep.
     static let sleep = [
         "................",
-        "................",
-        ".....#####......",
-        "...##llllg#.....",
-        "..#lllllg##.....",
-        "..#lllgg#.......",
-        ".#llllgg#.......",
-        ".#lllggm#.......",
-        ".#lllggm#.......",
-        ".#llgggm#.......",
-        "..#lggmm#.......",
-        "..#gggmmm##.....",
-        "...##ggmmm#.....",
-        ".....#####......",
+        "....####........",
+        "...#www#........",
+        "..#www#.........",
+        ".#www#..........",
+        ".#ww#...........",
+        ".#ww#...........",
+        ".#ww#...........",
+        ".#ww#...........",
+        ".#www#..........",
+        ".#wwww##....###.",
+        "..#wwwww####ww#.",
+        "..##wwwwwwwww#..",
+        "....#########...",
         "................",
         "................",
     ]
     static let network = [
         "................",
-        "................",
-        ".....######.....",
-        "....#wwwwwl#....",
-        "....#wllllm#....",
-        "....#llllmm#....",
-        "....##mmmm##....",
-        "......####......",
+        "....########....",
+        "....#wwwwww#....",
+        "....#wwwwww#....",
+        "....#wwwwww#....",
+        "....########....",
         ".......##.......",
-        "..#########.....",
-        "..#.....#..#....",
-        ".###...###..###.",
-        ".#l#...#l#..#l#.",
-        ".###...###..###.",
-        "................",
+        ".......##.......",
+        "..############..",
+        "..#..........#..",
+        "..#..........#..",
+        "######....######",
+        "#wwww#....#wwww#",
+        "#wwww#....#wwww#",
+        "######....######",
         "................",
     ]
     static let sharing = [
         "................",
-        "................",
         "..#####.........",
         ".#wwwww########.",
-        ".#wlllllllllll#.",
-        ".#wlgggggggggm#.",
-        ".#wlgggggggggm#.",
-        ".#lmmmmmmmmmmm#.",
+        ".#wwwwwwwwwwww#.",
+        ".#wwwwwwwwwwww#.",
+        ".#wwwwwwwwwwww#.",
+        ".#wwwwwwwwwwww#.",
         ".##############.",
-        "......##........",
-        "......##........",
-        "...#########....",
-        "...#wwwwwwl#....",
-        "...#lgggggm#....",
-        "...#########....",
+        "................",
+        "....##....##....",
+        "...#ww#..#ww#...",
+        "...#ww#..#ww#...",
+        "..#wwww##wwww#..",
+        "..#wwwwwwwwww#..",
+        "...##########...",
         "................",
     ]
     static let colours = [
@@ -217,27 +220,25 @@ enum StripArt {
         var rows = [
             "................",
             "................",
-            "................",
-            "......##........",
-            ".....#l#........",
-            "..####l#........",
-            "..#lll#l#.......",
-            "..#llgg#g#......",
-            "..#lggm#m#......",
-            "..#gmm#m#.......",
-            "..####m#........",
-            ".....#m#........",
-            "......##........",
+            "......#.........",
+            ".....##.........",
+            "..#####.........",
+            "..#ww##.........",
+            "..#ww##.........",
+            "..#ww##.........",
+            "..#ww##.........",
+            "..#ww##.........",
+            "..#####.........",
+            ".....##.........",
+            "......#.........",
             "................",
             "................",
             "................",
         ]
-        func put(_ x: Int, _ y: Int, _ ch: Character = "#") { var r = Array(rows[y]); r[x] = ch; rows[y] = String(r) }
-        // The waves: the nearest one solid, the ones beyond it in #555555, as a grey screen
-        // drew the quieter arcs.
-        if level >= 1 { for y in 6...8 { put(10, y) } }
-        if level >= 2 { for y in 5...9 { put(12, y, "d") } }
-        if level >= 3 { for y in 4...10 { put(14, y, "d") } }
+        func put(_ x: Int, _ y: Int) { var r = Array(rows[y]); r[x] = "#"; rows[y] = String(r) }
+        if level >= 1 { put(9, 6); put(9, 7); put(9, 8) }
+        if level >= 2 { put(11, 4); put(11, 5); put(11, 6); put(11, 7); put(11, 8); put(11, 9); put(11, 10) }
+        if level >= 3 { put(13, 2); put(13, 3); put(13, 4); put(13, 5); put(13, 6); put(13, 7); put(13, 8); put(13, 9); put(13, 10); put(13, 11); put(13, 12) }
         return rows
     }
     static func battery(fraction: Double, charging: Bool) -> [String] {
@@ -246,32 +247,22 @@ enum StripArt {
             "................",
             "................",
             "................",
-            "..############..",
-            "..#wwwwwwwwww#..",
-            "..#wwwwwwwwww###",
-            "..#wwwwwwwwww#l#",
-            "..#wwwwwwwwww#m#",
-            "..#llllllllll###",
-            "..############..",
+            "...###########..",
+            "...#wwwwwwwww##.",
+            "...#wwwwwwwww#w#",
+            "...#wwwwwwwww#w#",
+            "...#wwwwwwwww#w#",
+            "...#wwwwwwwww##.",
+            "...###########..",
             "................",
             "................",
             "................",
             "................",
             "................",
         ]
-        // The charge: black cells from the left, the last one grey when it is only half a cell,
-        // and a low battery shown in #555555 rather than a colour.
-        let exact = max(0.0, min(1.0, fraction)) * 10
-        let full = Int(exact)
-        let part = exact - Double(full)
-        let ink: Character = fraction < 0.2 ? "d" : "#"
-        for y in 5...9 {
-            var r = Array(rows[y])
-            for x in 0..<full { r[3 + x] = ink }
-            if full < 10, part >= 0.4 { r[3 + full] = "g" }
-            rows[y] = String(r)
-        }
-        if charging { for (x, y) in [(8, 3), (7, 4), (6, 5), (7, 6), (9, 6), (8, 7), (7, 8)] { var r = Array(rows[y]); r[x] = "w"; rows[y] = String(r) } }
+        let cells = max(0, min(9, Int((fraction * 9).rounded())))
+        for y in 5...9 { var r = Array(rows[y]); for x in 0..<cells { r[4 + x] = fraction < 0.2 ? "r" : "#" }; rows[y] = String(r) }
+        if charging { for (x, y) in [(8, 3), (7, 4), (6, 5), (7, 6), (9, 6), (8, 7), (7, 8)] { var r = Array(rows[y]); r[x] = "y"; rows[y] = String(r) } }
         return rows
     }
     static let mirroring = [
