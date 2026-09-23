@@ -5,6 +5,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **A folder in the dock from Settings.** Themes ▸ Apps in the dock ▸ "Add app or folder…"
+  takes a folder too — a Downloads folder on an external disk, say — and puts it in the dock
+  as a stack. Dragging a folder onto the dock did this already; the button only took apps.
+
 - **Fix: nothing piles up over a long session.** A review for memory that grows with ordinary
   use found four slow build-ups, none of them large on its own: the title bars kept what they
   had learnt about every window that never had a bar (a screen-sized one, say) after it was

@@ -733,7 +733,7 @@ struct DockSettingsTab: View {
             title: "Apps in the dock",
             subtitle: "\(dockApps.count) apps",
             headerAction: AnyView(
-                Button("Add app\u{2026}") { browseForApp() }
+                Button("Add app or folder\u{2026}") { browseForApp() }
                     .buttonStyle(RMDefaultButtonStyle())
             ),
             bodyPadding: 0
@@ -943,18 +943,29 @@ struct DockSettingsTab: View {
         iconOverrideRefresh.toggle()
     }
 
+    /// An app, or a folder: a folder sits in the dock as a stack (a Downloads folder on an
+    /// external disk, say). Dragging either onto the dock does the same.
     private func browseForApp() {
         NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [UTType.application]
+        panel.allowedContentTypes = [UTType.application, UTType.folder]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.message = "Select an application to add to the Dock"
+        panel.canChooseDirectories = true
+        panel.treatsFilePackagesAsDirectories = false   // an .app is picked, not opened
+        panel.message = "Select an application or a folder to add to the Dock"
         panel.prompt = "Add"
         panel.level = .floating
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        if url.pathExtension.lowercased() != "app" {
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
+                AppManager.shared.addFolder(path: url.path)
+                refreshApps()
+                return
+            }
+        }
         guard let bundle = Bundle(url: url),
               let bundleID = bundle.bundleIdentifier else { return }
 
