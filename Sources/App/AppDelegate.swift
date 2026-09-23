@@ -1354,8 +1354,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         themesMenu.addItem(offItem)
         themesMenu.addItem(.separator())
 
-        func themeCategory(_ name: String) -> String {
-            let n = name.lowercased()
+        func themeCategory(_ theme: ThemeBundle) -> String {
+            // The manifest's own family first: an Apple theme is under Apple whatever it is
+            // called ("System 7.1 (authentic)" matched none of the name rules below).
+            if theme.config.family?.id == "apple" { return "Apple" }
+            let n = theme.name.lowercased()
             // Check Unix & Amiga first so "BeOS Classic" isn't caught by the Apple "classic" rule.
             if n.contains("beos") || n.contains("os/2") || n.contains("warp") || n.contains("sgi")
                 || n.contains("irix") || n.contains("amiga") || n.contains("workbench") { return "Unix & Amiga" }
@@ -1365,7 +1368,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return "Other"
         }
         for category in ["Apple", "Windows", "Unix & Amiga", "Other"] {
-            let inCategory = ThemeManager.shared.availableThemes.filter { themeCategory($0.name) == category }
+            let inCategory = ThemeManager.shared.availableThemes.filter { themeCategory($0) == category }
             guard !inCategory.isEmpty else { continue }
             // Each category is its own submenu entry.
             let catItem = NSMenuItem(title: category, action: nil, keyEquivalent: "")
