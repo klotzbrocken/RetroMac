@@ -49,11 +49,9 @@ final class ControlStripTests: XCTestCase {
         XCTAssertNotNil(t.iconResource("computer.png"))
 
         let os9 = try XCTUnwrap(authenticTheme())
-        // The strip wears Mac OS 9 (authentic)'s pictures, shown in grey.
+        // The strip is the PowerBook 150's, drawn by RetroMac: no borrowed Platinum pictures.
         for name in ["strip-volume.png", "strip-arrow-left.png", "strip-arrow-right.png"] {
-            let mine = try XCTUnwrap(t.iconResource(name).flatMap { try? Data(contentsOf: $0) }, name)
-            let theirs = try XCTUnwrap(os9.iconResource(name).flatMap { try? Data(contentsOf: $0) }, name)
-            XCTAssertEqual(mine, theirs, "\(name) is Mac OS 9 (authentic)'s own")
+            XCTAssertNil(t.iconResource(name), "\(name): the PowerBook strip draws its own")
         }
         XCTAssertEqual(t.config.desktopIconSize, os9.config.desktopIconSize, "size and behaviour come from Mac OS 9 (authentic)")
         XCTAssertEqual(t.config.dock.dockStyle, os9.config.dock.dockStyle)
@@ -63,6 +61,24 @@ final class ControlStripTests: XCTestCase {
     }
 
     /// The seven modules a PowerBook's strip had, in its order, and none of the Mac OS 9 ones.
+    /// The PowerBook strip's pictures: 16 px tall, in the four greys and nothing else, one for
+    /// each of the 150's seven modules.
+    func testPowerBookStripArtKeepsToFourGreys() {
+        let allowed: Set<Character> = ["#", "d", "g", "w", "."]
+        for id in ["appletalk", "battery", "sharing", "hdspindown", "power", "sleep", "volume"] {
+            let m = ControlStripController.makeModule(id)!
+            let art = PowerBookStrip.picture(for: m)
+            XCTAssertEqual(art?.count, 16, id)
+            XCTAssertTrue(art?.allSatisfy { Set($0).isSubset(of: allowed) } ?? false, id)
+        }
+        for level in 0...3 { XCTAssertEqual(PowerBookStrip.speaker(level: level).count, 16) }
+        let rows = PowerBookStrip.batteryMonitor(fraction: 0.5, charging: false)
+        XCTAssertEqual(Set(rows.map(\.count)).count, 1, "every row of the gauge is as wide")
+        XCTAssertEqual(PowerBookStrip.tab.count, 24)
+        XCTAssertTrue(PowerBookStrip.tab.allSatisfy { Set($0).isSubset(of: allowed) })
+        XCTAssertFalse(PowerBookStrip.hasTriangle(ControlStripController.makeModule("battery")!), "the gauge has no menu triangle")
+    }
+
     func testSystem7StripHasThePowerBookModules() throws {
         let t = try XCTUnwrap(theme("MacOS7-Authentic.retromactheme"))
         let ids = try XCTUnwrap(t.config.stripModuleIDs)

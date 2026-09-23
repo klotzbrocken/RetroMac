@@ -98,7 +98,6 @@ final class ControlStripController {
             observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
                 guard let self else { return }
                 for m in self.modules { m.refresh() }
-                self.view?.invalidateMonoArt()
                 self.layout()
             })
             observers.append(NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
@@ -279,7 +278,7 @@ final class ControlStripController {
                 m.refresh(); lastRefresh[m.id] = Date(); changed = true
             }
         }
-        if changed { view?.invalidateMonoArt(); layout() }
+        if changed { layout() }
     }
 
     private func updateVisibilityForSpace() {
@@ -369,8 +368,8 @@ final class ControlStripView: NSView {
     static let triangleRoom: CGFloat = 8
     var mirrored = false          // right edge: the tab is on the right, everything reads mirrored
     var scrollIndex = 0
-    /// The four greys of the PowerBook 150 (`menuBar.palette: "grays4"`): a white ledge with
-    /// black edges and #AAAAAA grooves; the modules and the pictures in greyscale, every grey.
+    /// The four greys of the PowerBook 150 (`menuBar.palette: "grays4"`): the 150's own strip,
+    /// drawn by `drawPowerBook()` in those four and nothing else.
     let mono: Bool
 
     override var isFlipped: Bool { true }
@@ -379,13 +378,13 @@ final class ControlStripView: NSView {
         self.controller = controller
         let isMono = theme.config.hasFourGreys
         mono = isMono
-        // The tab, the size box and the arrows are pictures: grey, every grey, pixel for pixel.
-        let bit: (NSImage?) -> NSImage? = { img in (isMono ? img.map { FourGrays.greyscalePixels($0) } : img) }
+        // The PowerBook strip draws its ends, arrows and pictures itself (`PowerBookStrip`).
+        let bit: (NSImage?) -> NSImage? = { img in isMono ? nil : img }
         tabImage = bit(theme.iconResource("controlstrip-left.png").flatMap { NSImage(contentsOf: $0) })
         sizeBoxImage = bit(theme.iconResource("controlstrip-right.png").flatMap { NSImage(contentsOf: $0) })
         var pics: [String: NSImage] = [:]
         for m in controller.modules {
-            if let u = theme.iconResource("strip-\(m.id).png"), let i = NSImage(contentsOf: u) { pics[m.id] = i }
+            if !isMono, let u = theme.iconResource("strip-\(m.id).png"), let i = NSImage(contentsOf: u) { pics[m.id] = i }
         }
         pictures = pics
         arrowLeft = bit(theme.iconResource("strip-arrow-left.png").flatMap { NSImage(contentsOf: $0) })
@@ -398,13 +397,20 @@ final class ControlStripView: NSView {
         guard let img, img.size.height > 0 else { return fallback }
         return (img.size.width / img.size.height * Self.baseHeight).rounded()
     }
-    var tabWidth: CGFloat { capWidth(tabImage, fallback: 16) }
-    var sizeBoxWidth: CGFloat { capWidth(sizeBoxImage, fallback: 19) }
+    /// The PowerBook strip (four greys) draws its ends itself: the close box at the left end,
+    /// the tab at the right — and collapsed, the tab alone at the edge.
+    var tabWidth: CGFloat { mono ? (collapsed ? CGFloat(PowerBookStrip.tab[0].count) : 12) : capWidth(tabImage, fallback: 16) }
+    var sizeBoxWidth: CGFloat { mono ? CGFloat(PowerBookStrip.tab[0].count) : capWidth(sizeBoxImage, fallback: 19) }
 
-    /// A module's cell: its own width and the triangle's room.
-    static func cell(_ m: ControlStripModule) -> CGFloat { m.width + triangleRoom }
+    /// A module's cell: its own width and the triangle's room. On the PowerBook strip, the
+    /// picture's own width, and the Battery Monitor without a triangle.
+    func cell(_ m: ControlStripModule) -> CGFloat {
+        guard mono, let art = PowerBookStrip.picture(for: m) else { return m.width + Self.triangleRoom }
+        let w = CGFloat(art.map(\.count).max() ?? 16) + 4
+        return PowerBookStrip.hasTriangle(m) ? w + Self.triangleRoom : w
+    }
     func modulesWidth(_ modules: [ControlStripModule]) -> CGFloat {
-        modules.reduce(0) { $0 + Self.cell($1) } + CGFloat(max(0, modules.count - 1)) * Self.groove
+        modules.reduce(0) { $0 + cell($1) } + CGFloat(max(0, modules.count - 1)) * Self.groove
     }
 
     /// Window width for a state: the tab alone when collapsed; otherwise tab, arrows, the
@@ -440,7 +446,7 @@ final class ControlStripView: NSView {
         let area = moduleArea
         var cursor: CGFloat = 0
         for m in mods.dropFirst(min(scrollIndex, mods.count)) {
-            let cw = Self.cell(m)
+            let cw = cell(m)
             if cursor + cw > area.width + 0.5 { break }
             let r = mirrored ? NSRect(x: area.maxX - cursor - cw, y: 0, width: cw, height: Self.baseHeight)
                              : NSRect(x: area.minX + cursor, y: 0, width: cw, height: Self.baseHeight)
@@ -456,10 +462,11 @@ final class ControlStripView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         ctx.interpolationQuality = .none
         ctx.scaleBy(x: Self.scale, y: Self.scale)   // everything below is in 1× units
-        let platinum = mono ? FourGrays.white : NSColor(calibratedWhite: 0.733, alpha: 1)
-        let border = mono ? FourGrays.black : NSColor(calibratedWhite: 0.149, alpha: 1)
-        let light = mono ? FourGrays.white : NSColor.white
-        let shadow = mono ? FourGrays.light : NSColor(calibratedWhite: 0.502, alpha: 1)
+        if mono { drawPowerBook(); return }
+        let platinum = NSColor(calibratedWhite: 0.733, alpha: 1)
+        let border = NSColor(calibratedWhite: 0.149, alpha: 1)
+        let light = NSColor.white
+        let shadow = NSColor(calibratedWhite: 0.502, alpha: 1)
         // The tab, from the theme's own picture (mirrored on the right edge).
         drawCap(tabImage, in: tabRect, flip: mirrored)
         if collapsed { return }
@@ -486,16 +493,9 @@ final class ControlStripView: NSView {
         for (i, (m, r)) in placed.enumerated() {
             let picture = NSRect(x: r.minX + 2, y: (Self.baseHeight - 16) / 2, width: r.width - 2 - Self.triangleRoom, height: 16)
             if let img = pictures[m.id] {
-                let shown = mono ? monoPicture(m.id, img) : img
-                shown.draw(in: NSRect(x: picture.minX, y: picture.minY, width: 16, height: 16), from: .zero, operation: .sourceOver,
-                           fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
+                img.draw(in: NSRect(x: picture.minX, y: picture.minY, width: 16, height: 16), from: .zero, operation: .sourceOver,
+                         fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
                 m.drawText(in: picture)
-            } else if mono {
-                // The module's own pixel art — Mac OS 9 (authentic)'s — in grey on the way to the screen.
-                if let img = monoArt(for: m, size: picture.size) {
-                    img.draw(in: picture, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true,
-                             hints: [.interpolation: NSImageInterpolation.none])
-                }
             } else {
                 m.draw(in: picture)
             }
@@ -508,6 +508,65 @@ final class ControlStripView: NSView {
         }
     }
 
+    /// The PowerBook 150's strip, in its four greys: black rules top and bottom, every part a
+    /// raised button with a black line between neighbours — close box, arrow, modules, arrow —
+    /// and the tab at the end.
+    private func drawPowerBook() {
+        let h = Self.baseHeight
+        // Pixel art at 1.5×: without antialiasing every pixel lands on whole device pixels,
+        // with it the seams between neighbours show as a grid.
+        NSGraphicsContext.current?.cgContext.setShouldAntialias(false)
+        if collapsed {
+            PowerBookStrip.draw(PowerBookStrip.tab, at: NSPoint(x: tabRect.minX, y: 0), flipped: mirrored)
+            return
+        }
+        let ledge = mirrored
+            ? NSRect(x: sizeBoxRect.minX, y: 0, width: tabRect.maxX - sizeBoxRect.minX, height: h)
+            : NSRect(x: tabRect.minX, y: 0, width: sizeBoxRect.maxX - tabRect.minX, height: h)
+        FourGrays.black.setFill(); ledge.fill()
+        // The parts from left to right; each button runs on to the next part, less the one
+        // black line between them (the grooves belong to the button before them).
+        enum Part { case closeBox, arrow(left: Bool, enabled: Bool), module(ControlStripModule), tab }
+        var parts: [(NSRect, Part)] = [
+            (tabRect, .closeBox),
+            (leftArrowRect, .arrow(left: !mirrored, enabled: mirrored ? canScrollOn : canScrollBack)),
+            (rightArrowRect, .arrow(left: mirrored, enabled: mirrored ? canScrollBack : canScrollOn)),
+            (sizeBoxRect, .tab),
+        ]
+        parts += placedModules().map { ($0.1, Part.module($0.0)) }
+        parts.sort { $0.0.minX < $1.0.minX }
+        for (i, (r, part)) in parts.enumerated() {
+            if case .tab = part {
+                PowerBookStrip.draw(PowerBookStrip.tab, at: NSPoint(x: r.minX, y: 0), flipped: mirrored)
+                continue
+            }
+            var end = r.maxX
+            if i + 1 < parts.count {
+                let next = parts[i + 1]
+                if case .tab = next.1 { end = next.0.minX } else { end = next.0.minX - 1 }   // the tab brings its own line
+            }
+            PowerBookStrip.button(NSRect(x: r.minX, y: 1, width: end - r.minX, height: h - 2))
+            func centred(_ art: [String], in r: NSRect) {
+                PowerBookStrip.draw(art, at: NSPoint(x: (r.midX - CGFloat(art[0].count) / 2).rounded(.down),
+                                                     y: ((h - CGFloat(art.count)) / 2).rounded(.down)))
+            }
+            switch part {
+            case .closeBox: centred(PowerBookStrip.closeBox, in: r)
+            case .arrow(let left, let enabled): centred(PowerBookStrip.arrow(pointsLeft: left, enabled: enabled), in: r)
+            case .module(let m):
+                if let art = PowerBookStrip.picture(for: m) {
+                    PowerBookStrip.draw(art, at: NSPoint(x: r.minX + 2, y: ((h - 16) / 2).rounded(.down)))
+                }
+                if PowerBookStrip.hasTriangle(m) {
+                    let tx = r.maxX - 6, ty = (h / 2).rounded(.down)
+                    FourGrays.black.setFill()
+                    for k in 0..<4 { NSRect(x: tx + CGFloat(k), y: ty - 3 + CGFloat(k), width: 1, height: CGFloat(7 - 2 * k)).fill() }
+                }
+            case .tab: break
+            }
+        }
+    }
+
     private func drawCap(_ img: NSImage?, in rect: NSRect, flip: Bool) {
         guard let img, let ctx = NSGraphicsContext.current?.cgContext else { return }
         ctx.saveGState()
@@ -516,31 +575,7 @@ final class ControlStripView: NSView {
         ctx.restoreGState()
     }
 
-    private var monoArtCache: [String: NSImage] = [:]
-    /// The theme's picture in grey, pixel for pixel, shown nearest-neighbour like the colour
-    /// strip shows it.
-    private func monoPicture(_ id: String, _ img: NSImage) -> NSImage {
-        let key = "pic-\(id)"
-        if let c = monoArtCache[key] { return c }
-        let grey = FourGrays.greyscalePixels(img)
-        monoArtCache[key] = grey
-        return grey
-    }
-    private func monoArt(for m: ControlStripModule, size: NSSize) -> NSImage? {
-        let key = "\(m.id)-\(Int(size.width))"
-        if let c = monoArtCache[key] { return c }
-        let img = FourGrays.greyscale(size: size, scale: Self.scale * (window?.backingScaleFactor ?? 2)) { r in m.draw(in: r) }
-        monoArtCache[key] = img
-        return img
-    }
-    /// A module that shows state (battery, resolution) draws again: its grey picture must too.
-    func invalidateMonoArt() { monoArtCache.removeAll() }
-
     private func drawGroove(at x: CGFloat) {
-        if mono {
-            FourGrays.light.setFill(); NSRect(x: x, y: 3, width: 1, height: Self.baseHeight - 6).fill()
-            return
-        }
         NSColor(calibratedWhite: 0.55, alpha: 1).setFill(); NSRect(x: x, y: 3, width: 1, height: Self.baseHeight - 6).fill()
         NSColor(calibratedWhite: 0.92, alpha: 1).setFill(); NSRect(x: x + 1, y: 3, width: 1, height: Self.baseHeight - 6).fill()
     }
@@ -560,8 +595,7 @@ final class ControlStripView: NSView {
             p.move(to: NSPoint(x: cx - 3, y: cy - 4)); p.line(to: NSPoint(x: cx + 3, y: cy)); p.line(to: NSPoint(x: cx - 3, y: cy + 4))
         }
         p.close()
-        if mono { (enabled ? FourGrays.black : FourGrays.light).setFill() }
-        else { (enabled ? NSColor(calibratedWhite: 0.2, alpha: 1) : NSColor(calibratedWhite: 0.6, alpha: 1)).setFill() }
+        (enabled ? NSColor(calibratedWhite: 0.2, alpha: 1) : NSColor(calibratedWhite: 0.6, alpha: 1)).setFill()
         p.fill()
     }
 
@@ -570,7 +604,7 @@ final class ControlStripView: NSView {
     private enum Drag {
         case none
         case tab(startY: CGFloat, moved: Bool)
-        case size(startX: CGFloat, startWidth: CGFloat)
+        case size(startX: CGFloat, startWidth: CGFloat, moved: Bool = false)
         case module(ControlStripModule, startX: CGFloat)   // Option-drag: rearrange
         case strip(startY: CGFloat)                         // Option-drag: move the strip
     }
@@ -608,8 +642,9 @@ final class ControlStripView: NSView {
                 drag = .tab(startY: screenP.y, moved: true)
                 controller.dragged(by: dy)
             }
-        case .size(let startX, let startWidth):
+        case .size(let startX, let startWidth, _):
             let dx = (screenP.x - startX) / Self.scale
+            if abs(dx) >= 1 { drag = .size(startX: startX, startWidth: startWidth, moved: true) }
             controller.resized(to: startWidth + (mirrored ? -dx : dx))
         case .module:
             // The module under the pointer is where the dragged one will go.
@@ -627,6 +662,7 @@ final class ControlStripView: NSView {
     override func mouseUp(with event: NSEvent) {
         switch drag {
         case .tab(_, let moved): if !moved { controller.toggleCollapsed() }
+        case .size(_, _, let moved): if mono, !moved { controller.toggleCollapsed() }   // the PowerBook tab closes the strip
         case .module(let m, _):
             if let target = dragTarget, target !== m { controller.move(m, before: target) }
         default: break

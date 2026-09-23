@@ -65,85 +65,6 @@ enum StripArt {
         }
     }
 
-    // The PowerBook's own modules, drawn like Mac OS 9 (authentic)'s: a black outline, white
-    // faces, a touch of colour — the four-grey theme shows them in grey like the rest.
-
-    /// HD Spin Down: the internal disk, its activity light on.
-    static let hardDisk = [
-        "................",
-        "................",
-        "................",
-        "................",
-        ".##############.",
-        ".#wwwwwwwwwwww#.",
-        ".#wwwwwwwwwwww#.",
-        ".#wwwwwwwwwwww#.",
-        ".##############.",
-        ".#wwwwwwwwwwww#.",
-        ".#wnnwwwwwwwww#.",
-        ".#wwwwwwwwwwww#.",
-        ".##############.",
-        "................",
-        "................",
-        "................",
-    ]
-    /// Power Settings on the adapter: the two-prong plug, its cord hanging down.
-    static let powerPlug = [
-        "................",
-        "....##..##......",
-        "....##..##......",
-        "....##..##......",
-        "..##########....",
-        "..#wwwwwwww#....",
-        "..#wwwwwwww#....",
-        "..#wwwwwwww#....",
-        "...#wwwwww#.....",
-        "....######......",
-        "......##........",
-        "......##........",
-        "......##........",
-        ".......##.......",
-        "........###.....",
-        "................",
-    ]
-    /// Power Settings on the battery: the cell, half full, as the Battery module draws it.
-    static let powerBattery = [
-        "................",
-        "................",
-        "................",
-        "................",
-        "...###########..",
-        "...#####wwwww##.",
-        "...#####wwwww#w#",
-        "...#####wwwww#w#",
-        "...#####wwwww#w#",
-        "...#####wwwww##.",
-        "...###########..",
-        "................",
-        "................",
-        "................",
-        "................",
-        "................",
-    ]
-    /// Sleep Now: the crescent moon the era used for sleep.
-    static let sleep = [
-        "................",
-        "....####........",
-        "...#www#........",
-        "..#www#.........",
-        ".#www#..........",
-        ".#ww#...........",
-        ".#ww#...........",
-        ".#ww#...........",
-        ".#ww#...........",
-        ".#www#..........",
-        ".#wwww##....###.",
-        "..#wwwww####ww#.",
-        "..##wwwwwwwww#..",
-        "....#########...",
-        "................",
-        "................",
-    ]
     static let network = [
         "................",
         "....########....",
@@ -886,7 +807,7 @@ final class HDSpinDownModule: ControlStripModule {
         return nil
     }
 
-    func draw(in rect: NSRect) { StripArt.draw(StripArt.hardDisk, at: rect.origin) }
+    func draw(in rect: NSRect) { PowerBookStrip.draw(PowerBookStrip.hdSpinDown, at: rect.origin) }
 
     func menu() -> NSMenu? {
         let m = NSMenu()
@@ -920,7 +841,7 @@ final class PowerModule: ControlStripModule {
         onBattery = source == kIOPSBatteryPowerValue
     }
 
-    func draw(in rect: NSRect) { StripArt.draw(onBattery ? StripArt.powerBattery : StripArt.powerPlug, at: rect.origin) }
+    func draw(in rect: NSRect) { PowerBookStrip.draw(PowerBookStrip.powerSettings, at: rect.origin) }
 
     func menu() -> NSMenu? {
         let m = NSMenu()
@@ -939,7 +860,7 @@ final class SleepNowModule: ControlStripModule {
     var isAvailable: Bool { true }
     var width: CGFloat { 20 }
 
-    func draw(in rect: NSRect) { StripArt.draw(StripArt.sleep, at: rect.origin) }
+    func draw(in rect: NSRect) { PowerBookStrip.draw(PowerBookStrip.sleepNow, at: rect.origin) }
 
     func menu() -> NSMenu? { nil }
 
