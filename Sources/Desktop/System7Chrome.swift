@@ -1,16 +1,16 @@
 import AppKit
 
-/// **System 7.1** window chrome, as a PowerBook 150 drew it: the four greys and nothing else.
+/// **System 7.1** window chrome, in greys from the Mac's 256-colour table.
 /// The title bar is System 6's racing stripes (`System6Chrome` draws them) with the close box
 /// on the left AND the zoom box on the right, which is what System 7 added; the window is
 /// white in a 1 px black frame, and the parts System 7 drew in grey — the scroll bar's gutter,
 /// the grow box's ground — use #AAAAAA and #555555 rather than the Platinum bevels.
 enum System7Chrome {
 
-    static let black = FourGrays.black
-    static let dark = FourGrays.dark      // #555555
-    static let light = FourGrays.light    // #AAAAAA
-    static let white = FourGrays.white
+    static let black = Mac256.black
+    static let dark = Mac256.grey55      // #555555
+    static let light = Mac256.greyAA     // #AAAAAA
+    static let white = Mac256.white
 
     static let boxSize = System6Chrome.boxSize
     static var titleFont: NSFont { System6Chrome.titleFont }

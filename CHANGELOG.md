@@ -5,42 +5,38 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
-- **New theme: System 7.1 (authentic).** The PowerBook 150's screen on today's desktop: a
-  fixed palette of four greys — `#000000`, `#555555`, `#AAAAAA`, `#FFFFFF` — and nothing
-  outside it. No colour, no gradient, no antialiasing on a theme surface, every picture
-  snapped to the four and every scaled bitmap reduced nearest-neighbour (a manifest says
-  `menuBar.palette: "grays4"`). The resolution and the desktop are the ones you have: the
+- **New theme: System 7.1 (authentic).** System 7.1 as a colour Mac showed it, at the
+  Monitors control panel's "256": every icon RetroMac draws under the theme — the desktop, the
+  Apple menu and its submenus, the Application menu, the Applications window, the Control
+  Strip — is resampled to the pixels it is shown at and snapped to the Mac's standard 8-bit
+  colour table (the 6 × 6 × 6 cube and the red, green, blue and grey ramps), with the hard
+  edge of a 1-bit mask; the menu bar wears the rainbow apple (a manifest says
+  `menuBar.palette: "mac256"`). The resolution and the desktop are the ones you have: the
   desktop pattern tiles across whatever the screen is, and windows keep their places.
-  The **Control Strip** carries the seven modules a PowerBook had, in its order — AppleTalk,
-  Battery Monitor, File Sharing, HD Spin Down, Power Settings, Sleep Now, Sound Volume — and
-  none of Mac OS 9's (no keychain, media bay, colour depth, resolution, printer, sound source
-  or mirroring); a theme picks its own set with `dock.stripModules`. Sizes and behaviour are
-  Mac OS 9 (authentic)'s: the tab rolls it out and in, the size box sets how much shows,
-  Option-drag rearranges the modules or moves the strip, and a module is never stretched.
+  The **Control Strip** is the one Apple shipped in 1994 with System 7.1.1, redrawn after the
+  pictures in the PowerBook 150 and Duo 280c manuals: a close box at the left end, hollow
+  scroll arrows, every module a raised light-grey button with its black triangle, the Battery
+  Monitor as a battery and eight cells, the chamfered tab with its grip at the right end. It
+  carries the seven modules a PowerBook had, in its order — AppleTalk, Battery Monitor, File
+  Sharing, HD Spin Down, Power Settings, Sleep Now, Sound Volume — and none of Mac OS 9's (no
+  keychain, media bay, colour depth, resolution, printer, sound source or mirroring); a theme
+  picks its own set with `dock.stripModules`. Sizes and behaviour are Mac OS 9
+  (authentic)'s: the tab rolls it out and in and sets how much shows, Option-drag rearranges
+  the modules or moves the strip, and a module is never stretched.
   The **desktop** has Macintosh HD at the top right, the Trash at the bottom right whatever
   the screen's size (a negative `gridY` counts from the bottom now), the Applications folder,
   and one icon per mounted volume under the hard disk (`type: "volumes"`); a selected name
   inverts rather than taking the accent colour. The **menu bar** has System 7.1's icon-only
   Application menu (`menuBar.applicationMenuIconOnly`), the Balloon Help `?` balloon
-  (`menuBar.balloonHelp`) and the Apple menu of the day. Windows use their own `system7`
-  chrome — the racing-stripe title bar with the close box left and the zoom box right, the
-  1 px black frame, and System 7's grey scroll bars and grow box; the Applications window and
-  the theme's Read Me wear it too. Every icon RetroMac draws under the theme is grey — in every
-  grey there is, smoothly resampled, while the surfaces around them (menus, strip, frames)
-  keep to the four; pictures snapped to four greys came out as blotches. That holds for the
-  dock, the desktop, the Applications grid and the menus — the Apple menu wears Mac OS 9 (authentic)'s own pictures, in grey. The menus open
-  at once: the Apple menu's submenus (the Applications folder, Control Panels, Favorites and
-  the three recent lists) are read when they open rather than when the menu is built, every
-  picture is converted once and kept, and the conversion works on the raw bytes — one
-  512 px icon used to mean a quarter of a million NSColor objects, which is what made the
-  Apple menu, the Application menu and Balloon Help crawl. The strip is the
-  PowerBook 150's own, redrawn after the picture in Apple's "PowerBook Getting Started" for
-  the 150: a close box at the left end, hollow scroll arrows, every module a raised grey button
-  with its black triangle, the Battery Monitor as a battery and eight cells, the chamfered tab
-  with its grip at the right end — and the seven pictures (the compact Mac, the battery, the
-  folder, the drive, the lever, the z's, the speaker) in the 150's four greys, which is what
-  its 2-bit screen made of every icon. Battery reads slowly,
-  volume and network on their events, and every scaled picture is cached.
+  (`menuBar.balloonHelp`) and the Apple menu of the day, with Mac OS 9 (authentic)'s pictures
+  in the 256 colours. Windows use their own `system7` chrome — the racing-stripe title bar
+  with the close box left and the zoom box right, the 1 px black frame, and System 7's grey
+  scroll bars and grow box; the Applications window and the theme's Read Me wear it too. The
+  menus open at once: the Apple menu's submenus (the Applications folder, Control Panels,
+  Favorites and the three recent lists) are read when they open rather than when the menu is
+  built, every picture is converted once and kept, and the conversion works on the raw bytes
+  through a 32 768-entry lookup table. Battery reads slowly, volume and network on their
+  events.
 
 - **Starfield Simulation.** The Windows 2000 screen saver, for every theme: white squares
   streaming out of the centre of a black screen, drawn as the original drew them (the far

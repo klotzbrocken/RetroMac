@@ -86,10 +86,9 @@ struct DockThemeConfig: Codable {
         /// The Apple menu of Mac OS 9 under the Apple cover: About This Computer, Applications,
         /// Calculator, Chooser, Control Panels, Favorites, Recent Applications/Documents/Servers…
         var appleMenu: Bool? = nil
-        /// The palette every theme surface is limited to. `"grays4"` is the PowerBook 150's
-        /// four greys (#000000, #555555, #AAAAAA, #FFFFFF): the menus, the Control Strip, the
-        /// volume slider and every picture they show are snapped to those four, with no
-        /// gradients and no antialiasing (System 7.1 (authentic)).
+        /// The palette the theme draws in. `"mac256"` is the Mac's standard 256-colour table
+        /// (System 7.1 (authentic)): every icon — dock, desktop, menus, Applications window,
+        /// Control Strip — is snapped to it with a 1-bit mask, as System 7 drew at "256".
         var palette: String? = nil
     }
     var menuBar: MenuBarConfig? = nil
@@ -354,7 +353,7 @@ extension DockThemeConfig {
     var applicationMenuIsIconOnly: Bool { menuBar?.applicationMenuIconOnly == true }
     var hasBalloonHelp: Bool { menuBar?.balloonHelp == true }
     var hasAppleMenu: Bool { menuBar?.appleMenu == true }
-    var hasFourGreys: Bool { menuBar?.palette?.lowercased() == "grays4" }
+    var hasMac256Palette: Bool { menuBar?.palette?.lowercased() == "mac256" }
     /// The Control Strip modules this theme wants, in its own order; nil = all of them.
     var stripModuleIDs: [String]? { dock.stripModules }
     /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.

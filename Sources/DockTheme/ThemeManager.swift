@@ -863,8 +863,8 @@ final class ThemeManager {
                 img.size = NSSize(width: size, height: size)
                 // Mapped/custom artwork is shown crisp (hi-res) — only un-mapped system
                 // apps get auto-pixelated (below) so they blend into a pixel theme. A
-                // four-grey theme snaps even its own artwork, so nothing is outside the four.
-                return theme.config.hasFourGreys ? FourGrays.greyscale(img, points: size) : img
+                // 256-colour theme snaps even its own artwork, so nothing is outside the table.
+                return theme.config.hasMac256Palette ? Mac256.icon(img, points: size) : img
             }
         }
 
@@ -892,8 +892,8 @@ final class ThemeManager {
             if activeTheme?.config.icon.monochrome == true {
                 icon = grayscaled(icon, size: size)
             }
-            // A four-grey theme: the icon in grey, every grey — only the surfaces keep to four.
-            if activeTheme?.config.hasFourGreys == true { icon = FourGrays.greyscale(icon, points: size) }
+            // A 256-colour theme: the icon snapped to the Mac's standard colour table.
+            if activeTheme?.config.hasMac256Palette == true { icon = Mac256.icon(icon, points: size) }
             return icon
         }
 
@@ -909,7 +909,7 @@ final class ThemeManager {
         var img = image
         if activeTheme?.config.isPixelated == true { img = pixelated(img, to: size) }
         if activeTheme?.config.icon.monochrome == true { img = grayscaled(img, size: size) }
-        if activeTheme?.config.hasFourGreys == true { img = FourGrays.greyscale(img, points: size) }
+        if activeTheme?.config.hasMac256Palette == true { img = Mac256.icon(img, points: size) }
         return img
     }
 

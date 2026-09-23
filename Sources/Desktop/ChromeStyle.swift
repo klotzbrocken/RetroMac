@@ -126,7 +126,7 @@ enum ChromeStyleFactory {
         case "win7":   return win7()         // Windows 7 Aero glass (7.css recipe)
         case "macos9": return macClassic()   // Mac OS 9 Platinum
         case "macos6": return system6()      // authentic 1-bit System 6 (System6Chrome)
-        case "system7": return system7()     // System 7.1 in four greys (System7Chrome)
+        case "system7": return system7()     // System 7.1 (System7Chrome)
         case "win98":  return win98()
         case "nextstep": return nextstep()
         case "snowleopard": return snowLeopard()

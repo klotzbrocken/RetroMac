@@ -257,7 +257,7 @@
     "com.apple.reminders": "reminders.png"
   },
   "screensaver": "flying-toasters",
-  "menuBarApple": "mono",
+  "menuBarApple": "rainbow",
   "appearance": "light",
   "accentColor": "graphite",
   "desktopIconSize": 32,
@@ -266,7 +266,7 @@
     "applicationMenuIconOnly": true,
     "appleMenu": true,
     "balloonHelp": true,
-    "palette": "grays4"
+    "palette": "mac256"
   },
   "desktopIconsSide": "right",
   "desktopLabel": {

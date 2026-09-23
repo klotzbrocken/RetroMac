@@ -616,12 +616,12 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         img.draw(in: NSRect(x: pad, y: pad, width: CGFloat(side) - 2 * pad, height: CGFloat(side) - 2 * pad),
                  from: .zero, operation: .sourceOver, fraction: 1.0)
         NSGraphicsContext.restoreGraphicsState()
-        // A four-grey theme's grid is in the four greys too — the same snap the dock and the
+        // A 256-colour theme's grid is in the 256 colours too — the same snap the dock and the
         // desktop get, done once here rather than in every page.
         var out = rep
-        if ThemeManager.shared.activeTheme?.config.hasFourGreys == true {
+        if ThemeManager.shared.activeTheme?.config.hasMac256Palette == true {
             let img = NSImage(size: NSSize(width: side, height: side)); img.addRepresentation(rep)
-            if let grey = FourGrays.greyscale(img, points: CGFloat(side), scale: 1).representations.first as? NSBitmapImageRep { out = grey }
+            if let c = Mac256.icon(img, points: CGFloat(side), scale: 1).representations.first as? NSBitmapImageRep { out = c }
         }
         guard let png = out.representation(using: .png, properties: [:]) else { return nil }
         return "data:image/png;base64," + png.base64EncodedString()

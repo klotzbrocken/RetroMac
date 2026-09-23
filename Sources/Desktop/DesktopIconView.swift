@@ -109,18 +109,18 @@ final class DesktopIconView: NSView {
         super.draw(dirtyRect)
         if isSelected {
             // Highlight hugs the LABEL TEXT only (the word), not the full two-line cell.
-            // A four-grey theme has no highlight colour: the name inverts, as the Finder did.
-            if FourGrays.active {
-                FourGrays.black.setFill()
+            // System 7.1's Finder: the name inverts, white on black, whatever the colours.
+            if Mac256.active {
+                Mac256.black.setFill()
                 textRect.fill()
-                label.textColor = FourGrays.white
+                label.textColor = Mac256.white
             } else {
                 NSColor.selectedContentBackgroundColor.withAlphaComponent(0.85).setFill()
                 NSBezierPath(roundedRect: textRect, xRadius: 3, yRadius: 3).fill()
             }
         } else if let plate = labelPlate {
             // Mac OS 9: the name sits on a plate of the label colour, square-cornered.
-            if FourGrays.active { label.textColor = FourGrays.black }
+            if Mac256.active { label.textColor = Mac256.black }
             plate.setFill()
             textRect.fill()
         }

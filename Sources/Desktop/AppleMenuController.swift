@@ -91,16 +91,16 @@ final class AppleMenuController {
         return nil
     }
 
-    /// One 16 pt picture, in the theme's own palette: a four-grey theme snaps it once, here,
+    /// One 16 pt picture, in the theme's own palette: a 256-colour theme snaps it once, here,
     /// rather than every time a menu is drawn.
     private static func prepared(_ image: NSImage, theme: ThemeBundle) -> NSImage {
-        if theme.config.hasFourGreys { return FourGrays.greyscale(image, points: 16, scale: 2) }
+        if theme.config.hasMac256Palette { return Mac256.icon(image, points: 16, scale: 2) }
         let out = (image.copy() as? NSImage) ?? image
         out.size = NSSize(width: 16, height: 16)
         return out
     }
 
-    /// Menu pictures, kept between openings: building them is a file read and, in a four-grey
+    /// Menu pictures, kept between openings: building them is a file read and, in a 256-colour
     /// theme, a pass over the picture.
     private static let iconCache: NSCache<NSString, NSImage> = {
         let c = NSCache<NSString, NSImage>(); c.countLimit = 400; return c

@@ -368,15 +368,15 @@ final class ControlStripView: NSView {
     static let triangleRoom: CGFloat = 8
     var mirrored = false          // right edge: the tab is on the right, everything reads mirrored
     var scrollIndex = 0
-    /// The four greys of the PowerBook 150 (`menuBar.palette: "grays4"`): the 150's own strip,
-    /// drawn by `drawPowerBook()` in those four and nothing else.
+    /// System 7.1 (authentic) (`menuBar.palette: "mac256"`): the 1994 PowerBook strip, drawn
+    /// by `drawPowerBook()` in the Mac's 256 colours.
     let mono: Bool
 
     override var isFlipped: Bool { true }
 
     init(theme: ThemeBundle, controller: ControlStripController) {
         self.controller = controller
-        let isMono = theme.config.hasFourGreys
+        let isMono = theme.config.hasMac256Palette
         mono = isMono
         // The PowerBook strip draws its ends, arrows and pictures itself (`PowerBookStrip`).
         let bit: (NSImage?) -> NSImage? = { img in isMono ? nil : img }
@@ -397,7 +397,7 @@ final class ControlStripView: NSView {
         guard let img, img.size.height > 0 else { return fallback }
         return (img.size.width / img.size.height * Self.baseHeight).rounded()
     }
-    /// The PowerBook strip (four greys) draws its ends itself: the close box at the left end,
+    /// The PowerBook strip draws its ends itself: the close box at the left end,
     /// the tab at the right — and collapsed, the tab alone at the edge.
     var tabWidth: CGFloat { mono ? (collapsed ? CGFloat(PowerBookStrip.tab[0].count) : 12) : capWidth(tabImage, fallback: 16) }
     var sizeBoxWidth: CGFloat { mono ? CGFloat(PowerBookStrip.tab[0].count) : capWidth(sizeBoxImage, fallback: 19) }
@@ -508,7 +508,7 @@ final class ControlStripView: NSView {
         }
     }
 
-    /// The PowerBook 150's strip, in its four greys: black rules top and bottom, every part a
+    /// The 1994 PowerBook strip, at 256 colours: black rules top and bottom, every part a
     /// raised button with a black line between neighbours — close box, arrow, modules, arrow —
     /// and the tab at the end.
     private func drawPowerBook() {
@@ -523,7 +523,7 @@ final class ControlStripView: NSView {
         let ledge = mirrored
             ? NSRect(x: sizeBoxRect.minX, y: 0, width: tabRect.maxX - sizeBoxRect.minX, height: h)
             : NSRect(x: tabRect.minX, y: 0, width: sizeBoxRect.maxX - tabRect.minX, height: h)
-        FourGrays.black.setFill(); ledge.fill()
+        Mac256.black.setFill(); ledge.fill()
         // The parts from left to right; each button runs on to the next part, less the one
         // black line between them (the grooves belong to the button before them).
         enum Part { case closeBox, arrow(left: Bool, enabled: Bool), module(ControlStripModule), tab }
@@ -559,7 +559,7 @@ final class ControlStripView: NSView {
                 }
                 if PowerBookStrip.hasTriangle(m) {
                     let tx = r.maxX - 6, ty = (h / 2).rounded(.down)
-                    FourGrays.black.setFill()
+                    Mac256.black.setFill()
                     for k in 0..<4 { NSRect(x: tx + CGFloat(k), y: ty - 3 + CGFloat(k), width: 1, height: CGFloat(7 - 2 * k)).fill() }
                 }
             case .tab: break

@@ -77,7 +77,7 @@ final class PlatinumVolumeSlider {
 
         override func draw(_ dirtyRect: NSRect) {
             let b = bounds
-            let mono = FourGrays.active
+            let mono = Mac256.active
             (mono ? NSColor.white : PlatinumBar.bar).setFill(); b.fill()
             NSColor.black.setFill()
             NSRect(x: 0, y: 0, width: b.width, height: 1).fill(); NSRect(x: 0, y: b.height - 1, width: b.width, height: 1).fill()
@@ -90,8 +90,8 @@ final class PlatinumVolumeSlider {
             }
             // The track: sunken, dark on the top-left, light on the bottom-right; dithered on 1 bit.
             let t = trackRect
-            (mono ? FourGrays.dark : NSColor(white: 0.5, alpha: 1)).setFill(); t.fill()
-            (mono ? FourGrays.light : NSColor(white: 0.85, alpha: 1)).setFill(); t.insetBy(dx: 1, dy: 1).fill()
+            (mono ? Mac256.grey88 : NSColor(white: 0.5, alpha: 1)).setFill(); t.fill()
+            (mono ? Mac256.greyDD : NSColor(white: 0.85, alpha: 1)).setFill(); t.insetBy(dx: 1, dy: 1).fill()
             NSColor.black.setFill()
             NSRect(x: t.minX, y: t.minY, width: 1, height: t.height).fill(); NSRect(x: t.minX, y: t.maxY - 1, width: t.width, height: 1).fill()
             NSColor.white.setFill()

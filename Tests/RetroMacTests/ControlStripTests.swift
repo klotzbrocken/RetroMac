@@ -27,7 +27,7 @@ final class ControlStripTests: XCTestCase {
         XCTAssertNotNil(t.iconResource("controlstrip-right.png"))
     }
 
-    /// System 7.1 (authentic): the Mac OS 9 (authentic) desktop in the four greys, with the
+    /// System 7.1 (authentic): the Mac OS 9 (authentic) desktop in 256 colours, with the
     /// PowerBook's own seven strip modules and its own window style.
     func testSystem7ManifestMirrorsMacOS9InFourGreys() throws {
         let t = try XCTUnwrap(theme("MacOS7-Authentic.retromactheme"), "the theme bundle loads")
@@ -36,10 +36,10 @@ final class ControlStripTests: XCTestCase {
         XCTAssertTrue(t.config.hidesDock)
         XCTAssertTrue(t.config.hasApplicationMenu)
         XCTAssertTrue(t.config.hasAppleMenu)
-        XCTAssertTrue(t.config.hasFourGreys, "every theme surface is limited to the four greys")
+        XCTAssertTrue(t.config.hasMac256Palette, "the theme draws in the Mac's 256 colours")
         XCTAssertTrue(t.config.applicationMenuIsIconOnly, "System 7.1 showed the icon alone")
         XCTAssertTrue(t.config.hasBalloonHelp)
-        XCTAssertEqual(t.config.menuBarAppleStyleDefault, 6, "the solid black apple")
+        XCTAssertEqual(t.config.menuBarAppleStyleDefault, 1, "the rainbow apple of a colour Mac")
         XCTAssertEqual(t.config.chrome?.style, "system7", "its own window style")
         XCTAssertEqual(t.config.desktopIcons?.map { $0.name }, ["Macintosh HD", "Volumes", "Applications", "Trash"])
         XCTAssertEqual(t.config.desktopIcons?.last?.gridY, -1, "the Trash sits on the bottom row, whatever the screen")
@@ -55,16 +55,16 @@ final class ControlStripTests: XCTestCase {
         }
         XCTAssertEqual(t.config.desktopIconSize, os9.config.desktopIconSize, "size and behaviour come from Mac OS 9 (authentic)")
         XCTAssertEqual(t.config.dock.dockStyle, os9.config.dock.dockStyle)
-        XCTAssertFalse(os9.config.hasFourGreys)
+        XCTAssertFalse(os9.config.hasMac256Palette)
         XCTAssertNil(os9.config.stripModuleIDs, "Mac OS 9 (authentic) keeps every module")
         XCTAssertFalse(try XCTUnwrap(theme("MacOS6-Classic.retromactheme")).config.isControlStripModules, "System 6 stays as it was")
     }
 
     /// The seven modules a PowerBook's strip had, in its order, and none of the Mac OS 9 ones.
-    /// The PowerBook strip's pictures: 16 px tall, in the four greys and nothing else, one for
-    /// each of the 150's seven modules.
-    func testPowerBookStripArtKeepsToFourGreys() {
-        let allowed: Set<Character> = ["#", "d", "g", "w", "."]
+    /// The PowerBook strip's pictures: 16 px tall, every colour one of the 256, one for each
+    /// of the seven modules.
+    func testPowerBookStripArtKeepsToThePalette() {
+        let allowed = Set(PowerBookStrip.ink.keys).union(["."])
         for id in ["appletalk", "battery", "sharing", "hdspindown", "power", "sleep", "volume"] {
             let m = ControlStripController.makeModule(id)!
             let art = PowerBookStrip.picture(for: m)
@@ -91,42 +91,42 @@ final class ControlStripTests: XCTestCase {
         XCTAssertNil(ControlStripController.makeModule("nonesuch"), "an unknown id is skipped, not guessed at")
     }
 
-    /// Nothing leaves the four greys, at the pixel count asked for, and a picture with four
-    /// tones lands on all four rather than collapsing to black and white.
-    func testFourGreysAreTheOnlyColoursLeft() throws {
-        let src = NSImage(size: NSSize(width: 64, height: 64))
-        src.lockFocus()
-        let bands: [NSColor] = [NSColor(deviceWhite: 0.02, alpha: 1),
-                                NSColor(deviceWhite: 0.33, alpha: 1),
-                                NSColor(deviceWhite: 0.68, alpha: 1),
-                                NSColor(deviceWhite: 0.98, alpha: 1)]
-        for (i, c) in bands.enumerated() {
-            c.setFill()
-            NSRect(x: 0, y: CGFloat(i) * 16, width: 64, height: 16).fill()
+    /// The Mac's standard 8-bit table: 256 different colours, the cube, the four ramps and
+    /// black; an icon comes out at the pixel count asked for, every pixel one of them, and
+    /// its mask all or nothing.
+    func testMac256IsTheStandardTableAndIconsKeepToIt() throws {
+        let table = Mac256.palette.map { Int($0.r) << 16 | Int($0.g) << 8 | Int($0.b) }
+        XCTAssertEqual(table.count, 256)
+        XCTAssertEqual(Set(table).count, 256, "no colour twice")
+        XCTAssertEqual(table.first, 0xFFFFFF, "white first, as the table starts")
+        XCTAssertEqual(table.last, 0x000000, "black last")
+        for grey in [0xEEEEEE, 0xDDDDDD, 0xBBBBBB, 0xAAAAAA, 0x888888, 0x777777, 0x555555, 0x444444, 0x222222, 0x111111, 0xCCCCFF] {
+            XCTAssertTrue(table.contains(grey), String(grey, radix: 16))
         }
-        src.unlockFocus()
+        for c in Mac256.palette { XCTAssertTrue(Mac256.snap(c.r, c.g, c.b) == c, "a table colour stays itself") }
 
-        let out = FourGrays.quantize(src, points: 16, scale: 2)
+        // A 64 px picture: a colour ramp across, half transparent at the bottom.
+        let src = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 64, pixelsHigh: 64, bitsPerSample: 8, samplesPerPixel: 4,
+                                                 hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        for y in 0..<64 { for x in 0..<64 {
+            src.setColor(NSColor(deviceRed: CGFloat(x) / 63, green: CGFloat(y) / 63, blue: 0.4, alpha: y < 48 ? 1 : 0.2), atX: x, y: y)
+        } }
+        let img = NSImage(size: NSSize(width: 64, height: 64)); img.addRepresentation(src)
+        let out = Mac256.icon(img, points: 16, scale: 2)
         let rep = try XCTUnwrap(out.representations.first as? NSBitmapImageRep)
         XCTAssertEqual(rep.pixelsWide, 32)
-        let allowed: Set<Int> = [0, 0x55, 0xAA, 0xFF]
-        var seen = Set<Int>()
-        for y in 0..<rep.pixelsHigh {
-            for x in 0..<rep.pixelsWide {
-                let c = try XCTUnwrap(rep.colorAt(x: x, y: y))
-                if c.alphaComponent < 0.5 { continue }
-                let v = Int((c.redComponent * 255).rounded())
-                XCTAssertTrue(allowed.contains(v), "\(v) is not one of the four greys")
-                let isGrey = abs(c.redComponent - c.greenComponent) < 0.001 && abs(c.greenComponent - c.blueComponent) < 0.001
-                XCTAssertTrue(isGrey, "grey, never a colour")
-                seen.insert(v)
-            }
-        }
-        XCTAssertEqual(seen, allowed, "all four are used, none is dithered away")
-        XCTAssertEqual(FourGrays.snap(0.0), FourGrays.black)
-        XCTAssertEqual(FourGrays.snap(0.36), FourGrays.dark)
-        XCTAssertEqual(FourGrays.snap(0.62), FourGrays.light)
-        XCTAssertEqual(FourGrays.snap(1.0), FourGrays.white)
+        let allowed = Set(table)
+        var opaque = 0, clear = 0
+        for y in 0..<rep.pixelsHigh { for x in 0..<rep.pixelsWide {
+            let c = try XCTUnwrap(rep.colorAt(x: x, y: y))
+            let a = Int((c.alphaComponent * 255).rounded())
+            XCTAssertTrue(a == 0 || a == 255, "a 1-bit mask")
+            if a == 0 { clear += 1; continue }
+            opaque += 1
+            let v = Int((c.redComponent * 255).rounded()) << 16 | Int((c.greenComponent * 255).rounded()) << 8 | Int((c.blueComponent * 255).rounded())
+            XCTAssertTrue(allowed.contains(v), String(v, radix: 16))
+        } }
+        XCTAssertGreaterThan(opaque, 0); XCTAssertGreaterThan(clear, 0)
     }
 
     func testClassicThemeIsUntouched() throws {

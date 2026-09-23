@@ -50,7 +50,7 @@ enum RetroFrameTheme {
         if name.contains("beos") { return "beos" }
         if name.contains("mac os 9") { return "macos9" }
         if name.contains("mac os 6") { return "macos6" }     // authentic 1-bit System 6 chrome (System6Chrome)
-        if name.contains("system 7") { return "system7" }    // System 7.1 in four greys (System7Chrome)
+        if name.contains("system 7") { return "system7" }    // System 7.1 (System7Chrome)
         // The Aqua family splits in two. "macosx" is Cheetah-era Aqua: pinstripes, gel controls,
         // candy scrollbars. 10.6 dropped all of that for a flat unified grey title bar, and 10.8 kept
         // it, so Snow Leopard and Mountain Lion share their own key instead of borrowing 2001's look.

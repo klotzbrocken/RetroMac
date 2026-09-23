@@ -127,11 +127,11 @@ final class ApplicationMenuController: NSObject {
         var img = theme?.classicAppIcon(for: app?.bundleIdentifier)
         if img == nil { img = app?.icon ?? NSImage(named: NSImage.applicationIconName) }
         guard let img else { return nil }
-        // A four-grey theme snaps it once, here; the menu is redrawn far more often than the
+        // A 256-colour theme snaps it once, here; the menu is redrawn far more often than the
         // front application changes.
         let out: NSImage
-        if theme?.config.hasFourGreys == true {
-            out = FourGrays.greyscale(img, points: 16, scale: 2)
+        if theme?.config.hasMac256Palette == true {
+            out = Mac256.icon(img, points: 16, scale: 2)
         } else {
             out = (img.copy() as? NSImage) ?? img
             out.size = NSSize(width: 16, height: 16)
