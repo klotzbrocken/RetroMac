@@ -46,7 +46,7 @@ struct WhatsNewView: View {
                         icon: "wrench.and.screwdriver.fill",
                         color: .gray,
                         title: "Fixes",
-                        description: "Switching the Dock\u{2019}s auto-hide off in System Settings no longer brings the macOS Dock back over the Snow Leopard or Mountain Lion dock. A click on a background window\u{2019}s themed title bar brings that very window forward at once, without the spinning cursor, and dragging by the bar no longer loses track. The menu names the theme chosen in Settings. Desktop names that wrap get a plate that fits. The Apple cover takes the first click and stays off without Accessibility."
+                        description: "Switching the Dock\u{2019}s auto-hide off in System Settings no longer brings the macOS Dock back over the Snow Leopard or Mountain Lion dock. A click on a background window\u{2019}s themed title bar brings that very window forward at once, without the spinning cursor, and dragging by the bar no longer loses track. The menu names the theme chosen in Settings. Desktop names that wrap get a plate that fits. The Apple cover takes the first click and stays off without Accessibility. A folder can join the dock from Settings, and a long session no longer piles up memory."
                     )
 
                 }

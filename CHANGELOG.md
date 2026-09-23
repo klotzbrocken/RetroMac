@@ -3,7 +3,7 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## Unreleased
+## 2.8.7
 
 - **A folder in the dock from Settings.** Themes ▸ Apps in the dock ▸ "Add app or folder…"
   takes a folder too — a Downloads folder on an external disk, say — and puts it in the dock
@@ -17,8 +17,6 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   the app quit; widget and TV windows left two key-window observers behind each time they
   were opened; and a stack's Quick Look previews were kept for the whole session, one per
   file and version — now at most 600 of them, 64 MB, released under memory pressure.
-
-## 2.8.7
 
 - **New theme: System 7.1 (authentic).** System 7.1 as a colour Mac showed it, at the
   Monitors control panel's "256": every icon RetroMac draws under the theme — the desktop, the
