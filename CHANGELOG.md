@@ -77,6 +77,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   until a later refresh. It is a non-activating panel now that accepts the first click, and
   whether it takes clicks is settled the moment the theme changes.
 
+- **Fix: the themed dock gives way to the macOS Dock when auto-hide is switched off.** RetroMac
+  keeps the real Dock out of sight by setting it to hide with an endless delay; switching
+  "Automatically hide and show the Dock" off in System Settings (or ⌥⌘D) brought it back over
+  the Snow Leopard or Mountain Lion dock, which then only showed while auto-hide was on. RetroMac
+  now notices within two seconds, takes the choice for the themed dock (it stays put), hands it
+  to macOS when it lets the real Dock go, and hides the real Dock again.
+- **Fix: the status menu names the theme you chose in Settings.** "Themes ▸ …" kept the
+  previous theme until something else rebuilt the menu.
+
 ## 2.8.6
 
 - **New theme: Mac OS 9 (authentic).** The desktop as it was, next to "Mac OS 9.2 Classic",

@@ -33,6 +33,7 @@ final class DockController {
     private var didHideSystemDock = false
     private var hidViaCoreDock = false             // true → hidden live via CoreDock (no killall, no window restack)
     private var lastAppliedHidePosition: String?   // guards against re-running killall Dock per theme switch
+    private var systemDockWatch: Timer?            // notices the real Dock being brought back from outside
     private var dockOpGeneration = 0               // supersedes stale async hide/restore completions
     private var originalDockAutoHide: Bool?
     private var originalDockPosition: String?
@@ -1055,6 +1056,7 @@ final class DockController {
                                                   autohideDelay: "1000000") ?? false
                 DispatchQueue.main.async {
                     guard let self = self, gen == self.dockOpGeneration else { return }  // superseded
+                    if ok { self.watchSystemDock() }
                     if !ok {
                         // Partial/failed hide — KEEP the recovery keys + captured original state so a
                         // later restore / quit / relaunch can put the Dock back (the Dock may be left
@@ -1070,6 +1072,38 @@ final class DockController {
         } else if didHideSystemDock {
             restoreSystemDock()
         }
+    }
+
+    /// While the real Dock is hidden, System Settings ("Automatically hide and show the Dock")
+    /// or ⌥⌘D can switch its auto-hide off again — and the real Dock then comes back over the
+    /// themed one. The hide only holds while auto-hide is on with the endless delay, so this
+    /// watches for that to change and takes it as the user's choice for the dock they see:
+    /// the themed dock stops hiding (or starts), macOS gets that choice back when RetroMac lets
+    /// the real Dock go, and the real Dock is hidden again.
+    private func watchSystemDock() {
+        systemDockWatch?.invalidate()
+        systemDockWatch = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+            self?.checkSystemDock()
+        }
+    }
+
+    private func checkSystemDock() {
+        guard didHideSystemDock, !hidViaCoreDock else { systemDockWatch?.invalidate(); systemDockWatch = nil; return }
+        let domain = "com.apple.dock" as CFString
+        CFPreferencesAppSynchronize(domain)   // the Dock's own file, as System Settings left it
+        let autohide = (CFPreferencesCopyAppValue("autohide" as CFString, domain) as? NSNumber)?.boolValue ?? false
+        let delay = (CFPreferencesCopyAppValue("autohide-delay" as CFString, domain) as? NSNumber)?.doubleValue ?? 0
+        guard !autohide || delay < 1000 else { return }   // still ours
+        print("[Dock] The system Dock was changed outside RetroMac (autohide=\(autohide), delay=\(delay)) — hiding it again")
+        originalDockAutoHide = autohide
+        persistDockRecoveryState()
+        if let theme = ThemeManager.shared.activeTheme?.config, theme.supportsAutoHide,
+           AppSettings.shared.themeDockAutoHide[theme.settingsKey] ?? false != autohide {
+            AppSettings.shared.themeDockAutoHide[theme.settingsKey] = autohide
+        }
+        systemDockWatch?.invalidate(); systemDockWatch = nil
+        lastAppliedHidePosition = nil   // past the idempotency guard: write the hide again
+        applySystemDockPolicy()
     }
 
     /// Serial queue for the `defaults`/`killall Dock` shell-outs so they never block the
@@ -1148,6 +1182,7 @@ final class DockController {
     /// keeps the lightweight CoreDock path (no window restacking).
     private func restoreSystemDock(synchronous: Bool = false, forceReload: Bool = false) {
         guard didHideSystemDock else { return }
+        systemDockWatch?.invalidate(); systemDockWatch = nil
         let restoreHide = originalDockAutoHide ?? false
         let restorePos = originalDockPosition ?? "bottom"
         let minToApp = originalMinimizeToApp ?? false

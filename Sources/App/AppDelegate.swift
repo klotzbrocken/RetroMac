@@ -184,6 +184,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
                 self?.wallpaperShaderController?.reloadWallpaper()
             }
+            // The status menu shows the theme by name ("Themes ▸ Snow Leopard"): a switch made
+            // in Settings must reach it too, not only one made from the menu itself.
+            self?.rebuildMenu()
         }
 
         // Freeze the shaded desktop across a wallpaper swap. Posted BEFORE the picture changes —
