@@ -3,7 +3,7 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## Unreleased
+## 2.8.7
 
 - **New theme: System 7.1 (authentic).** System 7.1 as a colour Mac showed it, at the
   Monitors control panel's "256": every icon RetroMac draws under the theme — the desktop, the
