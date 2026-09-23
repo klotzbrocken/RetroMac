@@ -457,7 +457,8 @@ final class TitleBarOverlayController {
         view.onAction = { [weak self] kind in self?.perform(kind, on: info.id, pid: info.pid) }
         view.onActivate = { [weak self] in self?.activate(info.id, pid: info.pid) }
         view.onDrag = { [weak self] delta in self?.drag(info.id, pid: info.pid, by: delta) }
-        view.onDragEnd = { [weak self] in self?.dragOrigin = nil }
+        view.onDragEnd = { [weak self] in self?.endDrag() }
+        view.onPress = { [weak self] in self?.press(info.id, pid: info.pid) }
         panel.contentView = content
         let o = Overlay(panel: panel, view: view, bounds: info.bounds, level: level, pid: info.pid)
         overlays[info.id] = o
@@ -539,6 +540,7 @@ final class TitleBarOverlayController {
             v.onActivate = o.view.onActivate
             v.onDrag = o.view.onDrag
             v.onDragEnd = o.view.onDragEnd
+            v.onPress = o.view.onPress
             panel.contentView = v
             o.patch = panel
             o.patchView = v
@@ -786,7 +788,16 @@ final class TitleBarOverlayController {
 
     // MARK: - Driving the real window (Accessibility)
 
+    /// The window being dragged by its bar and where it stood when the drag began (Quartz,
+    /// top-left). Keyed to the window, set afresh on every press: a mouse-up that never
+    /// arrived (the bar rebuilt under the pointer) can no longer leave a stale origin that
+    /// throws the next drag — of this window or another — somewhere else.
     private var dragOrigin: CGPoint?
+    private var dragWindow: CGWindowID?
+    /// The latest position asked for while the previous one is still being set: drags are
+    /// coalesced, the app gets the newest point and never a queue of old ones.
+    private var dragTarget: CGPoint?
+    private var dragSetting = false
 
     static let lightDiameter: CGFloat = 15   // a hair over the real 14, so nothing of them shows
 
@@ -953,13 +964,54 @@ final class TitleBarOverlayController {
     }
 
     /// Bring a window's app to the front and the window with it, the way a click on a real
-    /// title bar does; the bar intercepts that click, so it has to do it itself.
+    /// title bar does; the bar intercepts that click, so it has to do it itself. The window is
+    /// raised first and the app activated after, so the app brings this window forward and
+    /// not whichever of its windows was frontmost; and all of it runs off the main thread —
+    /// an app slow to answer Accessibility (a browser with many windows) used to hold the
+    /// main thread long enough for the spinning cursor.
     private func activate(_ wid: CGWindowID, pid: pid_t) {
-        NSRunningApplication(processIdentifier: pid)?.activate(options: [])
-        if let w = axWindow(wid, pid: pid) {
-            AXUIElementPerformAction(w, kAXRaiseAction as CFString)
-            AXUIElementSetAttributeValue(w, kAXMainAttribute as CFString, kCFBooleanTrue)
+        let known = axWindows[wid]
+        Self.axQueue.async {
+            func raise(_ w: AXUIElement) -> Bool {
+                AXUIElementSetAttributeValue(w, kAXMainAttribute as CFString, kCFBooleanTrue)
+                return AXUIElementPerformAction(w, kAXRaiseAction as CFString) == .success
+            }
+            var w = known
+            // A cached element can outlive its window's identity; look it up again if it fails.
+            if w == nil || !raise(w!) {
+                w = Self.findAXWindow(wid, pid: pid)
+                if let w { _ = raise(w) }
+            }
+            // The app to the front through Accessibility: RetroMac is rarely the active app when
+            // a bar is clicked (the bar's panel does not activate it), and since macOS 14 an
+            // app in the background may not activate another one through NSRunningApplication.
+            AXUIElementSetAttributeValue(AXUIElementCreateApplication(pid), kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+            DispatchQueue.main.async { [weak self] in
+                if let w { self?.axWindows[wid] = w } else { self?.axWindows.removeValue(forKey: wid) }
+                guard let app = NSRunningApplication(processIdentifier: pid) else { return }
+                if #available(macOS 14.0, *) { NSApp.yieldActivation(to: app) }
+                app.activate(options: [])
+            }
         }
+    }
+
+    /// A press on a bar: whatever drag comes next starts from this window as it stands now,
+    /// and its Accessibility element is fetched in the background if it is not known yet.
+    private func press(_ wid: CGWindowID, pid: pid_t) {
+        endDrag()
+        dragWindow = wid
+        dragOrigin = overlays[wid]?.bounds.origin
+        guard axWindows[wid] == nil else { return }
+        Self.axQueue.async {
+            let w = Self.findAXWindow(wid, pid: pid)
+            DispatchQueue.main.async { [weak self] in if let w { self?.axWindows[wid] = w } }
+        }
+    }
+
+    private func endDrag() {
+        dragOrigin = nil
+        dragWindow = nil
+        dragTarget = nil
     }
 
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
@@ -1074,20 +1126,29 @@ final class TitleBarOverlayController {
         return CGRect(origin: rp, size: rs)
     }
 
-    /// Move the real window by `delta` (AppKit points, y up) from where it was when the drag began.
+    /// Move the real window by `delta` (AppKit points, y up) from where it was when the drag
+    /// began. The position is set on the Accessibility queue, coalesced: while one is being
+    /// set, only the newest target waits.
     private func drag(_ wid: CGWindowID, pid: pid_t, by delta: NSPoint) {
-        guard let w = axWindow(wid, pid: pid) else { return }
-        if dragOrigin == nil {
-            var ref: CFTypeRef?
-            var p = CGPoint.zero
-            guard AXUIElementCopyAttributeValue(w, kAXPositionAttribute as CFString, &ref) == .success, let ref,
-                  AXValueGetValue(ref as! AXValue, .cgPoint, &p) else { return }
-            dragOrigin = p
-        }
+        if dragWindow != wid { press(wid, pid: pid) }
         guard let origin = dragOrigin else { return }
-        var target = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)   // AX is y-down
-        if let v = AXValueCreate(.cgPoint, &target) {
-            AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v)
+        dragTarget = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)   // AX is y-down
+        guard let w = axWindows[wid] else { return }   // still being fetched: the next event moves it
+        applyDrag(w)
+    }
+
+    private func applyDrag(_ w: AXUIElement) {
+        guard !dragSetting, var target = dragTarget else { return }
+        dragTarget = nil
+        dragSetting = true
+        Self.axQueue.async {
+            if let v = AXValueCreate(.cgPoint, &target) {
+                AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v)
+            }
+            DispatchQueue.main.async { [weak self] in
+                self?.dragSetting = false
+                self?.applyDrag(w)
+            }
         }
     }
 
@@ -1145,6 +1206,8 @@ final class TitleBarOverlayView: NSView {
     var onActivate: (() -> Void)?
     var onDrag: ((NSPoint) -> Void)?
     var onDragEnd: (() -> Void)?
+    /// Every mouse-down on the bar, before anything else: a drag starts afresh from here.
+    var onPress: (() -> Void)?
 
     private var style: TitleBarOverlayController.Style = .platinum
     private var title = ""
@@ -1643,6 +1706,7 @@ final class TitleBarOverlayView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
+        onPress?()
         // A click on a window that is not in front brings it there first, as the real bar would.
         if !isFront { onActivate?() }
         if tracker.mouseDown(at: p) { needsDisplay = true; return }
@@ -1731,6 +1795,7 @@ final class LightsPatchView: NSView {
     var onActivate: (() -> Void)?
     var onDrag: ((NSPoint) -> Void)?
     var onDragEnd: (() -> Void)?
+    var onPress: (() -> Void)?
     private var dragStart: NSPoint?
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -1739,7 +1804,7 @@ final class LightsPatchView: NSView {
         image.draw(in: bounds, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true,
                    hints: [.interpolation: NSImageInterpolation.high])
     }
-    override func mouseDown(with event: NSEvent) { onActivate?(); dragStart = NSEvent.mouseLocation }
+    override func mouseDown(with event: NSEvent) { onPress?(); onActivate?(); dragStart = NSEvent.mouseLocation }
     override func mouseDragged(with event: NSEvent) {
         guard let start = dragStart else { return }
         let now = NSEvent.mouseLocation

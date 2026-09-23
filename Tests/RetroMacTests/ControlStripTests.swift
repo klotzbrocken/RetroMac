@@ -60,34 +60,34 @@ final class ControlStripTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(theme("MacOS6-Classic.retromactheme")).config.isControlStripModules, "System 6 stays as it was")
     }
 
-    /// The seven modules a PowerBook's strip had, in its order, and none of the Mac OS 9 ones.
-    /// The PowerBook strip's pictures: 16 px tall, every colour one of the 256, one for each
-    /// of the seven modules.
-    func testPowerBookStripArtKeepsToThePalette() {
-        let allowed = Set(PowerBookStrip.ink.keys).union(["."])
-        for id in ["appletalk", "battery", "sharing", "hdspindown", "power", "sleep", "volume"] {
+    /// The System 7.5 colour strip's pieces: 24 rows each, the modules' buttons 31 px with
+    /// their line, every character one of the strip's colours (or a space beside the tab).
+    func testSystem7StripArtIsTheOriginalsPieces() {
+        let allowed = Set(System7Strip.ink.keys).union([" "])
+        for id in ["appletalk", "sharing", "colours", "resolution", "volume"] {
             let m = ControlStripController.makeModule(id)!
-            let art = PowerBookStrip.picture(for: m)
-            XCTAssertEqual(art?.count, 16, id)
-            XCTAssertTrue(art?.allSatisfy { Set($0).isSubset(of: allowed) } ?? false, id)
+            let art = System7Strip.cell(for: m)
+            XCTAssertEqual(art?.count, System7Strip.height, id)
+            XCTAssertTrue(art?.allSatisfy { $0.count == System7Strip.cellWidth && Set($0).isSubset(of: allowed) } ?? false, id)
         }
-        for level in 0...3 { XCTAssertEqual(PowerBookStrip.speaker(level: level).count, 16) }
-        let rows = PowerBookStrip.batteryMonitor(fraction: 0.5, charging: false)
-        XCTAssertEqual(Set(rows.map(\.count)).count, 1, "every row of the gauge is as wide")
-        XCTAssertEqual(PowerBookStrip.tab.count, 24)
-        XCTAssertTrue(PowerBookStrip.tab.allSatisfy { Set($0).isSubset(of: allowed) })
-        XCTAssertFalse(PowerBookStrip.hasTriangle(ControlStripController.makeModule("battery")!), "the gauge has no menu triangle")
+        for level in 0...3 { XCTAssertEqual(System7Strip.sound(level: level).count, System7Strip.height) }
+        XCTAssertNotEqual(System7Strip.sound(level: 0), System7Strip.sound(level: 2), "the waves follow the volume")
+        XCTAssertNotEqual(System7Strip.fileSharing, System7Strip.fileSharingOn, "off is crossed out, on is not")
+        for piece in [System7Strip.closeBox, System7Strip.tab, System7Strip.blankCell,
+                      System7Strip.arrow(pointsLeft: true, enabled: false), System7Strip.arrow(pointsLeft: false, enabled: true)] {
+            XCTAssertEqual(piece.count, System7Strip.height)
+            XCTAssertTrue(piece.allSatisfy { Set($0).isSubset(of: allowed) })
+        }
+        XCTAssertNil(System7Strip.cell(for: ControlStripController.makeModule("battery")!), "not on the colour strip")
     }
 
-    func testSystem7StripHasThePowerBookModules() throws {
+    /// The five modules of the System 7.5 colour strip, in its order, and nothing else.
+    func testSystem7StripHasTheColourStripModules() throws {
         let t = try XCTUnwrap(theme("MacOS7-Authentic.retromactheme"))
         let ids = try XCTUnwrap(t.config.stripModuleIDs)
-        XCTAssertEqual(ids, ["appletalk", "battery", "sharing", "hdspindown", "power", "sleep", "volume"])
+        XCTAssertEqual(ids, ["appletalk", "sharing", "colours", "resolution", "volume"])
         let built = ids.compactMap { ControlStripController.makeModule($0)?.id }
-        XCTAssertEqual(built, ["network", "battery", "sharing", "hdspindown", "power", "sleep", "volume"])
-        for gone in ["keychain", "mediabay", "colours", "resolution", "printer", "soundsource", "mirroring"] {
-            XCTAssertFalse(built.contains(gone), "\(gone) was not on a System 7 strip")
-        }
+        XCTAssertEqual(built, ["network", "sharing", "colours", "resolution", "volume"])
         XCTAssertNil(ControlStripController.makeModule("nonesuch"), "an unknown id is skipped, not guessed at")
     }
 

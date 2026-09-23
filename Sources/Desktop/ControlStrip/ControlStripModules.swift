@@ -65,6 +65,63 @@ enum StripArt {
         }
     }
 
+    /// HD Spin Down: the drive, flat, with the three strokes of its spinning above it.
+    static let hdSpinDown = [
+        "................",
+        "................",
+        "................",
+        "...#...#...#....",
+        "...#...#...#....",
+        "....#..#..#.....",
+        "................",
+        "..############..",
+        ".#wwwwwwwwwwww#.",
+        ".#wmmmmmmmmmmm#.",
+        ".#wnnmmmmmmmmm#.",
+        ".#mmmmmmmmmmmm#.",
+        "..############..",
+        "................",
+        "................",
+        "................",
+    ]
+    /// Power Settings: the lever raised off its plate, the slider below it.
+    static let powerSettings = [
+        "................",
+        "................",
+        "............##..",
+        "...........###..",
+        "..........###...",
+        ".........###....",
+        "........###.....",
+        "..######m##.....",
+        ".#ggggggg#......",
+        ".#########......",
+        "................",
+        ".mmmmmmmmmmmmmm.",
+        "................",
+        "......#.........",
+        ".######m#######.",
+        "......#.........",
+    ]
+    /// Sleep Now: three z's rising over the reclined lid.
+    static let sleepNow = [
+        "..........#####.",
+        ".............#..",
+        "............#...",
+        ".....####..#....",
+        ".......#..#####.",
+        "......#.........",
+        ".###.####.......",
+        "..#.............",
+        ".###..........#.",
+        ".............#..",
+        "............#...",
+        "...........#....",
+        ".##########.....",
+        ".#gggggggg#.....",
+        ".##########.....",
+        "................",
+    ]
     static let network = [
         "................",
         "....########....",
@@ -807,7 +864,7 @@ final class HDSpinDownModule: ControlStripModule {
         return nil
     }
 
-    func draw(in rect: NSRect) { PowerBookStrip.draw(PowerBookStrip.hdSpinDown, at: rect.origin) }
+    func draw(in rect: NSRect) { StripArt.draw(StripArt.hdSpinDown, at: rect.origin) }
 
     func menu() -> NSMenu? {
         let m = NSMenu()
@@ -841,7 +898,7 @@ final class PowerModule: ControlStripModule {
         onBattery = source == kIOPSBatteryPowerValue
     }
 
-    func draw(in rect: NSRect) { PowerBookStrip.draw(PowerBookStrip.powerSettings, at: rect.origin) }
+    func draw(in rect: NSRect) { StripArt.draw(StripArt.powerSettings, at: rect.origin) }
 
     func menu() -> NSMenu? {
         let m = NSMenu()
@@ -860,7 +917,7 @@ final class SleepNowModule: ControlStripModule {
     var isAvailable: Bool { true }
     var width: CGFloat { 20 }
 
-    func draw(in rect: NSRect) { PowerBookStrip.draw(PowerBookStrip.sleepNow, at: rect.origin) }
+    func draw(in rect: NSRect) { StripArt.draw(StripArt.sleepNow, at: rect.origin) }
 
     func menu() -> NSMenu? { nil }
 

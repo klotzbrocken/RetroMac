@@ -88,7 +88,7 @@ final class ThemeReadmeController: NSObject, WKScriptMessageHandler, WKNavigatio
           var s=document.getElementById('readme-fill'); if(s) s.remove();
           s=document.createElement('style'); s.id='readme-fill';
           s.textContent='html,body{margin:0!important;padding:0!important;background:transparent!important;}'
-            +'.win{max-width:none!important;width:100%!important;margin:0!important;min-height:100vh!important;box-shadow:none!important;border-radius:0!important;}';
+            +'.win{max-width:none!important;width:100%!important;margin:0!important;min-height:100vh!important;box-sizing:border-box!important;box-shadow:none!important;border-radius:0!important;}';
           document.head.appendChild(s);
         })();
         """)

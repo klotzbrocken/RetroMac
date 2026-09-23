@@ -13,16 +13,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   edge of a 1-bit mask; the menu bar wears the rainbow apple (a manifest says
   `menuBar.palette: "mac256"`). The resolution and the desktop are the ones you have: the
   desktop pattern tiles across whatever the screen is, and windows keep their places.
-  The **Control Strip** is the one Apple shipped in 1994 with System 7.1.1, redrawn after the
-  pictures in the PowerBook 150 and Duo 280c manuals: a close box at the left end, hollow
-  scroll arrows, every module a raised light-grey button with its black triangle, the Battery
-  Monitor as a battery and eight cells, the chamfered tab with its grip at the right end. It
-  carries the seven modules a PowerBook had, in its order — AppleTalk, Battery Monitor, File
-  Sharing, HD Spin Down, Power Settings, Sleep Now, Sound Volume — and none of Mac OS 9's (no
-  keychain, media bay, colour depth, resolution, printer, sound source or mirroring); a theme
-  picks its own set with `dock.stripModules`. Sizes and behaviour are Mac OS 9
-  (authentic)'s: the tab rolls it out and in and sets how much shows, Option-drag rearranges
-  the modules or moves the strip, and a module is never stretched.
+  The **Control Strip** is System 7.5's on a colour Mac, pixel for pixel: every piece is the
+  original's own art, taken from a screenshot of the real strip and snapped to the 256-colour
+  table — the close box, the scroll arrows (sunk in and grey with nothing to scroll to, raised
+  and black when there is), the tab with its grip, and the five modules it carried: AppleTalk
+  Switch, File Sharing (crossed out in red while it is off), Monitor Bit Depth, Monitor
+  Resolution and Sound Volume, whose waves follow the volume. A theme picks its own set with
+  `dock.stripModules`. Sizes and behaviour are Mac OS 9 (authentic)'s: the tab rolls it out
+  and in and sets how much shows, Option-drag rearranges the modules or moves the strip.
   The **desktop** has Macintosh HD at the top right, the Trash at the bottom right whatever
   the screen's size (a negative `gridY` counts from the bottom now), the Applications folder,
   and one icon per mounted volume under the hard disk (`type: "volumes"`); a selected name
@@ -77,6 +75,20 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   RetroMac and was swallowed, and a cover made before the theme came up ignored the mouse
   until a later refresh. It is a non-activating panel now that accepts the first click, and
   whether it takes clicks is settled the moment the theme changes.
+
+- **Fix: a click on a background window's themed title bar brings that window forward at
+  once.** The window is raised first and its app activated after — through Accessibility, since
+  macOS 14 lets an app in the background activate another only that way — so it is the clicked
+  window that comes to the front and not whichever of the app's windows was frontmost, and none
+  of it runs on the main thread any more (a browser slow to answer Accessibility put up the
+  spinning cursor). Dragging a window by its bar starts afresh from that window on every press
+  and sets the position in the background, coalesced: a mouse-up that never arrived no longer
+  leaves a stale starting point that threw the next drag — of this window or another — off.
+- **Fix: desktop names that wrap to two lines get a plate that fits.** The plate and the
+  selection were sized from font metrics, which a pixel font understates: "Time Machine" got
+  a plate the label's full width, "Macintosh HD" one line of plate and a second line cut in
+  half. They are measured by the label's own cell now, as it wraps, and the label is as tall
+  as its two lines.
 
 - **Fix: the themed dock gives way to the macOS Dock when auto-hide is switched off.** RetroMac
   keeps the real Dock out of sight by setting it to hide with an endless delay; switching

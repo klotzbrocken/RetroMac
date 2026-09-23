@@ -368,8 +368,8 @@ final class ControlStripView: NSView {
     static let triangleRoom: CGFloat = 8
     var mirrored = false          // right edge: the tab is on the right, everything reads mirrored
     var scrollIndex = 0
-    /// System 7.1 (authentic) (`menuBar.palette: "mac256"`): the 1994 PowerBook strip, drawn
-    /// by `drawPowerBook()` in the Mac's 256 colours.
+    /// System 7.1 (authentic) (`menuBar.palette: "mac256"`): the System 7.5 colour strip,
+    /// drawn by `drawPowerBook()` from the original's pixels.
     let mono: Bool
 
     override var isFlipped: Bool { true }
@@ -378,7 +378,7 @@ final class ControlStripView: NSView {
         self.controller = controller
         let isMono = theme.config.hasMac256Palette
         mono = isMono
-        // The PowerBook strip draws its ends, arrows and pictures itself (`PowerBookStrip`).
+        // The System 7 strip draws its ends, arrows and pictures itself (`System7Strip`).
         let bit: (NSImage?) -> NSImage? = { img in isMono ? nil : img }
         tabImage = bit(theme.iconResource("controlstrip-left.png").flatMap { NSImage(contentsOf: $0) })
         sizeBoxImage = bit(theme.iconResource("controlstrip-right.png").flatMap { NSImage(contentsOf: $0) })
@@ -397,20 +397,21 @@ final class ControlStripView: NSView {
         guard let img, img.size.height > 0 else { return fallback }
         return (img.size.width / img.size.height * Self.baseHeight).rounded()
     }
-    /// The PowerBook strip draws its ends itself: the close box at the left end,
-    /// the tab at the right — and collapsed, the tab alone at the edge.
-    var tabWidth: CGFloat { mono ? (collapsed ? CGFloat(PowerBookStrip.tab[0].count) : 12) : capWidth(tabImage, fallback: 16) }
-    var sizeBoxWidth: CGFloat { mono ? CGFloat(PowerBookStrip.tab[0].count) : capWidth(sizeBoxImage, fallback: 19) }
+    /// The System 7 strip draws its ends itself (`System7Strip`): the close box at the left
+    /// end, the tab at the right — and collapsed, the tab alone at the edge. Its pieces carry
+    /// their own black line, so there is no groove between them.
+    var tabWidth: CGFloat { mono ? CGFloat(collapsed ? System7Strip.tabWidth : System7Strip.endWidth) : capWidth(tabImage, fallback: 16) }
+    var sizeBoxWidth: CGFloat { mono ? CGFloat(System7Strip.tabWidth) : capWidth(sizeBoxImage, fallback: 19) }
+    private var groove: CGFloat { mono ? 0 : Self.groove }
+    private var scrollCell: CGFloat { mono ? CGFloat(System7Strip.endWidth) : Self.scrollCell }
 
-    /// A module's cell: its own width and the triangle's room. On the PowerBook strip, the
-    /// picture's own width, and the Battery Monitor without a triangle.
+    /// A module's cell: its own width and the triangle's room; on the System 7 strip, the
+    /// original's 30 px button and its line.
     func cell(_ m: ControlStripModule) -> CGFloat {
-        guard mono, let art = PowerBookStrip.picture(for: m) else { return m.width + Self.triangleRoom }
-        let w = CGFloat(art.map(\.count).max() ?? 16) + 4
-        return PowerBookStrip.hasTriangle(m) ? w + Self.triangleRoom : w
+        mono ? CGFloat(System7Strip.cellWidth) : m.width + Self.triangleRoom
     }
     func modulesWidth(_ modules: [ControlStripModule]) -> CGFloat {
-        modules.reduce(0) { $0 + cell($1) } + CGFloat(max(0, modules.count - 1)) * Self.groove
+        modules.reduce(0) { $0 + cell($1) } + CGFloat(max(0, modules.count - 1)) * groove
     }
 
     /// Window width for a state: the tab alone when collapsed; otherwise tab, arrows, the
@@ -419,7 +420,7 @@ final class ControlStripView: NSView {
         if collapsed { return tabWidth }
         let all = modulesWidth(modules)
         let shown = visible > 0 ? min(visible, all) : all
-        return tabWidth + Self.scrollCell + Self.groove + shown + Self.groove + Self.scrollCell + sizeBoxWidth
+        return tabWidth + scrollCell + groove + shown + groove + scrollCell + sizeBoxWidth
     }
     /// Window width in points for a 1× layout width.
     static func windowWidth(_ base: CGFloat) -> CGFloat { base * scale }
@@ -430,13 +431,13 @@ final class ControlStripView: NSView {
     private func x(_ r: NSRect) -> NSRect { mirrored ? NSRect(x: base.width - r.maxX, y: r.minY, width: r.width, height: r.height) : r }
     private var collapsed: Bool { AppSettings.shared.controlStripCollapsed }
     private var tabRect: NSRect { x(NSRect(x: 0, y: 0, width: tabWidth, height: Self.baseHeight)) }
-    private var leftArrowRect: NSRect { x(NSRect(x: tabWidth, y: 0, width: Self.scrollCell, height: Self.baseHeight)) }
+    private var leftArrowRect: NSRect { x(NSRect(x: tabWidth, y: 0, width: scrollCell, height: Self.baseHeight)) }
     private var moduleArea: NSRect {
-        let start = tabWidth + Self.scrollCell + Self.groove
-        let end = base.width - sizeBoxWidth - Self.scrollCell - Self.groove
+        let start = tabWidth + scrollCell + groove
+        let end = base.width - sizeBoxWidth - scrollCell - groove
         return x(NSRect(x: start, y: 0, width: max(0, end - start), height: Self.baseHeight))
     }
-    private var rightArrowRect: NSRect { x(NSRect(x: base.width - sizeBoxWidth - Self.scrollCell, y: 0, width: Self.scrollCell, height: Self.baseHeight)) }
+    private var rightArrowRect: NSRect { x(NSRect(x: base.width - sizeBoxWidth - scrollCell, y: 0, width: scrollCell, height: Self.baseHeight)) }
     private var sizeBoxRect: NSRect { x(NSRect(x: base.width - sizeBoxWidth, y: 0, width: sizeBoxWidth, height: Self.baseHeight)) }
 
     /// The modules on show, with their cells, from the scroll index on until the area is full.
@@ -451,7 +452,7 @@ final class ControlStripView: NSView {
             let r = mirrored ? NSRect(x: area.maxX - cursor - cw, y: 0, width: cw, height: Self.baseHeight)
                              : NSRect(x: area.minX + cursor, y: 0, width: cw, height: Self.baseHeight)
             out.append((m, r))
-            cursor += cw + Self.groove
+            cursor += cw + groove
         }
         return out
     }
@@ -508,63 +509,31 @@ final class ControlStripView: NSView {
         }
     }
 
-    /// The 1994 PowerBook strip, at 256 colours: black rules top and bottom, every part a
-    /// raised button with a black line between neighbours — close box, arrow, modules, arrow —
-    /// and the tab at the end.
+    /// The System 7.5 colour strip, piece by piece from the original's own pixels
+    /// (`System7Strip`): close box, arrow, the modules' buttons, arrow, tab.
     private func drawPowerBook() {
-        let h = Self.baseHeight
         // Pixel art at 1.5×: without antialiasing every pixel lands on whole device pixels,
         // with it the seams between neighbours show as a grid.
         NSGraphicsContext.current?.cgContext.setShouldAntialias(false)
         if collapsed {
-            PowerBookStrip.draw(PowerBookStrip.tab, at: NSPoint(x: tabRect.minX, y: 0), flipped: mirrored)
+            System7Strip.draw(System7Strip.tab, at: NSPoint(x: tabRect.minX, y: 0), flipped: mirrored)
             return
         }
-        let ledge = mirrored
-            ? NSRect(x: sizeBoxRect.minX, y: 0, width: tabRect.maxX - sizeBoxRect.minX, height: h)
-            : NSRect(x: tabRect.minX, y: 0, width: sizeBoxRect.maxX - tabRect.minX, height: h)
-        Mac256.black.setFill(); ledge.fill()
-        // The parts from left to right; each button runs on to the next part, less the one
-        // black line between them (the grooves belong to the button before them).
-        enum Part { case closeBox, arrow(left: Bool, enabled: Bool), module(ControlStripModule), tab }
-        var parts: [(NSRect, Part)] = [
-            (tabRect, .closeBox),
-            (leftArrowRect, .arrow(left: !mirrored, enabled: mirrored ? canScrollOn : canScrollBack)),
-            (rightArrowRect, .arrow(left: mirrored, enabled: mirrored ? canScrollBack : canScrollOn)),
-            (sizeBoxRect, .tab),
-        ]
-        parts += placedModules().map { ($0.1, Part.module($0.0)) }
-        parts.sort { $0.0.minX < $1.0.minX }
-        for (i, (r, part)) in parts.enumerated() {
-            if case .tab = part {
-                PowerBookStrip.draw(PowerBookStrip.tab, at: NSPoint(x: r.minX, y: 0), flipped: mirrored)
-                continue
-            }
-            var end = r.maxX
-            if i + 1 < parts.count {
-                let next = parts[i + 1]
-                if case .tab = next.1 { end = next.0.minX } else { end = next.0.minX - 1 }   // the tab brings its own line
-            }
-            PowerBookStrip.button(NSRect(x: r.minX, y: 1, width: end - r.minX, height: h - 2))
-            func centred(_ art: [String], in r: NSRect) {
-                PowerBookStrip.draw(art, at: NSPoint(x: (r.midX - CGFloat(art[0].count) / 2).rounded(.down),
-                                                     y: ((h - CGFloat(art.count)) / 2).rounded(.down)))
-            }
-            switch part {
-            case .closeBox: centred(PowerBookStrip.closeBox, in: r)
-            case .arrow(let left, let enabled): centred(PowerBookStrip.arrow(pointsLeft: left, enabled: enabled), in: r)
-            case .module(let m):
-                if let art = PowerBookStrip.picture(for: m) {
-                    PowerBookStrip.draw(art, at: NSPoint(x: r.minX + 2, y: ((h - 16) / 2).rounded(.down)))
-                }
-                if PowerBookStrip.hasTriangle(m) {
-                    let tx = r.maxX - 6, ty = (h / 2).rounded(.down)
-                    Mac256.black.setFill()
-                    for k in 0..<4 { NSRect(x: tx + CGFloat(k), y: ty - 3 + CGFloat(k), width: 1, height: CGFloat(7 - 2 * k)).fill() }
-                }
-            case .tab: break
+        System7Strip.draw(System7Strip.closeBox, at: tabRect.origin, flipped: mirrored)
+        System7Strip.draw(System7Strip.arrow(pointsLeft: true, enabled: mirrored ? canScrollOn : canScrollBack),
+                          at: leftArrowRect.origin, flipped: mirrored)
+        for (m, r) in placedModules() {
+            if let art = System7Strip.cell(for: m) {
+                System7Strip.draw(art, at: r.origin, flipped: mirrored)
+            } else {
+                // A module the colour strip did not have: a plain button, its own picture on it.
+                System7Strip.draw(System7Strip.blankCell, at: r.origin, flipped: mirrored)
+                m.draw(in: NSRect(x: r.minX + (mirrored ? 5 : 4), y: 4, width: 16, height: 16))
             }
         }
+        System7Strip.draw(System7Strip.arrow(pointsLeft: false, enabled: mirrored ? canScrollBack : canScrollOn),
+                          at: rightArrowRect.origin, flipped: mirrored)
+        System7Strip.draw(System7Strip.tab, at: sizeBoxRect.origin, flipped: mirrored)
     }
 
     private func drawCap(_ img: NSImage?, in rect: NSRect, flip: Bool) {

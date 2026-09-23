@@ -157,11 +157,9 @@
     "edgeOffset": 0,
     "stripModules": [
       "appletalk",
-      "battery",
       "sharing",
-      "hdspindown",
-      "power",
-      "sleep",
+      "colours",
+      "resolution",
       "volume"
     ]
   },
@@ -171,7 +169,7 @@
     "reflectionOpacity": 0,
     "hoverScale": 1.0,
     "hoverAnimationDuration": 0.05,
-    "monochrome": true
+    "monochrome": false
   },
   "indicator": {
     "style": "none",
@@ -236,7 +234,7 @@
     }
   ],
   "fallbackIcon": "generic.png",
-  "defaultPreset": "bw-noir",
+  "defaultPreset": "crt-lite",
   "iconMappings": {
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",
