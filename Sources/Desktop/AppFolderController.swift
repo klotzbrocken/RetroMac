@@ -18,6 +18,8 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     private let kind: Kind
     private var panel: NSPanel?
     private var webView: WKWebView?
+    /// The key-window observers that blur the Mac OS 9 widget; removed with the panel.
+    private var blurTokens: [NSObjectProtocol] = []
     private var dragOverlay: DragOverlayView?
     /// funStuff only: the current folder path within the virtual CD-ROM tree ([] = disc root).
     private var funPath: [String] = []
@@ -99,7 +101,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = container
             self.panel = p; self.webView = wv; self.dragOverlay = overlay
-            installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
+            blurTokens = installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
         }
 
         if kind == .funStuff { funPath = [] }   // always (re)open the disc at its root
@@ -124,6 +126,8 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         }
         webView = nil
         dragOverlay = nil
+        blurTokens.forEach { NotificationCenter.default.removeObserver($0) }
+        blurTokens = []
         panel?.orderOut(nil); panel = nil
         collapsed = false; preZoomFrame = nil; preCollapseHeight = 0
     }

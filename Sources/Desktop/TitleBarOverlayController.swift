@@ -170,6 +170,7 @@ final class TitleBarOverlayController {
                     Self.bundleIDs.removeValue(forKey: pid)
                     Self.icons.removeValue(forKey: pid)
                     Self.classicIcons.removeValue(forKey: pid)
+                    WindowBorderController.shared.removeMinimizeObserver(pid: pid)
                 } else if let pid = app?.processIdentifier {
                     // A new or re-activated app needs its AX observer (closed/minimised windows)
                     // whether or not the borders are running.
@@ -342,6 +343,10 @@ final class TitleBarOverlayController {
             apply(info, level: outLevel[i], style: style, isFront: wid == frontWID, screens: screens)
         }
         for wid in overlays.keys where !suitable.contains(wid) { forget(wid) }
+        if Date() >= nextPrune {
+            nextPrune = Date().addingTimeInterval(30)
+            pruneCaches(present: Set(infoByID.keys))
+        }
     }
 
     /// The screen a window mostly sits on, in Quartz (top-left) coordinates.
@@ -774,6 +779,27 @@ final class TitleBarOverlayController {
         lightOffsetsRetry.removeValue(forKey: wid)
         titles.removeValue(forKey: wid)
         axWindows.removeValue(forKey: wid)
+    }
+
+    /// What is known about windows that no longer exist. `forget` runs for windows that had a
+    /// bar; a window that never had one (screen-sized, excluded, dropped) but was measured or
+    /// asked about kept its entries for the rest of the session, one more set for every such
+    /// window ever opened. Every 30 s, every window-keyed cache is checked against the
+    /// WindowServer: an id it no longer knows is gone for good. A window merely off this list
+    /// (another space, minimised) still exists and keeps what was learnt about it.
+    private var nextPrune = Date.distantPast
+    private func pruneCaches(present: Set<CGWindowID>) {
+        var known = Set(axWindows.keys).union(titles.keys).union(lightOffsets.keys)
+            .union(lightOffsetsRetry.keys).union(autoGeometry.keys).union(axWindowRetry.keys)
+            .union(leaving.keys).union(zoomedFrom.keys).union(zoomedTo.keys)
+        known.subtract(present)
+        known.subtract(overlays.keys)
+        let now = Date()
+        for wid in known where PrivateWindowAPI.bounds(of: wid) == nil {
+            forget(wid)
+            axWindowRetry.removeValue(forKey: wid)
+            if let until = leaving[wid], until < now { leaving.removeValue(forKey: wid) }
+        }
     }
 
     /// A window came back from the Dock: give it its bar again without waiting for the poll.

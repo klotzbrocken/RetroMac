@@ -11,6 +11,8 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
 
     private var panel: NSPanel?
     private var webView: WKWebView?
+    /// The key-window observers that blur the Mac OS 9 widget; removed with the panel.
+    private var blurTokens: [NSObjectProtocol] = []
     private var dragOverlay: DragOverlayView?
     private var timer: Timer?
     private var moveObserver: NSObjectProtocol?
@@ -77,7 +79,7 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
             p.contentView = container
             self.panel = p
             self.webView = wv
-            installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
+            blurTokens = installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
             self.dragOverlay = overlay
             // Remember the position whenever the user drags the widget.
             moveObserver = NotificationCenter.default.addObserver(
@@ -112,6 +114,8 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
         }
         webView = nil
         dragOverlay = nil
+        blurTokens.forEach { NotificationCenter.default.removeObserver($0) }
+        blurTokens = []
         panel?.orderOut(nil); panel = nil
     }
 

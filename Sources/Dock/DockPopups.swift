@@ -298,8 +298,15 @@ private final class DockStackView: NSView, NSDraggingSource {
     private var dropActive = false
     private let pixelize = ThemeManager.shared.activeTheme?.config.isPixelated == true
     /// Quick Look previews, keyed by path + modification date so an edited file re-renders.
-    /// Static so reopening the stack does not regenerate what it already has.
-    private static var thumbs: [String: NSImage] = [:]
+    /// Static so reopening the stack does not regenerate what it already has — and bounded:
+    /// every file a stack ever showed, in every version, used to stay for the whole session
+    /// (a Downloads stack gathers a new one with every download).
+    private static let thumbs: NSCache<NSString, NSImage> = {
+        let c = NSCache<NSString, NSImage>()
+        c.countLimit = 600
+        c.totalCostLimit = 64 * 1024 * 1024   // bytes of pixels
+        return c
+    }()
     private var requested = Set<String>()
 
     override init(frame frameRect: NSRect) {
@@ -361,7 +368,7 @@ private final class DockStackView: NSView, NSDraggingSource {
     /// placeholders. Async: the workspace icon is drawn until this arrives.
     private func requestThumbnail(_ url: URL) {
         let key = thumbKey(url)
-        guard !requested.contains(key), Self.thumbs[key] == nil else { return }
+        guard !requested.contains(key), Self.thumbs.object(forKey: key as NSString) == nil else { return }
         requested.insert(key)
         let scale = window?.backingScaleFactor ?? 2
         let req = QLThumbnailGenerator.Request(fileAt: url,
@@ -371,8 +378,9 @@ private final class DockStackView: NSView, NSDraggingSource {
         QLThumbnailGenerator.shared.generateBestRepresentation(for: req) { [weak self] rep, _ in
             guard let rep = rep else { return }
             let img = NSImage(cgImage: rep.cgImage, size: NSSize(width: rep.cgImage.width, height: rep.cgImage.height))
+            let cost = rep.cgImage.width * rep.cgImage.height * 4
             DispatchQueue.main.async {
-                Self.thumbs[key] = img
+                Self.thumbs.setObject(img, forKey: key as NSString, cost: cost)
                 self?.needsDisplay = true
             }
         }
@@ -384,7 +392,7 @@ private final class DockStackView: NSView, NSDraggingSource {
         if url.pathExtension == "app", let bid = Bundle(url: url)?.bundleIdentifier {
             return ThemeManager.shared.icon(for: bid, size: size)
         }
-        if let t = Self.thumbs[thumbKey(url)] { return t }
+        if let t = Self.thumbs.object(forKey: thumbKey(url) as NSString) { return t }
         requestThumbnail(url)
         let icon = NSWorkspace.shared.icon(forFile: url.path)
         icon.size = NSSize(width: size, height: size)

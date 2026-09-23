@@ -3,6 +3,17 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+- **Fix: nothing piles up over a long session.** A review for memory that grows with ordinary
+  use found four slow build-ups, none of them large on its own: the title bars kept what they
+  had learnt about every window that never had a bar (a screen-sized one, say) after it was
+  closed — now every window-keyed cache is checked against the WindowServer every 30 s; the
+  Accessibility observer RetroMac adds for each app, with its run-loop source, stayed after
+  the app quit; widget and TV windows left two key-window observers behind each time they
+  were opened; and a stack's Quick Look previews were kept for the whole session, one per
+  file and version — now at most 600 of them, 64 MB, released under memory pressure.
+
 ## 2.8.7
 
 - **New theme: System 7.1 (authentic).** System 7.1 as a colour Mac showed it, at the

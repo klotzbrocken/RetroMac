@@ -511,14 +511,18 @@ final class WebAppChromeView: NSView {
     /// chrome has to know about key changes. Other styles ignore it; the extra redraw is harmless.
     private var isActiveWindow: Bool { window?.isKeyWindow ?? true }
 
+    private var keyTokens: [NSObjectProtocol] = []
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        NotificationCenter.default.removeObserver(self)
+        // Block observers are removed by their tokens, not by `removeObserver(self)`: that
+        // left two behind every time the view changed windows.
+        keyTokens.forEach { NotificationCenter.default.removeObserver($0) }
+        keyTokens = []
         guard let win = window else { return }
         for n in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
-            NotificationCenter.default.addObserver(forName: n, object: win, queue: .main) { [weak self] _ in
+            keyTokens.append(NotificationCenter.default.addObserver(forName: n, object: win, queue: .main) { [weak self] _ in
                 self?.needsDisplay = true
-            }
+            })
         }
     }
 

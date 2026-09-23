@@ -96,6 +96,12 @@ final class WindowBorderController {
                    let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
                     self?.addMinimizeObserver(pid: app.processIdentifier)
                 }
+                // A quit app's observer and its run-loop source go with it; kept, one more of
+                // each stayed behind for every app launched and quit during the session.
+                if name == NSWorkspace.didTerminateApplicationNotification,
+                   let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
+                    self?.removeMinimizeObserver(pid: app.processIdentifier)
+                }
                 self?.sync()
             })
         }
@@ -151,6 +157,11 @@ final class WindowBorderController {
         AXObserverAddNotification(observer, appEl, kAXUIElementDestroyedNotification as CFString, ctx)
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
         axObservers[pid] = observer
+    }
+
+    func removeMinimizeObserver(pid: pid_t) {
+        guard let observer = axObservers.removeValue(forKey: pid) else { return }
+        CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
     }
 
     private func removeMinimizeObservers() {
