@@ -222,12 +222,13 @@ enum ChromeStyleFactory {
             buttons: [ ChromeButton(.close, interactive: true, render: .native) ])
     }
 
-    // System 7.1 — the same racing-stripe bar, with the zoom box System 7 added on the right.
+    // System 7.1 at 256 colours — the striped lavender-grey bar, close box left, zoom box right.
+    // Drawing is done by `System7Chrome`; this supplies metrics.
     static func system7() -> ChromeStyle {
         return ChromeStyle(
-            titleHeight: 20, windowBorder: 0,
+            titleHeight: System7Chrome.barHeight, windowBorder: 0,
             buttonSize: NSSize(width: System7Chrome.boxSize, height: System7Chrome.boxSize),
-            buttonSpacing: 6, buttonInset: 8,
+            buttonSpacing: 6, buttonInset: System7Chrome.boxInset,
             cornerRadius: 0, buttonSide: .left,
             titleFont: System7Chrome.titleFont, titleColor: .black, titleShadow: false,
             titleAlignment: .center,

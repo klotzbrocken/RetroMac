@@ -434,25 +434,42 @@ final class System6TVChromeView: NSView {
     var title = ""
     var onClose: (() -> Void)?
     var onZoom: (() -> Void)?
+    /// System 7.1 at 256 colours (`System7Chrome`) instead of System 6's 1-bit bar.
+    var system7 = false
     private var tracker = ChromeButtonTracker()
     private let titleFont = System6Chrome.titleFont
 
-    private var barRect: NSRect { NSRect(x: 0, y: bounds.height - Self.barH, width: bounds.width, height: Self.barH) }
+    private var barHeight: CGFloat { system7 ? System7Chrome.barHeight : Self.barH }
+    private var barRect: NSRect { NSRect(x: 0, y: bounds.height - barHeight, width: bounds.width, height: barHeight) }
     private var boxY: CGFloat { bounds.height - Self.barH + (Self.barH - System6Chrome.boxSize) / 2 }
-    private var closeRect: NSRect { NSRect(x: 8, y: boxY, width: System6Chrome.boxSize, height: System6Chrome.boxSize) }
-    private var zoomRect: NSRect { NSRect(x: bounds.width - 8 - System6Chrome.boxSize, y: boxY, width: System6Chrome.boxSize, height: System6Chrome.boxSize) }
+    private var closeRect: NSRect {
+        system7 ? System7Chrome.closeRect(in: barRect, flipped: false)
+                : NSRect(x: 8, y: boxY, width: System6Chrome.boxSize, height: System6Chrome.boxSize)
+    }
+    private var zoomRect: NSRect {
+        system7 ? System7Chrome.zoomRect(in: barRect, flipped: false)
+                : NSRect(x: bounds.width - 8 - System6Chrome.boxSize, y: boxY, width: System6Chrome.boxSize, height: System6Chrome.boxSize)
+    }
     private var hoverTracking: NSTrackingArea?
 
     override var isOpaque: Bool { false }
 
     override func draw(_ dirtyRect: NSRect) {
         let bar = barRect
-        System6Chrome.titleBar(bar, active: true)
-        System6Chrome.black.setFill(); NSBezierPath(rect: NSRect(x: 0, y: bar.minY, width: bounds.width, height: 1)).fill()
-        System6Chrome.windowFrame(bounds)
         tracker.reset()
         tracker.add(.close, closeRect.insetBy(dx: -3, dy: -3), interactive: true)
         tracker.add(.zoom, zoomRect.insetBy(dx: -3, dy: -3), interactive: true)
+        if system7 {
+            System7Chrome.frame(bounds)
+            System7Chrome.titleBar(bar, active: true, flipped: false)
+            System7Chrome.closeBox(closeRect, pressed: tracker.state(for: .close) == .pressed, flipped: false)
+            System7Chrome.zoomBox(zoomRect, pressed: tracker.state(for: .zoom) == .pressed, flipped: false)
+            System7Chrome.title(title, bar: bar, active: true, flipped: false, minX: closeRect.maxX, maxX: zoomRect.minX)
+            return
+        }
+        System6Chrome.titleBar(bar, active: true)
+        System6Chrome.black.setFill(); NSBezierPath(rect: NSRect(x: 0, y: bar.minY, width: bounds.width, height: 1)).fill()
+        System6Chrome.windowFrame(bounds)
         System6Chrome.closeBox(closeRect, state: tracker.state(for: .close))
         System6Chrome.resizeBox(zoomRect, state: tracker.state(for: .zoom))
         System6Chrome.titlePlaque(title, bar: bar, font: titleFont, active: true)

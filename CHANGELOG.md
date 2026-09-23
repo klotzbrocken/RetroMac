@@ -29,9 +29,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   inverts rather than taking the accent colour. The **menu bar** has System 7.1's icon-only
   Application menu (`menuBar.applicationMenuIconOnly`), the Balloon Help `?` balloon
   (`menuBar.balloonHelp`) and the Apple menu of the day, with Mac OS 9 (authentic)'s pictures
-  in the 256 colours. Windows use their own `system7` chrome — the racing-stripe title bar
-  with the close box left and the zoom box right, the 1 px black frame, and System 7's grey
-  scroll bars and grow box; the Applications window and the theme's Read Me wear it too. The
+  in the 256 colours. Windows use their own `system7` chrome, measured pixel for pixel
+  from System 7.1 running in an emulator: a 19 px title bar with six #777777 stripes on
+  #EEEEEE between a #CCCCFF light edge and a #9999CC shadow, the close box left and the zoom
+  box right sunk into it in #333366 and #AAAAAA, the 1 px black frame with its 1 px shadow, and
+  scroll bars with #9999CC arrows in raised #DDDDDD boxes, a dotted track and the fixed 16 px
+  scroll box with its lavender grip; an inactive window's bar is white with a grey title. The
+  title bars over real windows, the widget windows, the TV window (its picture in colour
+  now), the Applications window and the theme's Read Me all wear it. The
   menus open at once: the Apple menu's submenus (the Applications folder, Control Panels,
   Favorites and the three recent lists) are read when they open rather than when the menu is
   built, every picture is converted once and kept, and the conversion works on the raw bytes

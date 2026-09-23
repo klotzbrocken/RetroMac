@@ -461,7 +461,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
 final class WebAppChromeView: NSView {
 
-    enum Style { case win98, winxp, win7, macClassic, system6, nextstep, snowLeopard, futurama, plain }
+    enum Style { case win98, winxp, win7, macClassic, system6, system7, nextstep, snowLeopard, futurama, plain }
 
     var onClose: (() -> Void)?
     var onBack: (() -> Void)?
@@ -492,7 +492,7 @@ final class WebAppChromeView: NSView {
         case "win7":   style = .win7;       chromeStyle = ChromeStyleFactory.win7()
         case "macos9": style = .macClassic; chromeStyle = ChromeStyleFactory.macClassic()
         case "macos6": style = .system6;    chromeStyle = ChromeStyleFactory.system6()
-        case "system7": style = .system6;   chromeStyle = ChromeStyleFactory.system7()
+        case "system7": style = .system7;   chromeStyle = ChromeStyleFactory.system7()
         case "nextstep": style = .nextstep; chromeStyle = ChromeStyleFactory.nextstep()
         case "snowleopard": style = .snowLeopard; chromeStyle = ChromeStyleFactory.snowLeopard()
         case "futurama": style = .futurama; chromeStyle = nil
@@ -523,7 +523,7 @@ final class WebAppChromeView: NSView {
     }
 
     private var titleH: CGFloat {
-        switch style { case .winxp, .win7: return 30; case .system6: return 20; case .nextstep: return 22; case .futurama: return 26; default: return 22 }
+        switch style { case .winxp, .win7: return 30; case .system6: return 20; case .system7: return System7Chrome.barHeight; case .nextstep: return 22; case .futurama: return 26; default: return 22 }
     }
     private var pad: CGFloat { 4 }
 
@@ -566,6 +566,7 @@ final class WebAppChromeView: NSView {
         case .win7:       drawWin7(ctx, b)
         case .macClassic: drawMacClassic(ctx, b)
         case .system6:    drawSystem6(ctx, b)
+        case .system7:    drawSystem7(b)
         case .nextstep:   drawNextstep(ctx, b)
         case .snowLeopard: drawSnowLeopard(ctx, b)
         case .futurama:   drawFuturama(ctx, b)
@@ -727,6 +728,24 @@ final class WebAppChromeView: NSView {
         System6Chrome.closeBox(closeR, state: tracker.state(for: .close))
         System6Chrome.resizeBox(zoomR, state: tracker.state(for: .zoom))
         System6Chrome.titlePlaque(title, bar: bar, font: cs.titleFont, active: true)
+        closeHit = .zero   // close is tracked via `tracker`
+    }
+
+    // ---- System 7.1 at 256 colours — shared with the TV window and the title bars via System7Chrome ----
+    private func drawSystem7(_ b: NSRect) {
+        NSColor.white.setFill(); b.fill()
+        System7Chrome.frame(b)
+        let bar = NSRect(x: 0, y: 0, width: b.width, height: titleH)   // flipped: the bar at the top
+        System7Chrome.titleBar(bar, active: true, flipped: true)
+        let closeR = System7Chrome.closeRect(in: bar, flipped: true)
+        let zoomR = System7Chrome.zoomRect(in: bar, flipped: true)
+        tracker.reset()
+        tracker.add(.close, closeR.insetBy(dx: -3, dy: -3), interactive: true)
+        tracker.add(.zoom, zoomR.insetBy(dx: -3, dy: -3), interactive: true)
+        System7Chrome.closeBox(closeR, pressed: tracker.state(for: .close) == .pressed, flipped: true)
+        System7Chrome.zoomBox(zoomR, pressed: tracker.state(for: .zoom) == .pressed, flipped: true)
+        System7Chrome.title(title, bar: bar, active: true, flipped: true, minX: closeR.maxX, maxX: zoomR.minX,
+                            font: (chromeStyle ?? ChromeStyleFactory.system7()).titleFont)
         closeHit = .zero   // close is tracked via `tracker`
     }
 

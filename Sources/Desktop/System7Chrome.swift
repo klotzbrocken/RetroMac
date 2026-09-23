@@ -1,82 +1,132 @@
 import AppKit
 
-/// **System 7.1** window chrome, in greys from the Mac's 256-colour table.
-/// The title bar is System 6's racing stripes (`System6Chrome` draws them) with the close box
-/// on the left AND the zoom box on the right, which is what System 7 added; the window is
-/// white in a 1 px black frame, and the parts System 7 drew in grey — the scroll bar's gutter,
-/// the grow box's ground — use #AAAAAA and #555555 rather than the Platinum bevels.
+/// **System 7.1** window chrome as a colour Mac drew it at 256 colours, measured pixel for pixel
+/// from System 7.1 running in an emulator (Infinite Mac, the Finder's own windows).
+///
+/// The active title bar is 19 px from the frame's top rule to the black line under it: a
+/// #CCCCFF light edge along the top and left, a #9999CC shadow along the bottom and right, an
+/// #EEEEEE ground with six #777777 stripes, and — each 9 px in from the window's edge — the close
+/// box on the left and the zoom box on the right: 11 px, sunk into the bar (#333366 above and
+/// left, #CCCCFF below and right) around a raised #AAAAAA face, with a 1 px #EEEEEE gap cut out
+/// of the stripes either side. The title is centred in Chicago with 8 px of ground each side.
+/// An inactive window's bar is white, stripeless and boxless, its title in #777777.
+///
+/// Drawing is in whole pixels and works in flipped and unflipped views alike (`flipped` says
+/// which): every part is placed by its row counted from the top rule.
 enum System7Chrome {
 
     static let black = Mac256.black
-    static let dark = Mac256.grey55      // #555555
-    static let light = Mac256.greyAA     // #AAAAAA
     static let white = Mac256.white
+    static let face = Mac256.colour(0xEEEEEE)
+    static let stripe = Mac256.colour(0x777777)
+    static let light = Mac256.colour(0xCCCCFF)      // the lavender light edge
+    static let shade = Mac256.colour(0x9999CC)      // the lavender shadow edge
+    static let deep = Mac256.colour(0x333366)       // the boxes' dark edge
+    static let boxFace = Mac256.greyAA
+    static let pressedFace = Mac256.colour(0x777777)
+    static let inactiveText = Mac256.colour(0x777777)
 
-    static let boxSize = System6Chrome.boxSize
+    /// Top rule, 17 rows, the black line under the bar.
+    static let barHeight: CGFloat = 19
+    static let boxSize: CGFloat = 11
+    /// From the window's outer edge to a box.
+    static let boxInset: CGFloat = 9
     static var titleFont: NSFont { System6Chrome.titleFont }
 
-    private static func fill(_ r: NSRect, _ c: NSColor) { c.setFill(); NSBezierPath(rect: r).fill() }
+    // MARK: Geometry
 
-    static func titleBar(_ bar: NSRect, active: Bool) { System6Chrome.titleBar(bar, active: active) }
-    static func closeBox(_ r: NSRect, state: ChromeButtonState = .normal) { System6Chrome.closeBox(r, state: state) }
-    static func zoomBox(_ r: NSRect, state: ChromeButtonState = .normal) { System6Chrome.resizeBox(r, state: state) }
-    static func titlePlaque(_ title: String, bar: NSRect, font: NSFont, active: Bool) {
-        System6Chrome.titlePlaque(title, bar: bar, font: font, active: active)
+    /// Row `i` (0 = the top rule) of `bar`, from `x` for `w` pixels, `n` rows tall.
+    private static func rows(_ bar: NSRect, _ i: Int, _ n: Int = 1, x: CGFloat, w: CGFloat, flipped: Bool) -> NSRect {
+        let y = flipped ? bar.minY + CGFloat(i) : bar.maxY - CGFloat(i + n)
+        return NSRect(x: x, y: y, width: w, height: CGFloat(n))
     }
 
-    /// The 1 px black frame the window sits in.
-    static func frame(_ r: NSRect) {
-        black.setStroke()
-        let p = NSBezierPath(rect: r.insetBy(dx: 0.5, dy: 0.5))
-        p.lineWidth = 1
-        p.stroke()
+    static func closeRect(in bar: NSRect, flipped: Bool) -> NSRect {
+        rows(bar, 4, Int(boxSize), x: bar.minX + boxInset, w: boxSize, flipped: flipped)
+    }
+    static func zoomRect(in bar: NSRect, flipped: Bool) -> NSRect {
+        rows(bar, 4, Int(boxSize), x: bar.maxX - boxInset - boxSize, w: boxSize, flipped: flipped)
     }
 
-    /// A scroll bar the era's way: a #AAAAAA gutter between two white arrow boxes, a white
-    /// thumb outlined in black. `fraction` 0…1 is where the thumb sits, `visible` 0…1 how
-    /// much of the document shows. A bar with nothing to scroll is left empty (grey).
-    static func scrollBar(_ r: NSRect, vertical: Bool, fraction: CGFloat, visible: CGFloat) {
-        fill(r, light)
-        frame(r)
-        let side = vertical ? r.width : r.height
-        let arrowA = vertical ? NSRect(x: r.minX, y: r.maxY - side, width: side, height: side)
-                              : NSRect(x: r.minX, y: r.minY, width: side, height: side)
-        let arrowB = vertical ? NSRect(x: r.minX, y: r.minY, width: side, height: side)
-                              : NSRect(x: r.maxX - side, y: r.minY, width: side, height: side)
-        for (box, up) in [(arrowA, true), (arrowB, false)] {
-            fill(box, white); frame(box)
-            let c = box.insetBy(dx: 4, dy: 4)
-            let p = NSBezierPath()
-            if vertical {
-                if up { p.move(to: NSPoint(x: c.minX, y: c.minY)); p.line(to: NSPoint(x: c.maxX, y: c.minY)); p.line(to: NSPoint(x: c.midX, y: c.maxY)) }
-                else { p.move(to: NSPoint(x: c.minX, y: c.maxY)); p.line(to: NSPoint(x: c.maxX, y: c.maxY)); p.line(to: NSPoint(x: c.midX, y: c.minY)) }
-            } else {
-                if up { p.move(to: NSPoint(x: c.maxX, y: c.minY)); p.line(to: NSPoint(x: c.maxX, y: c.maxY)); p.line(to: NSPoint(x: c.minX, y: c.midY)) }
-                else { p.move(to: NSPoint(x: c.minX, y: c.minY)); p.line(to: NSPoint(x: c.minX, y: c.maxY)); p.line(to: NSPoint(x: c.maxX, y: c.midY)) }
-            }
-            p.close(); black.setFill(); p.fill()
+    // MARK: Drawing
+
+    /// The whole bar in `bar` (`barHeight` tall): the black rules round it, and for an active
+    /// window the light and shadow edges, the ground and the six stripes.
+    static func titleBar(_ bar: NSRect, active: Bool, flipped: Bool) {
+        let n = Int(bar.height)
+        (active ? face : white).setFill(); bar.fill()
+        black.setFill()
+        rows(bar, 0, x: bar.minX, w: bar.width, flipped: flipped).fill()
+        rows(bar, n - 1, x: bar.minX, w: bar.width, flipped: flipped).fill()
+        NSRect(x: bar.minX, y: bar.minY, width: 1, height: bar.height).fill()
+        NSRect(x: bar.maxX - 1, y: bar.minY, width: 1, height: bar.height).fill()
+        guard active else { return }
+        light.setFill()
+        rows(bar, 1, x: bar.minX + 1, w: bar.width - 3, flipped: flipped).fill()
+        rows(bar, 1, n - 3, x: bar.minX + 1, w: 1, flipped: flipped).fill()
+        shade.setFill()
+        rows(bar, n - 2, x: bar.minX + 1, w: bar.width - 2, flipped: flipped).fill()
+        rows(bar, 1, n - 2, x: bar.maxX - 2, w: 1, flipped: flipped).fill()
+        stripe.setFill()
+        for i in stride(from: 4, through: n - 5, by: 2) {
+            rows(bar, i, x: bar.minX + 2, w: bar.width - 4, flipped: flipped).fill()
         }
-        guard visible > 0, visible < 1 else { return }
-        let track = vertical ? NSRect(x: r.minX, y: r.minY + side, width: r.width, height: r.height - 2 * side)
-                             : NSRect(x: r.minX + side, y: r.minY, width: r.width - 2 * side, height: r.height)
-        let length = max(side, (vertical ? track.height : track.width) * visible)
-        let travel = (vertical ? track.height : track.width) - length
-        let thumb = vertical
-            ? NSRect(x: track.minX, y: track.maxY - length - travel * fraction, width: track.width, height: length)
-            : NSRect(x: track.minX + travel * fraction, y: track.minY, width: length, height: track.height)
-        fill(thumb, white); frame(thumb)
     }
 
-    /// The grow box in the bottom-right corner: two nested outlines, as System 7 drew it.
-    static func growBox(_ r: NSRect) {
-        fill(r, white)
-        frame(r)
-        let outer = r.insetBy(dx: 3, dy: 3)
-        fill(NSRect(x: outer.minX, y: outer.minY, width: outer.width - 3, height: outer.height - 3), light)
-        black.setStroke()
-        let a = NSBezierPath(rect: NSRect(x: outer.minX + 0.5, y: outer.minY + 0.5, width: outer.width - 3, height: outer.height - 3))
-        a.lineWidth = 1; a.stroke()
-        let b = NSBezierPath(rect: NSRect(x: outer.minX + 3.5, y: outer.minY + 3.5, width: outer.width - 3, height: outer.height - 3))
-        b.lineWidth = 1; b.stroke()
+    /// A box in `r`, drawn by its rows from the top: the sunken frame, the raised face, and for
+    /// the zoom box the small square's shadow in its upper left.
+    private static func box(_ r: NSRect, zoom: Bool, pressed: Bool, flipped: Bool) {
+        // The stripes stop a pixel short of the box on either side.
+        face.setFill(); r.insetBy(dx: -1, dy: 0).fill()
+        func px(_ x: Int, _ y: Int, _ w: Int, _ h: Int, _ c: NSColor) {
+            c.setFill()
+            let yy = flipped ? r.minY + CGFloat(y) : r.maxY - CGFloat(y + h)
+            NSRect(x: r.minX + CGFloat(x), y: yy, width: CGFloat(w), height: CGFloat(h)).fill()
+        }
+        let s = Int(r.width)
+        px(0, 0, s, s, pressed ? pressedFace : boxFace)
+        // Sunk into the bar: dark above and left, light below and right. The top and left
+        // edges are drawn last: they own the corners, as the original's did.
+        px(0, s - 1, s, 1, light); px(s - 1, 0, 1, s, light)
+        px(0, 0, s, 1, deep); px(0, 0, 1, s, deep)
+        // The face, raised — or pushed in while the mouse holds it.
+        let hi = pressed ? deep : light, lo = pressed ? light : deep
+        px(1, s - 2, s - 2, 1, lo); px(s - 2, 1, 1, s - 2, lo)
+        px(1, 1, s - 2, 1, hi); px(1, 1, 1, s - 2, hi)
+        if zoom {
+            px(6, 2, 1, 5, deep); px(2, 6, 5, 1, deep)
+        }
+    }
+
+    static func closeBox(_ r: NSRect, pressed: Bool = false, flipped: Bool) { box(r, zoom: false, pressed: pressed, flipped: flipped) }
+    static func zoomBox(_ r: NSRect, pressed: Bool = false, flipped: Bool) { box(r, zoom: true, pressed: pressed, flipped: flipped) }
+
+    /// The title, centred on the bar with 8 px of ground cleared either side, kept between
+    /// `minX` and `maxX` (the boxes).
+    static func title(_ title: String, bar: NSRect, active: Bool, flipped: Bool,
+                      minX: CGFloat? = nil, maxX: CGFloat? = nil, font: NSFont = titleFont) {
+        guard !title.isEmpty else { return }
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: active ? black : inactiveText]
+        let lo = (minX ?? bar.minX + 1) + 8, hi = (maxX ?? bar.maxX - 1) - 8
+        guard hi > lo else { return }
+        let size = title.size(withAttributes: attrs)
+        let w = min(size.width.rounded(.up), hi - lo)
+        let x = max(lo, min(hi - w, (bar.midX - w / 2).rounded()))
+        (active ? face : white).setFill()
+        rows(bar, 2, Int(bar.height) - 4, x: x - 8, w: w + 16, flipped: flipped).fill()
+        let y = (bar.minY + (bar.height - size.height) / 2).rounded()
+        NSGraphicsContext.saveGraphicsState()
+        NSRect(x: x, y: bar.minY, width: w, height: bar.height).clip()
+        (title as NSString).draw(at: NSPoint(x: x, y: y), withAttributes: attrs)
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    /// The window's 1 px black frame.
+    static func frame(_ r: NSRect) {
+        black.setFill()
+        NSRect(x: r.minX, y: r.minY, width: r.width, height: 1).fill()
+        NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1).fill()
+        NSRect(x: r.minX, y: r.minY, width: 1, height: r.height).fill()
+        NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height).fill()
     }
 }

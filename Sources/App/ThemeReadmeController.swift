@@ -153,7 +153,8 @@ final class ThemeReadmeController: NSObject, WKScriptMessageHandler, WKNavigatio
         case "win7", "winxp":            variant = "winRed"
         case "win98", "win31":           variant = "winSilver"
         case "macos9":                   variant = "platinumBox"   // the close box, left, as on every Platinum bar
-        case "macos6", "system7":        variant = "classicBox"    // the hollow square of the 1-bit Mac, left
+        case "macos6":                   variant = "classicBox"    // the hollow square of the 1-bit Mac, left
+        case "system7":                  variant = "system7Box"    // System 7.1's close box, sunk into the bar, left
         default:                         variant = isMac ? "macDot" : "neutral"
         }
         return """
@@ -186,6 +187,12 @@ final class ThemeReadmeController: NSObject, WKScriptMessageHandler, WKNavigatio
             // The 1-bit Mac's close box: a hollow black square on white, top-left, 15 px.
             b.style.cssText = base + 'top:50%;left:8px;transform:translateY(-50%);width:13px;height:13px;'
               + 'background:#fff;border:2px solid #000;border-radius:0;color:transparent;font-size:0;box-shadow:none;';
+          } else if (v === 'system7Box') {
+            // System7Chrome's close box: 11 px sunk into the bar (#333366 / #CCCCFF), a raised
+            // #AAAAAA face, 9 px in from the window's edge, the stripes cleared a pixel round it.
+            b.style.cssText = base + 'top:50%;left:8px;transform:translateY(-50%);width:11px;height:11px;border:none;border-radius:0;'
+              + 'background:#aaa;color:transparent;font-size:0;'
+              + 'box-shadow:0 0 0 1px #eee,inset 1px 1px 0 #336,inset -1px -1px 0 #ccf,inset 2px 2px 0 #ccf,inset -2px -2px 0 #336;';
           } else if (v === 'winRed') {
             b.textContent = '\\u2715';
             b.style.cssText = base + 'top:6px;right:8px;width:26px;height:18px;color:#fff;font:700 12px \"Segoe UI\",Arial,sans-serif;'

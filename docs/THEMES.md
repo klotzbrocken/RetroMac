@@ -76,7 +76,7 @@ imports themes it did not write.
   `personal`, `screen`. `order` sorts families; `release.year` sorts inside one.
 - **`experienceLevel`**: `full` (dock, desktop, windows, boot, everything), `partial`, `minimal`.
 - **`chrome.style`** picks how windows, widgets and menus are drawn. One of `win31`, `win98`,
-  `winxp`, `win7`, `macos6`, `macos9`, `macosx`, `snowleopard`, `beos`, `nextstep`, `futurama`,
+  `winxp`, `win7`, `macos6`, `system7`, `macos9`, `macosx`, `snowleopard`, `beos`, `nextstep`, `futurama`,
   `maiksfav`, `default`. There is no "custom" chrome yet; pick the nearest.
 
 ## Dock and taskbar

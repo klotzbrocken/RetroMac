@@ -278,8 +278,10 @@ final class TVBrowserWindow: NSObject {
     /// Mac System 6 theme: borderless 1-bit B/W window — racing-stripe title bar, hollow close
     /// box left, no zoom/collapse; content inset below the bar.
     private func applySystem6Chrome(_ win: NSWindow, title: String) {
-        guard ["macos6", "system7"].contains(RetroFrameTheme.key()), let content = win.contentView else { return }
-        let bar = System6TVChromeView.barH
+        let key = RetroFrameTheme.key()
+        guard ["macos6", "system7"].contains(key), let content = win.contentView else { return }
+        let colour = key == "system7"   // System 7.1 at 256 colours: its own bar, the picture in colour
+        let bar = colour ? System7Chrome.barHeight : System6TVChromeView.barH
         let size = win.frame.size
         win.styleMask = [.borderless, .resizable]
         win.isOpaque = false
@@ -291,12 +293,13 @@ final class TVBrowserWindow: NSObject {
         // so it matches the monochrome theme. Applied to the content layer only, so the crisp
         // black-and-white title bar above is untouched.
         content.wantsLayer = true
-        if let mono = CIFilter(name: "CIColorControls") {
+        if !colour, let mono = CIFilter(name: "CIColorControls") {
             mono.setValue(0.0, forKey: "inputSaturation")   // grayscale
             mono.setValue(1.1, forKey: "inputContrast")     // slight push toward System 6's high-contrast look
             content.layer?.filters = [mono]
         }
         let chrome = System6TVChromeView(frame: NSRect(origin: .zero, size: size))
+        chrome.system7 = colour
         chrome.wantsLayer = true
         chrome.title = title
         chrome.onClose = { [weak self] in self?.window?.close() }

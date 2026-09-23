@@ -38,7 +38,7 @@ final class TitleBarOverlayController {
     private init() {}
 
     enum Style: CaseIterable {
-        case system6, platinum                 // the Mac bars
+        case system6, system7, platinum        // the Mac bars
         case win31, win98, luna, aero          // the Windows bars (95, 98 and Me share win98)
         case aquaLights, snowLights            // the three lights only (Mac OS X, Snow Leopard, Mountain Lion)
         var isBar: Bool { self != .aquaLights && self != .snowLights }
@@ -107,7 +107,7 @@ final class TitleBarOverlayController {
     static func style(for key: String) -> Style? {
         switch key {
         case "macos6":      return .system6
-        case "system7":     return .system6   // the same racing-stripe bar
+        case "system7":     return .system7   // the striped bar at 256 colours
         case "macos9":      return .platinum
         case "win31":       return .win31
         case "win98":       return .win98      // Windows 95, 98 and Me
@@ -608,6 +608,7 @@ final class TitleBarOverlayController {
     static func stripHeight(_ style: Style) -> CGFloat {
         switch style {
         case .system6:  return 20
+        case .system7:  return System7Chrome.barHeight
         case .platinum: return 22
         case .win31:    return 20
         case .win98:    return 24
@@ -1222,6 +1223,14 @@ final class TitleBarOverlayView: NSView {
                 tracker.add(k, r.insetBy(dx: -3, dy: -3), interactive: isFront)
                 buttonRects.append((k, r))
             }
+        case .system7:
+            // System 7.1: the close box left and the zoom box right, 11 pt, 9 pt in from the edges.
+            let bar = NSRect(x: 0, y: 0, width: w, height: h)
+            for (k, r) in [(ChromeButtonKind.close, System7Chrome.closeRect(in: bar, flipped: true)),
+                           (.zoom, System7Chrome.zoomRect(in: bar, flipped: true))] {
+                tracker.add(k, r.insetBy(dx: -3, dy: -3), interactive: isFront)
+                buttonRects.append((k, r))
+            }
         case .win31:
             // The system-menu box on the left (a double-click closed the window; here one
             // click does), minimise and maximise on the right.
@@ -1278,6 +1287,7 @@ final class TitleBarOverlayView: NSView {
         let b = bounds
         switch style {
         case .system6:    drawSystem6(b)
+        case .system7:    drawSystem7(b)
         case .platinum:   drawPlatinum(b)
         case .win31:      drawWin31(b)
         case .win98:      drawWin98(b)
@@ -1354,6 +1364,22 @@ final class TitleBarOverlayView: NSView {
         NSRect(x: (b.width - width) / 2 - 8, y: 0, width: width + 16, height: b.height).clip()
         System6Chrome.titlePlaque(title, bar: b, font: font, active: isFront)
         NSGraphicsContext.restoreGraphicsState()
+    }
+
+    // MARK: System 7.1
+
+    private func drawSystem7(_ b: NSRect) {
+        System7Chrome.titleBar(b, active: isFront, flipped: true)
+        if isFront {
+            for (k, r) in buttonRects {
+                let pressed = tracker.state(for: k) == .pressed
+                if k == .close { System7Chrome.closeBox(r, pressed: pressed, flipped: true) }
+                else { System7Chrome.zoomBox(r, pressed: pressed, flipped: true) }
+            }
+        }
+        let left = buttonRects.first { $0.0 == .close }?.1.maxX ?? 0
+        let right = buttonRects.first { $0.0 == .zoom }?.1.minX ?? b.width
+        System7Chrome.title(title, bar: b, active: isFront, flipped: true, minX: left, maxX: right)
     }
 
     // MARK: Windows 3.1
