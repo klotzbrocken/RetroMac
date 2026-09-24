@@ -15,6 +15,29 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.8.7</title>
+      <pubDate>Thu, 24 Sep 2026 00:10:54 +0000</pubDate>
+      <sparkle:version>2.8.7</sparkle:version>
+      <sparkle:shortVersionString>2.8.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.8.7</h2>
+        <ul>
+          <li><b>New theme: System 7.1 (authentic).</b> System 7.1 as a colour Mac showed it at 256 colours: every icon on the desktop, in the Apple menu, the Application menu and the Applications window snapped to the Mac&rsquo;s standard colour table, the rainbow apple, and windows in System 7&rsquo;s lavender-grey &mdash; striped title bar, sunken close and zoom boxes, the scroll bars of the day, measured pixel for pixel from the real thing. The Control Strip is System 7.5&rsquo;s, taken pixel for pixel from the original: AppleTalk, File Sharing, colour depth, resolution and sound. No dock; the Application menu at the right of the menu bar and Balloon Help beside it.</li>
+          <li><b>Starfield Simulation.</b> The Windows 2000 screen saver, for every theme.</li>
+          <li><b>Settings &#9656; General &#9656; macOS defaults.</b> The emergency exit: turns the theme and the shader off and puts back everything RetroMac can have changed about the system.</li>
+          <li><b>A folder in the dock from Settings.</b> &ldquo;Add app or folder&hellip;&rdquo; takes a folder too &mdash; a Downloads folder on an external disk, say &mdash; and puts it in the dock as a stack.</li>
+          <li><b>Fixes:</b> switching the Dock&rsquo;s auto-hide off in System Settings no longer brings the macOS Dock back over the Snow Leopard or Mountain Lion dock; a click on a background window&rsquo;s themed title bar brings that very window forward at once, and dragging by the bar no longer loses track; the menu names the theme chosen in Settings; desktop names that wrap get a plate that fits; the Apple cover takes the first click; nothing piles up in memory over a long session.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.8.7/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="o8irlg+y0zccn1whd/W45ISmWC1IRF0HGdwTovyd8YJsYuBdg59y7BGxRE7C60JEShlQvnPT6IG0xnCpFlS3CQ=="
+        length="93532505"
+      />
+    </item>
+    <item>
       <title>Version 2.8.6</title>
       <pubDate>Sun, 20 Sep 2026 14:17:50 +0000</pubDate>
       <sparkle:version>2.8.6</sparkle:version>
