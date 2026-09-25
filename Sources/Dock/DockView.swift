@@ -281,7 +281,7 @@ final class DockView: NSView {
         super.init(frame: frame)
         wantsLayer = true
         layer?.masksToBounds = false
-        registerForDraggedTypes([.fileURL])
+        registerForDraggedTypes([.fileURL, .retromacDockItem])
         setupObservers()
     }
 
@@ -1129,6 +1129,13 @@ final class DockView: NSView {
     }
 
     private func folderIcon(path: String, size: CGFloat) -> NSImage {
+        // The picture the user chose for this folder (Settings ▸ the item's icon) comes first,
+        // as it does for an app; folders ignored it.
+        if let custom = ThemeManager.shared.customIconPath(for: "__folder__" + path),
+           let img = NSImage(contentsOfFile: custom) {
+            img.size = NSSize(width: size, height: size)
+            return img
+        }
         // Theme-mapped folder art. iconMappings is keyed by the dock's synthetic folder id, so
         // a manifest can name any folder — see ThemeBundle.iconURL(for:) for the "~" folding.
         if let url = ThemeManager.shared.activeTheme?.iconURL(for: "__folder__" + path),
@@ -1136,10 +1143,14 @@ final class DockView: NSView {
             img.size = NSSize(width: size, height: size)
             return img
         }
-        // Themed Downloads icon (e.g. Maiks Favourite's retro folder.icns), shown crisp.
-        if let downloads = try? FileManager.default.url(for: .downloadsDirectory, in: .userDomainMask, appropriateFor: nil, create: false),
-           URL(fileURLWithPath: path).standardizedFileURL == downloads.standardizedFileURL,
-           let dir = ThemeManager.shared.activeTheme?.iconsDirectory {
+        // Themed Downloads icon (e.g. Maiks Favourite's retro folder.icns), shown crisp — for the
+        // user's Downloads and for any folder called Downloads (one on an external disk).
+        let isDownloads: Bool = {
+            if URL(fileURLWithPath: path).lastPathComponent.caseInsensitiveCompare("Downloads") == .orderedSame { return true }
+            guard let downloads = try? FileManager.default.url(for: .downloadsDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else { return false }
+            return URL(fileURLWithPath: path).standardizedFileURL == downloads.standardizedFileURL
+        }()
+        if isDownloads, let dir = ThemeManager.shared.activeTheme?.iconsDirectory {
             let custom = dir.appendingPathComponent("downloads.icns")
             if let img = NSImage(contentsOf: custom) {
                 img.size = NSSize(width: size, height: size)
@@ -3404,16 +3415,18 @@ final class DockView: NSView {
     // MARK: - Drag & Drop
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        if draggedDockItem(sender) != nil { return .move }
         guard hasAppURL(sender) else { return [] }
         return .copy
     }
 
     override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
-        guard hasAppURL(sender) else { return [] }
+        let internalDrag = draggedDockItem(sender) != nil
+        guard internalDrag || hasAppURL(sender) else { return [] }
         let loc = convert(sender.draggingLocation, from: nil)
         dropInsertionIndex = insertionIndex(at: loc)
         needsDisplay = true
-        return .copy
+        return internalDrag ? .move : .copy
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
@@ -3422,8 +3435,16 @@ final class DockView: NSView {
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let loc = convert(sender.draggingLocation, from: nil)
+        let slot = rowSlot(forInsertionIndex: dropInsertionIndex ?? insertionIndex(at: loc))
         dropInsertionIndex = nil
         needsDisplay = true
+
+        // A pinned icon dragged along the dock: it moves to where it was let go.
+        if let moved = draggedDockItem(sender) {
+            AppManager.shared.move(bundleID: moved, toSlot: slot, inRow: pinnedRow)
+            return true
+        }
 
         guard let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [
             .urlReadingFileURLsOnly: true
@@ -3438,11 +3459,30 @@ final class DockView: NSView {
             return true
         }
 
-        // It's an app
+        // It's an app: pinned where it was dropped, not at the end of the row.
         guard let bundle = Bundle(url: url),
               let bundleID = bundle.bundleIdentifier else { return false }
-        AppManager.shared.addApp(bundleID: bundleID)
+        AppManager.shared.addApp(bundleID: bundleID, atSlot: slot, inRow: pinnedRow)
         return true
+    }
+
+    /// The pinned item a drag inside the dock carries, if it is one.
+    private func draggedDockItem(_ sender: NSDraggingInfo) -> String? {
+        guard sender.draggingSource is DockItemView else { return nil }
+        return sender.draggingPasteboard.string(forType: .retromacDockItem)
+    }
+
+    /// The pinned apps' row: the folder stacks sit apart beside the trash wherever the layout
+    /// has that right-hand group, and count for nothing there.
+    private var pinnedRow: (DockApp) -> Bool {
+        let stacksApart = hasTrash && !isControlStrip && !isWindowsTaskbar
+        return { app in !stacksApart || !app.isFolder }
+    }
+
+    /// A drop position in dock cells to a place in the pinned row: Dashboard, where the theme
+    /// has it, takes the cell after the first app and is no pinned item.
+    private func rowSlot(forInsertionIndex idx: Int) -> Int {
+        hasDashboard && idx > 1 ? idx - 1 : idx
     }
 
     private func hasAppURL(_ sender: NSDraggingInfo) -> Bool {

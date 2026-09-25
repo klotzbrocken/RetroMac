@@ -137,12 +137,43 @@ final class AppManager {
         NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
     }
 
+    /// Where an item sits in the dock's row of pinned apps: `slot` counts only the items that
+    /// `inRow` says share that row (the dock shows folder stacks apart, beside the trash, in
+    /// most layouts). The item goes before the one now at that slot, or after the last.
+    private func index(forSlot slot: Int, inRow: (DockApp) -> Bool, excluding bundleID: String? = nil) -> Int {
+        let row = apps.indices.filter { inRow(apps[$0]) && apps[$0].bundleID != bundleID }
+        if slot < row.count { return row[max(0, slot)] }
+        return (row.last.map { $0 + 1 }) ?? apps.count
+    }
+
+    /// Move a pinned item to `slot` of its row — a drag inside the dock, or the Settings list.
+    func move(bundleID: String, toSlot slot: Int, inRow: (DockApp) -> Bool) {
+        guard let from = apps.firstIndex(where: { $0.bundleID == bundleID }) else { return }
+        let item = apps.remove(at: from)
+        let to = index(forSlot: slot, inRow: inRow)
+        apps.insert(item, at: min(to, apps.count))
+        save()
+        NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
+    }
+
+    /// Pin an app where it was dropped rather than at the end of the row.
+    func addApp(bundleID: String, atSlot slot: Int, inRow: (DockApp) -> Bool) {
+        addApp(bundleID: bundleID)
+        guard apps.last?.bundleID == bundleID else { return }   // already there, or not an app
+        move(bundleID: bundleID, toSlot: slot, inRow: inRow)
+    }
+
     func setCustomIcon(for bundleID: String, path: String?) {
         guard let idx = apps.firstIndex(where: { $0.bundleID == bundleID }) else { return }
         apps[idx].customIconPath = path
         save()
         NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
     }
+}
+
+extension NSPasteboard.PasteboardType {
+    /// A pinned dock item being dragged along the dock (its bundle id, or `__folder__<path>`).
+    static let retromacDockItem = NSPasteboard.PasteboardType("com.retromac.dock-item")
 }
 
 extension Notification.Name {

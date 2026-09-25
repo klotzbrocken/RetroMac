@@ -3,6 +3,27 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+- **Rearrange the dock.** Drag a pinned icon along the dock and it moves to where it is let
+  go; an app or folder dragged in from the Finder lands where it is dropped instead of at the
+  end of the row. In Settings, the grip on "Apps in the dock" is real — drag a row up or down
+  — and the dots open a menu (Move to Top, Move Up, Move Down, Remove from Dock) instead of
+  removing the item on the first click. A pinned icon now opens on release rather than on
+  press, the way the Mac's Dock does, so a drag is not taken for a click.
+- **A folder in the dock takes its own icon.** The icon chosen for a folder in Settings was
+  ignored; it shows now. Any folder called Downloads — one on an external disk, say — wears
+  the theme's Downloads icon.
+- **"Quit RetroMac" from the dock's menu asks first.**
+- **Fix: one theme everywhere.** A theme picked in Settings did not tell the rest of the app:
+  Quick Access, the status menu, the theme's shader, the menu-bar apple and the window borders
+  went on as the theme before (and the Apple menu, looking its pictures up in the wrong theme,
+  showed stand-ins). They follow every switch now.
+- **Fix: no dock left behind.** A switch could build the dock twice and lose track of the
+  first; it stayed on screen until RetroMac quit and showed as soon as a theme without a dock
+  (Mac OS 9 (authentic), System 7.1) took over. Every dock window goes when the dock is
+  rebuilt or put away, and an open stack or preview with it.
+
 ## 2.8.7
 
 - **A folder in the dock from Settings.** Themes ▸ Apps in the dock ▸ "Add app or folder…"

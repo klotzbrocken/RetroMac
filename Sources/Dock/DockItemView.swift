@@ -21,6 +21,12 @@ final class DockItemView: NSView {
     private var previewTimer: Timer?
     private var holdTimer: Timer?
     private var didLongPress = false
+    /// A press on a pinned item that may still become a drag along the dock: the click waits
+    /// for the mouse-up, the way the Mac's Dock launches on release.
+    private var pressPoint: NSPoint?
+    private var clickPending = false
+    /// Pinned items (apps and folders in the dock's list) can be dragged to another place.
+    private var isPinned: Bool { AppManager.shared.apps.contains { $0.bundleID == bundleID } }
 
     var onLeftClick: ((String) -> Void)?
     var onRightClick: ((String, NSPoint) -> Void)?
@@ -322,9 +328,14 @@ final class DockItemView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         cancelWindowPreview()
-        // Themes without a long press keep firing on mouse-down, so nothing else in the dock
-        // changes feel over this.
-        guard holdArmed else { onLeftClick?(bundleID); return }
+        pressPoint = convert(event.locationInWindow, from: nil)
+        clickPending = false
+        // Themes without a long press fire on mouse-down — except for a pinned item, which
+        // might be dragged: its click waits for the mouse-up.
+        guard holdArmed else {
+            if isPinned { clickPending = true } else { onLeftClick?(bundleID) }
+            return
+        }
         didLongPress = false
         holdTimer?.invalidate()
         let t = Timer(timeInterval: 0.45, repeats: false) { [weak self] _ in
@@ -339,8 +350,26 @@ final class DockItemView: NSView {
         holdTimer = t
     }
 
-    override func mouseUp(with event: NSEvent) {
+    override func mouseDragged(with event: NSEvent) {
+        guard let start = pressPoint, isPinned else { return }
+        let p = convert(event.locationInWindow, from: nil)
+        guard hypot(p.x - start.x, p.y - start.y) > 5 else { return }
+        // A drag: no click, no long press; the icon goes along with the pointer.
+        pressPoint = nil
+        clickPending = false
         holdTimer?.invalidate(); holdTimer = nil
+        let item = NSPasteboardItem()
+        item.setString(bundleID, forType: .retromacDockItem)
+        let dragItem = NSDraggingItem(pasteboardWriter: item)
+        let image = iconImageView.image ?? NSImage(size: bounds.size)
+        dragItem.setDraggingFrame(bounds, contents: image)
+        beginDraggingSession(with: [dragItem], event: event, source: self)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        pressPoint = nil
+        holdTimer?.invalidate(); holdTimer = nil
+        if clickPending { clickPending = false; onLeftClick?(bundleID); return }
         guard holdArmed else { return }
         if !didLongPress { onLeftClick?(bundleID) }
         didLongPress = false
@@ -360,5 +389,12 @@ final class DockItemView: NSView {
             return (bundleID.replacingOccurrences(of: "__folder__", with: "") as NSString).lastPathComponent
         }
         return bundleID
+    }
+}
+
+extension DockItemView: NSDraggingSource {
+    /// Along the dock only: dropped anywhere else, the icon simply goes back to its place.
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        context == .withinApplication ? .move : []
     }
 }

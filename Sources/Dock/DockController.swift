@@ -68,6 +68,8 @@ final class DockController {
             let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false
             if !hidesDock {
                 self.createWindow()
+            } else {
+                self.tearDownWindow()
             }
             self.registerHotkey()
             self.applySystemDockPolicy()
@@ -152,9 +154,7 @@ final class DockController {
         // nothing re-triggers it after we quit, so it stays there. Clearing the edge first lets
         // the Dock reclaim the primary. (Manually running `killall Dock` later fixes it precisely
         // because RetroMac's windows are gone by then.)
-        window?.orderOut(nil)
-        window = nil
-        dockView = nil
+        tearDownWindow()
         isVisible = false
         DesktopIconsController.shared.hide()
         ProgramManagerController.shared.hide()
@@ -211,7 +211,23 @@ final class DockController {
 
     // MARK: - Window
 
+    /// Take the dock off the screen: the window it knows about AND any other dock window still
+    /// standing, and a stack or preview left open over it. Two build paths of one switch (the
+    /// theme turned on behind its boot screen, the theme picked in Settings) could each create a
+    /// window; the second replaced the reference to the first, which then stayed on screen —
+    /// unreachable — until RetroMac quit, and showed through as soon as a theme without a dock
+    /// (Mac OS 9 (authentic), System 7.1) took over.
+    private func tearDownWindow() {
+        window?.orderOut(nil)
+        for case let w as DockWindow in NSApp.windows where w !== window && w.isVisible { w.orderOut(nil) }
+        window = nil
+        dockView = nil
+        DockStackController.shared.hide()
+        DockPreviewController.shared.hide()
+    }
+
     private func createWindow() {
+        tearDownWindow()   // never two: a window already there would be orphaned by this one
         let screen = targetScreen()
         let dockView = DockView(frame: NSRect(x: 0, y: 0, width: 400, height: 400))
         dockView.onContextMenu = { [weak self] bundleID, point in
@@ -267,9 +283,7 @@ final class DockController {
 
     private func recreateWindow() {
         let wasVisible = isVisible
-        window?.orderOut(nil)
-        window = nil
-        dockView = nil
+        tearDownWindow()
 
         // Dock-less themes (Windows 3.1 Program Manager): no dock bar, just overlays.
         let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false
@@ -885,8 +899,13 @@ final class DockController {
             DispatchQueue.main.async {
                 // Selecting the theme changes nothing on screen, so it happens in front of the
                 // cover — and it has to, because the cover IS this theme's own boot screen.
+                // Picked in Settings, the switch arrives here alone; from the menu or Quick Access
+                // it came through setActiveTheme, which has already made the new theme active
+                // and told everyone. Only in the first case is the news still to be sent.
+                let before = ThemeManager.shared.activeTheme?.stableID
                 ThemeManager.shared.reload(selectTheme: newTheme)
                 ThemeManager.shared.clearCache()
+                let switched = ThemeManager.shared.activeTheme?.stableID != before
 
                 // Everything below is visible, so it waits until the boot screen is up. When
                 // setActiveTheme already raised one, `cover` runs this straight away behind it.
@@ -903,8 +922,11 @@ final class DockController {
                     AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
                     AppManager.shared.syncAutoApplications(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowApplications)
                     self?.recreateWindow()
-                    // Note: no .dockThemeChanged post needed — recreateWindow() already
-                    // creates a fresh DockView with the new theme's layout.
+                    // The dock is rebuilt either way; the rest of the app — Quick Access, the
+                    // status menu, the theme's shader, the menu-bar apple, the window borders —
+                    // learns of a switch made in Settings only through this. Without it they
+                    // went on showing the theme before.
+                    if switched { NotificationCenter.default.post(name: .dockThemeChanged, object: nil) }
                 }
                 if !AppSettings.shared.dockOnly, let theme = ThemeManager.shared.activeTheme {
                     SplashController.shared.cover(for: theme, then: apply)
@@ -1562,6 +1584,15 @@ final class DockController {
         NSApp.sendAction(Selector(("openSettings")), to: nil, from: nil)
     }
     @objc private func menuQuitRetroMac() {
+        // It sits among the dock items' own commands, where a slip is easy: ask first. Quitting
+        // takes the whole themed desktop away, not just the dock.
+        let alert = NSAlert()
+        alert.messageText = "Quit RetroMac?"
+        alert.informativeText = "The theme, the dock and the shader go away, and the Mac returns to its usual look."
+        alert.addButton(withTitle: "Quit")
+        alert.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
         // Route through AppDelegate.quitApp so cleanup (wallpaper/dock/menu-bar restore) runs.
         if !NSApp.sendAction(Selector(("quitApp")), to: nil, from: nil) {
             NSApp.terminate(nil)

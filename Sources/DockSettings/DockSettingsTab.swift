@@ -849,18 +849,34 @@ struct DockSettingsTab: View {
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    AppManager.shared.removeApp(bundleID: app.bundleID)
-                    refreshApps()
+                // A menu, not a button: the dots used to remove the item on the first click.
+                Menu {
+                    Button("Move to Top") { moveDockApp(app, by: -AppManager.shared.apps.count) }
+                    Button("Move Up") { moveDockApp(app, by: -1) }
+                    Button("Move Down") { moveDockApp(app, by: 1) }
+                    Divider()
+                    Button("Remove from Dock", role: .destructive) {
+                        AppManager.shared.removeApp(bundleID: app.bundleID)
+                        refreshApps()
+                    }
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 12))
                         .foregroundColor(.rmTextTertiary)
                 }
-                .buttonStyle(.plain)
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
             }
             .padding(.vertical, 11)
             .padding(.horizontal, RMSpacing.card)
+            .contentShape(Rectangle())
+            // The grip is real now: drag a row up or down the list, the dock follows.
+            .onDrag {
+                draggedDockApp = app.bundleID
+                return NSItemProvider(object: app.bundleID as NSString)
+            }
+            .onDrop(of: [UTType.text], delegate: DockRowDrop(target: app.bundleID, dragged: $draggedDockApp) { refreshApps() })
 
             if !isLast {
                 Rectangle()
@@ -913,6 +929,15 @@ struct DockSettingsTab: View {
 
     private func refreshApps() {
         dockApps = AppManager.shared.apps
+    }
+
+    @State private var draggedDockApp: String?
+
+    private func moveDockApp(_ app: DockApp, by delta: Int) {
+        let apps = AppManager.shared.apps
+        guard let from = apps.firstIndex(where: { $0.bundleID == app.bundleID }) else { return }
+        AppManager.shared.moveApp(from: from, to: max(0, min(apps.count - 1, from + delta)))
+        refreshApps()
     }
 
     @State private var showingIconPicker = false
@@ -1009,4 +1034,23 @@ struct DockAppIconView: View {
                 .resizable()
         }
     }
+}
+
+/// A row of "Apps in the dock" taking a dragged row: the dragged item moves to this row's place
+/// as soon as the pointer is over it, so the list reorders under the drag and the dock with it.
+private struct DockRowDrop: DropDelegate {
+    let target: String
+    @Binding var dragged: String?
+    let refresh: () -> Void
+
+    func dropEntered(info: DropInfo) {
+        let apps = AppManager.shared.apps
+        guard let d = dragged, d != target,
+              let from = apps.firstIndex(where: { $0.bundleID == d }),
+              let to = apps.firstIndex(where: { $0.bundleID == target }) else { return }
+        AppManager.shared.moveApp(from: from, to: to)
+        refresh()
+    }
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+    func performDrop(info: DropInfo) -> Bool { dragged = nil; return true }
 }
