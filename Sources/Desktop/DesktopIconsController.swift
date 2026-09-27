@@ -12,6 +12,8 @@ final class DesktopIconsController {
     private var iconViews: [DesktopIconView] = []
     private var isVisible = false
     private var trashObserver: Any?
+    /// Mount, unmount and rename: the volumes on the desktop follow the disks there are.
+    private var volumeObservers: [NSObjectProtocol] = []
     private var screenObserver: Any?
     private var trashPollTimer: Timer?
     private var custom = DesktopStore.ThemeCustom()
@@ -137,7 +139,13 @@ final class DesktopIconsController {
     }
 
     /// Remove desktop icons window.
+    private func removeVolumeObservers() {
+        volumeObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        volumeObservers.removeAll()
+    }
+
     func hide() {
+        removeVolumeObservers()
         if let obs = trashObserver {
             DistributedNotificationCenter.default().removeObserver(obs)
             trashObserver = nil
@@ -277,6 +285,17 @@ final class DesktopIconsController {
             }
             contentView.addSubview(view)
             iconViews.append(view)
+        }
+
+        // A theme with volumes on the desktop redraws them when a disk comes or goes.
+        let showsVolumes = ThemeManager.shared.activeTheme?.config.desktopIcons?.contains { $0.type == "volumes" } == true
+        if showsVolumes && volumeObservers.isEmpty {
+            let nc = NSWorkspace.shared.notificationCenter
+            for name in [NSWorkspace.didMountNotification, NSWorkspace.didUnmountNotification, NSWorkspace.didRenameVolumeNotification] {
+                volumeObservers.append(nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.update() })
+            }
+        } else if !showsVolumes {
+            removeVolumeObservers()
         }
 
         // Observe trash changes + poll periodically (notification can be unreliable)

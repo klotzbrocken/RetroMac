@@ -15,7 +15,9 @@ final class DockView: NSView {
     private var themeObserver: NSObjectProtocol?
     private var wsTerminateObserver: NSObjectProtocol?
     private var wsActivateObserver: NSObjectProtocol?
-    private var dropInsertionIndex: Int?
+    /// Where a drop would land, along the dock's axis (x across, y down a vertical dock):
+    /// between the icons it would fall between, drawn as the insertion line.
+    private var dropMarker: CGFloat?
     private var separatorX: CGFloat?
     private var startSeparatorX: CGFloat?
     private var separatorY: CGFloat?
@@ -2491,22 +2493,13 @@ final class DockView: NSView {
         if let trashSepX = trashSeparatorX { drawTaskbarSeparator(atX: trashSepX) }
 
         // Drop insertion indicator
-        if let idx = dropInsertionIndex {
-            let iconSize = theme.dock.iconSize * scale
-            let spacing = theme.dock.spacing * scale
-            let padding = theme.dock.padding * scale
+        if let m = dropMarker {
             NSColor.controlAccentColor.setFill()
             if isVertical {
-                let topY = dockBarRect.maxY - padding - gripHeight
-                let y = topY - CGFloat(idx) * (iconSize + spacing) + spacing / 2
-                NSBezierPath(roundedRect: NSRect(x: rect.minX + 4, y: y - 1, width: rect.width - 8, height: 2),
+                NSBezierPath(roundedRect: NSRect(x: rect.minX + 4, y: m - 1, width: rect.width - 8, height: 2),
                              xRadius: 1, yRadius: 1).fill()
             } else {
-                let startOffset = hasStartButton && !startButtonFrame.isEmpty
-                    ? startButtonFrame.maxX + theme.dock.spacing * scale
-                    : padding
-                let x = startOffset + CGFloat(idx) * (iconSize + spacing) - spacing / 2
-                NSBezierPath(roundedRect: NSRect(x: x - 1, y: 4, width: 2, height: rect.height - 8),
+                NSBezierPath(roundedRect: NSRect(x: m - 1, y: 4, width: 2, height: rect.height - 8),
                              xRadius: 1, yRadius: 1).fill()
             }
         }
@@ -3424,25 +3417,27 @@ final class DockView: NSView {
         let internalDrag = draggedDockItem(sender) != nil
         guard internalDrag || hasAppURL(sender) else { return [] }
         let loc = convert(sender.draggingLocation, from: nil)
-        dropInsertionIndex = insertionIndex(at: loc)
+        let target = dropTarget(sender, at: loc)
+        dropMarker = marker(forSlot: target.slot, in: target.views)
         needsDisplay = true
         return internalDrag ? .move : .copy
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
-        dropInsertionIndex = nil
+        dropMarker = nil
         needsDisplay = true
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let loc = convert(sender.draggingLocation, from: nil)
-        let slot = rowSlot(forInsertionIndex: dropInsertionIndex ?? insertionIndex(at: loc))
-        dropInsertionIndex = nil
+        let target = dropTarget(sender, at: loc)
+        dropMarker = nil
         needsDisplay = true
 
-        // A pinned icon dragged along the dock: it moves to where it was let go.
+        // A pinned icon dragged along the dock: it moves to where it was let go, within its
+        // own group (the apps, or the folder stacks beside the trash).
         if let moved = draggedDockItem(sender) {
-            AppManager.shared.move(bundleID: moved, toSlot: slot, inRow: pinnedRow)
+            AppManager.shared.move(bundleID: moved, toSlot: target.slot, inRow: target.inRow)
             return true
         }
 
@@ -3454,15 +3449,15 @@ final class DockView: NSView {
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
 
         if isDir.boolValue && !url.pathExtension.lowercased().contains("app") {
-            // It's a folder (not an .app bundle)
-            AppManager.shared.addFolder(path: url.path)
+            // A folder: pinned where it was dropped among the folders.
+            AppManager.shared.addFolder(path: url.path, atSlot: target.slot, inRow: target.inRow)
             return true
         }
 
-        // It's an app: pinned where it was dropped, not at the end of the row.
+        // An app: pinned where it was dropped, not at the end of the row.
         guard let bundle = Bundle(url: url),
               let bundleID = bundle.bundleIdentifier else { return false }
-        AppManager.shared.addApp(bundleID: bundleID, atSlot: slot, inRow: pinnedRow)
+        AppManager.shared.addApp(bundleID: bundleID, atSlot: target.slot, inRow: target.inRow)
         return true
     }
 
@@ -3472,42 +3467,60 @@ final class DockView: NSView {
         return sender.draggingPasteboard.string(forType: .retromacDockItem)
     }
 
-    /// The pinned apps' row: the folder stacks sit apart beside the trash wherever the layout
-    /// has that right-hand group, and count for nothing there.
-    private var pinnedRow: (DockApp) -> Bool {
-        let stacksApart = hasTrash && !isControlStrip && !isWindowsTaskbar
-        return { app in !stacksApart || !app.isFolder }
+    /// Whether the layout shows folder stacks apart from the apps, beside the trash.
+    private var stacksApart: Bool { hasTrash && !isControlStrip && !isWindowsTaskbar }
+
+    /// Where a drag would land: the group it belongs to (a folder among the folders where they
+    /// sit apart, anything else among the apps), the icons of that group on screen without the
+    /// one being dragged, and the slot among them — counted from the icons' real positions, so
+    /// Dashboard, a start button or the gap before the stacks cannot shift it, and the list the
+    /// slot refers to is the one without the dragged item.
+    private func dropTarget(_ sender: NSDraggingInfo, at loc: NSPoint)
+        -> (slot: Int, views: [DockItemView], inRow: (DockApp) -> Bool) {
+        let dragged = draggedDockItem(sender)
+        let folder: Bool
+        if let dragged {
+            folder = AppManager.shared.apps.first { $0.bundleID == dragged }?.isFolder ?? false
+        } else if let url = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self],
+                                                                    options: [.urlReadingFileURLsOnly: true])?.first as? URL {
+            var isDir: ObjCBool = false
+            FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+            folder = isDir.boolValue && url.pathExtension.lowercased() != "app"
+        } else {
+            folder = false
+        }
+        let apart = stacksApart
+        let inRow: (DockApp) -> Bool = { app in !apart || app.isFolder == folder }
+        let members = Set(AppManager.shared.apps.filter(inRow).map(\.bundleID))
+        let views = itemViews.filter { members.contains($0.bundleID) && $0.bundleID != dragged }
+        let slot = isVertical
+            ? Self.slot(forDrop: loc.y, centres: views.map { $0.frame.midY }, descending: true)
+            : Self.slot(forDrop: loc.x, centres: views.map { $0.frame.midX }, descending: false)
+        return (slot, views, inRow)
     }
 
-    /// A drop position in dock cells to a place in the pinned row: Dashboard, where the theme
-    /// has it, takes the cell after the first app and is no pinned item.
-    private func rowSlot(forInsertionIndex idx: Int) -> Int {
-        hasDashboard && idx > 1 ? idx - 1 : idx
+    /// How many of the group's icons come before the drop point: those left of it across a
+    /// horizontal dock, those above it down a vertical one (y grows upwards).
+    static func slot(forDrop p: CGFloat, centres: [CGFloat], descending: Bool) -> Int {
+        descending ? centres.filter { $0 > p }.count : centres.filter { $0 < p }.count
+    }
+
+    /// The insertion line for a slot: halfway into the gap before the icon at that slot, or
+    /// just past the last one.
+    private func marker(forSlot slot: Int, in views: [DockItemView]) -> CGFloat? {
+        let spacing = (ThemeManager.shared.activeTheme?.config.dock.spacing ?? 4) * CGFloat(AppSettings.shared.dockIconScale)
+        let sorted = isVertical ? views.sorted { $0.frame.midY > $1.frame.midY } : views.sorted { $0.frame.midX < $1.frame.midX }
+        guard !sorted.isEmpty else { return nil }
+        if isVertical {
+            return slot < sorted.count ? sorted[slot].frame.maxY + spacing / 2 : sorted[sorted.count - 1].frame.minY - spacing / 2
+        }
+        return slot < sorted.count ? sorted[slot].frame.minX - spacing / 2 : sorted[sorted.count - 1].frame.maxX + spacing / 2
     }
 
     private func hasAppURL(_ sender: NSDraggingInfo) -> Bool {
         sender.draggingPasteboard.canReadObject(forClasses: [NSURL.self], options: [
             .urlReadingFileURLsOnly: true
         ])
-    }
-
-    private func insertionIndex(at point: NSPoint) -> Int {
-        guard let theme = ThemeManager.shared.activeTheme?.config else { return 0 }
-        let scale = CGFloat(AppSettings.shared.dockIconScale)
-        let iconSize = theme.dock.iconSize * scale
-        let spacing = theme.dock.spacing * scale
-        let padding = theme.dock.padding * scale
-        let cell = iconSize + spacing
-        let pos: CGFloat
-        if isVertical {
-            pos = point.y - padding
-        } else if hasStartButton && !startButtonFrame.isEmpty {
-            pos = point.x - startButtonFrame.maxX - spacing
-        } else {
-            pos = point.x - padding
-        }
-        let idx = Int((pos + cell / 2) / cell)
-        return max(0, min(idx, AppManager.shared.apps.count))
     }
 
     // MARK: - Magnification

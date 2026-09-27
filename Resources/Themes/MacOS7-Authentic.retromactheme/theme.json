@@ -155,6 +155,7 @@
     "showGrip": false,
     "magnification": false,
     "edgeOffset": 0,
+    "controlStripStyle": "system7",
     "stripModules": [
       "appletalk",
       "sharing",
@@ -264,6 +265,7 @@
     "applicationMenuIconOnly": true,
     "appleMenu": true,
     "balloonHelp": true,
+    "appleMenuStyle": "system7",
     "palette": "mac256"
   },
   "desktopIconsSide": "right",

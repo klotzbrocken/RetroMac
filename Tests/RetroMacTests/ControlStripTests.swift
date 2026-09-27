@@ -91,6 +91,21 @@ final class ControlStripTests: XCTestCase {
         XCTAssertNil(ControlStripController.makeModule("nonesuch"), "an unknown id is skipped, not guessed at")
     }
 
+    /// System 7.1 has its own Apple menu and its own strip, by the manifest — not because of
+    /// its palette — and the two strips are built from different keys, so a switch rebuilds.
+    func testSystem7HasItsOwnAppleMenuAndStrip() throws {
+        let s7 = try XCTUnwrap(theme("MacOS7-Authentic.retromactheme"))
+        let os9 = try XCTUnwrap(authenticTheme())
+        XCTAssertTrue(s7.config.hasSystem7AppleMenu)
+        XCTAssertTrue(s7.config.hasSystem7ControlStrip)
+        XCTAssertFalse(os9.config.hasSystem7AppleMenu)
+        XCTAssertFalse(os9.config.hasSystem7ControlStrip)
+        XCTAssertNotEqual(ControlStripController.buildKey(for: s7), ControlStripController.buildKey(for: os9))
+        let titles = AppleMenuController.shared.system7Items().map(\.title).filter { !$0.isEmpty }
+        XCTAssertEqual(titles, ["About This Macintosh\u{2026}", "Alarm Clock", "Calculator", "Chooser",
+                                "Control Panels", "Key Caps", "Note Pad", "Scrapbook"])
+    }
+
     /// The Mac's standard 8-bit table: 256 different colours, the cube, the four ramps and
     /// black; an icon comes out at the pixel count asked for, every pixel one of them, and
     /// its mask all or nothing.

@@ -86,6 +86,9 @@ struct DockThemeConfig: Codable {
         /// The Apple menu of Mac OS 9 under the Apple cover: About This Computer, Applications,
         /// Calculator, Chooser, Control Panels, Favorites, Recent Applications/Documents/Servers…
         var appleMenu: Bool? = nil
+        /// Which Apple menu: `"system7"` is System 7.1's (About This Macintosh, Alarm Clock,
+        /// Key Caps, Note Pad, Scrapbook…); absent, Mac OS 9's.
+        var appleMenuStyle: String? = nil
         /// The palette the theme draws in. `"mac256"` is the Mac's standard 256-colour table
         /// (System 7.1 (authentic)): every icon — dock, desktop, menus, Applications window,
         /// Control Strip — is snapped to it with a 1-bit mask, as System 7 drew at "256".
@@ -251,6 +254,9 @@ struct DockThemeConfig: Codable {
         /// The Control Strip modules this theme shows, by id and in its own order
         /// (`["appletalk", "battery", …]`). Absent: every module RetroMac has.
         var stripModules: [String]?
+        /// How the Control Strip is built: `"system7"` is System 7.5's colour strip, from the
+        /// original's pixels; absent, Mac OS 9's Platinum strip.
+        var controlStripStyle: String?
     }
 
     struct IconStyle: Codable {
@@ -356,6 +362,9 @@ extension DockThemeConfig {
     var hasMac256Palette: Bool { menuBar?.palette?.lowercased() == "mac256" }
     /// The Control Strip modules this theme wants, in its own order; nil = all of them.
     var stripModuleIDs: [String]? { dock.stripModules }
+    var controlStripStyle: String? { dock.controlStripStyle }
+    var hasSystem7ControlStrip: Bool { dock.controlStripStyle?.lowercased() == "system7" }
+    var hasSystem7AppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "system7" }
     /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.
     var hasWindowPreview: Bool { dock.windowPreview == true }
     var hasFolderStacks: Bool { dock.folderStacks == true }

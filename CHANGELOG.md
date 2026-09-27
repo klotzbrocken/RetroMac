@@ -19,6 +19,31 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Quick Access, the status menu, the theme's shader, the menu-bar apple and the window borders
   went on as the theme before (and the Apple menu, looking its pictures up in the wrong theme,
   showed stand-ins). They follow every switch now.
+- **WindowShade.** Under the Mac OS 8/9 title bars the collapse box and a double-click roll a
+  window up to its bar and down again, as Mac OS 8 and 9 did: the window is parked out of
+  sight (not minimised, no Dock entry) and its bar stays where it was — it can be dragged, and
+  the window unrolls wherever the bar is then. Themes off or RetroMac quitting put every
+  rolled-up window back. A double-click does what each era's did: nothing under System 6 and
+  7, maximise under Windows, minimise under the Mac OS X and Snow Leopard lights.
+- **System 7.1 gets its own Apple menu** — About This Macintosh, Alarm Clock, Calculator,
+  Chooser, Control Panels, Key Caps, Note Pad, Scrapbook — instead of Mac OS 9's
+  (`menuBar.appleMenuStyle`), and its strip is chosen by `dock.controlStripStyle` rather
+  than by its palette.
+- **Fix: the Control Strip follows a switch between two strip themes.** From System 7.1 to Mac
+  OS 9 (or back) the old strip — its modules, its look — stayed until RetroMac restarted.
+- **Fix: dock rearranging lands where it is let go.** An icon dragged to the right went one
+  place too far, and folders beside the trash were placed by the apps' positions; the drop
+  point is now counted from the icons actually on screen, within the icon's own group, and a
+  folder dropped in from the Finder lands where it falls too. The Settings list reorders in
+  memory while dragging and saves once on the drop; letting go outside it changes nothing,
+  and a drag that does not carry the row (text from elsewhere, a drag cut short) moves nothing.
+- **Fix: dragging a window by its bar.** A short first drag, over before the window's
+  Accessibility element had arrived, was lost; a position still being set for one window
+  could land on the next one dragged.
+- **Fix: disks on the desktop follow mount and unmount** instead of waiting for the next
+  theme switch.
+- **Fix: a second RetroMac running** (the dev build beside the release) no longer has its
+  square window corners reset by the other one starting up.
 - **Fix: no dock left behind.** A switch could build the dock twice and lose track of the
   first; it stayed on screen until RetroMac quit and showed as soon as a theme without a dock
   (Mac OS 9 (authentic), System 7.1) took over. Every dock window goes when the dock is

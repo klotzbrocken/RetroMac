@@ -137,21 +137,40 @@ final class AppManager {
         NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
     }
 
-    /// Where an item sits in the dock's row of pinned apps: `slot` counts only the items that
-    /// `inRow` says share that row (the dock shows folder stacks apart, beside the trash, in
-    /// most layouts). The item goes before the one now at that slot, or after the last.
-    private func index(forSlot slot: Int, inRow: (DockApp) -> Bool, excluding bundleID: String? = nil) -> Int {
-        let row = apps.indices.filter { inRow(apps[$0]) && apps[$0].bundleID != bundleID }
-        if slot < row.count { return row[max(0, slot)] }
-        return (row.last.map { $0 + 1 }) ?? apps.count
+    /// `apps` with `id` moved to `slot` of its row. `slot` counts the items `inRow` puts in the
+    /// same row, *without* the moved one — the dock counts the icons it drops between the
+    /// same way — and the item goes before the one at that slot, or after the row's last.
+    static func reordered(_ apps: [DockApp], moving id: String, toSlot slot: Int,
+                          inRow: (DockApp) -> Bool) -> [DockApp] {
+        var list = apps
+        guard let from = list.firstIndex(where: { $0.bundleID == id }) else { return apps }
+        let item = list.remove(at: from)
+        let row = list.indices.filter { inRow(list[$0]) }
+        let to: Int
+        if slot < row.count { to = row[max(0, slot)] }
+        else { to = row.last.map { $0 + 1 } ?? list.count }
+        list.insert(item, at: min(to, list.count))
+        return list
     }
 
-    /// Move a pinned item to `slot` of its row — a drag inside the dock, or the Settings list.
+    /// Move a pinned item to `slot` of its row — a drag along the dock.
     func move(bundleID: String, toSlot slot: Int, inRow: (DockApp) -> Bool) {
-        guard let from = apps.firstIndex(where: { $0.bundleID == bundleID }) else { return }
-        let item = apps.remove(at: from)
-        let to = index(forSlot: slot, inRow: inRow)
-        apps.insert(item, at: min(to, apps.count))
+        let next = Self.reordered(apps, moving: bundleID, toSlot: slot, inRow: inRow)
+        guard next.map(\.bundleID) != apps.map(\.bundleID) else { return }
+        apps = next
+        save()
+        NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
+    }
+
+    /// The whole order at once, as the Settings list leaves it after a drag: one save, one
+    /// notice. Ids it does not name keep their place after the named ones.
+    func setOrder(bundleIDs: [String]) {
+        let rank = Dictionary(uniqueKeysWithValues: bundleIDs.enumerated().map { ($1, $0) })
+        let next = apps.enumerated().sorted {
+            (rank[$0.element.bundleID] ?? Int.max, $0.offset) < (rank[$1.element.bundleID] ?? Int.max, $1.offset)
+        }.map(\.element)
+        guard next.map(\.bundleID) != apps.map(\.bundleID) else { return }
+        apps = next
         save()
         NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
     }
@@ -161,6 +180,14 @@ final class AppManager {
         addApp(bundleID: bundleID)
         guard apps.last?.bundleID == bundleID else { return }   // already there, or not an app
         move(bundleID: bundleID, toSlot: slot, inRow: inRow)
+    }
+
+    /// Pin a folder where it was dropped among the folders.
+    func addFolder(path: String, atSlot slot: Int, inRow: (DockApp) -> Bool) {
+        addFolder(path: path)
+        let id = "__folder__\(path)"
+        guard apps.last?.bundleID == id else { return }
+        move(bundleID: id, toSlot: slot, inRow: inRow)
     }
 
     func setCustomIcon(for bundleID: String, path: String?) {

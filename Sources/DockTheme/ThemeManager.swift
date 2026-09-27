@@ -92,6 +92,8 @@ final class ThemeManager {
         // overrides — re-apply them here (the dockTheme sink reloads on EVERY switch).
         applyDockVariants()
         registerThemeFonts()
+        AppleMenuController.clearIconCache()
+        ApplicationMenuController.clearIconCache()
         print("[Theme] Active: \(activeTheme?.name ?? "nil")")
     }
 

@@ -141,6 +141,9 @@ final class ApplicationMenuController: NSObject {
     }
 
     /// The menu's pictures, kept between openings (one per app, per theme).
+    /// Emptied when the themes are read again: a theme installed anew keeps its id, and its old
+    /// pictures would otherwise stay until RetroMac quit.
+    static func clearIconCache() { iconCache.removeAllObjects() }
     private static let iconCache: NSCache<NSString, NSImage> = {
         let c = NSCache<NSString, NSImage>(); c.countLimit = 200; return c
     }()

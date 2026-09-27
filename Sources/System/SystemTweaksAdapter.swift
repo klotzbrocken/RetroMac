@@ -139,6 +139,14 @@ enum SystemTweaksAdapter {
     /// snapshotted the first one's 0.5 as the "original" and put it back on restore. Nobody
     /// sets 0.5 by hand, so an untracked 0.5 is ours and goes; every other value is the user's.
     private static func dropOrphanedSquareCorners() {
+        // Another RetroMac running (the dev build beside the release) may be the one using the
+        // value right now; it is then not an orphan, and deleting it would take that one's
+        // square corners away mid-session.
+        let me = ProcessInfo.processInfo.processIdentifier
+        let others = NSWorkspace.shared.runningApplications.contains {
+            $0.processIdentifier != me && ($0.bundleIdentifier ?? "").hasPrefix("com.retromac.app")
+        }
+        guard !others else { return }
         let stored = (d.array(forKey: origKey) as? [[String: String]]) ?? []
         let tracked = stored.contains { $0["domain"] == "-g" && $0["key"] == "NSConvolutionOverride1" }
         guard !tracked, let value = SystemBridge.shared.readDefault("-g", "NSConvolutionOverride1"),

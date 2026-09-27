@@ -283,6 +283,11 @@ final class WindowBorderController {
             if Date() < until { return }
             leaving.removeValue(forKey: target)
         }
+        // A window rolled up to its title bar (WindowShade) has nothing to frame.
+        if TitleBarOverlayController.shared.isShaded(target) {
+            if let b = borders[target] { skb_destroy(b.wid); borders.removeValue(forKey: target) }
+            return
+        }
         // Skip full-screen / desktop-sized windows.
         if let scr = NSScreen.screens.first(where: { $0.frame.width >= windowBounds.width }),
            windowBounds.width >= scr.frame.width - 1, windowBounds.height >= scr.frame.height - 1 {

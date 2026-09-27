@@ -17,7 +17,8 @@ final class AppleMenuController {
 
     /// The menu of the day, first level in the theme's own pictures (icons/…).
     func items() -> [PlatinumMenuItem] {
-        [open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
+        if ThemeManager.shared.activeTheme?.config.hasSystem7AppleMenu == true { return system7Items() }
+        return [open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
          .separator(),
          submenu("Applications", icon: themeIcon("folder.png")) { Self.entries(Self.applications()) },
          app("Apple System Profiler", "/System/Applications/Utilities/System Information.app", icon: "profiler.png"),
@@ -31,6 +32,21 @@ final class AppleMenuController {
          submenu("Recent Servers", icon: themeIcon("recent-servers.png")) { Self.entries(Self.sharedList("RecentServers")) },
          app("Sherlock 2", "/System/Library/CoreServices/Spotlight.app", icon: "sherlock.png"),
          app("Stickies", "/System/Applications/Stickies.app", icon: "stickies.png")]
+    }
+
+    /// System 7.1's Apple menu as it came: About This Macintosh, then the desk accessories and
+    /// Control Panels, in the modern app that does each job — no Favorites, no recent lists,
+    /// no Network Browser or Sherlock, which came later.
+    func system7Items() -> [PlatinumMenuItem] {
+        [open("About This Macintosh\u{2026}", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
+         .separator(),
+         app("Alarm Clock", "/System/Applications/Clock.app"),
+         app("Calculator", "/System/Applications/Calculator.app", icon: "calculator.png"),
+         open("Chooser", "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension", icon: "chooser.png"),
+         submenu("Control Panels", icon: themeIcon("settings.png")) { Self.entries(Self.controlPanels()) },
+         open("Key Caps", "x-apple.systempreferences:com.apple.Keyboard-Settings.extension"),
+         app("Note Pad", "/System/Applications/Notes.app", icon: "notes.png"),
+         app("Scrapbook", "/System/Applications/Photos.app", icon: "photos.png")]
     }
 
     // MARK: Items
@@ -102,6 +118,9 @@ final class AppleMenuController {
 
     /// Menu pictures, kept between openings: building them is a file read and, in a 256-colour
     /// theme, a pass over the picture.
+    /// Emptied when the themes are read again: a theme installed anew keeps its id, and its old
+    /// pictures would otherwise stay until RetroMac quit.
+    static func clearIconCache() { iconCache.removeAllObjects() }
     private static let iconCache: NSCache<NSString, NSImage> = {
         let c = NSCache<NSString, NSImage>(); c.countLimit = 400; return c
     }()

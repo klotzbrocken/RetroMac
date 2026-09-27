@@ -44,6 +44,16 @@ final class TitleBarOverlayController {
         var isBar: Bool { self != .aquaLights && self != .snowLights }
         /// Windows caption buttons cluster on the right; the Mac's close box sits on the left.
         var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero }
+        /// What a double-click on the bar did in each era: Mac OS 8/9 rolled the window up
+        /// (WindowShade), System 6 and 7 did nothing, Windows maximised, Mac OS X minimised.
+        var doubleClickAction: ChromeButtonKind? {
+            switch self {
+            case .platinum: return .collapse
+            case .system6, .system7: return nil
+            case .win31, .win98, .luna, .aero: return .zoom
+            case .aquaLights, .snowLights: return .minimize
+            }
+        }
     }
 
     private final class Overlay {
@@ -196,6 +206,7 @@ final class TitleBarOverlayController {
         wsTokens.forEach { nc.removeObserver($0) }
         wsTokens.removeAll()
         undoAutoGeometry()   // before the element cache goes
+        unshadeAll()          // likewise: every rolled-up window back where it was
         stopOverlays()
         WindowBorderController.shared.releaseObserversIfIdle()
         squareTheRealCorners()   // reconciles without the corner key now
@@ -340,9 +351,17 @@ final class TitleBarOverlayController {
             }
             if excluded.contains(info.bundleID) { continue }
             suitable.insert(wid)
-            apply(info, level: outLevel[i], style: style, isFront: wid == frontWID, screens: screens)
+            // A shaded window is parked in a corner; its bar stays where the window was.
+            let placed = shaded[wid].map { WindowInfo(id: info.id, pid: info.pid, bounds: $0, title: info.title,
+                                                       ownerName: info.ownerName, bundleID: info.bundleID) } ?? info
+            apply(placed, level: outLevel[i], style: style, isFront: wid == frontWID, screens: screens)
         }
-        for wid in overlays.keys where !suitable.contains(wid) { forget(wid) }
+        // A rolled-up window parked off screen may drop off the list; while it exists, its bar
+        // stays — forgetting it would leave the window stranded in the corner.
+        for wid in overlays.keys where !suitable.contains(wid) {
+            if shaded[wid] != nil, PrivateWindowAPI.bounds(of: wid) != nil { continue }
+            forget(wid)
+        }
         if Date() >= nextPrune {
             nextPrune = Date().addingTimeInterval(30)
             pruneCaches(present: Set(infoByID.keys))
@@ -406,7 +425,11 @@ final class TitleBarOverlayController {
         if let o = overlays[info.id] {
             o.bounds = info.bounds
             if o.panel.frame != frame { o.panel.setFrame(frame, display: false) }
-            if style.isBar { makeRoom(for: o, info: info, screens: screens); updatePatch(o, info: info, isFront: isFront) }
+            if shaded[info.id] != nil {
+                o.patch?.orderOut(nil)   // the real lights are in the corner with the window
+            } else if style.isBar {
+                makeRoom(for: o, info: info, screens: screens); updatePatch(o, info: info, isFront: isFront)
+            }
             // The z-order is re-asserted on the WindowServer's reorder and front-change events
             // (`handleServerEvent`); here only when the level changed, and once every few
             // seconds as a safety net. Ordering every overlay every pass was most of the 7 ms a
@@ -773,6 +796,7 @@ final class TitleBarOverlayController {
 
     /// The window is gone (closed, minimised, off the list): overlay and every cache with it.
     func forget(_ wid: CGWindowID) {
+        shaded.removeValue(forKey: wid)
         drop(for: wid)
         autoGeometry.removeValue(forKey: wid)
         lightOffsets.removeValue(forKey: wid)
@@ -822,7 +846,8 @@ final class TitleBarOverlayController {
     private var dragWindow: CGWindowID?
     /// The latest position asked for while the previous one is still being set: drags are
     /// coalesced, the app gets the newest point and never a queue of old ones.
-    private var dragTarget: CGPoint?
+    /// Keyed to its window: a position set on the queue for one drag never lands on another.
+    private var dragTarget: (wid: CGWindowID, point: CGPoint)?
     private var dragSetting = false
 
     static let lightDiameter: CGFloat = 15   // a hair over the real 14, so nothing of them shows
@@ -1030,14 +1055,57 @@ final class TitleBarOverlayController {
         guard axWindows[wid] == nil else { return }
         Self.axQueue.async {
             let w = Self.findAXWindow(wid, pid: pid)
-            DispatchQueue.main.async { [weak self] in if let w { self?.axWindows[wid] = w } }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let w else { return }
+                self.axWindows[wid] = w
+                // A short first drag may be over before the element arrived: it moves now.
+                self.applyDrag()
+            }
         }
     }
 
+    /// The drag is over. A position still waiting for its window's element stays: it belongs to
+    /// that window, and is the drag's last one.
     private func endDrag() {
         dragOrigin = nil
         dragWindow = nil
-        dragTarget = nil
+    }
+
+    // MARK: - WindowShade
+
+    /// Windows rolled up to their title bar, the way Mac OS 8 and 9 collapsed a window: the frame
+    /// each had (Quartz, top-left). The real window cannot be made that short, so it is parked
+    /// off screen instead — a point of it left in the bottom-right corner of its screen, which
+    /// keeps it a window (no minimising, no genie, no Dock) — and its bar stays behind alone.
+    private var shaded: [CGWindowID: CGRect] = [:]
+    func isShaded(_ wid: CGWindowID) -> Bool { shaded[wid] != nil }
+
+    private func toggleShade(_ w: AXUIElement, wid: CGWindowID) {
+        if let frame = shaded.removeValue(forKey: wid) {
+            // Unroll: the window back where its bar is.
+            var p = frame.origin
+            Self.axQueue.async { if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
+            WindowBorderController.shared.update()
+            sync()
+            return
+        }
+        guard let frame = overlays[wid]?.bounds, let screen = Self.screen(for: frame) else { return }
+        shaded[wid] = frame
+        let q = Self.quartz(screen.frame)
+        var park = CGPoint(x: q.maxX - 1, y: q.maxY - 1)
+        Self.axQueue.async { if let v = AXValueCreate(.cgPoint, &park) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
+        overlays[wid]?.patch?.orderOut(nil)
+        WindowBorderController.shared.update()   // no frame around a window that is not there
+    }
+
+    /// Theme off or RetroMac quitting: every rolled-up window back in its place, at once.
+    private func unshadeAll() {
+        for (wid, frame) in shaded {
+            guard let w = axWindows[wid] else { continue }
+            var p = frame.origin
+            if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) }
+        }
+        shaded.removeAll()
     }
 
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
@@ -1046,7 +1114,8 @@ final class TitleBarOverlayController {
         let attr: String
         switch kind {
         case .close:              attr = kAXCloseButtonAttribute
-        case .minimize, .collapse: attr = kAXMinimizeButtonAttribute
+        case .collapse:           toggleShade(w, wid: wid); return
+        case .minimize:           attr = kAXMinimizeButtonAttribute
         case .maximize, .zoom, .restore: zoom(w, wid: wid); return
         default: return
         }
@@ -1158,22 +1227,32 @@ final class TitleBarOverlayController {
     private func drag(_ wid: CGWindowID, pid: pid_t, by delta: NSPoint) {
         if dragWindow != wid { press(wid, pid: pid) }
         guard let origin = dragOrigin else { return }
-        dragTarget = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)   // AX is y-down
-        guard let w = axWindows[wid] else { return }   // still being fetched: the next event moves it
-        applyDrag(w)
+        // A rolled-up window is only its bar: the bar moves, and the window unrolls there.
+        if var frame = shaded[wid] {
+            frame.origin = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)
+            shaded[wid] = frame
+            if let o = overlays[wid], let style { o.bounds = frame; o.panel.setFrame(Self.barFrame(for: frame, style: style), display: true) }
+            return
+        }
+        dragTarget = (wid, CGPoint(x: origin.x + delta.x, y: origin.y - delta.y))   // AX is y-down
+        applyDrag()   // waits for the element if it is still being fetched
     }
 
-    private func applyDrag(_ w: AXUIElement) {
-        guard !dragSetting, var target = dragTarget else { return }
+    /// Set the newest target on the Accessibility queue — for the window it belongs to, looked
+    /// up when it is sent, so a completion from an earlier drag cannot send a later drag's
+    /// point to the earlier window.
+    private func applyDrag() {
+        guard !dragSetting, let target = dragTarget, let w = axWindows[target.wid] else { return }
         dragTarget = nil
         dragSetting = true
+        var point = target.point
         Self.axQueue.async {
-            if let v = AXValueCreate(.cgPoint, &target) {
+            if let v = AXValueCreate(.cgPoint, &point) {
                 AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v)
             }
             DispatchQueue.main.async { [weak self] in
                 self?.dragSetting = false
-                self?.applyDrag(w)
+                self?.applyDrag()
             }
         }
     }
@@ -1737,7 +1816,7 @@ final class TitleBarOverlayView: NSView {
         if !isFront { onActivate?() }
         if tracker.mouseDown(at: p) { needsDisplay = true; return }
         if deadZone.contains(p) {
-            if event.clickCount == 2 { onAction?(.zoom); return }
+            if event.clickCount == 2 { if let action = style.doubleClickAction { onAction?(action) }; return }
             dragStart = NSEvent.mouseLocation
             dragging = false
         }

@@ -59,6 +59,7 @@ final class ControlStripController {
         panel?.orderOut(nil)
         panel = nil
         view = nil
+        builtFor = nil
     }
 
     /// The modules the theme asks for, in its order; an unknown id is skipped.
@@ -68,7 +69,19 @@ final class ControlStripController {
         modules = built.isEmpty ? Self.macOS9Order.compactMap { Self.makeModule($0) } : built
     }
 
+    /// What the strip on screen was built from. A switch between two themes that both have a
+    /// strip (System 7.1 ↔ Mac OS 9) left the old one standing — its modules, its look, its
+    /// pictures — because the panel was only ever built once.
+    private var builtFor: String?
+    static func buildKey(for theme: ThemeBundle) -> String {
+        [theme.stableID, (theme.config.stripModuleIDs ?? []).joined(separator: ","),
+         theme.config.controlStripStyle ?? ""].joined(separator: "|")
+    }
+
     private func show(theme: ThemeBundle) {
+        let key = Self.buildKey(for: theme)
+        if panel != nil, builtFor != key { hide() }
+        builtFor = key
         if panel == nil {
             let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: ControlStripView.height),
                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -368,15 +381,15 @@ final class ControlStripView: NSView {
     static let triangleRoom: CGFloat = 8
     var mirrored = false          // right edge: the tab is on the right, everything reads mirrored
     var scrollIndex = 0
-    /// System 7.1 (authentic) (`menuBar.palette: "mac256"`): the System 7.5 colour strip,
-    /// drawn by `drawPowerBook()` from the original's pixels.
+    /// `dock.controlStripStyle: "system7"`: the System 7.5 colour strip, drawn by
+    /// `drawPowerBook()` from the original's pixels.
     let mono: Bool
 
     override var isFlipped: Bool { true }
 
     init(theme: ThemeBundle, controller: ControlStripController) {
         self.controller = controller
-        let isMono = theme.config.hasMac256Palette
+        let isMono = theme.config.hasSystem7ControlStrip
         mono = isMono
         // The System 7 strip draws its ends, arrows and pictures itself (`System7Strip`).
         let bit: (NSImage?) -> NSImage? = { img in isMono ? nil : img }

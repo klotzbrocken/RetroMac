@@ -745,10 +745,18 @@ struct DockSettingsTab: View {
                         .foregroundColor(.rmTextSecondary)
                         .padding(RMSpacing.card)
                 } else {
-                    ForEach(Array(visibleApps.enumerated()), id: \.element.id) { index, app in
-                        let isLast = !hasMore && index == visibleApps.count - 1
-                        dockAppRow(app, isLast: isLast)
+                    VStack(spacing: 0) {
+                        ForEach(Array(visibleApps.enumerated()), id: \.element.id) { index, app in
+                            let isLast = !hasMore && index == visibleApps.count - 1
+                            dockAppRow(app, isLast: isLast)
+                        }
                     }
+                    .coordinateSpace(name: "dockList")
+                    .onPreferenceChange(DockRowFrames.self) { dockRowFrames = $0 }
+                    .onDrop(of: [UTType.text], delegate: DockListDrop(
+                        apps: $dockApps, dragged: $draggedDockApp, validated: $dragValidated, rowFrames: dockRowFrames,
+                        commit: { AppManager.shared.setOrder(bundleIDs: $0) },
+                        revert: { refreshApps() }))
                     if hasMore {
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) { showAllApps = true }
@@ -871,12 +879,15 @@ struct DockSettingsTab: View {
             .padding(.vertical, 11)
             .padding(.horizontal, RMSpacing.card)
             .contentShape(Rectangle())
-            // The grip is real now: drag a row up or down the list, the dock follows.
+            // The grip is real: drag a row up or down the list; the list takes the drop.
             .onDrag {
                 draggedDockApp = app.bundleID
+                dragValidated = false
                 return NSItemProvider(object: app.bundleID as NSString)
             }
-            .onDrop(of: [UTType.text], delegate: DockRowDrop(target: app.bundleID, dragged: $draggedDockApp) { refreshApps() })
+            .background(GeometryReader { g in
+                Color.clear.preference(key: DockRowFrames.self, value: [app.bundleID: g.frame(in: .named("dockList"))])
+            })
 
             if !isLast {
                 Rectangle()
@@ -932,6 +943,8 @@ struct DockSettingsTab: View {
     }
 
     @State private var draggedDockApp: String?
+    @State private var dragValidated = false
+    @State private var dockRowFrames: [String: CGRect] = [:]
 
     private func moveDockApp(_ app: DockApp, by delta: Int) {
         let apps = AppManager.shared.apps
@@ -1036,21 +1049,60 @@ struct DockAppIconView: View {
     }
 }
 
-/// A row of "Apps in the dock" taking a dragged row: the dragged item moves to this row's place
-/// as soon as the pointer is over it, so the list reorders under the drag and the dock with it.
-private struct DockRowDrop: DropDelegate {
-    let target: String
+/// Where each row of "Apps in the dock" sits, for the list's drop target.
+private struct DockRowFrames: PreferenceKey {
+    static var defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+/// The list of "Apps in the dock" taking a dragged row. The rows reorder in memory under the
+/// pointer — nothing is written while the drag is on — and the order is saved once, on the
+/// drop; leaving the list puts it back as it was. Only a drag that really carries the row's
+/// id counts: a stale id from a drag cut short, or a text dragged in from elsewhere, moves
+/// nothing.
+private struct DockListDrop: DropDelegate {
+    @Binding var apps: [DockApp]
     @Binding var dragged: String?
-    let refresh: () -> Void
+    @Binding var validated: Bool
+    let rowFrames: [String: CGRect]
+    let commit: ([String]) -> Void
+    let revert: () -> Void
+
+    func validateDrop(info: DropInfo) -> Bool { dragged != nil && info.hasItemsConforming(to: [UTType.text]) }
 
     func dropEntered(info: DropInfo) {
-        let apps = AppManager.shared.apps
-        guard let d = dragged, d != target,
-              let from = apps.firstIndex(where: { $0.bundleID == d }),
-              let to = apps.firstIndex(where: { $0.bundleID == target }) else { return }
-        AppManager.shared.moveApp(from: from, to: to)
-        refresh()
+        guard let expected = dragged, let provider = info.itemProviders(for: [UTType.text]).first else { return }
+        _ = provider.loadObject(ofClass: NSString.self) { object, _ in
+            let carried = object as? String
+            DispatchQueue.main.async { validated = carried == expected }
+        }
     }
-    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
-    func performDrop(info: DropInfo) -> Bool { dragged = nil; return true }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        guard validated, let moving = dragged else { return DropProposal(operation: .cancel) }
+        let y = info.location.y
+        if let target = rowFrames.first(where: { $0.value.minY <= y && y < $0.value.maxY })?.key, target != moving,
+           let from = apps.firstIndex(where: { $0.bundleID == moving }),
+           let to = apps.firstIndex(where: { $0.bundleID == target }) {
+            withAnimation(.easeInOut(duration: 0.12)) {
+                apps.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+            }
+        }
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        revert()
+        dragged = nil
+        validated = false
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer { dragged = nil; validated = false }
+        guard validated else { return false }
+        commit(apps.map(\.bundleID))
+        return true
+    }
 }
