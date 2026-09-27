@@ -11,7 +11,7 @@ struct WhatsNewView: View {
                     .padding(.top, 24)
                 Text("What's New in RetroMac \(currentAppVersion)")
                     .font(.title2.bold())
-                Text("System 7.1 in 256 colours, a starfield, and an emergency exit")
+                Text("A dock you can rearrange, WindowShade, and one theme everywhere")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -22,31 +22,31 @@ struct WhatsNewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     featureRow(
-                        icon: "desktopcomputer",
+                        icon: "dock.rectangle",
                         color: .blue,
-                        title: "System 7.1 (authentic)",
-                        description: "System 7.1 as a colour Mac showed it at 256 colours: every icon on the desktop, in the Apple menu, the Application menu and the Applications window snapped to the Mac\u{2019}s standard colour table, the rainbow apple, and windows in System 7\u{2019}s lavender-grey \u{2014} striped title bar, sunken close and zoom boxes, the scroll bars of the day, measured pixel for pixel from the real thing. The Control Strip is System 7.5\u{2019}s, taken pixel for pixel from the original: AppleTalk, File Sharing, colour depth, resolution and sound. No dock; the Application menu at the right of the menu bar and Balloon Help beside it."
+                        title: "Rearrange the dock",
+                        description: "Drag an icon along the dock and it stays where you let go; an app or a folder dragged in from the Finder lands where it is dropped. In Settings the grip on \u{201C}Apps in the dock\u{201D} works, and the dots open a menu instead of removing the item. A folder in the dock takes the icon you choose for it, and any folder called Downloads wears the theme\u{2019}s Downloads icon."
                     )
 
                     featureRow(
-                        icon: "sparkles",
+                        icon: "rectangle.compress.vertical",
                         color: .purple,
-                        title: "Starfield Simulation",
-                        description: "The Windows 2000 screen saver, for every theme: white squares flying out of the centre, with the constants recovered from the original binary."
+                        title: "WindowShade",
+                        description: "Under the Mac OS 8/9 title bars the collapse box and a double-click roll a window up to its bar and down again, as Mac OS 8 and 9 did; under System 7.1 a double-click does it, as System 7.5\u{2019}s WindowShade did. The bar stays where the window was and can be dragged."
                     )
 
                     featureRow(
-                        icon: "lifepreserver",
+                        icon: "menubar.rectangle",
                         color: .orange,
-                        title: "Settings \u{25B8} General \u{25B8} macOS defaults",
-                        description: "The emergency exit: turns the theme and the shader off and puts back everything RetroMac can have changed about the system \u{2014} cursors, window corners, the Dock, the menu bar, desktop icons, wallpaper and appearance."
+                        title: "System 7.1, closer to the original",
+                        description: "Its own Apple menu \u{2014} About This Macintosh, Alarm Clock, Applications, Calculator, Chooser, Control Panels, Key Caps, Note Pad, Scrapbook \u{2014} and the Control Strip follows a switch to or from Mac OS 9 at once."
                     )
 
                     featureRow(
                         icon: "wrench.and.screwdriver.fill",
                         color: .gray,
                         title: "Fixes",
-                        description: "Switching the Dock\u{2019}s auto-hide off in System Settings no longer brings the macOS Dock back over the Snow Leopard or Mountain Lion dock. A click on a background window\u{2019}s themed title bar brings that very window forward at once, without the spinning cursor, and dragging by the bar no longer loses track. The menu names the theme chosen in Settings. Desktop names that wrap get a plate that fits. The Apple cover takes the first click and stays off without Accessibility. A folder can join the dock from Settings, and a long session no longer piles up memory."
+                        description: "A theme picked in Settings now reaches Quick Access, the status menu, the shader and the Apple menu. No dock is left behind after a switch to a theme without one. Dragging a window by its bar no longer loses a short first drag. Disks on the desktop follow mount and unmount. \u{201C}Quit RetroMac\u{201D} from the dock asks first."
                     )
 
                 }

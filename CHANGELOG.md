@@ -3,7 +3,7 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## Unreleased
+## 2.8.8
 
 - **Rearrange the dock.** Drag a pinned icon along the dock and it moves to where it is let
   go; an app or folder dragged in from the Finder lands where it is dropped instead of at the
