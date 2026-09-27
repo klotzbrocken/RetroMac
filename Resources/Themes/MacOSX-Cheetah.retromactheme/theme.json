@@ -50,6 +50,7 @@
     "bevelBottomColor": "#3F619EAA",
     "bevelWidth": 1.5,
     "pinstripe": true,
+    "separatorStyle": "line",
     "shelfStyle": "flat",
     "magnification": true,
     "magnificationScale": 2.0,

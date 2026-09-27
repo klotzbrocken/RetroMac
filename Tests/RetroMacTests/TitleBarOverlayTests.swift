@@ -42,18 +42,19 @@ final class TitleBarOverlayTests: XCTestCase {
     /// The bar sits above the window, so every bar style has the height of its era and the
     /// lights styles have none; every Windows and Mac chrome key resolves to a style.
     func testEveryWindowsAndMacChromeHasAStyle() {
-        for key in ["macos6", "macos9", "win31", "win98", "winxp", "win7"] {
+        for key in ["macos6", "system7", "macos9", "macosx", "win31", "win98", "winxp", "win7"] {
             let style = TitleBarOverlayController.style(for: key)
             XCTAssertEqual(style?.isBar, true, "\(key) should be a bar")
             XCTAssertGreaterThan(TitleBarOverlayController.stripHeight(style!), 0)
         }
-        for key in ["macosx", "snowleopard"] {
+        for key in ["snowleopard"] {
             let style = TitleBarOverlayController.style(for: key)
             XCTAssertEqual(style?.isBar, false, "\(key) should be lights only")
             XCTAssertEqual(TitleBarOverlayController.stripHeight(style!), 0)
         }
         XCTAssertNil(TitleBarOverlayController.style(for: "beos"))
         XCTAssertEqual(TitleBarOverlayController.stripHeight(.platinum), 22, "Platinum's own height, nothing to cover any more")
+        XCTAssertEqual(TitleBarOverlayController.stripHeight(.aqua), 23, "10.0's bar: edge, 21 pinstripes, the line under")
     }
 
     /// The Platinum bar stands a point out on each side, on the hairline macOS draws round
@@ -130,5 +131,22 @@ final class TitleBarCacheTests: XCTestCase {
         XCTAssertLessThan(rep.colorAt(x: 0, y: 0)!.alphaComponent, 0.5)          // top-left cut (bitmap y = 0 is the top)
         XCTAssertGreaterThan(rep.colorAt(x: 0, y: h - 1)!.alphaComponent, 0.5)   // bottom-left square
         XCTAssertGreaterThan(rep.colorAt(x: w / 2, y: 0)!.alphaComponent, 0.5)   // top edge between the corners
+    }
+
+    /// Mac OS X 10.0's bar, as measured: three 13 pt gems 22 pt apart, the first centred
+    /// 16.5 pt in and 10.5 pt down; the pill 8 pt in from the right; rounded top corners.
+    func testAquaBarGeometry() {
+        let bar = NSRect(x: 0, y: 0, width: 400, height: AquaChrome.barHeight)
+        let lights = AquaChrome.lightRects(in: bar, flipped: true)
+        XCTAssertEqual(lights.map(\.midX), [16.5, 38.5, 60.5])
+        XCTAssertTrue(lights.allSatisfy { $0.width == 13 && $0.height == 13 && $0.midY == 10.5 })
+        let pill = AquaChrome.pillRect(in: bar, flipped: true)
+        XCTAssertEqual(pill.maxX, 392)
+        XCTAssertEqual(pill.size, NSSize(width: 22, height: 10))
+        // The same rows counted from the top in an unflipped view.
+        let up = AquaChrome.lightRects(in: bar, flipped: false)
+        XCTAssertEqual(up[0].maxY, bar.maxY - AquaChrome.lightTop)
+        XCTAssertEqual(TitleBarOverlayController.barCornerRadius(for: .aqua), 6)
+        XCTAssertEqual(TitleBarOverlayController.Style.aqua.doubleClickAction, .minimize, "10.0 minimised on a double-click")
     }
 }

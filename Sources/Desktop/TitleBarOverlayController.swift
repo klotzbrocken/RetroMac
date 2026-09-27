@@ -38,10 +38,10 @@ final class TitleBarOverlayController {
     private init() {}
 
     enum Style: CaseIterable {
-        case system6, system7, platinum        // the Mac bars
+        case system6, system7, platinum, aqua  // the Mac bars (aqua: Mac OS X 10.0's pinstripes)
         case win31, win98, luna, aero          // the Windows bars (95, 98 and Me share win98)
-        case aquaLights, snowLights            // the three lights only (Mac OS X, Snow Leopard, Mountain Lion)
-        var isBar: Bool { self != .aquaLights && self != .snowLights }
+        case snowLights                        // the three lights only (Snow Leopard, Mountain Lion)
+        var isBar: Bool { self != .snowLights }
         /// Windows caption buttons cluster on the right; the Mac's close box sits on the left.
         var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero }
         /// What a double-click on the bar did in each era: Mac OS 8/9 rolled the window up, and
@@ -52,7 +52,7 @@ final class TitleBarOverlayController {
             case .platinum, .system7: return .collapse
             case .system6: return nil
             case .win31, .win98, .luna, .aero: return .zoom
-            case .aquaLights, .snowLights: return .minimize
+            case .aqua, .snowLights: return .minimize
             }
         }
     }
@@ -95,7 +95,7 @@ final class TitleBarOverlayController {
     /// The rounding of the bar's own top corners (Luna, Aero); the frame's sides stop under it.
     var barCornerRadius: CGFloat { style.map { Self.barCornerRadius(for: $0) } ?? 0 }
     static func barCornerRadius(for style: Style) -> CGFloat {
-        switch style { case .luna: return 8; case .aero: return 6; default: return 0 }
+        switch style { case .luna: return 8; case .aero: return 6; case .aqua: return AquaChrome.cornerRadius; default: return 0 }
     }
     /// How much the bar adds above each window while a bar style runs (0 otherwise), for the
     /// border to frame and the zoom to allow for.
@@ -124,7 +124,7 @@ final class TitleBarOverlayController {
         case "win98":       return .win98      // Windows 95, 98 and Me
         case "winxp":       return .luna
         case "win7":        return .aero
-        case "macosx":      return .aquaLights
+        case "macosx":      return .aqua       // the white pinstriped bar, the gems and the pill
         case "snowleopard": return .snowLights // and Mountain Lion, which declares the same chrome
         default:            return nil
         }
@@ -645,7 +645,8 @@ final class TitleBarOverlayController {
         case .win98:    return 24
         case .luna:     return 30
         case .aero:     return 30
-        case .aquaLights, .snowLights: return 0   // sized from the real lights instead
+        case .aqua:     return AquaChrome.barHeight
+        case .snowLights: return 0   // sized from the real lights instead
         }
     }
 
@@ -797,7 +798,7 @@ final class TitleBarOverlayController {
 
     /// The window is gone (closed, minimised, off the list): overlay and every cache with it.
     func forget(_ wid: CGWindowID) {
-        shaded.removeValue(forKey: wid)
+        if shaded.removeValue(forKey: wid) != nil { GarageDoor.shared.forget(wid) }
         drop(for: wid)
         autoGeometry.removeValue(forKey: wid)
         lightOffsets.removeValue(forKey: wid)
@@ -1082,15 +1083,22 @@ final class TitleBarOverlayController {
     func isShaded(_ wid: CGWindowID) -> Bool { shaded[wid] != nil }
 
     private func toggleShade(_ w: AXUIElement, wid: CGWindowID) {
-        if let frame = shaded.removeValue(forKey: wid) {
-            // Unroll: the window back where its bar is.
-            var p = frame.origin
-            Self.axQueue.async { if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
-            WindowBorderController.shared.update()
-            sync()
+        guard !GarageDoor.shared.isMoving(wid) else { return }   // a door on its way finishes first
+        if let frame = shaded[wid] {
+            // Unroll: the window back where its bar is — under Mac OS X once the door is down.
+            let unroll = { [weak self] in
+                guard let self, self.shaded.removeValue(forKey: wid) != nil else { return }
+                var p = frame.origin
+                Self.axQueue.async { if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
+                WindowBorderController.shared.update()
+                self.sync()
+            }
+            if style == .aqua { GarageDoor.shared.rollDown(wid, bounds: frame, then: unroll) } else { unroll() }
             return
         }
         guard let frame = overlays[wid]?.bounds, let screen = Self.screen(for: frame) else { return }
+        // Mac OS X rolled the window up into its bar; Mac OS 8 and 9 took it away at once.
+        if style == .aqua { GarageDoor.shared.rollUp(wid, bounds: frame) }
         shaded[wid] = frame
         let q = Self.quartz(screen.frame)
         var park = CGPoint(x: q.maxX - 1, y: q.maxY - 1)
@@ -1107,6 +1115,7 @@ final class TitleBarOverlayController {
             if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) }
         }
         shaded.removeAll()
+        GarageDoor.shared.forgetAll()
     }
 
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
@@ -1371,7 +1380,17 @@ final class TitleBarOverlayView: NSView {
         buttonRects.removeAll()
         let h = bounds.height, w = bounds.width
         switch style {
-        case .aquaLights, .snowLights:
+        case .aqua:
+            // Mac OS X 10.0: the three gems on the left, the pill that rolls the window up on the right.
+            let bar = NSRect(x: 0, y: 0, width: w, height: h)
+            for (k, r) in zip([ChromeButtonKind.close, .minimize, .zoom], AquaChrome.lightRects(in: bar, flipped: true)) {
+                tracker.add(k, r.insetBy(dx: -2, dy: -2), interactive: true)
+                buttonRects.append((k, r))
+            }
+            let pill = AquaChrome.pillRect(in: bar, flipped: true)
+            tracker.add(.collapse, pill.insetBy(dx: -3, dy: -4), interactive: true)
+            buttonRects.append((.collapse, pill))
+        case .snowLights:
             for kind in [ChromeButtonKind.close, .minimize, .zoom] {
                 guard let r = lights[kind] else { continue }
                 tracker.add(kind, r, interactive: true)
@@ -1462,8 +1481,8 @@ final class TitleBarOverlayView: NSView {
         case .win98:      drawWin98(b)
         case .luna:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .luna)).addClip(); drawLuna(b)
         case .aero:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .aero)).addClip(); drawAero(b)
-        case .snowLights: drawLights(aqua: false)
-        case .aquaLights: drawLights(aqua: true)
+        case .aqua:       drawAqua(b)
+        case .snowLights: drawLights()
         }
     }
 
@@ -1740,17 +1759,37 @@ final class TitleBarOverlayView: NSView {
     }
 
     /// The three orbs, and nothing else: the panel is clear around them. 10.6 shows the ×, −
-    /// and + on all three as soon as the pointer is over any of them, and so did Aqua.
-    private func drawLights(aqua: Bool) {
+    /// and + on all three as soon as the pointer is over any of them.
+    private func drawLights() {
         let hovering = tracker.hovered != nil || tracker.pressed != nil
         for (kind, r) in buttonRects {
             let light: SnowLeopardChrome.Light = kind == .close ? .close : (kind == .minimize ? .minimize : .zoom)
             let pressed = tracker.state(for: kind) == .pressed
-            if aqua { AquaGem.draw(r, light, active: isFront, pressed: pressed) }
-            else { SnowLeopardChrome.drawLight(r, light, active: isFront, flipped: true) }
+            SnowLeopardChrome.drawLight(r, light, active: isFront, flipped: true)
             if pressed { NSColor.black.withAlphaComponent(0.18).setFill(); NSBezierPath(ovalIn: r).fill() }
             if hovering && isFront { SnowLeopardChrome.drawGlyph(light, in: r) }
         }
+    }
+
+    /// Mac OS X 10.0: the white pinstriped bar, the three gems (with ×, − and + while the
+    /// pointer is over them), the title centred between them and the pill.
+    private func drawAqua(_ b: NSRect) {
+        AquaChrome.titleBar(b, active: isFront, flipped: true)
+        let overLights = [ChromeButtonKind.close, .minimize, .zoom].contains { tracker.hovered == $0 || tracker.pressed == $0 }
+        var left: CGFloat = 0, right = b.width
+        for (kind, r) in buttonRects {
+            let pressed = tracker.state(for: kind) == .pressed
+            if kind == .collapse {
+                AquaChrome.pill(r, active: isFront, pressed: pressed, flipped: true)
+                right = r.minX
+                continue
+            }
+            let light: SnowLeopardChrome.Light = kind == .close ? .close : (kind == .minimize ? .minimize : .zoom)
+            AquaGem.draw(r, light, active: isFront, pressed: pressed, flipped: true)
+            if overLights { SnowLeopardChrome.drawGlyph(light, in: r) }
+            left = max(left, r.maxX)
+        }
+        AquaChrome.title(title, bar: b, active: isFront, flipped: true, minX: left, maxX: right)
     }
 
     /// The bar the Applications widget draws (os9.ca's CSS), line for line — see `PlatinumBar`.
@@ -1860,38 +1899,6 @@ final class TitleBarOverlayView: NSView {
 
 private extension CGRect {
     var area: CGFloat { isNull ? 0 : width * height }
-}
-
-/// The Aqua traffic light of Mac OS X 10.0 to 10.5: a candy gem, lit from above, with a dark
-/// rim and a soft glow at the bottom. Drawn, not sampled.
-enum AquaGem {
-    static func draw(_ r: NSRect, _ kind: SnowLeopardChrome.Light, active: Bool, pressed: Bool) {
-        let body: NSColor, deep: NSColor
-        switch (active, kind) {
-        case (false, _):        body = NSColor(srgbRed: 0.80, green: 0.80, blue: 0.80, alpha: 1); deep = NSColor(srgbRed: 0.55, green: 0.55, blue: 0.55, alpha: 1)
-        case (true, .close):    body = NSColor(srgbRed: 1.00, green: 0.42, blue: 0.36, alpha: 1); deep = NSColor(srgbRed: 0.74, green: 0.10, blue: 0.08, alpha: 1)
-        case (true, .minimize): body = NSColor(srgbRed: 1.00, green: 0.78, blue: 0.30, alpha: 1); deep = NSColor(srgbRed: 0.80, green: 0.50, blue: 0.02, alpha: 1)
-        case (true, .zoom):     body = NSColor(srgbRed: 0.55, green: 0.86, blue: 0.36, alpha: 1); deep = NSColor(srgbRed: 0.15, green: 0.52, blue: 0.10, alpha: 1)
-        }
-        let disc = NSBezierPath(ovalIn: r)
-        // Body: light where the light hits it (upper left), deep colour at the rim.
-        NSGradient(colors: [body.blended(withFraction: pressed ? 0.25 : 0, of: .black) ?? body, deep])?
-            .draw(in: disc, relativeCenterPosition: NSPoint(x: -0.25, y: -0.35))
-        // Rim.
-        deep.blended(withFraction: 0.35, of: .black)?.setStroke()
-        disc.lineWidth = 0.8
-        disc.stroke()
-        // The specular arc across the top third (y down: near minY).
-        let gloss = NSBezierPath(ovalIn: NSRect(x: r.minX + r.width * 0.18, y: r.minY + r.height * 0.06,
-                                               width: r.width * 0.64, height: r.height * 0.42))
-        NSGradient(colors: [NSColor.white.withAlphaComponent(0.85), NSColor.white.withAlphaComponent(0.05)])?
-            .draw(in: gloss, angle: -90)
-        // The glow the bottom of the gem gives back.
-        let glow = NSBezierPath(ovalIn: NSRect(x: r.minX + r.width * 0.22, y: r.maxY - r.height * 0.36,
-                                              width: r.width * 0.56, height: r.height * 0.28))
-        body.withAlphaComponent(0.45).setFill()
-        glow.fill()
-    }
 }
 
 /// The patch over the real traffic lights: the real title bar's own colour, photographed just

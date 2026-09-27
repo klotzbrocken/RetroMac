@@ -93,6 +93,7 @@ Everything under `"dock"`. Sizes are points.
 | `borderColor`, `borderWidth`, `cornerRadius`, `shadow*` | Outline and shadow |
 | `bevelTopColor`, `bevelBottomColor`, `bevelWidth` | The 3D edge of the Windows 9x bar |
 | `pinstripe` | Aqua's fine horizontal texture |
+| `separatorStyle` | `"line"`: Mac OS X 10.0's single solid divider, the shelf's full height; absent, Snow Leopard's dashes |
 | `shelfStyle` | `flat` or `3d` (Snow Leopard's perspective shelf); `shelfLineColor` |
 | `startButton`, `startButtonLabel`, `startButtonIcon`, `startButtonImage`, `startButtonStyle`, `startButtonColor`, `startButtonGradientTop/Bottom` | The Start button; `startButtonImage` is a sprite sheet with three states stacked vertically (normal, hover, pressed); `startButtonStyle` `raised`, `sunken`, `flat` |
 | `startMenuStyle` | `classic` (Windows 95/98/Me cascade) or `xp` (Luna's two columns) |

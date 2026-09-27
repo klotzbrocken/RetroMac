@@ -2467,6 +2467,12 @@ final class DockView: NSView {
                 NSBezierPath(rect: NSRect(x: sx - 1, y: top, width: 1, height: gh)).fill()
                 NSColor(white: 0.50, alpha: 1).setFill()                  // shadow (right)
                 NSBezierPath(rect: NSRect(x: sx + 1, y: top, width: 1, height: gh)).fill()
+            } else if theme.dock.separatorStyle == "line" {
+                // Mac OS X 10.0: one solid light line, the shelf's full height, a shade paler
+                // than the dock (#DBE2ED on #ACBDD6 in 10.0.4).
+                NSColor(srgbRed: 0.86, green: 0.89, blue: 0.93, alpha: 0.9).setFill()
+                let x = (sx - 0.5).rounded(.down)
+                NSBezierPath(rect: NSRect(x: x, y: shelfRect.minY + 1, width: 1, height: shelfRect.height - 2)).fill()
             } else {
                 // Snow Leopard dock separator: a single thin vertical "zebra" of short light
                 // dashes (not a solid line), matching the real dock's dotted divider.

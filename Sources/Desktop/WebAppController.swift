@@ -461,7 +461,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
 final class WebAppChromeView: NSView {
 
-    enum Style { case win98, winxp, win7, macClassic, system6, system7, nextstep, snowLeopard, futurama, plain }
+    enum Style { case win98, winxp, win7, macClassic, system6, system7, nextstep, aqua, snowLeopard, futurama, plain }
 
     var onClose: (() -> Void)?
     var onBack: (() -> Void)?
@@ -494,6 +494,7 @@ final class WebAppChromeView: NSView {
         case "macos6": style = .system6;    chromeStyle = ChromeStyleFactory.system6()
         case "system7": style = .system7;   chromeStyle = ChromeStyleFactory.system7()
         case "nextstep": style = .nextstep; chromeStyle = ChromeStyleFactory.nextstep()
+        case "macosx": style = .aqua;       chromeStyle = ChromeStyleFactory.snowLeopard()   // the tracker's lights
         case "snowleopard": style = .snowLeopard; chromeStyle = ChromeStyleFactory.snowLeopard()
         case "futurama": style = .futurama; chromeStyle = nil
         default:       style = .plain;      chromeStyle = nil
@@ -527,7 +528,7 @@ final class WebAppChromeView: NSView {
     }
 
     private var titleH: CGFloat {
-        switch style { case .winxp, .win7: return 30; case .system6: return 20; case .system7: return System7Chrome.barHeight; case .nextstep: return 22; case .futurama: return 26; default: return 22 }
+        switch style { case .winxp, .win7: return 30; case .system6: return 20; case .system7: return System7Chrome.barHeight; case .aqua: return AquaChrome.barHeight; case .nextstep: return 22; case .futurama: return 26; default: return 22 }
     }
     private var pad: CGFloat { 4 }
 
@@ -572,10 +573,38 @@ final class WebAppChromeView: NSView {
         case .system6:    drawSystem6(ctx, b)
         case .system7:    drawSystem7(b)
         case .nextstep:   drawNextstep(ctx, b)
+        case .aqua:       drawAqua(b)
         case .snowLeopard: drawSnowLeopard(ctx, b)
         case .futurama:   drawFuturama(ctx, b)
         case .plain:      drawPlain(ctx, b)
         }
+    }
+
+    // ---- Mac OS X 10.0: the white pinstriped bar and the gems of `AquaChrome`, as the title
+    //      bars over the real windows draw them. No pill: a widget does not roll up. ----
+    private func drawAqua(_ b: NSRect) {
+        let active = isActiveWindow
+        let outline = AquaChrome.outline(b, flipped: true)
+        NSColor.white.setFill(); outline.fill()
+        let bar = NSRect(x: 0, y: 0, width: b.width, height: AquaChrome.barHeight)
+        AquaChrome.titleBar(bar, active: active, flipped: true)
+        let lights = AquaChrome.lightRects(in: bar, flipped: true)
+        tracker.reset()
+        tracker.add(.close, lights[0].insetBy(dx: -2, dy: -2), interactive: true)
+        tracker.add(.collapse, lights[1].insetBy(dx: -2, dy: -2), interactive: false)
+        tracker.add(.zoom, lights[2].insetBy(dx: -2, dy: -2), interactive: false)
+        let hovering = [ChromeButtonKind.close, .collapse, .zoom].contains { tracker.state(for: $0) == .hovered }
+        let kinds: [SnowLeopardChrome.Light] = [.close, .minimize, .zoom]
+        for (k, r) in zip(kinds, lights) {
+            AquaGem.draw(r, k, active: active, pressed: k == .close && tracker.state(for: .close) == .pressed, flipped: true)
+            if active && hovering { SnowLeopardChrome.drawGlyph(k, in: r) }
+        }
+        AquaChrome.title(title, bar: bar, active: active, flipped: true, minX: lights[2].maxX, maxX: b.width - lights[2].maxX)
+        // The grey edge down the sides and along the bottom.
+        AquaChrome.edge.setStroke()
+        outline.lineWidth = 2
+        NSGraphicsContext.saveGraphicsState(); outline.addClip(); outline.stroke(); NSGraphicsContext.restoreGraphicsState()
+        closeHit = .zero   // close is tracked via `tracker`
     }
 
     // ---- Mac OS X 10.6 Snow Leopard. Every measurement lives in `SnowLeopardChrome`, which

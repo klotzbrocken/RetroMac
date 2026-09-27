@@ -3,6 +3,24 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+- **Mac OS X, closer to 10.0.** Measured pixel for pixel from Mac OS X 10.0.4 screenshots:
+  - **The title bar is Aqua's own now:** white pinstripes with a grey edge, rounded top
+    corners, a grey line under the bar, and the title centred in Lucida Grande. It replaces
+    the traffic lights that were drawn over the real ones. Widget windows, the Applications
+    window and the Read Me wear the same bar.
+  - **The traffic lights are the glossy 10.0 gems:** a black rim on top, a white gloss, the
+    colour glowing up from the bottom, and a soft shadow under each. Inactive windows show
+    them grey.
+  - **The pill on the right rolls a window up into its title bar, like a garage door, and
+    back down.** The rolled-up bar can be dragged; the window unrolls wherever the bar is
+    then. A double-click on the bar minimises, as 10.0's did.
+  - **The dock's divider is a single solid line**, as 10.0 drew it, not dashes.
+  - **The menu-bar apple is 10.0's vivid glossy blue:** a pale highlight on top, royal blue
+    through the middle, a brighter glow at the bottom. The Mountain Lion and Snow Leopard
+    themes use the same apple.
+
 ## 2.8.8
 
 - **Rearrange the dock.** Drag a pinned icon along the dock and it moves to where it is let

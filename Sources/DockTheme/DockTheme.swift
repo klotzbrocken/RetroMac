@@ -257,6 +257,9 @@ struct DockThemeConfig: Codable {
         /// How the Control Strip is built: `"system7"` is System 7.5's colour strip, from the
         /// original's pixels; absent, Mac OS 9's Platinum strip.
         var controlStripStyle: String?
+        /// How the dock divides apps from folders and the trash: `"line"` is Mac OS X 10.0's
+        /// single solid light line, top to bottom of the shelf; absent, Snow Leopard's dashes.
+        var separatorStyle: String?
     }
 
     struct IconStyle: Codable {
