@@ -102,7 +102,7 @@ final class ControlStripTests: XCTestCase {
         XCTAssertFalse(os9.config.hasSystem7ControlStrip)
         XCTAssertNotEqual(ControlStripController.buildKey(for: s7), ControlStripController.buildKey(for: os9))
         let titles = AppleMenuController.shared.system7Items().map(\.title).filter { !$0.isEmpty }
-        XCTAssertEqual(titles, ["About This Macintosh\u{2026}", "Alarm Clock", "Calculator", "Chooser",
+        XCTAssertEqual(titles, ["About This Macintosh\u{2026}", "Alarm Clock", "Applications", "Calculator", "Chooser",
                                 "Control Panels", "Key Caps", "Note Pad", "Scrapbook"])
     }
 

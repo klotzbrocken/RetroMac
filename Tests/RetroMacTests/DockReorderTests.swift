@@ -46,7 +46,7 @@ final class DockReorderTests: XCTestCase {
 
     func testDoubleClickOnTheBarDoesWhatEachEraDid() {
         XCTAssertEqual(TitleBarOverlayController.Style.platinum.doubleClickAction, .collapse, "Mac OS 8/9: WindowShade")
-        XCTAssertNil(TitleBarOverlayController.Style.system7.doubleClickAction, "System 7.1 did nothing")
+        XCTAssertEqual(TitleBarOverlayController.Style.system7.doubleClickAction, .collapse, "System 7.5's WindowShade")
         XCTAssertNil(TitleBarOverlayController.Style.system6.doubleClickAction)
         XCTAssertEqual(TitleBarOverlayController.Style.luna.doubleClickAction, .zoom, "Windows maximised")
         XCTAssertEqual(TitleBarOverlayController.Style.snowLights.doubleClickAction, .minimize, "10.6 minimised")

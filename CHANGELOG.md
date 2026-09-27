@@ -23,10 +23,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   window up to its bar and down again, as Mac OS 8 and 9 did: the window is parked out of
   sight (not minimised, no Dock entry) and its bar stays where it was — it can be dragged, and
   the window unrolls wherever the bar is then. Themes off or RetroMac quitting put every
-  rolled-up window back. A double-click does what each era's did: nothing under System 6 and
-  7, maximise under Windows, minimise under the Mac OS X and Snow Leopard lights.
-- **System 7.1 gets its own Apple menu** — About This Macintosh, Alarm Clock, Calculator,
-  Chooser, Control Panels, Key Caps, Note Pad, Scrapbook — instead of Mac OS 9's
+  rolled-up window back. Under System 7.1 a double-click rolls the window up too, as System 7.5's WindowShade
+  control panel did. Elsewhere a double-click does what each era's did: nothing under System
+  6, maximise under Windows, minimise under the Mac OS X and Snow Leopard lights.
+- **System 7.1 gets its own Apple menu** — About This Macintosh, Alarm Clock, Applications
+  (the alias every System 7 user kept there, to start programs), Calculator, Chooser, Control
+  Panels, Key Caps, Note Pad, Scrapbook — instead of Mac OS 9's
   (`menuBar.appleMenuStyle`), and its strip is chosen by `dock.controlStripStyle` rather
   than by its palette.
 - **Fix: the Control Strip follows a switch between two strip themes.** From System 7.1 to Mac

@@ -44,12 +44,13 @@ final class TitleBarOverlayController {
         var isBar: Bool { self != .aquaLights && self != .snowLights }
         /// Windows caption buttons cluster on the right; the Mac's close box sits on the left.
         var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero }
-        /// What a double-click on the bar did in each era: Mac OS 8/9 rolled the window up
-        /// (WindowShade), System 6 and 7 did nothing, Windows maximised, Mac OS X minimised.
+        /// What a double-click on the bar did in each era: Mac OS 8/9 rolled the window up, and
+        /// so did System 7.5 with its WindowShade control panel (the System 7.1 theme wears 7.5's
+        /// Control Strip too); System 6 did nothing, Windows maximised, Mac OS X minimised.
         var doubleClickAction: ChromeButtonKind? {
             switch self {
-            case .platinum: return .collapse
-            case .system6, .system7: return nil
+            case .platinum, .system7: return .collapse
+            case .system6: return nil
             case .win31, .win98, .luna, .aero: return .zoom
             case .aquaLights, .snowLights: return .minimize
             }

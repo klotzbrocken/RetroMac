@@ -34,13 +34,16 @@ final class AppleMenuController {
          app("Stickies", "/System/Applications/Stickies.app", icon: "stickies.png")]
     }
 
-    /// System 7.1's Apple menu as it came: About This Macintosh, then the desk accessories and
-    /// Control Panels, in the modern app that does each job — no Favorites, no recent lists,
-    /// no Network Browser or Sherlock, which came later.
+    /// System 7.1's Apple menu: About This Macintosh, then the desk accessories and Control
+    /// Panels, in the modern app that does each job, and — as every System 7 user put an alias
+    /// of it into Apple Menu Items — the Applications folder, to start programs from. Sorted
+    /// by name, as the menu always was. No Favorites, recent lists, Network Browser or
+    /// Sherlock, which came later.
     func system7Items() -> [PlatinumMenuItem] {
         [open("About This Macintosh\u{2026}", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
          .separator(),
          app("Alarm Clock", "/System/Applications/Clock.app"),
+         submenu("Applications", icon: themeIcon("folder.png")) { Self.entries(Self.applications()) },
          app("Calculator", "/System/Applications/Calculator.app", icon: "calculator.png"),
          open("Chooser", "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension", icon: "chooser.png"),
          submenu("Control Panels", icon: themeIcon("settings.png")) { Self.entries(Self.controlPanels()) },
