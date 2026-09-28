@@ -62,6 +62,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     through the middle, a brighter glow at the bottom. The Mountain Lion and Snow Leopard
     themes use the same apple.
 
+- **Fix: the dock stayed magnified when the pointer left it downward onto a display below
+  the main one.** Leaving downward keeps the magnification only while the pointer is still
+  on the dock's screen — the edge it was meant for — and a pointer that goes on from under a
+  floating dock is followed until it comes back or has gone.
 - **Fix: the dock no longer draws over full-screen apps**, in every theme. It checked
   whether its own window was on the active Space — but a window that joins every Space
   always is, so a full-screen app never hid it. The WindowServer is asked now what kind of

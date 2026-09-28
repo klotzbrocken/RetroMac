@@ -297,6 +297,7 @@ final class DockView: NSView {
     required init?(coder: NSCoder) { fatalError() }
 
     deinit {
+        belowDockWatch?.invalidate()
         magTimer?.cancel()
         clockTimer?.invalidate()
         pacmanTimer?.invalidate()
@@ -3726,23 +3727,57 @@ final class DockView: NSView {
         // which would drop the magnifier and cause a flicker. Keep the effect alive
         // on a downward exit (cursor still horizontally over the dock); only reset on
         // a REAL exit — upward past the popped icons, or out either side.
+        //
+        // Only while the pointer is still on the dock's screen, though: with a second display
+        // below the main one there is no edge down there, the pointer goes on to the other
+        // screen, and the dock stayed magnified until the pointer came back.
         if !isVertical {
             let local = convert(event.locationInWindow, from: nil)
             let withinX = local.x >= 0 && local.x <= bounds.width
             let downwardExit = local.y <= dockBarRect.maxY
-            if withinX && downwardExit {
+            let onDockScreen = window?.screen.map { $0.frame.contains(NSEvent.mouseLocation) } ?? true
+            if withinX && downwardExit && onDockScreen {
                 magTargetPoint = NSPoint(x: min(max(local.x, 0), bounds.width), y: dockBarRect.midY)
                 if magPhase >= 1 { applyMagnification(at: magTargetPoint) }
                 else { setMagTarget(1); startMagTimer() }
+                watchBelowDock()
                 return
             }
         }
-        // Ease the magnification back out by interpolating the captured magnified frames
-        // toward the true rest frames, so it lands EXACTLY on the rest layout (no settle jump).
+        endMagnificationOnExit()
+    }
+
+    /// Ease the magnification back out by interpolating the captured magnified frames toward
+    /// the true rest frames, so it lands EXACTLY on the rest layout (no settle jump).
+    private func endMagnificationOnExit() {
+        belowDockWatch?.invalidate(); belowDockWatch = nil
         magExitFrames = itemViews.map { $0.frame }
         magExitBar = magnifiedDockBarRect ?? dockBarRect
         setMagTarget(0)
         startMagTimer()
+    }
+
+    /// After a downward exit the view hears nothing more of the pointer. Below a dock that
+    /// floats above the edge it can still go on — sideways, back up past the icons, or onto
+    /// a display below — so it is looked for a few times a second until it comes back into
+    /// the dock (tracking takes over) or has really gone (the magnification ends).
+    private var belowDockWatch: Timer?
+    private func watchBelowDock() {
+        guard belowDockWatch == nil else { return }
+        let t = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self, let win = self.window else { self?.belowDockWatch?.invalidate(); self?.belowDockWatch = nil; return }
+            let mouse = NSEvent.mouseLocation
+            let local = self.convert(win.convertPoint(fromScreen: mouse), from: nil)
+            if self.bounds.contains(local) {   // back in the dock: its own tracking follows it again
+                self.belowDockWatch?.invalidate(); self.belowDockWatch = nil
+                return
+            }
+            let onScreen = win.screen?.frame.contains(mouse) ?? true
+            let stillBelow = local.x >= 0 && local.x <= self.bounds.width && local.y <= self.dockBarRect.maxY
+            if !onScreen || !stillBelow { self.endMagnificationOnExit() }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        belowDockWatch = t
     }
 
     private func applyMagnification(at point: NSPoint) {
