@@ -24,6 +24,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     a translucent white with a bright top edge instead of the darker blue.
   - **Snow Leopard and Mountain Lion: one divider too.** Running apps that are not kept in
     the Dock follow the others, as they did before Mojave.
+  - **The Dock is square-cornered, and its pinstripes show**: 10.0's four-point pattern,
+    a brighter and a darker row, where there was a faint even texture.
+  - **Terminal, iChat (for Messages) and iCal wear their Mac OS X icons; the TV folder its
+    own QuickTime folder; Applications on the desktop the Aqua folder.** The TV folder had
+    shared its spot with Dashboard; it has one of its own now, top of the second column.
   - **The divider sits in the middle of its gap**, which is as wide as 10.0's (it was a
     point off centre, and close up against the icons).
   - **Fix: desktop icons moved on a bigger screen vanished on a smaller one.** A saved spot

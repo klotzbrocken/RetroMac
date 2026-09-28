@@ -2302,9 +2302,9 @@ final class DockView: NSView {
             let open = NSBezierPath()
             open.move(to: NSPoint(x: rect.minX + 0.5, y: rect.minY))
             open.line(to: NSPoint(x: rect.minX + 0.5, y: rect.maxY - cr))
-            open.appendArc(from: NSPoint(x: rect.minX + 0.5, y: rect.maxY - 0.5), to: NSPoint(x: rect.minX + cr, y: rect.maxY - 0.5), radius: cr - 0.5)
+            open.appendArc(from: NSPoint(x: rect.minX + 0.5, y: rect.maxY - 0.5), to: NSPoint(x: rect.minX + cr, y: rect.maxY - 0.5), radius: max(0, cr - 0.5))
             open.line(to: NSPoint(x: rect.maxX - cr, y: rect.maxY - 0.5))
-            open.appendArc(from: NSPoint(x: rect.maxX - 0.5, y: rect.maxY - 0.5), to: NSPoint(x: rect.maxX - 0.5, y: rect.maxY - cr), radius: cr - 0.5)
+            open.appendArc(from: NSPoint(x: rect.maxX - 0.5, y: rect.maxY - 0.5), to: NSPoint(x: rect.maxX - 0.5, y: rect.maxY - cr), radius: max(0, cr - 0.5))
             open.line(to: NSPoint(x: rect.maxX - 0.5, y: rect.minY))
             verticalBorderPath = open
         } else {
@@ -2341,19 +2341,21 @@ final class DockView: NSView {
             drawFuturamaBeam(ctx: ctx, rect: rect, path: bgPath, alpha: 1.0)
         }
 
-        // Aqua pinstripe texture: fine horizontal lines over the (clipped) background.
+        // Aqua pinstripe texture, as 10.0.4's dock had it: a four-point period, one row a touch
+        // brighter and, two rows on, one a touch darker (#ADBDD7 and #A3B3CF on #A7B8D2),
+        // counted down from the top edge. A shade stronger than the original, which was drawn
+        // at 1x; on a Retina screen the same contrast read as no lines at all.
         if theme.dock.pinstripe == true {
             ctx.saveGState()
             bgPath.addClip()
-            NSColor.white.withAlphaComponent(0.07 * bgAlpha).setStroke()
-            let pen = NSBezierPath(); pen.lineWidth = 1
-            var yy = rect.minY + 1.5
-            while yy < rect.maxY {
-                pen.move(to: NSPoint(x: rect.minX, y: yy))
-                pen.line(to: NSPoint(x: rect.maxX, y: yy))
-                yy += 2
+            var yy = rect.maxY - 2
+            while yy > rect.minY {
+                NSColor.white.withAlphaComponent(0.11 * bgAlpha).setFill()
+                ctx.fill(NSRect(x: rect.minX, y: yy, width: rect.width, height: 1))
+                NSColor.black.withAlphaComponent(0.05 * bgAlpha).setFill()
+                ctx.fill(NSRect(x: rect.minX, y: yy - 2, width: rect.width, height: 1))
+                yy -= 4
             }
-            pen.stroke()
             ctx.restoreGState()
         }
 

@@ -33,7 +33,7 @@
     "iconSize": 60,
     "padding": 4,
     "spacing": 2,
-    "cornerRadius": 6,
+    "cornerRadius": 0,
     "edgeOffset": 0,
     "squareBottom": true,
     "separatorGap": 30,
@@ -153,10 +153,10 @@
     },
     {
       "name": "TV",
-      "icon": "quicktime.png",
+      "icon": "tv.png",
       "type": "tvfolder",
-      "gridX": 0,
-      "gridY": 7
+      "gridX": 1,
+      "gridY": 0
     },
     {
       "name": "Dashboard",
