@@ -21,6 +21,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     line up after the others, as they did before Mojave — a flat black triangle under each
     running app, close under its icon, and bigger icons with less room round them.
   - **Macintosh HD wears 10.0's drive icon**, the grey drive seen from above.
+  - **Crisper, livelier icons.** The theme's icons were soft and pale next to 10.0's own;
+    they are sharpened and their colour brought up.
   - **Applications is a folder again** — 10.0's pale blue folder with the pencil-and-ruler
     "A" on its front — **and opens as a 10.0 Finder window:** the folder's icon before the
     title, the toolbar with Back, View, Computer, Home, Favorites and Applications under the
