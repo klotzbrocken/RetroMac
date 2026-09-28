@@ -2500,9 +2500,10 @@ final class DockView: NSView {
                 NSColor(white: 0.50, alpha: 1).setFill()                  // shadow (right)
                 NSBezierPath(rect: NSRect(x: sx + 1, y: top, width: 1, height: gh)).fill()
             } else if theme.dock.separatorStyle == "line" {
-                // Mac OS X 10.0: one solid light line, the shelf's full height, a shade paler
-                // than the dock (#DBE2ED on #ACBDD6 in 10.0.4).
-                NSColor(srgbRed: 0.86, green: 0.89, blue: 0.93, alpha: 0.9).setFill()
+                // Mac OS X 10.0: one solid light line, the shelf's full height, clearly paler
+                // than the dock (#DBE2ED on #ACBDD6 in 10.0.4). White: the dock is a translucent
+                // white now, and a grey line all but vanished on it.
+                NSColor.white.setFill()
                 let x = (sx - 0.5).rounded(.down)
                 NSBezierPath(rect: NSRect(x: x, y: shelfRect.minY + 1, width: 1, height: shelfRect.height - 2)).fill()
             } else {
