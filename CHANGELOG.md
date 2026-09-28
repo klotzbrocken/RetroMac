@@ -17,6 +17,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     back down.** The rolled-up bar can be dragged; the window unrolls wherever the bar is
     then. A double-click on the bar minimises, as 10.0's did.
   - **The dock's divider is a single solid line**, as 10.0 drew it, not dashes.
+  - **The Dock is 10.0's:** one divider only — running apps that are not kept in the Dock
+    line up after the others, as they did before Mojave — a flat black triangle under each
+    running app, close under its icon, and bigger icons with less room round them.
+  - **Macintosh HD wears 10.0's drive icon**, the grey drive seen from above.
+  - **Clock, CPU Monitor, Notepad and the Read Me** have the same 10.0 bar as the
+    Applications window, all three gems included.
   - **The menu-bar apple is 10.0's vivid glossy blue:** a pale highlight on top, royal blue
     through the middle, a brighter glow at the bottom. The Mountain Lion and Snow Leopard
     themes use the same apple.

@@ -176,6 +176,7 @@ final class DockView: NSView {
                            showQuickLaunch: ThemeManager.shared.activeTheme?.config.showQuickLaunch ?? false,
                            apps: AppManager.shared.apps,
                            transients: runningAppsNotInDock(),
+                           transientsApart: ThemeManager.shared.activeTheme?.config.dock.runningAppsSeparator != false,
                            stacksOnRight: hasTrash && !isControlStrip,
                            hasDashboard: hasDashboard,
                            hasShowDesktop: hasShowDesktop,

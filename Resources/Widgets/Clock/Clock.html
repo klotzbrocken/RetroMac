@@ -218,6 +218,26 @@
   body.theme-nextstep .closebox::after{transform:rotate(-45deg);}
   body.theme-nextstep .body{background:#8a8a98;border:none;box-shadow:none;margin:2px;}
 
+  /* Cheetah's own bar, measured from 10.0.4 like Sources/Desktop/AquaChrome.swift: a #CBCBCB
+     top edge, 21 rows of white pinstripes, #919191 under them; 13px gems 22px apart, the first
+     10px in; the title in Lucida Grande 13, regular. Scale 1. Not for Snow Leopard, which
+     layers its own bar over the macosx rules. */
+  body.theme-macosx:not(.theme-snowleopard) #win{border-color:#9a9a9a;}
+  body.theme-macosx:not(.theme-snowleopard) .mx-title{box-sizing:border-box;height:23px;flex:0 0 23px;padding:0 0 0 9px;gap:0;
+    background:linear-gradient(to bottom,#cbcbcb 0px 1px,#ffffff 1px 2px,#ffffff 2px 3px,#f4f4f4 3px 4px,#eeeeee 4px 5px,#f4f4f4 5px 6px,#fefefe 6px 7px,#f3f3f3 7px 8px,#ededed 8px 9px,#f2f2f2 9px 10px,#fdfdfd 10px 11px,#f1f1f1 11px 12px,#ebebeb 12px 13px,#f0f0f0 13px 14px,#f9f9f9 14px 15px,#ededed 15px 16px,#e6e6e6 16px 17px,#e9e9e9 17px 18px,#f2f2f2 18px 19px,#e7e7e7 19px 20px,#e0e0e0 20px 21px,#e4e4e4 21px 22px);
+    border-bottom:1px solid #919191;box-shadow:none;}
+  body.theme-macosx:not(.theme-snowleopard) .mx-title::after{display:none;}
+  body.theme-macosx:not(.theme-snowleopard) .mx-lights{gap:9px;margin-top:-1px;}
+  body.theme-macosx:not(.theme-snowleopard) .mx-gel{width:13px;height:13px;flex:0 0 13px;
+    box-shadow:inset 0 1px 0 #080808,inset 0 0 0 1px var(--rim),0 2px 2.5px rgba(0,0,0,.55);
+    background:radial-gradient(circle 8px at 50% 81%,var(--glow) 0,var(--mid) 42%,var(--deep) 72%,var(--deep));}
+  body.theme-macosx:not(.theme-snowleopard) .mx-gel::before{left:2px;right:2px;top:1px;height:3.5px;
+    background:linear-gradient(to bottom,rgba(255,255,255,.97),rgba(255,255,255,.4));}
+  body.theme-macosx:not(.theme-snowleopard) .mx-close{--rim:#7d1105;--deep:#c5493b;--mid:#eb8877;--glow:#ffc9bd;}
+  body.theme-macosx:not(.theme-snowleopard) .mx-min{--rim:#b03d03;--deep:#e8a12e;--mid:#fac95f;--glow:#fffda3;}
+  body.theme-macosx:not(.theme-snowleopard) .mx-zoom{--rim:#2f6a0c;--deep:#6fb03c;--mid:#9dd364;--glow:#dffbab;}
+  body.theme-macosx:not(.theme-snowleopard) .mx-cap,body.theme-macosx:not(.theme-snowleopard) .mx-caption{font:400 13px "Lucida Grande","Helvetica Neue",Helvetica,Arial,sans-serif;
+    color:#000;text-shadow:none;}
 </style>
 <style>
 /* Live title-bar button feedback (native DragOverlayView → window.setBtnState); the overlay

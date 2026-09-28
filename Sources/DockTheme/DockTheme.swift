@@ -260,6 +260,9 @@ struct DockThemeConfig: Codable {
         /// How the dock divides apps from folders and the trash: `"line"` is Mac OS X 10.0's
         /// single solid light line, top to bottom of the shelf; absent, Snow Leopard's dashes.
         var separatorStyle: String?
+        /// `false`: apps that are running but not kept in the dock line up after the others
+        /// with no divider of their own, as before Mojave. Absent: they get one.
+        var runningAppsSeparator: Bool?
     }
 
     struct IconStyle: Codable {

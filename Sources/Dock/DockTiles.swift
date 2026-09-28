@@ -42,6 +42,7 @@ extension DockView {
                               showQuickLaunch: Bool,
                               apps: [DockApp],
                               transients: [String],
+                              transientsApart: Bool = true,
                               stacksOnRight: Bool,
                               hasDashboard: Bool,
                               hasShowDesktop: Bool,
@@ -83,9 +84,12 @@ extension DockView {
 
         if hasShowDesktop { tile(.showDesktop, "__showdesktop__") }
 
+        // Apps running but not kept in the Dock: behind a divider of their own since Mojave;
+        // before that (`transientsApart` false) simply at the end of the apps, as 10.0 had it.
         for (i, bid) in transients.enumerated() {
+            let first = i == 0 && transientsApart
             tile(.app(bundleID: bid, transient: true), bid,
-                 gap: i == 0 ? spacing : 0, sep: i == 0 ? .transients : nil)
+                 gap: first ? spacing : 0, sep: first ? .transients : nil)
         }
 
         if hasUrlLauncher || hasTrash || hasDoomLauncher {

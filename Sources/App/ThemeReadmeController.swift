@@ -187,6 +187,16 @@ final class ThemeReadmeController: NSObject, WKScriptMessageHandler, WKNavigatio
               + 'background:radial-gradient(4.6px 2.2px at 50% 3px,rgba(255,255,255,.97),rgba(255,255,255,.5) 70%,rgba(255,255,255,0)),'
               + 'radial-gradient(circle 8px at 50% 81%,#ffc9bd 0,#eb8877 42%,#c5493b 72%,#c5493b);'
               + 'box-shadow:inset 0 1px 0 #080808,inset 0 0 0 1px #7d1105,0 2px 2.5px rgba(0,0,0,.55);';
+            // Minimise and zoom beside it, 22 px apart, as on every 10.0 bar; the readme has no
+            // use for them, so they are only drawn.
+            [['#b03d03','#e8a12e','#fac95f','#fffda3'],['#2f6a0c','#6fb03c','#9dd364','#dffbab']].forEach(function(c, i){
+              var g = document.createElement('span');
+              g.style.cssText = 'position:absolute;top:4px;left:' + (31 + 22 * i) + 'px;width:13px;height:13px;border-radius:50%;'
+                + 'background:radial-gradient(4.6px 2.2px at 50% 3px,rgba(255,255,255,.97),rgba(255,255,255,.5) 70%,rgba(255,255,255,0)),'
+                + 'radial-gradient(circle 8px at 50% 81%,' + c[3] + ' 0,' + c[2] + ' 42%,' + c[1] + ' 72%,' + c[1] + ');'
+                + 'box-shadow:inset 0 1px 0 #080808,inset 0 0 0 1px ' + c[0] + ',0 2px 2.5px rgba(0,0,0,.55);';
+              bar.appendChild(g);
+            });
           } else if (v === 'platinumBox') {
             // ClassicMacChrome.bevelBox: #D8D8D8 face, #2A2A2A outline, white inner highlight, 11 px.
             b.style.cssText = base + 'top:50%;left:8px;transform:translateY(-50%);width:11px;height:11px;'

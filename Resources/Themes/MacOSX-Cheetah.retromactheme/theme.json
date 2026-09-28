@@ -29,10 +29,10 @@
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
-    "height": 63,
-    "iconSize": 52,
-    "padding": 7,
-    "spacing": 5,
+    "height": 70,
+    "iconSize": 60,
+    "padding": 4,
+    "spacing": 2,
     "cornerRadius": 6,
     "edgeOffset": 6,
     "backgroundColor": "#6E92CE96",
@@ -51,6 +51,7 @@
     "bevelWidth": 1.5,
     "pinstripe": true,
     "separatorStyle": "line",
+    "runningAppsSeparator": false,
     "shelfStyle": "flat",
     "magnification": true,
     "magnificationScale": 2.0,
@@ -72,8 +73,8 @@
   "indicator": {
     "style": "triangle",
     "color": "#000000",
-    "size": 7,
-    "offset": 9
+    "size": 9,
+    "offset": 5
   },
   "wallpaper": "wallpaper.jpg",
   "wallpapers": [

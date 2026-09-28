@@ -133,6 +133,19 @@ final class DockTileTests: XCTestCase {
         }
     }
 
+    /// Mac OS X 10.0: running apps that are not kept in the Dock follow the others with no
+    /// divider, so the only one left is the one before the documents and the trash.
+    func testRunningAppsJoinTheRowWithoutADividerBeforeMojave() {
+        let row = DockView.iconDockTiles(taskbar: false, showQuickLaunch: false, apps: [app("a")],
+                                         transients: ["t1", "t2"], transientsApart: false,
+                                         stacksOnRight: true, hasDashboard: false, hasShowDesktop: false,
+                                         hasUrlLauncher: false, hasTrash: true, hasDoomLauncher: false,
+                                         iconSize: icon, spacing: gap, doomWidth: doom)
+        XCTAssertEqual(row.filter { $0.separator == .transients }.count, 0)
+        XCTAssertEqual(row.filter { $0.separator == .rightGroup }.count, 1)
+        XCTAssertEqual(row.filter { $0.id.hasPrefix("t") }.map(\.gapBefore), [0, 0])
+    }
+
     // MARK: - Windows taskbars
 
     func testTaskbarRowIsQuickLaunchOnly() {

@@ -180,17 +180,27 @@ final class DockItemView: NSView {
             return
         }
         if theme.indicator.style == "triangle" {
-            // Classic Mac OS X running indicator: a small solid triangle pointing
-            // toward the icon (up for bottom docks, sideways for vertical docks).
+            // Classic Mac OS X running indicator: a small solid triangle pointing toward the
+            // icon (up for bottom docks, sideways for vertical docks) — `size` wide and a little
+            // over half as tall, 9 × 5 in 10.0.
             let tri = CAShapeLayer()
-            tri.frame = dot.frame
+            let depth = (sz * 0.56).rounded()
+            var f = dot.frame
+            if theme.isVertical {
+                if indicatorOnRight { f.origin.x += sz - depth }
+                f.size.width = depth
+            } else {
+                f.size.height = depth
+            }
+            tri.frame = f
+            indicatorW = f.width; indicatorH = f.height; indicatorYOrigin = f.origin.y
             let p = CGMutablePath()
             if theme.isVertical {
                 let pointRight = theme.effectiveDockPosition != "right"
-                if pointRight { p.move(to: CGPoint(x: sz, y: sz/2)); p.addLine(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: 0, y: sz)) }
-                else          { p.move(to: CGPoint(x: 0, y: sz/2)); p.addLine(to: CGPoint(x: sz, y: 0)); p.addLine(to: CGPoint(x: sz, y: sz)) }
+                if pointRight { p.move(to: CGPoint(x: depth, y: sz/2)); p.addLine(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: 0, y: sz)) }
+                else          { p.move(to: CGPoint(x: 0, y: sz/2)); p.addLine(to: CGPoint(x: depth, y: 0)); p.addLine(to: CGPoint(x: depth, y: sz)) }
             } else {
-                p.move(to: CGPoint(x: sz/2, y: sz)); p.addLine(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: sz, y: 0))
+                p.move(to: CGPoint(x: sz/2, y: depth)); p.addLine(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: sz, y: 0))
             }
             p.closeSubpath()
             tri.path = p
