@@ -26,6 +26,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     the Dock follow the others, as they did before Mojave.
   - **The Dock is square-cornered, and its pinstripes show**: 10.0's four-point pattern,
     a brighter and a darker row, where there was a faint even texture.
+  - **The Mac OS X icons, from 10.4's own set:** Mail, Safari, System Preferences, iTunes
+    (for Music), iPhoto (for Photos), Preview, TextEdit, QuickTime, Address Book, Calculator,
+    Dashboard, Sherlock and the utilities (Activity Monitor, Console, Disk Utility, Grab for
+    Screenshot, System Profiler for System Information, Keychain Access and more) — 42 in all,
+    Keynote, Numbers, Pages, GarageBand and the utilities newly mapped.
   - **Terminal, iChat (for Messages) and iCal wear their Mac OS X icons; the TV folder its
     own QuickTime folder; Applications on the desktop the Aqua folder.** The TV folder had
     shared its spot with Dashboard; it has one of its own now, top of the second column.
