@@ -21,6 +21,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     line up after the others, as they did before Mojave — a flat black triangle under each
     running app, close under its icon, and bigger icons with less room round them.
   - **Macintosh HD wears 10.0's drive icon**, the grey drive seen from above.
+  - **Applications is a folder again** — 10.0's pale blue folder with the pencil-and-ruler
+    "A" on its front — **and opens as a 10.0 Finder window:** the folder's icon before the
+    title, the toolbar with Back, View, Computer, Home, Favorites and Applications under the
+    bar, 32-pixel icons on white. View switches between icons and list; the pill hides and
+    shows the toolbar, as it did in 10.0.
   - **Clock, CPU Monitor, Notepad and the Read Me** have the same 10.0 bar as the
     Applications window, all three gems included.
   - **The menu-bar apple is 10.0's vivid glossy blue:** a pale highlight on top, royal blue

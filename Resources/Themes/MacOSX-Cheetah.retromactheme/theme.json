@@ -108,7 +108,7 @@
     },
     {
       "name": "Applications",
-      "icon": "applications.png",
+      "icon": "applicationsfolder.png",
       "type": "appfolder",
       "gridX": 0,
       "gridY": 1

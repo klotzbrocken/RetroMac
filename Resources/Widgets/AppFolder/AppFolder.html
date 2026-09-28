@@ -281,6 +281,36 @@
   body.theme-macosx:not(.theme-snowleopard) .mx-zoom{--rim:#2f6a0c;--deep:#6fb03c;--mid:#9dd364;--glow:#dffbab;}
   body.theme-macosx:not(.theme-snowleopard) .mx-caption{font:400 13px "Lucida Grande","Helvetica Neue",Helvetica,Arial,sans-serif;
     color:#000;text-shadow:none;}
+  /* ----- Cheetah's Finder furniture: proxy icon, pill, toolbar, 32 px icons (10.0.4) ----- */
+  .mx-proxy,.mx-pill,.mx-toolbar{display:none;}
+  body.theme-macosx:not(.theme-snowleopard) .mx-proxy{display:inline-block;width:16px;height:16px;vertical-align:-3px;margin-right:4px;}
+  body.theme-macosx:not(.theme-snowleopard) .mx-pill{display:block;position:absolute;right:8px;top:5px;width:22px;height:10px;box-sizing:border-box;
+    border:1.2px solid #5a5a5a;border-radius:5px;cursor:default;box-shadow:0 1px 1px rgba(0,0,0,.3);
+    background:linear-gradient(to bottom,#f9f9f9 0,#f6f6f6 20%,#dddddd 40%,#d5d5d5 50%,#e8e8e8 62%,#fff 80%,#fff);}
+  body.theme-macosx:not(.theme-snowleopard) .mx-pill:active{background:linear-gradient(to bottom,#c8c8c8,#9a9a9a 45%,#b8b8b8 60%,#d8d8d8);}
+  body.theme-macosx:not(.theme-snowleopard) .be-menubar,body.theme-macosx:not(.theme-snowleopard) .be-count{display:none;}
+  body.theme-macosx:not(.theme-snowleopard) .be-win{background:repeating-linear-gradient(to bottom,#fff 0 1px,#efefef 1px 2px,#e8e8e8 2px 3px,#efefef 3px 4px);}
+  body.theme-macosx:not(.theme-snowleopard) .mx-toolbar{display:flex;align-items:flex-start;height:56px;flex:0 0 56px;box-sizing:border-box;
+    padding:5px 0 0 8px;border-bottom:1px solid #a9a9a9;font:12px "Lucida Grande","Helvetica Neue",Helvetica,sans-serif;color:#000;
+    background:repeating-linear-gradient(to bottom,#fff 0 1px,#efefef 1px 2px,#e8e8e8 2px 3px,#efefef 3px 4px);user-select:none;-webkit-user-select:none;}
+  body.theme-macosx.mx-notb .mx-toolbar{display:none;}
+  .mx-tb{display:flex;flex-direction:column;align-items:center;padding:0 7px;cursor:default;}
+  .mx-tb .mx-ic{height:32px;display:flex;align-items:center;justify-content:center;}
+  .mx-tb em{font-style:normal;margin-top:3px;white-space:nowrap;}
+  .mx-tb:active .mx-ic{filter:brightness(.7);}
+  .mx-tbsep{align-self:stretch;width:1px;margin:0 7px 4px;background:repeating-linear-gradient(to bottom,#000 0 1px,transparent 1px 3px);}
+  .mx-backbtn{width:24px;height:24px;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+    border:1px solid #8a8a8a;background:radial-gradient(circle at 50% 30%,#fff,#e9e9e9 45%,#c9c9c9 80%,#b4b4b4);
+    box-shadow:0 1px 1.5px rgba(0,0,0,.35),inset 0 -2px 2px rgba(255,255,255,.7);opacity:.75;}
+  .mx-seg{display:flex;height:22px;box-sizing:border-box;border:1px solid #7f7f7f;border-radius:11px;overflow:hidden;box-shadow:0 1px 1.5px rgba(0,0,0,.25);
+    background:linear-gradient(to bottom,#fff,#f0f0f0 45%,#dedede 55%,#f7f7f7);}
+  .mx-seg i{width:28px;display:flex;align-items:center;justify-content:center;border-left:1px solid #a6a6a6;}
+  .mx-seg i:first-child{border-left:none;width:30px;padding-left:2px;}
+  .mx-seg i:last-child{width:30px;padding-right:2px;}
+  .mx-seg i.on{background:linear-gradient(to bottom,#d6e7fd,#a5c8f5 45%,#78a9ec 55%,#b5d4f8);}
+  body.theme-macosx:not(.theme-snowleopard) .be-content{background:#fff;}
+  body.theme-macosx:not(.theme-snowleopard) .be-grid:not(.list) .be-item .ic{width:32px;height:32px;}
+  body.theme-macosx:not(.theme-snowleopard) .be-item .lbl{font:12px "Lucida Grande","Helvetica Neue",Helvetica,sans-serif;max-width:110px;}
   body.theme-macosx .be-menubar{color:#2a2a2a;border:none;border-bottom:1px solid #9b9b9b;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
     background:repeating-linear-gradient(to bottom,rgba(0,0,0,.028) 0 1px,rgba(255,255,255,.12) 1px 2px),linear-gradient(to bottom,#f4f4f4,#dcdcdc);}
   body.theme-macosx .be-mid,body.theme-macosx .be-content{background:#fff;}
@@ -559,7 +589,40 @@
         <span class="mx-gel mx-min" id="mxmin" title="Minimieren"><span class="mx-glyph">&minus;</span></span>
         <span class="mx-gel mx-zoom" id="mxzoom" title="Zoom"><span class="mx-glyph">+</span></span>
       </span>
-      <span class="mx-caption">Applications</span>
+      <span class="mx-caption"><img class="mx-proxy" src="aqua-folder.png" alt="">Applications</span>
+      <!-- 10.0's pill: shows and hides the toolbar (Cheetah only). -->
+      <span class="mx-pill" id="mxpill" title="Hide Toolbar"></span>
+    </div>
+    <!-- Mac OS X 10.0 Finder toolbar (Cheetah only), after its window: Back, View, then the
+         places. View switches between icons and list; the rest is the picture of the day. -->
+    <div class="mx-toolbar" id="mxtoolbar">
+      <span class="mx-tb mx-back"><span class="mx-ic"><span class="mx-backbtn"><svg viewBox="0 0 14 8" width="12" height="7"><path d="M0 4 4.5 0.5v7z" fill="#333"/><rect x="6" y="3" width="2" height="2" fill="#333"/><rect x="10" y="3" width="2" height="2" fill="#333"/></svg></span></span><em>Back</em></span>
+      <span class="mx-tb mx-view"><span class="mx-ic"><span class="mx-seg" id="mxseg">
+        <i data-view="icon" title="as Icons"><svg viewBox="0 0 10 10" width="10" height="10"><path d="M0 0h4v4H0zM6 0h4v4H6zM0 6h4v4H0zM6 6h4v4H6z" fill="none" stroke="#222" stroke-width="1.2"/></svg></i>
+        <i data-view="list" title="as List"><svg viewBox="0 0 12 10" width="12" height="10"><path d="M0 1h12M0 4h12M0 7h12M0 10h12" stroke="#222" stroke-width="1.1"/></svg></i>
+        <i data-view="col" title="as Columns"><svg viewBox="0 0 13 10" width="13" height="10"><path d="M.5.5h12v9H.5zM4.5.5v9M8.5.5v9" fill="none" stroke="#222"/></svg></i>
+      </span></span><em>View</em></span>
+      <span class="mx-tbsep"></span>
+      <span class="mx-tb"><span class="mx-ic"><svg viewBox="0 0 32 32" width="32" height="32">
+        <defs><linearGradient id="mxsc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3f48"/><stop offset="1" stop-color="#050608"/></linearGradient>
+        <linearGradient id="mxcase" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#cfd6e0"/></linearGradient></defs>
+        <rect x="3" y="2" width="26" height="21" rx="3" fill="url(#mxcase)" stroke="#2d55b8" stroke-width="1.2"/>
+        <rect x="6" y="4.5" width="20" height="15" rx="1" fill="url(#mxsc)"/><path d="M6 4.5h20v5c-7 1.5-13 1.5-20 0z" fill="#fff" opacity=".14"/>
+        <path d="M5 24h22l2 4H3z" fill="url(#mxcase)" stroke="#8a95a6" stroke-width=".8"/><rect x="9" y="25.5" width="14" height="1.5" rx=".7" fill="#2d55b8"/>
+        <circle cx="6" cy="27.5" r="1.5" fill="#2d55b8"/><circle cx="26" cy="27.5" r="1.5" fill="#2d55b8"/></svg></span><em>Computer</em></span>
+      <span class="mx-tb"><span class="mx-ic"><svg viewBox="0 0 32 32" width="32" height="32">
+        <rect x="22" y="4" width="3" height="7" fill="#9a8a78" stroke="#5a4a3a" stroke-width=".6"/>
+        <path d="M7 15h18v14H7z" fill="#f2e8d6" stroke="#8a7a66" stroke-width=".8"/>
+        <path d="M3 16 16 4l13 12" fill="none" stroke="#3b3029" stroke-width="2.4" stroke-linejoin="round"/>
+        <path d="M5.5 15.5 16 6l10.5 9.5" fill="none" stroke="#b9a58d" stroke-width="1"/>
+        <rect x="13" y="20" width="6" height="9" fill="#8a3a24" stroke="#4e1e12" stroke-width=".6"/><circle cx="17.5" cy="25" r=".6" fill="#e8c060"/>
+        <rect x="13" y="10.5" width="6" height="5" fill="#dfe8f0" stroke="#5a4a3a" stroke-width=".6"/><rect x="11" y="10.5" width="2" height="5" fill="#8a3a24"/><rect x="19" y="10.5" width="2" height="5" fill="#8a3a24"/>
+        <ellipse cx="16" cy="30" rx="11" ry="1.5" fill="#000" opacity=".15"/></svg></span><em>Home</em></span>
+      <span class="mx-tb"><span class="mx-ic"><svg viewBox="0 0 32 32" width="32" height="32">
+        <defs><radialGradient id="mxheart" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#ff8a8a"/><stop offset=".45" stop-color="#e01818"/><stop offset="1" stop-color="#7a0606"/></radialGradient></defs>
+        <path d="M16 28C9 22 2 17 2 10.5 2 6.4 5.2 3.5 9 3.5c3 0 5.4 1.8 7 4.2 1.6-2.4 4-4.2 7-4.2 3.8 0 7 2.9 7 7 0 6.5-7 11.5-14 17.5z" fill="url(#mxheart)" stroke="#6a0404" stroke-width=".7"/>
+        <path d="M6 7.5c1.5-2 4.5-2.3 6.3-.3-2.3.2-4.5 1.2-6.3 3.3z" fill="#fff" opacity=".75"/></svg></span><em>Favorites</em></span>
+      <span class="mx-tb"><span class="mx-ic"><img src="aqua-apps.png" width="32" height="32" alt=""></span><em>Applications</em></span>
     </div>
     <!-- Windows 98 classic title bar (shown only in theme-win98) -->
     <div class="w98-title" id="w98title">
@@ -664,6 +727,9 @@
     let v=VIEW[viewMode];
     // Win95/98 icon view uses the smaller 32px Start-menu icon size → tighter cells.
     if (viewMode==='icon' && document.body.classList.contains('theme-win98')) v={CW:76,CH:78};
+    // Mac OS X 10.0's Finder: 32 px icons, widely spaced, as its icon view had them.
+    const cheetah = document.body.classList.contains('theme-macosx') && !document.body.classList.contains('theme-snowleopard');
+    if (viewMode==='icon' && cheetah) v={CW:124,CH:60};
     grid.className='be-grid'+(viewMode==='mini'?' mini':'')+(viewMode==='list'?' list':'');
     const list = viewMode==='list';
     const cols = list ? 1 : Math.max(1, Math.floor((content.clientWidth - PAD*2)/v.CW));
@@ -737,7 +803,12 @@
       // are posted to the host instead of being mapped through the native overlay).
       return [...R('w98cap'),0,0,0,0,0,0,0,0,0,0,0,0];
     }
-    if(mx){ return [...R('mxtitle'),...R('mxclose'),...R('mxmin'),...R('mxzoom')]; }
+    if(mx){
+      // Cheetah's pill takes its own clicks: the drag region stops short of it.
+      const t=R('mxtitle'), p=document.getElementById('mxpill');
+      if(p && getComputedStyle(p).display!=='none') t[2]=Math.max(0, p.getBoundingClientRect().x - 4 - t[0]);
+      return [...t,...R('mxclose'),...R('mxmin'),...R('mxzoom')];
+    }
     if(mf){ return [...R('mftitle'),...R('mfclose'),...R('mfmin'),...R('mfzoom')]; }
     if(xp){ return [...R('xptitle'),...R('xpclose'),...R('xpmin'),...R('xpmax')]; }
     if(m6){ return [...R('m9title'),...R('m9close'),0,0,0,0,...R('m9zoom')]; }   // System 6: close + zoom
@@ -912,6 +983,21 @@
     m.style.top=Math.min(e.clientY, window.innerHeight-20)+'px';
     openMenuEl=m;
   });
+
+  // Cheetah's toolbar: View picks icons or list (columns did not exist here), the pill hides
+  // and shows the whole toolbar as 10.0's did.
+  (function(){
+    const seg=document.getElementById('mxseg'), pill=document.getElementById('mxpill');
+    const mark=()=>seg && seg.querySelectorAll('i').forEach(i=>i.classList.toggle('on', i.dataset.view===viewMode));
+    if(seg) seg.addEventListener('click',e=>{
+      const i=e.target.closest('i'); if(!i || i.dataset.view==='col') return;
+      viewMode=i.dataset.view; mark(); st.x=st.y=0; buildGrid();
+    });
+    if(pill) pill.addEventListener('click',e=>{
+      e.stopPropagation(); document.body.classList.toggle('mx-notb'); buildGrid();
+    });
+    mark();
+  })();
 
   window.addEventListener('resize',buildGrid);
   buildGrid();
