@@ -1408,9 +1408,18 @@ final class DockController {
         let header = NSMenuItem(title: "Dock", action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
+        // XP's taskbar menu opened the Task Manager; so does this one under XP and 7.
+        if TaskManagerController.wanted {
+            let tm = NSMenuItem(title: "Task Manager", action: #selector(menuOpenTaskManager(_:)), keyEquivalent: "")
+            tm.target = self
+            menu.addItem(tm)
+            menu.addItem(.separator())
+        }
         appendDockPositionItems(to: menu)
         menu.popUp(positioning: nil, at: point, in: dockView)
     }
+
+    @objc private func menuOpenTaskManager(_ sender: NSMenuItem) { TaskManagerController.shared.show() }
 
     @objc private func menuSetDockPosition(_ sender: NSMenuItem) {
         guard let pos = sender.representedObject as? String,

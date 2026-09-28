@@ -168,6 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NextDockController.shared.update()
             NextRunningAppsController.shared.update()
             WindowBorderController.shared.update()   // recolour theme window borders on theme change
+            TaskManagerController.shared.update()    // Ctrl+Option+Delete under Windows XP and 7
             // The active theme drives the menu-bar Apple logo (Mac OS 9 → rainbow, Mac OS X →
             // aqua-classic, Maiks Favourite II → hell); every other theme turns it off.
             // Setting the style triggers RainbowAppleController.update() via its didSet.
@@ -2968,6 +2969,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NextMenuController.shared.hide()
             NextDockController.shared.hide()
             NextRunningAppsController.shared.hide()
+            TaskManagerController.shared.stop()
             ThemeManager.shared.clearActiveTheme()
             ThemeManager.shared.restoreWallpapers()
         }
@@ -3009,6 +3011,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NextMenuController.shared.hide()
         NextDockController.shared.hide()
         NextRunningAppsController.shared.hide()
+        TaskManagerController.shared.stop()
         ThemeManager.shared.clearActiveTheme()
         ThemeManager.shared.restoreWallpapers()
         // Also stop the CRT overlay when disabling theme

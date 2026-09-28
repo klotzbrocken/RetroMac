@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<!-- Windows Task Manager 5.1 (Windows XP), rebuilt for RetroMac. The Performance page first;
+     the look after XP's Luna and after jankammerath/TaskMgr98 (MPL-2.0), which served as the
+     reference for layout and colours — no code taken from it. Fed once a second by
+     TaskManagerController through window.update(snapshot). -->
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;
+    font:11px Tahoma,"Segoe UI",Verdana,sans-serif;color:#000;-webkit-user-select:none;user-select:none;cursor:default;}
+
+  /* ---------- Luna window ---------- */
+  #win{position:absolute;inset:0;display:flex;flex-direction:column;background:#ece9d8;
+    border-radius:8px 8px 0 0;overflow:hidden;
+    box-shadow:inset 0 0 0 1px #0831d9,inset 0 0 0 2px #166aee,inset 0 0 0 3px #0855dd,inset 0 0 0 4px #0831d9;}
+  #win.inactive{box-shadow:inset 0 0 0 1px #6f86d0,inset 0 0 0 2px #9db4ef,inset 0 0 0 3px #7d99df,inset 0 0 0 4px #6f86d0;}
+  .xp-title{height:30px;flex:0 0 30px;display:flex;align-items:center;padding:0 5px 0 6px;gap:4px;
+    background:linear-gradient(180deg,#0997ff 0,#0053ee 8%,#0050ee 40%,#0066ff 88%,#0066ff 93%,#005bff 95%,#003dd7 96%,#003dd7 100%);}
+  #win.inactive .xp-title{background:linear-gradient(180deg,#7697e7 0,#7e9ee3 3%,#94afe8 6%,#97b4e9 8%,#82a5e4 14%,#7c9fe2 17%,#7996de 25%,#7b99e1 56%,#82a9e9 81%,#80a5e7 89%,#7b96e1 94%,#7a93df 97%,#abbae3 100%);}
+  .xp-ico{width:16px;height:16px;flex:0 0 16px;margin-right:2px;}
+  .xp-cap{color:#fff;font:700 13px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 0 #0f1089;white-space:nowrap;flex:1 1 auto;overflow:hidden;}
+  #win.inactive .xp-cap{color:#d8e4f8;text-shadow:none;}
+  .xp-btn{width:21px;height:21px;flex:0 0 21px;border:1px solid #fff;border-radius:3px;position:relative;
+    background:radial-gradient(circle at 90% 90%,#0054e9 0,#2263d5 55%,#4479e4 70%,#a3bbec 90%,#fff 100%);}
+  .xp-btn.close{margin-left:2px;background:radial-gradient(circle at 90% 90%,#cc4600 0,#dc6527 55%,#cd7546 65%,#ffccb2 90%,#fff 100%);}
+  .xp-btn.is-hover{filter:brightness(1.15);} .xp-btn.is-press{filter:brightness(.8);}
+  .xp-btn.min::after{content:"";position:absolute;left:4px;bottom:4px;width:6px;height:3px;background:#fff;}
+  .xp-btn.max::after{content:"";position:absolute;left:4px;top:4px;width:11px;height:11px;box-sizing:border-box;border:1px solid #fff;border-top-width:3px;}
+  .xp-btn.close::before,.xp-btn.close::after{content:"";position:absolute;left:50%;top:50%;width:13px;height:2px;background:#fff;}
+  .xp-btn.close::before{transform:translate(-50%,-50%) rotate(45deg);} .xp-btn.close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  .inner{flex:1 1 auto;display:flex;flex-direction:column;margin:0 4px 4px;min-height:0;}
+
+  /* ---------- menu ---------- */
+  .menubar{display:flex;height:20px;flex:0 0 20px;align-items:stretch;background:#ece9d8;border-bottom:1px solid #fff;box-shadow:0 1px 0 #aca899;}
+  .menubar > span{padding:3px 6px 0;}
+  .menubar > span.open{background:#316ac5;color:#fff;}
+  .menu{position:absolute;z-index:20;background:#fff;border:1px solid #aca899;box-shadow:2px 2px 2px rgba(0,0,0,.3);padding:2px;min-width:170px;}
+  .menu div{padding:3px 18px 3px 20px;position:relative;white-space:nowrap;}
+  .menu div:hover{background:#316ac5;color:#fff;}
+  .menu div.sep{height:0;padding:0;margin:3px 1px;border-top:1px solid #aca899;}
+  .menu div.sep:hover{background:none;}
+  .menu div.dis{color:#aca899;} .menu div.dis:hover{background:none;color:#aca899;}
+  .menu div.chk::before{content:"✓";position:absolute;left:6px;}
+  .menu div.dot::before{content:"●";position:absolute;left:6px;font-size:8px;top:5px;}
+  .menu div.sub::after{content:"▶";position:absolute;right:5px;font-size:8px;top:5px;}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;margin:6px 6px 0;position:relative;z-index:1;}
+  .tab{padding:3px 7px 2px;margin-right:-1px;border:1px solid #919b9c;border-bottom:none;border-radius:3px 3px 0 0;
+    background:linear-gradient(#fff,#ecebe5 70%,#e3e2db);margin-top:2px;}
+  .tab.on{margin-top:0;padding-bottom:4px;background:#fcfcfe;border-top:3px solid #ffc83c;border-top-color:#e68b2c;
+    box-shadow:inset 0 1px 0 #ffc83c;z-index:2;margin-bottom:-1px;}
+  .page{flex:1 1 auto;margin:0 6px 6px;border:1px solid #919b9c;background:#fcfcfe;padding:9px 8px 8px;min-height:0;position:relative;
+    box-shadow:1px 1px 0 #d0cec8;}
+  .page.hidden{display:none;}
+  .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#6f6f6f;}
+
+  /* ---------- Performance ---------- */
+  .row{display:flex;gap:8px;}
+  .grp{position:relative;border:1px solid #d0d0bf;border-radius:4px;padding:15px 7px 6px;margin-top:0;}
+  .grp > b{position:absolute;top:-7px;left:6px;padding:0 2px;background:#fcfcfe;color:#0046d5;font-weight:400;}
+  .meterbox{width:78px;flex:0 0 78px;height:100px;}
+  .histbox{flex:1 1 auto;height:100px;min-width:0;}
+  canvas{display:block;background:#000;border:1px solid;border-color:#7f9db9;}
+  .numrow{margin-top:8px;}
+  .nums{flex:1 1 0;height:74px;}
+  .nums table{width:100%;border-collapse:collapse;}
+  .nums td{padding:0 0 1px;} .nums td.v{text-align:right;}
+
+  /* ---------- status bar ---------- */
+  .status{height:22px;flex:0 0 22px;display:flex;align-items:center;border-top:1px solid #d0cec8;margin:0 -4px -4px;padding:0 4px;background:#ece9d8;}
+  .status span{padding:0 6px;border-right:1px solid #d0cec8;height:16px;line-height:16px;white-space:nowrap;}
+  .status span:last-child{border-right:none;}
+</style></head>
+<body>
+<div id="win">
+  <div class="xp-title" id="xptitle">
+    <svg class="xp-ico" viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="10" rx="1" fill="#3a6ea5" stroke="#0a246a"/><rect x="2.5" y="3.5" width="11" height="7" fill="#000"/><path d="M3 9l2-2 2 1 2-3 2 2 2-2" stroke="#0f0" fill="none" stroke-width="1"/><rect x="5" y="12" width="6" height="2" fill="#bdbdbd"/></svg>
+    <span class="xp-cap">Windows Task Manager</span>
+    <span class="xp-btn min" id="xpmin"></span><span class="xp-btn max" id="xpmax"></span><span class="xp-btn close" id="xpclose"></span>
+  </div>
+  <div class="inner">
+    <div class="menubar" id="menubar">
+      <span data-menu="file">File</span><span data-menu="options">Options</span><span data-menu="view">View</span><span data-menu="shutdown">Shut Down</span><span data-menu="help">Help</span>
+    </div>
+    <div class="tabs" id="tabs">
+      <span class="tab" data-page="apps">Applications</span><span class="tab" data-page="procs">Processes</span><span class="tab on" data-page="perf">Performance</span><span class="tab" data-page="net">Networking</span><span class="tab" data-page="users">Users</span>
+    </div>
+    <div class="page hidden" id="page-apps"><div class="empty">Applications — coming next.</div></div>
+    <div class="page hidden" id="page-procs"><div class="empty">Processes — coming soon.</div></div>
+    <div class="page hidden" id="page-net"><div class="empty">Networking — coming soon.</div></div>
+    <div class="page hidden" id="page-users"><div class="empty">Users — coming soon.</div></div>
+    <div class="page" id="page-perf">
+      <div class="row">
+        <div class="grp meterbox"><b>CPU Usage</b><canvas id="cpuMeter"></canvas></div>
+        <div class="grp histbox"><b>CPU Usage History</b><div id="cpuGraphs" style="display:flex;gap:4px;"></div></div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div class="grp meterbox"><b>PF Usage</b><canvas id="pfMeter"></canvas></div>
+        <div class="grp histbox"><b>Page File Usage History</b><canvas id="pfGraph"></canvas></div>
+      </div>
+      <div class="row numrow">
+        <div class="grp nums"><b>Totals</b><table>
+          <tr><td>Handles</td><td class="v" id="n-handles">0</td></tr>
+          <tr><td>Threads</td><td class="v" id="n-threads">0</td></tr>
+          <tr><td>Processes</td><td class="v" id="n-procs">0</td></tr></table></div>
+        <div class="grp nums"><b>Physical Memory (K)</b><table>
+          <tr><td>Total</td><td class="v" id="n-ptotal">0</td></tr>
+          <tr><td>Available</td><td class="v" id="n-pavail">0</td></tr>
+          <tr><td>System Cache</td><td class="v" id="n-pcache">0</td></tr></table></div>
+      </div>
+      <div class="row numrow">
+        <div class="grp nums"><b>Commit Charge (K)</b><table>
+          <tr><td>Total</td><td class="v" id="n-ctotal">0</td></tr>
+          <tr><td>Limit</td><td class="v" id="n-climit">0</td></tr>
+          <tr><td>Peak</td><td class="v" id="n-cpeak">0</td></tr></table></div>
+        <div class="grp nums"><b>Kernel Memory (K)</b><table>
+          <tr><td>Total</td><td class="v" id="n-ktotal">0</td></tr>
+          <tr><td>Paged</td><td class="v" id="n-kpaged">0</td></tr>
+          <tr><td>Nonpaged</td><td class="v" id="n-knon">0</td></tr></table></div>
+      </div>
+    </div>
+    <div class="status"><span id="s-procs">Processes: 0</span><span id="s-cpu">CPU Usage: 0%</span><span id="s-commit">Commit Charge: 0K / 0K</span></div>
+  </div>
+</div>
+<script>
+(function(){
+  const post=o=>{ try{ window.webkit.messageHandlers.taskmgr.postMessage(o); }catch(e){} };
+  const $=id=>document.getElementById(id);
+  const HIST=200;                                   // samples kept per graph
+  const hist={cpu:[],kernel:[],pf:[],cores:[]};
+  const opts={kernel:false, perCPU:false, paused:false};
+  let last=null, gridShift=0;
+
+  // ---------- canvases ----------
+  function fit(cv){
+    const r=cv.closest('.grp').getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+    const w=Math.max(10, cv.dataset.w ? +cv.dataset.w : Math.floor(r.width-16)), h=Math.max(10, Math.floor(r.height-22));
+    if(cv.width!==w*dpr||cv.height!==h*dpr){ cv.width=w*dpr; cv.height=h*dpr; cv.style.width=w+'px'; cv.style.height=h+'px'; }
+    const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); return {c,w,h};
+  }
+  // The LED meter: two columns of lit (#00E000) and dark (#003000) segments, kernel share red.
+  function meter(cv, pct, kpct, label){
+    const {c,w,h}=fit(cv);
+    c.fillStyle='#000'; c.fillRect(0,0,w,h);
+    const labelH=16, top=5, bottom=h-labelH, n=Math.max(8, Math.floor((bottom-top)/3));
+    const segH=2, gap=1, mw=Math.floor(w*0.46), left=Math.floor((w-mw)/2), half=Math.floor(mw/2);
+    const lit=Math.round(pct/100*n), klit=opts.kernel?Math.min(lit,Math.round(kpct/100*n)):0;
+    for(let i=0;i<n;i++){
+      const y=bottom-(i+1)*(segH+gap);
+      c.fillStyle= i<klit ? '#e00000' : i<lit ? '#00e000' : '#003000';
+      c.fillRect(left,y,half-1,segH); c.fillRect(left+half+1,y,mw-half-1,segH);
+    }
+    c.fillStyle='#00ff00'; c.font='11px Tahoma,sans-serif'; c.textAlign='center'; c.textBaseline='middle';
+    c.fillText(label, w/2, bottom+labelH/2);
+  }
+  // A history graph: dark green 12 px grid that moves with the samples, the line in green,
+  // the kernel line in red. Newest sample at the right edge, 2 px per sample.
+  function graph(cv, vals, kvals){
+    const {c,w,h}=fit(cv);
+    c.fillStyle='#000'; c.fillRect(0,0,w,h);
+    c.strokeStyle='#008040'; c.lineWidth=1; c.beginPath();
+    for(let y=h-0.5; y>0; y-=12){ c.moveTo(0,Math.floor(y)+.5); c.lineTo(w,Math.floor(y)+.5); }
+    for(let x=w-1-(gridShift%12); x>=0; x-=12){ c.moveTo(x+.5,0); c.lineTo(x+.5,h); }
+    c.stroke();
+    const plot=(v,col)=>{ if(v.length<2) return; c.strokeStyle=col; c.beginPath();
+      for(let i=0;i<v.length;i++){ const x=w-1-(v.length-1-i)*2, y=h-1-Math.round(v[i]/100*(h-2)); if(x<-2) continue; i===0||x<0?c.moveTo(x,y):c.lineTo(x,y); }
+      c.stroke(); };
+    plot(vals,'#00ff00'); if(kvals&&opts.kernel) plot(kvals,'#ff0000');
+  }
+  function cpuGraphs(){
+    const host=$('cpuGraphs'), n=opts.perCPU ? Math.max(1,hist.cores.length) : 1;
+    if(host.children.length!==n){
+      host.innerHTML='';
+      for(let i=0;i<n;i++){ const cv=document.createElement('canvas'); host.appendChild(cv); }
+    }
+    const r=host.closest('.grp').getBoundingClientRect(), total=Math.floor(r.width-16), each=Math.floor((total-(n-1)*4)/n);
+    [...host.children].forEach((cv,i)=>{
+      cv.dataset.w=each;
+      if(opts.perCPU) graph(cv, hist.cores[i]||[], null); else graph(cv, hist.cpu, hist.kernel);
+    });
+  }
+  function fmt(n){ return Math.round(n).toLocaleString('en-US'); }
+  function mb(k){ return Math.round(k/1024)+'M'; }
+
+  function render(){
+    if(!last) { meter($('cpuMeter'),0,0,'0 %'); meter($('pfMeter'),0,0,'0 MB'); cpuGraphs(); graph($('pfGraph'),[],null); return; }
+    const s=last;
+    meter($('cpuMeter'), s.cpu, s.kernel, Math.round(s.cpu)+' %');
+    const pfPct = s.commitLimit ? s.commit/s.commitLimit*100 : 0;
+    const pfLabel = Math.round(s.commit/1024)+' MB';   // XP counted it in MB, however much
+    meter($('pfMeter'), pfPct, 0, pfLabel);
+    cpuGraphs(); graph($('pfGraph'), hist.pf, null);
+    $('n-handles').textContent=fmt(s.handles); $('n-threads').textContent=fmt(s.threads); $('n-procs').textContent=fmt(s.processes);
+    $('n-ptotal').textContent=fmt(s.physTotal); $('n-pavail').textContent=fmt(s.physAvail); $('n-pcache').textContent=fmt(s.sysCache);
+    $('n-ctotal').textContent=fmt(s.commit); $('n-climit').textContent=fmt(s.commitLimit); $('n-cpeak').textContent=fmt(s.commitPeak);
+    $('n-ktotal').textContent=fmt(s.kTotal); $('n-kpaged').textContent=fmt(s.kPaged); $('n-knon').textContent=fmt(s.kNonpaged);
+    $('s-procs').textContent='Processes: '+s.processes;
+    $('s-cpu').textContent='CPU Usage: '+Math.round(s.cpu)+'%';
+    $('s-commit').textContent='Commit Charge: '+mb(s.commit)+' / '+mb(s.commitLimit);
+  }
+
+  window.update=function(s){
+    if(opts.paused) return;
+    last=s;
+    const push=(a,v)=>{ a.push(v); if(a.length>HIST) a.shift(); };
+    push(hist.cpu,s.cpu); push(hist.kernel,s.kernel);
+    push(hist.pf, s.commitLimit ? s.commit/s.commitLimit*100 : 0);
+    (s.cores||[]).forEach((v,i)=>{ hist.cores[i]=hist.cores[i]||[]; push(hist.cores[i],v); });
+    gridShift+=2;
+    render();
+  };
+
+  // ---------- tabs ----------
+  $('tabs').addEventListener('mousedown',e=>{
+    const t=e.target.closest('.tab'); if(!t) return;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+    document.querySelectorAll('.page').forEach(p=>p.classList.toggle('hidden',p.id!=='page-'+t.dataset.page));
+    render();
+  });
+
+  // ---------- menus ----------
+  let openMenu=null, openLabel=null;
+  const speed=()=>window.__speed||'normal';
+  const MENUS={
+    file:()=>[{t:'New Task (Run...)',a:'run'},{sep:1},{t:'Exit Task Manager',a:'close'}],
+    options:()=>[{t:'Always On Top',dis:1},{t:'Minimize On Use',dis:1},{t:'Hide When Minimized',dis:1}],
+    view:()=>[{t:'Refresh Now',a:'refresh'},
+      {t:'Update Speed: High',dot:speed()==='high',a:'speed:high'},{t:'Update Speed: Normal',dot:speed()==='normal',a:'speed:normal'},
+      {t:'Update Speed: Low',dot:speed()==='low',a:'speed:low'},{t:'Update Speed: Paused',dot:speed()==='paused',a:'speed:paused'},
+      {sep:1},{t:'CPU History: One Graph, All CPUs',dot:!opts.perCPU,a:'cpu:one'},{t:'CPU History: One Graph Per CPU',dot:opts.perCPU,a:'cpu:per'},
+      {t:'Show Kernel Times',chk:opts.kernel,a:'kernel'}],
+    shutdown:()=>[{t:'Stand By',dis:1},{t:'Hibernate',dis:1},{t:'Turn Off',dis:1},{t:'Restart',dis:1},{sep:1},{t:'Log Off',dis:1},{t:'Switch User',dis:1}],
+    help:()=>[{t:'Task Manager Help Topics',dis:1},{sep:1},{t:'About Task Manager',a:'about'}]
+  };
+  function closeMenus(){ if(openMenu){openMenu.remove();openMenu=null;} if(openLabel){openLabel.classList.remove('open');openLabel=null;} }
+  function act(a){
+    if(a==='close'||a==='run'||a==='about'||a==='refresh') { post({a}); return; }
+    if(a.startsWith('speed:')){ window.__speed=a.slice(6); opts.paused=window.__speed==='paused'; post({a:'speed',v:window.__speed}); return; }
+    if(a==='cpu:one'){ opts.perCPU=false; render(); return; }
+    if(a==='cpu:per'){ opts.perCPU=true; render(); return; }
+    if(a==='kernel'){ opts.kernel=!opts.kernel; render(); return; }
+  }
+  $('menubar').addEventListener('mousedown',e=>{
+    const l=e.target.closest('[data-menu]'); if(!l) return;
+    e.stopPropagation();
+    if(openLabel===l){ closeMenus(); return; }
+    closeMenus();
+    const m=document.createElement('div'); m.className='menu';
+    MENUS[l.dataset.menu]().forEach(it=>{
+      const d=document.createElement('div');
+      if(it.sep){ d.className='sep'; }
+      else { d.textContent=it.t; if(it.dis) d.classList.add('dis'); if(it.chk) d.classList.add('chk'); if(it.dot) d.classList.add('dot');
+        if(!it.dis && it.a) d.addEventListener('mouseup',ev=>{ ev.stopPropagation(); closeMenus(); act(it.a); }); }
+      m.appendChild(d);
+    });
+    const r=l.getBoundingClientRect(); m.style.left=r.left+'px'; m.style.top=(r.bottom)+'px';
+    document.body.appendChild(m); openMenu=m; openLabel=l; l.classList.add('open');
+  });
+  document.addEventListener('mousedown',e=>{ if(openMenu && !openMenu.contains(e.target)) closeMenus(); });
+
+  // ---------- host hooks ----------
+  window.setTheme=function(){};   // one look for now: XP's (Windows 7 gets its own later)
+  window.setActive=function(a){ $('win').classList.toggle('inactive',!a); };
+  window.setBtnState=function(slot,state){
+    const el=$({close:'xpclose',collapse:'xpmin',zoom:'xpmax'}[slot]); if(!el) return;
+    el.classList.remove('is-hover','is-press'); if(state==='hover') el.classList.add('is-hover'); else if(state==='press') el.classList.add('is-press');
+  };
+  // [title, close, minimise, maximise] in CSS px, top-left: the host lays its drag and button
+  // overlay over them.
+  window.regions=function(){
+    const R=id=>{const b=$(id).getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
+    return [...R('xptitle'),...R('xpclose'),...R('xpmin'),...R('xpmax')];
+  };
+  window.addEventListener('resize',render);
+  render();
+})();
+</script>
+</body></html>

@@ -34,6 +34,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     through the middle, a brighter glow at the bottom. The Mountain Lion and Snow Leopard
     themes use the same apple.
 
+- **Windows Task Manager (Windows XP and 7).** Ctrl+Option+Delete — the Mac's Ctrl+Alt+Del
+  — or "Task Manager" in the taskbar's menu opens XP's Task Manager 5.1. Its Performance
+  page is live: the green LED meters and scrolling history graphs for CPU and page file,
+  Totals, Physical Memory, Commit Charge and Kernel Memory, the status bar; View sets the
+  update speed, one graph per CPU and the red kernel times. The other tabs follow.
+
 ## 2.8.8
 
 - **Rearrange the dock.** Drag a pinned icon along the dock and it moves to where it is let
