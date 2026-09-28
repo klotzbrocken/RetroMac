@@ -24,6 +24,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     a translucent white with a bright top edge instead of the darker blue.
   - **Snow Leopard and Mountain Lion: one divider too.** Running apps that are not kept in
     the Dock follow the others, as they did before Mojave.
+  - **The divider sits in the middle of its gap**, which is as wide as 10.0's (it was a
+    point off centre, and close up against the icons).
+  - **Fix: desktop icons moved on a bigger screen vanished on a smaller one.** A saved spot
+    beyond the screen's edge is pulled back onto it.
   - **The dividers move with the icons.** Magnifying used to close the gaps between the
     groups and slide the icons over dividers left where they were; the gaps stay now and
     the dividers go along.

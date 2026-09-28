@@ -189,6 +189,7 @@ final class DockView: NSView {
                            hasDoomLauncher: hasDoomLauncher && !isControlStrip,
                            iconSize: iconSize,
                            spacing: spacing,
+                           groupGap: ThemeManager.shared.activeTheme.flatMap { t in t.config.dock.separatorGap.map { $0 * iconSize / max(1, t.config.dock.iconSize) } },
                            doomWidth: doomTileWidth(iconSize))
     }
     /// Win98-style taskbar (classic start menu): etched groove separators + Show Desktop.
@@ -470,7 +471,7 @@ final class DockView: NSView {
             var y = bar.maxY - padding - gripHeight
             for t in tiles {
                 y -= t.gapBefore
-                if t.separator == .transients { separatorY = y + spacing / 2 }
+                if t.separator == .transients { separatorY = y + (spacing + t.gapBefore) / 2 }   // mid-gap
                 y -= iconSize
                 addTile(t, frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                         theme: theme, iconSize: iconSize)
@@ -758,8 +759,8 @@ final class DockView: NSView {
                 // drawn beside it.
                 let y = (barRect.height - iconSize) / 2
                 for t in tiles {
-                    if t.separator == .transients { separatorX = x + t.gapBefore - spacing / 2 }
-                    if t.separator == .rightGroup { trashSeparatorX = x + t.gapBefore - spacing / 2 }
+                    if t.separator == .transients { separatorX = x + (t.gapBefore - spacing) / 2 }   // mid-gap
+                    if t.separator == .rightGroup { trashSeparatorX = x + (t.gapBefore - spacing) / 2 }
                     x += t.gapBefore
                     addTile(t, frame: NSRect(x: x, y: y, width: t.width, height: iconSize),
                             theme: theme, iconSize: iconSize)
@@ -815,7 +816,7 @@ final class DockView: NSView {
             for tile in tiles {
                 guard idx < itemViews.count else { break }
                 y -= tile.gapBefore
-                if tile.separator == .transients { separatorY = y + spacing / 2 }
+                if tile.separator == .transients { separatorY = y + (spacing + tile.gapBefore) / 2 }   // mid-gap
                 y -= iconSize
                 itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                 idx += 1
@@ -1062,8 +1063,8 @@ final class DockView: NSView {
             let y = (barRect.height - iconSize) / 2
             for tile in tiles {
                 guard idx < itemViews.count else { break }
-                if tile.separator == .transients { separatorX = x + tile.gapBefore - spacing / 2 }
-                if tile.separator == .rightGroup { trashSeparatorX = x + tile.gapBefore - spacing / 2 }
+                if tile.separator == .transients { separatorX = x + (tile.gapBefore - spacing) / 2 }   // mid-gap
+                if tile.separator == .rightGroup { trashSeparatorX = x + (tile.gapBefore - spacing) / 2 }
                 x += tile.gapBefore
                 itemViews[idx].frame = NSRect(x: x, y: y, width: tile.width, height: iconSize)
                 idx += 1
@@ -3770,7 +3771,7 @@ final class DockView: NSView {
                 item.layer?.setAffineTransform(.identity)
                 item.layer?.zPosition = scales[i]
                 item.frame = NSRect(x: cx - magW / 2, y: cy - magW / 2, width: magW, height: magW)
-                if i < tiles.count, tiles[i].separator == .transients { separatorY = cy + magW / 2 + spacing / 2 }
+                if i < tiles.count, tiles[i].separator == .transients { separatorY = cy + magW / 2 + (spacing + gaps[i]) / 2 }
             }
             let expandedTop = min(bounds.height, max(barRect.maxY, newTop + padding))
             let expandedBottom = max(0, min(barRect.minY, newTop - totalMag - padding))
@@ -3836,8 +3837,8 @@ final class DockView: NSView {
             let magW = magnifiedWidths[i]
             let magH = baseSize * scales[i]
             if i < tiles.count {
-                if tiles[i].separator == .transients { separatorX = x + gaps[i] - spacing / 2 }
-                if tiles[i].separator == .rightGroup { trashSeparatorX = x + gaps[i] - spacing / 2 }
+                if tiles[i].separator == .transients { separatorX = x + (gaps[i] - spacing) / 2 }
+                if tiles[i].separator == .rightGroup { trashSeparatorX = x + (gaps[i] - spacing) / 2 }
             }
             x += gaps[i]
             item.resetMagnification()

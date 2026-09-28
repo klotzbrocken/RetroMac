@@ -51,6 +51,7 @@ extension DockView {
                               hasDoomLauncher: Bool,
                               iconSize: CGFloat,
                               spacing: CGFloat,
+                              groupGap: CGFloat? = nil,
                               doomWidth: CGFloat) -> [DockTile] {
         // Folder stacks (Downloads, Applications) belong beside the trash the way macOS groups
         // them, rather than inline among the pinned apps. Layouts with no right-hand section have
@@ -89,14 +90,14 @@ extension DockView {
         for (i, bid) in transients.enumerated() {
             let first = i == 0 && transientsApart
             tile(.app(bundleID: bid, transient: true), bid,
-                 gap: first ? spacing : 0, sep: first ? .transients : nil)
+                 gap: first ? (groupGap ?? spacing) : 0, sep: first ? .transients : nil)
         }
 
         if hasUrlLauncher || hasTrash || hasDoomLauncher {
             var first = true
             func rightTile(_ kind: DockTile.Kind, _ id: String, width: CGFloat = iconSize) {
                 tile(kind, id, width: width,
-                     gap: first ? spacing : 0, sep: first ? .rightGroup : nil)
+                     gap: first ? (groupGap ?? spacing) : 0, sep: first ? .rightGroup : nil)
                 first = false
             }
             for app in stacks { rightTile(.app(bundleID: app.bundleID, transient: false), app.bundleID) }

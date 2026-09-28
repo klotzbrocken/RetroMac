@@ -266,6 +266,9 @@ struct DockThemeConfig: Codable {
         /// `true`: a bottom dock with rounded top corners only and no border along the screen
         /// edge it sits on (Mac OS X 10.0, with `edgeOffset` 0).
         var squareBottom: Bool?
+        /// Extra room at each divider, in points at the theme's icon size (default: the icon
+        /// spacing). Mac OS X 10.0 left about 20 px of dock either side of its line.
+        var separatorGap: CGFloat?
     }
 
     struct IconStyle: Codable {

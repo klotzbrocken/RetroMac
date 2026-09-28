@@ -146,6 +146,15 @@ final class DockTileTests: XCTestCase {
         XCTAssertEqual(row.filter { $0.id.hasPrefix("t") }.map(\.gapBefore), [0, 0])
     }
 
+    /// A theme's own divider gap (Mac OS X 10.0's wide one) goes before each group.
+    func testAThemeCanWidenTheGapAtTheDividers() {
+        let row = DockView.iconDockTiles(taskbar: false, showQuickLaunch: false, apps: [app("a")],
+                                         transients: ["t"], stacksOnRight: true, hasDashboard: false,
+                                         hasShowDesktop: false, hasUrlLauncher: false, hasTrash: true,
+                                         hasDoomLauncher: false, iconSize: icon, spacing: gap, groupGap: 30, doomWidth: doom)
+        XCTAssertEqual(row.filter { $0.separator != nil }.map(\.gapBefore), [30, 30])
+    }
+
     // MARK: - Windows taskbars
 
     func testTaskbarRowIsQuickLaunchOnly() {
@@ -173,5 +182,17 @@ final class DockTileTests: XCTestCase {
         let row = tiles(apps: [app("a")], trash: true, doomLauncher: true)
         XCTAssertEqual(row.last?.width, doom)
         XCTAssertTrue(row.dropLast().allSatisfy { $0.width == icon })
+    }
+}
+
+/// Desktop icons moved on one screen stay reachable on a smaller one.
+final class DesktopIconPlacementTests: XCTestCase {
+    func testASpotBeyondTheScreenIsPulledBackInside() {
+        let area = NSRect(x: 0, y: 0, width: 1470, height: 900)
+        let cell = NSSize(width: 90, height: 95)
+        let p = DesktopIconsController.onScreen(NSPoint(x: 1746, y: 877), size: cell, in: area)
+        XCTAssertEqual(p, NSPoint(x: 1380, y: 805))
+        let inside = NSPoint(x: 100, y: 200)
+        XCTAssertEqual(DesktopIconsController.onScreen(inside, size: cell, in: area), inside, "a spot on screen stays put")
     }
 }

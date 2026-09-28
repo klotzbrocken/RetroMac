@@ -36,6 +36,7 @@
     "cornerRadius": 6,
     "edgeOffset": 0,
     "squareBottom": true,
+    "separatorGap": 30,
     "backgroundColor": "#FFFFFF80",
     "backgroundGradientTop": null,
     "backgroundGradientBottom": null,

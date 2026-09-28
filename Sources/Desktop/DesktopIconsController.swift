@@ -163,6 +163,12 @@ final class DesktopIconsController {
 
     // MARK: - Window Setup
 
+    /// `origin` moved just far enough that a `size` cell lies inside `area`.
+    static func onScreen(_ origin: NSPoint, size: NSSize, in area: NSRect) -> NSPoint {
+        NSPoint(x: min(max(origin.x, area.minX), max(area.minX, area.maxX - size.width)),
+                y: min(max(origin.y, area.minY), max(area.minY, area.maxY - size.height)))
+    }
+
     private func show(entries: [DockThemeConfig.DesktopIconEntry]) {
         guard let screen = NSScreen.main else { return }
         let visibleFrame = screen.visibleFrame
@@ -262,7 +268,11 @@ final class DesktopIconsController {
             view.onContextMenu = { [weak self] v, e in self?.showIconMenu(v, e) }
 
             if let pos = custom.positions[entry.name] {
-                view.frame = NSRect(x: pos[0], y: pos[1], width: cw, height: ch)
+                // A spot saved on a bigger screen can lie beyond this one's edge (an icon moved
+                // on an external display, now on the laptop's): keep it on screen, as near as can be.
+                let area = visibleFrame.offsetBy(dx: -screenFrame.origin.x, dy: -screenFrame.origin.y)
+                view.frame = NSRect(origin: Self.onScreen(NSPoint(x: pos[0], y: pos[1]), size: NSSize(width: cw, height: ch), in: area),
+                                    size: NSSize(width: cw, height: ch))
             } else {
                 let placed: (col: Int, row: Int)
                 if let y = entry.gridY {
