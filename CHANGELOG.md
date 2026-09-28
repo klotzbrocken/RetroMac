@@ -62,6 +62,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     through the middle, a brighter glow at the bottom. The Mountain Lion and Snow Leopard
     themes use the same apple.
 
+- **Fix: the green light did not take a window out of full screen** under the themed title
+  bars. The title bar macOS slides down over a full-screen window is a small window of its
+  own, and RetroMac laid its bar, lights and border over it. A display showing a full-screen
+  app gets no retro chrome now, and a themed green light on a full-screen window leaves full
+  screen, as the real one does.
 - **Fix: the dock stayed magnified when the pointer left it downward onto a display below
   the main one.** Leaving downward keeps the magnification only while the pointer is still
   on the dock's screen — the edge it was meant for — and a pointer that goes on from under a

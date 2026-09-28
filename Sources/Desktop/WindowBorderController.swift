@@ -288,9 +288,14 @@ final class WindowBorderController {
             if let b = borders[target] { skb_destroy(b.wid); borders.removeValue(forKey: target) }
             return
         }
-        // Skip full-screen / desktop-sized windows.
+        // Skip full-screen / desktop-sized windows, and everything on a display that shows a
+        // full-screen app's Space (the title bar macOS slides down there is a window too).
         if let scr = NSScreen.screens.first(where: { $0.frame.width >= windowBounds.width }),
            windowBounds.width >= scr.frame.width - 1, windowBounds.height >= scr.frame.height - 1 {
+            if let b = borders[target] { skb_destroy(b.wid); borders.removeValue(forKey: target) }
+            return
+        }
+        if TitleBarOverlayController.shared.isOnFullScreenSpace(windowBounds) {
             if let b = borders[target] { skb_destroy(b.wid); borders.removeValue(forKey: target) }
             return
         }

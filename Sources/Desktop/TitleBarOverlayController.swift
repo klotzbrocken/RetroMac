@@ -107,6 +107,14 @@ final class TitleBarOverlayController {
         return barAboveHeight
     }
     private var style: Style?
+    /// Displays (by UUID) showing a full-screen app's Space, as of the last sync.
+    private var fullScreenDisplays: Set<String> = []
+    /// Whether a window with these bounds (Quartz) sits on a display showing a full-screen
+    /// app's Space — asked afresh, so it holds while the title bars are off too.
+    func isOnFullScreenSpace(_ bounds: CGRect) -> Bool {
+        guard let uuid = Self.screen(for: bounds)?.displayUUID else { return false }
+        return skb_display_shows_fullscreen_space(uuid as CFString)
+    }
     private var excluded: Set<String> = []
     private var overlays: [CGWindowID: Overlay] = [:]
     private var axWindows: [CGWindowID: AXUIElement] = [:]
@@ -335,6 +343,13 @@ final class TitleBarOverlayController {
         // The front window: the first suitable one, in z-order, that belongs to the active app.
         let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? -1
         let screens = NSScreen.screens
+        // Displays showing a full-screen app's Space: no retro chrome there. The title bar
+        // macOS slides down over a full-screen window is a small window of its own, not
+        // screen-sized, and a bar or patch laid over it took the clicks meant for its lights —
+        // the green one could not take the window out of full screen.
+        fullScreenDisplays = Set(screens.compactMap { s in
+            s.displayUUID.flatMap { skb_display_shows_fullscreen_space($0 as CFString) ? $0 : nil }
+        })
         var frontWID: CGWindowID = 0
         var suitable = Set<CGWindowID>()
         for i in 0..<count {
@@ -395,6 +410,10 @@ final class TitleBarOverlayController {
             leaving.removeValue(forKey: info.id)
         }
         if Self.isScreenSized(info.bounds, screens: screens) { drop(for: info.id); return }
+        if !fullScreenDisplays.isEmpty,
+           let uuid = Self.screen(for: info.bounds, screens: screens)?.displayUUID, fullScreenDisplays.contains(uuid) {
+            drop(for: info.id); return
+        }
         let frame: NSRect
         var lights: [ChromeButtonKind: NSRect] = [:]
         var deadZoneWidth: CGFloat = 0
@@ -1121,6 +1140,14 @@ final class TitleBarOverlayController {
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
         count("action.\(kind)")
         guard let w = axWindow(wid, pid: pid) else { return }
+        // A full-screen window's green light takes it out of full screen, as the real one does.
+        if kind == .zoom || kind == .maximize || kind == .restore {
+            var fs: CFTypeRef?
+            if AXUIElementCopyAttributeValue(w, "AXFullScreen" as CFString, &fs) == .success, (fs as? Bool) == true {
+                AXUIElementSetAttributeValue(w, "AXFullScreen" as CFString, kCFBooleanFalse)
+                return
+            }
+        }
         let attr: String
         switch kind {
         case .close:              attr = kAXCloseButtonAttribute
