@@ -12,12 +12,14 @@ final class AppleMenuController {
     func popUp(below rect: NSRect, in window: NSWindow) {
         if PlatinumMenuController.shared.isOpen { PlatinumMenuController.shared.dismissAll(); return }
         PlatinumMenuController.shared.ignoreClickWindow = window
-        PlatinumMenuController.shared.show(items(), below: rect)
+        let aqua = ThemeManager.shared.activeTheme?.config.hasMacOSXAppleMenu == true
+        PlatinumMenuController.shared.show(items(), below: rect, look: aqua ? .aqua : .platinum)
     }
 
     /// The menu of the day, first level in the theme's own pictures (icons/…).
     func items() -> [PlatinumMenuItem] {
         if ThemeManager.shared.activeTheme?.config.hasSystem7AppleMenu == true { return system7Items() }
+        if ThemeManager.shared.activeTheme?.config.hasMacOSXAppleMenu == true { return macOSXItems() }
         return [open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
          .separator(),
          submenu("Applications", icon: themeIcon("folder.png")) { Self.entries(Self.applications()) },
@@ -50,6 +52,72 @@ final class AppleMenuController {
          open("Key Caps", "x-apple.systempreferences:com.apple.Keyboard-Settings.extension"),
          app("Note Pad", "/System/Applications/Notes.app", icon: "notes.png"),
          app("Scrapbook", "/System/Applications/Photos.app", icon: "photos.png")]
+    }
+
+    /// Mac OS X 10.0's Apple menu, row for row, each pointed at what does the job today. The
+    /// Dock submenu drives RetroMac's dock (magnification, hiding); Restart, Shut Down and
+    /// Log Out ask first, through the system's own dialogs, as they did.
+    func macOSXItems() -> [PlatinumMenuItem] {
+        let theme = ThemeManager.shared.activeTheme?.config
+        let name = theme?.settingsKey ?? ""
+        let magnifying = AppSettings.shared.dockMagnification
+        let hiding = AppSettings.shared.themeDockAutoHide[name] ?? false
+        return [
+            .action("About This Mac") { Self.openTarget("x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension") },
+            .action("Get Mac OS X Software\u{2026}") { Self.openTarget("/System/Applications/App Store.app") },
+            .separator(),
+            .action("System Preferences\u{2026}") { Self.openTarget("/System/Applications/System Settings.app") },
+            .submenu("Dock", [
+                .action(magnifying ? "Turn Magnification Off" : "Turn Magnification On") { AppSettings.shared.dockMagnification.toggle() },
+                .action(hiding ? "Turn Hiding Off" : "Turn Hiding On", shortcut: "\u{2325}\u{2318}D") {
+                    AppSettings.shared.themeDockAutoHide[name] = !hiding
+                },
+                .separator(),
+                .action("Dock Preferences\u{2026}") { NSApp.sendAction(Selector(("openSettings")), to: nil, from: nil) },
+            ]),
+            .submenu("Location", [
+                .action("Automatic", ticked: true) {},
+                .separator(),
+                .action("Network Preferences\u{2026}") { Self.openTarget("x-apple.systempreferences:com.apple.Network-Settings.extension") },
+            ]),
+            .separator(),
+            .submenu("Recent Items", rows: {
+                let apps = Self.entries(Self.sharedList("RecentApplications"))
+                let docs = Self.entries(Self.sharedList("RecentDocuments"))
+                return [.label("Applications")] + (apps.isEmpty ? [.label("None")] : apps)
+                    + [.separator(), .label("Documents")] + (docs.isEmpty ? [.label("None")] : docs)
+            }),
+            .separator(),
+            .action("Force Quit\u{2026}") { Self.forceQuitWindow() },
+            .separator(),
+            .action("Sleep") {
+                let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset"); p.arguments = ["sleepnow"]
+                try? p.run()
+            },
+            .action("Restart") { Self.askLoginWindow("rrst") },
+            .action("Shut Down") { Self.askLoginWindow("rsdn") },
+            .separator(),
+            .action("Log Out\u{2026}", shortcut: "\u{21E7}\u{2318}Q") { Self.askLoginWindow("rlgo") },
+        ]
+    }
+
+    /// Restart ("rrst"), Shut Down ("rsdn") or Log Out ("rlgo") the way the Apple menu does it:
+    /// the request goes to loginwindow, which asks the user first.
+    static func askLoginWindow(_ event: String) {
+        NSAppleScript(source: "tell application \"loginwindow\" to \u{00AB}event aevt\(event)\u{00BB}")?.executeAndReturnError(nil)
+    }
+
+    /// The Force Quit Applications window: ⌥⌘⎋, sent as the keyboard would (needs the
+    /// Accessibility permission RetroMac asks for its title bars); Activity Monitor without it.
+    static func forceQuitWindow() {
+        guard AXIsProcessTrusted(), let src = CGEventSource(stateID: .hidSystemState) else {
+            openTarget("/System/Applications/Utilities/Activity Monitor.app"); return
+        }
+        for down in [true, false] {
+            let e = CGEvent(keyboardEventSource: src, virtualKey: 53, keyDown: down)   // Escape
+            e?.flags = [.maskCommand, .maskAlternate]
+            e?.post(tap: .cghidEventTap)
+        }
     }
 
     // MARK: Items

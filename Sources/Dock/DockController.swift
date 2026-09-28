@@ -1,6 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 import Combine
+import SkyLightBridge
 
 final class DockController {
     static let shared = DockController()
@@ -874,6 +875,14 @@ final class DockController {
         // Our dock window lives on the desktop Space, so isOnActiveSpace returns false.
         // This replaces CGWindowListCopyWindowInfo which requires Screen Recording
         // permission (TCC) on macOS 15+ and triggered a dialog on every launch.
+        //
+        // But the dock window joins all Spaces (it has to be on every desktop), and a window
+        // that does is on the active Space by definition — so that test never fired, and the
+        // dock drew over every full-screen app. The WindowServer is asked instead what kind of
+        // Space the dock's display is showing.
+        if let uuid = targetScreen().displayUUID, skb_display_shows_fullscreen_space(uuid as CFString) {
+            return true
+        }
         guard let dockWindow = window else { return false }
         // A newly created window may briefly report isOnActiveSpace = false before
         // it is fully ordered on screen. Only trust the check if the window is visible.

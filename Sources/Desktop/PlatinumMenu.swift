@@ -20,10 +20,13 @@ struct PlatinumMenuItem {
     var kind: Kind
     var ticked = false
     var dimmed = false
+    /// The key equivalent shown at the row's right (Aqua menus), e.g. "⇧⌘Q".
+    var shortcut: String? = nil
 
     static func separator() -> PlatinumMenuItem { PlatinumMenuItem(title: "", kind: .separator) }
-    static func action(_ title: String, icon: NSImage? = nil, ticked: Bool = false, dimmed: Bool = false, _ run: @escaping () -> Void) -> PlatinumMenuItem {
-        PlatinumMenuItem(title: title, icon: icon, kind: .action(run), ticked: ticked, dimmed: dimmed)
+    static func action(_ title: String, icon: NSImage? = nil, ticked: Bool = false, dimmed: Bool = false,
+                       shortcut: String? = nil, _ run: @escaping () -> Void) -> PlatinumMenuItem {
+        PlatinumMenuItem(title: title, icon: icon, kind: .action(run), ticked: ticked, dimmed: dimmed, shortcut: shortcut)
     }
     static func submenu(_ title: String, icon: NSImage? = nil, _ items: [PlatinumMenuItem]) -> PlatinumMenuItem {
         PlatinumMenuItem(title: title, icon: icon, kind: .submenu(items))
@@ -65,8 +68,13 @@ struct PlatinumMenuItem {
     }
 }
 
+/// How the menus are drawn: Mac OS 8/9's Platinum (and System 7), or Mac OS X 10.0's Aqua.
+enum RetroMenuLook { case platinum, aqua }
+
 final class PlatinumMenuController {
     static let shared = PlatinumMenuController()
+    /// The look of the menus open now, set with each `show`.
+    private(set) var look: RetroMenuLook = .platinum
     private var panels: [PlatinumMenuPanel] = []
     private var globalMonitor: Any?
     private var localMonitor: Any?
@@ -76,14 +84,20 @@ final class PlatinumMenuController {
     static let separatorHeight: CGFloat = 9
     /// Chicago 12 of the day: ChiKareGo2 at its 16 px bitmap size.
     static var font: NSFont { RetroFonts.chicago(16) }
+    /// Mac OS X 10.0, measured from 10.0.4: 19 px rows, a blank 12 px between groups (no
+    /// line), Lucida Grande 14.
+    static let aquaRowHeight: CGFloat = 19
+    static let aquaSeparatorHeight: CGFloat = 12
+    static var aquaFont: NSFont { NSFont(name: "LucidaGrande", size: 14) ?? .menuFont(ofSize: 14) }
     /// A window whose clicks must not dismiss (the button that opens the menu toggles it itself).
     weak var ignoreClickWindow: NSWindow?
     var isOpen: Bool { !panels.isEmpty }
 
     /// Show the root menu below `anchor` (screen coordinates, AppKit), left edges aligned;
     /// above it when there is no room below (the Control Strip at the bottom of the screen).
-    func show(_ items: [PlatinumMenuItem], below anchor: NSRect) {
+    func show(_ items: [PlatinumMenuItem], below anchor: NSRect, look: RetroMenuLook = .platinum) {
         dismissAll()
+        self.look = look
         let panel = makePanel(items: items, level: 0)
         let size = panel.contentSize
         let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main!
@@ -107,11 +121,26 @@ final class PlatinumMenuController {
         let vf = screen.visibleFrame
         var x = parent.frame.maxX - 1
         if x + size.width > vf.maxX { x = parent.frame.minX - size.width + 1 }
-        var y = rowRectInScreen.maxY - size.height + 1   // the first row level with the parent row
+        // The first row level with the parent row (Aqua has 4 px above its first row).
+        var y = rowRectInScreen.maxY - size.height + (look == .aqua ? 4 : 1)
         y = max(vf.minY, min(y, vf.maxY - size.height))
         panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.orderFrontRegardless()
         panels.append(panel)
+    }
+
+    /// A picture of a menu as it would open, hovering row `hovered` — for tests and previews;
+    /// nothing is shown on screen.
+    func snapshot(_ items: [PlatinumMenuItem], look: RetroMenuLook, hovered: Int = -1) -> NSBitmapImageRep? {
+        let before = self.look
+        self.look = look
+        defer { self.look = before }
+        let view = PlatinumMenuView(items: items, level: 0, controller: self)
+        view.frame = NSRect(origin: .zero, size: view.intrinsicSize)
+        view.setHovered(hovered)
+        guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return nil }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        return rep
     }
 
     fileprivate func closeDeeperThan(_ level: Int) {
@@ -131,7 +160,8 @@ final class PlatinumMenuController {
         let panel = PlatinumMenuPanel(contentRect: NSRect(origin: .zero, size: view.intrinsicSize),
                                       styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.level = .popUpMenu
-        panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false   // the drawn 1 px shadow is the shadow
+        panel.isOpaque = false; panel.backgroundColor = .clear
+        panel.hasShadow = look == .aqua   // Platinum's drawn 1 px shadow is its shadow; Aqua's is soft
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         panel.hidesOnDeactivate = false
         view.frame = NSRect(origin: .zero, size: view.intrinsicSize)
@@ -172,11 +202,16 @@ private final class PlatinumMenuView: NSView {
     var maxHeight: CGFloat = .greatestFiniteMagnitude
     private var firstRow = 0
     private var scrollTimer: Timer?
-    private var fullHeight: CGFloat { 4 + items.reduce(0) { $0 + (isSeparator($1) ? sepH : rowH) } }
+    private var fullHeight: CGFloat { padTop + padBottom + items.reduce(0) { $0 + (isSeparator($1) ? sepH : rowH) } }
     private var scrolls: Bool { fullHeight > maxHeight }
 
-    private let rowH = PlatinumMenuController.rowHeight
-    private let sepH = PlatinumMenuController.separatorHeight
+    private lazy var aqua = controller?.look == .aqua
+    private var rowH: CGFloat { aqua ? PlatinumMenuController.aquaRowHeight : PlatinumMenuController.rowHeight }
+    private var sepH: CGFloat { aqua ? PlatinumMenuController.aquaSeparatorHeight : PlatinumMenuController.separatorHeight }
+    private var menuFont: NSFont { aqua ? PlatinumMenuController.aquaFont : PlatinumMenuController.font }
+    /// Space above the first row and below the last.
+    private var padTop: CGFloat { aqua ? 4 : 2 }
+    private var padBottom: CGFloat { aqua ? 3 : 2 }
     /// System 7.1 (authentic), at 256 colours: a white menu in a black line with a 1 px
     /// shadow, the selected row inverted, dimmed rows in #888888; else Platinum.
     private let mono = Mac256.active
@@ -192,13 +227,15 @@ private final class PlatinumMenuView: NSView {
     private let iconColumn: CGFloat = 26
 
     var intrinsicSize: NSSize {
-        let font = PlatinumMenuController.font
+        let font = menuFont
         var maxW: CGFloat = 100
         let hasIcons = items.contains { $0.icon != nil }
         for it in items where !it.title.isEmpty {
             let w = it.title.size(withAttributes: [.font: font]).width
-            maxW = max(maxW, w + 16 + (hasIcons ? iconColumn : 0) + 16 + 12)   // tick column, icon, arrow room
+            let key = it.shortcut.map { $0.size(withAttributes: [.font: font]).width + 24 } ?? 0
+            maxW = max(maxW, w + (aqua ? 22 : 16) + (hasIcons ? iconColumn : 0) + (aqua ? 30 : 28) + key)   // tick column, icon, arrow room
         }
+        if aqua { maxW = max(maxW, 200) }
         let h = min(fullHeight, maxHeight)
         return NSSize(width: min(max(maxW.rounded(.up), 140), 360), height: h)
     }
@@ -216,10 +253,11 @@ private final class PlatinumMenuView: NSView {
 
     /// Where a row sits; rows scrolled past sit above the top and are not drawn or hit.
     private func rowRect(_ i: Int) -> NSRect {
-        var y: CGFloat = 2 + (scrolls ? rowH : 0)   // below the up-arrow row when scrolling
+        var y: CGFloat = padTop + (scrolls ? rowH : 0)   // below the up-arrow row when scrolling
         for j in 0..<i { y += isSeparator(items[j]) ? sepH : rowH }
         for j in 0..<min(firstRow, items.count) { y -= isSeparator(items[j]) ? sepH : rowH }
         let h = isSeparator(items[i]) ? sepH : rowH
+        if aqua { return NSRect(x: 0, y: y, width: bounds.width, height: h) }   // edge to edge: no frame
         return NSRect(x: 1, y: y, width: bounds.width - 3, height: h)   // inside the line and the shadow
     }
     private var upArrowRect: NSRect { NSRect(x: 1, y: 2, width: bounds.width - 3, height: rowH) }
@@ -230,6 +268,7 @@ private final class PlatinumMenuView: NSView {
     private var canScrollUp: Bool { scrolls && firstRow > 0 }
 
     override func draw(_ dirtyRect: NSRect) {
+        if aqua { drawAqua(); return }
         let b = bounds
         // The menu's own shadow: one dark line below and to the right, as os9.ca draws it.
         NSColor(white: 0.067, alpha: 1).setFill()
@@ -311,6 +350,67 @@ private final class PlatinumMenuView: NSView {
             }
         }
     }
+
+    /// Mac OS X 10.0's menu, from 10.0.4: pinstripes on a near-white ground, a little
+    /// translucent; no frame (the window's shadow is the edge); groups apart by blank space;
+    /// the chosen row a pinstriped Aqua blue across the full width, its text white; submenu
+    /// arrows grey; key equivalents right-aligned.
+    private func drawAqua() {
+        let b = bounds
+        let ground: [CGFloat] = [0xF4, 0xEF, 0xE4, 0xEF].map { $0 / 255 }
+        for y in stride(from: 0, to: Int(b.height), by: 1) {
+            let v = ground[y % 4]
+            NSColor(srgbRed: v, green: v + 0.008, blue: min(1, v + 0.02), alpha: 0.96).setFill()
+            NSRect(x: 0, y: CGFloat(y), width: b.width, height: 1).fill()
+        }
+        let font = menuFont
+        let blue: [NSColor] = [0x4282CA, 0x4788CC, 0x4282CA, 0x3877C6].map {
+            NSColor(srgbRed: CGFloat(($0 >> 16) & 255) / 255, green: CGFloat(($0 >> 8) & 255) / 255, blue: CGFloat($0 & 255) / 255, alpha: 1)
+        }
+        if scrolls { NSGraphicsContext.current?.saveGraphicsState(); rowBand.clip() }
+        for (i, it) in items.enumerated() {
+            let r = rowRect(i)
+            if scrolls, r.maxY <= rowBand.minY || r.minY >= rowBand.maxY { continue }
+            if isSeparator(it) { continue }   // 10.0 set groups apart with space alone
+            let selected = i == hovered && !it.dimmed
+            if selected {
+                for k in 0..<Int(r.height) {
+                    blue[k % 4].setFill()
+                    NSRect(x: r.minX, y: r.minY + CGFloat(k), width: r.width, height: 1).fill()
+                }
+            }
+            let colour: NSColor = it.dimmed ? NSColor(white: 0.6, alpha: 1) : (selected ? .white : .black)
+            if it.ticked {
+                let p = NSBezierPath()
+                p.move(to: NSPoint(x: r.minX + 7, y: r.midY)); p.line(to: NSPoint(x: r.minX + 10, y: r.midY + 3)); p.line(to: NSPoint(x: r.minX + 15, y: r.midY - 4))
+                p.lineWidth = 2; colour.setStroke(); p.stroke()
+            }
+            var x = r.minX + 22
+            if hasIcons {
+                if let icon = it.icon {
+                    icon.draw(in: NSRect(x: x, y: r.midY - 8, width: 16, height: 16), from: .zero, operation: .sourceOver,
+                              fraction: it.dimmed ? 0.5 : 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.high])
+                }
+                x += iconColumn
+            }
+            let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: colour]
+            let ts = it.title.size(withAttributes: attrs)
+            it.title.draw(at: NSPoint(x: x, y: (r.midY - ts.height / 2).rounded()), withAttributes: attrs)
+            if let key = it.shortcut {
+                let ks = key.size(withAttributes: attrs)
+                key.draw(at: NSPoint(x: r.maxX - 14 - ks.width, y: (r.midY - ks.height / 2).rounded()), withAttributes: attrs)
+            }
+            if it.isSubmenu {
+                let ax = r.maxX - 20, ay = r.midY
+                let p = NSBezierPath()
+                p.move(to: NSPoint(x: ax, y: ay - 5)); p.line(to: NSPoint(x: ax + 8, y: ay)); p.line(to: NSPoint(x: ax, y: ay + 5)); p.close()
+                (selected ? NSColor.white : NSColor(white: 0.4, alpha: 1)).setFill(); p.fill()
+            }
+        }
+        if scrolls { NSGraphicsContext.current?.restoreGraphicsState() }
+    }
+
+    func setHovered(_ i: Int) { hovered = i; needsDisplay = true }
 
     private func scroll(by delta: Int) {
         let next = firstRow + delta

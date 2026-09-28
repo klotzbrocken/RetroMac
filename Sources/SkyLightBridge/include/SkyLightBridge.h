@@ -36,4 +36,8 @@ void skb_destroy(uint32_t wid);
 // Order any window of this process out, from any thread (no AppKit involved).
 void skb_order_out(uint32_t wid);
 
+// Whether the Space showing on the display with this UUID is a full-screen app's Space.
+// NSWindow.isOnActiveSpace cannot tell for a window that joins all Spaces (the dock's).
+bool skb_display_shows_fullscreen_space(CFStringRef display_uuid);
+
 #endif

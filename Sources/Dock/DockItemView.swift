@@ -334,6 +334,45 @@ final class DockItemView: NSView {
         layer?.setAffineTransform(.identity)
     }
 
+    // MARK: - Launch bounce
+
+    private(set) var isBouncing = false
+
+    /// The Mac OS X Dock's launch feedback: the icon hops away from the dock's edge, over and
+    /// over, until the application has finished launching. `offset` is the hop, in the
+    /// direction away from the screen edge (y up for a bottom dock, x for a side dock).
+    func startBouncing(offset: CGVector) {
+        guard let layer, !isBouncing else { return }
+        isBouncing = true
+        let horizontal = offset.dx != 0
+        let hop = CAKeyframeAnimation(keyPath: horizontal ? "transform.translation.x" : "transform.translation.y")
+        hop.values = [0, horizontal ? offset.dx : offset.dy, 0]
+        hop.keyTimes = [0, 0.5, 1]
+        hop.timingFunctions = [CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeIn)]
+        hop.duration = 0.62
+        hop.repeatCount = .infinity
+        hop.isAdditive = true   // on top of whatever the magnifier does with the frame
+        layer.add(hop, forKey: "launchBounce")
+    }
+
+    /// Launched: finish the hop in the air and come down, no snap.
+    func stopBouncing() {
+        guard let layer, isBouncing else { return }
+        isBouncing = false
+        guard let hop = layer.animation(forKey: "launchBounce") as? CAKeyframeAnimation else { return }
+        let keyPath = hop.keyPath ?? "transform.translation.y"
+        let current = (layer.presentation()?.value(forKeyPath: keyPath) as? CGFloat) ?? 0
+        layer.removeAnimation(forKey: "launchBounce")
+        guard abs(current) > 0.5 else { return }
+        let land = CABasicAnimation(keyPath: keyPath)
+        land.fromValue = current
+        land.toValue = 0
+        land.duration = 0.18
+        land.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        land.isAdditive = true
+        layer.add(land, forKey: "launchLand")
+    }
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func mouseDown(with event: NSEvent) {

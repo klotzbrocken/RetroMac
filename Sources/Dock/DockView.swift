@@ -320,7 +320,11 @@ final class DockView: NSView {
         wsObserver = nc.addObserver(
             forName: NSWorkspace.didLaunchApplicationNotification,
             object: nil, queue: .main
-        ) { [weak self] _ in
+        ) { [weak self] note in
+            // The app is up: its icon stops hopping.
+            if let bid = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier {
+                self?.stopBouncing(bid)
+            }
             self?.updateRunningIndicators()
             // updateRunningIndicators fires onRunningAppsChanged immediately, but a just-launched
             // app often isn't a `.regular` process yet, so runningAppsNotInDock() excludes it and
@@ -771,6 +775,7 @@ final class DockView: NSView {
         }
 
         lastItemBundleIDs = itemViews.map { $0.bundleID }
+        launching.keys.forEach { startBounceIfLaunching($0) }   // a rebuilt tile keeps hopping
         restCentersX = itemViews.map { $0.frame.midX }
         updateRunningIndicators()
         needsDisplay = true
@@ -1113,6 +1118,11 @@ final class DockView: NSView {
             itemView.updateIcon(icon)
             itemView.updateTheme(theme)
             itemView.onLeftClick = { [weak self] bid in
+                // Mac OS X bounced the icon of an application that was starting.
+                if theme.dock.launchBounce == true,
+                   NSRunningApplication.runningApplications(withBundleIdentifier: bid).isEmpty {
+                    self?.bounceWhileLaunching(bid)
+                }
                 // With the system Dock hidden, the app tile is how minimized windows
                 // come back: de-miniaturize them before activating (macOS behavior).
                 MinimizedWindowTracker.shared.restoreWindows(for: bid)
@@ -1140,6 +1150,40 @@ final class DockView: NSView {
         }
         addSubview(itemView)
         itemViews.append(itemView)
+    }
+
+    // MARK: - Launch bounce
+
+    /// Apps whose icon is hopping, and until when at the latest (an app that never reports
+    /// finishing its launch must not leave its icon hopping forever).
+    private var launching: [String: Date] = [:]
+
+    private func bounceWhileLaunching(_ bid: String) {
+        launching[bid] = Date().addingTimeInterval(20)
+        startBounceIfLaunching(bid)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
+            guard let self, let until = self.launching[bid], until <= Date() else { return }
+            self.stopBouncing(bid)
+        }
+    }
+
+    /// (Re)start the hop on `bid`'s current tile — also after a rebuild replaced the tile.
+    private func startBounceIfLaunching(_ bid: String) {
+        guard launching[bid] != nil, let item = itemViews.first(where: { $0.bundleID == bid }) else { return }
+        let h = (ThemeManager.shared.activeTheme?.config.dock.iconSize ?? 48) * CGFloat(AppSettings.shared.dockIconScale) * dynamicScale * 0.5
+        let offset: CGVector
+        switch dockPosition {
+        case "top":   offset = CGVector(dx: 0, dy: -h)
+        case "left":  offset = CGVector(dx: h, dy: 0)
+        case "right": offset = CGVector(dx: -h, dy: 0)
+        default:      offset = CGVector(dx: 0, dy: h)
+        }
+        item.startBouncing(offset: offset)
+    }
+
+    private func stopBouncing(_ bid: String) {
+        launching.removeValue(forKey: bid)
+        itemViews.first(where: { $0.bundleID == bid })?.stopBouncing()
     }
 
     private func folderIcon(path: String, size: CGFloat) -> NSImage {

@@ -26,6 +26,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     the Dock follow the others, as they did before Mojave.
   - **The Dock is square-cornered, and its pinstripes show**: 10.0's four-point pattern,
     a brighter and a darker row, where there was a faint even texture.
+  - **10.0's Apple menu:** About This Mac, Get Mac OS X Software…, System Preferences…,
+    Dock (magnification, hiding, Dock Preferences…), Location, Recent Items, Force Quit…,
+    Sleep, Restart, Shut Down, Log Out… ⇧⌘Q — drawn as 10.0 drew menus: pinstripes, blank
+    space between the groups, the chosen row in striped Aqua blue. Restart, Shut Down and Log
+    Out ask first, through the system's own dialogs.
+  - **Icons bounce while their application starts**, as the Mac OS X Dock's did (Snow Leopard
+    and Mountain Lion too).
   - **The Mac OS X icons, from 10.4's own set:** Mail, Safari, System Preferences, iTunes
     (for Music), iPhoto (for Photos), Preview, TextEdit, QuickTime, Address Book, Calculator,
     Dashboard, Sherlock and the utilities (Activity Monitor, Console, Disk Utility, Grab for
@@ -55,6 +62,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     through the middle, a brighter glow at the bottom. The Mountain Lion and Snow Leopard
     themes use the same apple.
 
+- **Fix: the dock no longer draws over full-screen apps**, in every theme. It checked
+  whether its own window was on the active Space — but a window that joins every Space
+  always is, so a full-screen app never hid it. The WindowServer is asked now what kind of
+  Space the dock's display is showing.
 - **Windows Task Manager (Windows XP and 7).** Ctrl+Option+Delete — the Mac's Ctrl+Alt+Del
   — or "Task Manager" in the taskbar's menu opens XP's Task Manager 5.1. Its Performance
   page is live: the green LED meters and scrolling history graphs for CPU and page file,

@@ -29,6 +29,7 @@
   "author": "RetroMac",
   "dock": {
     "runningAppsSeparator": false,
+    "launchBounce": true,
     "height": 78,
     "iconSize": 52,
     "padding": 12,

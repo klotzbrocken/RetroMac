@@ -87,7 +87,9 @@ struct DockThemeConfig: Codable {
         /// Calculator, Chooser, Control Panels, Favorites, Recent Applications/Documents/Servers…
         var appleMenu: Bool? = nil
         /// Which Apple menu: `"system7"` is System 7.1's (About This Macintosh, Alarm Clock,
-        /// Key Caps, Note Pad, Scrapbook…); absent, Mac OS 9's.
+        /// Key Caps, Note Pad, Scrapbook…); `"macosx"` is Mac OS X 10.0's, in Aqua (About This
+        /// Mac, System Preferences, Dock, Location, Recent Items, Force Quit, Sleep…); absent,
+        /// Mac OS 9's.
         var appleMenuStyle: String? = nil
         /// The palette the theme draws in. `"mac256"` is the Mac's standard 256-colour table
         /// (System 7.1 (authentic)): every icon — dock, desktop, menus, Applications window,
@@ -269,6 +271,8 @@ struct DockThemeConfig: Codable {
         /// Extra room at each divider, in points at the theme's icon size (default: the icon
         /// spacing). Mac OS X 10.0 left about 20 px of dock either side of its line.
         var separatorGap: CGFloat?
+        /// `true`: an application's icon hops while it launches, as the Mac OS X Dock's did.
+        var launchBounce: Bool?
     }
 
     struct IconStyle: Codable {
@@ -377,6 +381,7 @@ extension DockThemeConfig {
     var controlStripStyle: String? { dock.controlStripStyle }
     var hasSystem7ControlStrip: Bool { dock.controlStripStyle?.lowercased() == "system7" }
     var hasSystem7AppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "system7" }
+    var hasMacOSXAppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "macosx" }
     /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.
     var hasWindowPreview: Bool { dock.windowPreview == true }
     var hasFolderStacks: Bool { dock.folderStacks == true }

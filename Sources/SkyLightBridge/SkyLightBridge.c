@@ -221,3 +221,14 @@ void skb_destroy(uint32_t wid) {
     }
     SLSReleaseWindow(cid, wid);
 }
+
+// Spaces: the current Space of a display and its type (0 user desktop, 4 full-screen app).
+extern uint64_t SLSManagedDisplayGetCurrentSpace(int cid, CFStringRef display_uuid);
+extern int SLSSpaceGetType(int cid, uint64_t sid);
+
+bool skb_display_shows_fullscreen_space(CFStringRef display_uuid) {
+    if (!display_uuid) return false;
+    int cid = SLSMainConnectionID();
+    uint64_t sid = SLSManagedDisplayGetCurrentSpace(cid, display_uuid);
+    return sid != 0 && SLSSpaceGetType(cid, sid) == 4;
+}

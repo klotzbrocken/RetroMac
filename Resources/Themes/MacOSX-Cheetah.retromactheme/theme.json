@@ -26,6 +26,10 @@
     { "domain": "com.apple.dock", "key": "mineffect", "type": "string", "value": "genie", "refresh": "Dock" }
   ],
   "menuBarApple": "aqua-classic",
+  "menuBar": {
+    "appleMenu": true,
+    "appleMenuStyle": "macosx"
+  },
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
@@ -54,6 +58,7 @@
     "pinstripe": true,
     "separatorStyle": "line",
     "runningAppsSeparator": false,
+    "launchBounce": true,
     "shelfStyle": "flat",
     "magnification": true,
     "magnificationScale": 2.0,
