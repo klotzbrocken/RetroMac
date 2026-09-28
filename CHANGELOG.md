@@ -20,6 +20,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   - **The Dock is 10.0's:** one divider only — running apps that are not kept in the Dock
     line up after the others, as they did before Mojave — a flat black triangle under each
     running app, close under its icon, and bigger icons with less room round them.
+  - **The Dock sits on the bottom edge of the screen**, as 10.0's did: rounded on top only,
+    a translucent white with a bright top edge instead of the darker blue.
+  - **Snow Leopard and Mountain Lion: one divider too.** Running apps that are not kept in
+    the Dock follow the others, as they did before Mojave.
+  - **The dividers move with the icons.** Magnifying used to close the gaps between the
+    groups and slide the icons over dividers left where they were; the gaps stay now and
+    the dividers go along.
   - **Macintosh HD wears 10.0's drive icon**, the grey drive seen from above.
   - **Crisper, livelier icons.** The theme's icons were soft and pale next to 10.0's own;
     they are sharpened and their colour brought up.

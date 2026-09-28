@@ -8,6 +8,10 @@ final class DockView: NSView {
     // (not the live, already-magnified frames) to avoid compounding spacing/jitter.
     private var restCentersY: [CGFloat] = []
     private var restCentersX: [CGFloat] = []
+    /// The tiles the icons were laid out from (one per item view), so the magnifier keeps the
+    /// gaps before the groups and moves the dividers with the icons. Empty for layouts that
+    /// are not a row of tiles (the Windows taskbar, the Control Strip).
+    private var restTiles: [DockTile] = []
     private var runningBundleIDs: Set<String> = []
     private var lastItemBundleIDs: [String] = []
     private var wsObserver: NSObjectProtocol?
@@ -435,6 +439,7 @@ final class DockView: NSView {
         separatorY = nil
         trashSeparatorX = nil
         startSeparatorX = nil
+        restTiles = []
         startButtonIcon = nil
         startButtonImages = nil
         diskFreeFrame = .zero
@@ -471,6 +476,7 @@ final class DockView: NSView {
                         theme: theme, iconSize: iconSize)
                 y -= spacing
             }
+            restTiles = tiles
         } else if isControlStrip {
             // Mac OS 9 Control Strip layout: left cap PNG + icon modules + right cap PNG
             // Each module = icon + ▶ arrow, separated by grooves
@@ -759,6 +765,7 @@ final class DockView: NSView {
                             theme: theme, iconSize: iconSize)
                     x += t.width + spacing
                 }
+                restTiles = tiles
             }
         }
 
@@ -795,6 +802,7 @@ final class DockView: NSView {
         separatorY = nil
         trashSeparatorX = nil
         startSeparatorX = nil
+        restTiles = []
 
         var idx = 0
         if vertical {
@@ -813,6 +821,7 @@ final class DockView: NSView {
                 idx += 1
                 y -= spacing
             }
+            restTiles = tiles
             // Snapshot resting Y-centres for the frame-based magnifier (see restCentersY).
             restCentersY = itemViews.map { $0.frame.midY }
         } else if isControlStrip {
@@ -1060,6 +1069,7 @@ final class DockView: NSView {
                 idx += 1
                 x += tile.width + spacing
             }
+            restTiles = tiles
         }
 
         restCentersX = itemViews.map { $0.frame.midX }
@@ -2254,6 +2264,7 @@ final class DockView: NSView {
         // other three, with the border drawn on those three sides only.
         var verticalBorderPath: NSBezierPath?
         let bgPath: NSBezierPath
+        let flushBottom = theme.dock.squareBottom == true && !theme.isVertical && !theme.has3DShelf && dockPosition != "top"
         // 3D shelf is drawn SHORT — only the lower part of the bar — so icons (placed
         // with their centre on the shelf top) stick out halfway above it. Keep this
         // fraction in sync with the 3D floorY in the layout code.
@@ -2276,6 +2287,25 @@ final class DockView: NSView {
             bgPath.line(to: NSPoint(x: shelfRect.maxX - rightInset, y: shelfRect.maxY))
             bgPath.line(to: NSPoint(x: shelfRect.minX + leftInset, y: shelfRect.maxY))
             bgPath.close()
+        } else if flushBottom {
+            // Sitting on the screen's bottom edge, as Mac OS X 10.0's did: rounded on top,
+            // square where it meets the edge, and no border along that edge.
+            bgPath = NSBezierPath()
+            bgPath.move(to: NSPoint(x: rect.minX, y: rect.minY))
+            bgPath.line(to: NSPoint(x: rect.minX, y: rect.maxY - cr))
+            bgPath.appendArc(from: NSPoint(x: rect.minX, y: rect.maxY), to: NSPoint(x: rect.minX + cr, y: rect.maxY), radius: cr)
+            bgPath.line(to: NSPoint(x: rect.maxX - cr, y: rect.maxY))
+            bgPath.appendArc(from: NSPoint(x: rect.maxX, y: rect.maxY), to: NSPoint(x: rect.maxX, y: rect.maxY - cr), radius: cr)
+            bgPath.line(to: NSPoint(x: rect.maxX, y: rect.minY))
+            bgPath.close()
+            let open = NSBezierPath()
+            open.move(to: NSPoint(x: rect.minX + 0.5, y: rect.minY))
+            open.line(to: NSPoint(x: rect.minX + 0.5, y: rect.maxY - cr))
+            open.appendArc(from: NSPoint(x: rect.minX + 0.5, y: rect.maxY - 0.5), to: NSPoint(x: rect.minX + cr, y: rect.maxY - 0.5), radius: cr - 0.5)
+            open.line(to: NSPoint(x: rect.maxX - cr, y: rect.maxY - 0.5))
+            open.appendArc(from: NSPoint(x: rect.maxX - 0.5, y: rect.maxY - 0.5), to: NSPoint(x: rect.maxX - 0.5, y: rect.maxY - cr), radius: cr - 0.5)
+            open.line(to: NSPoint(x: rect.maxX - 0.5, y: rect.minY))
+            verticalBorderPath = open
         } else {
             bgPath = NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
         }
@@ -3705,9 +3735,13 @@ final class DockView: NSView {
             // Magnified heights are based on the REST icon size (baseSize), not the
             // current (possibly already-magnified) frame height — avoids compounding.
             let magHeights = scales.map { $0 * baseSize }
+            // The gap before each group stays a gap while the icons grow, and its divider
+            // moves with it.
+            let tiles = restTiles.count == count ? restTiles : []
+            let gaps = tiles.isEmpty ? [CGFloat](repeating: 0, count: count) : tiles.map(\.gapBefore)
             var posFromTop = [CGFloat](repeating: 0, count: count)
             var cum: CGFloat = 0
-            for i in 0..<count { posFromTop[i] = cum + magHeights[i] / 2; cum += magHeights[i] + spacing }
+            for i in 0..<count { cum += gaps[i]; posFromTop[i] = cum + magHeights[i] / 2; cum += magHeights[i] + spacing }
             let totalMag = max(1, cum - spacing)
 
             let origTop = (originalCentersY.first ?? 0) + baseSize / 2
@@ -3736,6 +3770,7 @@ final class DockView: NSView {
                 item.layer?.setAffineTransform(.identity)
                 item.layer?.zPosition = scales[i]
                 item.frame = NSRect(x: cx - magW / 2, y: cy - magW / 2, width: magW, height: magW)
+                if i < tiles.count, tiles[i].separator == .transients { separatorY = cy + magW / 2 + spacing / 2 }
             }
             let expandedTop = min(bounds.height, max(barRect.maxY, newTop + padding))
             let expandedBottom = max(0, min(barRect.minY, newTop - totalMag - padding))
@@ -3768,7 +3803,11 @@ final class DockView: NSView {
 
         // 2. Magnified widths from the REST icon size (baseSize), not live frames
         let magnifiedWidths = scales.map { baseSize * $0 }
-        let spacingTotal = CGFloat(max(0, count - 1)) * spacing
+        // The gap before each group stays a gap while the icons grow, and its divider moves
+        // with it: the icons used to close up and slide over a divider left where it was.
+        let tiles = restTiles.count == count ? restTiles : []
+        let gaps = tiles.isEmpty ? [CGFloat](repeating: 0, count: count) : tiles.map(\.gapBefore)
+        let spacingTotal = CGFloat(max(0, count - 1)) * spacing + gaps.reduce(0, +)
         let totalMagnified = magnifiedWidths.reduce(CGFloat(0), +) + spacingTotal
 
         // 3. Centre the magnified row around the resting centre
@@ -3796,6 +3835,11 @@ final class DockView: NSView {
         for (i, item) in itemViews.enumerated() {
             let magW = magnifiedWidths[i]
             let magH = baseSize * scales[i]
+            if i < tiles.count {
+                if tiles[i].separator == .transients { separatorX = x + gaps[i] - spacing / 2 }
+                if tiles[i].separator == .rightGroup { trashSeparatorX = x + gaps[i] - spacing / 2 }
+            }
+            x += gaps[i]
             item.resetMagnification()
             item.frame = NSRect(x: x, y: floorY, width: magW, height: magH)
             item.layer?.zPosition = scales[i]

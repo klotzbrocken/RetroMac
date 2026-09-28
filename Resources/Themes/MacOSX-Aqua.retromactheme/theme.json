@@ -28,6 +28,7 @@
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
+    "runningAppsSeparator": false,
     "height": 78,
     "iconSize": 52,
     "padding": 12,

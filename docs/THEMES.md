@@ -95,6 +95,7 @@ Everything under `"dock"`. Sizes are points.
 | `pinstripe` | Aqua's fine horizontal texture |
 | `separatorStyle` | `"line"`: Mac OS X 10.0's single solid divider, the shelf's full height; absent, Snow Leopard's dashes |
 | `runningAppsSeparator` | `false`: running apps not kept in the dock follow the others with no divider of their own, as before Mojave; absent, they get one |
+| `squareBottom` | `true`: a bottom dock rounded on top only, with no border along the screen edge it sits on (use with `edgeOffset` 0) |
 | `shelfStyle` | `flat` or `3d` (Snow Leopard's perspective shelf); `shelfLineColor` |
 | `startButton`, `startButtonLabel`, `startButtonIcon`, `startButtonImage`, `startButtonStyle`, `startButtonColor`, `startButtonGradientTop/Bottom` | The Start button; `startButtonImage` is a sprite sheet with three states stacked vertically (normal, hover, pressed); `startButtonStyle` `raised`, `sunken`, `flat` |
 | `startMenuStyle` | `classic` (Windows 95/98/Me cascade) or `xp` (Luna's two columns) |

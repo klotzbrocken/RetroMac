@@ -263,6 +263,9 @@ struct DockThemeConfig: Codable {
         /// `false`: apps that are running but not kept in the dock line up after the others
         /// with no divider of their own, as before Mojave. Absent: they get one.
         var runningAppsSeparator: Bool?
+        /// `true`: a bottom dock with rounded top corners only and no border along the screen
+        /// edge it sits on (Mac OS X 10.0, with `edgeOffset` 0).
+        var squareBottom: Bool?
     }
 
     struct IconStyle: Codable {

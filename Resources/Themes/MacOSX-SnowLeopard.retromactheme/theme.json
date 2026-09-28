@@ -50,6 +50,7 @@
     "bevelTopColor": null,
     "bevelBottomColor": null,
     "bevelWidth": 0,
+    "runningAppsSeparator": false,
     "shelfStyle": "3d",
     "magnification": true,
     "magnificationScale": 1.8,
