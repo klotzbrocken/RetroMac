@@ -93,6 +93,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   down (the blue screen with a spinner, from a restart), squeezed with the rest into five
   seconds. It is the boot now: the grey screen with the Apple and the spinner, then the
   "Mac OS X" panel with its progress bar.
+- **The rendered-wallpaper cache is kept small.** Every screen size, menu-bar height and bar
+  colour left a 1–4 MB picture in Application Support for good; they are tidied now — unused
+  for two weeks, or over 60 MB the longest unused — and never one that may be on screen.
 - **Mac OS X: the Dock's names as 10.0 wrote them** — white bold letters with a black
   outline, straight on the desktop, not on a dark plate, with air between the name and the
   icon. (The dock had room above for the magnified icons but not for the name, which was

@@ -420,6 +420,90 @@ final class ThemeManager {
             .appendingPathComponent("RetroMac/TiledWallpapers", isDirectory: true)
     }
 
+    // MARK: Wallpaper cache housekeeping
+    //
+    // Every rendered wallpaper is kept under a name that encodes all it depends on — theme,
+    // picture, screen size, menu-bar height, bar colours — and nothing was ever deleted: each new
+    // display, notch or colour gave a new 1–4 MB file for good (128 MB on a development Mac).
+    //
+    // A file may still be on screen somewhere — also on another Space, where macOS keeps showing
+    // what was set there last — and deleting a picture that is shown leaves that desktop blank.
+    // So each use is noted (in the defaults, `wallpaperCacheUsage`: touching the file itself
+    // could make macOS reload a picture it shows, which goes through black), and only files
+    // unused for two weeks go, or, over the size limit, the longest unused first; nothing used
+    // in the last day, and nothing set by this run, is deleted.
+
+    static let wallpaperCacheMaxAge: TimeInterval = 14 * 24 * 3600
+    static let wallpaperCacheMaxBytes = 60 * 1024 * 1024
+    static let wallpaperCacheGrace: TimeInterval = 24 * 3600
+
+    struct CachedWallpaper: Equatable { let path: String; let bytes: Int; let lastUsed: Date }
+
+    /// The files to delete: unused past `maxAge`, then — while the rest is over `maxBytes` —
+    /// the longest unused, but never one in `inUse` or used within `grace`.
+    static func wallpaperCacheVictims(_ files: [CachedWallpaper], inUse: Set<String>, now: Date,
+                                      maxAge: TimeInterval = wallpaperCacheMaxAge,
+                                      maxBytes: Int = wallpaperCacheMaxBytes,
+                                      grace: TimeInterval = wallpaperCacheGrace) -> [String] {
+        let removable = files.filter { !inUse.contains($0.path) && now.timeIntervalSince($0.lastUsed) > grace }
+        var victims = Set(removable.filter { now.timeIntervalSince($0.lastUsed) > maxAge }.map(\.path))
+        var total = files.filter { !victims.contains($0.path) }.reduce(0) { $0 + $1.bytes }
+        for f in removable.sorted(by: { $0.lastUsed < $1.lastUsed }) where total > maxBytes && !victims.contains(f.path) {
+            victims.insert(f.path)
+            total -= f.bytes
+        }
+        return files.map(\.path).filter { victims.contains($0) }
+    }
+
+    private static let wallpaperUsageKey = "wallpaperCacheUsage"
+
+    /// A cached file was served again: it counts as used now.
+    private static func markUsed(_ url: URL) {
+        var usage = UserDefaults.standard.dictionary(forKey: wallpaperUsageKey) as? [String: Double] ?? [:]
+        usage[url.lastPathComponent] = Date().timeIntervalSince1970
+        UserDefaults.standard.set(usage, forKey: wallpaperUsageKey)
+    }
+
+    private var lastWallpaperPrune = Date.distantPast
+
+    /// Tidy the cache off the main thread, at most every ten minutes. What this run has set on
+    /// the screens is protected by name (asking macOS what it shows costs a second of main
+    /// thread — see `lastSetWallpaper`).
+    private func pruneWallpaperCacheSoon() {
+        guard Date().timeIntervalSince(lastWallpaperPrune) > 600 else { return }
+        lastWallpaperPrune = Date()
+        let inUse = Set(lastSetWallpaper.values.map { $0.standardizedFileURL.path })
+        let dir = Self.tiledWallpaperDir
+        let usage = UserDefaults.standard.dictionary(forKey: Self.wallpaperUsageKey) as? [String: Double] ?? [:]
+        DispatchQueue.global(qos: .utility).async {
+            let fm = FileManager.default
+            let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]
+            guard let urls = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: keys) else { return }
+            let files: [CachedWallpaper] = urls.filter { $0.pathExtension == "png" }.compactMap { u in
+                guard let v = try? u.resourceValues(forKeys: Set(keys)) else { return nil }
+                // Last used: the last noted use, or when it was made (written once, never touched).
+                let made = v.contentModificationDate ?? .distantPast
+                let used = usage[u.lastPathComponent].map { Date(timeIntervalSince1970: $0) } ?? .distantPast
+                return CachedWallpaper(path: u.standardizedFileURL.path, bytes: v.fileSize ?? 0, lastUsed: max(made, used))
+            }
+            let victims = Self.wallpaperCacheVictims(files, inUse: inUse, now: Date())
+            for path in victims { try? fm.removeItem(atPath: path) }
+            // Forget the uses of files that are gone — read afresh on main, so a use noted
+            // meanwhile is not lost.
+            let present = Set(files.map { URL(fileURLWithPath: $0.path).lastPathComponent })
+                .subtracting(victims.map { URL(fileURLWithPath: $0).lastPathComponent })
+            DispatchQueue.main.async {
+                let now = UserDefaults.standard.dictionary(forKey: Self.wallpaperUsageKey) as? [String: Double] ?? [:]
+                let gone = Set(usage.keys).subtracting(present)   // known at the scan and not on disk now
+                if !gone.isEmpty { UserDefaults.standard.set(now.filter { !gone.contains($0.key) }, forKey: Self.wallpaperUsageKey) }
+            }
+            if !victims.isEmpty {
+                let freed = files.filter { victims.contains($0.path) }.reduce(0) { $0 + $1.bytes }
+                print("[Theme] Wallpaper cache: removed \(victims.count) file(s), \(freed / 1_048_576) MB")
+            }
+        }
+    }
+
     /// Is this desktop picture one RetroMac put there (a theme's own file, or a rendered tile)?
     /// Such a URL must NEVER be snapshotted as the user's "original" — doing so is how a screen
     /// ends up permanently stuck on a theme wallpaper with nothing left to restore.
@@ -554,6 +638,7 @@ final class ThemeManager {
             changed += 1
         }
         persistWallpaperBackup()
+        pruneWallpaperCacheSoon()
         print("[Theme] Wallpaper set on \(changed) of \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent) — menu-bar tint — \(tintNotes.joined(separator: "; "))")
         Self.lastMenuBarTintNote = tintNotes.joined(separator: ", ")
         AppearanceAdapter.apply(for: theme.config)
@@ -682,7 +767,7 @@ final class ThemeManager {
         // exists, so the painted-once strip is served forever.
         let out = dir.appendingPathComponent(
             "\(safe)-\(source.deletingPathExtension().lastPathComponent)-menubar\(Int(barH))-\(style.cacheTag)-\(pxW)x\(pxH).png")
-        if FileManager.default.fileExists(atPath: out.path) { return out }
+        if FileManager.default.fileExists(atPath: out.path) { Self.markUsed(out); return out }
 
         guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pxW, pixelsHigh: pxH,
                                          bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
@@ -725,12 +810,11 @@ final class ThemeManager {
         let scale = screen.backingScaleFactor
         let pxW = Int(screen.frame.width * scale), pxH = Int(screen.frame.height * scale)
         guard pxW > 0, pxH > 0 else { return nil }
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("RetroMac/TiledWallpapers", isDirectory: true)
+        let dir = Self.tiledWallpaperDir
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let safe = themeName.replacingOccurrences(of: " ", with: "-")
         let out = dir.appendingPathComponent("\(safe)-\(tile.deletingPathExtension().lastPathComponent)-\(pxW)x\(pxH).png")
-        if FileManager.default.fileExists(atPath: out.path) { return out }
+        if FileManager.default.fileExists(atPath: out.path) { Self.markUsed(out); return out }
 
         guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pxW, pixelsHigh: pxH,
                                          bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
