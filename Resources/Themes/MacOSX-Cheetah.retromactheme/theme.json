@@ -172,6 +172,13 @@
     }
   ],
   "iconMappings": {
+    "com.anthropic.claudefordesktop": "claude.png",
+    "com.openai.chat": "chatgpt.png",
+    "com.openai.codex": "chatgpt.png",
+    "com.google.Chrome": "chrome.png",
+    "org.mozilla.firefox": "firefox.png",
+    "com.microsoft.teams2": "teams.png",
+    "com.microsoft.teams": "teams.png",
     "com.microsoft.Outlook": "outlook.png",
     "com.apple.dt.Xcode": "xcode.png",
     "com.microsoft.Word": "word.png",
