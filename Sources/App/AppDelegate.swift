@@ -168,7 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NextDockController.shared.update()
             NextRunningAppsController.shared.update()
             WindowBorderController.shared.update()   // recolour theme window borders on theme change
-            TaskManagerController.shared.update()    // Ctrl+Option+Delete under Windows XP and 7
+            TaskManagerController.shared.update()    // Ctrl+Option+Delete under Windows XP
             // The active theme drives the menu-bar Apple logo (Mac OS 9 → rainbow, Mac OS X →
             // aqua-classic, Maiks Favourite II → hell); every other theme turns it off.
             // Setting the style triggers RainbowAppleController.update() via its didSet.

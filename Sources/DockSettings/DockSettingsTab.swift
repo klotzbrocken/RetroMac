@@ -1059,9 +1059,9 @@ private struct DockRowFrames: PreferenceKey {
 
 /// The list of "Apps in the dock" taking a dragged row. The rows reorder in memory under the
 /// pointer — nothing is written while the drag is on — and the order is saved once, on the
-/// drop; leaving the list puts it back as it was. Only a drag that really carries the row's
-/// id counts: a stale id from a drag cut short, or a text dragged in from elsewhere, moves
-/// nothing.
+/// drop; leaving the list puts it back as it was, and the same drag can come back in. Only a
+/// drag that really carries the row's id counts: a stale id from a drag cut short, or a text
+/// dragged in from elsewhere, moves nothing.
 private struct DockListDrop: DropDelegate {
     @Binding var apps: [DockApp]
     @Binding var dragged: String?
@@ -1093,9 +1093,11 @@ private struct DockListDrop: DropDelegate {
         return DropProposal(operation: .move)
     }
 
+    /// Leaving the list puts the order back; the drag itself goes on, and may come back —
+    /// `dropEntered` checks its payload again then. (`dragged` is replaced by the next drag's
+    /// id when one starts, and a stale one moves nothing: the payload must match it.)
     func dropExited(info: DropInfo) {
         revert()
-        dragged = nil
         validated = false
     }
 

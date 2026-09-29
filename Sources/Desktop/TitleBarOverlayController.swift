@@ -157,6 +157,9 @@ final class TitleBarOverlayController {
         if running {
             if newStyle != style {
                 if newStyle?.isBar != true { undoAutoGeometry() }   // no bar, no room needed above
+                // Every rolled-up window down again first: the next style may have no box to
+                // unroll it with, and the element cache that unrolling needs goes next.
+                unshadeAll()
                 style = newStyle; stopOverlays(); squareTheRealCorners()
             }
             // Same style, other theme (95 → 98 → Me, a Plus! scheme): the colours come from the
@@ -170,6 +173,7 @@ final class TitleBarOverlayController {
         style = newStyle
         running = true
         takeCommandM()
+        restoreShadedAfterCrash()
         // A hung app must not hang RetroMac: every Accessibility request this process makes
         // gives up after half a second instead of the six-second default. Process-wide, which
         // also covers the observers and the minimised-window tracker.
@@ -368,7 +372,7 @@ final class TitleBarOverlayController {
             if excluded.contains(info.bundleID) { continue }
             suitable.insert(wid)
             // A shaded window is parked in a corner; its bar stays where the window was.
-            let placed = shaded[wid].map { WindowInfo(id: info.id, pid: info.pid, bounds: $0, title: info.title,
+            let placed = shaded[wid].map { WindowInfo(id: info.id, pid: info.pid, bounds: $0.frame, title: info.title,
                                                        ownerName: info.ownerName, bundleID: info.bundleID) } ?? info
             apply(placed, level: outLevel[i], style: style, isFront: wid == frontWID, screens: screens)
         }
@@ -738,6 +742,9 @@ final class TitleBarOverlayController {
         count("event\(event)")
         switch event {
         case PrivateWindowAPI.EVENT_WINDOW_MOVE, PrivateWindowAPI.EVENT_WINDOW_RESIZE:
+            // A rolled-up window is parked out of sight and its bar stays where the window
+            // was: the parking move (and any later one) must not carry the bar along.
+            guard shaded[wid] == nil else { return }
             guard let o = overlays[wid], let style else { return }
             guard let g = PrivateWindowAPI.bounds(of: wid) else { forget(wid); return }
             let previous = o.bounds
@@ -817,7 +824,13 @@ final class TitleBarOverlayController {
 
     /// The window is gone (closed, minimised, off the list): overlay and every cache with it.
     func forget(_ wid: CGWindowID) {
-        if shaded.removeValue(forKey: wid) != nil { GarageDoor.shared.forget(wid) }
+        // A rolled-up window that still exists keeps its way back: only its caches go. (Off
+        // this Space it drops off the window lists, and closing any other window sent every
+        // window not listed through here.)
+        if shaded[wid] != nil {
+            if PrivateWindowAPI.bounds(of: wid) != nil { drop(for: wid); return }
+            forgetShade(wid)
+        }
         drop(for: wid)
         autoGeometry.removeValue(forKey: wid)
         lightOffsets.removeValue(forKey: wid)
@@ -852,7 +865,10 @@ final class TitleBarOverlayController {
 
     /// Drop every bar whose window is not in `onScreen` (a closed window, reported through AX).
     func dropAll(notIn onScreen: Set<CGWindowID>) {
-        for wid in overlays.keys where !onScreen.contains(wid) { forget(wid) }
+        for wid in overlays.keys where !onScreen.contains(wid) {
+            if shaded[wid] != nil, PrivateWindowAPI.bounds(of: wid) != nil { continue }   // parked, not gone
+            forget(wid)
+        }
     }
 
     // MARK: - Mouse routing
@@ -1088,6 +1104,7 @@ final class TitleBarOverlayController {
     /// The drag is over. A position still waiting for its window's element stays: it belongs to
     /// that window, and is the drag's last one.
     private func endDrag() {
+        if let wid = dragWindow, shaded[wid] != nil { saveShadeRecovery() }   // a rolled-up bar moved: its way back moved with it
         dragOrigin = nil
         dragWindow = nil
     }
@@ -1098,15 +1115,26 @@ final class TitleBarOverlayController {
     /// each had (Quartz, top-left). The real window cannot be made that short, so it is parked
     /// off screen instead — a point of it left in the bottom-right corner of its screen, which
     /// keeps it a window (no minimising, no genie, no Dock) — and its bar stays behind alone.
-    private var shaded: [CGWindowID: CGRect] = [:]
+    /// What rolling a window up changed: its frame, and who it belongs to, for putting it
+    /// back — also after a crash, from `windowShadeRecovery`.
+    struct ShadeRecord: Codable, Equatable {
+        var frame: CGRect
+        var pid: pid_t
+        var bundleID: String
+    }
+    /// Written to disk on rolling up, unrolling and at the end of a drag of a rolled-up
+    /// bar (`saveShadeRecovery`), not on every step of the drag.
+    private var shaded: [CGWindowID: ShadeRecord] = [:]
     func isShaded(_ wid: CGWindowID) -> Bool { shaded[wid] != nil }
 
     private func toggleShade(_ w: AXUIElement, wid: CGWindowID) {
         guard !GarageDoor.shared.isMoving(wid) else { return }   // a door on its way finishes first
-        if let frame = shaded[wid] {
+        if let record = shaded[wid] {
             // Unroll: the window back where its bar is — under Mac OS X once the door is down.
+            let frame = record.frame
             let unroll = { [weak self] in
-                guard let self, self.shaded.removeValue(forKey: wid) != nil else { return }
+                guard let self, self.shaded[wid] != nil else { return }
+                self.forgetShade(wid)
                 var p = frame.origin
                 Self.axQueue.async { if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
                 WindowBorderController.shared.update()
@@ -1115,26 +1143,125 @@ final class TitleBarOverlayController {
             if style == .aqua { GarageDoor.shared.rollDown(wid, bounds: frame, then: unroll) } else { unroll() }
             return
         }
-        guard let frame = overlays[wid]?.bounds, let screen = Self.screen(for: frame) else { return }
+        guard let o = overlays[wid] else { return }
+        let frame = o.bounds
+        let screens = NSScreen.screens.map { Self.quartz($0.frame) }
+        guard !screens.isEmpty else { return }
         // Mac OS X rolled the window up into its bar; Mac OS 8 and 9 took it away at once.
         if style == .aqua { GarageDoor.shared.rollUp(wid, bounds: frame) }
-        shaded[wid] = frame
-        let q = Self.quartz(screen.frame)
-        var park = CGPoint(x: q.maxX - 1, y: q.maxY - 1)
-        Self.axQueue.async { if let v = AXValueCreate(.cgPoint, &park) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
-        overlays[wid]?.patch?.orderOut(nil)
+        shaded[wid] = ShadeRecord(frame: frame, pid: o.pid, bundleID: Self.bundleID(for: o.pid))
+        saveShadeRecovery()
+        var park = Self.parkingSpot(for: frame.size, screens: screens)
+        Self.axQueue.async { [weak self] in
+            let set = AXValueCreate(.cgPoint, &park).map { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, $0) }
+            // Where it really went: an app that keeps its windows on screen would leave it
+            // standing in plain view, rolled up in name only.
+            var ref: CFTypeRef?
+            var reached = CGPoint(x: CGFloat.nan, y: .nan)
+            if AXUIElementCopyAttributeValue(w, kAXPositionAttribute as CFString, &ref) == .success, let ref {
+                AXValueGetValue(ref as! AXValue, .cgPoint, &reached)
+            }
+            let parked = set == .success && Self.isOutOfSight(CGRect(origin: reached, size: frame.size), screens: screens)
+            DispatchQueue.main.async {
+                guard let self, !parked, self.shaded[wid] != nil else { return }
+                // Not parked: undo the whole thing, the window back where it was.
+                self.forgetShade(wid)
+                var back = frame.origin
+                Self.axQueue.async { if let v = AXValueCreate(.cgPoint, &back) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
+                WindowBorderController.shared.update()
+                self.sync()
+            }
+        }
+        o.patch?.orderOut(nil)
         WindowBorderController.shared.update()   // no frame around a window that is not there
     }
 
-    /// Theme off or RetroMac quitting: every rolled-up window back in its place, at once.
+    /// Where a window of `size` goes to be out of sight (Quartz, top-left): one point of it
+    /// left on a screen, the rest on none. Each screen's bottom corners are tried and the one
+    /// whose window lies least on any screen wins — the bottom-right corner of the main display
+    /// is no good with a display below or beside it, where the window would simply show.
+    static func parkingSpot(for size: CGSize, screens: [CGRect]) -> CGPoint {
+        var best = CGPoint(x: (screens.first?.maxX ?? 0) - 1, y: (screens.first?.maxY ?? 0) - 1)
+        var bestArea = CGFloat.greatestFiniteMagnitude
+        for s in screens {
+            for p in [CGPoint(x: s.maxX - 1, y: s.maxY - 1), CGPoint(x: s.minX - size.width + 1, y: s.maxY - 1)] {
+                let a = visibleArea(CGRect(origin: p, size: size), screens: screens)
+                if a < bestArea { bestArea = a; best = p }
+            }
+        }
+        return best
+    }
+
+    /// How much of `rect` lies on the screens (overlaps between screens do not occur).
+    static func visibleArea(_ rect: CGRect, screens: [CGRect]) -> CGFloat {
+        screens.reduce(0) { sum, s in
+            let i = rect.intersection(s)
+            return i.isNull ? sum : sum + i.width * i.height
+        }
+    }
+
+    /// Parked well enough: no more of it on any screen than a corner a few points square.
+    static func isOutOfSight(_ rect: CGRect, screens: [CGRect]) -> Bool {
+        guard rect.origin.x.isFinite, rect.origin.y.isFinite else { return false }
+        return visibleArea(rect, screens: screens) <= 16
+    }
+
+    private func forgetShade(_ wid: CGWindowID) {
+        shaded.removeValue(forKey: wid)
+        GarageDoor.shared.forget(wid)
+        saveShadeRecovery()
+    }
+
+    /// Theme off, another title-bar style, or RetroMac quitting: every rolled-up window back
+    /// in its place, at once. The element is looked up again where the cache lost it.
     private func unshadeAll() {
-        for (wid, frame) in shaded {
-            guard let w = axWindows[wid] else { continue }
-            var p = frame.origin
+        for (wid, record) in shaded {
+            guard let w = axWindows[wid] ?? Self.findAXWindow(wid, pid: record.pid) else { continue }
+            var p = record.frame.origin
             if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) }
         }
         shaded.removeAll()
         GarageDoor.shared.forgetAll()
+        saveShadeRecovery()
+    }
+
+    // MARK: WindowShade after a crash
+
+    private static let shadeRecoveryKey = "windowShadeRecovery"
+
+    /// Every rolled-up window, on disk as soon as it is rolled up: a RetroMac that is killed
+    /// or crashes leaves windows parked in a corner, and the next launch puts them back.
+    private func saveShadeRecovery() {
+        let d = UserDefaults.standard
+        if shaded.isEmpty {
+            guard d.object(forKey: Self.shadeRecoveryKey) != nil else { return }
+            d.removeObject(forKey: Self.shadeRecoveryKey)
+        } else {
+            let byID = Dictionary(uniqueKeysWithValues: shaded.map { (String($0.key), $0.value) })
+            guard let data = try? JSONEncoder().encode(byID) else { return }
+            d.set(data, forKey: Self.shadeRecoveryKey)
+        }
+        d.synchronize()   // a kill -9 right after rolling up must not lose the way back
+    }
+
+    static func decodeShadeRecovery(_ data: Data) -> [CGWindowID: ShadeRecord] {
+        guard let byID = try? JSONDecoder().decode([String: ShadeRecord].self, from: data) else { return [:] }
+        return Dictionary(uniqueKeysWithValues: byID.compactMap { k, v in UInt32(k).map { (CGWindowID($0), v) } })
+    }
+
+    /// At start: windows a previous run left rolled up go back where they were — if the
+    /// window still exists and still belongs to the same application.
+    private func restoreShadedAfterCrash() {
+        guard shaded.isEmpty, let data = UserDefaults.standard.data(forKey: Self.shadeRecoveryKey) else { return }
+        for (wid, record) in Self.decodeShadeRecovery(data) {
+            guard PrivateWindowAPI.bounds(of: wid) != nil,
+                  let app = NSRunningApplication(processIdentifier: record.pid),
+                  record.bundleID.isEmpty || app.bundleIdentifier == record.bundleID,
+                  let w = Self.findAXWindow(wid, pid: record.pid) else { continue }
+            var p = record.frame.origin
+            if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) }
+        }
+        UserDefaults.standard.removeObject(forKey: Self.shadeRecoveryKey)
     }
 
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
@@ -1265,9 +1392,10 @@ final class TitleBarOverlayController {
         if dragWindow != wid { press(wid, pid: pid) }
         guard let origin = dragOrigin else { return }
         // A rolled-up window is only its bar: the bar moves, and the window unrolls there.
-        if var frame = shaded[wid] {
-            frame.origin = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)
-            shaded[wid] = frame
+        if var record = shaded[wid] {
+            record.frame.origin = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)
+            shaded[wid] = record
+            let frame = record.frame
             if let o = overlays[wid], let style { o.bounds = frame; o.panel.setFrame(Self.barFrame(for: frame, style: style), display: true) }
             return
         }

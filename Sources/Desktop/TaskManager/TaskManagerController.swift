@@ -2,7 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 import WebKit
 
-/// Windows Task Manager (XP's 5.1) under the Windows XP and Windows 7 themes: a widget panel
+/// Windows Task Manager (XP's 5.1) under the Windows XP theme: a widget panel
 /// with the page in `Widgets/TaskManager/TaskManager.html`, fed by `SystemSampler` at the
 /// update speed its View menu sets. Opened with Ctrl+Option+Delete — the Mac's Ctrl+Alt+Del —
 /// or "Task Manager" in the taskbar's menu, as in XP.
@@ -12,7 +12,8 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
 
     /// The themes that had a Task Manager with tabs. Windows 95, 98 and Me had only the
     /// "Close Program" list.
-    static var wanted: Bool { ["winxp", "win7"].contains(RetroFrameTheme.key()) }
+    /// Windows XP only for now: Windows 7 gets it with Task Manager 6.1's own look, not XP's.
+    static var wanted: Bool { RetroFrameTheme.key() == "winxp" }
 
     private var panel: NSPanel?
     private var webView: WKWebView?

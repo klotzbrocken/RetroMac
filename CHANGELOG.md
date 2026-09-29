@@ -75,11 +75,20 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   whether its own window was on the active Space — but a window that joins every Space
   always is, so a full-screen app never hid it. The WindowServer is asked now what kind of
   Space the dock's display is showing.
-- **Windows Task Manager (Windows XP and 7).** Ctrl+Option+Delete — the Mac's Ctrl+Alt+Del
+- **Windows Task Manager (Windows XP).** Ctrl+Option+Delete — the Mac's Ctrl+Alt+Del
   — or "Task Manager" in the taskbar's menu opens XP's Task Manager 5.1. Its Performance
   page is live: the green LED meters and scrolling history graphs for CPU and page file,
   Totals, Physical Memory, Commit Charge and Kernel Memory, the status bar; View sets the
-  update speed, one graph per CPU and the red kernel times. The other tabs follow.
+  update speed, one graph per CPU and the red kernel times. The other tabs follow; Windows 7
+  gets it with Task Manager 6.1's own look.
+- **WindowShade, made safe.** A rolled-up window no longer loses its way back when it is on
+  another Space and some other window closes, or when the theme switches to a title-bar style
+  without a collapse box (every rolled-up window comes down first). It is parked where none of
+  it shows on any display — with a display below or beside the main one it showed there —
+  and if an app will not let it go there, the roll-up is undone. The bar no longer jumps to
+  the corner with the parked window, and after a crash or a Force Quit of RetroMac the next
+  launch puts rolled-up windows back.
+- **Fix: a row dragged out of Settings' dock list and back in could not be dropped.**
 
 ## 2.8.8
 

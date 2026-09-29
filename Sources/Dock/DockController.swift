@@ -1417,7 +1417,7 @@ final class DockController {
         let header = NSMenuItem(title: "Dock", action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
-        // XP's taskbar menu opened the Task Manager; so does this one under XP and 7.
+        // XP's taskbar menu opened the Task Manager; so does this one under XP.
         if TaskManagerController.wanted {
             let tm = NSMenuItem(title: "Task Manager", action: #selector(menuOpenTaskManager(_:)), keyEquivalent: "")
             tm.target = self
