@@ -224,6 +224,11 @@
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-broken-lite",
   "iconMappings": {
+    "com.anthropic.claudefordesktop": "claude.png",
+    "com.openai.chat": "chatgpt.png",
+    "com.openai.codex": "chatgpt.png",
+    "com.google.Chrome": "chrome.png",
+    "org.mozilla.firefox": "firefox.png",
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",
     "com.apple.mail": "mail.png",

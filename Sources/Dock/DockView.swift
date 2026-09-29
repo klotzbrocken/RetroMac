@@ -3935,7 +3935,7 @@ final class DockView: NSView {
            !itemViews.isEmpty, scales[maxIdx] > 1.08 {
             showHoverLabel(text: nameFor(itemViews[maxIdx].bundleID), centerX: labelX, aboveY: labelTopY)
         } else {
-            hoverLabel?.isHidden = true
+            hoverLabel?.isHidden = true; outlinedLabel?.isHidden = true
         }
 
         // 4. Expand the dock bar background to contain magnified icons. Reserve the Futurama end
@@ -3977,6 +3977,22 @@ final class DockView: NSView {
     }
 
     private func showHoverLabel(text: String, centerX: CGFloat, aboveY: CGFloat) {
+        // Mac OS X 10.0 wrote the name straight on the desktop, white with a black outline;
+        // 10.6 put it on a dark rounded plate.
+        if ThemeManager.shared.activeTheme?.config.dock.labelStyle == "outlined" {
+            hoverLabel?.isHidden = true
+            let v: OutlinedDockLabel
+            if let o = outlinedLabel { v = o } else { v = OutlinedDockLabel(frame: .zero); v.wantsLayer = true; v.layer?.zPosition = 10_000; outlinedLabel = v }
+            v.text = text
+            let size = v.fittingSize
+            let cx = max(size.width / 2 + 2, min(centerX, bounds.width - size.width / 2 - 2))
+            let y = min(aboveY + 4, bounds.height - size.height)
+            v.frame = NSRect(x: (cx - size.width / 2).rounded(), y: y.rounded(), width: size.width, height: size.height)
+            if v.superview == nil { addSubview(v) } else { addSubview(v, positioned: .above, relativeTo: nil) }
+            v.isHidden = false
+            return
+        }
+        outlinedLabel?.isHidden = true
         let lbl: NSTextField
         if let l = hoverLabel { lbl = l } else {
             let l = NSTextField(labelWithString: "")
@@ -4000,6 +4016,9 @@ final class DockView: NSView {
         if lbl.superview == nil { addSubview(lbl) } else { addSubview(lbl, positioned: .above, relativeTo: nil) }
         lbl.isHidden = false
     }
+
+    /// The outlined name label (`labelStyle: "outlined"`), made on first use.
+    private var outlinedLabel: OutlinedDockLabel?
 
     // MARK: - Eased magnification driver
 
@@ -4071,7 +4090,7 @@ final class DockView: NSView {
     }
 
     private func resetMagnification() {
-        hoverLabel?.isHidden = true
+        hoverLabel?.isHidden = true; outlinedLabel?.isHidden = true
         for item in itemViews {
             item.resetMagnification()
         }
@@ -4630,5 +4649,30 @@ final class DockView: NSView {
         } else {
             diskFreeLabel = ""; diskFreeValue = ""; diskFreeUnit = ""
         }
+    }
+}
+
+
+/// A dock name label as Mac OS X 10.0 drew it: white Lucida Grande Bold with a black outline
+/// and a soft shadow, straight on whatever is behind — no plate.
+final class OutlinedDockLabel: NSView {
+    var text = "" { didSet { if text != oldValue { invalidateIntrinsicContentSize(); needsDisplay = true } } }
+    private static var font: NSFont { NSFont(name: "LucidaGrande-Bold", size: 18) ?? .boldSystemFont(ofSize: 18) }
+    private static let shadow: NSShadow = {
+        let s = NSShadow()
+        s.shadowColor = NSColor.black.withAlphaComponent(0.9)
+        s.shadowOffset = NSSize(width: 0, height: -1)
+        s.shadowBlurRadius = 2.5
+        return s
+    }()
+    override var fittingSize: NSSize {
+        let s = (text as NSString).size(withAttributes: [.font: Self.font])
+        return NSSize(width: ceil(s.width) + 10, height: ceil(s.height) + 6)
+    }
+    override func draw(_ dirtyRect: NSRect) {
+        let at = NSPoint(x: 5, y: 3)
+        // The outline (a stroke only) with the shadow, then the white letters over it.
+        (text as NSString).draw(at: at, withAttributes: [.font: Self.font, .strokeColor: NSColor.black, .strokeWidth: 7, .shadow: Self.shadow])
+        (text as NSString).draw(at: at, withAttributes: [.font: Self.font, .foregroundColor: NSColor.white])
     }
 }

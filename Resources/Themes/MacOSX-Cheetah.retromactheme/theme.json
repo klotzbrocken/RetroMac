@@ -59,6 +59,7 @@
     "separatorStyle": "line",
     "runningAppsSeparator": false,
     "launchBounce": true,
+    "labelStyle": "outlined",
     "shelfStyle": "flat",
     "magnification": true,
     "magnificationScale": 2.0,

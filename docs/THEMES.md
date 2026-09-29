@@ -98,6 +98,7 @@ Everything under `"dock"`. Sizes are points.
 | `squareBottom` | `true`: a bottom dock rounded on top only, with no border along the screen edge it sits on (use with `edgeOffset` 0) |
 | `separatorGap` | Room at each divider in points at the theme's icon size, the line in its middle (default: the icon spacing) |
 | `launchBounce` | `true`: an application's icon hops while it launches, as the Mac OS X Dock's did |
+| `labelStyle` | `"outlined"`: the name above the magnified icon in white with a black outline, no plate (Mac OS X 10.0); absent, a dark rounded plate (10.6) |
 | `shelfStyle` | `flat` or `3d` (Snow Leopard's perspective shelf); `shelfLineColor` |
 | `startButton`, `startButtonLabel`, `startButtonIcon`, `startButtonImage`, `startButtonStyle`, `startButtonColor`, `startButtonGradientTop/Bottom` | The Start button; `startButtonImage` is a sprite sheet with three states stacked vertically (normal, hover, pressed); `startButtonStyle` `raised`, `sunken`, `flat` |
 | `startMenuStyle` | `classic` (Windows 95/98/Me cascade) or `xp` (Luna's two columns) |

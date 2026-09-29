@@ -273,6 +273,9 @@ struct DockThemeConfig: Codable {
         var separatorGap: CGFloat?
         /// `true`: an application's icon hops while it launches, as the Mac OS X Dock's did.
         var launchBounce: Bool?
+        /// The name shown above the magnified icon: `"outlined"` is Mac OS X 10.0's white
+        /// letters with a black outline, straight on the desktop; absent, 10.6's dark plate.
+        var labelStyle: String?
     }
 
     struct IconStyle: Codable {
