@@ -429,8 +429,13 @@ final class DockController {
         // Top overflow above the bar: magnification themes need room for popped icons;
         // hover-zoom themes (no magnification) need room too so the enlarged icon — and a
         // pellet/Pac-Man border — aren't clipped at the dock's top edge.
+        // A theme that names the magnified icon (Aqua) needs the name's height on top of that,
+        // or the name is pushed down onto the icon: 10.0's outlined 18 pt letters and their
+        // gap, or 10.6's plate.
+        let labelRoom: CGFloat = (theme?.dock.showLabels == true && theme?.isVertical != true)
+            ? (theme?.dock.labelStyle == "outlined" ? 36 : 28) : 0
         let magOverflow: CGFloat = hasMag
-            ? effectiveIconSize * (maxScale - 1.0)
+            ? effectiveIconSize * (maxScale - 1.0) + labelRoom
             : max(0, effectiveIconSize * (hoverScale - 1.0) * 1.5)   // headroom up for the hover pop
         let effectiveHMagOverflow = hMagOverflow * dynScale
         let shortAxis = dockBarHeight * dynScale + magOverflow

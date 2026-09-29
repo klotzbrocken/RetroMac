@@ -3986,7 +3986,7 @@ final class DockView: NSView {
             v.text = text
             let size = v.fittingSize
             let cx = max(size.width / 2 + 2, min(centerX, bounds.width - size.width / 2 - 2))
-            let y = min(aboveY + 4, bounds.height - size.height)
+            let y = min(aboveY + 6, bounds.height - size.height)   // a little air above the icon, as 10.0 left
             v.frame = NSRect(x: (cx - size.width / 2).rounded(), y: y.rounded(), width: size.width, height: size.height)
             if v.superview == nil { addSubview(v) } else { addSubview(v, positioned: .above, relativeTo: nil) }
             v.isHidden = false

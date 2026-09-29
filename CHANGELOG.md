@@ -94,7 +94,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   seconds. It is the boot now: the grey screen with the Apple and the spinner, then the
   "Mac OS X" panel with its progress bar.
 - **Mac OS X: the Dock's names as 10.0 wrote them** — white bold letters with a black
-  outline, straight on the desktop, not on a dark plate.
+  outline, straight on the desktop, not on a dark plate, with air between the name and the
+  icon. (The dock had room above for the magnified icons but not for the name, which was
+  pushed down onto the icon — under Snow Leopard too.)
 - **Mac OS 9 (authentic): Claude, ChatGPT, Chrome and Firefox in Mac OS 9 icons**, with the
   hard edge of a 1-bit mask.
 - **Aqua icons for today's apps:** Claude, ChatGPT, Chrome, Firefox and Teams under Mac OS X,
