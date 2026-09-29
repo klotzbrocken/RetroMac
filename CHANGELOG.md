@@ -3,7 +3,7 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## Unreleased
+## 2.8.8
 
 - **Mac OS X, closer to 10.0.** Measured pixel for pixel from Mac OS X 10.0.4 screenshots:
   - **The title bar is Aqua's own now:** white pinstripes with a grey edge, rounded top
@@ -108,8 +108,6 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   and Mountain Lion (today's versions have new bundle ids; Mountain Lion gets a Numbers icon),
   Chrome and Firefox under Windows 95, 98 and Me (as Internet Explorer), Outlook and Xcode
   under Mac OS X.
-
-## 2.8.8
 
 - **Rearrange the dock.** Drag a pinned icon along the dock and it moves to where it is let
   go; an app or folder dragged in from the Finder lands where it is dropped instead of at the

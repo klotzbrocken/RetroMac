@@ -11,7 +11,7 @@ struct WhatsNewView: View {
                     .padding(.top, 24)
                 Text("What's New in RetroMac \(currentAppVersion)")
                     .font(.title2.bold())
-                Text("A dock you can rearrange, WindowShade, and one theme everywhere")
+                Text("Mac OS X as 10.0 looked, a Task Manager for XP, and a dock you can rearrange")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -21,6 +21,20 @@ struct WhatsNewView: View {
             // Feature list
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    featureRow(
+                        icon: "macwindow",
+                        color: .cyan,
+                        title: "Mac OS X, closer to 10.0",
+                        description: "White pinstriped title bars with glossy Aqua lights, and the pill that rolls a window up into its bar like a garage door. The Dock sits on the screen\u{2019}s edge with one divider, black triangles, bouncing icons and outlined names. 10.0\u{2019}s Apple menu, its blue apple, a Finder-style Applications window, a proper boot screen and dozens of original Mac OS X icons."
+                    )
+
+                    featureRow(
+                        icon: "gauge.with.dots.needle.33percent",
+                        color: .green,
+                        title: "Windows Task Manager",
+                        description: "Under Windows XP, Ctrl+Option+Delete \u{2014} or \u{201C}Task Manager\u{201D} in the taskbar\u{2019}s menu \u{2014} opens XP\u{2019}s Task Manager with a live Performance page: the green meters, the history graphs and all the numbers, from what your Mac reports."
+                    )
+
                     featureRow(
                         icon: "dock.rectangle",
                         color: .blue,
@@ -46,7 +60,7 @@ struct WhatsNewView: View {
                         icon: "wrench.and.screwdriver.fill",
                         color: .gray,
                         title: "Fixes",
-                        description: "A theme picked in Settings now reaches Quick Access, the status menu, the shader and the Apple menu. No dock is left behind after a switch to a theme without one. Dragging a window by its bar no longer loses a short first drag. Disks on the desktop follow mount and unmount. \u{201C}Quit RetroMac\u{201D} from the dock asks first."
+                        description: "The dock hides over full-screen apps again, and the green light takes a window out of full screen. The dock no longer stays magnified when the pointer leaves for a display below. A theme picked in Settings now reaches Quick Access, the status menu, the shader and the Apple menu. Rolled-up windows always find their way back. The wallpaper cache stays small. \u{201C}Quit RetroMac\u{201D} from the dock asks first."
                     )
 
                 }
