@@ -78,6 +78,10 @@
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-lite",
   "iconMappings": {
+    "com.apple.Keynote": "keynote.png",
+    "com.apple.Pages": "pages.png",
+    "com.apple.Numbers": "numbers.png",
+    "com.apple.iWork.Numbers": "numbers.png",
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",
     "com.apple.mail": "mail.png",

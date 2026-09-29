@@ -89,6 +89,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   the corner with the parked window, and after a crash or a Force Quit of RetroMac the next
   launch puts rolled-up windows back.
 - **Fix: a row dragged out of Settings' dock list and back in could not be dropped.**
+- **Icons that were there but never shown:** Keynote, Pages and Numbers under Snow Leopard
+  and Mountain Lion (today's versions have new bundle ids; Mountain Lion gets a Numbers icon),
+  Chrome and Firefox under Windows 95, 98 and Me (as Internet Explorer), Outlook and Xcode
+  under Mac OS X.
 
 ## 2.8.8
 

@@ -171,6 +171,9 @@
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-sharp-lite",
   "iconMappings": {
+    "com.apple.Keynote": "keynote.png",
+    "com.apple.Pages": "pages.png",
+    "com.apple.Numbers": "numbers.png",
     "com.apple.reminders": "reminders.png",
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",

@@ -172,6 +172,8 @@
     }
   ],
   "iconMappings": {
+    "com.microsoft.Outlook": "outlook.png",
+    "com.apple.dt.Xcode": "xcode.png",
     "com.microsoft.Word": "word.png",
     "com.microsoft.Excel": "excel.png",
     "com.microsoft.Powerpoint": "powerpoint.png",
