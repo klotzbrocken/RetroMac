@@ -70,6 +70,11 @@ struct WhatsNewView: View {
 
             Spacer()
 
+            // Stars are how RetroMac gets into Homebrew and in front of new people.
+            Link("Like RetroMac? \u{2605} Star it on GitHub", destination: URL(string: "https://github.com/klotzbrocken/RetroMac")!)
+                .font(.callout)
+                .padding(.bottom, 10)
+
             Button("Let's Go!") {
                 AppSettings.shared.lastSeenVersion = currentAppVersion
                 NSApp.keyWindow?.close()

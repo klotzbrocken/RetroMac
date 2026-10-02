@@ -132,6 +132,9 @@ struct AboutTab: View {
                     Text("Questions? Write me an email!")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    LabeledContent("Like RetroMac?") {
+                        Link("\u{2605} Star it on GitHub", destination: URL(string: "https://github.com/klotzbrocken/RetroMac")!)
+                    }
                 }
 
                 // MARK: - License (between Developer and Shader Credits)
