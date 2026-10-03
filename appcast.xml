@@ -15,6 +15,30 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 2.8.8</title>
+      <pubDate>Sat, 03 Oct 2026 02:08:28 +0000</pubDate>
+      <sparkle:version>2.8.8</sparkle:version>
+      <sparkle:shortVersionString>2.8.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 2.8.8</h2>
+        <ul>
+          <li><b>Mac OS X, closer to 10.0.</b> White pinstriped title bars with glossy Aqua lights, and the pill that rolls a window up into its bar like a garage door. The Dock sits on the screen&rsquo;s edge with one divider, black triangles under running apps, icons that bounce while their app starts and names in outlined letters. 10.0&rsquo;s Apple menu, its vivid blue apple, a Finder-style Applications window, a proper boot screen and dozens of original Mac OS X icons.</li>
+          <li><b>Windows Task Manager.</b> Under Windows XP, Ctrl+Option+Delete &mdash; or &ldquo;Task Manager&rdquo; in the taskbar&rsquo;s menu &mdash; opens XP&rsquo;s Task Manager with a live Performance page: green meters, history graphs and the numbers, from what your Mac reports.</li>
+          <li><b>Rearrange the dock</b> by dragging its icons, in the dock and in Settings.</li>
+          <li><b>WindowShade.</b> Roll windows up to their title bar under Mac OS 8/9 and System 7.1 &mdash; and they always find their way back, on any display arrangement, even after a crash.</li>
+          <li><b>New icons</b> for Claude, ChatGPT, Chrome, Firefox and Teams in the Mac OS X, Snow Leopard and Mac OS 9 themes.</li>
+          <li><b>Fixes:</b> the dock hides over full-screen apps again, and the green light takes a window out of full screen; the dock no longer stays magnified when the pointer leaves for a display below; desktop icons moved on a bigger screen no longer vanish on a smaller one; the wallpaper cache stays small; a theme picked in Settings reaches every part of RetroMac.</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.8.8/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="LrAzZ5nQPD3oaWoxdf+Kqy4y7oW84dMFisQh/MUe0uQkh6nfGekyGCBCtTOk3K3+bhVo6nNdD47sUOf9A8I6Cg=="
+        length="101858304"
+      />
+    </item>
+    <item>
       <title>Version 2.8.7</title>
       <pubDate>Thu, 24 Sep 2026 00:10:54 +0000</pubDate>
       <sparkle:version>2.8.7</sparkle:version>
