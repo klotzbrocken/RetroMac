@@ -14,7 +14,7 @@ enum TaskApplications {
                 ["pid": Int(app.processIdentifier),
                  "name": app.localizedName ?? app.bundleIdentifier ?? "?",
                  "icon": icon(for: app),
-                 "status": app.isFinishedLaunching ? "Running" : "Starting"]
+                 "status": "Running"]   // some apps never report "finished launching"
             }
             .sorted { ($0["name"] as! String).localizedCaseInsensitiveCompare($1["name"] as! String) == .orderedAscending }
     }

@@ -72,7 +72,8 @@ final class ClockWidgetController: NSObject, WKScriptMessageHandler, WKNavigatio
         guard let panel = panel else { return }
         if let s = UserDefaults.standard.string(forKey: posKey) {
             let origin = NSPointFromString(s)
-            if NSScreen.screens.contains(where: { $0.visibleFrame.intersects(NSRect(origin: origin, size: panel.frame.size)) }) {
+            // Whole on one screen: a spot remembered on a bigger display can leave it all but off the edge.
+            if NSScreen.screens.contains(where: { $0.visibleFrame.contains(NSRect(origin: origin, size: panel.frame.size)) }) {
                 panel.setFrameOrigin(origin); return
             }
         }
