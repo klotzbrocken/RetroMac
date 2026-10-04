@@ -102,6 +102,10 @@ struct DockThemeConfig: Codable {
     /// stacked them down the LEFT; the Mac stacks them down the right, and everything here used
     /// to do it the Mac way regardless of what it was imitating.
     var desktopIconsSide: String? = nil
+    /// Windows Vista's Sidebar on the right edge; `gadgets` lists which ones it starts with
+    /// ("clock", "calendar", "cpu").
+    var sidebar: SidebarConfig? = nil
+    struct SidebarConfig: Codable { var gadgets: [String]? = nil }
     var appearance: String? = nil     // system appearance to match when "Match appearance" is on: light|dark
     var accentColor: String? = nil    // system accent to match: graphite|blue|red|orange|yellow|green|purple|pink
     var splashScreen: String? = nil   // boot splash image shown briefly on theme activation
@@ -336,7 +340,7 @@ extension DockThemeConfig {
 
     /// Themes whose real-world dock/taskbar supported auto-hide.
     var supportsAutoHide: Bool {
-        ["Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows 95", "Windows Me", "Windows 7", "OS/2 Warp 4"].contains(name)
+        ["Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows 95", "Windows Me", "Windows 7", "Windows Vista", "OS/2 Warp 4"].contains(name)
     }
     var dockAutoHideEnabled: Bool {
         supportsAutoHide && (AppSettings.shared.themeDockAutoHide[settingsKey] ?? false)

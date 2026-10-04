@@ -1,0 +1,24 @@
+Windows Vista theme — asset provenance
+======================================
+
+Window chrome, Start menu, widgets
+  Shared with the Windows 7 theme (chrome.style "win7"); see that theme's CREDITS.txt.
+
+Icons (vista_*.png, folder.png)
+  Extracted from "Windows Vista Icon Pack for Windows 10 1507-1809" (7TSP pack) by Luximoz,
+  DeviantArt: windows_vista_7tsp_pack_by_luximoz_dg1sp2o. The icons themselves are Microsoft's
+  Windows Vista icons (imageres.dll, shell32.dll, explorer.exe) — Microsoft trade dress, bundled
+  as a deliberate project decision like the other Windows themes.
+
+Start orb (startvista.png)
+  3-state sprite (normal / hover / pressed) built from a 300 px Vista Start orb PNG; hover and
+  pressed are exposure-shifted copies, as for startwin7.png. Microsoft trademark.
+
+Wallpapers (wallpaper*.jpg), splash.jpg
+  Microsoft's Windows Vista wallpapers, from windowswallpaper.miraheze.org: Aurora (img36),
+  Northern Lights (img31), Palm (img34), Gerbera (img30), Fish (img32), Guilin (img16),
+  Stones (img7), Ultimate (img41). Cropped to 1920x1200. splash.jpg is the Vista logon
+  background with "Welcome" set over it. Microsoft copyright; bundled as trade dress.
+
+Other icons (win7_*.png, calendar.png, generic.png, notepad98.png, reamp.png, systray/volume)
+  Reused from RetroMac's Windows 7 theme.

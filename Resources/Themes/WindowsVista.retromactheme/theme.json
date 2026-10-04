@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.microsoft.windowsvista",
+  "family": {
+    "id": "microsoft",
+    "name": "Microsoft Windows",
+    "order": 2
+  },
+  "release": {
+    "label": "Windows Vista",
+    "year": 2007
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "win7"
+  },
+  "name": "Windows Vista",
+  "hideMenuBarDefault": true,
+  "version": "1.0",
+  "author": "RetroMac",
+  "splashScreen": "splash.jpg",
+  "splashFullscreen": true,
+  "wallpaper": "wallpaper.jpg",
+  "wallpapers": [
+    {
+      "name": "Aurora",
+      "file": "wallpaper.jpg"
+    },
+    {
+      "name": "Northern Lights",
+      "file": "wallpaper2.jpg"
+    },
+    {
+      "name": "Palm",
+      "file": "wallpaper3.jpg"
+    },
+    {
+      "name": "Gerbera",
+      "file": "wallpaper4.jpg"
+    },
+    {
+      "name": "Fish",
+      "file": "wallpaper5.jpg"
+    },
+    {
+      "name": "Guilin",
+      "file": "wallpaper6.jpg"
+    },
+    {
+      "name": "Stones",
+      "file": "wallpaper7.jpg"
+    },
+    {
+      "name": "Ultimate",
+      "file": "wallpaper8.jpg"
+    }
+  ],
+  "dock": {
+    "height": 40,
+    "iconSize": 24,
+    "padding": 6,
+    "spacing": 4,
+    "cornerRadius": 0,
+    "backgroundColor": "#14181CC0",
+    "backgroundGradientTop": "#5A6068B0",
+    "backgroundGradientBottom": "#020304E6",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#000000FF",
+    "borderWidth": 0,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#FFFFFF66",
+    "bevelBottomColor": "#000000FF",
+    "bevelWidth": 0,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "fullWidth": true,
+    "startButton": true,
+    "startButtonLabel": "",
+    "showClock": true,
+    "magnification": false,
+    "showTrash": false,
+    "startMenuStyle": "xp",
+    "gradientTop": "#3E444BFF",
+    "gradientBottom": "#050607FF",
+    "startButtonImage": "startvista.png"
+  },
+  "icon": {
+    "renderStyle": "smooth",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.08
+  },
+  "indicator": {
+    "style": "highlight",
+    "color": "#5B9BD5",
+    "size": 3,
+    "offset": 2
+  },
+  "desktopIconsSide": "left",
+  "desktopIcons": [
+    {
+      "name": "Computer",
+      "icon": "vista_computer.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Documents",
+      "icon": "vista_documents.png",
+      "type": "folder",
+      "gridX": 0,
+      "gridY": 1,
+      "path": "~/Documents"
+    },
+    {
+      "name": "Recycle Bin",
+      "icon": "vista_recycle_empty.png",
+      "iconFull": "vista_recycle_full.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "Internet Explorer",
+      "icon": "vista_ie.png",
+      "type": "webapp",
+      "url": "https://98.js.org/programs/explorer/index.html?address=https%3A%2F%2Fwww.amazon.com",
+      "args": [
+        "1020",
+        "740"
+      ],
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Notepad",
+      "icon": "win7_notepad.png",
+      "type": "notepad",
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "Paint",
+      "icon": "win7_paint.png",
+      "type": "webapp",
+      "url": "https://98.js.org/programs/jspaint/index.html",
+      "args": [
+        "920",
+        "640"
+      ],
+      "gridX": 0,
+      "gridY": 5
+    },
+    {
+      "name": "TV",
+      "icon": "win7_tv.png",
+      "type": "tvfolder",
+      "gridX": 0,
+      "gridY": 6
+    },
+    {
+      "name": "All Programs",
+      "icon": "vista_programs.png",
+      "type": "appfolder",
+      "gridX": 1,
+      "gridY": 0
+    },
+    {
+      "name": "Minesweeper",
+      "icon": "win7_mines.png",
+      "type": "webapp",
+      "url": "https://98.js.org/programs/minesweeper/index.html",
+      "args": [
+        "360",
+        "460"
+      ],
+      "gridX": 1,
+      "gridY": 1
+    },
+    {
+      "name": "Solitaire",
+      "icon": "win7_solitaire.png",
+      "type": "webapp",
+      "url": "https://98.js.org/programs/js-solitaire/index.html",
+      "args": [
+        "800",
+        "600"
+      ],
+      "gridX": 1,
+      "gridY": 2
+    },
+    {
+      "name": "3D Pinball",
+      "icon": "win7_pinball.png",
+      "type": "webapp",
+      "url": "https://98.js.org/programs/pinball/space-cadet.html",
+      "args": [
+        "640",
+        "620"
+      ],
+      "gridX": 1,
+      "gridY": 3
+    },
+    {
+      "name": "Screen Saver",
+      "icon": "vista_screensaver.png",
+      "type": "screensaver",
+      "gridX": 1,
+      "gridY": 4
+    }
+  ],
+  "fallbackIcon": "vista_generic.png",
+  "defaultPreset": "lcd-retro-lite",
+  "iconMappings": {
+    "com.apple.finder": "vista_explorer.png",
+    "com.apple.Safari": "vista_ie.png",
+    "com.apple.mail": "vista_mail.png",
+    "com.apple.Photos": "vista_photos.png",
+    "com.apple.MobileSMS": "vista_messenger.png",
+    "com.apple.Notes": "vista_notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.systempreferences": "vista_controlpanel.png",
+    "com.apple.Music": "vista_music.png",
+    "com.apple.Terminal": "vista_cmd.png",
+    "__folder__~/Downloads": "vista_downloads.png"
+  },
+  "desktopIconSize": 48,
+  "screensaver": "pipes",
+  "appearance": "light",
+  "accentColor": "blue",
+  "sidebar": {
+    "gadgets": [
+      "clock",
+      "calendar",
+      "cpu"
+    ]
+  }
+}

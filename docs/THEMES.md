@@ -187,6 +187,15 @@ Two themes replace the desktop wholesale: `programManager` (Windows 3.1's groups
 of these same entries) and `sgiDesktop` (IRIX's Toolchest, Icon Catalog and Shelf). Copy the
 bundled manifest if you need either; the shapes are in `DockTheme.swift`.
 
+```json
+"sidebar": { "gadgets": ["clock", "calendar", "cpu"] }
+```
+
+`sidebar` puts Windows Vista's Sidebar on the right edge of the main screen, from the top down
+to the taskbar, below every window. `gadgets` is what it starts with: `clock`, `calendar` and
+`cpu` (processor and memory load from the Mac). The user changes the set with the **+** at
+its top.
+
 ## Boot, screensaver, the rest of the Mac
 
 | Key | What it does |

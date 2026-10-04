@@ -166,6 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ApplicationMenuController.shared.update()
             NextMenuController.shared.update()
             NextDockController.shared.update()
+            SidebarController.shared.update()
             NextRunningAppsController.shared.update()
             WindowBorderController.shared.update()   // recolour theme window borders on theme change
             TaskManagerController.shared.update()    // Ctrl+Option+Delete under Windows XP
@@ -2829,6 +2830,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ApplicationMenuController.shared.update()
         NextMenuController.shared.update()
         NextDockController.shared.update()
+        SidebarController.shared.update()
         NextRunningAppsController.shared.update()
         WindowBorderController.shared.update()
         RainbowAppleController.shared.update()
@@ -2968,6 +2970,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SGIDesktopController.shared.hide()
             NextMenuController.shared.hide()
             NextDockController.shared.hide()
+            SidebarController.shared.hide()
             NextRunningAppsController.shared.hide()
             TaskManagerController.shared.stop()
             ThemeManager.shared.clearActiveTheme()
@@ -3010,6 +3013,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SGIDesktopController.shared.hide()
         NextMenuController.shared.hide()
         NextDockController.shared.hide()
+        SidebarController.shared.hide()
         NextRunningAppsController.shared.hide()
         TaskManagerController.shared.stop()
         ThemeManager.shared.clearActiveTheme()

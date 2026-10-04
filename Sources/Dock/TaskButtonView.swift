@@ -22,6 +22,7 @@ final class TaskButtonView: NSView {
     private var pressed = false
     private var hovered = false
     private var trackingArea: NSTrackingArea?
+    private let vista = RetroFrameTheme.isVista
 
     init(frame: NSRect, title: String, icon: NSImage?, style: Style, isActive: Bool, maxIconSize: CGFloat, enlargeIcon: Bool = false) {
         self.title = title
@@ -139,7 +140,11 @@ final class TaskButtonView: NSView {
         }
         // Translucent glass panel; brighter when the window is open (sunken) or hovered.
         let top: NSColor, bot: NSColor, border: NSColor
-        if sunken {                       // open/active window — lit aqua glass
+        if vista {                        // Vista: smoky glass on the black bar, the active one lit grey
+            top = c(1, 1, 1, sunken ? 0.34 : hovered ? 0.24 : 0.12)
+            bot = c(1, 1, 1, sunken ? 0.14 : hovered ? 0.10 : 0.03)
+            border = c(0, 0, 0, 0.75)
+        } else if sunken {                // open/active window — lit aqua glass
             top = c(0.92, 0.97, 1.0, 0.78); bot = c(0.66, 0.85, 0.96, 0.66); border = c(0.24, 0.50, 0.69, 0.9)
         } else if hovered {               // hover — soft aqua glow
             top = c(0.92, 0.96, 0.99, 0.55); bot = c(0.75, 0.90, 0.98, 0.42); border = c(0.24, 0.50, 0.69, 0.75)
@@ -176,7 +181,7 @@ final class TaskButtonView: NSView {
             textX = iconX + iconSz + 5
         }
         let isWin98 = (style == .win98)
-        let darkText = (style == .win98 || style == .win7)   // Win7 Superbar is light glass → dark text
+        let darkText = style == .win98 || (style == .win7 && !vista)   // Win7 Superbar is light glass → dark text
         let color: NSColor = darkText ? .black : .white
         let fsize: CGFloat = isWin98 ? 13 : 12
         let fontName = (style == .win7) ? "Segoe UI" : "Tahoma"   // Win7 uses Segoe UI

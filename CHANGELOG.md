@@ -5,6 +5,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **New theme: Windows Vista.** Aero glass windows on a black glass taskbar with the round
+  Start orb, Start Search and the orange power button, the time on one line, the Welcome
+  screen at start, eight Vista wallpapers from Aurora to the Ultimate orb, and Vista's own
+  icons from Luximoz's Windows Vista icon pack.
+- **The Vista Sidebar.** A column on the right edge with a clock, a calendar and a CPU meter
+  whose two dials show your Mac's processor and memory load. The **+** at its top shows or
+  hides each gadget.
 - **WindowShade never loses a window.** A rolled-up window keeps its way back until it is
   really back: an app that does not answer leaves it rolled up, to be unrolled again, and on a
   theme switch or at quit it stays on record for the next start if it would not move. A theme

@@ -267,7 +267,7 @@ final class DockController {
             glass.blendingMode = .behindWindow
             glass.material = .fullScreenUI
             glass.state = .active
-            glass.appearance = NSAppearance(named: .aqua)
+            glass.appearance = NSAppearance(named: RetroFrameTheme.isVista ? .darkAqua : .aqua)   // Vista's bar is black glass
             dockView.autoresizingMask = [.width, .height]
             container.addSubview(glass)
             container.addSubview(dockView)

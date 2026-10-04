@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>Sidebar</title>
+<style>
+  html, body { margin:0; height:100%; overflow:hidden; -webkit-user-select:none; cursor:default; }
+  /* Vista's Sidebar: a faint dark strip, darkest at the screen edge. */
+  body { background:linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,.16) 35%, rgba(0,0,0,.30) 100%);
+         font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif; }
+  #bar { height:24px; display:flex; justify-content:flex-end; align-items:center; gap:2px; padding:0 8px; }
+  .hb { width:18px; height:16px; border-radius:3px; color:rgba(255,255,255,.75); font:bold 13px/16px Arial,sans-serif;
+        text-align:center; }
+  .hb:hover { background:rgba(255,255,255,.18); box-shadow:inset 0 0 0 1px rgba(255,255,255,.35); color:#fff; }
+  .hb.dim { color:rgba(255,255,255,.35); font-size:9px; }
+  .hb.dim:hover { background:none; box-shadow:none; color:rgba(255,255,255,.35); }
+  #gadgets { display:flex; flex-direction:column; align-items:center; gap:12px; padding-top:6px; }
+  .g { width:130px; display:none; filter:drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+  .g.on { display:block; }
+  canvas { display:block; }
+
+  /* Calendar: a sheet of paper with the rings on top. */
+  #calendar { position:relative; }
+  .rings { height:8px; display:flex; justify-content:space-around; padding:0 10px; position:relative; z-index:1; margin-bottom:-4px; }
+  .rings i { width:3px; height:8px; border-radius:2px; background:linear-gradient(#f4f4f4,#8a8a8a); box-shadow:0 0 0 .5px #555; }
+  .sheet { background:linear-gradient(#ffffff,#eceff2); border:1px solid #9aa3ad; border-radius:3px; padding:6px 5px 5px; }
+  .head { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#333; margin-bottom:3px; }
+  .head span.arr { color:#7a8794; font-size:9px; padding:0 3px; }
+  .head span.arr:hover { color:#1d5fa6; }
+  table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  th { font-weight:normal; font-size:9px; color:#777; padding:0 0 1px; }
+  td { font-size:9.5px; text-align:center; color:#222; padding:1px 0; line-height:11px; }
+  td.out { color:#b5b9be; }
+  td.today { background:linear-gradient(#f7a35c,#e8711c); color:#fff; border-radius:2px; box-shadow:inset 0 0 0 1px #c25a10; }
+  th:first-child, td.sun { color:#c0392b; }
+  td.today.sun { color:#fff; }
+</style></head>
+<body>
+<div id="bar"><div class="hb" id="add" title="Add Gadgets">+</div><div class="hb dim">&#9664;</div><div class="hb dim">&#9654;</div></div>
+<div id="gadgets">
+  <div class="g" id="clock"><canvas id="clk" width="130" height="130"></canvas></div>
+  <div class="g" id="calendar">
+    <div class="rings"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="sheet">
+      <div class="head"><span class="arr" id="prev">&#9664;</span><span id="month"></span><span class="arr" id="next">&#9654;</span></div>
+      <table><thead><tr id="dow"></tr></thead><tbody id="days"></tbody></table>
+    </div>
+  </div>
+  <div class="g" id="cpu"><canvas id="meter" width="130" height="92"></canvas></div>
+</div>
+<script>
+(function(){
+  var post = function(m){ try { webkit.messageHandlers.sidebar.postMessage(m); } catch(e) {} };
+  document.getElementById('add').onclick = function(){ post('menu'); };
+
+  function hiDPI(c){
+    var r = window.devicePixelRatio || 1, w = c.width, h = c.height;
+    c.width = w * r; c.height = h * r; c.style.width = w + 'px'; c.style.height = h + 'px';
+    var x = c.getContext('2d'); x.scale(r, r); return x;
+  }
+
+  // ---- Clock: Vista's default gadget, a white face in a silver bezel.
+  var ck = hiDPI(document.getElementById('clk'));
+  function drawClock(){
+    var x = ck, c = 65, R = 60, now = new Date();
+    x.clearRect(0, 0, 130, 130);
+    var bez = x.createLinearGradient(0, 5, 0, 125);
+    bez.addColorStop(0, '#fdfdfd'); bez.addColorStop(.5, '#9ea4aa'); bez.addColorStop(1, '#e9ebed');
+    x.beginPath(); x.arc(c, c, R, 0, 7); x.fillStyle = bez; x.fill();
+    x.lineWidth = 1; x.strokeStyle = 'rgba(0,0,0,.55)'; x.stroke();
+    var face = x.createRadialGradient(c, c - 18, 6, c, c, R - 6);
+    face.addColorStop(0, '#ffffff'); face.addColorStop(.85, '#eef0ee'); face.addColorStop(1, '#c9cdd0');
+    x.beginPath(); x.arc(c, c, R - 6, 0, 7); x.fillStyle = face; x.fill();
+    x.strokeStyle = 'rgba(0,0,0,.35)'; x.stroke();
+    for (var i = 0; i < 60; i++) {
+      var a = i * Math.PI / 30, big = i % 5 == 0, r1 = R - 9, r2 = r1 - (big ? 5 : 2.5);
+      x.beginPath(); x.moveTo(c + Math.sin(a) * r1, c - Math.cos(a) * r1); x.lineTo(c + Math.sin(a) * r2, c - Math.cos(a) * r2);
+      x.lineWidth = big ? 1.6 : .7; x.strokeStyle = '#222'; x.stroke();
+    }
+    x.fillStyle = '#111'; x.font = '13px "Segoe UI","Helvetica Neue",Arial'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    for (var n = 1; n <= 12; n++) { var b = n * Math.PI / 6; x.fillText(n, c + Math.sin(b) * (R - 23), c - Math.cos(b) * (R - 23) + 1); }
+    function hand(a, len, w, col, tail){
+      x.beginPath(); x.moveTo(c - Math.sin(a) * tail, c + Math.cos(a) * tail); x.lineTo(c + Math.sin(a) * len, c - Math.cos(a) * len);
+      x.lineWidth = w; x.lineCap = 'round'; x.strokeStyle = col; x.stroke();
+    }
+    var s = now.getSeconds(), m = now.getMinutes() + s / 60, h = now.getHours() % 12 + m / 60;
+    x.save(); x.shadowColor = 'rgba(0,0,0,.35)'; x.shadowOffsetX = 1.5; x.shadowOffsetY = 1.5; x.shadowBlur = 2;
+    hand(h * Math.PI / 6, R - 30, 4, '#1a1a1a', 6);
+    hand(m * Math.PI / 30, R - 16, 2.6, '#1a1a1a', 8);
+    hand(s * Math.PI / 30, R - 13, 1, '#b3261e', 12);
+    x.restore();
+    x.beginPath(); x.arc(c, c, 3, 0, 7); x.fillStyle = '#b3261e'; x.fill();
+    // glass highlight
+    var gl = x.createLinearGradient(0, c - R, 0, c);
+    gl.addColorStop(0, 'rgba(255,255,255,.55)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    x.beginPath(); x.ellipse(c, c - R * .42, R * .72, R * .45, 0, 0, 7); x.fillStyle = gl; x.fill();
+  }
+
+  // ---- Calendar: the month, today in orange; the arrows leaf through months.
+  var shown = new Date(); shown.setDate(1);
+  var names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('dow').innerHTML = ['S','M','T','W','T','F','S'].map(function(d){ return '<th>' + d + '</th>'; }).join('');
+  function drawCalendar(){
+    var t = new Date(), y = shown.getFullYear(), mo = shown.getMonth();
+    document.getElementById('month').textContent = names[mo] + ' ' + y;
+    var start = new Date(y, mo, 1 - new Date(y, mo, 1).getDay()), html = '';
+    for (var w = 0; w < 6; w++) {
+      html += '<tr>';
+      for (var d = 0; d < 7; d++) {
+        var day = new Date(start); day.setDate(start.getDate() + w * 7 + d);
+        var cls = [];
+        if (day.getMonth() != mo) cls.push('out');
+        if (d == 0) cls.push('sun');
+        if (day.toDateString() == t.toDateString()) cls.push('today');
+        html += '<td class="' + cls.join(' ') + '">' + day.getDate() + '</td>';
+      }
+      html += '</tr>';
+    }
+    document.getElementById('days').innerHTML = html;
+  }
+  document.getElementById('prev').onclick = function(){ shown.setMonth(shown.getMonth() - 1); drawCalendar(); };
+  document.getElementById('next').onclick = function(){ shown.setMonth(shown.getMonth() + 1); drawCalendar(); };
+
+  // ---- CPU Meter: two chrome dials, processor on the left, memory on the right.
+  var mt = hiDPI(document.getElementById('meter'));
+  var cpu = 0, ram = 0, shownCpu = 0, shownRam = 0;
+  function dial(cx, cy, R, val, label){
+    var x = mt;
+    var rim = x.createLinearGradient(0, cy - R, 0, cy + R);
+    rim.addColorStop(0, '#f2f4f6'); rim.addColorStop(.5, '#7d858d'); rim.addColorStop(1, '#d6dade');
+    x.beginPath(); x.arc(cx, cy, R, 0, 7); x.fillStyle = rim; x.fill();
+    x.lineWidth = 1; x.strokeStyle = 'rgba(0,0,0,.6)'; x.stroke();
+    var face = x.createRadialGradient(cx, cy - R * .3, 2, cx, cy, R);
+    face.addColorStop(0, '#4a4f55'); face.addColorStop(1, '#0d0f11');
+    x.beginPath(); x.arc(cx, cy, R - 4, 0, 7); x.fillStyle = face; x.fill();
+    // scale: 0–100 % over 240°, the last fifth in red
+    var a0 = Math.PI * .75, span = Math.PI * 1.5;
+    for (var i = 0; i <= 20; i++) {
+      var a = a0 + span * i / 20, big = i % 5 == 0, r1 = R - 6, r2 = r1 - (big ? 5 : 3);
+      x.beginPath(); x.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); x.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+      x.lineWidth = big ? 1.4 : .8; x.strokeStyle = i >= 16 ? '#ff4b3a' : '#e8e8e8'; x.stroke();
+    }
+    // read-out
+    var bw = R * .78, bh = R * .34;
+    x.fillStyle = '#c9d9b8'; x.fillRect(cx - bw / 2, cy + R * .32, bw, bh);
+    x.strokeStyle = '#000'; x.lineWidth = .8; x.strokeRect(cx - bw / 2, cy + R * .32, bw, bh);
+    x.fillStyle = '#1b2410'; x.font = 'bold ' + Math.round(bh * .8) + 'px "Segoe UI","Helvetica Neue",Arial';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText((val < 10 ? '0' : '') + Math.round(val) + '%', cx, cy + R * .32 + bh / 2 + .5);
+    // needle
+    var na = a0 + span * Math.min(100, val) / 100;
+    x.save(); x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 2; x.shadowOffsetY = 1;
+    x.beginPath(); x.moveTo(cx - Math.cos(na) * 4, cy - Math.sin(na) * 4); x.lineTo(cx + Math.cos(na) * (R - 9), cy + Math.sin(na) * (R - 9));
+    x.lineWidth = 2; x.lineCap = 'round'; x.strokeStyle = '#ff3b22'; x.stroke(); x.restore();
+    x.beginPath(); x.arc(cx, cy, 3.5, 0, 7); x.fillStyle = '#c8ccd0'; x.fill();
+    // glass
+    var gl = x.createLinearGradient(0, cy - R, 0, cy);
+    gl.addColorStop(0, 'rgba(255,255,255,.35)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    x.beginPath(); x.ellipse(cx, cy - R * .45, R * .7, R * .42, 0, 0, 7); x.fillStyle = gl; x.fill();
+    x.fillStyle = 'rgba(255,255,255,.8)'; x.font = Math.round(R * .2) + 'px "Segoe UI","Helvetica Neue",Arial';
+    x.fillText(label, cx, cy - R * .38);
+  }
+  function drawMeter(){
+    mt.clearRect(0, 0, 130, 92);
+    dial(48, 50, 40, shownCpu, 'CPU');
+    dial(102, 29, 26, shownRam, 'RAM');   // the small one sits in front, top right
+  }
+  // Needles swing towards the new value instead of jumping.
+  function animate(){
+    var dc = cpu - shownCpu, dr = ram - shownRam;
+    if (Math.abs(dc) < .3 && Math.abs(dr) < .3) { shownCpu = cpu; shownRam = ram; drawMeter(); return; }
+    shownCpu += dc * .25; shownRam += dr * .25; drawMeter(); requestAnimationFrame(animate);
+  }
+
+  window.update = function(d){ cpu = d.cpu; ram = d.ram; requestAnimationFrame(animate); };
+  window.setGadgets = function(list){
+    ['clock','calendar','cpu'].forEach(function(id){ document.getElementById(id).classList.toggle('on', list.indexOf(id) >= 0); });
+  };
+
+  var lastDay = '';
+  function tick(){
+    drawClock();
+    var d = new Date().toDateString();
+    if (d != lastDay) { lastDay = d; shown = new Date(); shown.setDate(1); drawCalendar(); }
+  }
+  tick(); drawMeter();
+  // Redraw on the second boundary so the second hand steps like Vista's.
+  setTimeout(function(){ tick(); setInterval(tick, 1000); }, 1000 - new Date().getMilliseconds());
+})();
+</script>
+</body></html>

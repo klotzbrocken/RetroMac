@@ -1012,7 +1012,8 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
         L.name = NSRect(x: body.minX + leftColW, y: avY - nameH - 2, width: rightColW, height: nameH)
         var ry = L.name.minY - 10
         for _ in places { L.places.append(NSRect(x: body.minX + leftColW, y: ry - placeH, width: rightColW, height: placeH)); ry -= placeH }
-        L.shutDown = NSRect(x: body.minX + leftColW + 12, y: body.minY + 8, width: rightColW - 24, height: shutH)
+        L.shutDown = NSRect(x: body.minX + leftColW + 12, y: body.minY + 8,
+                            width: RetroFrameTheme.isVista ? 62 : rightColW - 24, height: shutH)   // Vista: power button + arrow
         return L
     }
 
@@ -1130,7 +1131,7 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
         let sp = rr(L.search, 3)
         NSColor.white.setFill(); sp.fill()
         NSColor(white: 0.55, alpha: 1).setStroke(); sp.lineWidth = 1; sp.stroke()
-        text("Search programs and files", NSPoint(x: L.search.minX + 8, y: L.search.midY - 7), font(11, false), NSColor(white: 0.5, alpha: 1))
+        text(RetroFrameTheme.isVista ? "Start Search" : "Search programs and files", NSPoint(x: L.search.minX + 8, y: L.search.midY - 7), font(11, false), NSColor(white: 0.5, alpha: 1))
         NSColor(srgbRed: 0.20, green: 0.45, blue: 0.75, alpha: 1).setStroke()
         let mp = NSBezierPath(ovalIn: NSRect(x: L.search.maxX - 19, y: L.search.midY - 5, width: 9, height: 9)); mp.lineWidth = 1.5; mp.stroke()
 
@@ -1147,17 +1148,38 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
             if i < places.count - 1 { NSColor(white: 1, alpha: 0.08).setFill(); NSRect(x: r.minX + 12, y: r.minY, width: rightColW - 24, height: 1).fill() }
         }
 
-        // Shut down split-button
+        // Shut down split-button; Vista has a round-cornered orange power button and an arrow instead.
+        // ponytail: Vista's lock button is left out — macOS has no public "lock now" call.
         let sd = L.shutDown
-        NSGradient(colors: [NSColor(white: hovered == .shutDown ? 0.82 : 0.74, alpha: 1), NSColor(white: 0.54, alpha: 1)])!.draw(in: rr(sd, 3), angle: 90)
-        NSColor(white: 0.32, alpha: 1).setStroke(); let sdp = rr(sd, 3); sdp.lineWidth = 1; sdp.stroke()
-        text("Shut down", NSPoint(x: sd.minX + 10, y: sd.midY - 8), font(12, false), darkText)
-        NSColor(white: 0.35, alpha: 1).setFill(); NSRect(x: sd.maxX - 20, y: sd.minY + 3, width: 1, height: sd.height - 6).fill()
-        let sar = NSBezierPath()
-        sar.move(to: NSPoint(x: sd.maxX - 14, y: sd.midY - 3))
-        sar.line(to: NSPoint(x: sd.maxX - 9, y: sd.midY))
-        sar.line(to: NSPoint(x: sd.maxX - 14, y: sd.midY + 3)); sar.close()
-        NSColor(white: 0.2, alpha: 1).setFill(); sar.fill()
+        if RetroFrameTheme.isVista {
+            let pb = NSRect(x: sd.minX, y: sd.minY, width: 38, height: sd.height)
+            let lit = hovered == .shutDown
+            NSGradient(colors: [NSColor(srgbRed: lit ? 1 : 0.96, green: lit ? 0.62 : 0.52, blue: 0.22, alpha: 1),
+                                NSColor(srgbRed: 0.78, green: 0.27, blue: 0.05, alpha: 1)])!.draw(in: rr(pb, 3), angle: -90)
+            NSColor(white: 0, alpha: 0.6).setStroke(); let pp = rr(pb, 3); pp.lineWidth = 1; pp.stroke()
+            if let g = NSImage(systemSymbolName: "power", accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: 12, weight: .bold)) {
+                let t = NSImage(size: g.size, flipped: false) { r in
+                    g.draw(in: r); NSColor.white.set(); r.fill(using: .sourceAtop); return true }
+                t.draw(in: NSRect(x: pb.midX - g.size.width / 2, y: pb.midY - g.size.height / 2, width: g.size.width, height: g.size.height))
+            }
+            let ab = NSRect(x: pb.maxX + 4, y: sd.minY, width: 20, height: sd.height)
+            NSColor(white: 1, alpha: 0.12).setFill(); rr(ab, 3).fill()
+            let a = NSBezierPath()
+            a.move(to: NSPoint(x: ab.midX - 3, y: ab.midY - 4)); a.line(to: NSPoint(x: ab.midX + 2, y: ab.midY))
+            a.line(to: NSPoint(x: ab.midX - 3, y: ab.midY + 4)); a.close()
+            NSColor.white.setFill(); a.fill()
+        } else {
+            NSGradient(colors: [NSColor(white: hovered == .shutDown ? 0.82 : 0.74, alpha: 1), NSColor(white: 0.54, alpha: 1)])!.draw(in: rr(sd, 3), angle: 90)
+            NSColor(white: 0.32, alpha: 1).setStroke(); let sdp = rr(sd, 3); sdp.lineWidth = 1; sdp.stroke()
+            text("Shut down", NSPoint(x: sd.minX + 10, y: sd.midY - 8), font(12, false), darkText)
+            NSColor(white: 0.35, alpha: 1).setFill(); NSRect(x: sd.maxX - 20, y: sd.minY + 3, width: 1, height: sd.height - 6).fill()
+            let sar = NSBezierPath()
+            sar.move(to: NSPoint(x: sd.maxX - 14, y: sd.midY - 3))
+            sar.line(to: NSPoint(x: sd.maxX - 9, y: sd.midY))
+            sar.line(to: NSPoint(x: sd.maxX - 14, y: sd.midY + 3)); sar.close()
+            NSColor(white: 0.2, alpha: 1).setFill(); sar.fill()
+        }
 
         NSGraphicsContext.current?.restoreGraphicsState()
 

@@ -56,7 +56,7 @@ enum RetroFrameTheme {
         // it, so Snow Leopard and Mountain Lion share their own key instead of borrowing 2001's look.
         if name.contains("snow leopard") || name.contains("mountain lion") { return "snowleopard" }
         if name.contains("mac os x") { return "macosx" }
-        if name.contains("windows 7") { return "win7" }   // Aero glass chrome (drawWin7)
+        if name.contains("windows 7") || name.contains("windows vista") { return "win7" }   // Aero glass chrome (drawWin7)
         if name.contains("windows 98") { return "win98" }
         if name.contains("windows 95") { return "win98" }   // Win95 reuses the 98 chrome (solid navy via chromeColors)
         if name.contains("windows me") { return "win98" }   // Millennium Edition reuses the 98 chrome
@@ -71,6 +71,13 @@ enum RetroFrameTheme {
     /// True for any Mac OS X era theme, whichever Aqua generation it renders. Use this where the
     /// question is "is this a Mac OS X theme at all"; switch on `key()` where the look differs.
     static var isAquaFamily: Bool { key() == "macosx" || key() == "snowleopard" }
+
+    /// Windows Vista declares Windows 7's chrome key ("win7"): the Aero frames, widgets and tray are
+    /// the same. Ask this only where Vista looks different — the black glass taskbar, the Start
+    /// menu's foot and the one-line clock.
+    static var isVista: Bool {
+        key() == "win7" && ThemeManager.shared.activeTheme?.config.name == "Windows Vista"
+    }
 
     /// Process environment to merge into a launched game so it can match the RetroMac theme.
     static func gameEnv() -> [String: String] {

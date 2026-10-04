@@ -58,7 +58,7 @@ enum CrashEra: String, CaseIterable {
         if name.contains("windows 98") { return .win98 }
         if name.contains("windows me") { return .winMe }
         if name.contains("windows xp") { return .winXP }
-        if name.contains("windows 7")  { return .win7 }
+        if name.contains("windows 7") || name.contains("windows vista") { return .win7 }
         if name.contains("system 6") || name.contains("mac os 6") { return .macos6 }
         if name.contains("mac os 9")   { return .macos9 }
         if name.contains("snow leopard") || name.contains("mountain lion") { return .macosxModern }

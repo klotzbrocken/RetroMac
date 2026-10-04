@@ -603,7 +603,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows XP" || tn == "Windows 7") {
+               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows XP" || tn == "Windows 7" || tn == "Windows Vista") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -946,7 +946,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows XP" || tn == "Windows 7") {
+               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows XP" || tn == "Windows 7" || tn == "Windows Vista") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -4155,7 +4155,8 @@ final class DockView: NSView {
     /// Windows 7 Aero notification area: flat glass tray with a "show hidden icons" up-chevron,
     /// small network + volume glyphs, and a two-line time/date clock in dark ink.
     private func drawWin7Systray(clockFrame: NSRect, scale: CGFloat, theme: DockThemeConfig) {
-        let ink = NSColor(white: 0.16, alpha: 1)
+        let vista = RetroFrameTheme.isVista   // black glass: white ink, the time on one line
+        let ink = vista ? NSColor.white : NSColor(white: 0.16, alpha: 1)
         NSColor(white: 1, alpha: 0.30).setStroke()
         let sep = NSBezierPath()
         sep.move(to: NSPoint(x: clockFrame.minX + 0.5, y: clockFrame.minY + 5))
@@ -4178,6 +4179,13 @@ final class DockView: NSView {
                 if idx == 0 { win7NetFrame = r } else { win7VolFrame = r }
                 x += g.size.width + 6
             }
+        }
+        if vista {
+            let f = NSFont.systemFont(ofSize: max(10, theme.dock.iconSize * scale * 0.36))
+            let a: [NSAttributedString.Key: Any] = [.font: f, .foregroundColor: ink]
+            let sz = (clockString as NSString).size(withAttributes: a)
+            (clockString as NSString).draw(at: NSPoint(x: clockFrame.maxX - 8 - sz.width, y: cy - sz.height / 2), withAttributes: a)
+            return
         }
         // Two-line time / date clock, right-aligned, dark ink on the light glass bar.
         let df = DateFormatter(); df.dateFormat = "M/d/yyyy"
