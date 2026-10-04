@@ -33,7 +33,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settingsWindow = SettingsWindowController()
     private let welcomeFlow = WelcomeFlowWindowController()
     private let setupWizard = SetupWizardWindowController()
-    private let fpsOverlay = FPSOverlayController()
     private let windowPicker = WindowPicker()
     let tvBrowser = TVBrowserWindow()   // internal: Tube Mode's "Classic Themed Window" hands channels over
     private var appLaunchObserver: NSObjectProtocol?
@@ -55,11 +54,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Retro Viewport (movable shader window)
     private(set) var retroViewport = RetroViewport()
-
-    // Video recording with shader effects
-    private var shaderRecorder: ShaderRecorder?
-    /// Read by CrashScheduler — a simulated crash must never land in a recording.
-    var isRecordingShaderVideo: Bool { shaderRecorder?.isRecording == true }
 
     // Save/restore state for TV window overlay
     var savedPreset: String?
@@ -458,7 +452,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !wasActive { startOverlay(mode: .fullScreen) }
         rememberShaderStateForActiveTheme(on: true)         // persist "on" per theme (flyout path)
     }
-    func launcherToggleWebcam() { toggleVirtualCamera() }
     func launcherOpenSettings() { openSettings() }
     func launcherSelectPreset(_ id: String) {
         let item = NSMenuItem(); item.representedObject = id
@@ -1760,13 +1753,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isActive = false
         perAppBundleID = nil
 
-        if fpsOverlay.isVisible {
-            fpsOverlay.hide()
-        }
-
-        if AppSettings.shared.classicMacModeActive {
-            ClassicMacMode.deactivate()
-        }
+        // Classic Mac Mode is gone; a flag left on by an older version is cleared here once.
+        if AppSettings.shared.classicMacModeActive { AppSettings.shared.classicMacModeActive = false }
 
         updateMenuBarIcon()
         rebuildMenu()
@@ -2116,9 +2104,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 }
 
-                if self.fpsOverlay.isVisible {
-                    self.setupFPSTracking()
-                }
                 await MainActor.run {
                     self.updateMenuBarIcon()
                     self.rebuildMenu()
@@ -2293,22 +2278,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
-    @objc private func selectScanline(_ sender: NSMenuItem) {
-        let name = sender.representedObject as? String ?? ""
-        AppSettings.shared.scanlineOverlayName = name
-        overlayController?.loadOverlays()
-        wallpaperShaderController?.loadOverlays()
-        rebuildMenu()
-    }
-
-    @objc private func selectReflection(_ sender: NSMenuItem) {
-        let name = sender.representedObject as? String ?? ""
-        AppSettings.shared.reflectionName = name
-        overlayController?.loadOverlays()
-        wallpaperShaderController?.loadOverlays()
-        rebuildMenu()
-    }
-
     @objc private func selectDisplay(_ sender: NSMenuItem) {
         let displayID = CGDirectDisplayID(sender.tag)
         AppSettings.shared.targetDisplayID = displayID
@@ -2386,49 +2355,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isActive { disableAll() }
         if retroViewport.isActive { retroViewport.hide() }
         if VirtualCameraManager.shared.isRunning { VirtualCameraManager.shared.stop() }
-    }
-
-    func showOnboarding() {
-        welcomeFlow.showSetup()
-    }
-
-    /// Opens Settings so the user can enter a license key (from the coffee page).
-    func openSettingsForLicense() {
-        settingsWindow.show()
-    }
-
-    func applyOverlayToWindowID(_ windowID: CGWindowID, presetName: String, parentWindow: NSWindow? = nil, saveState: Bool = true) {
-        if saveState {
-            // Save current state so we can restore when the TV window closes
-            savedPreset = currentPresetName
-            savedWasActive = isActive
-            print("[RetroMac] TV overlay: saving state (preset=\(currentPresetName ?? "nil"), active=\(isActive))")
-        }
-
-        Task {
-            do {
-                let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-                guard let scWindow = content.windows.first(where: { $0.windowID == windowID }) else {
-                    print("[RetroMac] No SCWindow found for windowID \(windowID)")
-                    if saveState {
-                        self.savedPreset = nil
-                        self.savedWasActive = false
-                    }
-                    return
-                }
-                await MainActor.run {
-                    // Don't modify currentPresetName — pass preset via override
-                    // Pass parentWindow so overlay attaches as child (for TV windows)
-                    self.startOverlay(mode: .singleWindow(scWindow), presetOverride: presetName, parentWindow: parentWindow)
-                }
-            } catch {
-                print("[RetroMac] Window overlay error: \(error)")
-                if saveState {
-                    self.savedPreset = nil
-                    self.savedWasActive = false
-                }
-            }
-        }
     }
 
     /// Save current overlay state so it can be restored later via `restorePreviousOverlay()`.
@@ -2542,78 +2468,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
-    @objc private func toggleFPSOverlay() {
-        if fpsOverlay.isVisible {
-            fpsOverlay.hide()
-            overlayController?.stopFPSTracking()
-        } else {
-            fpsOverlay.show()
-            setupFPSTracking()
-        }
-        rebuildMenu()
-    }
-
-    @objc private func takeScreenshot() {
-        // Try the full overlay's captured frame first
-        var image: NSImage? = overlayController?.captureScreenshot()
-
-        // Lite overlay: no captured frame — grab the composited screen instead
-        if image == nil && crtLiteOverlay?.isActive == true {
-            let displayID = CGMainDisplayID()
-            if let cgImage = CGDisplayCreateImage(displayID) {
-                image = NSImage(cgImage: cgImage, size: NSSize(width: CGFloat(cgImage.width), height: CGFloat(cgImage.height)))
-            }
-        }
-
-        guard let image else {
-            print("[RetroMac] Screenshot failed: no frame available")
-            return
-        }
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd_HHmmss"
-        let timestamp = formatter.string(from: Date())
-        let filename = "RetroMac_\(timestamp).png"
-        let desktop = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first!
-        let url = desktop.appendingPathComponent(filename)
-
-        if let tiff = image.tiffRepresentation,
-           let bitmap = NSBitmapImageRep(data: tiff),
-           let pngData = bitmap.representation(using: .png, properties: [:]) {
-            try? pngData.write(to: url)
-            print("[RetroMac] Screenshot saved: \(url.path)")
-
-            let pb = NSPasteboard.general
-            pb.clearContents()
-            pb.writeObjects([image])
-
-            NSSound(named: "Tink")?.play()
-        }
-    }
-
-    private func setupFPSTracking() {
-        guard let controller = overlayController else { return }
-        controller.onFPSUpdate = { [weak self] report in
-            guard let self = self else { return }
-            let gpuMs = self.overlayController?.lastGPUTimeMs ?? 0
-            let res = report.resolution
-            let resStr = res.width > 0 ? "\(Int(res.width))×\(Int(res.height))" : "—"
-            self.fpsOverlay.update(render: report.renderFPS, capture: report.captureFPS,
-                                   captureAge: report.captureAge, gpuTimeMs: gpuMs,
-                                   resolution: resStr)
-        }
-        controller.startFPSTracking()
-    }
-
-    @objc private func toggleClassicMacMode() {
-        if AppSettings.shared.classicMacModeActive {
-            disableAll()
-        } else {
-            ClassicMacMode.activate()
-            rebuildMenu()
-        }
-    }
-
     private func phosphorValueString() -> String {
         let v = AppSettings.shared.phosphorPersistence
         return v <= 0.001 ? "Off" : "\(Int(v * 100))%"
@@ -2681,54 +2535,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             retroViewport.show(preset: preset)
         }
         rebuildMenu()
-    }
-
-    @objc private func selectViewportPreset(_ sender: NSMenuItem) {
-        guard let presetID = sender.representedObject as? String else { return }
-        AppSettings.shared.viewportPreset = presetID
-
-        if retroViewport.isActive {
-            retroViewport.switchPreset(presetID)
-        } else {
-            // Open viewport with the selected preset
-            retroViewport.show(preset: presetID)
-        }
-        rebuildMenu()
-    }
-
-    // MARK: - Video Recording
-
-    @objc private func toggleRecording() {
-        guard let renderer = overlayController?.renderer else { return }
-
-        if let recorder = renderer.recorder, recorder.isRecording {
-            // Stop recording
-            recorder.stopAndSave()
-            renderer.recorder = nil
-            rebuildMenu()
-        } else {
-            // Start recording
-            let device = renderer.device
-            let recorder = ShaderRecorder(device: device)
-
-            // Get current capture resolution from screen
-            let screen = NSScreen.main!
-            let scale = screen.backingScaleFactor
-            let w = Int(screen.frame.width * scale)
-            let h = Int(screen.frame.height * scale)
-
-            do {
-                try recorder.startRecording(width: w, height: h)
-                renderer.recorder = recorder
-                rebuildMenu()
-            } catch {
-                print("[RetroMac] Recording failed: \(error)")
-                let alert = NSAlert()
-                alert.messageText = "Recording Failed"
-                alert.informativeText = error.localizedDescription
-                alert.runModal()
-            }
-        }
     }
 
     /// The menu-bar status-item icon in screen coordinates (target for the onboarding coach mark).
@@ -4098,175 +3904,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }.resume()
     }
 
-    // MARK: - Legacy RetroArch Infrastructure (kept for potential future use)
-
-    /// Ensure RetroArch is installed, download if missing
-    private func ensureRetroArch(completion: @escaping (Bool) -> Void) {
-        let fm = FileManager.default
-        if fm.fileExists(atPath: "/Applications/RetroArch.app") {
-            completion(true)
-            return
-        }
-
-        let progressWindow = createProgressWindow(title: "Installing RetroArch…", detail: "Downloading RetroArch (Universal)…")
-
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let tempDir = NSTemporaryDirectory() + "retroarch_install"
-            try? fm.removeItem(atPath: tempDir)
-            try? fm.createDirectory(atPath: tempDir, withIntermediateDirectories: true, attributes: nil)
-
-            let dmgPath = tempDir + "/RetroArch.dmg"
-            let mountPoint = tempDir + "/ra_mount"
-            try? fm.createDirectory(atPath: mountPoint, withIntermediateDirectories: true, attributes: nil)
-
-            let dmgURL = "https://buildbot.libretro.com/stable/1.22.2/apple/osx/universal/RetroArch_Metal.dmg"
-
-            let download = Process()
-            download.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
-            download.arguments = ["-L", "-s", "-o", dmgPath,
-                                  "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-                                  dmgURL]
-            try? download.run()
-            download.waitUntilExit()
-
-            guard download.terminationStatus == 0,
-                  fm.fileExists(atPath: dmgPath),
-                  (try? fm.attributesOfItem(atPath: dmgPath)[.size] as? Int) ?? 0 > 1_000_000 else {
-                print("[RetroArch] DMG download failed")
-                DispatchQueue.main.async {
-                    progressWindow.close()
-                    let alert = NSAlert()
-                    alert.messageText = "Installation Failed"
-                    alert.informativeText = "Could not download RetroArch. Please install manually from retroarch.com."
-                    alert.addButton(withTitle: "Open Website")
-                    alert.addButton(withTitle: "Cancel")
-                    if alert.runModal() == .alertFirstButtonReturn {
-                        NSWorkspace.shared.open(URL(string: "https://www.retroarch.com/?page=platforms")!)
-                    }
-                    completion(false)
-                }
-                return
-            }
-
-            DispatchQueue.main.async {
-                self?.updateProgressWindow(progressWindow, detail: "Installing RetroArch…")
-            }
-
-            let mount = Process()
-            mount.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-            mount.arguments = ["attach", dmgPath, "-mountpoint", mountPoint, "-nobrowse", "-quiet"]
-            try? mount.run()
-            mount.waitUntilExit()
-
-            if let appPath = self?.findAppBundle(named: "RetroArch", in: mountPoint) {
-                self?.copyAppToApplications(appPath: appPath, targetName: "RetroArch.app") { success in
-                    let detach = Process()
-                    detach.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-                    detach.arguments = ["detach", mountPoint, "-quiet"]
-                    try? detach.run(); detach.waitUntilExit()
-                    try? fm.removeItem(atPath: tempDir)
-
-                    // Download Slang shaders after RetroArch is installed
-                    if success { self?.ensureRetroArchShaders() }
-
-                    DispatchQueue.main.async { progressWindow.close(); completion(success) }
-                }
-            } else {
-                let detach = Process()
-                detach.executableURL = URL(fileURLWithPath: "/usr/bin/hdiutil")
-                detach.arguments = ["detach", mountPoint, "-quiet"]
-                try? detach.run(); detach.waitUntilExit()
-                try? fm.removeItem(atPath: tempDir)
-                DispatchQueue.main.async { progressWindow.close(); completion(false) }
-            }
-        }
-    }
-
-    /// Download a RetroArch core from the libretro buildbot
     @discardableResult
     private func runUnzip(_ zipPath: String, into dir: String) -> Bool {
         TrustedDownloadInstaller.unzip(URL(fileURLWithPath: zipPath), into: URL(fileURLWithPath: dir))
-    }
-
-    private func ensureRetroArchCore(coreName: String, completion: @escaping (Bool) -> Void) {
-        let coresDir = NSHomeDirectory() + "/Library/Application Support/RetroArch/cores"
-        let corePath = coresDir + "/\(coreName).dylib"
-        let fm = FileManager.default
-
-        if fm.fileExists(atPath: corePath) {
-            completion(true)
-            return
-        }
-
-        try? fm.createDirectory(atPath: coresDir, withIntermediateDirectories: true, attributes: nil)
-
-        let progressWindow = createProgressWindow(title: "Downloading Core…", detail: "Downloading \(coreName)…")
-        let coreURL = "https://buildbot.libretro.com/nightly/apple/osx/arm64/latest/\(coreName).dylib.zip"
-
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let tempDir = NSTemporaryDirectory() + "core_download"
-            let zipPath = tempDir + "/core.zip"
-            try? fm.removeItem(atPath: tempDir)
-            try? fm.createDirectory(atPath: tempDir, withIntermediateDirectories: true, attributes: nil)
-
-            let download = Process()
-            download.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
-            download.arguments = ["-L", "-s", "-o", zipPath, coreURL]
-            try? download.run()
-            download.waitUntilExit()
-
-            guard download.terminationStatus == 0, fm.fileExists(atPath: zipPath) else {
-                print("[RetroArch] Core download failed: \(coreName)")
-                DispatchQueue.main.async { progressWindow.close(); completion(false) }
-                return
-            }
-
-            let unzipOK = self?.runUnzip(zipPath, into: coresDir) ?? false
-
-            try? fm.removeItem(atPath: tempDir)
-            let success = unzipOK && fm.fileExists(atPath: corePath)
-            print("[RetroArch] Core \(coreName): \(success ? "installed" : "failed")")
-            DispatchQueue.main.async { progressWindow.close(); completion(success) }
-        }
-    }
-
-    /// Ensure Slang CRT shaders are downloaded
-    private func ensureRetroArchShaders() {
-        let shadersDir = NSHomeDirectory() + "/Library/Application Support/RetroArch/shaders/shaders_slang/crt"
-        let fm = FileManager.default
-
-        // Check if crt-geom shader already exists
-        if fm.fileExists(atPath: shadersDir + "/crt-geom.slangp") { return }
-
-        let baseShaderDir = NSHomeDirectory() + "/Library/Application Support/RetroArch/shaders"
-        try? fm.createDirectory(atPath: baseShaderDir, withIntermediateDirectories: true, attributes: nil)
-
-        let shadersURL = "https://buildbot.libretro.com/assets/frontend/shaders_slang.zip"
-        let tempDir = NSTemporaryDirectory() + "shaders_download"
-        let zipPath = tempDir + "/shaders.zip"
-        try? fm.removeItem(atPath: tempDir)
-        try? fm.createDirectory(atPath: tempDir, withIntermediateDirectories: true, attributes: nil)
-
-        DispatchQueue.global(qos: .utility).async {
-            let download = Process()
-            download.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
-            download.arguments = ["-L", "-s", "-o", zipPath, shadersURL]
-            try? download.run()
-            download.waitUntilExit()
-
-            guard download.terminationStatus == 0, fm.fileExists(atPath: zipPath) else {
-                print("[RetroArch] Shader download failed")
-                try? fm.removeItem(atPath: tempDir)
-                return
-            }
-
-            let unzipOK = self.runUnzip(zipPath, into: baseShaderDir)
-
-            try? fm.removeItem(atPath: tempDir)
-            // Only claim success when the extraction was clean AND the expected shader landed.
-            let installed = unzipOK && fm.fileExists(atPath: shadersDir + "/crt-geom.slangp")
-            print("[RetroArch] Slang shaders \(installed ? "installed" : "install FAILED")")
-        }
     }
 
     private func downloadQuakeShareware(completion: @escaping (Bool) -> Void) {
@@ -4861,12 +4501,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         welcomeFlow.showCoffee()
     }
 
-    @objc private func selectCameraShader(_ sender: NSMenuItem) {
-        guard let shaderID = sender.representedObject as? String else { return }
-        VirtualCameraManager.shared.changeShader(shaderID)
-        rebuildMenu()
-    }
-
     func applicationWillTerminate(_ notification: Notification) {
         VirtualCameraManager.shared.stop()
         cleanupBeforeQuit()
@@ -4907,30 +4541,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - License / Nag
-
-    private func showFriendlyNag() {
-        let lm = LicenseManager.shared
-        lm.markNagDismissed()
-
-        let alert = NSAlert()
-        alert.messageText = "Enjoying RetroMac?"
-        alert.informativeText = "RetroMac is free. If you like it, buy me a coffee or unlock all \(PresetRegistry.builtinPresets.count) presets!"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Buy me a coffee ☕")
-        alert.addButton(withTitle: "Get All Presets")
-        alert.addButton(withTitle: "Later")
-
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            if let url = URL(string: LicenseManager.kofiURL) {
-                NSWorkspace.shared.open(url)
-            }
-        } else if response == .alertSecondButtonReturn {
-            if let url = URL(string: LicenseManager.purchaseURL) {
-                NSWorkspace.shared.open(url)
-            }
-        }
-    }
 
     private func showPresetLockedAlert(presetName: String) {
         // Show the unified coffee / unlock screen (with inline key entry) instead of the old alert.

@@ -46,9 +46,7 @@ extension Color {
     static let rmAccentText = Color(red: 0.090, green: 0.420, blue: 0.235)     // #176b3c
 
     // Status
-    static let rmStatusOn = Color(red: 0.122, green: 0.604, blue: 0.341)       // same as accent
     static let rmDanger = Color(red: 0.890, green: 0.341, blue: 0.231)         // #e3573b
-    static let rmWarning = Color(red: 0.878, green: 0.620, blue: 0.169)        // #e09e2b
     static let rmInfo = Color(red: 0.227, green: 0.510, blue: 0.910)           // #3a82e8
 }
 
@@ -68,9 +66,7 @@ extension Font {
     /// 13 pt sidebar item
     static let rmSidebarItem = Font.system(size: 13)
     /// 14 pt toolbar title, weight 600
-    static let rmToolbarTitle = Font.system(size: 15, weight: .semibold)
     /// 24 pt hero number, weight 600
-    static let rmHero = Font.system(size: 24, weight: .semibold).leading(.tight)
     /// Monospaced variant for FPS, resolution, percentages
     static func rmMono(size: CGFloat = 11, weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
@@ -89,7 +85,6 @@ enum RMSpacing {
     static let card: CGFloat = 16
     static let section: CGFloat = 18
     static let page: CGFloat = 20
-    static let pageLarge: CGFloat = 24
 }
 
 enum RMRadius {

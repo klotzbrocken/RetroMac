@@ -1276,26 +1276,6 @@ final class ThemeManager {
         return nil
     }
 
-    func deleteTheme(_ theme: ThemeBundle) throws {
-        guard !theme.isBuiltIn else {
-            print("[Theme] Cannot delete built-in theme")
-            return
-        }
-        try FileManager.default.removeItem(at: theme.url)
-        reload()
-        if activeTheme?.url == theme.url {
-            if let first = availableThemes.first {
-                setActiveTheme(name: first.name)
-            }
-        }
-    }
-
-    func duplicateTheme(_ theme: ThemeBundle, newName: String) throws -> ThemeBundle {
-        let copy = try ThemeBundle.create(name: newName, basedOn: theme, at: userThemesDir)
-        reload()
-        return copy
-    }
-
     // MARK: - Apply Theme Icons to System
 
     /// Apply the current theme's icons to actual apps on disk via NSWorkspace.setIcon

@@ -97,11 +97,6 @@ final class RetroRenderer {
         }
     }
 
-    // Recording
-    var recorder: ShaderRecorder?
-
-    private(set) var lastGPUTimeMs: Double = 0
-    private var gpuSampleCounter: UInt32 = 0
 
     init(device: MTLDevice) throws {
         self.device = device
@@ -245,58 +240,8 @@ final class RetroRenderer {
             bloom.apply(source: drawable.texture, drawable: drawable, commandBuffer: commandBuffer, viewportSize: viewportSize)
         }
 
-        gpuSampleCounter &+= 1
-        let shouldSample = gpuSampleCounter % 30 == 0
-        if shouldSample {
-            commandBuffer.addCompletedHandler { [weak self] buf in
-                let gpuTime = (buf.gpuEndTime - buf.gpuStartTime) * 1000
-                self?.lastGPUTimeMs = gpuTime
-            }
-        }
-
-        // Recording: capture the rendered frame for video output
-        if let recorder = recorder, recorder.isRecording {
-            // Schedule a blit to a managed texture for recording
-            // (done after bloom so the recording includes the effect)
-            let recTex = ensureRecordingTexture(width: drawable.texture.width, height: drawable.texture.height)
-            if let recTex = recTex, let blit = commandBuffer.makeBlitCommandEncoder() {
-                blit.copy(from: drawable.texture, to: recTex)
-                blit.synchronize(resource: recTex)
-                blit.endEncoding()
-                commandBuffer.addCompletedHandler { _ in
-                    recorder.addFrame(texture: recTex)
-                }
-            }
-        }
-
         commandBuffer.present(drawable)
         commandBuffer.commit()
-    }
-
-    // Recording textures: a small ring (triple-buffered) so consecutive frames don't
-    // serialize on a single managed texture's CPU readback (the per-frame blit + readback
-    // would otherwise stall the GPU waiting on the previous frame's addCompletedHandler).
-    private var recordingTextures: [MTLTexture] = []
-    private var recordingTextureIndex = 0
-    private let recordingRingSize = 3
-
-    private func ensureRecordingTexture(width: Int, height: Int) -> MTLTexture? {
-        if recordingTextures.count == recordingRingSize,
-           recordingTextures[0].width == width, recordingTextures[0].height == height {
-            let tex = recordingTextures[recordingTextureIndex]
-            recordingTextureIndex = (recordingTextureIndex + 1) % recordingRingSize
-            return tex
-        }
-        // (Re)build the ring at the current size.
-        let desc = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false
-        )
-        desc.usage = [.shaderRead, .renderTarget]
-        desc.storageMode = .managed
-        recordingTextures = (0..<recordingRingSize).compactMap { _ in device.makeTexture(descriptor: desc) }
-        guard !recordingTextures.isEmpty else { recordingTextureIndex = 0; return nil }
-        recordingTextureIndex = 1 % recordingTextures.count
-        return recordingTextures[0]
     }
 
     func renderToImage(sourceTexture: MTLTexture, viewportSize: CGSize) -> NSImage? {
@@ -479,74 +424,6 @@ final class RetroRenderer {
         commandBuffer.commit()
         commandBuffer.waitUntilCompleted()
         frameCount &+= 1
-    }
-
-    /// Render to an IOSurface-backed texture without blocking the calling thread.
-    /// Used by VirtualCameraManager to avoid stalling the capture queue.
-    func renderToTextureAsync(sourceTexture: MTLTexture, target: MTLTexture, viewportSize: CGSize) {
-        guard let pipeline = currentPipeline,
-              let commandBuffer = commandQueue.makeCommandBuffer() else { return }
-
-        let fw = Float(viewportSize.width)
-        let fh = Float(viewportSize.height)
-        let sw = Float(sourceTexture.width)
-        let sh = Float(sourceTexture.height)
-
-        var uniforms = ShaderUniforms(
-            mvp: makeOrthographic(width: fw, height: fh),
-            outputSize: SIMD4<Float>(fw, fh, 1.0 / fw, 1.0 / fh),
-            sourceSize: SIMD4<Float>(sw, sh, 1.0 / sw, 1.0 / sh),
-            originalSize: SIMD4<Float>(sw, sh, 1.0 / sw, 1.0 / sh),
-            finalViewportSize: SIMD4<Float>(fw, fh, 1.0 / fw, 1.0 / fh),
-            frameCount: frameCount,
-            frameDirection: 1,
-            intensity: intensity,
-            vignetteIntensity: vignetteIntensity
-        )
-
-        let renderDesc = MTLRenderPassDescriptor()
-        renderDesc.colorAttachments[0].texture = target
-        renderDesc.colorAttachments[0].loadAction = .dontCare
-        renderDesc.colorAttachments[0].storeAction = .store
-
-        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderDesc) else { return }
-
-        encoder.setRenderPipelineState(pipeline)
-        encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        encoder.setVertexBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 1)
-        encoder.setFragmentBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.size, index: 0)
-        encoder.setFragmentTexture(sourceTexture, index: 0)
-        encoder.setFragmentSamplerState(sampler, index: 0)
-        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-
-        encoder.endEncoding()
-        commandBuffer.commit()
-        // No waitUntilCompleted — IOSurface is read by extension on next poll
-        frameCount &+= 1
-    }
-
-    /// Composite a lower-third overlay texture onto an existing target (alpha-over blend)
-    func compositeLowerThird(texture: MTLTexture, pipeline: MTLRenderPipelineState, target: MTLTexture, viewportSize: CGSize, slideOffset: Float) {
-        guard let commandBuffer = commandQueue.makeCommandBuffer() else { return }
-
-        let renderDesc = MTLRenderPassDescriptor()
-        renderDesc.colorAttachments[0].texture = target
-        renderDesc.colorAttachments[0].loadAction = .load  // preserve existing content
-        renderDesc.colorAttachments[0].storeAction = .store
-
-        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderDesc) else { return }
-
-        var slide = slideOffset
-        encoder.setRenderPipelineState(pipeline)
-        encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        encoder.setVertexBytes(&slide, length: MemoryLayout<Float>.size, index: 1)
-        encoder.setFragmentTexture(texture, index: 0)
-        encoder.setFragmentSamplerState(sampler, index: 0)
-        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-
-        encoder.endEncoding()
-        commandBuffer.commit()
-        // No waitUntilCompleted — lower-third composites on IOSurface read asynchronously
     }
 
     // MARK: - Setup

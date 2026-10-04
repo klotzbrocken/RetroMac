@@ -83,15 +83,6 @@ final class OverlayManager {
             .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
 
-    static func allOverlays(type: OverlayType) -> [OverlayInfo] {
-        let builtins: [OverlayInfo]
-        switch type {
-        case .scanline: builtins = builtinScanlines
-        case .reflection: builtins = builtinReflections
-        }
-        return builtins + customOverlays(type: type)
-    }
-
     static func overlaysDirectory() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         return appSupport.appendingPathComponent(overlaysDirName)

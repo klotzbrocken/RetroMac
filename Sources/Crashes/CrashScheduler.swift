@@ -94,7 +94,6 @@ final class CrashScheduler {
         case noTheme
         case noScenarios
         case streaming
-        case recording
         case screenLocked
         case fullscreenApp
         case presenting(String)
@@ -113,7 +112,6 @@ final class CrashScheduler {
             case .noTheme:          return "No theme is active."
             case .noScenarios:      return "This theme has no crashes yet."
             case .streaming:        return "Paused — RetroMac's virtual camera is running."
-            case .recording:        return "Paused — RetroMac is recording shader video."
             case .screenLocked:     return "The screen is locked."
             case .fullscreenApp:    return "Paused — an app is running full screen."
             case .presenting(let app): return "Paused — \(app) is running."
@@ -271,7 +269,6 @@ final class CrashScheduler {
 
         // The reasons that hold even when the user asked for it by hand.
         if VirtualCameraManager.shared.isRunning { return .streaming }
-        if (NSApp.delegate as? AppDelegate)?.isRecordingShaderVideo == true { return .recording }
         if ScreensaverController.shared.active { return .screenLocked }
         if isScreenLocked() { return .screenLocked }
         if isSomeoneFullScreen() { return .fullscreenApp }

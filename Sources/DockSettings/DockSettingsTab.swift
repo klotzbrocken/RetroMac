@@ -7,7 +7,6 @@ struct DockSettingsTab: View {
     @State private var dockApps: [DockApp] = []
     @State private var themes: [ThemeBundle] = []
     @State private var newThemeName: String = ""
-    @State private var showingSaveSheet: Bool = false
     @State private var iconOverrideRefresh: Bool = false
     @State private var showAllApps: Bool = false
     @State private var showAdvanced: Bool = false

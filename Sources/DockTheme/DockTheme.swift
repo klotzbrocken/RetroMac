@@ -310,7 +310,6 @@ extension DockThemeConfig {
     var parsedBackgroundColor: NSColor { NSColor.fromHex(dock.backgroundColor) }
     var parsedBorderColor: NSColor { NSColor.fromHex(dock.borderColor) }
     var parsedShadowColor: NSColor { NSColor.fromHex(dock.shadowColor) }
-    var parsedIndicatorColor: NSColor { NSColor.fromHex(indicator.color) }
     var parsedBevelTopColor: NSColor? { dock.bevelTopColor.map { NSColor.fromHex($0) } }
     var parsedBevelBottomColor: NSColor? { dock.bevelBottomColor.map { NSColor.fromHex($0) } }
     var parsedGradientTop: NSColor? { dock.backgroundGradientTop.map { NSColor.fromHex($0) } }
@@ -429,15 +428,4 @@ extension NSColor {
         return NSColor(red: r, green: g, blue: b, alpha: a)
     }
 
-    var hexString: String {
-        guard let c = usingColorSpace(.sRGB) else { return "#FFFFFFFF" }
-        let r = Int(c.redComponent * 255)
-        let g = Int(c.greenComponent * 255)
-        let b = Int(c.blueComponent * 255)
-        let a = Int(c.alphaComponent * 255)
-        if a == 255 {
-            return String(format: "#%02X%02X%02X", r, g, b)
-        }
-        return String(format: "#%02X%02X%02X%02X", r, g, b, a)
-    }
 }

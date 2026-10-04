@@ -90,36 +90,6 @@ final class BloomFilter {
         encoder.endEncoding()
     }
 
-    /// Variant for IOSurface/texture targets (video recording, virtual camera)
-    func apply(source: MTLTexture, target: MTLTexture, commandBuffer: MTLCommandBuffer) {
-        guard intensity > 0 else { return }
-
-        ensureTextures(width: source.width, height: source.height)
-        guard let half = halfTexture else { return }
-
-        scaleKernel.encode(commandBuffer: commandBuffer, sourceTexture: source, destinationTexture: half)
-        blurKernel.encode(commandBuffer: commandBuffer, inPlaceTexture: &halfTexture!, fallbackCopyAllocator: nil)
-
-        let renderDesc = MTLRenderPassDescriptor()
-        renderDesc.colorAttachments[0].texture = target
-        renderDesc.colorAttachments[0].loadAction = .load
-        renderDesc.colorAttachments[0].storeAction = .store
-
-        guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderDesc),
-              let pipeline = compositePipeline else { return }
-
-        var bloomIntensity = intensity
-        var bloomThreshold = threshold
-        encoder.setRenderPipelineState(pipeline)
-        encoder.setVertexBuffer(vertexBuffer, offset: 0, index: 0)
-        encoder.setFragmentTexture(half, index: 0)
-        encoder.setFragmentSamplerState(sampler, index: 0)
-        encoder.setFragmentBytes(&bloomIntensity, length: MemoryLayout<Float>.size, index: 0)
-        encoder.setFragmentBytes(&bloomThreshold, length: MemoryLayout<Float>.size, index: 1)
-        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
-        encoder.endEncoding()
-    }
-
     // MARK: - Private
 
     private func ensureTextures(width: Int, height: Int) {

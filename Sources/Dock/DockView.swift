@@ -104,9 +104,6 @@ final class DockView: NSView {
     // Doom Slayer — DOOM-themed counterpart to the Pac-Man border (borderStyle "doomslayer").
     private let doomSlayer = DoomSlayerController()
     private var clockLabelLayers: [CATextLayer] = []
-    private var clockTopStart: CGFloat = 0
-    private var clockTopEnd: CGFloat = 0
-    private var clockDotDists: [CGFloat] = []
     private var lastClockHour: Int = -1
     // Ghosts that chase Pac-Man (spawned on icon hover; max 2).
     private final class PacGhost {
@@ -504,7 +501,6 @@ final class DockView: NSView {
             diskFreeFrame = .zero
 
             // Pinned apps
-            let allBundleIDs = apps.map { $0.bundleID }
             for (i, app) in apps.enumerated() {
                 let y = (barRect.height - iconSize) / 2
                 addItem(bundleID: app.bundleID,
@@ -4614,11 +4610,6 @@ final class DockView: NSView {
         // the classic Win98 path identical to the working XP path.
         guard let theme = ThemeManager.shared.activeTheme, let iconURL = theme.iconResource(name) else { return nil }
         return NSImage(contentsOf: iconURL)
-    }
-
-    private func dismissStartMenu() {
-        startMenuPanel?.dismiss()
-        startMenuPanel = nil
     }
 
     // MARK: - Clock

@@ -38,22 +38,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     private var resizeDebounceTimer: DispatchSourceTimer?
     private var trackingIsMoving = false
 
-    /// What the HUD reports, per output surface.
-    ///
-    /// One shared counter incremented in `draw(in:)` could not answer the question it was there
-    /// for. It summed across screens, so two displays at a healthy 30 read as 60; and because
-    /// `draw` deliberately re-presents the last texture when ScreenCaptureKit falls silent on a
-    /// static display, a perfect number could equally mean the capture had stalled seconds ago.
-    /// Render ticks and delivered capture frames are counted separately now, per view, with the
-    /// age of the newest capture frame alongside.
-    struct FPSReport {
-        var renderFPS: [Int] = []
-        var captureFPS: [Int] = []
-        /// Seconds since the most recent capture frame on any surface.
-        var captureAge: Double = 0
-        var resolution: CGSize = .zero
-    }
-
     /// While this deadline is in the future, incoming capture frames are dropped and the last one
     /// keeps being presented.
     ///
@@ -69,12 +53,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         textureLock.withLock { holdFramesUntil = CACurrentMediaTime() + seconds }
     }
 
-    private var renderTicks: [ObjectIdentifier: Int] = [:]
-    private var captureTicks: [ObjectIdentifier: Int] = [:]
-    private var lastCaptureAt: CFTimeInterval = 0
-    private var fpsTimer: DispatchSourceTimer?
-    var onFPSUpdate: ((FPSReport) -> Void)?
-
     var intensity: Float {
         get { renderer?.intensity ?? 1.0 }
         set { renderer?.intensity = newValue }
@@ -83,10 +61,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
     var vignetteIntensity: Float {
         get { renderer?.vignetteIntensity ?? 0.0 }
         set { renderer?.vignetteIntensity = newValue }
-    }
-
-    var lastGPUTimeMs: Double {
-        renderer?.lastGPUTimeMs ?? 0
     }
 
     static func create(mode: CaptureMode = .fullScreen) async throws -> OverlayWindowController {
@@ -365,8 +339,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                                 guard let self, CACurrentMediaTime() >= self.holdFramesUntil else { return }
                                 self.viewTextures[viewID] = texture
                                 self.viewDirtyFlags[viewID] = true
-                                self.captureTicks[viewID, default: 0] += 1
-                                self.lastCaptureAt = CACurrentMediaTime()
                             }
                         }
                         manager.onFirstFrame = { [weak self] in
@@ -400,8 +372,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                         guard let self, CACurrentMediaTime() >= self.holdFramesUntil else { return }
                         self.viewTextures[viewID] = texture
                         self.viewDirtyFlags[viewID] = true
-                        self.captureTicks[viewID, default: 0] += 1
-                        self.lastCaptureAt = CACurrentMediaTime()
                     }
                 }
                 manager.onFirstFrame = { [weak self] in
@@ -509,8 +479,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                 guard let self, CACurrentMediaTime() >= self.holdFramesUntil else { return }
                 self.viewTextures[viewID] = texture
                 self.viewDirtyFlags[viewID] = true
-                self.captureTicks[viewID, default: 0] += 1
-                self.lastCaptureAt = CACurrentMediaTime()
             }
         }
         manager.onFirstFrame = { [weak self] in
@@ -541,7 +509,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
                 NSWorkspace.shared.notificationCenter.removeObserver(obs)
                 self.spaceObserver = nil
             }
-            self.stopFPSTracking()
             for manager in self.captureManagers { manager.stop() }
             self.captureManagers.removeAll()
             for view in self.metalViews { view.isPaused = true }
@@ -599,51 +566,6 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         // would show the untouched wallpaper straight through the shaded copy of it.
         renderer.render(sourceTexture: texture, to: drawable, viewportSize: view.drawableSize,
                         opaque: isDesktopScope, output: view)
-        textureLock.withLock { renderTicks[viewID, default: 0] += 1 }
-    }
-
-    func startFPSTracking() {
-        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
-        timer.schedule(deadline: .now() + 1, repeating: 1)
-        timer.setEventHandler { [weak self] in
-            guard let self = self else { return }
-            var report = FPSReport()
-            self.textureLock.withLock {
-                // Ordered by the views themselves, so display 1 stays display 1 between ticks
-                // rather than following an unordered dictionary.
-                for view in self.metalViews {
-                    let id = ObjectIdentifier(view)
-                    report.renderFPS.append(self.renderTicks[id] ?? 0)
-                    report.captureFPS.append(self.captureTicks[id] ?? 0)
-                }
-                self.renderTicks.removeAll(keepingCapacity: true)
-                self.captureTicks.removeAll(keepingCapacity: true)
-                if let first = self.metalViews.first,
-                   let tex = self.viewTextures[ObjectIdentifier(first)] {
-                    report.resolution = CGSize(width: tex.width, height: tex.height)
-                }
-                report.captureAge = self.lastCaptureAt > 0
-                    ? CACurrentMediaTime() - self.lastCaptureAt
-                    : 0
-            }
-            self.onFPSUpdate?(report)
-        }
-        timer.resume()
-        fpsTimer = timer
-    }
-
-    func stopFPSTracking() {
-        fpsTimer?.cancel()
-        fpsTimer = nil
-    }
-
-    func captureScreenshot() -> NSImage? {
-        let texture: MTLTexture? = textureLock.withLock {
-            viewTextures.values.first
-        }
-        guard let source = texture else { return nil }
-        let size = CGSize(width: source.width, height: source.height)
-        return renderer.renderToImage(sourceTexture: source, viewportSize: size)
     }
 
     // MARK: - Child Window Attachment (for TV overlay)

@@ -88,19 +88,6 @@ enum EmulatorType: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Path to the executable inside the .app bundle
-    var executablePath: String {
-        let appName: String
-        switch self {
-        case .ares: appName = "ares"
-        case .dolphin: appName = "Dolphin"
-        case .duckStation: appName = "DuckStation"
-        case .pcsx2: appName = "PCSX2"
-        case .stella: appName = "Stella"
-        }
-        return "\(appPath)/Contents/MacOS/\(appName)"
-    }
-
     /// Direct download URL for auto-installation (nil = manual only)
     var downloadURL: String? {
         switch self {

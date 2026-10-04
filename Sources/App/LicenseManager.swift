@@ -83,7 +83,6 @@ final class LicenseManager: ObservableObject {
     private let licenseEmailKey = "licenseEmail"
     private let licenseValidKey = "licenseValid"
     private let lastValidationKey = "lastLicenseValidation"
-    private let nagDismissedKey = "lastNagDismissed"
 
     @Published var licenseKey: String
     @Published var licenseEmail: String
@@ -99,21 +98,6 @@ final class LicenseManager: ObservableObject {
         if isLicensed { return true }
         if presetID.hasPrefix("custom:") { return true }  // user's own shaders are always available
         return Self.freePresetIDs.contains(presetID)
-    }
-
-    /// Whether to show the friendly nag (at most once per day, not on first launch)
-    var shouldShowNag: Bool {
-        if isLicensed { return false }
-        if !AppSettings.shared.onboardingComplete { return false }
-        if let lastDismissed = defaults.object(forKey: nagDismissedKey) as? Date {
-            let daysSince = Calendar.current.dateComponents([.day], from: lastDismissed, to: Date()).day ?? 0
-            return daysSince >= 1
-        }
-        return true
-    }
-
-    func markNagDismissed() {
-        defaults.set(Date(), forKey: nagDismissedKey)
     }
 
     /// Whether the recurring coffee/unlock page should appear (unlicensed + 30-day ack window).

@@ -153,10 +153,6 @@ enum WarcraftGame {
         }
     }
 
-    static func isPlayable(_ title: Title) -> Bool {
-        isEngineAvailable(title) && hasExtractedData(title)
-    }
-
     // MARK: - Runtime
 
     private static var supportDir: URL {

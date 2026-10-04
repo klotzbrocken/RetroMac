@@ -1555,15 +1555,6 @@ final class TitleBarOverlayView: NSView {
         needsDisplay = true
     }
 
-    /// Whether the panel should take the mouse at `p` (view coordinates). An inactive Platinum
-    /// bar shows no boxes, so it has none to hit; its dead zone still takes the click, to
-    /// activate the window.
-    func isHot(_ p: NSPoint) -> Bool {
-        let boxesShown = true   // the Platinum boxes are drawn in every state now, like the widgets'
-        if boxesShown, buttonRects.contains(where: { $0.1.insetBy(dx: -3, dy: -3).contains(p) }) { return true }
-        return deadZone.contains(p)
-    }
-
     func hover(at p: NSPoint) { if tracker.mouseMoved(to: p) { needsDisplay = true } }
     func hoverEnded() { if tracker.mouseExited() { needsDisplay = true } }
 

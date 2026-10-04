@@ -400,30 +400,6 @@ enum CrashDialogRenderer {
          "0053f6c4 00000000 bff9db49 0063fd54 00000001 00000000"]
     }
 
-    /// The white-on-red stop sign of the 9x error dialogs, drawn rather than shipped.
-    private static func drawStopIcon(_ rect: NSRect) {
-        let r = rect.insetBy(dx: 1, dy: 1)
-        let path = NSBezierPath()
-        let cut = r.width * 0.30
-        path.move(to: NSPoint(x: r.minX + cut, y: r.minY))
-        path.line(to: NSPoint(x: r.maxX - cut, y: r.minY))
-        path.line(to: NSPoint(x: r.maxX, y: r.minY + cut))
-        path.line(to: NSPoint(x: r.maxX, y: r.maxY - cut))
-        path.line(to: NSPoint(x: r.maxX - cut, y: r.maxY))
-        path.line(to: NSPoint(x: r.minX + cut, y: r.maxY))
-        path.line(to: NSPoint(x: r.minX, y: r.maxY - cut))
-        path.line(to: NSPoint(x: r.minX, y: r.minY + cut))
-        path.close()
-        NSColor(srgbRed: 0.78, green: 0.0, blue: 0.0, alpha: 1).setFill()
-        path.fill()
-        NSColor.white.setStroke()
-        let bar = NSBezierPath()
-        bar.move(to: NSPoint(x: r.minX + r.width * 0.22, y: r.midY))
-        bar.line(to: NSPoint(x: r.maxX - r.width * 0.22, y: r.midY))
-        bar.lineWidth = max(2, r.width * 0.13)
-        bar.stroke()
-    }
-
     // MARK: - Macintosh
 
     /// The caution triangle, for the alerts that were not a bomb.

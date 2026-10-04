@@ -72,24 +72,6 @@ final class VirtualCameraManager: NSObject, ObservableObject {
 
     // MARK: - Public API
 
-    private var pendingReactivation = false
-
-    func installExtension() {
-        activateExtension()
-    }
-
-    /// Deactivate then reactivate to force CMIO to re-register the launchd job
-    func reinstallExtension() {
-        logger.info("Reinstalling Camera Extension (deactivate → reactivate)…")
-        pendingReactivation = true
-        let request = OSSystemExtensionRequest.deactivationRequest(
-            forExtensionWithIdentifier: Self.extensionBundleID,
-            queue: .main
-        )
-        request.delegate = self
-        OSSystemExtensionManager.shared.submitRequest(request)
-    }
-
     func activateExtension() {
         logger.info("Requesting Camera Extension activation…")
         let request = OSSystemExtensionRequest.activationRequest(
@@ -572,24 +554,14 @@ extension VirtualCameraManager: OSSystemExtensionRequestDelegate {
     func request(_ request: OSSystemExtensionRequest, didFinishWithResult result: OSSystemExtensionRequest.Result) {
         switch result {
         case .completed:
-            if pendingReactivation {
-                logger.info("Camera Extension deactivated — now reactivating…")
-                pendingReactivation = false
-                extensionActivated = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    self.startAfterActivation = true
-                    self.activateExtension()
-                }
-            } else {
-                logger.info("Camera Extension activated successfully")
-                DispatchQueue.main.async {
-                    self.extensionActivated = true
-                    if self.startAfterActivation {
-                        self.startAfterActivation = false
-                        // Small delay to let extension start polling before we publish IOSurface
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            self.start()
-                        }
+            logger.info("Camera Extension activated successfully")
+            DispatchQueue.main.async {
+                self.extensionActivated = true
+                if self.startAfterActivation {
+                    self.startAfterActivation = false
+                    // Small delay to let extension start polling before we publish IOSurface
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        self.start()
                     }
                 }
             }
@@ -616,7 +588,6 @@ extension VirtualCameraManager: OSSystemExtensionRequestDelegate {
         DispatchQueue.main.async {
             self.activationPending = false
             self.startAfterActivation = false
-            self.pendingReactivation = false
             NotificationCenter.default.post(name: .virtualCameraStateChanged, object: nil)
             self.showActivationAlert(
                 title: "Couldn’t enable the virtual camera",

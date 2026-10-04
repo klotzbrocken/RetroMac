@@ -180,14 +180,6 @@ final class CursorThemeManager {
     /// Crash / force-quit recovery, run at launch.
     func restoreIfNeeded() { restore() }
 
-    /// Discard the factory snapshot so the next apply captures a fresh one. Only for the case
-    /// where the stored originals are known to be wrong; there is no way back afterwards.
-    func forgetCapturedOriginals() {
-        try? FileManager.default.removeItem(at: backupDir)
-        d.removeObject(forKey: legacySnapKey)
-        print("[Cursor] Dropped the captured originals")
-    }
-
     // MARK: - CGS plumbing
 
     private func registerGroup(_ slot: CursorSlot, _ f: CursorFrames) {

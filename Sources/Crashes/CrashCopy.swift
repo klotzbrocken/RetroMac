@@ -211,24 +211,6 @@ enum CrashCopy {
             escalatesToBlueScreen: true)
     }
 
-    static func win9xIllegalOperation(using rng: inout CrashRNG) -> ErrorDialog {
-        let app = pick(culprits, using: &rng)
-        let module = pick(modules, using: &rng)
-        let addr = "0\(hex(3, using: &rng)):bf\(hex(6, using: &rng))"
-        return ErrorDialog(
-            title: "\(app)",
-            body: ["This program has performed an illegal operation",
-                   "and will be shut down.",
-                   "",
-                   "If the problem persists, contact the program",
-                   "vendor.",
-                   "",
-                   "\(app) caused an invalid page fault in",
-                   "module \(module) at \(addr)."],
-            buttons: ["Close", "Details >>"],
-            restartButton: nil)
-    }
-
     // MARK: - Windows XP and 7
 
     /// The NT Stop screen. Head and body are fixed — that block of advice is the same on every

@@ -190,12 +190,6 @@ final class NextDockView: NSView {
         }
     }
 
-    private func trashEmpty() -> Bool {
-        let trash = URL(fileURLWithPath: NSHomeDirectory() + "/.Trash")
-        let items = (try? FileManager.default.contentsOfDirectory(atPath: trash.path)) ?? []
-        return items.filter { $0 != ".DS_Store" }.isEmpty
-    }
-
     /// The iconic NeXT clock/calendar tile: green digital time on a dark LCD, a white calendar
     /// leaf below with weekday, big day number and month. Drawn natively (no logo/trademark).
     private func drawClock(in r: NSRect, ctx: CGContext) {

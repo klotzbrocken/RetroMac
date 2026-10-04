@@ -416,12 +416,6 @@ final class ProgramManagerView: NSView {
         }
         layoutMinimizedIcons()
     }
-    @objc private func menuSelectGroup(_ sender: NSMenuItem) {
-        guard let gv = sender.representedObject as? ProgramGroupView else { return }
-        if gv.isMinimized { gv.restore() }
-        activate(gv)
-    }
-    @objc private func menuHelp() { menuAbout() }
     @objc private func menuAbout() {
         let a = NSAlert()
         a.messageText = "Program Manager"

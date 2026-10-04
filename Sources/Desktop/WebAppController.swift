@@ -56,11 +56,6 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         return urlString
     }
 
-    static func closeAll() {
-        Array(openWindows.values).forEach { $0.close() }   // full teardown (handlers + webview), not just orderOut
-        openWindows.removeAll()
-    }
-
     private let appName: String
     private let appURL: String
     private let appIcon: String?

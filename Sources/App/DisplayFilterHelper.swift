@@ -161,11 +161,6 @@ enum DisplayFilterHelper {
         }
     }
 
-    /// Legacy name — calls restoreFilter()
-    static func restoreGrayscale() {
-        restoreFilter()
-    }
-
     /// Whether we're currently managing a display filter
     static var isActive: Bool { isManaging }
 

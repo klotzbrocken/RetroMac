@@ -68,10 +68,6 @@ enum RetroFrameTheme {
         return "default"
     }
 
-    /// True for any Mac OS X era theme, whichever Aqua generation it renders. Use this where the
-    /// question is "is this a Mac OS X theme at all"; switch on `key()` where the look differs.
-    static var isAquaFamily: Bool { key() == "macosx" || key() == "snowleopard" }
-
     /// Windows Vista declares Windows 7's chrome key ("win7"): the Aero frames, widgets and tray are
     /// the same. Ask this only where Vista looks different — the black glass taskbar, the Start
     /// menu's foot and the one-line clock.

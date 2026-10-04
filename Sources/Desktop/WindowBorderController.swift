@@ -35,9 +35,6 @@ final class WindowBorderController {
     private var borders: [CGWindowID: SkyBorder] = [:]
     private var currentStyle: WindowBorderStyle = .none
     private var currentKey = "default"
-    /// The width of the frame being drawn right now (0 when borders are off), for the title
-    /// bar to stretch over it.
-    var activeBorderWidth: CGFloat { running ? currentStyle.width : 0 }
     private var wsTokens: [NSObjectProtocol] = []
     private var syncTimer: Timer?
     private var didRegisterEvents = false
@@ -357,12 +354,6 @@ final class WindowBorderController {
         for (target, b) in borders { skb_order(b.wid, b.level, target) }
     }
 
-    private var syncScheduled = false
-    private func scheduleSync() {
-        guard !syncScheduled else { return }
-        syncScheduled = true
-        DispatchQueue.main.async { [weak self] in self?.syncScheduled = false; self?.sync() }
-    }
 
     private func drawInto(_ b: SkyBorder) {
         // Under a Windows bar the caption is the top of the frame, so the ring has no top edge

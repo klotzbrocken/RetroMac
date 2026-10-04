@@ -22,12 +22,6 @@ enum RetroFonts {
         return NSFont(name: "ChiKareGo2", size: size) ?? NSFont(name: "Charcoal", size: size) ?? .systemFont(ofSize: size)
     }
 
-    /// Pixel Operator (Jayvee Enaguas, CC0): an 8 px grid, sized in multiples of 16.
-    static func pixelOperator(_ size: CGFloat = 16) -> NSFont {
-        registerIfNeeded()
-        return NSFont(name: "PixelOperator", size: size) ?? .systemFont(ofSize: size)
-    }
-
     /// A font by name, registered the same way, for themes that name one of the shipped faces.
     static func named(_ name: String, size: CGFloat) -> NSFont? {
         registerIfNeeded()

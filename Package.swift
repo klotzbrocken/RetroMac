@@ -20,7 +20,7 @@ let package = Package(
                 "SkyLightBridge",
             ],
             path: "Sources",
-            exclude: ["CameraExtension", "DALPlugin", "SkyLightBridge"],
+            exclude: ["CameraExtension", "SkyLightBridge"],
             resources: [
                 .copy("../Resources/Themes"),
                 .copy("../Resources/TV"),

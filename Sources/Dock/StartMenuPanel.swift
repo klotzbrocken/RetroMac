@@ -334,11 +334,8 @@ private final class XPStartMenuContentView: NSView, StartMenuPanel.SubmenuHost {
     private let headerBlueBottom = NSColor(red: 0.05, green: 0.22, blue: 0.66, alpha: 1.0)
     private let leftPanelBg = NSColor.white
     private let rightPanelBg = NSColor(red: 0.82, green: 0.87, blue: 0.96, alpha: 1.0)
-    private let footerGray = NSColor(red: 0.82, green: 0.87, blue: 0.96, alpha: 1.0)
     private let borderBlue = NSColor(red: 0.04, green: 0.16, blue: 0.57, alpha: 1.0)
     private let hoverBlue = NSColor(red: 0.24, green: 0.38, blue: 0.82, alpha: 1.0)
-    private let orangeHighlight = NSColor(red: 0.17, green: 0.35, blue: 0.78, alpha: 0.15)
-    private let footerBtnBg = NSColor(red: 0.22, green: 0.41, blue: 0.82, alpha: 1.0)
 
     private var hoveredSection: HoverSection? = nil
     private var trackingArea: NSTrackingArea?
