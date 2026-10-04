@@ -2,19 +2,20 @@ import XCTest
 import SwiftUI
 @testable import RetroMac
 
-/// The What's New window lays out in its fixed size; set RETROMAC_SNAPSHOT_DIR to keep a picture
+/// The What's New page of the welcome flow (the one users see) lays out in its fixed size; set RETROMAC_SNAPSHOT_DIR to keep a picture
 /// of it, drawn the way AppKit draws it on screen (an off-screen window, never shown).
 final class WhatsNewSnapshotTests: XCTestCase {
     @MainActor
     func testWhatsNewRenders() throws {
-        let host = NSHostingView(rootView: WhatsNewView())
-        host.frame = NSRect(x: 0, y: 0, width: 440, height: 500)
+        let size = NSSize(width: WelcomePage.windowWidth, height: WelcomePage.windowHeight)
+        let host = NSHostingView(rootView: WelcomeFlowView(pages: [.whatsNew], onFinish: { _ in }).frame(width: size.width, height: size.height))
+        host.frame = NSRect(origin: .zero, size: size)
         let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: ProcessInfo.processInfo.environment["RETROMAC_SNAPSHOT_DARK"] != nil ? .darkAqua : .aqua)
         window.contentView = host
         host.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(0.3))
-        XCTAssertEqual(host.fittingSize, NSSize(width: 440, height: 500))
+        XCTAssertEqual(host.fittingSize, size)
         guard let dir = ProcessInfo.processInfo.environment["RETROMAC_SNAPSHOT_DIR"],
               let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return }
         // The window's own background under the view, as on screen.
