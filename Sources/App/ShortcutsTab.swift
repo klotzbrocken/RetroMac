@@ -13,12 +13,6 @@ struct ShortcutsTab: View {
                 // "Hide the menu bar / desktop icons while the shader is on" moved to Shader ▸
                 // Where, next to the scope they belong to; the Apple logo to Desktop ▸ Menu bar;
                 // the Setup Assistant to General, its one home.
-                RMCard(title: "Conflicts", bodyPadding: 0) {
-                    RMRow(label: "Show a tip when a hotkey is already taken", isLast: true) {
-                        Toggle("", isOn: $settings.showHotkeyConflictTips)
-                            .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
-                    }
-                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)

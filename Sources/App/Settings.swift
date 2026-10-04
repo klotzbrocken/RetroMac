@@ -927,9 +927,6 @@ final class AppSettings: ObservableObject {
     @Published var exposeAppHotkeyModifiers: UInt32 {
         didSet { defaults.set(exposeAppHotkeyModifiers, forKey: "exposeAppHotkeyModifiers") }
     }
-    @Published var showHotkeyConflictTips: Bool {
-        didSet { defaults.set(showHotkeyConflictTips, forKey: "showHotkeyConflictTips") }
-    }
     @Published var showSplashScreen: Bool {
         didSet { defaults.set(showSplashScreen, forKey: "showSplashScreen") }
     }
@@ -1361,7 +1358,6 @@ final class AppSettings: ObservableObject {
         exposeHotkeyModifiers = defaults.object(forKey: "exposeHotkeyModifiers") as? UInt32 ?? 0x1000
         exposeAppHotkeyCode = defaults.object(forKey: "exposeAppHotkeyCode") as? UInt32 ?? 0x6D
         exposeAppHotkeyModifiers = defaults.object(forKey: "exposeAppHotkeyModifiers") as? UInt32 ?? 0x1000
-        showHotkeyConflictTips = defaults.object(forKey: "showHotkeyConflictTips") as? Bool ?? true
         showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true   // boot screen on by default (per-theme toggle still applies)
         crashMode = defaults.string(forKey: "crashMode") ?? "authentic"
         crashIntensity = defaults.string(forKey: "crashIntensity") ?? "off"
