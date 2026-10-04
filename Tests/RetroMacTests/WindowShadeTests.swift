@@ -42,4 +42,11 @@ final class WindowShadeTests: XCTestCase {
         XCTAssertEqual(C.decodeShadeRecovery(data), [1234: record])
         XCTAssertTrue(C.decodeShadeRecovery(Data("junk".utf8)).isEmpty)
     }
+
+    /// Putting windows back: only a window that still exists and would not move keeps its record.
+    func testOnlyWindowsThatWouldNotMoveStayOnRecord() {
+        let r = C.ShadeRecord(frame: CGRect(x: 10, y: 20, width: 300, height: 200), pid: 1, bundleID: "x")
+        let left = C.remainingShadeRecords([(1, r, .restored), (2, r, .gone), (3, r, .failed)])
+        XCTAssertEqual(Array(left.keys), [3])
+    }
 }

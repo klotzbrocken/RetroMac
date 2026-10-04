@@ -633,9 +633,15 @@ final class ThemeManager {
                 continue
             }
             announceChange()
-            try? ws.setDesktopImageURL(finalURL, for: screen, options: [:])
-            lastSetWallpaper[screenKey] = finalURL
-            changed += 1
+            // Remembered only when it took: a failed set must be tried again by the next pass,
+            // not skipped as already done.
+            do {
+                try ws.setDesktopImageURL(finalURL, for: screen, options: [:])
+                lastSetWallpaper[screenKey] = finalURL
+                changed += 1
+            } catch {
+                print("[Theme] Could not set the wallpaper on \(screen.localizedName): \(error.localizedDescription)")
+            }
         }
         persistWallpaperBackup()
         pruneWallpaperCacheSoon()

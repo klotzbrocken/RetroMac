@@ -728,11 +728,15 @@ final class PrinterModule: ControlStripModule {
     @objc private func choose(_ sender: NSMenuItem) {
         guard let name = sender.representedObject as? String else { return }
         // The queue name, not the display name, is what lpoptions wants.
-        let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/lpoptions")
-        p.arguments = ["-d", name.replacingOccurrences(of: " ", with: "_")]
-        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
-        try? p.run(); p.waitUntilExit()
-        refresh()
+        // lpoptions takes a third of a second: off the main thread, the strip stays responsive.
+        let queue = name.replacingOccurrences(of: " ", with: "_")
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/lpoptions")
+            p.arguments = ["-d", queue]
+            p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+            try? p.run(); p.waitUntilExit()
+            DispatchQueue.main.async { self?.refresh() }
+        }
     }
 }
 

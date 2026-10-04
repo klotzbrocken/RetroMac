@@ -3,6 +3,16 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+- **WindowShade never loses a window.** A rolled-up window keeps its way back until it is
+  really back: an app that does not answer leaves it rolled up, to be unrolled again, and on a
+  theme switch or at quit it stays on record for the next start if it would not move. A theme
+  switch right after rolling up can no longer send the window away again, and the recovery
+  after a crash no longer waits seconds on a hung app.
+- **Fix: a wallpaper that could not be set was taken as set**, so the next pass skipped it.
+- **Choosing a printer in the Control Strip no longer pauses the strip.**
+
 ## 2.8.8
 
 - **Mac OS X, closer to 10.0.** Measured pixel for pixel from Mac OS X 10.0.4 screenshots:

@@ -173,11 +173,12 @@ final class TitleBarOverlayController {
         style = newStyle
         running = true
         takeCommandM()
-        restoreShadedAfterCrash()
         // A hung app must not hang RetroMac: every Accessibility request this process makes
         // gives up after half a second instead of the six-second default. Process-wide, which
-        // also covers the observers and the minimised-window tracker.
+        // also covers the observers and the minimised-window tracker — and set before the crash
+        // recovery below, whose requests would otherwise wait six seconds on a hung app.
         AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 0.5)
+        restoreShadedAfterCrash()
         squareTheRealCorners()
         WindowBorderController.shared.ensureServerEvents()   // move/resize/minimise arrive through it
         WindowBorderController.shared.ensureObservers()      // and closed windows, through Accessibility
@@ -1132,13 +1133,19 @@ final class TitleBarOverlayController {
         if let record = shaded[wid] {
             // Unroll: the window back where its bar is — under Mac OS X once the door is down.
             let frame = record.frame
+            // The way back is forgotten only once the window is back: an app that does not
+            // answer leaves it rolled up, its bar in place, to be unrolled again.
             let unroll = { [weak self] in
                 guard let self, self.shaded[wid] != nil else { return }
-                self.forgetShade(wid)
-                var p = frame.origin
-                Self.axQueue.async { if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
-                WindowBorderController.shared.update()
-                self.sync()
+                Self.axQueue.async { [weak self] in
+                    let back = Self.move(w, to: frame.origin)
+                    DispatchQueue.main.async {
+                        guard let self else { return }
+                        if back { self.forgetShade(wid) }
+                        WindowBorderController.shared.update()
+                        self.sync()
+                    }
+                }
             }
             if style == .aqua { GarageDoor.shared.rollDown(wid, bounds: frame, then: unroll) } else { unroll() }
             return
@@ -1213,16 +1220,44 @@ final class TitleBarOverlayController {
     }
 
     /// Theme off, another title-bar style, or RetroMac quitting: every rolled-up window back
-    /// in its place, at once. The element is looked up again where the cache lost it.
+    /// in its place, at once. On the Accessibility queue and waited for: a park still queued
+    /// there runs first, so it cannot send a window away again after it was put back. A window
+    /// that still exists but could not be moved keeps its record on disk, for the next start.
     private func unshadeAll() {
-        for (wid, record) in shaded {
-            guard let w = axWindows[wid] ?? Self.findAXWindow(wid, pid: record.pid) else { continue }
-            var p = record.frame.origin
-            if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) }
+        guard !shaded.isEmpty else { GarageDoor.shared.forgetAll(); return }
+        let jobs = shaded.map { wid, record in (wid, record, axWindows[wid] ?? Self.findAXWindow(wid, pid: record.pid)) }
+        var outcomes: [(CGWindowID, ShadeRecord, ShadeOutcome)] = []
+        Self.axQueue.sync {
+            for (wid, record, w) in jobs {
+                let restored = w.map { Self.move($0, to: record.frame.origin) } ?? false
+                outcomes.append((wid, record, restored ? .restored : (PrivateWindowAPI.bounds(of: wid) == nil ? .gone : .failed)))
+            }
         }
         shaded.removeAll()
         GarageDoor.shared.forgetAll()
-        saveShadeRecovery()
+        saveShadeRecovery(Self.remainingShadeRecords(outcomes))
+    }
+
+    /// Move a window and say whether it got there (read back, within two points). Accessibility
+    /// queue only.
+    private static func move(_ w: AXUIElement, to point: CGPoint) -> Bool {
+        var p = point
+        guard let v = AXValueCreate(.cgPoint, &p),
+              AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) == .success else { return false }
+        var ref: CFTypeRef?
+        var reached = CGPoint(x: CGFloat.nan, y: .nan)
+        if AXUIElementCopyAttributeValue(w, kAXPositionAttribute as CFString, &ref) == .success, let ref {
+            AXValueGetValue(ref as! AXValue, .cgPoint, &reached)
+        }
+        return abs(reached.x - point.x) <= 2 && abs(reached.y - point.y) <= 2
+    }
+
+    enum ShadeOutcome { case restored, gone, failed }
+
+    /// What stays on record after putting windows back: only the ones that still exist and
+    /// could not be moved. A restored window needs no record, a closed one cannot use it.
+    static func remainingShadeRecords(_ outcomes: [(CGWindowID, ShadeRecord, ShadeOutcome)]) -> [CGWindowID: ShadeRecord] {
+        Dictionary(outcomes.compactMap { $0.2 == .failed ? ($0.0, $0.1) : nil }, uniquingKeysWith: { a, _ in a })
     }
 
     // MARK: WindowShade after a crash
@@ -1231,13 +1266,14 @@ final class TitleBarOverlayController {
 
     /// Every rolled-up window, on disk as soon as it is rolled up: a RetroMac that is killed
     /// or crashes leaves windows parked in a corner, and the next launch puts them back.
-    private func saveShadeRecovery() {
+    private func saveShadeRecovery(_ records: [CGWindowID: ShadeRecord]? = nil) {
+        let records = records ?? shaded
         let d = UserDefaults.standard
-        if shaded.isEmpty {
+        if records.isEmpty {
             guard d.object(forKey: Self.shadeRecoveryKey) != nil else { return }
             d.removeObject(forKey: Self.shadeRecoveryKey)
         } else {
-            let byID = Dictionary(uniqueKeysWithValues: shaded.map { (String($0.key), $0.value) })
+            let byID = Dictionary(uniqueKeysWithValues: records.map { (String($0.key), $0.value) })
             guard let data = try? JSONEncoder().encode(byID) else { return }
             d.set(data, forKey: Self.shadeRecoveryKey)
         }
@@ -1253,15 +1289,18 @@ final class TitleBarOverlayController {
     /// window still exists and still belongs to the same application.
     private func restoreShadedAfterCrash() {
         guard shaded.isEmpty, let data = UserDefaults.standard.data(forKey: Self.shadeRecoveryKey) else { return }
+        var outcomes: [(CGWindowID, ShadeRecord, ShadeOutcome)] = []
         for (wid, record) in Self.decodeShadeRecovery(data) {
+            // Gone, or the id now belongs to another app's window: nothing to bring back.
             guard PrivateWindowAPI.bounds(of: wid) != nil,
                   let app = NSRunningApplication(processIdentifier: record.pid),
-                  record.bundleID.isEmpty || app.bundleIdentifier == record.bundleID,
-                  let w = Self.findAXWindow(wid, pid: record.pid) else { continue }
-            var p = record.frame.origin
-            if let v = AXValueCreate(.cgPoint, &p) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) }
+                  record.bundleID.isEmpty || app.bundleIdentifier == record.bundleID else {
+                outcomes.append((wid, record, .gone)); continue
+            }
+            let restored = Self.findAXWindow(wid, pid: record.pid).map { w in Self.axQueue.sync { Self.move(w, to: record.frame.origin) } } ?? false
+            outcomes.append((wid, record, restored ? .restored : .failed))
         }
-        UserDefaults.standard.removeObject(forKey: Self.shadeRecoveryKey)
+        saveShadeRecovery(Self.remainingShadeRecords(outcomes))   // a window that would not move is tried at the next start
     }
 
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
