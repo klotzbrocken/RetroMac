@@ -24,6 +24,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   switch right after rolling up can no longer send the window away again, and the recovery
   after a crash no longer waits seconds on a hung app.
 - **Fix: a wallpaper that could not be set was taken as set**, so the next pass skipped it.
+- **Fix: the Mac OS X pill rolls windows up on a laptop screen again.** macOS keeps a window's
+  last 52 points on a single display; the strip left at the edge is one point wide, and that
+  no longer counts as "still in view" and sends the window straight back.
+- **Fix: desktop icons no longer sit under the dock.** Its window reaches higher than the bar
+  (room for magnified icons and names) and swallowed the clicks on any icon down there, the
+  Screen Saver under Mac OS X among them. Icons now keep above it and move on to the next
+  column when a screen is too short, as the Finder did.
 - **Choosing a printer in the Control Strip no longer pauses the strip.**
 
 ## 2.8.8

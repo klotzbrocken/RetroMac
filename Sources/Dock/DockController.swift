@@ -316,7 +316,6 @@ final class DockController {
         NextMenuController.shared.hide()
         NextDockController.shared.hide()
         NextRunningAppsController.shared.hide()
-        DesktopIconsController.shared.update()
 
         createWindow()
         // Use orderFront(nil) instead of show()'s orderFrontRegardless()
@@ -324,6 +323,7 @@ final class DockController {
         repositionWindow()
         window?.orderFront(nil)
         isVisible = true
+        DesktopIconsController.shared.update()   // after the bar is up: the icons keep clear of it
         // Re-apply unconditionally (not gated on !didHideSystemDock): the dock edge
         // may have changed (position override), so the system Dock must be re-placed
         // to a non-conflicting edge. applySystemDockPolicy() preserves the original

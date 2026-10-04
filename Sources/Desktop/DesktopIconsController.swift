@@ -169,9 +169,23 @@ final class DesktopIconsController {
                 y: min(max(origin.y, area.minY), max(area.minY, area.maxY - size.height)))
     }
 
+    /// Where desktop icons may stand. RetroMac's own dock or taskbar is not macOS's, so
+    /// `visibleFrame` leaves it in; its window — magnification and name headroom included —
+    /// would sit over any icon below its top and swallow the clicks. The Finder kept the icons
+    /// above the Dock too.
+    /// ponytail: a bar along the bottom only; side docks still overlap the outer column.
+    static func iconArea(of screen: NSScreen, bar: NSRect?) -> NSRect {
+        var area = screen.visibleFrame
+        if let bar, bar.width > bar.height, bar.minY <= area.minY + 1, bar.maxY > area.minY, bar.maxY < area.maxY {
+            area.size.height = area.maxY - bar.maxY
+            area.origin.y = bar.maxY
+        }
+        return area
+    }
+
     private func show(entries: [DockThemeConfig.DesktopIconEntry]) {
         guard let screen = NSScreen.main else { return }
-        let visibleFrame = screen.visibleFrame
+        let visibleFrame = Self.iconArea(of: screen, bar: DockController.shared.barScreenFrame)
         let screenFrame = screen.frame
 
         if window == nil {
@@ -275,7 +289,12 @@ final class DesktopIconsController {
                                     size: NSSize(width: cw, height: ch))
             } else {
                 let placed: (col: Int, row: Int)
-                if let y = entry.gridY {
+                if let y = entry.gridY, y >= rowsPerColumn {
+                    // Below the last row that fits this screen: into the first free cell, the
+                    // way the Finder wrapped icons that did not fit.
+                    let free = firstFreeCell()
+                    placed = (free.0, free.1)
+                } else if let y = entry.gridY {
                     placed = (entry.gridX ?? 0, y)
                 } else {
                     let free = firstFreeCell()
@@ -466,7 +485,7 @@ final class DesktopIconsController {
     /// default column/row — i.e. the origin — instead of tidying it in place.)
     func snapToGrid() {
         guard let screen = NSScreen.main else { return }
-        let visibleFrame = screen.visibleFrame
+        let visibleFrame = Self.iconArea(of: screen, bar: DockController.shared.barScreenFrame)
         let screenFrame = screen.frame
         let cw = cellWidth, ch = cellHeight
         let baseX = iconsFromLeft

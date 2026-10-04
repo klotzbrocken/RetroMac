@@ -34,6 +34,10 @@ final class WindowShadeTests: XCTestCase {
         XCTAssertFalse(C.isOutOfSight(CGRect(x: 100, y: 100, width: 800, height: 600), screens: [main]))
         XCTAssertFalse(C.isOutOfSight(CGRect(x: CGFloat.nan, y: 0, width: 800, height: 600), screens: [main]), "no position read back")
         XCTAssertTrue(C.isOutOfSight(CGRect(x: main.maxX - 1, y: main.maxY - 1, width: 800, height: 600), screens: [main]))
+        // Measured on a MacBook: the window was parked one point in from the right, but macOS
+        // kept 52 points of its height on screen.
+        XCTAssertTrue(C.isOutOfSight(CGRect(x: main.maxX - 1, y: main.maxY - 52, width: 600, height: 400), screens: [main]))
+        XCTAssertFalse(C.isOutOfSight(CGRect(x: main.maxX - 40, y: main.maxY - 52, width: 600, height: 400), screens: [main]))
     }
 
     func testTheRecoveryRecordSurvivesARoundTrip() throws {

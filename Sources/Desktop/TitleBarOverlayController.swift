@@ -1207,10 +1207,16 @@ final class TitleBarOverlayController {
         }
     }
 
-    /// Parked well enough: no more of it on any screen than a corner a few points square.
+    /// Parked well enough: what is left on any screen is a sliver no more than two points thin.
+    /// macOS will not always let a window that far down (on a single laptop display it kept
+    /// 52 points of height on screen), but a one-point strip at the edge is out of sight all the
+    /// same — an area limit called that a failure and put the window straight back.
     static func isOutOfSight(_ rect: CGRect, screens: [CGRect]) -> Bool {
         guard rect.origin.x.isFinite, rect.origin.y.isFinite else { return false }
-        return visibleArea(rect, screens: screens) <= 16
+        return screens.allSatisfy { s in
+            let i = rect.intersection(s)
+            return i.isNull || min(i.width, i.height) <= 2
+        }
     }
 
     private func forgetShade(_ wid: CGWindowID) {
