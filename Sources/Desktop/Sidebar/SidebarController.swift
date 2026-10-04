@@ -86,6 +86,9 @@ final class SidebarController: NSObject, WKScriptMessageHandler, WKNavigationDel
     private func reposition() {
         guard let panel = panel, let screen = NSScreen.main else { return }
         var f = screen.visibleFrame
+        // With the menu bar hidden its strip still slides in under the pointer and takes the
+        // click, so the "+" has to sit below it either way.
+        f.size.height = min(f.height, screen.frame.maxY - NSStatusBar.system.thickness - f.minY)
         // Stop at the taskbar, as Vista's did.
         if let bar = DockController.shared.barScreenFrame, bar.intersects(f), bar.maxY < f.maxY - 100 {
             f.size.height = f.maxY - bar.maxY; f.origin.y = bar.maxY
@@ -131,7 +134,7 @@ final class SidebarController: NSObject, WKScriptMessageHandler, WKNavigationDel
             item.state = gadgets.contains(g.id) ? .on : .off
             menu.addItem(item)
         }
-        menu.popUp(positioning: nil, at: NSPoint(x: 8, y: wv.bounds.height - 24), in: wv)
+        menu.popUp(positioning: nil, at: NSPoint(x: 84, y: 22), in: wv)   // under the "+" (WKWebView is flipped)
     }
 
     @objc private func toggleGadget(_ sender: NSMenuItem) {
