@@ -33,6 +33,9 @@ final class DockView: NSView {
     private var startButtonIcon: NSImage?
     private var startButtonImages: (normal: NSImage, hover: NSImage, pressed: NSImage)?
     private var startButtonPressed = false
+    /// Drawn pressed while the mouse is down on it AND while its Start menu is open, as every
+    /// Windows from 95 to 7 kept it.
+    private var startButtonDown: Bool { startButtonPressed || startMenuPanel?.isVisible == true }
     private var startButtonHovered = false
     private var diskFreeFrame: NSRect = .zero
     private var diskFreeLabel: String = ""   // e.g. "APFS"
@@ -2639,7 +2642,7 @@ final class DockView: NSView {
         // Start button (themed: XP uses green gradient + rounded, classic uses gray bevel)
         if hasStartButton && !startButtonFrame.isEmpty {
             let iconSize = theme.dock.iconSize * scale
-            let pressOffset: CGFloat = startButtonPressed ? 1 : 0
+            let pressOffset: CGFloat = startButtonDown ? 1 : 0
             let isXPStyle = theme.isXPStartMenu
 
             if isXPStyle {
@@ -2650,7 +2653,7 @@ final class DockView: NSView {
                 // Draw background: bitmap sprite sheet or fallback gradient
                 if let imgs = startButtonImages {
                     let stateImage: NSImage
-                    if startButtonPressed {
+                    if startButtonDown {
                         stateImage = imgs.pressed
                     } else if startButtonHovered {
                         stateImage = imgs.hover
@@ -2668,12 +2671,12 @@ final class DockView: NSView {
                         ?? NSColor(red: 0.38, green: 0.76, blue: 0.25, alpha: 1.0)
                     var gBot = theme.dock.startButtonGradientBottom.map { NSColor.fromHex($0) }
                         ?? NSColor(red: 0.17, green: 0.49, blue: 0.09, alpha: 1.0)
-                    if startButtonHovered && !startButtonPressed {
+                    if startButtonHovered && !startButtonDown {
                         gTop = gTop.blended(withFraction: 0.18, of: .white) ?? gTop
                         gBot = gBot.blended(withFraction: 0.10, of: .white) ?? gBot
                     }
-                    let top = startButtonPressed ? gBot : gTop
-                    let bottom = startButtonPressed ? gTop : gBot
+                    let top = startButtonDown ? gBot : gTop
+                    let bottom = startButtonDown ? gTop : gBot
                     let btnPath = NSBezierPath(roundedRect: btnRect, xRadius: 6, yRadius: 6)
                     NSGradient(starting: bottom, ending: top)?.draw(in: btnPath, angle: 90)
                     // glossy white highlight over the top ~half
@@ -2681,7 +2684,7 @@ final class DockView: NSView {
                     let gloss = NSRect(x: btnRect.minX, y: btnRect.midY,
                                        width: btnRect.width, height: btnRect.height * 0.5)
                     NSGradient(starting: NSColor.white.withAlphaComponent(0),
-                               ending: NSColor.white.withAlphaComponent(startButtonPressed ? 0.12 : 0.42))?
+                               ending: NSColor.white.withAlphaComponent(startButtonDown ? 0.12 : 0.42))?
                         .draw(in: gloss, angle: 90)
                     NSGraphicsContext.current?.restoreGraphicsState()
                     // light inner edge + dark outline for the beveled look
@@ -2734,7 +2737,7 @@ final class DockView: NSView {
                     // (sunken tray + OS/2 WARP text, all baked in)
                     if let imgs = startButtonImages {
                         let stateImage: NSImage
-                        if startButtonPressed {
+                        if startButtonDown {
                             stateImage = imgs.pressed
                         } else if startButtonHovered {
                             stateImage = imgs.hover
@@ -2749,7 +2752,7 @@ final class DockView: NSView {
                     } else {
                         // Fallback: procedural sunken tray
                         let r = startButtonFrame
-                        let bg: NSColor = startButtonPressed
+                        let bg: NSColor = startButtonDown
                             ? NSColor(calibratedWhite: 0.72, alpha: 1)
                             : NSColor(calibratedWhite: 0.753, alpha: 1)
                         bg.setFill()
@@ -2792,8 +2795,8 @@ final class DockView: NSView {
                     NSBezierPath(rect: startButtonFrame).fill()
                 } else {
                     // Classic Win98 raised: light top-left, dark bottom-right
-                    let lightColor: NSColor = startButtonPressed ? NSColor(white: 0.5, alpha: 1) : .white
-                    let darkColor: NSColor = startButtonPressed ? .white : NSColor(white: 0.5, alpha: 1)
+                    let lightColor: NSColor = startButtonDown ? NSColor(white: 0.5, alpha: 1) : .white
+                    let darkColor: NSColor = startButtonDown ? .white : NSColor(white: 0.5, alpha: 1)
 
                     (Win98Scheme.activeFaceColor() ?? NSColor(red: 0.75, green: 0.75, blue: 0.75, alpha: 1)).setFill()
                     NSBezierPath(rect: startButtonFrame).fill()
@@ -4297,6 +4300,12 @@ final class DockView: NSView {
                 NSWorkspace.shared.launchApplication("Terminal")
             }),
         ]
+        if TaskManagerController.wanted,   // XP's Task Manager, under its Control Panel entries
+           let at = rightItems.firstIndex(where: { $0.title == "RetroMac Settings" }) {
+            rightItems.insert(MI(title: "Task Manager", icon: xpIcon("xp_taskmgr.png"), action: {
+                TaskManagerController.shared.show()   // also Ctrl+Option+Delete
+            }), at: at + 1)
+        }
 
         let data = StartMenuPanel.XPMenuData(
             leftItems: leftItems,
@@ -4321,6 +4330,7 @@ final class DockView: NSView {
 
         let panel = StartMenuPanel()
         startMenuPanel = panel
+        panel.onClose = { [weak self] in self?.needsDisplay = true }
         let pt = NSPoint(x: startButtonFrame.minX, y: startButtonFrame.maxY + 2)
         panel.showXP(data: data, at: pt, in: self, startButtonRect: startButtonFrame)
     }
@@ -4344,7 +4354,7 @@ final class DockView: NSView {
         // Right: places (text only — Win7's right column has no icons).
         func open(_ url: URL) -> () -> Void { { NSWorkspace.shared.open(url) } }
         func settings(_ s: String) -> () -> Void { { if let u = URL(string: s) { NSWorkspace.shared.open(u) } } }
-        let rightItems: [MI] = [
+        var rightItems: [MI] = [
             MI(title: "Documents", action: open(home.appendingPathComponent("Documents"))),
             MI(title: "Pictures",  action: open(home.appendingPathComponent("Pictures"))),
             MI(title: "Music",     action: open(home.appendingPathComponent("Music"))),
@@ -4354,6 +4364,9 @@ final class DockView: NSView {
             MI(title: "Default Programs", action: { NSApp.sendAction(Selector(("openSettings")), to: nil, from: nil) }),
             MI(title: "Help and Support", action: { if let u = URL(string: "https://support.microsoft.com/windows") { NSWorkspace.shared.open(u) } }),
         ]
+        if SidebarController.shared.isAvailable {   // Vista: open (or close) the Sidebar from here
+            rightItems.insert(MI(title: "Windows Sidebar", action: { SidebarController.shared.toggle() }), at: rightItems.count - 1)
+        }
 
         let data = StartMenuPanel.XPMenuData(
             leftItems: leftItems,
@@ -4369,6 +4382,7 @@ final class DockView: NSView {
 
         let panel = StartMenuPanel()
         startMenuPanel = panel
+        panel.onClose = { [weak self] in self?.needsDisplay = true }
         let pt = NSPoint(x: startButtonFrame.minX, y: startButtonFrame.maxY + 2)
         panel.showWin7(data: data, at: pt, in: self, startButtonRect: startButtonFrame)
     }
@@ -4521,6 +4535,7 @@ final class DockView: NSView {
         let bannerText = ThemeManager.shared.activeTheme?.config.name ?? "Windows 98"
         let panel = StartMenuPanel()
         startMenuPanel = panel
+        panel.onClose = { [weak self] in self?.needsDisplay = true }
         let pt = NSPoint(x: startButtonFrame.minX, y: startButtonFrame.maxY + 2)
         panel.show(items: items, bannerText: bannerText, at: pt, in: self, startButtonRect: startButtonFrame)
     }

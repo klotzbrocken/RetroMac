@@ -49,7 +49,9 @@
 <script>
 (function(){
   var post = function(m){ try { webkit.messageHandlers.sidebar.postMessage(m); } catch(e) {} };
-  document.getElementById('add').onclick = function(){ post('menu'); };
+  // The menu opens under the "+", or where the right-click was.
+  document.getElementById('add').onclick = function(){ post({x:84, y:22}); };
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); post({x:e.clientX, y:e.clientY}); });
 
   function hiDPI(c){
     var r = window.devicePixelRatio || 1, w = c.width, h = c.height;

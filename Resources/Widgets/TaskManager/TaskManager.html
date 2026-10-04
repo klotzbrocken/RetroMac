@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8">
-<!-- Windows Task Manager 5.1 (Windows XP), rebuilt for RetroMac. The Performance page first;
+<!-- Windows Task Manager 5.1 (Windows XP), rebuilt for RetroMac: Applications, Processes,
+     Performance, Networking and Users;
      the look after XP's Luna and after jankammerath/TaskMgr98 (MPL-2.0), which served as the
      reference for layout and colours — no code taken from it. Fed once a second by
      TaskManagerController through window.update(snapshot). -->
@@ -67,6 +68,29 @@
   .nums table{width:100%;border-collapse:collapse;}
   .nums td{padding:0 0 1px;} .nums td.v{text-align:right;}
 
+  /* ---------- list views (Applications, Processes, Networking, Users) ---------- */
+  .lv{position:absolute;left:8px;right:8px;top:9px;bottom:8px;border:1px solid #7f9db9;background:#fff;overflow-y:auto;overflow-x:hidden;}
+  .lv table{width:100%;border-collapse:collapse;table-layout:fixed;}
+  .lv th{position:sticky;top:0;z-index:1;text-align:left;font-weight:400;padding:3px 6px 2px;white-space:nowrap;overflow:hidden;
+    background:linear-gradient(#fff,#f3f1e7 80%,#ebe8d6);border-right:1px solid #e2dfcf;box-shadow:inset 0 -3px 0 #e2dece,inset 0 -1px 0 #d6d2c2;}
+  .lv th:hover{box-shadow:inset 0 -3px 0 #f9b119,inset 0 -1px 0 #d6d2c2;}
+  .lv td{padding:1px 6px;height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lv .r{text-align:right;}
+  .lv td img{width:16px;height:16px;vertical-align:-4px;margin-right:4px;}
+  .lv tr.sel td{background:#316ac5;color:#fff;}
+  .btns{position:absolute;right:8px;bottom:8px;display:flex;gap:6px;}
+  .xpbtn{min-width:75px;height:23px;padding:0 8px;font:11px Tahoma,sans-serif;color:#000;border:1px solid #003c74;border-radius:3px;
+    background:linear-gradient(#fff,#f3f2ee 60%,#ecebe6 86%,#d6d0c5);}
+  .xpbtn:hover:not(:disabled){box-shadow:inset 0 0 0 1px #fce49b,inset 0 0 0 2px #f9c86a;}
+  .xpbtn:active:not(:disabled){background:linear-gradient(#e5e4de,#e3e2da 86%,#f2f1ee);}
+  .xpbtn:disabled{color:#aca899;border-color:#c9c7ba;background:#f5f4ea;}
+  .chk{position:absolute;left:8px;bottom:12px;display:flex;align-items:center;gap:4px;}
+  .chk input{margin:0;}
+  #netGraphs{position:absolute;left:8px;right:8px;top:9px;display:flex;flex-direction:column;gap:8px;}
+  #netGraphs .grp{height:118px;}
+  .ng{display:flex;gap:4px;align-items:stretch;}
+  .ng .scale{width:30px;flex:0 0 30px;display:flex;flex-direction:column;justify-content:space-between;text-align:right;font-size:10px;padding:0 0 1px;}
+
   /* ---------- status bar ---------- */
   .status{height:22px;flex:0 0 22px;display:flex;align-items:center;border-top:1px solid #d0cec8;margin:0 -4px -4px;padding:0 4px;background:#ece9d8;}
   .status span{padding:0 6px;border-right:1px solid #d0cec8;height:16px;line-height:16px;white-space:nowrap;}
@@ -86,10 +110,27 @@
     <div class="tabs" id="tabs">
       <span class="tab" data-page="apps">Applications</span><span class="tab" data-page="procs">Processes</span><span class="tab on" data-page="perf">Performance</span><span class="tab" data-page="net">Networking</span><span class="tab" data-page="users">Users</span>
     </div>
-    <div class="page hidden" id="page-apps"><div class="empty">Applications — coming next.</div></div>
-    <div class="page hidden" id="page-procs"><div class="empty">Processes — coming soon.</div></div>
-    <div class="page hidden" id="page-net"><div class="empty">Networking — coming soon.</div></div>
-    <div class="page hidden" id="page-users"><div class="empty">Users — coming soon.</div></div>
+    <div class="page hidden" id="page-apps">
+      <div class="lv" style="bottom:42px"><table><colgroup><col style="width:72%"><col></colgroup>
+        <thead><tr><th>Task</th><th>Status</th></tr></thead><tbody id="t-apps"></tbody></table></div>
+      <div class="btns"><button class="xpbtn" id="b-end" disabled>End Task</button><button class="xpbtn" id="b-switch" disabled>Switch To</button><button class="xpbtn" id="b-new">New Task...</button></div>
+    </div>
+    <div class="page hidden" id="page-procs">
+      <div class="lv" style="bottom:42px"><table><colgroup><col style="width:38%"><col style="width:26%"><col style="width:12%"><col></colgroup>
+        <thead><tr id="h-procs"><th data-k="name">Image Name</th><th data-k="user">User Name</th><th data-k="cpu" class="r">CPU</th><th data-k="mem" class="r">Mem Usage</th></tr></thead><tbody id="t-procs"></tbody></table></div>
+      <label class="chk"><input type="checkbox" id="c-all"> Show processes from all users</label>
+      <div class="btns"><button class="xpbtn" id="b-kill" disabled>End Process</button></div>
+    </div>
+    <div class="page hidden" id="page-net">
+      <div id="netGraphs"></div>
+      <div class="lv" id="netList"><table><colgroup><col style="width:28%"><col style="width:32%"><col style="width:21%"><col></colgroup>
+        <thead><tr><th>Adapter Name</th><th class="r">Network Utilization</th><th class="r">Link Speed</th><th>State</th></tr></thead><tbody id="t-net"></tbody></table></div>
+    </div>
+    <div class="page hidden" id="page-users">
+      <div class="lv" style="bottom:42px"><table><colgroup><col style="width:30%"><col style="width:10%"><col style="width:20%"><col style="width:20%"><col></colgroup>
+        <thead><tr><th>User</th><th class="r">ID</th><th>Status</th><th>Client Name</th><th>Session</th></tr></thead><tbody id="t-users"></tbody></table></div>
+      <div class="btns"><button class="xpbtn" disabled>Disconnect</button><button class="xpbtn" id="b-logoff" disabled>Logoff</button><button class="xpbtn" disabled>Send Message...</button></div>
+    </div>
     <div class="page" id="page-perf">
       <div class="row">
         <div class="grp meterbox"><b>CPU Usage</b><canvas id="cpuMeter"></canvas></div>
@@ -212,11 +253,89 @@
   };
 
   // ---------- tabs ----------
+  let page='perf';
   $('tabs').addEventListener('mousedown',e=>{
     const t=e.target.closest('.tab'); if(!t) return;
     document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
     document.querySelectorAll('.page').forEach(p=>p.classList.toggle('hidden',p.id!=='page-'+t.dataset.page));
-    render();
+    page=t.dataset.page; post({a:'page',v:page});
+    render(); renderLists();
+  });
+
+  // ---------- lists ----------
+  // Rows come from the host once a second; the selection is kept by pid across refreshes.
+  const L={apps:[],procs:[],net:[],users:[]};
+  const sel={apps:null,procs:null,users:null};
+  const netHist={};
+  let sortK='name', sortDir=1;
+  const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function rowsInto(id, rows, key, cells){
+    const kind=id.slice(2), tb=$(id);
+    if(sel[kind]!=null && !rows.some(r=>r[key]===sel[kind])) sel[kind]=null;
+    tb.innerHTML=rows.map(r=>'<tr data-k="'+esc(r[key])+'"'+(r[key]===sel[kind]?' class="sel"':'')+'>'+cells(r)+'</tr>').join('');
+  }
+  function renderLists(){
+    if(page==='apps'){
+      rowsInto('t-apps', L.apps, 'pid', r=>'<td>'+(r.icon?'<img src="'+r.icon+'">':'')+esc(r.name)+'</td><td>'+esc(r.status)+'</td>');
+      $('b-end').disabled=$('b-switch').disabled=sel.apps==null;
+    } else if(page==='procs'){
+      const rows=L.procs.slice().sort((a,b)=>{
+        const x=a[sortK], y=b[sortK];
+        if(typeof x==='number'||typeof y==='number') return ((x??-1)-(y??-1))*sortDir;
+        return String(x).localeCompare(String(y),undefined,{sensitivity:'base'})*sortDir; });
+      rowsInto('t-procs', rows, 'pid', r=>'<td>'+esc(r.name)+'</td><td>'+esc(r.user)+'</td><td class="r">'+
+        (r.cpu==null?'':String(r.cpu).padStart(2,'0'))+'</td><td class="r">'+(r.mem==null?'':fmt(r.mem)+' K')+'</td>');
+      $('b-kill').disabled=sel.procs==null;
+    } else if(page==='net'){
+      rowsInto('t-net', L.net, 'id', r=>'<td>'+esc(r.name)+'</td><td class="r">'+(r.util<1?r.util.toFixed(2):Math.round(r.util))+' %</td><td class="r">'+esc(r.speed)+'</td><td>'+esc(r.state)+'</td>');
+      netGraphs();
+    } else if(page==='users'){
+      rowsInto('t-users', L.users, 'user', r=>'<td>'+esc(r.user)+'</td><td class="r">'+r.id+'</td><td>'+esc(r.status)+'</td><td></td><td>'+esc(r.session)+'</td>');
+      $('b-logoff').disabled=sel.users==null;
+    }
+  }
+  // One graph per adapter, scaled like XP's: the smallest of 1/5/10/25/50/100 % that fits.
+  function netGraphs(){
+    const host=$('netGraphs'), ids=L.net.slice(0,2).map(n=>n.id);
+    if(host.dataset.ids!==ids.join()){
+      host.dataset.ids=ids.join();
+      host.innerHTML=L.net.slice(0,2).map(n=>'<div class="grp"><b>'+esc(n.name)+'</b><div class="ng"><div class="scale"><span></span><span></span><span>0 %</span></div><canvas data-id="'+esc(n.id)+'"></canvas></div></div>').join('');
+    }
+    $('netList').style.top=(ids.length ? 9+ids.length*126 : 9)+'px';
+    host.querySelectorAll('canvas').forEach(cv=>{
+      const v=netHist[cv.dataset.id]||[], peak=Math.max(0,...v.slice(-200));
+      const scale=[1,5,10,25,50,100].find(x=>peak<=x)||100;
+      const sc=cv.closest('.ng').querySelector('.scale').children;
+      sc[0].textContent=scale+' %'; sc[1].textContent=(scale/2)+' %';
+      cv.dataset.w=Math.floor(cv.closest('.grp').getBoundingClientRect().width-16-34);
+      graph(cv, v.map(x=>x/scale*100), null);
+    });
+  }
+  window.lists=function(d){
+    (d.net||[]).forEach(n=>{ const h=netHist[n.id]=netHist[n.id]||[]; h.push(n.util); if(h.length>HIST) h.shift(); });
+    for(const k in d) L[k]=d[k];
+    renderLists();
+  };
+  function selectable(id, key, onDbl){
+    const kind=id.slice(2);
+    $(id).addEventListener('mousedown',e=>{
+      const tr=e.target.closest('tr'); if(!tr) return;
+      const r=L[kind].find(x=>String(x[key])===tr.dataset.k); sel[kind]=r?r[key]:null; renderLists();
+    });
+    if(onDbl) $(id).addEventListener('dblclick',()=>{ if(sel[kind]!=null) onDbl(sel[kind]); });
+  }
+  selectable('t-apps','pid',pid=>post({a:'switchTo',pid}));
+  selectable('t-procs','pid');
+  selectable('t-users','user');
+  $('b-end').onclick=()=>{ if(sel.apps!=null) post({a:'endTask',pid:sel.apps}); };
+  $('b-switch').onclick=()=>{ if(sel.apps!=null) post({a:'switchTo',pid:sel.apps}); };
+  $('b-new').onclick=()=>post({a:'run'});
+  $('b-kill').onclick=()=>{ const r=L.procs.find(x=>x.pid===sel.procs); if(r) post({a:'endProcess',pid:r.pid,name:r.name}); };
+  $('b-logoff').onclick=()=>post({a:'logoff'});
+  $('c-all').onchange=e=>post({a:'allUsers',v:e.target.checked});
+  $('h-procs').addEventListener('mousedown',e=>{
+    const th=e.target.closest('th'); if(!th) return;
+    const k=th.dataset.k; sortDir = sortK===k ? -sortDir : (k==='cpu'||k==='mem' ? -1 : 1); sortK=k; renderLists();
   });
 
   // ---------- menus ----------

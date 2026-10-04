@@ -11,7 +11,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   icons from Luximoz's Windows Vista icon pack.
 - **The Vista Sidebar.** A column on the right edge with a clock, a calendar and a CPU meter
   whose two dials show your Mac's processor and memory load. The **+** at its top shows or
-  hides each gadget.
+  hides each gadget. "Close Sidebar" (right-click, or the **+**) puts it away; "Windows Sidebar"
+  in the Start menu brings it back.
+- **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.
+- **Windows XP Task Manager, all five pages.** Applications lists the running programs (End
+  Task, Switch To, New Task); Processes shows each process with its user, CPU and memory, sorts
+  by any column and ends a process after XP's warning; Networking draws a graph per adapter with
+  its link speed; Users lists who is logged in. "Task Manager" is in the XP Start menu now too.
 - **WindowShade never loses a window.** A rolled-up window keeps its way back until it is
   really back: an app that does not answer leaves it rolled up, to be unrolled again, and on a
   theme switch or at quit it stays on record for the next start if it would not move. A theme

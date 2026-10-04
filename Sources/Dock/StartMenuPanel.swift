@@ -236,11 +236,15 @@ final class StartMenuPanel: NSPanel {
         }
     }
 
+    /// Told when the menu goes away, however it was closed, so the Start button can pop back up.
+    var onClose: (() -> Void)?
+
     func dismiss() {
         (menuContentView as? StartMenuPanel.SubmenuHost)?.dismissSubmenu()
         orderOut(nil)
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor); globalMonitor = nil }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor); localMonitor = nil }
+        onClose?()
     }
 }
 

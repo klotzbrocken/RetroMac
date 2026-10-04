@@ -21,6 +21,11 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
     private var timer: Timer?
     private var keyTokens: [NSObjectProtocol] = []
     private let sampler = SystemSampler()
+    private let processes = TaskProcesses()
+    private let network = TaskNetwork()
+    /// The page on show ("apps", "procs", "perf", "net", "users"): only its list is read.
+    private var page = "perf"
+    private var allUsers = false
     /// Seconds between samples: XP's High, Normal and Low; nil while paused.
     private var interval: TimeInterval? = 1
 
@@ -133,6 +138,18 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
     private func sample() {
         let s = sampler.next()
         webView?.evaluateJavaScript("window.update && window.update(\(s.json))")
+        // Networking keeps its graph going behind the other pages, as XP's did; the rest is read
+        // only while it is on show.
+        var lists: [String: Any] = ["net": network.list()]
+        switch page {
+        case "apps":  lists["apps"] = TaskApplications.list()
+        case "procs": lists["procs"] = processes.list(allUsers: allUsers)
+        case "users": lists["users"] = TaskUsers.list()
+        default: break
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: lists), let json = String(data: data, encoding: .utf8) {
+            webView?.evaluateJavaScript("window.lists && window.lists(\(json))")
+        }
     }
 
     // MARK: Page
@@ -173,8 +190,51 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
             startSampling()
         case "run":     newTask()
         case "about":   about()
+        case "page":
+            page = body["v"] as? String ?? "perf"
+            if page == "procs" { processes.reset() }
+            sample()
+        case "allUsers":
+            allUsers = body["v"] as? Bool ?? false
+            sample()
+        case "switchTo":
+            if let pid = body["pid"] as? Int { NSRunningApplication(processIdentifier: pid_t(pid))?.activate() }
+        case "endTask":
+            if let pid = body["pid"] as? Int { NSRunningApplication(processIdentifier: pid_t(pid))?.terminate() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.sample() }
+        case "endProcess":
+            if let pid = body["pid"] as? Int { endProcess(pid_t(pid), name: body["name"] as? String ?? "") }
+        case "logoff":  logOff()
         default: break
         }
+    }
+
+    /// Processes ▸ End Process: XP's warning first, then the process is killed outright — it
+    /// gets no chance to save, which is what the warning says.
+    private func endProcess(_ pid: pid_t, name: String) {
+        let warn = NSAlert()
+        warn.alertStyle = .warning
+        warn.messageText = "Task Manager Warning"
+        warn.informativeText = "WARNING: Ending a process can lose data and make the system unstable. The process will not be given the chance to save its state or data before it ends. Are you sure you want to end \(name)?"
+        warn.addButton(withTitle: "Yes"); warn.addButton(withTitle: "No")
+        guard warn.runModal() == .alertFirstButtonReturn else { return }
+        if kill(pid, SIGKILL) != 0 {
+            let err = NSAlert()
+            err.messageText = "Unable to Terminate Process"
+            err.informativeText = "The operation could not be completed. Access is denied."
+            err.runModal()
+        }
+        sample()
+    }
+
+    /// Users ▸ Logoff, after asking.
+    private func logOff() {
+        let ask = NSAlert()
+        ask.messageText = "Log Off Windows"
+        ask.informativeText = "Are you sure you want to log off?"
+        ask.addButton(withTitle: "Log Off"); ask.addButton(withTitle: "Cancel")
+        guard ask.runModal() == .alertFirstButtonReturn else { return }
+        NSAppleScript(source: "tell application \"System Events\" to log out")?.executeAndReturnError(nil)
     }
 
     /// File ▸ New Task (Run...): pick a program and start it.

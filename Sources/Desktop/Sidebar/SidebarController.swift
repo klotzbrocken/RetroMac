@@ -19,10 +19,23 @@ final class SidebarController: NSObject, WKScriptMessageHandler, WKNavigationDel
     private var screenObserver: NSObjectProtocol?
     private let gadgetsKey = "sidebarGadgets"
 
+    /// True while the theme has a Sidebar at all (whether or not the user closed it).
+    var isAvailable: Bool { !AppSettings.shared.dockOnly && ThemeManager.shared.activeTheme?.config.sidebar != nil }
+    var isShown: Bool { panel != nil }
+
+    /// "Close Sidebar" sticks, across theme switches and launches, until it is opened again.
+    private var userClosed: Bool {
+        get { UserDefaults.standard.bool(forKey: "sidebarClosed") }
+        set { UserDefaults.standard.set(newValue, forKey: "sidebarClosed") }
+    }
+
     func update() {
-        guard !AppSettings.shared.dockOnly, let config = ThemeManager.shared.activeTheme?.config.sidebar else { hide(); return }
+        guard isAvailable, !userClosed, let config = ThemeManager.shared.activeTheme?.config.sidebar else { hide(); return }
         show(defaultGadgets: config.gadgets ?? Self.allGadgets.map(\.id))
     }
+
+    /// Open or close it — the Start menu's "Windows Sidebar" entry.
+    func toggle() { userClosed = isShown; update() }
 
     func hide() {
         timer?.invalidate(); timer = nil
@@ -125,8 +138,10 @@ final class SidebarController: NSObject, WKScriptMessageHandler, WKNavigationDel
     }
 
     func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == "sidebar", (message.body as? String) == "menu", let wv = webView else { return }
-        // The "+" at the top: tick the gadgets to show, as Vista's "Add Gadgets" gallery did.
+        guard message.name == "sidebar", let wv = webView,
+              let body = message.body as? [String: Any], let x = body["x"] as? Double, let y = body["y"] as? Double else { return }
+        // The "+" and a right-click both open this: which gadgets to show (Vista's "Add Gadgets"
+        // gallery, cut down to a list) and "Close Sidebar".
         let menu = NSMenu()
         for g in Self.allGadgets {
             let item = NSMenuItem(title: g.title, action: #selector(toggleGadget(_:)), keyEquivalent: "")
@@ -134,8 +149,14 @@ final class SidebarController: NSObject, WKScriptMessageHandler, WKNavigationDel
             item.state = gadgets.contains(g.id) ? .on : .off
             menu.addItem(item)
         }
-        menu.popUp(positioning: nil, at: NSPoint(x: 84, y: 22), in: wv)   // under the "+" (WKWebView is flipped)
+        menu.addItem(.separator())
+        let close = NSMenuItem(title: "Close Sidebar", action: #selector(closeSidebar), keyEquivalent: "")
+        close.target = self
+        menu.addItem(close)
+        menu.popUp(positioning: nil, at: NSPoint(x: x, y: y), in: wv)   // page coordinates: WKWebView is flipped
     }
+
+    @objc private func closeSidebar() { userClosed = true; hide() }
 
     @objc private func toggleGadget(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String else { return }
