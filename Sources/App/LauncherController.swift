@@ -625,6 +625,14 @@ struct LauncherView: View {
             .help("Settings")
             .accessibilityLabel("Settings")
             Spacer()
+            // Rescue Desktop, one click from the flyout (RET-01).
+            Button { onClose(); AppDelegate.shared?.rescueDesktop() } label: {
+                Label("Rescue Desktop", systemImage: "lifepreserver")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .help("Turn the theme and every effect off and bring back windows you cannot reach")
+            Spacer()
             Button(role: .destructive) { NSApp.terminate(nil) } label: {
                 Image(systemName: "power").foregroundStyle(destructive)
             }

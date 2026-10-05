@@ -904,7 +904,7 @@ final class TitleBarOverlayController {
     /// does not answer (Citrix, a process stopped in the debugger) costs its 0.5 s timeout on
     /// this queue, not in the dock's magnification. Results come back to main, where all the
     /// state lives. User actions (close, zoom, drag) stay on main: their wait is the user's.
-    private static let axQueue = DispatchQueue(label: "com.retromac.titlebar.ax", qos: .userInitiated)
+    static let axQueue = DispatchQueue(label: "com.retromac.titlebar.ax", qos: .userInitiated)
     private var measuring: Set<CGWindowID> = []
     private var fetchingTitle: Set<CGWindowID> = []
 
@@ -965,7 +965,7 @@ final class TitleBarOverlayController {
     }
 
     /// The app's window element for a window number. Pure Accessibility, safe on any thread.
-    private static func findAXWindow(_ wid: CGWindowID, pid: pid_t) -> AXUIElement? {
+    static func findAXWindow(_ wid: CGWindowID, pid: pid_t) -> AXUIElement? {
         let app = AXUIElementCreateApplication(pid)
         var ref: CFTypeRef?
         guard AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &ref) == .success,
@@ -1246,7 +1246,7 @@ final class TitleBarOverlayController {
 
     /// Move a window and say whether it got there (read back, within two points). Accessibility
     /// queue only.
-    private static func move(_ w: AXUIElement, to point: CGPoint) -> Bool {
+    static func move(_ w: AXUIElement, to point: CGPoint) -> Bool {
         var p = point
         guard let v = AXValueCreate(.cgPoint, &p),
               AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) == .success else { return false }
@@ -1284,6 +1284,11 @@ final class TitleBarOverlayController {
             d.set(data, forKey: Self.shadeRecoveryKey)
         }
         d.synchronize()   // a kill -9 right after rolling up must not lose the way back
+    }
+
+    /// Rolled-up windows still on record — ones that would not move back yet.
+    static var shadeRecordsOnFile: Int {
+        UserDefaults.standard.data(forKey: shadeRecoveryKey).map { decodeShadeRecovery($0).count } ?? 0
     }
 
     static func decodeShadeRecovery(_ data: Data) -> [CGWindowID: ShadeRecord] {

@@ -9,6 +9,7 @@ struct ShortcutsTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: RMSpacing.section) {
+                rescueCard
                 globalHotkeysCard
                 // "Hide the menu bar / desktop icons while the shader is on" moved to Shader ▸
                 // Where, next to the scope they belong to; the Apple logo to Desktop ▸ Menu bar;
@@ -16,6 +17,35 @@ struct ShortcutsTab: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
+        }
+    }
+
+    // MARK: - Rescue Desktop
+
+    /// The way out when the desktop is stuck: works with the theme off, too (RET-01). A
+    /// combination RetroMac already uses is refused, one another app holds is reported (RET-02).
+    private var rescueCard: some View {
+        RMCard(title: "Rescue Desktop", bodyPadding: 0) {
+            HotkeyRow(
+                label: "Rescue Desktop",
+                hint: DesktopRescue.hotkeyRegistered
+                    ? "Turns the theme and every effect off and brings back windows you cannot reach. Your settings stay. \u{2303}\u{2325}\u{2318}R by default."
+                    : "Another app already uses this shortcut, so it does nothing here. Pick another one.",
+                hotkeyCode: settings.rescueHotkeyCode,
+                hotkeyModifiers: settings.rescueHotkeyModifiers,
+                isLast: true,
+                onSet: { code, mods in
+                    guard !settings.isRetroMacHotkey(code: code, modifiers: mods) else { NSSound.beep(); return }
+                    settings.rescueHotkeyCode = code
+                    settings.rescueHotkeyModifiers = mods
+                    AppDelegate.shared?.registerHotkey()
+                },
+                onClear: {
+                    settings.rescueHotkeyCode = 0
+                    settings.rescueHotkeyModifiers = 0
+                    AppDelegate.shared?.registerHotkey()
+                }
+            )
         }
     }
 

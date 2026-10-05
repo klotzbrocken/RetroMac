@@ -876,7 +876,7 @@ final class ThemeManager {
     }
 
     /// True if any connected screen currently displays a RetroMac theme wallpaper.
-    private func anyScreenShowsOwnWallpaper() -> Bool {
+    func anyScreenShowsOwnWallpaper() -> Bool {
         NSScreen.screens.contains { screen in
             guard let current = NSWorkspace.shared.desktopImageURL(for: screen) else { return false }
             return isOwnWallpaper(current)

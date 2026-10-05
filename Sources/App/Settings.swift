@@ -927,6 +927,21 @@ final class AppSettings: ObservableObject {
     @Published var exposeAppHotkeyModifiers: UInt32 {
         didSet { defaults.set(exposeAppHotkeyModifiers, forKey: "exposeAppHotkeyModifiers") }
     }
+    /// Whether one of RetroMac's own hotkeys already uses this combination.
+    func isRetroMacHotkey(code: UInt32, modifiers: UInt32) -> Bool {
+        [(hotkeyCode, hotkeyModifiers), (screenshotHotkeyCode, screenshotHotkeyModifiers),
+         (menuBarToggleHotkeyCode, menuBarToggleHotkeyModifiers), (dashboardHotkeyCode, dashboardHotkeyModifiers),
+         (exposeHotkeyCode, exposeHotkeyModifiers), (exposeAppHotkeyCode, exposeAppHotkeyModifiers)]
+            .contains { $0.0 == code && $0.1 == modifiers && modifiers != 0 }
+    }
+
+    /// Rescue Desktop (Lastenheft 3.0, RET-01): ⌃⌥⌘R by default.
+    @Published var rescueHotkeyCode: UInt32 {
+        didSet { defaults.set(rescueHotkeyCode, forKey: "rescueHotkeyCode") }
+    }
+    @Published var rescueHotkeyModifiers: UInt32 {
+        didSet { defaults.set(rescueHotkeyModifiers, forKey: "rescueHotkeyModifiers") }
+    }
     @Published var showSplashScreen: Bool {
         didSet { defaults.set(showSplashScreen, forKey: "showSplashScreen") }
     }
@@ -1357,6 +1372,8 @@ final class AppSettings: ObservableObject {
         exposeHotkeyCode = defaults.object(forKey: "exposeHotkeyCode") as? UInt32 ?? 0x65
         exposeHotkeyModifiers = defaults.object(forKey: "exposeHotkeyModifiers") as? UInt32 ?? 0x1000
         exposeAppHotkeyCode = defaults.object(forKey: "exposeAppHotkeyCode") as? UInt32 ?? 0x6D
+        rescueHotkeyCode = defaults.object(forKey: "rescueHotkeyCode") as? UInt32 ?? 0x0F   // R
+        rescueHotkeyModifiers = defaults.object(forKey: "rescueHotkeyModifiers") as? UInt32 ?? 0x1900   // ⌃⌥⌘
         exposeAppHotkeyModifiers = defaults.object(forKey: "exposeAppHotkeyModifiers") as? UInt32 ?? 0x1000
         showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true   // boot screen on by default (per-theme toggle still applies)
         crashMode = defaults.string(forKey: "crashMode") ?? "authentic"

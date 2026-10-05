@@ -5,6 +5,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **Rescue Desktop.** One action takes the theme, the shader and every desktop effect away and
+  brings back windows you cannot reach: rolled-up ones, ones parked off screen, ones left on a
+  display that is no longer there. Your settings stay, and a report says what was done, skipped
+  or did not work. ⌃⌥⌘R (change it in Settings ▸ Shortcuts), the flyout, or "Rescue Desktop"
+  in the menu-bar menu. If RetroMac quits mid-rescue, the next start turns nothing on and
+  finishes it; `--rescue-desktop` on the command line does the same on request.
 - **New theme: Windows Vista.** Aero glass windows on a black glass taskbar with the round
   Start orb, Start Search and the orange power button, the time on one line, the Welcome
   screen at start, eight Vista wallpapers from Aurora to the Ultimate orb, and Vista's own

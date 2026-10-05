@@ -48,7 +48,11 @@ a *particular* game is in the Game Library window, not here.
 
 **Crashes** — Retro Crashes: mode, how often, what can happen, boot failures, moments, the scene.
 
-**Shortcuts** — the global hotkeys, and the conflict tip. Nothing else.
+**Shortcuts** — Rescue Desktop on top, then the global hotkeys. Nothing else.
+
+**Rescue Desktop** is also in the flyout and the menu-bar menu, and works with no theme on. If a
+rescue was interrupted, the next launch turns nothing on and finishes it; launching with
+`--rescue-desktop` (`open -a RetroMac --args --rescue-desktop`) does the same on request.
 
 **General** — the Setup Assistant, start at login, and the three permissions with Grant buttons.
 

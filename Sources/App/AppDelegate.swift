@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashboardHotKeyRef: EventHotKeyRef?
     private var exposeHotKeyRef: EventHotKeyRef?
     private var exposeAppHotKeyRef: EventHotKeyRef?
+    private var rescueHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var menuBarHiddenByHotkey = false
     private(set) var currentIntensity: Float!
@@ -241,8 +242,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Opt-in "start into the last theme": the user setting (Settings ▸ Dock) or the QA env
         // hook RETROMAC_AUTOACTIVATE_THEME immediately turns the remembered theme on at launch
         // (mirrors selecting it from the menu). Default off → clean start is unchanged.
-        let autoActivateTheme = settings.activateThemeOnLaunch
-            || ProcessInfo.processInfo.environment["RETROMAC_AUTOACTIVATE_THEME"] != nil
+        // A rescue that never finished, or --rescue-desktop: nothing comes on by itself, and
+        // the rescue runs again once the app is up (RET-14).
+        let rescueAtLaunch = DesktopRescue.pending || DesktopRescue.requestedAtLaunch
+        if rescueAtLaunch {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { DesktopRescue.shared.run() }
+        }
+        let autoActivateTheme = !rescueAtLaunch && (settings.activateThemeOnLaunch
+            || ProcessInfo.processInfo.environment["RETROMAC_AUTOACTIVATE_THEME"] != nil)
         if autoActivateTheme {
             DispatchQueue.main.async {
                 ThemeManager.shared.setActiveTheme(name: settings.dockTheme)
@@ -337,7 +344,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // "off for this theme" outranks the launch switch. The app remembered that choice
             // and then contradicted itself on the next launch, which is what made the setting
             // look as though it were not being saved at all.
-            if AppSettings.shared.enableOnLaunch && !self.isActive
+            if AppSettings.shared.enableOnLaunch && !self.isActive && !rescueAtLaunch
                 && !AppSettings.shared.shaderDisabledForActiveTheme {
                 let preset = self.currentPresetName ?? AppSettings.shared.defaultPreset
                 let needsCapture = !Self.isLitePreset(preset) && !self.isWallpaperOnlyScope
@@ -1429,6 +1436,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        let rescueItem = NSMenuItem(title: "Rescue Desktop", action: #selector(rescueDesktop), keyEquivalent: "")
+        rescueItem.target = self
+        rescueItem.image = sfIcon("lifepreserver")
+        menu.addItem(rescueItem)
+
         let wizardItem = NSMenuItem(title: "Setup Assistant\u{2026}", action: #selector(openSetupWizard), keyEquivalent: "")
         wizardItem.target = self
         // Not the wand: that is Retro Mode / favourite, up in the header.
@@ -1549,6 +1561,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // 6. Rescue Desktop (id: 11). A combination another app holds is said so in Settings
+        //    ▸ Shortcuts rather than taken over (RET-02).
+        DesktopRescue.hotkeyRegistered = true
+        if settings.rescueHotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 11)
+            if RegisterEventHotKey(settings.rescueHotkeyCode, settings.rescueHotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                rescueHotKeyRef = ref
+            } else {
+                DesktopRescue.hotkeyRegistered = false
+            }
+        }
+
         // Install event handler (once)
         if eventHandlerRef == nil {
             var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
@@ -1569,6 +1595,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     case 8: DispatchQueue.main.async { DashboardController.shared.toggle() }
                     case 9: DispatchQueue.main.async { ExposeController.shared.toggle(.allWindows) }
                     case 10: DispatchQueue.main.async { ExposeController.shared.toggle(.applicationWindows) }
+                    case 11: DispatchQueue.main.async { DesktopRescue.shared.run() }
                     default: return OSStatus(eventNotHandledErr)
                     }
                     return noErr
@@ -1579,6 +1606,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func unregisterHotkey() {
+        if let ref = rescueHotKeyRef {
+            UnregisterEventHotKey(ref)
+            rescueHotKeyRef = nil
+        }
         if let ref = exposeHotKeyRef {
             UnregisterEventHotKey(ref)
             exposeHotKeyRef = nil
@@ -2808,6 +2839,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: "OK")
         NSApp.activate(ignoringOtherApps: true)
         alert.runModal()
+    }
+
+    @objc func rescueDesktop() { DesktopRescue.shared.run() }
+
+    /// Rescue Desktop's first step: Retro Mode, the theme and the shader off — the same paths
+    /// the user's own switches take, so nothing they chose is forgotten (RET-05).
+    func rescueTurnEverythingOff() {
+        if retroModeActive { toggleRetroMode() }
+        disableTheme()
+        if isActive { disableAll() }
     }
 
     @objc private func disableTheme() {
