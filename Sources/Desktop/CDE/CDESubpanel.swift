@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 
 /// A CDE subpanel (Lastenheft 3.0, CDE-02, CDE-05): the column that slides up out of a Front
 /// Panel arrow — a small titled window, "Install Icon" at the top, then one row per launcher.
@@ -51,12 +52,44 @@ final class CDESubpanel: NSView {
         resignObserver = NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: p, queue: .main) { _ in
             closeAll()   // a click anywhere else closes it
         }
+        // Esc closes it (CDE-02). The key goes to the app in front, not to this background
+        // app, so while a subpanel is open Esc is held as a hotkey and let go on close.
+        setEscHotKey(true)
     }
     private static var resignObserver: NSObjectProtocol?
 
     static func closeAll() {
+        setEscHotKey(false)
         if let o = resignObserver { NotificationCenter.default.removeObserver(o); resignObserver = nil }
         window?.orderOut(nil); window = nil; openKind = nil
+    }
+
+    private static var escHotKey: EventHotKeyRef?
+    private static var escHandler: EventHandlerRef?
+    private static let escSignature = OSType(0x52434445)   // "RCDE"
+
+    private static func setEscHotKey(_ on: Bool) {
+        if on, escHotKey == nil {
+            if escHandler == nil {
+                var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+                InstallEventHandler(GetApplicationEventTarget(), { _, event, _ -> OSStatus in
+                    var id = EventHotKeyID()
+                    GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil,
+                                      MemoryLayout<EventHotKeyID>.size, nil, &id)
+                    guard id.signature == CDESubpanel.escSignature else { return OSStatus(eventNotHandledErr) }
+                    DispatchQueue.main.async { CDESubpanel.closeAll() }
+                    return noErr
+                }, 1, &spec, nil, &escHandler)
+            }
+            var ref: EventHotKeyRef?
+            // id 99: ids 1–11 are AppDelegate's hotkeys
+            if RegisterEventHotKey(UInt32(kVK_Escape), 0, EventHotKeyID(signature: escSignature, id: 99), GetApplicationEventTarget(), 0, &ref) == noErr {
+                escHotKey = ref
+            }
+        } else if !on, let ref = escHotKey {
+            UnregisterEventHotKey(ref)
+            escHotKey = nil
+        }
     }
 
     // MARK: Content
