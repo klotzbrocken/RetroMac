@@ -17,7 +17,7 @@ final class CDEDesktop {
     private var observers: [NSObjectProtocol] = []
     private(set) var mode: Mode = .cde
 
-    func show(_ mode: Mode = .cde) {
+    func show(_ mode: Mode) {
         self.mode = mode
         guard let screen = NSScreen.screens.first else { return }
         if panel == nil {
@@ -36,7 +36,7 @@ final class CDEDesktop {
             let nc = NotificationCenter.default
             observers = [
                 nc.addObserver(forName: .minimizedWindowsChanged, object: nil, queue: .main) { [weak self] _ in self?.reload() },
-                nc.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in self?.show() },
+                nc.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in guard let self else { return }; self.show(self.mode) },
             ]
         }
         panel?.setFrame(screen.frame, display: false)
