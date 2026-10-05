@@ -1,5 +1,4 @@
 import AppKit
-import Carbon.HIToolbox
 
 /// A CDE subpanel (Lastenheft 3.0, CDE-02, CDE-05): the column that slides up out of a Front
 /// Panel arrow — a small titled window, "Install Icon" at the top, then one row per launcher.
@@ -49,47 +48,25 @@ final class CDESubpanel: NSView {
         window = p; openKind = kind
         NSApp.activate(ignoringOtherApps: true)
         p.makeKeyAndOrderFront(nil)
+        // A click in another app closes it too: the panel only resigns key if it became key.
+        outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
+            DispatchQueue.main.async { closeAll() }
+        }
+        CDEEscape.hold { closeAll() }   // Esc closes it (CDE-02)
         resignObserver = NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: p, queue: .main) { _ in
             closeAll()   // a click anywhere else closes it
         }
-        // Esc closes it (CDE-02). The key goes to the app in front, not to this background
-        // app, so while a subpanel is open Esc is held as a hotkey and let go on close.
-        setEscHotKey(true)
     }
     private static var resignObserver: NSObjectProtocol?
+    private static var outsideMonitor: Any?
 
     static func closeAll() {
-        setEscHotKey(false)
         if let o = resignObserver { NotificationCenter.default.removeObserver(o); resignObserver = nil }
-        window?.orderOut(nil); window = nil; openKind = nil
-    }
-
-    private static var escHotKey: EventHotKeyRef?
-    private static var escHandler: EventHandlerRef?
-    private static let escSignature = OSType(0x52434445)   // "RCDE"
-
-    private static func setEscHotKey(_ on: Bool) {
-        if on, escHotKey == nil {
-            if escHandler == nil {
-                var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-                InstallEventHandler(GetApplicationEventTarget(), { _, event, _ -> OSStatus in
-                    var id = EventHotKeyID()
-                    GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil,
-                                      MemoryLayout<EventHotKeyID>.size, nil, &id)
-                    guard id.signature == CDESubpanel.escSignature else { return OSStatus(eventNotHandledErr) }
-                    DispatchQueue.main.async { CDESubpanel.closeAll() }
-                    return noErr
-                }, 1, &spec, nil, &escHandler)
-            }
-            var ref: EventHotKeyRef?
-            // id 99: ids 1–11 are AppDelegate's hotkeys
-            if RegisterEventHotKey(UInt32(kVK_Escape), 0, EventHotKeyID(signature: escSignature, id: 99), GetApplicationEventTarget(), 0, &ref) == noErr {
-                escHotKey = ref
-            }
-        } else if !on, let ref = escHotKey {
-            UnregisterEventHotKey(ref)
-            escHotKey = nil
-        }
+        if let m = outsideMonitor { NSEvent.removeMonitor(m); outsideMonitor = nil }
+        guard let w = window else { return }
+        window = nil; openKind = nil
+        w.orderOut(nil)
+        CDEEscape.release()
     }
 
     // MARK: Content
@@ -128,7 +105,7 @@ final class CDESubpanel: NSView {
 
     /// The Solaris 8 subpanels, with Mac targets. Icons from the reference where the screenshots
     /// show one; otherwise the app's own (ICO-07, the native fallback).
-    private static func items(for kind: Kind, theme t: ThemeBundle) -> [Item] {
+    static func items(for kind: Kind, theme t: ThemeBundle) -> [Item] {
         let fm = FileManager.default
         var list: [Item]
         switch kind {
@@ -158,7 +135,7 @@ final class CDESubpanel: NSView {
         case .tools:
             list = [Item(title: "Desktop Style", icon: icon(t, "cde_style.png"),
                          action: CDEActions.settings("com.apple.Appearance-Settings.extension")),
-                    Item(title: "RetroMac Settings", icon: NSApp.applicationIconImage,
+                    Item(title: "RetroMac Settings", icon: NSApplication.shared.applicationIconImage,
                          action: { AppDelegate.shared?.launcherOpenSettings() }),
                     Item(title: "Workspaces", icon: appIcon("com.apple.exposelauncher"), action: CDEActions.missionControl)]
         case .hosts:

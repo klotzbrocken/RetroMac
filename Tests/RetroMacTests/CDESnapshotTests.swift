@@ -34,4 +34,18 @@ final class CDESnapshotTests: XCTestCase {
         XCTAssertEqual(v.frame.width, 208, "the width of the Solaris 8 Help subpanel")
         try snapshot(v, "cde-subpanel-help.png")
     }
+
+    @MainActor
+    func testWorkspaceMenu() throws {
+        let t = try theme()
+        // Solaris 8's own Workspace Menu: 31 … 364 in the reference, 334 pt tall with its two
+        // icon rows "Add Item to Menu" and "Customize Menu", here one row ("RetroMac Settings").
+        let items = CDEDesktop.workspaceMenu(theme: t)
+        XCTAssertEqual(CDEMenu.size(of: items, title: "Workspace Menu").height, 334 - 23)
+        XCTAssertEqual(items.first?.title, "Applications")
+        XCTAssertEqual(items.last?.title, "Exit Theme...", "CDE-11: the menu's last entry ends the theme, not the session")
+        let v = CDEMenuView(frame: NSRect(x: 0, y: 0, width: 420, height: 360))
+        v.open(items, title: "Workspace Menu", at: .zero, level: 0)
+        try snapshot(v, "cde-workspace-menu.png")
+    }
 }

@@ -10,7 +10,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   on the calendar and a cpu/disk meter; an arrow over every control opens its subpanel, and an
   app dropped on "Install Icon" stays there. The mauve dtwm title bars, the tiled Solaris sun on
   the purple desktop. Every control opens a real Mac app or setting; the four workspaces open
-  Mission Control, and Exit turns the theme off.
+  Mission Control, and Exit turns the theme off. A right-click on the desktop brings up the
+  Workspace Menu, the box at the left of a title bar its window menu (a double-click closes the
+  window), and a minimised window lies on the desktop as an icon until you restore it.
 - **Rescue Desktop.** One action takes the theme, the shader and every desktop effect away and
   brings back windows you cannot reach: rolled-up ones, ones parked off screen, ones left on a
   display that is no longer there. Your settings stay, and a report says what was done, skipped

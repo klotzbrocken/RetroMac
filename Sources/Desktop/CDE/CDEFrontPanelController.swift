@@ -26,6 +26,7 @@ final class CDEFrontPanelController {
     func hide() {
         view?.stop()
         CDESubpanel.closeAll()
+        CDEDesktop.shared.hide()
         if let o = screenObserver { NotificationCenter.default.removeObserver(o); screenObserver = nil }
         panel?.orderOut(nil)
         panel = nil
@@ -55,6 +56,13 @@ final class CDEFrontPanelController {
         reposition()
         panel?.orderFrontRegardless()
         v.start()
+        CDEDesktop.shared.show()
+    }
+
+    /// "Minimize/Restore Front Panel" in the Workspace Menu's Windows cascade.
+    func toggleMinimized() {
+        guard let panel else { return }
+        if panel.isVisible { CDESubpanel.closeAll(); panel.orderOut(nil) } else { panel.orderFrontRegardless() }
     }
 
     /// Bottom centre of the main display (CDE-01), at its natural width.
@@ -142,14 +150,16 @@ final class CDEFrontPanelView: NSView {
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
     override var isFlipped: Bool { true }
 
+    /// The Clock app, or RetroMac's clock widget where there is none.
+    static func openClock() {
+        if NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.clock") != nil {
+            CDEActions.app("com.apple.clock")()
+        } else { ClockWidgetController.shared.userShow() }
+    }
+
     private static func makeControls() -> [CDEControl] {
         [
-            CDEControl(id: "clock", cell: cell(26, 84), tooltip: "Clock",
-                       action: {
-                           if NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.clock") != nil {
-                               CDEActions.app("com.apple.clock")()
-                           } else { ClockWidgetController.shared.userShow() }
-                       }, subpanel: .links),
+            CDEControl(id: "clock", cell: cell(26, 84), tooltip: "Clock", action: openClock, subpanel: .links),
             CDEControl(id: "calendar", cell: cell(86, 142), tooltip: "Calendar",
                        action: CDEActions.app("com.apple.iCal"), subpanel: .cards),
             CDEControl(id: "files", cell: cell(144, 200), tooltip: "File Manager: your home folder in the Finder",

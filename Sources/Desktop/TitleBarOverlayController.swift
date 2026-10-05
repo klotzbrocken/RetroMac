@@ -509,7 +509,10 @@ final class TitleBarOverlayController {
         }
         view.configure(style: drawStyle, title: title, icon: icon, isFront: isFront, lights: lights,
                        deadZoneWidth: deadZoneWidth, zoomed: zoomed)
-        view.onAction = { [weak self] kind in self?.perform(kind, on: info.id, pid: info.pid) }
+        view.onAction = { [weak self] kind in
+            if style == .cde, kind == .close { self?.showCDEWindowMenu(info.id, pid: info.pid); return }
+            self?.perform(kind, on: info.id, pid: info.pid)
+        }
         view.onActivate = { [weak self] in self?.activate(info.id, pid: info.pid) }
         view.onDrag = { [weak self] delta in self?.drag(info.id, pid: info.pid, by: delta) }
         view.onDragEnd = { [weak self] in self?.endDrag() }
@@ -1315,6 +1318,18 @@ final class TitleBarOverlayController {
             outcomes.append((wid, record, restored ? .restored : .failed))
         }
         saveShadeRecovery(Self.remainingShadeRecords(outcomes))   // a window that would not move is tried at the next start
+    }
+
+    /// dtwm's window menu, posted by the box at the left of the bar (CDE-08); a double-click
+    /// on the box closes the window, as it did.
+    private func showCDEWindowMenu(_ wid: CGWindowID, pid: pid_t) {
+        guard let f = overlays[wid]?.panel.frame else { return }
+        let box = NSRect(x: f.minX, y: f.maxY - Self.stripHeight(.cde), width: 19, height: Self.stripHeight(.cde))
+        let zoomed = zoomedTo[wid] != nil
+        let act = { [weak self] (k: ChromeButtonKind) -> () -> Void in { self?.perform(k, on: wid, pid: pid) } }
+        CDEMenu.show(CDEDesktop.windowMenu(restore: zoomed ? act(.restore) : nil, minimize: act(.minimize),
+                                           maximize: zoomed ? nil : act(.maximize), close: act(.close)),
+                     at: NSPoint(x: box.minX, y: box.minY), anchor: box, onAnchorDoubleClick: act(.close))
     }
 
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {

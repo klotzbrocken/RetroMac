@@ -10,8 +10,9 @@
 | Desktop | CDE mit dtwm, Standardpalette (mauve/grau), Backdrop „Solaris“ | Original bestätigt |
 | Sprache | Englisch | Original bestätigt |
 | Auflösung | 1024 × 768, verlustfreie PNG | Original bestätigt |
-| Herkunft | Sieben Screenshots, von Maik geliefert (`~/Downloads/Solaris/solcde*.png`). Ihre ursprüngliche Quelle ist noch nachzutragen. | Offen |
+| Herkunft | Sieben Screenshots aus der GUI Gallery von Toastytech, „Solaris 8 CDE and OpenWindows“ [T1]: `solcde*.png`, von Maik geliefert. Die Seite beschreibt dazu das Verhalten von Subpanels, Fenstermenü, Icons und Workspace-Menü. | Original bestätigt |
 | Handbuch | Solaris CDE User's Guide 806-1360 [S1–S3] | Dokumentiert |
+| Version | SunOS 5.8 = Solaris 8, erschienen 2000, letztes Update 2/04 [W1] | Dokumentiert |
 
 Eine eigene VM-Installation (REF-01) steht noch aus. Bis dahin gelten diese Screenshots als optische Referenz.
 
@@ -31,6 +32,8 @@ Eine eigene VM-Installation (REF-01) steht noch aus. Bis dahin gelten diese Scre
 | Titelleiste | 1 pt Kante plus 19 pt Leiste. Menü-, Minimier- und Maximierknopf je 19 × 19. Rahmen 5 pt. | Console-Fenster |
 | Subpanel | Breite 208. Titel 15 pt plus 2 pt Kante, Install-Icon-Zeile 50 pt mit eingeprägter Linie, Einträge 45 pt flach. Schrift weiß mit dunklem Schatten. | Help-Subpanel `solcdehelp.png` |
 | Backdrop | Kachel 113 × 88, Ursprung am Bildschirmrand oben links | Autokorrelation über `solcdeshutdown.png` |
+| Menüs | 1-pt-Kante, Titel 20 pt über Doppellinie (2 × 1 pt schwarz), Zeilen 21 pt, mit 16-pt-Icon 23 pt, Trenner 2 pt geätzt. Aktive Zeile eingesenkt, #9494A5. Kaskade 4 pt unter ihrer Zeile, 2 pt überlappend. Schrift Lucida Grande 14 (Titel 115 pt breit wie im Original). | Workspace Menu in `solcdegeneral.png` |
+| Icons minimierter Fenster | Bild-Box 60 × 59, 2-pt-Kante, geätzter Rahmen 4 pt innen, Bild 48 × 48. Label-Box 20 pt darunter, Text abgeschnitten („Calcula“). Raster 85 pt ab (2, 4) oben links. | `solcdegeneral.png`, `solcdefileman.png` |
 
 ## Assets und Herkunft
 
@@ -43,6 +46,7 @@ Alle Bilder stammen aus den gelieferten Screenshots, unverändert in Pixeln und 
 | `icons/cde_*.png` | Panel-Icons aus `solcdeshutdown.png` |
 | `icons/sp_*.png` | Subpanel-Icons aus `solcdegeneral.png` (Links, Cards, Mail) und `solcdehelp.png` (Help) |
 | `wallpaper.png` | Backdrop-Kachel aus `solcdeshutdown.png` (x 0, y 528) |
+| `icons/mi_*.png` | 16-pt-Menü-Icons aus dem Workspace Menu und seiner Kaskade „Applications“ in `solcdegeneral.png` |
 
 ## RetroMac-Anpassungen
 
@@ -63,15 +67,20 @@ Alle Bilder stammen aus den gelieferten Screenshots, unverändert in Pixeln und 
 - **Drop-Zonen (CDE-06):** nur zwei. Der Papierkorb legt Dateien in den macOS-Papierkorb, „Install Icon“ nimmt Apps auf. Andere Ziele nehmen nichts an.
 - **Schrift:** Lucida Grande statt der Sun-Bitmap-Lucida. Sie rendert etwas kräftiger, weil macOS glättet.
 - **Fensterrahmen:** Der 5-pt-Rahmen kennt das aktive Fenster nicht und trägt immer die inaktiven Farben. Die Titelleiste zeigt den aktiven Zustand.
-- **Fenstermenü-Knopf:** schließt mit einem Klick. dtwm öffnete beim Klick das Fenstermenü und schloss erst beim Doppelklick.
+- **Fenstermenü (CDE-08):** wie bei dtwm. Ein Klick auf den Kasten öffnet es, ein Doppelklick schließt das Fenster. Restore, Minimize, Maximize und Close wirken. Move, Size, Lower und die Workspace-Einträge bleiben grau: macOS bietet sie für fremde Fenster nicht an. Die Tastenkürzel (Alt+F4 …) fehlen, weil sie nicht wirken würden.
+- **Workspace Menu (CDE-09):** Rechtsklick auf den Desktop. Die Kaskaden zeigen die Inhalte der Subpanels, wie CDE sie aus dem Front Panel baute. „Applications“ folgt der Solaris-Liste mit Mac-Gegenstücken: Image Viewer → Vorschau, Snapshot → Bildschirmfoto, Text Note → Notizzettel, Voice Note → Sprachmemos. Einträge ohne installierte App fehlen; das Icon Editor fehlt immer. „Add Item to Menu“ und „Customize Menu“ werden zu „RetroMac Settings...“. „Log out...“ heißt „Exit Theme...“ und beendet das Theme (CDE-11). „Windows“ enthält Mission Control, „Restore All Icons“ und „Minimize/Restore Front Panel“. Ein minimiertes Front Panel wird nicht zum Icon, sondern ausgeblendet.
+- **Icons minimierter Fenster (CDE-10):** ein Klick öffnet das Fenstermenü, ein Doppelklick stellt das Fenster wieder her. Ohne Bedienungshilfen-Recht zeigt RetroMac ausgeblendete Apps statt Fenster (das Verhalten des Fenster-Trackers). Das Bild ist das Theme-Icon der App, sonst ihr eigenes. Der Desktop übernimmt wie bei den anderen Themes mit Desktop-Icons die Klicks auf die freie Fläche.
+- **Subpanels:** Laut Toastytech blieben sie offen, bis man den Pfeil erneut klickte. RetroMac schließt sie zusätzlich mit Esc und mit einem Klick daneben, wie CDE-02 verlangt.
 - **Bildschirmschoner:** keiner. RetroMac hat keinen der CDE-Schoner (Swarm, Worms …).
 
 ## Offen für die nächsten Runden
 
 - **CDE-04:** Anwendungen-Fenster (Application Manager) im CDE-Stil. Bis dahin öffnet es den Programme-Ordner.
-- **CDE-09:** Desktop-Kontextmenü als Workspace Menu.
-- **CDE-10:** minimierte Fenster als Desktop-Icons.
-- Fenstermenü statt Ein-Klick-Schließen.
 - Widget-Stile `cde` für Uhr, Rechner, Notepad, CPU-Monitor und AppFolder; WebApp-Chrome.
 - Crash-Ära (Solaris), Bootscreen (dtlogin), Cursor (X11-Cursorfont).
 - `minAppVersion: "3.0"` (ARC-03): wird gesetzt, wenn die App-Version auf 3.0 geht. Vorher würde das Theme im 2.8.x-Build nicht laden.
+
+## Quellen
+
+- [T1] Toastytech GUI Gallery, „Solaris 8 CDE and OpenWindows“, http://toastytech.com/guis/sol.html und sol2.html
+- [W1] Wikipedia, „Solaris (Betriebssystem)“, https://de.wikipedia.org/wiki/Solaris_(Betriebssystem)
