@@ -426,6 +426,58 @@ enum CrashCopy {
                           font: .mono, palette: .console)
     }
 
+    /// A Solaris 8 panic on the Sun console, black on white: the BAD TRAP line, the registers,
+    /// the stack, then the kernel syncing its disks and writing the dump before it reboots.
+    /// Wrapped at 80 columns as the console wrapped it.
+    static func solarisPanic(using rng: inout CrashRNG) -> TextScreen {
+        func h(_ n: Int) -> String { hex(n, using: &rng).lowercased() }   // Solaris printed hex in lower case
+        let thread = "3000" + h(7), rp = "2a100" + h(6), pc = "1004" + h(4)
+        let frames = (0..<3).map { _ in "000002a100" + h(6) }
+        return TextScreen(grid: .vga80x30, topRow: 1, leftColumn: 0,
+                          lines: [
+                            .text("panic[cpu0]/thread=\(thread): BAD TRAP: type=31 rp=\(rp) addr=0"),
+                            .text("mmu_fsr=0 occurred in module \"unix\" due to a NULL pointer dereference"),
+                            .blank,
+                            .text("sched: trap type = 0x31"),
+                            .text("addr=0x0"),
+                            .text("pid=0, pc=0x\(pc), sp=0x2a100\(h(6)), tstate=0x4400001606, context=0x0"),
+                            .text("g1-g7: \(pc), 0, 0, \(thread), 0, 0, \(thread)"),
+                            .blank,
+                            .text("\(frames[0]) unix:die+78 (31, \(rp), 0, 0, 2a100\(h(6)), 1)"),
+                            .text("\(frames[1]) unix:trap+8e8 (\(rp), 0, 10000, 10200, 0, 0)"),
+                            .text("\(frames[2]) unix:ktl0+48 (0, 0, 0, 0, 0, 0)"),
+                            .blank,
+                            .text("syncing file systems... [3] 21 done"),
+                            .text("dumping to /dev/dsk/c0t0d0s1, offset 65536, content: kernel"),
+                            .percent(prefix: "", suffix: "% done: writing kernel pages"),
+                          ],
+                          font: .mono, palette: .sunConsole)
+    }
+
+    /// The machine hangs, the watchdog resets it, and OpenBoot is left at its prompt.
+    static func solarisOkPrompt() -> TextScreen {
+        TextScreen(grid: .vga80x30, topRow: 1, leftColumn: 0,
+                   lines: [.text("Watchdog Reset"), .text("Externally Initiated Reset"), .text("Program terminated"), .prompt("ok ")],
+                   font: .mono, palette: .sunConsole)
+    }
+
+    /// After an unclean stop the root file system would not check clean, and the boot stopped
+    /// in single-user mode to ask for the root password.
+    static func solarisFsck() -> TextScreen {
+        TextScreen(grid: .vga80x30, topRow: 1, leftColumn: 0,
+                   lines: [
+                    .text("/dev/rdsk/c0t0d0s0: UNEXPECTED INCONSISTENCY; RUN fsck MANUALLY."),
+                    .blank,
+                    .text("WARNING - Unable to repair the / filesystem. Run fsck"),
+                    .text("manually (fsck -F ufs /dev/rdsk/c0t0d0s0). Exit the shell when"),
+                    .text("done to continue the boot process."),
+                    .blank,
+                    .text("Type control-d to proceed with normal startup,"),
+                    .prompt("(or give root password for system maintenance): "),
+                   ],
+                   font: .mono, palette: .sunConsole)
+    }
+
     /// The grey curtain, in the four languages it always used. Word for word: it is one of the
     /// few pieces of system text people can quote from memory.
     static func kernelPanic() -> KernelPanic {

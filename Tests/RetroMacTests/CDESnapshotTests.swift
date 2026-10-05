@@ -58,4 +58,14 @@ final class CDESnapshotTests: XCTestCase {
         XCTAssertEqual(AppFolderController.cdeGroup(forCategory: nil), "Desktop_Apps", "no category: the general group")
         XCTAssertFalse(AppFolderController.cdeGroups.contains(AppFolderController.cdeAllGroup))
     }
+
+    func testSolarisPanicScreen() throws {
+        var rng = CrashRNG(seed: 8)
+        let screen = CrashCopy.solarisPanic(using: &rng)
+        XCTAssertEqual(screen.palette, .sunConsole, "a Sun console is black on white")
+        guard let dir = ProcessInfo.processInfo.environment["RETROMAC_SNAPSHOT_DIR"],
+              let image = CrashRenderer.image(for: screen, counter: 64) else { return }
+        try NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])?
+            .write(to: URL(fileURLWithPath: dir).appendingPathComponent("solaris-panic.png"))
+    }
 }

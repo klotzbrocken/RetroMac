@@ -81,6 +81,8 @@ enum ScreenPalette: Equatable {
     case orange9x
     /// ScanDisk's full-screen window: light grey on blue, with white for what mattered.
     case scandisk
+    /// A Sun workstation's console: black on white, which is where a Solaris panic landed.
+    case sunConsole
 }
 
 /// A pause in the counter — ScanDisk sitting at 43% for a while, which is where the tension was.

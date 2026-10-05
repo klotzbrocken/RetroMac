@@ -30,6 +30,7 @@ enum CrashPalette {
         case .nt: return ntBlue
         case .console, .dos, .orange9x: return consoleBlack
         case .scandisk: return scandiskBlue
+        case .sunConsole: return ntText
         }
     }
     static func foreground(_ palette: ScreenPalette) -> CGColor {
@@ -38,6 +39,7 @@ enum CrashPalette {
         case .nt, .console: return ntText
         case .dos, .scandisk: return dosGrey
         case .orange9x: return shutdownOrange
+        case .sunConsole: return consoleBlack
         }
     }
     /// The brighter colour a screen used for the part that mattered: the filled progress bar.

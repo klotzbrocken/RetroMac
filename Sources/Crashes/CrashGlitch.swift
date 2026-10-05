@@ -184,7 +184,7 @@ extension CrashEra {
     /// could either.
     var hasRedrawTrails: Bool {
         switch self {
-        case .win95, .win98, .winMe, .winXP, .macos6, .macos9: return true
+        case .win95, .win98, .winMe, .winXP, .macos6, .macos9, .solaris8: return true
         case .win7, .macosxAqua, .macosxModern: return false
         }
     }
@@ -192,7 +192,7 @@ extension CrashEra {
     /// Desktops that ran in 256 colours, where a corrupted palette repainted everything wrong.
     var hasIndexedColour: Bool {
         switch self {
-        case .win95, .win98, .winMe, .macos6, .macos9: return true
+        case .win95, .win98, .winMe, .macos6, .macos9, .solaris8: return true   // an 8-bit Sun framebuffer
         case .winXP, .win7, .macosxAqua, .macosxModern: return false
         }
     }
@@ -201,7 +201,7 @@ extension CrashEra {
     /// beam to lose it; by Windows 7 and Snow Leopard the monitor on the desk was flat.
     var hasCRT: Bool {
         switch self {
-        case .win95, .win98, .winMe, .winXP, .macos6, .macos9, .macosxAqua: return true
+        case .win95, .win98, .winMe, .winXP, .macos6, .macos9, .macosxAqua, .solaris8: return true
         case .win7, .macosxModern: return false
         }
     }
@@ -213,7 +213,7 @@ extension CrashEra {
         switch self {
         case .win95, .win98, .winMe: return 0.4
         case .winXP, .win7, .macos6, .macos9: return 0.3
-        case .macosxAqua, .macosxModern: return 0.2
+        case .macosxAqua, .macosxModern, .solaris8: return 0.2
         }
     }
 }

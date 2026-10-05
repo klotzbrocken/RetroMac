@@ -337,6 +337,38 @@ enum CrashCatalogue {
                           ])
         },
 
+        Spec(id: "solaris-panic",
+             title: "Kernel panic — BAD TRAP on the console",
+             eras: [.solaris8],
+             weight: 5, kind: .fullScreen) { rng in
+            CrashScenario(id: "solaris-panic",
+                          title: "Kernel panic — BAD TRAP on the console",
+                          eras: [.solaris8], weight: 5, freezeHold: 1.0,
+                          stages: [
+                            // CDE gave way to the console the moment the kernel gave up.
+                            CrashStage(.textScreen(CrashCopy.solarisPanic(using: &rng)),
+                                       recovery: [.restartsOnAnyKey])
+                          ])
+        },
+
+        Spec(id: "solaris-ok-prompt",
+             title: "Watchdog reset — the ok prompt",
+             eras: [.solaris8],
+             weight: 3, kind: .fullScreen) { _ in
+            CrashScenario(id: "solaris-ok-prompt",
+                          title: "Watchdog reset — the ok prompt",
+                          eras: [.solaris8], weight: 3, freezeHold: 1.6,
+                          stages: [CrashStage(.textScreen(CrashCopy.solarisOkPrompt()), recovery: [.restartsOnAnyKey])])
+        },
+
+        Spec(id: "boot-solaris-fsck",
+             title: "fsck wants the root password",
+             eras: [.solaris8],
+             weight: 4, kind: .fullScreen, category: .bootFailure) { _ in
+            bootFailure("boot-solaris-fsck", "fsck wants the root password", [.solaris8], weight: 4,
+                        stages: [CrashStage(.textScreen(CrashCopy.solarisFsck()), hold: 7, recovery: .anyKey)])
+        },
+
         // MARK: More failures
 
         Spec(id: "xp-memory-could-not-be-read",
@@ -678,18 +710,18 @@ enum CrashCatalogue {
 
         Spec(id: "moment-palette",
              title: "The palette goes",
-             eras: [.win95, .win98, .winMe, .macos6, .macos9],
+             eras: [.win95, .win98, .winMe, .macos6, .macos9, .solaris8],
              weight: 3, kind: .fullScreen, category: .moment) { rng in
-            moment("moment-palette", "The palette goes", [.win95, .win98, .winMe, .macos6, .macos9], weight: 3,
+            moment("moment-palette", "The palette goes", [.win95, .win98, .winMe, .macos6, .macos9, .solaris8], weight: 3,
                    stages: [CrashStage(.moment(.paletteCorruption), hold: Double.random(in: 1.5...3.0, using: &rng))])
         },
 
         Spec(id: "moment-hsync-roll",
              title: "The picture rolls",
-             eras: [.win95, .win98, .winMe, .winXP, .macos6, .macos9, .macosxAqua],
+             eras: [.win95, .win98, .winMe, .winXP, .macos6, .macos9, .macosxAqua, .solaris8],
              weight: 3, kind: .fullScreen, category: .moment) { rng in
             moment("moment-hsync-roll", "The picture rolls",
-                   [.win95, .win98, .winMe, .winXP, .macos6, .macos9, .macosxAqua], weight: 3,
+                   [.win95, .win98, .winMe, .winXP, .macos6, .macos9, .macosxAqua, .solaris8], weight: 3,
                    stages: [CrashStage(.moment(.hsyncRoll), hold: Double.random(in: 2...6, using: &rng))])
         },
 

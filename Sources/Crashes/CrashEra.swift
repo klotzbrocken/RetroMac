@@ -13,6 +13,7 @@ import Foundation
 enum CrashEra: String, CaseIterable {
     case win95, win98, winMe, winXP, win7
     case macos6, macos9, macosxAqua, macosxModern
+    case solaris8
 
     var displayName: String {
         switch self {
@@ -25,6 +26,7 @@ enum CrashEra: String, CaseIterable {
         case .macos9: return "Mac OS 9"
         case .macosxAqua: return "Mac OS X"
         case .macosxModern: return "Mac OS X (Snow Leopard and later)"
+        case .solaris8: return "Solaris 8"
         }
     }
 
@@ -48,6 +50,7 @@ enum CrashEra: String, CaseIterable {
         case "com.retromac.apple.aqua-cheetah":  return .macosxAqua
         case "com.retromac.apple.snow-leopard",
              "com.retromac.apple.mountain-lion": return .macosxModern
+        case "com.retromac.sun.solaris8-cde":   return .solaris8
         default: break
         }
 
@@ -63,6 +66,7 @@ enum CrashEra: String, CaseIterable {
         if name.contains("mac os 9")   { return .macos9 }
         if name.contains("snow leopard") || name.contains("mountain lion") { return .macosxModern }
         if name.contains("mac os x")   { return .macosxAqua }
+        if name.contains("solaris")    { return .solaris8 }
         return nil
     }
 }

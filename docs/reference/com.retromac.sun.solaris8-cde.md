@@ -74,13 +74,19 @@ Alle Bilder stammen aus den gelieferten Screenshots, unverändert in Pixeln und 
 - **Icons minimierter Fenster (CDE-10):** ein Klick öffnet das Fenstermenü, ein Doppelklick stellt das Fenster wieder her. Ohne Bedienungshilfen-Recht zeigt RetroMac ausgeblendete Apps statt Fenster (das Verhalten des Fenster-Trackers). Das Bild ist das Theme-Icon der App, sonst ihr eigenes. Der Desktop übernimmt wie bei den anderen Themes mit Desktop-Icons die Klicks auf die freie Fläche.
 - **Application Manager (CDE-04):** Er zeigt die Mac-Apps in Gruppen nach Solaris-Art, die sich aus der App-Store-Kategorie der App ergeben: Desktop_Apps (auch ohne Kategorie), Desktop_Tools, Developer_Tools, Graphics, Audio_Video, Information, Games. „All_Applications“ listet alle Apps. Leere Gruppen fehlen. Das Fenster ist das File-Manager-Fenster mit Pfad als Ordnerzeile und Text. Der Pfad „/Applications/Desktop_Tools“ ist virtuell. Solaris hatte /var/dt/appconfig/appmanager. Geöffnet wird er aus dem Workspace Menu und dem Applications-Subpanel. Minimieren blendet das Fenster aus.
 - **Widgets (Uhr, Rechner, Notepad, CPU-Monitor):** Sie tragen den dtwm-Rahmen mit Mauve-Titelleiste, Menükasten links, grauen Motif-Flächen und Textfeldern in #FFF7EF. Innen behalten sie ihren Aufbau aus dem Windows-98-Stil (Menüleiste, Tasten des Rechners), weil Solaris für diese RetroMac-Widgets kein Vorbild hat. Der Menükasten schließt das Widget mit einem Klick; das volle Fenstermenü haben echte Fenster und der Application Manager.
+- **Crash-Ära „Solaris 8“:**
+  - Kernel-Panic als BAD TRAP auf der Sun-Konsole, schwarz auf weiß mit zufälligen Adressen in Kleinschrift; der Dump zählt hoch.
+  - Watchdog-Reset mit OpenBoot-Prompt `ok`.
+  - Als Startfehler fsck, das im Single-User-Modus nach dem Root-Passwort fragt.
+  - Dazu die allgemeinen Effekte „Farbtabelle kippt“ (8-Bit-Framebuffer) und „Bild rollt“ (Röhre).
+  - Die Texte folgen dem typischen Solaris-8-Format. Eine Vorlage aus der VM fehlt noch (REF-01).
 - **Subpanels:** Laut Toastytech blieben sie offen, bis man den Pfeil erneut klickte. RetroMac schließt sie zusätzlich mit Esc und mit einem Klick daneben, wie CDE-02 verlangt.
 - **Bildschirmschoner:** keiner. RetroMac hat keinen der CDE-Schoner (Swarm, Worms …).
 
 ## Offen für die nächsten Runden
 
-- WebApp-Chrome.
-- Crash-Ära (Solaris), Bootscreen (dtlogin), Cursor (X11-Cursorfont).
+- WebApp-Rahmen: entfällt vorerst. Unter Solaris öffnet nichts eine Web-App, denn die starten nur über themeeigene Desktop-Icons und den Win95-Ordner „Fun Stuff“. Kommt, sobald ein Einstieg dazukommt.
+- Bootscreen (dtlogin) und Cursor (X11-Cursorfont): Es fehlen Vorlagen. Unter den sieben Screenshots ist weder ein Login noch ein Cursor. Maik liefert sie aus der VM oder als Datei (ICO-01: kein eigener Download).
 - `minAppVersion: "3.0"` (ARC-03): wird gesetzt, wenn die App-Version auf 3.0 geht. Vorher würde das Theme im 2.8.x-Build nicht laden.
 
 ## Quellen
