@@ -49,4 +49,13 @@ final class PhotonSnapshotTests: XCTestCase {
         var c = DateComponents(); c.year = 2004; c.month = 1; c.day = 11; c.hour = 17; c.minute = 45
         XCTAssertEqual(PhotonTaskbarView.clockText(Calendar.current.date(from: c)!), "Sun-11 05:45PM")
     }
+
+    func testALongListEndsInMore() {
+        let list = (1...25).map { CDEMenuItem(title: "App \($0)") }
+        let fitted = PhotonLaunchMenu.fit(list, rows: 10)
+        XCTAssertEqual(fitted.count, 10)
+        XCTAssertEqual(fitted.last?.title, "More")
+        XCTAssertEqual(fitted.last?.submenu?.count, 10)
+        XCTAssertEqual(fitted.last?.submenu?.last?.submenu?.count, 7, "25 = 9 + 9 + 7")
+    }
 }

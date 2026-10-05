@@ -497,14 +497,19 @@ enum PhotonLaunchMenu {
         let internet = Set(["https://example.com", "mailto:x@example.com"].flatMap { URL(string: $0).map { NSWorkspace.shared.urlsForApplications(toOpen: $0) } ?? [] }
             .map(\.path))
         var byCategory: [String: [CDEMenuItem]] = [:]
-        for path in Set(paths) {
+        var seen = Set<String>()
+        for path in Set(paths).sorted() {
+            let name = fm.displayName(atPath: path).replacingOccurrences(of: ".app", with: "")
+            guard seen.insert(name).inserted else { continue }   // one entry per name, as a menu shows it
             let declared = Bundle(path: path)?.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String
             let icon = NSWorkspace.shared.icon(forFile: path)
-            let item = CDEMenuItem(title: fm.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""), icon: icon,
+            let item = CDEMenuItem(title: name, icon: icon,
                                    action: { NSWorkspace.shared.open(URL(fileURLWithPath: path)) })
             byCategory[category(of: path, category: declared, internet: internet), default: []].append(item)
         }
-        func sorted(_ list: [CDEMenuItem]) -> [CDEMenuItem] { list.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending } }
+        func sorted(_ list: [CDEMenuItem]) -> [CDEMenuItem] {
+            fit(list.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending })
+        }
         let theme = ThemeManager.shared.activeTheme
         func icon(_ name: String) -> NSImage? { theme?.iconResource("\(name).png").flatMap { NSImage(contentsOf: $0) } }
         let configure: [CDEMenuItem] = PhotonShelfView.makeGroups().first { $0.id == "configure" }.flatMap {
@@ -520,6 +525,12 @@ enum PhotonLaunchMenu {
                CDEMenuItem(title: "Help", icon: icon("qnx_help"), action: CDEActions.app("com.apple.tips")),
                .separator,
                CDEMenuItem(title: "End Photon session", action: { AppDelegate.shared?.launcherDisableTheme() })]
+    }
+
+    /// A list taller than the screen ends in "More", which holds the rest, and so on down.
+    static func fit(_ list: [CDEMenuItem], rows: Int = max(8, Int(((NSScreen.screens.first?.visibleFrame.height ?? 800) - 60) / CDEMenu.photonRow))) -> [CDEMenuItem] {
+        guard list.count > rows else { return list }
+        return Array(list.prefix(rows - 1)) + [CDEMenuItem(title: "More", submenu: fit(Array(list.dropFirst(rows - 1)), rows: rows))]
     }
 
     /// Opens upwards from the Launch button, standing on the taskbar.
