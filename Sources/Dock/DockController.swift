@@ -83,6 +83,7 @@ final class DockController {
             NextMenuController.shared.update()
             NextDockController.shared.update()
             CDEFrontPanelController.shared.update()
+            PhotonDesktopController.shared.update()
             WindowSwitcher.shared.update()
             NextRunningAppsController.shared.update()
             WindowBorderController.shared.update()
@@ -168,6 +169,7 @@ final class DockController {
         NextMenuController.shared.hide()
         NextDockController.shared.hide()
         CDEFrontPanelController.shared.hide()
+        PhotonDesktopController.shared.hide()
         WindowSwitcher.shared.stop()
         NextRunningAppsController.shared.hide()
         WindowBorderController.shared.update()   // dock off → borders off (gated on dockEnabled)
@@ -303,6 +305,7 @@ final class DockController {
             NextMenuController.shared.update()
             NextDockController.shared.update()
             CDEFrontPanelController.shared.update()
+            PhotonDesktopController.shared.update()
             WindowSwitcher.shared.update()
             NextRunningAppsController.shared.update()
             // These themes replace the dock entirely (Win 3.1 Program Manager, BeOS Deskbar,
@@ -322,6 +325,7 @@ final class DockController {
         NextMenuController.shared.hide()
         NextDockController.shared.hide()
         CDEFrontPanelController.shared.hide()
+        PhotonDesktopController.shared.hide()
         WindowSwitcher.shared.update()   // a dock theme may have a switcher too (Snow Leopard)
         NextRunningAppsController.shared.hide()
 

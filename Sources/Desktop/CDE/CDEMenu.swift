@@ -26,9 +26,15 @@ enum CDEMenu {
 
     /// `topLeft` in screen coordinates. A click inside `anchor` within the double-click time
     /// runs `onAnchorDoubleClick` (dtwm: a double-click on the window-menu box closes the window).
-    static func show(_ items: [CDEMenuItem], title: String? = nil, at topLeft: NSPoint,
+    /// Whose menus these are: dtwm's (Solaris), or Photon's (QNX 6.2.1), which draws every entry
+    /// as a bar of its own and every section as a box of its own.
+    enum Look { case cde, photon }
+    private(set) static var look: Look = .cde
+
+    static func show(_ items: [CDEMenuItem], title: String? = nil, at topLeft: NSPoint, look: Look = .cde,
                      anchor: NSRect? = nil, onAnchorDoubleClick: (() -> Void)? = nil) {
         close()
+        self.look = look
         CDESubpanel.closeAll()
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(topLeft) }) ?? NSScreen.main else { return }
         let p = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -66,15 +72,29 @@ enum CDEMenu {
 
     // MARK: Metrics
 
-    static let font = NSFont(name: "LucidaGrande", size: 14) ?? .systemFont(ofSize: 14)
+    static var font: NSFont { look == .photon ? PhotonColors.label : (NSFont(name: "LucidaGrande", size: 14) ?? .systemFont(ofSize: 14)) }
     static let titleH: CGFloat = 20, ruleH: CGFloat = 4, rowH: CGFloat = 21, iconRowH: CGFloat = 23, sepH: CGFloat = 2
 
+    /// Photon, measured off the Launch menu in `qnx621about2.png`: a black edge, a #F1F1F1 light
+    /// and 3 pt of #D8D8D8 inside it; bars of 17 pt with 2 pt between; a section ends in #BFBFBF
+    /// and black and the next begins (7 pt); the label at 37 pt, a 16 pt icon at 12 pt.
+    static let photonTop: CGFloat = 5, photonBottom: CGFloat = 3, photonSide: CGFloat = 4, photonRow: CGFloat = 19,
+               photonBar: CGFloat = 17, photonSep: CGFloat = 7, photonLabel: CGFloat = 37
+
     /// A row with an icon is 2 pt taller than one without, side by side in the same menu.
-    static func height(of item: CDEMenuItem) -> CGFloat { item.isSeparator ? sepH : item.icon == nil ? rowH : iconRowH }
+    static func height(of item: CDEMenuItem) -> CGFloat {
+        if look == .photon { return item.isSeparator ? photonSep : photonRow }
+        return item.isSeparator ? sepH : item.icon == nil ? rowH : iconRowH
+    }
 
     /// Size of a menu: the widest label, its icon column and cascade arrow, or the title.
     static func size(of items: [CDEMenuItem], title: String?) -> NSSize {
         let hasArrows = items.contains { $0.submenu != nil }
+        if look == .photon {
+            let w = items.map { ($0.title as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
+            return NSSize(width: ceil(photonLabel + w + (hasArrows ? 26 : 14) + photonSide),
+                          height: photonTop + items.reduce(0) { $0 + height(of: $1) } + photonBottom)
+        }
         var w: CGFloat = 0, h: CGFloat = 2 + (title == nil ? 0 : titleH + ruleH)
         for it in items {
             h += height(of: it)
@@ -162,11 +182,13 @@ final class CDEMenuView: NSView {
 
     /// Row rectangles of a level, in view coordinates, with the item index.
     private func rows(_ l: Level) -> [(NSRect, Int)] {
-        var y = l.frame.minY + 1 + (l.title == nil ? 0 : CDEMenu.titleH + CDEMenu.ruleH)
+        let photon = CDEMenu.look == .photon
+        var y = l.frame.minY + (photon ? CDEMenu.photonTop : 1 + (l.title == nil ? 0 : CDEMenu.titleH + CDEMenu.ruleH))
+        let inset = photon ? CDEMenu.photonSide : 1
         var out: [(NSRect, Int)] = []
         for (i, it) in l.items.enumerated() {
             let h = CDEMenu.height(of: it)
-            out.append((NSRect(x: l.frame.minX + 1, y: y, width: l.frame.width - 2, height: h), i))
+            out.append((NSRect(x: l.frame.minX + inset, y: y, width: l.frame.width - inset * 2, height: h), i))
             y += h
         }
         return out
@@ -189,7 +211,11 @@ final class CDEMenuView: NSView {
         levels = Array(levels.prefix(h.level + 1))
         if let i = h.item, let sub = levels[h.level].items[i].submenu,
            let row = rows(levels[h.level]).first(where: { $0.1 == i })?.0 {
-            open(sub, title: levels[h.level].items[i].title, at: NSPoint(x: levels[h.level].frame.maxX - 2, y: row.minY + 4), level: h.level + 1)
+            if CDEMenu.look == .photon {   // Photon: the cascade's first bar level with its entry, edges shared
+                open(sub, title: nil, at: NSPoint(x: levels[h.level].frame.maxX - 1, y: row.minY - CDEMenu.photonTop), level: h.level + 1)
+            } else {
+                open(sub, title: levels[h.level].items[i].title, at: NSPoint(x: levels[h.level].frame.maxX - 2, y: row.minY + 4), level: h.level + 1)
+            }
         }
         needsDisplay = true
     }
@@ -237,7 +263,38 @@ final class CDEMenuView: NSView {
         NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height).fill()
     }
 
+    private func drawPhoton(_ l: Level, isLast: Bool) {
+        let f = l.frame
+        NSColor.fromHex("#D8D8D8").setFill(); f.fill()
+        NSColor.black.setFill(); f.frame()
+        PhotonColors.bevel(f.insetBy(dx: 1, dy: 1), NSColor.fromHex("#F1F1F1"), NSColor.fromHex("#BFBFBF"))
+        for (r, i) in rows(l) {
+            let it = l.items[i]
+            if it.isSeparator {
+                NSColor.fromHex("#BFBFBF").setFill(); NSRect(x: f.minX + 1, y: r.minY + 1, width: f.width - 2, height: 1).fill()
+                NSColor.black.setFill(); NSRect(x: f.minX, y: r.minY + 2, width: f.width, height: 1).fill()
+                NSColor.fromHex("#F1F1F1").setFill(); NSRect(x: f.minX + 1, y: r.minY + 3, width: f.width - 2, height: 1).fill()
+                continue
+            }
+            let bar = NSRect(x: r.minX + 1, y: r.minY, width: r.width - 2, height: CDEMenu.photonBar)
+            let posted = l.armed == i && it.submenu != nil && !isLast
+            (l.armed == i ? NSColor.fromHex(posted ? "#B3B3B3" : "#9BA9C9") : PhotonColors.well).setFill(); bar.fill()
+            if let icon = it.icon {
+                icon.draw(in: NSRect(x: f.minX + 12, y: bar.midY - 8, width: 16, height: 16), from: .zero,
+                          operation: .sourceOver, fraction: it.enabled ? 1 : 0.5, respectFlipped: true, hints: nil)
+            }
+            text(it.title, NSRect(x: f.minX + CDEMenu.photonLabel, y: bar.minY, width: bar.maxX - f.minX - CDEMenu.photonLabel, height: bar.height),
+                 centred: false, color: it.enabled ? .black : NSColor.fromHex("#8A8A8A"))
+            if it.submenu != nil {
+                let a = NSBezierPath(), x = bar.maxX - 12, y = bar.midY
+                a.move(to: NSPoint(x: x, y: y - 4.5)); a.line(to: NSPoint(x: x + 5, y: y)); a.line(to: NSPoint(x: x, y: y + 4.5)); a.close()
+                NSColor.black.setFill(); a.fill()
+            }
+        }
+    }
+
     private func draw(_ l: Level) {
+        if CDEMenu.look == .photon { drawPhoton(l, isLast: l.frame == levels.last?.frame); return }
         let f = l.frame
         Self.face.setFill(); f.fill()
         bevel(f, sunken: false)

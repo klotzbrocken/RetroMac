@@ -58,6 +58,7 @@ struct SwitcherCapability: Equatable {
         "com.retromac.microsoft.windowsxp": pending(.altTab, "The Windows XP Alt+Tab panel"),
         "com.retromac.microsoft.windowsvista": pending(.flip, "Windows Flip and Flip 3D"),
         "com.retromac.microsoft.windows7": pending(.flip, "Windows 7's Flip and Flip 3D"),
+        "com.retromac.qnx.qnx621-photon": pending(.focusCycle, "Photon's Alt+Tab cycle (documented for later versions, not yet for 6.2.1)"),
         "com.retromac.apple.aqua-cheetah": none("Mac OS X 10.0 had neither Exposé nor a Command-Tab panel."),
         "com.retromac.apple.system6": none("System 6 keeps its application menu."),
         "com.retromac.apple.system7-authentic": none("System 7 keeps its application menu."),

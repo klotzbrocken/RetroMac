@@ -41,10 +41,11 @@ final class TitleBarOverlayController {
         case system6, system7, platinum, aqua  // the Mac bars (aqua: Mac OS X 10.0's pinstripes)
         case win31, win98, luna, aero          // the Windows bars (95, 98 and Me share win98)
         case cde                               // Solaris 8's CDE (dtwm): menu box left, minimise and maximise right
+        case photon                            // QNX 6.2.1's Photon: menu box left, minimise, maximise, then close right
         case snowLights                        // the three lights only (Snow Leopard, Mountain Lion)
         var isBar: Bool { self != .snowLights }
         /// Windows caption buttons cluster on the right; the Mac's close box sits on the left.
-        var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero || self == .cde }
+        var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero || self == .cde || self == .photon }
         /// What a double-click on the bar did in each era: Mac OS 8/9 rolled the window up, and
         /// so did System 7.5 with its WindowShade control panel (the System 7.1 theme wears 7.5's
         /// Control Strip too); System 6 did nothing, Windows maximised, Mac OS X minimised.
@@ -52,7 +53,7 @@ final class TitleBarOverlayController {
             switch self {
             case .platinum, .system7: return .collapse
             case .system6: return nil
-            case .win31, .win98, .luna, .aero, .cde: return .zoom
+            case .win31, .win98, .luna, .aero, .cde, .photon: return .zoom
             case .aqua, .snowLights: return .minimize
             }
         }
@@ -131,6 +132,7 @@ final class TitleBarOverlayController {
         case "macos9":      return .platinum
         case "win31":       return .win31
         case "cde":         return .cde        // Solaris 8
+        case "photon":      return .photon     // QNX 6.2.1
         case "win98":       return .win98      // Windows 95, 98 and Me
         case "winxp":       return .luna
         case "win7":        return .aero
@@ -672,6 +674,7 @@ final class TitleBarOverlayController {
         case .platinum: return 22
         case .win31:    return 20
         case .cde:      return 20   // measured off Solaris 8: a 1 pt edge and a 19 pt bar
+        case .photon:   return 21   // measured off QNX 6.2.1: black and #3F3F3F, then a 19 pt bar
         case .win98:    return 24
         case .luna:     return 30
         case .aero:     return 30
@@ -1400,6 +1403,16 @@ final class TitleBarOverlayController {
                 if bottom < visible.maxY { visible = NSRect(x: visible.minX, y: visible.minY, width: visible.width, height: bottom - visible.minY) }
             }
         }
+        // The Unix desktops keep their panels in view: CDE's Front Panel at the bottom, Photon's
+        // taskbar at the bottom and its shelf on the right. They live on the main display.
+        if screen == NSScreen.screens.first {
+            if let fp = CDEFrontPanelController.shared.frame, fp.maxY > visible.minY {
+                visible = NSRect(x: visible.minX, y: fp.maxY, width: visible.width, height: visible.maxY - fp.maxY)
+            }
+            if let r = PhotonDesktopController.shared.reserved {
+                visible = NSRect(x: visible.minX, y: visible.minY + r.bottom, width: visible.width - r.right, height: visible.height - r.bottom)
+            }
+        }
         // The bar above the window is part of it now: a zoomed window starts a bar lower.
         let bar = barAboveHeight
         visible = NSRect(x: visible.minX, y: visible.minY, width: visible.width, height: max(100, visible.height - bar))
@@ -1656,6 +1669,17 @@ final class TitleBarOverlayView: NSView {
                 tracker.add(k, r, interactive: true)
                 buttonRects.append((k, r))
             }
+        case .photon:
+            // Photon, measured off the File Manager: the menu box on the left (one click closes,
+            // as with dtwm here), minimise and maximise together on the right, close apart.
+            let menu = NSRect(x: 4, y: 4, width: 13, height: 15)
+            let close = NSRect(x: w - 24, y: 4, width: 20, height: 15)
+            let max = NSRect(x: close.minX - 24, y: 4, width: 16, height: 15)
+            let min = NSRect(x: max.minX - 17, y: 4, width: 17, height: 15)
+            for (k, r) in [(ChromeButtonKind.close, menu), (.minimize, min), (.maximize, max), (.close, close)] {
+                tracker.add(k, r, interactive: true)
+                buttonRects.append((k, r))
+            }
         case .win98:
             // 20x18 bevel buttons, the theme's own size: [min][max], a 2 pt gap, [close].
             let bw: CGFloat = 20, bh: CGFloat = 18
@@ -1704,6 +1728,7 @@ final class TitleBarOverlayView: NSView {
         case .platinum:   drawPlatinum(b)
         case .win31:      drawWin31(b)
         case .cde:        drawCDE(b)
+        case .photon:     drawPhoton(b)
         case .win98:      drawWin98(b)
         case .luna:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .luna)).addClip(); drawLuna(b)
         case .aero:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .aero)).addClip(); drawAero(b)
@@ -1829,6 +1854,46 @@ final class TitleBarOverlayView: NSView {
 
     /// Solaris 8's dtwm bar, from the screenshots: mauve when active (#B54A7B, edges #DEADC6
     /// and #522139, white title), the desktop grey when not (#ADB5C6, #DEDEE7, #5A636B, black).
+    /// Photon's bar, row by row as the 6.2.1 File Manager shows it: black and #3F3F3F, a light
+    /// line, a groove, the gradient, a dark line under it; grey-blue when the window is behind.
+    private func drawPhoton(_ b: NSRect) {
+        let (light, mid, dark, top, bottom) = isFront
+            ? (NSColor.fromHex("#8EBDFF"), NSColor.fromHex("#5C8BDF"), NSColor.fromHex("#2A59AD"), NSColor.fromHex("#6695E9"), NSColor.fromHex("#4776CA"))
+            : (NSColor.fromHex("#E3F3FF"), NSColor.fromHex("#B1C1D9"), NSColor.fromHex("#7F8FA7"), NSColor.fromHex("#B7C7DF"), NSColor.fromHex("#A5B5CD"))
+        func row(_ y: CGFloat, _ c: NSColor) { c.setFill(); NSRect(x: 0, y: y, width: b.width, height: 1).fill() }
+        NSGradient(starting: top, ending: bottom)?.draw(in: NSRect(x: 0, y: 6, width: b.width, height: 14), angle: 90)
+        row(0, .black); row(1, NSColor.fromHex("#3F3F3F")); row(2, light); row(3, mid); row(4, dark); row(5, mid); row(20, dark)
+        NSColor.black.setFill(); NSRect(x: 0, y: 0, width: 1, height: b.height).fill(); NSRect(x: b.width - 1, y: 0, width: 1, height: b.height).fill()
+        NSColor.fromHex("#3F3F3F").setFill(); NSRect(x: 1, y: 1, width: 1, height: b.height - 1).fill(); NSRect(x: b.width - 2, y: 1, width: 1, height: b.height - 1).fill()
+        light.setFill(); NSRect(x: 2, y: 2, width: 1, height: b.height - 3).fill()
+        let face = NSColor.fromHex("#D6D6D6")
+        for (k, r) in buttonRects {
+            let pressed = tracker.state(for: k) == .pressed
+            face.setFill(); r.fill()
+            let hi = pressed ? NSColor.fromHex("#3F3F3F") : NSColor.fromHex("#F6F6F6"), lo = pressed ? NSColor.fromHex("#F6F6F6") : NSColor.fromHex("#3F3F3F")
+            hi.setFill(); NSRect(x: r.minX, y: r.minY, width: r.width, height: 1).fill(); NSRect(x: r.minX, y: r.minY, width: 1, height: r.height).fill()
+            lo.setFill(); NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1).fill(); NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height).fill()
+            NSColor.fromHex("#3E3C3E").setFill()
+            if r.minX < b.width / 2 {   // the menu box: three bars
+                for i in 0..<3 { NSRect(x: r.minX + 3, y: r.minY + 4 + CGFloat(i) * 3, width: r.width - 6, height: 1).fill() }
+            } else if k == .minimize {   // a bar with a small arrow down
+                NSRect(x: r.minX + 4, y: r.minY + 4, width: r.width - 8, height: 1).fill()
+                let a = NSBezierPath(); a.move(to: NSPoint(x: r.midX - 3, y: r.minY + 6)); a.line(to: NSPoint(x: r.midX + 3, y: r.minY + 6)); a.line(to: NSPoint(x: r.midX, y: r.minY + 9)); a.close(); a.fill()
+                NSRect(x: r.minX + 4, y: r.maxY - 4, width: r.width - 8, height: 1).fill()
+            } else if k == .maximize {   // the full square
+                NSRect(x: r.minX + 3, y: r.minY + 3, width: r.width - 6, height: r.height - 6).frame()
+            } else {                      // close: a square inside a square
+                NSRect(x: r.midX - 5, y: r.midY - 5, width: 10, height: 10).frame()
+                NSRect(x: r.midX - 2, y: r.midY - 2, width: 4, height: 4).fill()
+            }
+        }
+        let left = buttonRects.first { $0.1.minX < b.width / 2 }?.1.maxX ?? 0
+        let right = buttonRects.filter { $0.1.minX > b.width / 2 }.map(\.1.minX).min() ?? b.width
+        let font = NSFont(name: "LucidaGrande", size: 12) ?? .systemFont(ofSize: 12)
+        drawCentredTitle(in: NSRect(x: left + 4, y: 5, width: max(0, right - left - 8), height: 15), font: font,
+                         color: isFront ? NSColor.fromHex("#000065") : .black)
+    }
+
     private func drawCDE(_ b: NSRect) {
         let face = NSColor.fromHex(isFront ? "#B54A7B" : "#ADB5C6")
         let light = NSColor.fromHex(isFront ? "#DEADC6" : "#DEDEE7")

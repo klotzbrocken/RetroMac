@@ -5,6 +5,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **New theme: QNX 6.2.1 — Photon.** The realtime OS's desktop from its 2003 CD, measured off
+  the original: the shelf down the right with groups you fold open and shut, a live system
+  monitor, the CD player and World View; the taskbar with Launch, one entry per window and the
+  clock; Photon's blue title bars. Every launcher opens a real Mac app or setting, the Launch menu
+  sorts your apps into Photon's categories, and World View opens Mission Control.
 - **New theme: Solaris 8 — CDE.** The Common Desktop Environment as Solaris 8 shipped it in
   2000, measured off the original: the Front Panel at the bottom with a live clock, today's date
   on the calendar and a cpu/disk meter; an arrow over every control opens its subpanel, and an

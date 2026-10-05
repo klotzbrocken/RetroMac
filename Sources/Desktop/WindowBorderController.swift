@@ -478,6 +478,11 @@ final class WindowBorderController {
             // front, so it wears the inactive colours and the bar shows the active one.
             return .bevel(hiOuter: NSColor.fromHex("#DEDEE7"), hiInner: NSColor.fromHex("#ADB5C6"),
                           loInner: NSColor.fromHex("#ADB5C6"), loOuter: NSColor.fromHex("#5A636B"), width: 5, radius: 0)
+        case "photon":
+            // Photon's 5 pt frame: black and #3F3F3F outside, white and #D9D9D9 lit inside the
+            // top and left, #9D9D9D along the bottom and right.
+            return .bevel(hiOuter: NSColor.fromHex("#1F1F1F"), hiInner: NSColor.fromHex("#FFFFFF"),
+                          loInner: NSColor.fromHex("#9D9D9D"), loOuter: NSColor.fromHex("#1F1F1F"), width: 5, radius: 0)
         case "snowleopard":
             // 10.6 windows have no bevel and no glow, just a hairline contour around the
             // rounded frame. Anything thicker immediately reads as Leopard-era Aqua.
