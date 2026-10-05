@@ -48,4 +48,14 @@ final class CDESnapshotTests: XCTestCase {
         v.open(items, title: "Workspace Menu", at: .zero, level: 0)
         try snapshot(v, "cde-workspace-menu.png")
     }
+
+    func testApplicationManagerGroups() {
+        // CDE-04: Mac apps go to Solaris-style groups by the App Store category they declare.
+        XCTAssertEqual(AppFolderController.cdeGroup(forCategory: "public.app-category.utilities"), "Desktop_Tools")
+        XCTAssertEqual(AppFolderController.cdeGroup(forCategory: "public.app-category.developer-tools"), "Developer_Tools")
+        XCTAssertEqual(AppFolderController.cdeGroup(forCategory: "public.app-category.puzzle-games"), "Games")
+        XCTAssertEqual(AppFolderController.cdeGroup(forCategory: "public.app-category.productivity"), "Desktop_Apps")
+        XCTAssertEqual(AppFolderController.cdeGroup(forCategory: nil), "Desktop_Apps", "no category: the general group")
+        XCTAssertFalse(AppFolderController.cdeGroups.contains(AppFolderController.cdeAllGroup))
+    }
 }

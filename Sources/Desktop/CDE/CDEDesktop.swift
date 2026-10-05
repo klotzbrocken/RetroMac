@@ -81,7 +81,7 @@ final class CDEDesktop {
             CDEMenuItem(title: kind.title, submenu: CDESubpanel.items(for: kind, theme: t).map { CDEMenuItem(title: $0.title, icon: $0.icon, action: $0.action) })
         }
         let applications: [CDEMenuItem?] = [
-            CDEMenuItem(title: "Application Manager", icon: mi("appmgr"), action: CDEActions.open(URL(fileURLWithPath: "/Applications"))),
+            CDEMenuItem(title: "Application Manager", icon: mi("appmgr"), action: { AppFolderController.shared.show() }),
             CDEMenuItem(title: "Audio Control", icon: mi("audioctl"), action: CDEActions.settings("com.apple.Sound-Settings.extension")),
             app("Audio and Video", "audiovideo", "com.apple.QuickTimePlayerX"),
             app("Calculator", "calculator", "com.apple.calculator"),

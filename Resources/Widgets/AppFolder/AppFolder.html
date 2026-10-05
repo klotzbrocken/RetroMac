@@ -537,6 +537,68 @@
   body.theme-macos9.rm-blur .m9-plaque{opacity:.5;}
 </style>
 <style>
+/* ===== Solaris 8 CDE — the File Manager window as dtwm framed it; measured off
+   solcdefileman.png. 5 pt frame, 19 pt title bar, 27 pt menu bar, the path as folders and
+   as text, the view sunk in #9494A5, a 20 pt status line. ===== */
+.cde-title,.cde-path,.cde-only{display:none;}
+body.theme-cde .be-tab,body.theme-cde .not-cde,body.theme-cde .hsb,body.theme-cde .be-resize{display:none;}
+body.theme-cde .cde-only{display:block;}
+body.theme-cde{font-family:"Lucida Grande",Helvetica,sans-serif;}
+body.theme-cde .be-win{top:0;border:none;border-radius:0;padding:5px;background:#ADB5C6;
+  box-shadow:inset 2px 2px 0 #DEADC6,inset -2px -2px 0 #522139,inset 4px 4px 0 #B54A7B,inset -4px -4px 0 #B54A7B,
+             inset 5px 5px 0 #522139,inset -5px -5px 0 #DEADC6,2px 3px 7px rgba(0,0,0,.32);}
+body.theme-cde .cde-title{display:flex;height:19px;flex:0 0 19px;background:#B54A7B;}
+body.theme-cde .cde-btn,body.theme-cde .cde-cap,body.theme-cde .cde-btn i{box-shadow:inset 1px 1px 0 #DEADC6,inset -1px -1px 0 #522139;}
+body.theme-cde .cde-btn{position:relative;width:19px;height:19px;flex:0 0 19px;}
+body.theme-cde .cde-btn.is-press{box-shadow:inset 1px 1px 0 #522139,inset -1px -1px 0 #DEADC6;}
+body.theme-cde .cde-btn i{position:absolute;}
+body.theme-cde .cde-g-menu{left:5px;top:8px;width:10px;height:3px;}
+body.theme-cde .cde-g-min{left:7px;top:7px;width:5px;height:5px;}
+body.theme-cde .cde-g-max{left:3px;top:3px;width:13px;height:13px;}
+body.theme-cde .cde-cap{flex:1 1 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;}
+body.theme-cde .be-menubar{height:27px;flex:0 0 27px;padding:0 4px;gap:2px;background:#ADB5C6;border:none;
+  box-shadow:inset 1px 1px 0 #DEDEE7,inset -1px -1px 0 #5A636B;}
+body.theme-cde .be-menubar span{font-size:14px;color:#000;padding:2px 6px;border-radius:0;}
+body.theme-cde .be-menubar span::first-letter{text-decoration:underline;}
+body.theme-cde .be-menubar span:hover{background:none;color:#000;}
+body.theme-cde .be-menubar span.open{background:#ADB5C6;color:#000;box-shadow:inset 1px 1px 0 #DEDEE7,inset -1px -1px 0 #5A636B;}
+body.theme-cde .be-menubar .cde-help{margin-left:auto;}
+body.theme-cde .menu{background:#ADB5C6;border:none;padding:1px;min-width:0;font-family:"Lucida Grande",Helvetica,sans-serif;font-size:14px;
+  box-shadow:inset 1px 1px 0 #DEDEE7,inset -1px -1px 0 #5A636B;}
+body.theme-cde .menu .mi{height:21px;line-height:21px;padding:0 26px 0 4px;color:#000;}
+body.theme-cde .menu .mi.disabled{color:#6B7384;}
+body.theme-cde .menu .mi:not(.disabled):hover{background:#9494A5;color:#000;box-shadow:inset 1px 1px 0 #5A636B,inset -1px -1px 0 #DEDEE7;}
+body.theme-cde .menu .sep{height:2px;margin:0;background:none;border-top:1px solid #5A636B;border-bottom:1px solid #DEDEE7;}
+body.theme-cde .cde-path{display:block;flex:0 0 auto;}
+body.theme-cde .cde-crumbs{display:flex;align-items:flex-start;height:57px;padding:7px 8px 0;overflow:hidden;
+  box-shadow:inset 1px 1px 0 #DEDEE7,inset -1px -1px 0 #5A636B;}
+.cde-crumb{display:flex;flex-direction:column;align-items:flex-start;flex:0 0 32px;min-width:0;cursor:default;}
+.cde-crumb img{width:32px;height:25px;}
+.cde-crumb span{font-size:14px;color:#000;margin-top:5px;white-space:nowrap;}
+.cde-link{display:block;flex:0 0 auto;width:17px;height:2px;margin-top:11px;background:#000;}
+body.theme-cde .cde-field{height:31px;padding:6px 8px 0;box-shadow:inset 1px 1px 0 #DEDEE7,inset -1px -1px 0 #5A636B;}
+body.theme-cde #cdefield{display:block;height:17px;line-height:15px;padding:0 6px;font-size:14px;color:#000;white-space:nowrap;overflow:hidden;
+  border:1px solid;border-color:#9C948C #CEC6BD #CEC6BD #9C948C;}
+body.theme-cde .be-mid{padding:6px;gap:5px;background:#ADB5C6;box-shadow:inset 1px 1px 0 #DEDEE7,inset -1px -1px 0 #5A636B;}
+body.theme-cde .be-content{background:#9494A5;box-shadow:inset 2px 2px 0 #5A636B,inset -2px -2px 0 #DEDEE7;}
+body.theme-cde .be-item{width:auto;align-items:flex-start;text-align:left;gap:4px;padding:2px;}
+body.theme-cde .be-item .ic{width:32px;height:32px;}
+body.theme-cde .be-item .lbl{font-size:14px;color:#000;border-bottom:none;max-width:none;line-height:1.1;text-align:left;
+  white-space:nowrap;overflow:hidden;padding:0;}
+body.theme-cde .be-item.sel{box-shadow:inset 0 0 0 2px #B54A7B;}
+body.theme-cde .be-item.sel .lbl{background:none;color:#000;}
+body.theme-cde .be-grid.list .be-item.sel{background:none;}
+body.theme-cde .be-grid.list .be-item.sel .lbl{color:#000;}
+body.theme-cde .vsb{width:15px;padding:1px;background:#ADB5C6;border:none;box-shadow:inset 1px 1px 0 #5A636B,inset -1px -1px 0 #DEDEE7;}
+body.theme-cde .vsb .sb-arrows:first-child .sb-btn[data-v="1"],body.theme-cde .vsb .sb-arrows:last-child .sb-btn[data-v="-1"]{display:none;}
+body.theme-cde .sb-btn,body.theme-cde .sb-thumb{width:13px;background:#ADB5C6;border:none;box-shadow:inset 1px 1px 0 #DEDEE7,inset -1px -1px 0 #5A636B;}
+body.theme-cde .sb-btn{height:13px;}
+body.theme-cde .sb-trough{background:#ADB5C6;box-shadow:none;}
+body.theme-cde .sb-thumb .grip{display:none;}
+body.theme-cde .be-status{height:20px;flex:0 0 20px;background:#ADB5C6;border:none;box-shadow:inset 1px 1px 0 #DEDEE7,inset -1px -1px 0 #5A636B;}
+body.theme-cde .be-status .w98-statusrow{display:flex;width:100%;}
+body.theme-cde .w98-pane{display:none;}
+body.theme-cde .be-count{height:20px;background:none;border:none;box-shadow:none;font-size:14px;color:#000;padding:0 6px;}
 /* Live title-bar button feedback (native DragOverlayView → window.setBtnState); the overlay
    intercepts mouse events, so these classes stand in for :hover/:active. */
 .xp-close.is-hover,.mf-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
@@ -632,7 +694,16 @@
       <span class="w98-btn" id="w98max">□</span>
       <span class="w98-btn" id="w98close">×</span>
     </div>
-    <div class="be-menubar"><span>File</span><span>Window</span></div>
+    <!-- Solaris 8 CDE: dtwm's frame and title bar (theme-cde only) -->
+    <div class="cde-title" id="cdetitle">
+      <span class="cde-btn" id="cdemenu"><i class="cde-g-menu"></i></span>
+      <span class="cde-cap">Application Manager</span>
+      <span class="cde-btn" id="cdemin"><i class="cde-g-min"></i></span>
+      <span class="cde-btn" id="cdemax"><i class="cde-g-max"></i></span>
+    </div>
+    <div class="be-menubar"><span>File</span><span class="cde-only">Selected</span><span class="not-cde">Window</span><span class="cde-only">View</span><span class="cde-only cde-help">Help</span></div>
+    <!-- CDE File Manager furniture: the path as a row of folders, then as text -->
+    <div class="cde-path" id="cdepath"><div class="cde-crumbs" id="cdecrumbs"></div><div class="cde-field"><span id="cdefield"></span></div></div>
     <!-- Windows Explorer furniture (theme-win98 only): toolbar, address bar and the info panel
          down the left. Everything here is hidden by default and switched on by the theme. -->
     <div class="w98-toolbar" id="w98toolbar">
@@ -730,6 +801,11 @@
     // Mac OS X 10.0's Finder: 32 px icons, widely spaced, as its icon view had them.
     const cheetah = document.body.classList.contains('theme-macosx') && !document.body.classList.contains('theme-snowleopard');
     if (viewMode==='icon' && cheetah) v={CW:124,CH:60};
+    // CDE's File Manager: 32 pt icons, one every 83 × 61 pt, the columns wider when a name is.
+    if (viewMode==='icon' && document.body.classList.contains('theme-cde')) {
+      const ctx=document.createElement('canvas').getContext('2d'); ctx.font='14px "Lucida Grande"';
+      v={CW:Math.max(83, ...apps.map(a=>Math.ceil(ctx.measureText(a.name).width)+14)), CH:61};
+    }
     grid.className='be-grid'+(viewMode==='mini'?' mini':'')+(viewMode==='list'?' list':'');
     const list = viewMode==='list';
     const cols = list ? 1 : Math.max(1, Math.floor((content.clientWidth - PAD*2)/v.CW));
@@ -745,7 +821,7 @@
       el.style.left = list ? PAD+'px' : (PAD+c*v.CW)+'px';
       el.style.top = (PAD+r*v.CH)+'px';
       if(list) el.style.width = listW+'px';
-      const cl=document.body.classList, themed=cl.contains('theme-macos6')||cl.contains('theme-macos9')||cl.contains('theme-winxp')||cl.contains('theme-maiksfav')||cl.contains('theme-macosx')||cl.contains('theme-win98');
+      const cl=document.body.classList, themed=cl.contains('theme-cde')||cl.contains('theme-macos6')||cl.contains('theme-macos9')||cl.contains('theme-winxp')||cl.contains('theme-maiksfav')||cl.contains('theme-macosx')||cl.contains('theme-win98');
       const icHTML=(themed && it.img) ? `<img src="${it.img}">` : BEOS_ICONS.get(it.icon);
       el.innerHTML=`<div class="ic">${icHTML}</div><div class="lbl">${esc(it.name)}</div>`;
       el.addEventListener('mousedown',(e)=>{
@@ -769,9 +845,9 @@
       grid.appendChild(el);
     });
     // Explorer says "object(s)"; the BeOS/Platinum shells say "items".
-    const isWin = document.body.classList.contains('theme-win98');
+    const isWin = document.body.classList.contains('theme-win98'), isCDE = document.body.classList.contains('theme-cde');
     document.getElementById('count').textContent =
-      apps.length + (isWin ? ' object(s)' : ' items');
+      apps.length + (isWin ? ' object(s)' : isCDE ? ' Items' : ' items');
     const m9=document.getElementById('m9info'); if(m9) m9.textContent=apps.length+' items'+(availSpace?', '+availSpace:'');
     updateScroll();
   }
@@ -782,7 +858,7 @@
   window.setHover=function(h){ document.body.classList.toggle('hovering', !!h); };
   // Host sets the window title across all three chromes (BeOS tab / Mac OS 9 plaque / XP caption).
   window.setTitle=function(t){
-    document.querySelectorAll('.be-title,.xp-caption,.mf-caption,.mx-caption,.w98-cap').forEach(e=>e.textContent=t);
+    document.querySelectorAll('.be-title,.xp-caption,.mf-caption,.mx-caption,.w98-cap,.cde-cap').forEach(e=>e.textContent=t);
     const pl=document.querySelector('.m9-plaque span:last-child'); if(pl) pl.textContent=t;
   };
   // Host sets the Win95/98 title-bar program icon (data: URL from the theme bundle).
@@ -810,6 +886,7 @@
       return [...t,...R('mxclose'),...R('mxmin'),...R('mxzoom')];
     }
     if(mf){ return [...R('mftitle'),...R('mfclose'),...R('mfmin'),...R('mfzoom')]; }
+    if(cl.contains('theme-cde')){ return [...R('cdetitle'),...R('cdemenu'),...R('cdemin'),...R('cdemax')]; }
     if(xp){ return [...R('xptitle'),...R('xpclose'),...R('xpmin'),...R('xpmax')]; }
     if(m6){ return [...R('m9title'),...R('m9close'),0,0,0,0,...R('m9zoom')]; }   // System 6: close + zoom
     if(m9){ return [...R('m9title'),...R('m9close'),...R('m9collapse'),...R('m9zoom')]; }
@@ -928,6 +1005,40 @@
       {label:'Close', action:()=>post({a:'close'})},
     ];
   }
+  // CDE's File Manager menus: File for the folder, Selected for the chosen item, View, Help.
+  let cdeDepth=0;
+  function specFor(name){
+    if(!document.body.classList.contains('theme-cde')) return name==='File'?fileSpec():windowSpec();
+    if(name==='File') return [
+      {label:'Go Up', on:cdeDepth>0, action:()=>post({a:'openparent'})},
+      {label:'Open in Finder', action:()=>post({a:'find'})},
+      {sep:1},
+      {label:'Close', action:()=>post({a:'close'})},
+    ];
+    if(name==='Selected') return fileSpec().filter(it=>it.sep||['Open','Get Info','Duplicate','Move to Trash','Create Link'].includes(it.label))
+      .filter((it,i,a)=>!(it.sep&&(i===0||a[i-1].sep||i===a.length-1)));
+    if(name==='Help') return [{label:'Overview...', action:()=>post({a:'help'})}];
+    return windowSpec().filter(it=>!['Open Parent','Close'].includes(it.label)).filter((it,i,a)=>!(it.sep&&i===a.length-1));
+  }
+  // The path row: one folder per level, joined by a line, the names under them; a click on a
+  // folder goes there. Then the same path as text.
+  window.setCDEPath=function(names, text, folderURL){
+    cdeDepth=names.length-1;
+    const row=document.getElementById('cdecrumbs'); row.innerHTML='';
+    names.forEach((n,i)=>{
+      if(i>0){ const l=document.createElement('i'); l.className='cde-link'; row.appendChild(l); }
+      const c=document.createElement('span'); c.className='cde-crumb';
+      c.innerHTML=`<img src="${folderURL}"><span>${esc(n)}</span>`;
+      c.addEventListener('dblclick',()=>post({a:'cdecrumb',i:i}));
+      row.appendChild(c);
+    });
+    // A name wider than its folder pushes the next folder along; the line grows with it.
+    row.querySelectorAll('.cde-link').forEach(l=>{
+      const w=l.previousSibling.querySelector('span').getBoundingClientRect().width;
+      l.style.width=Math.max(17, w+10-32)+'px';
+    });
+    document.getElementById('cdefield').textContent=text;
+  };
   function buildMenu(spec){
     const m=document.createElement('div'); m.className='menu';
     spec.forEach(it=>{
@@ -949,7 +1060,7 @@
   }
   function openMenu(name,span){
     closeMenus();
-    const m=buildMenu(name==='File'?fileSpec():windowSpec());
+    const m=buildMenu(specFor(name));
     document.body.appendChild(m);
     const r=span.getBoundingClientRect();
     m.style.left=r.left+'px'; m.style.top=r.bottom+'px';
@@ -1009,6 +1120,7 @@ window.setBtnState = function(slot, state){
   if (cl.contains('theme-win98'))         ids = {close:'w98close', collapse:'w98min', zoom:'w98max'};
   else if (cl.contains('theme-macosx'))   ids = {close:'mxclose', collapse:'mxmin', zoom:'mxzoom'};
   else if (cl.contains('theme-maiksfav')) ids = {close:'mfclose', collapse:'mfmin', zoom:'mfzoom'};
+  else if (cl.contains('theme-cde'))      ids = {close:'cdemenu', collapse:'cdemin', zoom:'cdemax'};
   else if (cl.contains('theme-winxp'))    ids = {close:'xpclose', collapse:'xpmin', zoom:'xpmax'};
   else if (cl.contains('theme-macos6'))   ids = {close:'m9close', zoom:'m9zoom'};
   else if (cl.contains('theme-macos9'))   ids = {close:'m9close', collapse:'m9collapse', zoom:'m9zoom'};

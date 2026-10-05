@@ -124,7 +124,8 @@ final class CDESubpanel: NSView {
             list = [app("Text Editor", "com.apple.TextEdit", icon: icon(t, "cde_texteditor.png")),
                     app("Terminal", "com.apple.Terminal"),
                     app("Calculator", "com.apple.calculator"),
-                    folder("Application Manager", URL(fileURLWithPath: "/Applications"), nil)]
+                    Item(title: "Application Manager", icon: NSWorkspace.shared.icon(forFile: "/Applications"),
+                         action: { AppFolderController.shared.show() })]
         case .mail:
             list = [Item(title: "Mail", icon: icon(t, "sp_mail.png"), action: CDEActions.defaultApp(for: "mailto:")),
                     Item(title: "Suggestion Box", icon: icon(t, "sp_suggest.png"),

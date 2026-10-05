@@ -33,6 +33,7 @@ Eine eigene VM-Installation (REF-01) steht noch aus. Bis dahin gelten diese Scre
 | Subpanel | Breite 208. Titel 15 pt plus 2 pt Kante, Install-Icon-Zeile 50 pt mit eingeprägter Linie, Einträge 45 pt flach. Schrift weiß mit dunklem Schatten. | Help-Subpanel `solcdehelp.png` |
 | Backdrop | Kachel 113 × 88, Ursprung am Bildschirmrand oben links | Autokorrelation über `solcdeshutdown.png` |
 | Menüs | 1-pt-Kante, Titel 20 pt über Doppellinie (2 × 1 pt schwarz), Zeilen 21 pt, mit 16-pt-Icon 23 pt, Trenner 2 pt geätzt. Aktive Zeile eingesenkt, #9494A5. Kaskade 4 pt unter ihrer Zeile, 2 pt überlappend. Schrift Lucida Grande 14 (Titel 115 pt breit wie im Original). | Workspace Menu in `solcdegeneral.png` |
+| File-Manager-Fenster | Rahmen 5 pt (2 pt Kante außen, 2 pt Fläche, 1 pt innen), Titelleiste 19 pt, Menüleiste 27 pt (File, Selected, View, Help), Pfadzeile 57 pt mit Ordnern im Abstand Icon + 17 pt Linie, Pfadfeld 31 pt, Ansicht eingesenkt in #9494A5 mit 2-pt-Kante, Raster 83 × 61 pt, Auswahl als 2-pt-Rahmen #B54A7B, Statuszeile 20 pt („N Items“). | `solcdefileman.png` |
 | Icons minimierter Fenster | Bild-Box 60 × 59, 2-pt-Kante, geätzter Rahmen 4 pt innen, Bild 48 × 48. Label-Box 20 pt darunter, Text abgeschnitten („Calcula“). Raster 85 pt ab (2, 4) oben links. | `solcdegeneral.png`, `solcdefileman.png` |
 
 ## Assets und Herkunft
@@ -46,6 +47,7 @@ Alle Bilder stammen aus den gelieferten Screenshots, unverändert in Pixeln und 
 | `icons/cde_*.png` | Panel-Icons aus `solcdeshutdown.png` |
 | `icons/sp_*.png` | Subpanel-Icons aus `solcdegeneral.png` (Links, Cards, Mail) und `solcdehelp.png` (Help) |
 | `wallpaper.png` | Backdrop-Kachel aus `solcdeshutdown.png` (x 0, y 528) |
+| `icons/cde_folder.png`, `icons/cde_goup.png` | Ordner und „..(go up)“ aus der Ansicht in `solcdefileman.png` |
 | `icons/mi_*.png` | 16-pt-Menü-Icons aus dem Workspace Menu und seiner Kaskade „Applications“ in `solcdegeneral.png` |
 
 ## RetroMac-Anpassungen
@@ -70,12 +72,12 @@ Alle Bilder stammen aus den gelieferten Screenshots, unverändert in Pixeln und 
 - **Fenstermenü (CDE-08):** wie bei dtwm. Ein Klick auf den Kasten öffnet es, ein Doppelklick schließt das Fenster. Restore, Minimize, Maximize und Close wirken. Move, Size, Lower und die Workspace-Einträge bleiben grau: macOS bietet sie für fremde Fenster nicht an. Die Tastenkürzel (Alt+F4 …) fehlen, weil sie nicht wirken würden.
 - **Workspace Menu (CDE-09):** Rechtsklick auf den Desktop. Die Kaskaden zeigen die Inhalte der Subpanels, wie CDE sie aus dem Front Panel baute. „Applications“ folgt der Solaris-Liste mit Mac-Gegenstücken: Image Viewer → Vorschau, Snapshot → Bildschirmfoto, Text Note → Notizzettel, Voice Note → Sprachmemos. Einträge ohne installierte App fehlen; das Icon Editor fehlt immer. „Add Item to Menu“ und „Customize Menu“ werden zu „RetroMac Settings...“. „Log out...“ heißt „Exit Theme...“ und beendet das Theme (CDE-11). „Windows“ enthält Mission Control, „Restore All Icons“ und „Minimize/Restore Front Panel“. Ein minimiertes Front Panel wird nicht zum Icon, sondern ausgeblendet.
 - **Icons minimierter Fenster (CDE-10):** ein Klick öffnet das Fenstermenü, ein Doppelklick stellt das Fenster wieder her. Ohne Bedienungshilfen-Recht zeigt RetroMac ausgeblendete Apps statt Fenster (das Verhalten des Fenster-Trackers). Das Bild ist das Theme-Icon der App, sonst ihr eigenes. Der Desktop übernimmt wie bei den anderen Themes mit Desktop-Icons die Klicks auf die freie Fläche.
+- **Application Manager (CDE-04):** Er zeigt die Mac-Apps in Gruppen nach Solaris-Art, die sich aus der App-Store-Kategorie der App ergeben: Desktop_Apps (auch ohne Kategorie), Desktop_Tools, Developer_Tools, Graphics, Audio_Video, Information, Games. „All_Applications“ listet alle Apps. Leere Gruppen fehlen. Das Fenster ist das File-Manager-Fenster mit Pfad als Ordnerzeile und Text. Der Pfad „/Applications/Desktop_Tools“ ist virtuell. Solaris hatte /var/dt/appconfig/appmanager. Geöffnet wird er aus dem Workspace Menu und dem Applications-Subpanel. Minimieren blendet das Fenster aus.
 - **Subpanels:** Laut Toastytech blieben sie offen, bis man den Pfeil erneut klickte. RetroMac schließt sie zusätzlich mit Esc und mit einem Klick daneben, wie CDE-02 verlangt.
 - **Bildschirmschoner:** keiner. RetroMac hat keinen der CDE-Schoner (Swarm, Worms …).
 
 ## Offen für die nächsten Runden
 
-- **CDE-04:** Anwendungen-Fenster (Application Manager) im CDE-Stil. Bis dahin öffnet es den Programme-Ordner.
 - Widget-Stile `cde` für Uhr, Rechner, Notepad, CPU-Monitor und AppFolder; WebApp-Chrome.
 - Crash-Ära (Solaris), Bootscreen (dtlogin), Cursor (X11-Cursorfont).
 - `minAppVersion: "3.0"` (ARC-03): wird gesetzt, wenn die App-Version auf 3.0 geht. Vorher würde das Theme im 2.8.x-Build nicht laden.

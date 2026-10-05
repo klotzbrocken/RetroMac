@@ -27,7 +27,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         switch kind {
         case .tv: return "Television"
         case .funStuff: return funPath.last ?? "Fun Stuff (D:)"
-        case .apps: return "Applications"
+        case .apps: return Self.isCDE ? "Application Manager" : "Applications"
         }
     }
 
@@ -105,6 +105,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         }
 
         if kind == .funStuff { funPath = [] }   // always (re)open the disc at its root
+        cdeGroup = nil                          // the Application Manager opens on its groups
         webView?.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
         if let panel = panel, let screen = NSScreen.main {
             let vf = screen.visibleFrame
@@ -166,10 +167,14 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
         if let dataURL = ThemeManager.shared.iconDataURL(iconName) {
             webView.evaluateJavaScript("window.setWinIcon && window.setWinIcon('\(dataURL)')")
         }
-        let items = (kind == .tv) ? Self.tvItems() : Self.installedApps()
-        if let data = try? JSONSerialization.data(withJSONObject: items),
-           let json = String(data: data, encoding: .utf8) {
-            webView.evaluateJavaScript("window.setApps && window.setApps(\(json))")
+        if kind == .apps && Self.isCDE {
+            reloadCDE()
+        } else {
+            let items = (kind == .tv) ? Self.tvItems() : Self.installedApps()
+            if let data = try? JSONSerialization.data(withJSONObject: items),
+               let json = String(data: data, encoding: .utf8) {
+                webView.evaluateJavaScript("window.setApps && window.setApps(\(json))")
+            }
         }
         // Finder-style "N items, X GB available" info bar (Mac OS 9 theme).
         if let avail = Self.availableSpaceString() {
@@ -200,7 +205,71 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             } else {
                 overlay.collapseRect = .zero; overlay.zoomRect = .zero
             }
+            if Self.isCDE {
+                overlay.onClose = { [weak self] in self?.showCDEWindowMenu() }
+                overlay.onCollapse = { [weak self] in self?.close() }   // minimise: out of the way
+            }
         }
+    }
+
+    // MARK: - Solaris 8 CDE: Application Manager (Lastenheft 3.0, CDE-04)
+
+    private static var isCDE: Bool { RetroFrameTheme.key() == "cde" }
+    /// The open group, nil at the top where the groups lie as folders.
+    private var cdeGroup: String?
+    static let cdeGroups = ["Desktop_Apps", "Desktop_Tools", "Developer_Tools", "Graphics", "Audio_Video", "Information", "Games"]
+    static let cdeAllGroup = "All_Applications"
+
+    /// Solaris sorted its applications into groups (Desktop_Apps, Desktop_Tools …); a Mac app
+    /// goes to the group of the App Store category it declares, Desktop_Apps when it declares none.
+    static func cdeGroup(forCategory category: String?) -> String {
+        let c = (category ?? "").replacingOccurrences(of: "public.app-category.", with: "")
+        if c.hasSuffix("games") { return "Games" }
+        switch c {
+        case "utilities": return "Desktop_Tools"
+        case "developer-tools": return "Developer_Tools"
+        case "graphics-design", "photography": return "Graphics"
+        case "music", "video", "entertainment": return "Audio_Video"
+        case "education", "reference", "news", "books", "weather", "medical", "healthcare-fitness",
+             "sports", "travel", "lifestyle", "social-networking", "navigation": return "Information"
+        default: return "Desktop_Apps"
+        }
+    }
+
+    private static func cdeGroup(ofApp path: String?) -> String {
+        cdeGroup(forCategory: path.flatMap { Bundle(path: $0)?.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String })
+    }
+
+    /// The groups as folders, with every app in one more; inside a group "..(go up)" and its apps.
+    private func reloadCDE() {
+        guard let wv = webView else { return }
+        let tm = ThemeManager.shared
+        let folder = tm.iconDataURL("cde_folder.png") ?? ""
+        let apps = Self.installedApps()
+        var items: [[String: String]]
+        if let g = cdeGroup {
+            items = [["id": "cdeup", "name": "..(go up)", "img": tm.iconDataURL("cde_goup.png") ?? ""]]
+                + (g == Self.cdeAllGroup ? apps : apps.filter { Self.cdeGroup(ofApp: $0["path"]) == g })
+        } else {
+            let present = Set(apps.map { Self.cdeGroup(ofApp: $0["path"]) })
+            items = (Self.cdeGroups.filter(present.contains) + [Self.cdeAllGroup]).map { ["id": "cdegroup:\($0)", "name": $0, "img": folder] }
+        }
+        let names = ["Applications"] + (cdeGroup.map { [$0] } ?? [])
+        guard let itemsJSON = try? JSONSerialization.data(withJSONObject: items),
+              let namesJSON = try? JSONSerialization.data(withJSONObject: [names, "/" + names.joined(separator: "/"), folder]) else { return }
+        wv.evaluateJavaScript("window.setApps && window.setApps(\(String(decoding: itemsJSON, as: UTF8.self)))")
+        wv.evaluateJavaScript("window.setCDEPath && window.setCDEPath(...\(String(decoding: namesJSON, as: UTF8.self)))")
+    }
+
+    /// dtwm's window menu behind the box at the left of the title bar; a double-click closes.
+    private func showCDEWindowMenu() {
+        guard let panel, let overlay = dragOverlay else { return }
+        let box = panel.convertToScreen(overlay.convert(overlay.closeRect, to: nil))
+        let zoomed = preZoomFrame != nil
+        let zoom: () -> Void = { [weak self] in self?.toggleZoom() }
+        let hide: () -> Void = { [weak self] in self?.close() }
+        CDEMenu.show(CDEDesktop.windowMenu(restore: zoomed ? zoom : nil, minimize: hide, maximize: zoomed ? nil : zoom, close: hide),
+                     at: NSPoint(x: box.minX, y: box.minY), anchor: box, onAnchorDoubleClick: hide)
     }
 
     // MARK: - Mac OS 9 title-bar controls
@@ -301,10 +370,15 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
                 } else if id.hasPrefix("/") {
                     if let p = Self.validatedAppPath(id) { NSWorkspace.shared.open(URL(fileURLWithPath: p)) }
                 }
+                else if id.hasPrefix("cdegroup:") { cdeGroup = String(id.dropFirst("cdegroup:".count)); reloadCDE() }
+                else if id == "cdeup" { cdeGroup = nil; reloadCDE() }
                 else { AppLauncher.launchOrActivate(bundleID: id) }
             }
         case "close":   close()
         case "zoom":    toggleZoom()
+        case "openparent" where kind == .apps && Self.isCDE, "cdecrumb":
+            cdeGroup = nil; reloadCDE()
+        case "help": ThemeReadmeController.shared.showForActiveTheme()
         case "openparent":
             if kind == .funStuff { if !funPath.isEmpty { funPath.removeLast(); reloadFunGrid() } }
             else { NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications")) }
@@ -671,7 +745,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
     private static func installedApps() -> [[String: String]] {
         let k = RetroFrameTheme.key()
         let themed = (k == "macos6" || k == "system7" || k == "macos9" || k == "winxp" || k == "maiksfav"
-                      || k == "macosx" || k == "snowleopard" || k == "win98")
+                      || k == "macosx" || k == "snowleopard" || k == "win98" || k == "cde")
         let fm = FileManager.default
         let dirs = appSearchDirs
         var seen = Set<String>()
