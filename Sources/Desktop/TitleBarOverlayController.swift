@@ -486,7 +486,10 @@ final class TitleBarOverlayController {
         panel.ignoresMouseEvents = false
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
-        panel.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary]
+        // Transient: Mission Control and Exposé leave it out. At the window's own (normal) level it
+        // would otherwise count as a window of its own and stand there as a little strip beside
+        // the real one. Spaces are no concern: the bars only exist for windows on screen.
+        panel.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary, .transient]
         panel.animationBehavior = .none
         let view = TitleBarOverlayView(frame: NSRect(origin: .zero, size: frame.size))
         view.autoresizingMask = [.width, .height]
@@ -593,7 +596,7 @@ final class TitleBarOverlayController {
             panel.ignoresMouseEvents = false
             panel.hidesOnDeactivate = false
             panel.isReleasedWhenClosed = false
-            panel.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary]
+            panel.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary, .transient]   // not in Mission Control
             panel.animationBehavior = .none
             let v = LightsPatchView(frame: NSRect(origin: .zero, size: frame.size))
             v.autoresizingMask = [.width, .height]
