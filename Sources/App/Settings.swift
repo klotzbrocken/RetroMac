@@ -942,6 +942,17 @@ final class AppSettings: ObservableObject {
     @Published var rescueHotkeyModifiers: UInt32 {
         didSet { defaults.set(rescueHotkeyModifiers, forKey: "rescueHotkeyModifiers") }
     }
+    /// The historic window switcher (Lastenheft 3.0, SW-03): ⌃⌥Tab by default, Shift the other way.
+    @Published var switcherHotkeyCode: UInt32 {
+        didSet { defaults.set(switcherHotkeyCode, forKey: "switcherHotkeyCode") }
+    }
+    @Published var switcherHotkeyModifiers: UInt32 {
+        didSet { defaults.set(switcherHotkeyModifiers, forKey: "switcherHotkeyModifiers") }
+    }
+    /// Theme ids in which the switcher is turned off; on everywhere it exists by default.
+    @Published var switcherOffThemes: [String] {
+        didSet { defaults.set(switcherOffThemes, forKey: "switcherOffThemes") }
+    }
     @Published var showSplashScreen: Bool {
         didSet { defaults.set(showSplashScreen, forKey: "showSplashScreen") }
     }
@@ -1374,6 +1385,9 @@ final class AppSettings: ObservableObject {
         exposeAppHotkeyCode = defaults.object(forKey: "exposeAppHotkeyCode") as? UInt32 ?? 0x6D
         rescueHotkeyCode = defaults.object(forKey: "rescueHotkeyCode") as? UInt32 ?? 0x0F   // R
         rescueHotkeyModifiers = defaults.object(forKey: "rescueHotkeyModifiers") as? UInt32 ?? 0x1900   // ⌃⌥⌘
+        switcherHotkeyCode = defaults.object(forKey: "switcherHotkeyCode") as? UInt32 ?? 0x30   // Tab
+        switcherHotkeyModifiers = defaults.object(forKey: "switcherHotkeyModifiers") as? UInt32 ?? 0x1800   // ⌃⌥
+        switcherOffThemes = defaults.stringArray(forKey: "switcherOffThemes") ?? []
         exposeAppHotkeyModifiers = defaults.object(forKey: "exposeAppHotkeyModifiers") as? UInt32 ?? 0x1000
         showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true   // boot screen on by default (per-theme toggle still applies)
         crashMode = defaults.string(forKey: "crashMode") ?? "authentic"

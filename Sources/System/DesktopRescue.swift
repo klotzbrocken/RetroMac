@@ -39,6 +39,7 @@ final class DesktopRescue {
         // A second call while one runs shows that one, it does not start another (RET-03).
         if isRunning { panel?.present(); return }
         isRunning = true
+        WindowSwitcher.shared.stop()   // the rescue comes first (SW-11)
         Self.pending = true
         lines = []
         needsAccessibility = false

@@ -10,6 +10,7 @@ struct ShortcutsTab: View {
         ScrollView {
             VStack(spacing: RMSpacing.section) {
                 rescueCard
+                switcherCard
                 globalHotkeysCard
                 // "Hide the menu bar / desktop icons while the shader is on" moved to Shader ▸
                 // Where, next to the scope they belong to; the Apple logo to Desktop ▸ Menu bar;
@@ -35,7 +36,9 @@ struct ShortcutsTab: View {
                 hotkeyModifiers: settings.rescueHotkeyModifiers,
                 isLast: true,
                 onSet: { code, mods in
-                    guard !settings.isRetroMacHotkey(code: code, modifiers: mods) else { NSSound.beep(); return }
+                    guard !settings.isRetroMacHotkey(code: code, modifiers: mods),
+                          !(code == settings.switcherHotkeyCode && [settings.switcherHotkeyModifiers, settings.switcherHotkeyModifiers | UInt32(shiftKey)].contains(mods))
+                    else { NSSound.beep(); return }
                     settings.rescueHotkeyCode = code
                     settings.rescueHotkeyModifiers = mods
                     AppDelegate.shared?.registerHotkey()
@@ -46,6 +49,48 @@ struct ShortcutsTab: View {
                     AppDelegate.shared?.registerHotkey()
                 }
             )
+        }
+    }
+
+    // MARK: - Window switcher
+
+    /// The historic switcher of the active theme (Lastenheft 3.0, 8): what it does here, its
+    /// shortcut (Shift goes the other way), and a switch to leave it off in this theme.
+    private var switcherCard: some View {
+        let theme = ThemeManager.shared.activeTheme
+        let cap = SwitcherCapability.forTheme(theme?.config.id)
+        return RMCard(title: "Window switcher", bodyPadding: 0) {
+            VStack(spacing: 0) {
+                HotkeyRow(
+                    label: "Switch windows",
+                    hint: (theme.map { "\($0.config.name): " } ?? "") + cap.summary + " Add Shift to go the other way.",
+                    hotkeyCode: settings.switcherHotkeyCode,
+                    hotkeyModifiers: settings.switcherHotkeyModifiers,
+                    isLast: !cap.isAvailable,
+                    onSet: { code, mods in
+                        guard !settings.isRetroMacHotkey(code: code, modifiers: mods),
+                              !(code == settings.rescueHotkeyCode && mods == settings.rescueHotkeyModifiers),
+                              mods & UInt32(shiftKey) == 0 else { NSSound.beep(); return }
+                        settings.switcherHotkeyCode = code
+                        settings.switcherHotkeyModifiers = mods
+                        WindowSwitcher.shared.update()
+                    },
+                    onClear: {
+                        settings.switcherHotkeyModifiers = 0
+                        WindowSwitcher.shared.update()
+                    }
+                )
+                if cap.isAvailable, let id = theme?.config.id {
+                    Toggle("Use it in this theme", isOn: Binding(
+                        get: { !settings.switcherOffThemes.contains(id) },
+                        set: { on in
+                            settings.switcherOffThemes.removeAll { $0 == id }
+                            if !on { settings.switcherOffThemes.append(id) }
+                            WindowSwitcher.shared.update()
+                        }))
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                }
+            }
         }
     }
 

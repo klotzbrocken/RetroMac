@@ -18,6 +18,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Notepad and CPU monitor wear dtwm's mauve frame. Crashes come the Solaris way: a BAD TRAP
   panic on the black-on-white Sun console, a watchdog reset that leaves OpenBoot at its ok
   prompt, and after a restart fsck asking for the root password.
+- **Window switcher.** ⌃⌥Tab (Shift the other way) does what the theme's era did: Solaris moves
+  the focus to the next window at each press, Snow Leopard opens Exposé, Mountain Lion Mission
+  Control. Eras that had no switcher get none. Change the keys, or leave it off for a theme, in
+  Settings ▸ Shortcuts.
 - **Rescue Desktop.** One action takes the theme, the shader and every desktop effect away and
   brings back windows you cannot reach: rolled-up ones, ones parked off screen, ones left on a
   display that is no longer there. Your settings stay, and a report says what was done, skipped

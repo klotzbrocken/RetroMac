@@ -48,7 +48,13 @@ a *particular* game is in the Game Library window, not here.
 
 **Crashes** — Retro Crashes: mode, how often, what can happen, boot failures, moments, the scene.
 
-**Shortcuts** — Rescue Desktop on top, then the global hotkeys. Nothing else.
+**Shortcuts** — Rescue Desktop on top, then the window switcher, then the global hotkeys.
+
+**Window switcher** (⌃⌥Tab, Shift the other way) does what the active theme's era did, from a
+release matrix per theme: Solaris moves the focus window by window, Snow Leopard opens Exposé,
+Mountain Lion Mission Control. Themes whose era had none get none; the Windows Alt+Tab panels and
+Flip wait for their reference screenshots. Its keys are only taken while the theme has a
+switcher and "Use it in this theme" is on.
 
 **Rescue Desktop** is also in the flyout and the menu-bar menu, and works with no theme on. If a
 rescue was interrupted, the next launch turns nothing on and finishes it; launching with
