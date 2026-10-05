@@ -66,9 +66,10 @@ final class DesktopRescue {
         SystemUIHelper.restoreDesktopIconsIfNeeded()
         DockController.shared.restoreSystemDockIfNeeded()
         add(.done, "Menu bar, Dock and desktop icons are back as they were.")
-        add(ThemeManager.shared.anyScreenShowsOwnWallpaper() ? .failed : .done,
-            ThemeManager.shared.anyScreenShowsOwnWallpaper() ? "Wallpaper: a RetroMac picture is still showing."
-                                                            : "Wallpaper is your own again.")
+        // macOS reports a new desktop picture a moment after it was set: asked at once, the
+        // theme's still showed. Settled in finish().
+        wallpaperLine = lines.count
+        add(.pending, "Wallpaper…")
         add(CursorThemeManager.shared.isSupported ? .done : .skipped,
             CursorThemeManager.shared.isSupported ? "Cursor is the system's again."
                                                   : "Cursor: not touched (RetroMac cannot change cursors on this Mac).")
@@ -100,10 +101,17 @@ final class DesktopRescue {
 
     private func add(_ status: Status, _ text: String) { lines.append(Line(status: status, text: text)) }
 
+    private var wallpaperLine = 0
+
     private func finish() {
         isRunning = false
         Self.pending = false
-        showReport(finished: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            self.lines[self.wallpaperLine] = ThemeManager.shared.anyScreenShowsOwnWallpaper()
+                ? Line(status: .failed, text: "Wallpaper: a RetroMac picture is still showing.")
+                : Line(status: .done, text: "Wallpaper is your own again.")
+            self.showReport(finished: true)
+        }
     }
 
     private func showReport(finished: Bool) {
@@ -207,6 +215,7 @@ private final class RescueReportPanel: NSPanel {
                    styleMask: [.titled, .closable], backing: .buffered, defer: false)
         title = "Rescue Desktop"
         isReleasedWhenClosed = false
+        hidesOnDeactivate = false   // a panel hides with the app; this one must stay until read
         level = .floating
         text.preferredMaxLayoutWidth = 400
         text.font = .systemFont(ofSize: 13)
@@ -215,12 +224,18 @@ private final class RescueReportPanel: NSPanel {
         let ok = NSButton(title: "OK", target: self, action: #selector(dismiss))
         ok.keyEquivalent = "\r"
         let buttons = NSStackView(views: [accessibility, ok])
-        let stack = NSStackView(views: [text, buttons])
-        stack.orientation = .vertical
-        stack.alignment = .trailing
-        stack.spacing = 16
-        stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 16, right: 20)
-        contentView = stack
+        let container = NSView()
+        for v in [text, buttons] as [NSView] { v.translatesAutoresizingMaskIntoConstraints = false; container.addSubview(v) }
+        NSLayoutConstraint.activate([
+            text.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
+            text.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            text.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
+            text.widthAnchor.constraint(equalToConstant: 400),
+            buttons.topAnchor.constraint(equalTo: text.bottomAnchor, constant: 16),
+            buttons.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
+            buttons.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16),
+        ])
+        contentView = container
     }
 
     func update(lines: [DesktopRescue.Line], finished: Bool, needsAccessibility: Bool) {
