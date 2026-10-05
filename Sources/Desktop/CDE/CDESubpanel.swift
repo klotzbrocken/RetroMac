@@ -94,7 +94,7 @@ final class CDESubpanel: NSView {
         theme.iconResource(name).flatMap { NSImage(contentsOf: $0) }
     }
     private static func appIcon(_ bundleID: String) -> NSImage? {
-        NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID).map { NSWorkspace.shared.icon(forFile: $0.path) }
+        NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) == nil ? nil : ThemeManager.shared.icon(for: bundleID, size: 32)
     }
     private static func app(_ title: String, _ bundleID: String, icon: NSImage? = nil) -> Item {
         Item(title: title, icon: icon ?? appIcon(bundleID), action: CDEActions.app(bundleID))
@@ -158,7 +158,7 @@ final class CDESubpanel: NSView {
         for path in personal(kind) {
             let url = URL(fileURLWithPath: path)
             list.append(Item(title: fm.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""),
-                             icon: NSWorkspace.shared.icon(forFile: path),
+                             icon: Bundle(path: path)?.bundleIdentifier.map { ThemeManager.shared.icon(for: $0, size: 32) } ?? NSWorkspace.shared.icon(forFile: path),
                              action: { NSWorkspace.shared.open(url) }, personalPath: path))
         }
         return list

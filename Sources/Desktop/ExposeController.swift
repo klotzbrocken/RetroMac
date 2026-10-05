@@ -235,7 +235,8 @@ final class ExposeController {
             // the bottom of that same display.
             let frame = NSRect(x: x, y: primary.frame.maxY - (y + height), width: width, height: height)
             if icons[pidValue] == nil {
-                icons[pidValue] = NSRunningApplication(processIdentifier: pidValue)?.icon
+                let app = NSRunningApplication(processIdentifier: pidValue)
+                icons[pidValue] = app?.bundleIdentifier.map { ThemeManager.shared.icon(for: $0, size: 64) } ?? app?.icon
             }
             out.append(Item(windowID: id,
                             pid: pidValue,

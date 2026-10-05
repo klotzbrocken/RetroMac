@@ -124,7 +124,7 @@ final class ApplicationMenuController: NSObject {
         let theme = ThemeManager.shared.activeTheme
         let key = "\(theme?.stableID ?? "-")|app|\(app?.bundleIdentifier ?? "-")" as NSString
         if let hit = iconCache.object(forKey: key) { return hit }
-        var img = theme?.classicAppIcon(for: app?.bundleIdentifier)
+        var img = theme == nil ? nil : ThemeManager.shared.classicAppIcon(for: app?.bundleIdentifier)
         if img == nil { img = app?.icon ?? NSImage(named: NSImage.applicationIconName) }
         guard let img else { return nil }
         // A 256-colour theme snaps it once, here; the menu is redrawn far more often than the

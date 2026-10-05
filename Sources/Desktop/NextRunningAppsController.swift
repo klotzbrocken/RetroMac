@@ -45,7 +45,8 @@ final class NextRunningAppsController {
         for app in apps {
             guard let bid = app.bundleIdentifier, panels[bid] == nil, let sysIcon = app.icon else { continue }
             let overridePath = iconOverride(bid)
-            let icon = overridePath.flatMap { NSImage(contentsOfFile: $0) } ?? sysIcon
+            let icon = overridePath.flatMap { NSImage(contentsOfFile: $0) }
+                ?? (ThemeManager.shared.hasThemedIcon(for: bid) ? ThemeManager.shared.icon(for: bid, size: 64) : sysIcon)
             // Real app icons sit inset on the silver tile; a "Change Icon…" pick fills the whole
             // tile only when "Ganze Fläche füllen" was set (full-tile Fleet art).
             let fillWhole = overridePath != nil ? iconFill(bid) : false

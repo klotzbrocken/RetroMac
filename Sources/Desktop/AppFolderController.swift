@@ -673,7 +673,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             // Mapped pixel-art theme icons are edge-to-edge; native macOS icons carry ~10% built-in
             // transparent padding. Inset the theme icons by the same amount so all grid icons read
             // as one consistent size (fixes "native and Windows icons have different sizes").
-            if ThemeManager.shared.activeTheme?.iconURL(for: b) != nil { inset = 0.10 }
+            if ThemeManager.shared.hasThemedIcon(for: b) { inset = 0.10 }
         } else {
             img = NSWorkspace.shared.icon(forFile: path)
         }

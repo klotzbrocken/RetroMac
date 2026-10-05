@@ -1103,9 +1103,8 @@ final class DockView: NSView {
             }
         } else {
             let icon: NSImage
-            if isTransient && ThemeManager.shared.customIconPath(for: bundleID) == nil
-                && !theme.isPixelated && theme.icon.monochrome != true
-                && theme.iconMappings[bundleID] == nil {
+            if isTransient && !ThemeManager.shared.hasThemedIcon(for: bundleID)
+                && !theme.isPixelated && theme.icon.monochrome != true {
                 // Transient (running) apps show their real system icon unless user set a
                 // custom one — except in pixel/monochrome themes, where icon(for:)
                 // pixelates/desaturates the real icon so the whole dock stays consistent,
@@ -1330,8 +1329,7 @@ final class DockView: NSView {
         // Apps the theme has no icon art for fall back to their real macOS icon, which carries
         // built-in transparent padding — so it renders visibly smaller than the edge-to-edge themed
         // tabs. Flag those so the tab can enlarge them to match.
-        let mapped = (ThemeManager.shared.activeTheme?.config.iconMappings[w.bundleID] != nil)
-            || ThemeManager.shared.customIconPath(for: w.bundleID) != nil
+        let mapped = ThemeManager.shared.hasThemedIcon(for: w.bundleID)
         // Active (focused, non-minimized) → minimize; minimized or background → restore + raise.
         return (w.title, icon, w.isFocused && !w.isMinimized, !mapped, {
             if !w.isMinimized && w.isFocused { MinimizedWindowTracker.shared.minimize(w) }

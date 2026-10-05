@@ -71,3 +71,16 @@ Für jede Stelle (Dock, Taskbar, Shelf, Front Panel, Listen, Wechsler) gilt (ICO
 5. ein allgemeines App-Icon
 
 Eine App ohne Icon im Paket zeigt also ihr echtes Icon, nie ein fremdes Ersatzlogo (ICO-A3).
+
+Es gilt überall, wo ein Theme Apps zeigt (ICO-09):
+
+- Dock und Taskbars (auch laufende Apps und Fenster-Einträge)
+- Win-3.1-Task-Icons, BeOS-Deskbar und NeXT-Kacheln
+- CDE-Subpanels und Icons minimierter Fenster
+- Photon-Taskbar und Launch-Menü
+- Apple-Menü, Programm-Menü und Fenster-Titelleisten
+- Application Manager, App-Ordner und Exposé
+
+Oberflächen, die sonst nur Theme-Bilder zeigen (Win 3.1, klassische Mac-Menüs), nehmen ein Paket-Icon genauso wie eine Theme-Zuordnung.
+
+Nicht betroffen sind die RetroMac-Einstellungen. Dort zeigen die App-Listen das echte Icon, damit du beim Zuordnen die App erkennst.

@@ -19,7 +19,7 @@ final class Win31TaskIconsView: NSView {
     /// theme's default program icon (never the real macOS app icon, which breaks the look).
     private static func win31Icon(for bundleID: String, size: CGFloat) -> NSImage? {
         let theme = ThemeManager.shared.activeTheme
-        if theme?.config.iconMappings[bundleID] != nil {
+        if ThemeManager.shared.hasThemedIcon(for: bundleID) {
             return ThemeManager.shared.icon(for: bundleID, size: size)
         }
         let dir = theme?.iconsDirectory

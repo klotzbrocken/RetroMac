@@ -437,7 +437,7 @@ final class PhotonTaskbarView: NSView {
                 PhotonColors.face.setFill(); r.fill()
                 PhotonColors.bevel(r, PhotonColors.white, PhotonColors.shade)
             }
-            if let icon = NSRunningApplication(processIdentifier: t.pid)?.icon {
+            if let icon = t.bundleID.isEmpty ? NSRunningApplication(processIdentifier: t.pid)?.icon : ThemeManager.shared.icon(for: t.bundleID, size: 16) {
                 NSGraphicsContext.current?.imageInterpolation = .high
                 icon.draw(in: NSRect(x: r.minX + 6, y: r.minY + 3, width: 16, height: 16), from: .zero, operation: .sourceOver,
                           fraction: 1, respectFlipped: true, hints: nil)
@@ -525,7 +525,7 @@ enum PhotonLaunchMenu {
             let name = fm.displayName(atPath: path).replacingOccurrences(of: ".app", with: "")
             guard seen.insert(name).inserted else { continue }   // one entry per name, as a menu shows it
             let declared = Bundle(path: path)?.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String
-            let icon = NSWorkspace.shared.icon(forFile: path)
+            let icon = Bundle(path: path)?.bundleIdentifier.map { ThemeManager.shared.icon(for: $0, size: 16) } ?? NSWorkspace.shared.icon(forFile: path)
             let item = CDEMenuItem(title: name, icon: icon,
                                    action: { NSWorkspace.shared.open(URL(fileURLWithPath: path)) })
             byCategory[overrides[path] ?? category(of: path, category: declared, internet: internet), default: []].append(item)

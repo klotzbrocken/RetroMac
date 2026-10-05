@@ -253,7 +253,7 @@ final class AppleMenuController {
         if let hit = iconCache.object(forKey: key) { return hit }
         var img: NSImage?
         if path.hasSuffix(".app") {
-            img = ThemeManager.shared.activeTheme?.classicAppIcon(for: Bundle(path: path)?.bundleIdentifier)
+            img = ThemeManager.shared.classicAppIcon(for: Bundle(path: path)?.bundleIdentifier)
         } else if let theme = ThemeManager.shared.activeTheme {
             // Folders and documents in the theme's own drawing, as the Finder of the day.
             var isDir: ObjCBool = false

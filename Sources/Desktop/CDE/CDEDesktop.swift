@@ -181,12 +181,10 @@ private final class CDEDesktopView: NSView {
         NSRect(x: r.minX + 1, y: r.maxY - 1, width: r.width - 1, height: 1).fill()
     }
 
-    /// The theme's picture for the app if it maps one, else the app's own icon (ICO-07).
+    /// The app's icon in the one order every surface uses (ICO-07): yours, the package's, the
+    /// theme's, then its own.
     private static func picture(for e: MinimizedWindowTracker.Entry) -> NSImage? {
-        if ThemeManager.shared.activeTheme?.config.iconMappings[e.bundleID] != nil {
-            return ThemeManager.shared.icon(for: e.bundleID, size: 48)
-        }
-        return NSRunningApplication(processIdentifier: e.pid)?.icon
+        e.bundleID.isEmpty ? NSRunningApplication(processIdentifier: e.pid)?.icon : ThemeManager.shared.icon(for: e.bundleID, size: 48)
     }
 
     // MARK: Mouse

@@ -117,7 +117,9 @@ final class NextFileViewerView: NSView {
                 let name = String(item.dropLast(4))
                 guard seen.insert(name).inserted else { continue }
                 let url = URL(fileURLWithPath: dir).appendingPathComponent(item)
-                let icon = NSWorkspace.shared.icon(forFile: url.path); icon.size = NSSize(width: 48, height: 48)
+                let icon = Bundle(url: url)?.bundleIdentifier.map { ThemeManager.shared.icon(for: $0, size: 48) }
+                    ?? NSWorkspace.shared.icon(forFile: url.path)
+                icon.size = NSSize(width: 48, height: 48)
                 out.append(NextFileItem(name: name, icon: icon, action: { NSWorkspace.shared.open(url) }))
             }
         }

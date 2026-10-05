@@ -1049,14 +1049,15 @@ final class TitleBarOverlayController {
     private static func classicIcon(for pid: pid_t) -> NSImage? {
         if let i = classicIcons[pid] { return i }
         let bid = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
-        guard let i = ThemeManager.shared.activeTheme?.classicAppIcon(for: bid) ?? icon(for: pid) else { return nil }
+        guard let i = ThemeManager.shared.classicAppIcon(for: bid) ?? icon(for: pid) else { return nil }
         classicIcons[pid] = i
         return i
     }
 
     private static func icon(for pid: pid_t) -> NSImage? {
         if let i = icons[pid] { return i }
-        guard let i = NSRunningApplication(processIdentifier: pid)?.icon else { return nil }
+        guard let app = NSRunningApplication(processIdentifier: pid),
+              let i = app.bundleIdentifier.map({ ThemeManager.shared.icon(for: $0, size: 32) }) ?? app.icon else { return nil }
         icons[pid] = i
         return i
     }

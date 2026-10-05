@@ -944,6 +944,23 @@ final class ThemeManager {
         return image
     }
 
+    /// Whether the app wears an icon of the theme's own: the user's choice, the delivered package
+    /// or the theme's mapping. Surfaces that show only themed art ask this, so a package counts
+    /// everywhere a mapping does (ICO-09).
+    func hasThemedIcon(for bundleID: String) -> Bool {
+        guard let theme = activeTheme else { return false }
+        return iconOverrides[theme.stableID]?[bundleID] != nil
+            || IconPackStore.shared.entry(themeID: theme.stableID, bundleID: bundleID).map { $0.usageStatus != .notForRelease } == true
+            || theme.iconURL(for: bundleID) != nil
+    }
+
+    /// For the classic Mac surfaces (Apple menu, application menu, Platinum title bars), which show
+    /// the theme's icon for an app or its generic one, never the real macOS icon.
+    func classicAppIcon(for bundleID: String?, size: CGFloat = 32) -> NSImage? {
+        if let bundleID, hasThemedIcon(for: bundleID) { return icon(for: bundleID, size: size) }
+        return activeTheme?.classicAppIcon(for: nil)
+    }
+
     /// ICO-07, the one order every surface uses: the user's own choice for this theme, the
     /// delivered icon package, the theme's own mapping, the app's native icon, a generic one.
     private func loadIcon(for bundleID: String, size: CGFloat) -> NSImage {
