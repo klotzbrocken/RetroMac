@@ -209,7 +209,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.widgetKey())')")
         webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         webView.evaluateJavaScript("window.setEditorApp && window.setEditorApp('\(editorAppFlavor())')")
         let saved = UserDefaults.standard.string(forKey: textKey) ?? ""

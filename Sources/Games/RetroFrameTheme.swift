@@ -32,6 +32,10 @@ enum RetroFrameTheme {
         return out
     }
 
+    /// The chrome a widget page draws. The pages have none for CDE: they draw their Windows 98
+    /// furniture and `CDEWidgetChrome` repaints it as dtwm.
+    static func widgetKey() -> String { key() == "cde" ? "win98" : key() }
+
     static func key() -> String {
         // Only frame launched content (TV window chrome, game frames) when a theme
         // is actually ON. After a clean launch ThemeManager still remembers the last

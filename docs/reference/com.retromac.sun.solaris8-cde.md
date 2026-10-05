@@ -73,12 +73,13 @@ Alle Bilder stammen aus den gelieferten Screenshots, unverändert in Pixeln und 
 - **Workspace Menu (CDE-09):** Rechtsklick auf den Desktop. Die Kaskaden zeigen die Inhalte der Subpanels, wie CDE sie aus dem Front Panel baute. „Applications“ folgt der Solaris-Liste mit Mac-Gegenstücken: Image Viewer → Vorschau, Snapshot → Bildschirmfoto, Text Note → Notizzettel, Voice Note → Sprachmemos. Einträge ohne installierte App fehlen; das Icon Editor fehlt immer. „Add Item to Menu“ und „Customize Menu“ werden zu „RetroMac Settings...“. „Log out...“ heißt „Exit Theme...“ und beendet das Theme (CDE-11). „Windows“ enthält Mission Control, „Restore All Icons“ und „Minimize/Restore Front Panel“. Ein minimiertes Front Panel wird nicht zum Icon, sondern ausgeblendet.
 - **Icons minimierter Fenster (CDE-10):** ein Klick öffnet das Fenstermenü, ein Doppelklick stellt das Fenster wieder her. Ohne Bedienungshilfen-Recht zeigt RetroMac ausgeblendete Apps statt Fenster (das Verhalten des Fenster-Trackers). Das Bild ist das Theme-Icon der App, sonst ihr eigenes. Der Desktop übernimmt wie bei den anderen Themes mit Desktop-Icons die Klicks auf die freie Fläche.
 - **Application Manager (CDE-04):** Er zeigt die Mac-Apps in Gruppen nach Solaris-Art, die sich aus der App-Store-Kategorie der App ergeben: Desktop_Apps (auch ohne Kategorie), Desktop_Tools, Developer_Tools, Graphics, Audio_Video, Information, Games. „All_Applications“ listet alle Apps. Leere Gruppen fehlen. Das Fenster ist das File-Manager-Fenster mit Pfad als Ordnerzeile und Text. Der Pfad „/Applications/Desktop_Tools“ ist virtuell. Solaris hatte /var/dt/appconfig/appmanager. Geöffnet wird er aus dem Workspace Menu und dem Applications-Subpanel. Minimieren blendet das Fenster aus.
+- **Widgets (Uhr, Rechner, Notepad, CPU-Monitor):** Sie tragen den dtwm-Rahmen mit Mauve-Titelleiste, Menükasten links, grauen Motif-Flächen und Textfeldern in #FFF7EF. Innen behalten sie ihren Aufbau aus dem Windows-98-Stil (Menüleiste, Tasten des Rechners), weil Solaris für diese RetroMac-Widgets kein Vorbild hat. Der Menükasten schließt das Widget mit einem Klick; das volle Fenstermenü haben echte Fenster und der Application Manager.
 - **Subpanels:** Laut Toastytech blieben sie offen, bis man den Pfeil erneut klickte. RetroMac schließt sie zusätzlich mit Esc und mit einem Klick daneben, wie CDE-02 verlangt.
 - **Bildschirmschoner:** keiner. RetroMac hat keinen der CDE-Schoner (Swarm, Worms …).
 
 ## Offen für die nächsten Runden
 
-- Widget-Stile `cde` für Uhr, Rechner, Notepad, CPU-Monitor und AppFolder; WebApp-Chrome.
+- WebApp-Chrome.
 - Crash-Ära (Solaris), Bootscreen (dtlogin), Cursor (X11-Cursorfont).
 - `minAppVersion: "3.0"` (ARC-03): wird gesetzt, wenn die App-Version auf 3.0 geht. Vorher würde das Theme im 2.8.x-Build nicht laden.
 

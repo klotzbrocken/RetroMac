@@ -14,7 +14,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Workspace Menu, the box at the left of a title bar its window menu (a double-click closes the
   window), and a minimised window lies on the desktop as an icon until you restore it. The
   Application Manager shows your apps in Solaris-style groups (Desktop_Apps, Desktop_Tools …)
-  and all of them in one more, in a window built like CDE's File Manager.
+  and all of them in one more, in a window built like CDE's File Manager. The clock, calculator,
+  Notepad and CPU monitor wear dtwm's mauve frame.
 - **Rescue Desktop.** One action takes the theme, the shader and every desktop effect away and
   brings back windows you cannot reach: rolled-up ones, ones parked off screen, ones left on a
   display that is no longer there. Your settings stay, and a report says what was done, skipped

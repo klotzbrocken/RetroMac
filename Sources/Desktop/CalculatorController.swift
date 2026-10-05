@@ -120,7 +120,7 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.key())')")
+        webView.evaluateJavaScript("window.setTheme && window.setTheme('\(RetroFrameTheme.widgetKey())')")
         webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // Win98 Plus! scheme recolour
         // Win95/98 title-bar program icon (this widget's matching desktop icon).
         let icoName = ThemeManager.shared.activeTheme?.config.desktopIcons?.first(where: { $0.type == "calculator" })?.icon
