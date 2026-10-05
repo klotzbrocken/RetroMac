@@ -34,6 +34,7 @@ struct DockSettingsTab: View {
                 extrasCard
                 integrationCard
                 appsCard
+                iconPackCard
 
                 // Fine-tuning and theme files, collapsed by default to keep the tab simple.
                 DisclosureGroup(isExpanded: $showAdvanced) {
@@ -767,6 +768,68 @@ struct DockSettingsTab: View {
                                 .padding(.vertical, 8)
                         }
                         .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Historic icons (Lastenheft 3.0, section 9)
+
+    @State private var iconPackRefresh = false
+    @State private var iconPackMessage: String?
+
+    /// The icon package of the selected theme: how much of it is in, and the way to bring a new
+    /// one in or take it out (ICO-10). The pictures come from Maik, checked on import (ICO-01).
+    private var iconPackCard: some View {
+        let theme = ThemeManager.shared.activeTheme
+        let id = theme?.stableID ?? ""
+        let store = IconPackStore.shared
+        let status = store.status(themeID: id, theme: theme)
+        let icons = store.manifest(for: id)?.icons ?? []
+        let adaptations = icons.filter { $0.kind == .eraAdaptation }.count
+        let report = store.lastReport(for: id)
+        _ = iconPackRefresh
+        return RMCard(title: "Historic icons",
+                      subtitle: "Icon packages for modern apps in \u{201C}\(themeDisplayName)\u{201D}: a folder with icons.json and its PNGs.",
+                      bodyPadding: 0) {
+            VStack(spacing: 0) {
+                RMRow(label: "\(status.delivered) delivered \u{00B7} \(status.mapped) in use here \u{00B7} \(status.missing) missing \u{00B7} \(status.invalid) invalid",
+                      hint: status.delivered == 0 ? "No package for this theme yet. Apps show the theme's own icon or their real one."
+                          : "\(icons.count - adaptations) historical originals, \(adaptations) style adaptations.") {
+                    EmptyView()
+                }
+                if let report, !report.invalid.isEmpty {
+                    RMRow(label: "Turned away at the last import",
+                          hint: report.invalid.prefix(6).map { "\($0.appID): \($0.reason)" }.joined(separator: "\n")
+                            + (report.kept.isEmpty ? "" : "\nKept the working icon of: " + report.kept.joined(separator: ", ")),
+                          stacked: true) { EmptyView() }
+                }
+                RMRow(label: "Package", hint: iconPackMessage, isLast: true) {
+                    HStack(spacing: 6) {
+                        Button("Import\u{2026}") {
+                            let panel = NSOpenPanel()
+                            panel.canChooseDirectories = true
+                            panel.canChooseFiles = false
+                            panel.message = "Choose an icon package folder (with icons.json)"
+                            guard panel.runModal() == .OK, let url = panel.url else { return }
+                            do {
+                                let r = try store.importPackage(at: url)
+                                iconPackMessage = "\(r.accepted.count) icons in, \(r.invalid.count) turned away."
+                            } catch {
+                                iconPackMessage = error.localizedDescription
+                            }
+                            iconPackRefresh.toggle()
+                        }
+                        .buttonStyle(RMDefaultButtonStyle())
+                        if status.delivered > 0 {
+                            Button("Remove") {
+                                store.remove(themeID: id)
+                                iconPackMessage = nil
+                                iconPackRefresh.toggle()
+                            }
+                            .buttonStyle(RMDefaultButtonStyle())
+                        }
                     }
                 }
             }

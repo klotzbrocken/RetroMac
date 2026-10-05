@@ -931,7 +931,10 @@ final class ThemeManager {
     }
 
     func icon(for bundleID: String, size: CGFloat) -> NSImage {
-        let cacheKey = "\(activeTheme?.name ?? "default")_\(bundleID)_\(Int(size))" as NSString
+        // The delivered package's revision is part of the key: a new package is never shown
+        // from an old cache entry (ICO-11).
+        let pack = activeTheme.map { IconPackStore.shared.revision(themeID: $0.stableID) } ?? "-"
+        let cacheKey = "\(activeTheme?.name ?? "default")_\(bundleID)_\(Int(size))_\(pack)" as NSString
         if let cached = iconCache.object(forKey: cacheKey) {
             return cached
         }
@@ -941,6 +944,8 @@ final class ThemeManager {
         return image
     }
 
+    /// ICO-07, the one order every surface uses: the user's own choice for this theme, the
+    /// delivered icon package, the theme's own mapping, the app's native icon, a generic one.
     private func loadIcon(for bundleID: String, size: CGFloat) -> NSImage {
         if let themeName = activeTheme?.stableID,
            let customPath = iconOverrides[themeName]?[bundleID] {
@@ -948,6 +953,10 @@ final class ThemeManager {
                 img.size = NSSize(width: size, height: size)
                 return img
             }
+        }
+
+        if let theme = activeTheme, let img = IconPackStore.shared.image(themeID: theme.stableID, bundleID: bundleID, size: size) {
+            return theme.config.hasMac256Palette ? Mac256.icon(img, points: size) : img
         }
 
         if let theme = activeTheme, let iconURL = theme.iconURL(for: bundleID) {

@@ -25,6 +25,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Notepad and CPU monitor wear dtwm's mauve frame. Crashes come the Solaris way: a BAD TRAP
   panic on the black-on-white Sun console, a watchdog reset that leaves OpenBoot at its ok
   prompt, and after a restart fsck asking for the root password.
+- **Historic icons for modern apps.** A theme can take an icon package: a folder of PNGs with an
+  icons.json saying which app each is for, whether it is the era's own icon or a modern app
+  drawn in its style, and at which sizes. RetroMac checks every file on import, keeps an app's
+  working icon when its new one is broken, and shows the package in the dock and on the theme's
+  panels at once. Settings ▸ Dock ▸ Historic icons shows what is in, in use, missing and broken.
 - **Window switcher.** ⌃⌥Tab (Shift the other way) does what the theme's era did: Solaris moves
   the focus to the next window at each press, Snow Leopard opens Exposé, Mountain Lion Mission
   Control. Eras that had no switcher get none. Change the keys, or leave it off for a theme, in

@@ -1,0 +1,481 @@
+[
+ {
+  "appID": "finder",
+  "name": "Finder",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.finder"
+  ],
+  "verified": [
+   "com.apple.finder"
+  ]
+ },
+ {
+  "appID": "safari",
+  "name": "Safari",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.Safari"
+  ],
+  "verified": [
+   "com.apple.Safari"
+  ]
+ },
+ {
+  "appID": "mail",
+  "name": "Mail",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.mail"
+  ],
+  "verified": [
+   "com.apple.mail"
+  ]
+ },
+ {
+  "appID": "calendar",
+  "name": "Kalender",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.iCal"
+  ],
+  "verified": [
+   "com.apple.iCal"
+  ]
+ },
+ {
+  "appID": "contacts",
+  "name": "Kontakte",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.AddressBook"
+  ],
+  "verified": [
+   "com.apple.AddressBook"
+  ]
+ },
+ {
+  "appID": "notes",
+  "name": "Notizen",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.Notes"
+  ],
+  "verified": [
+   "com.apple.Notes"
+  ]
+ },
+ {
+  "appID": "reminders",
+  "name": "Erinnerungen",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.reminders"
+  ],
+  "verified": [
+   "com.apple.reminders"
+  ]
+ },
+ {
+  "appID": "preview",
+  "name": "Vorschau",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.Preview"
+  ],
+  "verified": [
+   "com.apple.Preview"
+  ]
+ },
+ {
+  "appID": "textedit",
+  "name": "TextEdit",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.TextEdit"
+  ],
+  "verified": [
+   "com.apple.TextEdit"
+  ]
+ },
+ {
+  "appID": "terminal",
+  "name": "Terminal",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.Terminal"
+  ],
+  "verified": [
+   "com.apple.Terminal"
+  ]
+ },
+ {
+  "appID": "systemsettings",
+  "name": "Systemeinstellungen",
+  "group": "Apple/Produktivität",
+  "bundleIDs": [
+   "com.apple.systempreferences"
+  ],
+  "verified": [
+   "com.apple.systempreferences"
+  ]
+ },
+ {
+  "appID": "pages",
+  "name": "Pages",
+  "group": "iWork",
+  "bundleIDs": [
+   "com.apple.iWork.Pages"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "numbers",
+  "name": "Numbers",
+  "group": "iWork",
+  "bundleIDs": [
+   "com.apple.iWork.Numbers"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "keynote",
+  "name": "Keynote",
+  "group": "iWork",
+  "bundleIDs": [
+   "com.apple.iWork.Keynote"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "word",
+  "name": "Word",
+  "group": "Microsoft",
+  "bundleIDs": [
+   "com.microsoft.Word"
+  ],
+  "verified": [
+   "com.microsoft.Word"
+  ]
+ },
+ {
+  "appID": "excel",
+  "name": "Excel",
+  "group": "Microsoft",
+  "bundleIDs": [
+   "com.microsoft.Excel"
+  ],
+  "verified": [
+   "com.microsoft.Excel"
+  ]
+ },
+ {
+  "appID": "powerpoint",
+  "name": "PowerPoint",
+  "group": "Microsoft",
+  "bundleIDs": [
+   "com.microsoft.Powerpoint"
+  ],
+  "verified": [
+   "com.microsoft.Powerpoint"
+  ]
+ },
+ {
+  "appID": "outlook",
+  "name": "Outlook",
+  "group": "Microsoft",
+  "bundleIDs": [
+   "com.microsoft.Outlook"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "teams",
+  "name": "Teams",
+  "group": "Microsoft",
+  "bundleIDs": [
+   "com.microsoft.teams2",
+   "com.microsoft.teams"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "onenote",
+  "name": "OneNote",
+  "group": "Microsoft",
+  "bundleIDs": [
+   "com.microsoft.onenote.mac"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "chrome",
+  "name": "Chrome",
+  "group": "Browser",
+  "bundleIDs": [
+   "com.google.Chrome"
+  ],
+  "verified": [
+   "com.google.Chrome"
+  ]
+ },
+ {
+  "appID": "firefox",
+  "name": "Firefox",
+  "group": "Browser",
+  "bundleIDs": [
+   "org.mozilla.firefox"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "edge",
+  "name": "Edge",
+  "group": "Browser",
+  "bundleIDs": [
+   "com.microsoft.edgemac"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "brave",
+  "name": "Brave",
+  "group": "Browser",
+  "bundleIDs": [
+   "com.brave.Browser"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "arc",
+  "name": "Arc",
+  "group": "Browser",
+  "bundleIDs": [
+   "company.thebrowser.Browser"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "claude",
+  "name": "Claude",
+  "group": "KI",
+  "bundleIDs": [
+   "com.anthropic.claudefordesktop"
+  ],
+  "verified": [
+   "com.anthropic.claudefordesktop"
+  ]
+ },
+ {
+  "appID": "chatgpt",
+  "name": "ChatGPT",
+  "group": "KI",
+  "bundleIDs": [
+   "com.openai.chat",
+   "com.openai.codex"
+  ],
+  "verified": [
+   "com.openai.codex"
+  ]
+ },
+ {
+  "appID": "cursor",
+  "name": "Cursor",
+  "group": "KI",
+  "bundleIDs": [
+   "com.todesktop.230313mzl4w4u92"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "slack",
+  "name": "Slack",
+  "group": "Kommunikation",
+  "bundleIDs": [
+   "com.tinyspeck.slackmacgap"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "discord",
+  "name": "Discord",
+  "group": "Kommunikation",
+  "bundleIDs": [
+   "com.hnc.Discord"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "zoom",
+  "name": "Zoom",
+  "group": "Kommunikation",
+  "bundleIDs": [
+   "us.zoom.xos"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "signal",
+  "name": "Signal",
+  "group": "Kommunikation",
+  "bundleIDs": [
+   "org.whispersystems.signal-desktop"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "whatsapp",
+  "name": "WhatsApp",
+  "group": "Kommunikation",
+  "bundleIDs": [
+   "net.whatsapp.WhatsApp"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "xcode",
+  "name": "Xcode",
+  "group": "Entwicklung",
+  "bundleIDs": [
+   "com.apple.dt.Xcode"
+  ],
+  "verified": [
+   "com.apple.dt.Xcode"
+  ]
+ },
+ {
+  "appID": "vscode",
+  "name": "Visual Studio Code",
+  "group": "Entwicklung",
+  "bundleIDs": [
+   "com.microsoft.VSCode"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "iterm2",
+  "name": "iTerm2",
+  "group": "Entwicklung",
+  "bundleIDs": [
+   "com.googlecode.iterm2"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "docker",
+  "name": "Docker Desktop",
+  "group": "Entwicklung",
+  "bundleIDs": [
+   "com.docker.docker"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "githubdesktop",
+  "name": "GitHub Desktop",
+  "group": "Entwicklung",
+  "bundleIDs": [
+   "com.github.GitHubClient"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "music",
+  "name": "Musik",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "com.apple.Music"
+  ],
+  "verified": [
+   "com.apple.Music"
+  ]
+ },
+ {
+  "appID": "photos",
+  "name": "Fotos",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "com.apple.Photos"
+  ],
+  "verified": [
+   "com.apple.Photos"
+  ]
+ },
+ {
+  "appID": "spotify",
+  "name": "Spotify",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "com.spotify.client"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "vlc",
+  "name": "VLC",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "org.videolan.vlc"
+  ],
+  "verified": [
+   "org.videolan.vlc"
+  ]
+ },
+ {
+  "appID": "photoshop",
+  "name": "Photoshop",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "com.adobe.Photoshop"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "illustrator",
+  "name": "Illustrator",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "com.adobe.illustrator"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "affinitydesigner",
+  "name": "Affinity Designer",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "com.seriflabs.affinitydesigner2",
+   "com.seriflabs.affinitydesigner"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "affinityphoto",
+  "name": "Affinity Photo",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "com.seriflabs.affinityphoto2",
+   "com.seriflabs.affinityphoto"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "affinitypublisher",
+  "name": "Affinity Publisher",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "com.seriflabs.affinitypublisher2",
+   "com.seriflabs.affinitypublisher"
+  ],
+  "verified": []
+ },
+ {
+  "appID": "figma",
+  "name": "Figma",
+  "group": "Medien/Kreativ",
+  "bundleIDs": [
+   "com.figma.Desktop"
+  ],
+  "verified": []
+ }
+]
