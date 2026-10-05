@@ -473,6 +473,11 @@ final class WindowBorderController {
             return .bevel(hiOuter: NSColor.fromHex("#FFFFFF"), hiInner: NSColor.fromHex("#AAAAAA"),
                           loInner: NSColor.fromHex("#555555"), loOuter: NSColor.fromHex("#000000"),
                           width: 2, radius: 0)
+        case "cde":
+            // dtwm's 5 pt frame, in the desktop grey: the frame does not know which window is in
+            // front, so it wears the inactive colours and the bar shows the active one.
+            return .bevel(hiOuter: NSColor.fromHex("#DEDEE7"), hiInner: NSColor.fromHex("#ADB5C6"),
+                          loInner: NSColor.fromHex("#ADB5C6"), loOuter: NSColor.fromHex("#5A636B"), width: 5, radius: 0)
         case "snowleopard":
             // 10.6 windows have no bevel and no glow, just a hairline contour around the
             // rounded frame. Anything thicker immediately reads as Leopard-era Aqua.

@@ -82,6 +82,7 @@ final class DockController {
             ApplicationMenuController.shared.update()
             NextMenuController.shared.update()
             NextDockController.shared.update()
+            CDEFrontPanelController.shared.update()
             NextRunningAppsController.shared.update()
             WindowBorderController.shared.update()
             RainbowAppleController.shared.update()
@@ -165,6 +166,7 @@ final class DockController {
         ApplicationMenuController.shared.hide()
         NextMenuController.shared.hide()
         NextDockController.shared.hide()
+        CDEFrontPanelController.shared.hide()
         NextRunningAppsController.shared.hide()
         WindowBorderController.shared.update()   // dock off → borders off (gated on dockEnabled)
         RainbowAppleController.shared.hide()
@@ -298,6 +300,7 @@ final class DockController {
             ApplicationMenuController.shared.update()
             NextMenuController.shared.update()
             NextDockController.shared.update()
+            CDEFrontPanelController.shared.update()
             NextRunningAppsController.shared.update()
             // These themes replace the dock entirely (Win 3.1 Program Manager, BeOS Deskbar,
             // SGI desktop) — hide the system Dock too, otherwise every running app + minimized
@@ -315,6 +318,7 @@ final class DockController {
         ApplicationMenuController.shared.hide()
         NextMenuController.shared.hide()
         NextDockController.shared.hide()
+        CDEFrontPanelController.shared.hide()
         NextRunningAppsController.shared.hide()
 
         createWindow()

@@ -64,6 +64,7 @@ enum RetroFrameTheme {
         if name.contains("windows xp") || name == "xp" || name.hasPrefix("xp ") { return "winxp" }
         if name.contains("maiks favourite") || name.contains("maiks favorite") { return "maiksfav" }
         if name.contains("nextstep") || name.contains("next step") { return "nextstep" }
+        if name.contains("solaris") { return "cde" }   // Solaris 8, the Common Desktop Environment
         if name.contains("futurama") { return "futurama" }
         return "default"
     }

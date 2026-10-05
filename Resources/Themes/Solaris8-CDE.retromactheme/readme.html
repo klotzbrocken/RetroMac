@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solaris 8 — CDE</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#524A8C; font-family:"Lucida Grande","Lucida Sans","Helvetica Neue",Arial,sans-serif; color:#152535; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#ADB5C6; border:2px solid #DEDEE7; border-radius:8px; box-shadow:0 10px 34px rgba(0,0,0,.38); border-radius:8px; overflow:hidden; }
+  .titlebar { background:#B54A7B;color:#fff;padding:8px 12px;font-size:13px;font-weight:600;border-bottom:2px solid #522139; }
+  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border-radius:10px; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#12365e; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#4a5a6a; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#1e5aa0; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #bcd2ea; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#2a7fd0; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#e0edfb; border:1px solid #b6d2ee; border-radius:6px; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#1e5aa0; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  .quote { font-style:italic; border-left:3px solid #2a7fd0; padding-left:12px; margin:4px 0 0; color:#4a5a6a; font-size:13px; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #bcd2ea; font-size:11px; color:#4a5a6a; line-height:1.6; }
+  footer a { color:#1560b0; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span class="tb-title">Solaris 8 — CDE</span></div>
+    <div class="body">
+      <div class="hero">
+        <img src="appIcon.png" alt="Solaris 8">
+        <div><h1>Solaris 8 &mdash; CDE</h1><p class="sub">Sun Microsystems &middot; 2000</p></div>
+      </div>
+      <p>Solaris 8 (SunOS 5.8, February 2000) ran on the workstations and servers that kept the dot-com web running. Its desktop was <b>CDE</b>, the Common Desktop Environment that HP, IBM, Novell and Sun agreed on as the shared Unix desktop.</p><p>At the bottom sat the <b>Front Panel</b>: a clock, a calendar, the File Manager, a text editor, mail, four workspaces called One to Four, printers, a cpu and disk meter, help and the trash. Every control had a little arrow above it that opened a subpanel with more.</p>
+      <h2>What made it special</h2>
+      <ul class="facts"><li>The <b>Front Panel</b> with its pop-up subpanels.</li><li>Four <b>workspaces</b>, long before macOS had Spaces.</li><li>The mauve and grey <b>dtwm</b> window frames.</li><li>The tiled Solaris sun on a purple desktop.</li></ul>
+      <h2>In RetroMac</h2>
+      <ul class="facts"><li>The Front Panel is measured off Solaris 8 screenshots, pixel for pixel; the clock, the date and the cpu/disk meter are live.</li><li>Every control opens a real Mac app, folder or setting; hold the pointer over it to see which. Drop an app on <b>Install Icon</b> in a subpanel to add your own.</li><li>The workspaces open Mission Control, and <b>Exit</b> turns the theme off.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>Open source at last.</b> CDE was released as open source in 2012, long after its Unix days.</div><div class="item"><b>Workspaces by name.</b> CDE's four workspaces were called One, Two, Three and Four, and you could rename them.</div><div class="item"><b>Lock, not log out.</b> The padlock on the Front Panel locked the display with a screen saver running.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+</body></html>

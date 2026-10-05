@@ -5,6 +5,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+- **New theme: Solaris 8 — CDE.** The Common Desktop Environment as Solaris 8 shipped it in
+  2000, measured off the original: the Front Panel at the bottom with a live clock, today's date
+  on the calendar and a cpu/disk meter; an arrow over every control opens its subpanel, and an
+  app dropped on "Install Icon" stays there. The mauve dtwm title bars, the tiled Solaris sun on
+  the purple desktop. Every control opens a real Mac app or setting; the four workspaces open
+  Mission Control, and Exit turns the theme off.
 - **Rescue Desktop.** One action takes the theme, the shader and every desktop effect away and
   brings back windows you cannot reach: rolled-up ones, ones parked off screen, ones left on a
   display that is no longer there. Your settings stay, and a report says what was done, skipped

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.sun.solaris8-cde",
+  "family": {
+    "id": "sun",
+    "name": "Sun Microsystems",
+    "order": 10
+  },
+  "release": {
+    "label": "Solaris 8",
+    "year": 2000
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "cde"
+  },
+  "name": "Solaris 8 — CDE",
+  "version": "1.0",
+  "author": "RetroMac",
+  "wallpaper": "wallpaper.png",
+  "wallpaperTiled": true,
+  "dock": {
+    "height": 64,
+    "iconSize": 48,
+    "padding": 8,
+    "spacing": 0,
+    "cornerRadius": 0,
+    "backgroundColor": "#505170FF",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#2A2A40FF",
+    "borderWidth": 1,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#7C7C99FF",
+    "bevelBottomColor": "#33334DFF",
+    "bevelWidth": 2,
+    "orientation": "vertical",
+    "position": "right",
+    "fullWidth": false,
+    "startButton": false,
+    "showClock": false,
+    "magnification": false,
+    "showTrash": true,
+    "showGrip": false,
+    "alignment": "center",
+    "edgeOffset": 0,
+    "dockStyle": "none"
+  },
+  "icon": {
+    "renderStyle": "smooth",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.1
+  },
+  "indicator": {
+    "style": "dot",
+    "color": "#FFFFFF",
+    "size": 4,
+    "offset": 3
+  },
+  "iconMappings": {},
+  "defaultPreset": "lcd-retro-lite",
+  "screensaver": "none",
+  "appearance": "light",
+  "accentColor": "purple"
+}

@@ -40,10 +40,11 @@ final class TitleBarOverlayController {
     enum Style: CaseIterable {
         case system6, system7, platinum, aqua  // the Mac bars (aqua: Mac OS X 10.0's pinstripes)
         case win31, win98, luna, aero          // the Windows bars (95, 98 and Me share win98)
+        case cde                               // Solaris 8's CDE (dtwm): menu box left, minimise and maximise right
         case snowLights                        // the three lights only (Snow Leopard, Mountain Lion)
         var isBar: Bool { self != .snowLights }
         /// Windows caption buttons cluster on the right; the Mac's close box sits on the left.
-        var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero }
+        var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero || self == .cde }
         /// What a double-click on the bar did in each era: Mac OS 8/9 rolled the window up, and
         /// so did System 7.5 with its WindowShade control panel (the System 7.1 theme wears 7.5's
         /// Control Strip too); System 6 did nothing, Windows maximised, Mac OS X minimised.
@@ -51,7 +52,7 @@ final class TitleBarOverlayController {
             switch self {
             case .platinum, .system7: return .collapse
             case .system6: return nil
-            case .win31, .win98, .luna, .aero: return .zoom
+            case .win31, .win98, .luna, .aero, .cde: return .zoom
             case .aqua, .snowLights: return .minimize
             }
         }
@@ -129,6 +130,7 @@ final class TitleBarOverlayController {
         case "system7":     return .system7   // the striped bar at 256 colours
         case "macos9":      return .platinum
         case "win31":       return .win31
+        case "cde":         return .cde        // Solaris 8
         case "win98":       return .win98      // Windows 95, 98 and Me
         case "winxp":       return .luna
         case "win7":        return .aero
@@ -440,7 +442,7 @@ final class TitleBarOverlayController {
         let icon: NSImage?
         if drawStyle == .platinum {
             icon = Self.classicIcon(for: info.pid)   // the theme's icon, or its generic one
-        } else if drawStyle.isWindows && drawStyle != .win31 {
+        } else if drawStyle.isWindows && drawStyle != .win31 && drawStyle != .cde {
             icon = Self.icon(for: info.pid)
         } else {
             icon = nil
@@ -666,6 +668,7 @@ final class TitleBarOverlayController {
         case .system7:  return System7Chrome.barHeight
         case .platinum: return 22
         case .win31:    return 20
+        case .cde:      return 20   // measured off Solaris 8: a 1 pt edge and a 19 pt bar
         case .win98:    return 24
         case .luna:     return 30
         case .aero:     return 30
@@ -1627,6 +1630,17 @@ final class TitleBarOverlayView: NSView {
                 tracker.add(k, r, interactive: true)
                 buttonRects.append((k, r))
             }
+        case .cde:
+            // dtwm, measured off Solaris 8: the window-menu box on the left (here one click
+            // closes, as a double-click did), minimise and maximise on the right, all 19 pt square.
+            let s: CGFloat = 19
+            let menu = NSRect(x: 0, y: 1, width: s, height: s)
+            let max = NSRect(x: w - s, y: 1, width: s, height: s)
+            let min = NSRect(x: max.minX - s, y: 1, width: s, height: s)
+            for (k, r) in [(ChromeButtonKind.close, menu), (.minimize, min), (.maximize, max)] {
+                tracker.add(k, r, interactive: true)
+                buttonRects.append((k, r))
+            }
         case .win98:
             // 20x18 bevel buttons, the theme's own size: [min][max], a 2 pt gap, [close].
             let bw: CGFloat = 20, bh: CGFloat = 18
@@ -1674,6 +1688,7 @@ final class TitleBarOverlayView: NSView {
         case .system7:    drawSystem7(b)
         case .platinum:   drawPlatinum(b)
         case .win31:      drawWin31(b)
+        case .cde:        drawCDE(b)
         case .win98:      drawWin98(b)
         case .luna:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .luna)).addClip(); drawLuna(b)
         case .aero:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .aero)).addClip(); drawAero(b)
@@ -1795,6 +1810,39 @@ final class TitleBarOverlayView: NSView {
         let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 6
         let right = (buttonRects.first { $0.0 == .minimize }?.1.minX ?? b.width) - 6
         drawCentredTitle(in: NSRect(x: left, y: cap.minY, width: max(0, right - left), height: cap.height), font: font, color: color)
+    }
+
+    /// Solaris 8's dtwm bar, from the screenshots: mauve when active (#B54A7B, edges #DEADC6
+    /// and #522139, white title), the desktop grey when not (#ADB5C6, #DEDEE7, #5A636B, black).
+    private func drawCDE(_ b: NSRect) {
+        let face = NSColor.fromHex(isFront ? "#B54A7B" : "#ADB5C6")
+        let light = NSColor.fromHex(isFront ? "#DEADC6" : "#DEDEE7")
+        let dark = NSColor.fromHex(isFront ? "#522139" : "#5A636B")
+        face.setFill(); b.fill()
+        dark.setFill(); NSRect(x: 0, y: 0, width: b.width, height: 1).fill()   // the frame's inner edge
+        func raised(_ r: NSRect, pressed: Bool = false) {
+            (pressed ? dark : light).setFill()
+            NSRect(x: r.minX, y: r.minY, width: r.width, height: 1).fill(); NSRect(x: r.minX, y: r.minY, width: 1, height: r.height).fill()
+            (pressed ? light : dark).setFill()
+            NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1).fill(); NSRect(x: r.maxX - 1, y: r.minY, width: 1, height: r.height).fill()
+        }
+        let bar = NSRect(x: 0, y: 1, width: b.width, height: b.height - 1)
+        raised(bar)
+        for (k, r) in buttonRects {
+            let pressed = tracker.state(for: k) == .pressed
+            raised(r, pressed: pressed)
+            switch k {
+            case .close:      raised(NSRect(x: r.midX - 5, y: r.midY - 1, width: 10, height: 3))   // the menu bar glyph
+            case .minimize:   raised(NSRect(x: r.midX - 2, y: r.midY - 2, width: 4, height: 4))
+            default:          raised(NSRect(x: r.midX - 6, y: r.midY - 6, width: 12, height: 12))
+            }
+        }
+        let font = NSFont(name: "LucidaGrande", size: 13) ?? .systemFont(ofSize: 13)
+        let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0)
+        let right = (buttonRects.first { $0.0 == .minimize }?.1.minX ?? b.width)
+        let title = NSRect(x: left, y: bar.minY, width: max(0, right - left), height: bar.height)
+        raised(title)
+        drawCentredTitle(in: title, font: font, color: isFront ? .white : .black)
     }
 
     private func triangle(in r: NSRect, pointingDown: Bool) {
