@@ -51,14 +51,15 @@
 - **World View (QNX-09):** öffnet Mission Control. Neun Arbeitsflächen werden nicht nachgebaut (TH-12).
 - **Taskbar (QNX-02, QNX-06):** ein Eintrag pro Fenster, wie bei Photon. Ein Klick holt das Fenster nach vorn oder aus dem Dock zurück. Die Uhr öffnet die Datums- und Uhrzeiteinstellungen.
 - **Launch-Menü (QNX-05):** MultiMedia, Editors, Utilities, Internet und Development enthalten die installierten Apps nach ihrer App-Store-Kategorie. Apps, die Webseiten oder Mail öffnen, zählen zu Internet. Configure ist dieselbe Liste wie in der Shelf. „End Photon session“, die erste Wahl aus Photons Shutdown-Dialog, schaltet das Theme ab.
+- **Desktop-Kontextmenü (QNX-05):** Ein Rechtsklick auf den freien Desktop zeigt das Launch-Menü an der Mausposition. Es ist dieselbe Liste, keine zweite.
+- **Kategorien einstellen (QNX-05):** Jede Kategorie endet mit „Add Application...“. Die gewählten Apps wandern in diese Kategorie, gespeichert pro App-Pfad. „Software ▸ Reset Categories“ stellt die Zuordnung nach App-Store-Kategorie wieder her. Eine Liste, die höher ist als der Bildschirm, endet in „More“.
+- **Widgets (Uhr, Rechner, Notepad, CPU-Monitor):** Sie tragen Photons Titelleiste über die volle Breite: Verlauf, Minimieren und Maximieren zusammen, Schließen abgesetzt. Dazu kommen Flächen in #D9D9D9 und der 5-pt-Rahmen. Innen behalten sie den Aufbau aus dem Windows-98-Stil. Einen Menükasten haben sie nicht, weil ein Widget kein Fenstermenü hat.
 - **Fenstermenü-Kasten:** schließt mit einem Klick, wie bei den übrigen Fenster-Themes.
 - **Maximieren:** Fenster bleiben links der Shelf und über der Taskbar.
 
 ## Offen für die nächsten Runden
 
-- Desktop-Kontextmenü mit denselben Zielen wie Launch (QNX-05).
-- Kategorien des Launch-Menüs einstellbar machen (QNX-05).
-- Widget-Stile (Uhr, Rechner, Notepad, CPU-Monitor), Application-Menü-Fenster, Crash-Ära, Bootscreen, Cursor.
+- Crash-Ära, Bootscreen, Cursor: Es fehlen Vorlagen von 6.2.1.
 - Klickverhalten auf den aktiven Task-Eintrag (QNX-06) an einer eigenen 6.2.1-Installation prüfen.
 - Alt+Tab (SW): erst mit 6.2.1-Nachweis.
 

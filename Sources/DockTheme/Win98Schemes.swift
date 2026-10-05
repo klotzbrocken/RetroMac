@@ -143,6 +143,7 @@ struct Win98Scheme {
         // whole injection — the reason Windows 95 title bars kept showing the static gradient.
         let remove = "(function(){var e=document.getElementById('w98scheme'); if(e) e.remove();})();"
         if RetroFrameTheme.key() == "cde" { return CDEWidgetChrome.js }   // Solaris: dtwm over the Win98 furniture
+        if RetroFrameTheme.key() == "photon" { return PhotonWidgetChrome.js }   // QNX: Photon over the Win98 furniture
         guard RetroFrameTheme.key() == "win98" else { return remove }
         // Win98 Plus! scheme (Windows 98 only), else the active theme's own palette (e.g. Windows Me).
         let c: DockThemeConfig.ChromeColors?

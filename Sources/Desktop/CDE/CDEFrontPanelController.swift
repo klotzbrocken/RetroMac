@@ -26,7 +26,7 @@ final class CDEFrontPanelController {
     func hide() {
         view?.stop()
         CDESubpanel.closeAll()
-        CDEDesktop.shared.hide()
+        CDEDesktop.shared.hide(.cde)
         if let o = screenObserver { NotificationCenter.default.removeObserver(o); screenObserver = nil }
         panel?.orderOut(nil)
         panel = nil
@@ -56,7 +56,7 @@ final class CDEFrontPanelController {
         reposition()
         panel?.orderFrontRegardless()
         v.start()
-        CDEDesktop.shared.show()
+        CDEDesktop.shared.show(.cde)
     }
 
     /// "Minimize/Restore Front Panel" in the Workspace Menu's Windows cascade.

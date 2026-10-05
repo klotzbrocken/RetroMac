@@ -32,9 +32,9 @@ enum RetroFrameTheme {
         return out
     }
 
-    /// The chrome a widget page draws. The pages have none for CDE: they draw their Windows 98
-    /// furniture and `CDEWidgetChrome` repaints it as dtwm.
-    static func widgetKey() -> String { key() == "cde" ? "win98" : key() }
+    /// The chrome a widget page draws. The pages have none for CDE or Photon: they draw their
+    /// Windows 98 furniture and `CDEWidgetChrome` / `PhotonWidgetChrome` repaint it.
+    static func widgetKey() -> String { ["cde", "photon"].contains(key()) ? "win98" : key() }
 
     static func key() -> String {
         // Only frame launched content (TV window chrome, game frames) when a theme

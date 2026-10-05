@@ -28,7 +28,7 @@ enum CDEWidgetChrome {
     body.theme-cde.theme-win98 .w98-cap {
       flex:1 1 auto!important; align-self:stretch; display:flex!important; align-items:center; justify-content:center;
       margin:0!important; padding:0!important; color:#fff!important; text-shadow:none!important;
-      font:400 13px "Lucida Grande",Helvetica,sans-serif!important; box-shadow:inset 1px 1px 0 #DEADC6,inset -1px -1px 0 #522139; }
+      font:400 13px "Lucida Grande",Helvetica,sans-serif!important; font-weight:400!important; box-shadow:inset 1px 1px 0 #DEADC6,inset -1px -1px 0 #522139; }
     body.theme-cde.theme-win98 .w98-title .w98-btn {
       position:relative; width:19px!important; height:19px!important; flex:0 0 19px!important; margin:0!important; padding:0!important;
       border:none!important; background:#B54A7B!important; font-size:0!important; color:transparent!important;

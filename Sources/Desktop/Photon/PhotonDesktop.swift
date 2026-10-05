@@ -25,6 +25,7 @@ final class PhotonDesktopController {
         (taskbar?.contentView as? PhotonTaskbarView)?.stop()
         shelf?.orderOut(nil); taskbar?.orderOut(nil)
         shelf = nil; taskbar = nil
+        CDEDesktop.shared.hide(.photon)
     }
 
     private static func panel() -> NSPanel {
@@ -55,6 +56,7 @@ final class PhotonDesktopController {
         taskbar?.orderFrontRegardless(); shelf?.orderFrontRegardless()   // the shelf over the taskbar's edge
         (shelf?.contentView as? PhotonShelfView)?.start()
         (taskbar?.contentView as? PhotonTaskbarView)?.start()
+        CDEDesktop.shared.show(.photon)   // a right-click on the desktop posts the Launch menu (QNX-05)
     }
 
     /// The taskbar across the bottom of the main display, the shelf from the top of the visible
@@ -476,6 +478,27 @@ final class PhotonTaskbarView: NSView {
 enum PhotonLaunchMenu {
     static let categories = ["MultiMedia", "Editors", "Utilities", "Internet", "Development"]
 
+    /// Apps you put in a category yourself (QNX-05: the categories are yours to arrange), by path.
+    private static let overridesKey = "photonLaunchCategories"
+    static var overrides: [String: String] {
+        get { UserDefaults.standard.dictionary(forKey: overridesKey) as? [String: String] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: overridesKey) }
+    }
+
+    /// "Add Application...": the chosen apps go into this category, wherever they stood.
+    static func add(to category: String) {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.application]
+        panel.allowsMultipleSelection = true
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.message = "Choose the applications for \(category)"
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK else { return }
+        var o = overrides
+        for url in panel.urls { o[url.path] = category }
+        overrides = o
+    }
+
     static func category(of path: String, category: String?, internet: Set<String>) -> String {
         if internet.contains(path) { return "Internet" }
         let c = (category ?? "").replacingOccurrences(of: "public.app-category.", with: "")
@@ -505,7 +528,7 @@ enum PhotonLaunchMenu {
             let icon = NSWorkspace.shared.icon(forFile: path)
             let item = CDEMenuItem(title: name, icon: icon,
                                    action: { NSWorkspace.shared.open(URL(fileURLWithPath: path)) })
-            byCategory[category(of: path, category: declared, internet: internet), default: []].append(item)
+            byCategory[overrides[path] ?? category(of: path, category: declared, internet: internet), default: []].append(item)
         }
         func sorted(_ list: [CDEMenuItem]) -> [CDEMenuItem] {
             fit(list.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending })
@@ -516,11 +539,15 @@ enum PhotonLaunchMenu {
             if case .items(let list) = $0.body { return list.map { i in CDEMenuItem(title: i.title, icon: icon(i.icon), action: i.action) } }
             return nil
         } ?? []
-        return categories.map { CDEMenuItem(title: $0, submenu: sorted(byCategory[$0] ?? [])) }
+        return categories.map { c in
+            CDEMenuItem(title: c, submenu: sorted(byCategory[c] ?? []) + [.separator, CDEMenuItem(title: "Add Application...", action: { add(to: c) })])
+        }
             + [.separator,
                CDEMenuItem(title: "Software", submenu: [
                 CDEMenuItem(title: "Installer", icon: icon("qnx_installer"), action: CDEActions.app("com.apple.AppStore")),
-                CDEMenuItem(title: "Software Update", action: CDEActions.settings("com.apple.Software-Update-Settings.extension"))]),
+                CDEMenuItem(title: "Software Update", action: CDEActions.settings("com.apple.Software-Update-Settings.extension")),
+                .separator,
+                CDEMenuItem(title: "Reset Categories", enabled: !overrides.isEmpty, action: { overrides = [:] })]),
                CDEMenuItem(title: "Configure", submenu: configure),
                CDEMenuItem(title: "Help", icon: icon("qnx_help"), action: CDEActions.app("com.apple.tips")),
                .separator,
@@ -532,6 +559,9 @@ enum PhotonLaunchMenu {
         guard list.count > rows else { return list }
         return Array(list.prefix(rows - 1)) + [CDEMenuItem(title: "More", submenu: fit(Array(list.dropFirst(rows - 1)), rows: rows))]
     }
+
+    /// At the pointer, for a right-click on the desktop.
+    static func show(at topLeft: NSPoint) { CDEMenu.show(items(), at: topLeft, look: .photon) }
 
     /// Opens upwards from the Launch button, standing on the taskbar.
     static func show(above button: NSRect) {

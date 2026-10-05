@@ -8,13 +8,17 @@ import ApplicationServices
 /// in an etched frame, a 20 pt label box under it, one icon every 85 pt.
 ///
 /// Like the themed desktop icons of the other themes, the layer sits just under the normal
-/// windows and takes the clicks that land on the bare desktop.
+/// windows and takes the clicks that land on the bare desktop. QNX's Photon uses it too: there a
+/// right-click posts the Launch menu (QNX-05) and no icons lie about, the taskbar has the windows.
 final class CDEDesktop {
+    enum Mode { case cde, photon }
     static let shared = CDEDesktop()
     private var panel: NSPanel?
     private var observers: [NSObjectProtocol] = []
+    private(set) var mode: Mode = .cde
 
-    func show() {
+    func show(_ mode: Mode = .cde) {
+        self.mode = mode
         guard let screen = NSScreen.screens.first else { return }
         if panel == nil {
             let p = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -41,7 +45,10 @@ final class CDEDesktop {
         panel?.orderFrontRegardless()
     }
 
-    func hide() {
+    /// With a mode, only when the layer is that theme's: the CDE and Photon controllers both tidy up
+    /// at every theme change and must not take the other one's desktop away.
+    func hide(_ only: Mode? = nil) {
+        if let only, only != mode { return }
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = []
         CDEMenu.close()
@@ -53,7 +60,7 @@ final class CDEDesktop {
         guard let view = panel?.contentView as? CDEDesktopView, let screen = NSScreen.screens.first else { return }
         view.top = screen.frame.maxY - screen.visibleFrame.maxY
         view.bottom = screen.frame.height - (screen.visibleFrame.minY - screen.frame.minY) - CDEFrontPanelView.size.height
-        view.entries = MinimizedWindowTracker.shared.entries
+        view.entries = mode == .cde ? MinimizedWindowTracker.shared.entries : []
     }
 
     // MARK: Menus
@@ -201,6 +208,7 @@ private final class CDEDesktopView: NSView {
     override func rightMouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if let i = slots().firstIndex(where: { $0.contains(p) }) { postIconMenu(entries[i], slot: slots()[i]); return }
+        if CDEDesktop.shared.mode == .photon { PhotonLaunchMenu.show(at: screenPoint(p)); return }
         guard let theme = ThemeManager.shared.activeTheme else { return }
         CDEMenu.show(CDEDesktop.workspaceMenu(theme: theme), title: "Workspace Menu", at: screenPoint(p))
     }
