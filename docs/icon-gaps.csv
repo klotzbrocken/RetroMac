@@ -1,0 +1,64 @@
+App,Bundle-IDs,Amiga Workbench 4.1,BeOS,Futurama,Mac OS 6 classic,System 7.1 (authentic),Mac OS 9 (authentic),Mac OS 9.2 Classic,Mountain Lion,Mac OS X,Snow Leopard,Maiks Favourite,Maiks Favourite II,NeXTSTEP,OS/2 Warp 4,QNX 6.2.1 — Photon,SGI IRIX,Solaris 8 — CDE,Windows 3.1,Windows 7,Windows 95,Windows 98,Windows Me,Windows Vista,Windows XP
+Activity Monitor,com.apple.ActivityMonitor,,,,x,,,,x,x,x,,,,,,,,,,x,x,x,,
+AirPort Utility,com.apple.airport.airportutility,,,,,,,,,x,,,,,,,,,,,,,,,
+App Store,com.apple.AppStore,,,,,,,,x,x,x,,,,,,,,,,x,x,x,,
+Audio MIDI Setup,com.apple.audio.AudioMIDISetup,,,,,,,,,x,,,,,,,,,,,,,,,
+Automator,com.apple.Automator,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Bluetooth File Exchange,com.apple.BluetoothFileExchange,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Calculator,com.apple.calculator,,,,x,,,,x,x,x,,,,,,,,x,,x,x,x,,
+ChatGPT,com.openai.chat com.openai.codex,,,,,,x,,,x,x,,,,,,,,,,,,,,
+Chess,com.apple.Chess,,,,,,,,x,x,x,,,,,,,,x,,,,,,
+Chrome,com.google.Chrome,,,x,x,,x,,,x,x,,,,,,,,,,x,x,x,,
+Claude,com.anthropic.claudefordesktop,,,x,,,x,,,x,x,,,,,,,,,,,,,,
+Clock,com.apple.clock,,,,,,,,x,x,,,,,,,,,x,,x,x,x,,
+ColorSync Utility,com.apple.ColorSyncUtility,,,,,,,,,x,,,,,,,,,,,,,,,
+Console,com.apple.Console,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Dictionary,com.apple.Dictionary,,,,x,x,x,x,x,x,x,,,,,,,,,,,,,,
+Digital Color Meter,com.apple.DigitalColorMeter,,,,,,,,,x,,,,,,,,,,,,,,,
+Directory Utility,com.apple.DirectoryUtility,,,,,,,,,x,,,,,,,,,,,,,,,
+Disk Utility,com.apple.DiskUtility,,,,x,x,x,x,x,x,x,,,,,,,,,,,,,,
+DVD Player,com.apple.DVDPlayer,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Erinnerungen,com.apple.reminders,,,x,x,x,x,x,x,x,x,x,x,,,,,,,,x,x,x,,
+Excel,com.microsoft.Excel,,,x,x,,,,x,x,x,,,,,,,,,,x,x,x,,x
+FaceTime,com.apple.FaceTime,,,,,,,,x,x,x,,,,,,,,,,x,x,x,,
+Finder,com.apple.finder,,x,x,x,x,x,x,x,x,x,x,x,x,x,,,,x,x,x,x,x,x,x
+Firefox,org.mozilla.firefox,,,,x,,x,,,x,x,,,,,,,,,,x,x,x,,
+Font Book,com.apple.FontBook,,,,,,,,x,x,x,,,,,,,,x,,,,,,
+Fotos,com.apple.Photos,,x,x,x,x,x,x,x,x,x,x,x,x,x,,,,x,x,x,x,x,x,x
+GarageBand,com.apple.garageband com.apple.garageband10,,,,x,x,x,x,x,x,x,,,,,,,,,,,,,,
+Grapher,com.apple.grapher,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Image Capture,com.apple.Image_Capture,,,,,,,,x,x,x,,,,,,,,,,,,,,
+iMovie,com.apple.iMovieApp,,,,x,x,x,x,x,x,x,,,,,,,,,,,,,,
+Installer,com.apple.installer,,,,,,,,x,x,x,,,,,,,,,,,,,,
+iTunes,com.apple.iTunes,,,,,,,,,x,,,,,,,,,,,,,,,
+Kalender,com.apple.iCal,,x,x,x,x,x,x,x,x,x,x,x,,x,,,,x,x,x,x,x,x,x
+Keychain Access,com.apple.keychainaccess,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Keynote,com.apple.iWork.Keynote,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Keynote Creator Studio,com.apple.Keynote,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Kontakte,com.apple.AddressBook,,,,,,,,x,x,x,,,,,,,,x,,x,x,x,,
+Mail,com.apple.mail,,x,x,x,x,x,x,x,x,x,x,x,,x,,,,x,x,x,x,x,x,x
+Messages,com.apple.MobileSMS,,x,x,x,x,x,x,x,x,x,x,x,,x,,,,x,x,x,x,x,x,x
+Migration Assistant,com.apple.MigrateAssistant,,,,,,,,,x,,,,,,,,,,,,,,,
+Musik,com.apple.Music,,x,x,x,x,x,x,x,x,x,x,x,x,x,,,,x,x,x,x,x,x,x
+Network Utility,com.apple.NetworkUtility,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Notizen,com.apple.Notes,,x,x,x,x,x,x,x,x,x,x,x,x,x,,,,x,x,x,x,x,x,x
+Notizzettel (Stickies),com.apple.Stickies,,,,,,,,x,x,x,,,,,,,,x,,,,,,
+Numbers,com.apple.iWork.Numbers,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Numbers Creator Studio,com.apple.Numbers,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Outlook,com.microsoft.Outlook,,,,,,,,x,x,x,,,,,,,,,,,,x,,x
+Pages,com.apple.iWork.Pages,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Pages Creator Studio,com.apple.Pages,,,,,,,,x,x,x,,,,,,,,,,,,,,
+Photo Booth,com.apple.PhotoBooth,,,,,,,,x,x,x,,,,,,,,,,,,,,
+PowerPoint,com.microsoft.Powerpoint,,,x,x,,,,x,x,x,,,,,,,,,,x,x,x,,x
+QuickTime Player,com.apple.QuickTimePlayerX,,,,x,x,x,x,x,x,x,,,,,,,,,,,,,,
+Safari,com.apple.Safari,,x,x,x,x,x,x,x,x,x,x,x,,x,,,,x,x,x,x,x,x,x
+Screenshot,com.apple.screenshot.launcher,,,,,,,,,x,,,,,,,,,,,,,,,
+System Information,com.apple.SystemProfiler,,,,,,,,,x,,,,,,,,,,,,,,,
+Systemeinstellungen,com.apple.systempreferences,,x,x,x,x,x,x,x,x,x,x,x,,x,,,,x,x,x,x,x,x,x
+Teams,com.microsoft.teams com.microsoft.teams2,,,,,,,,,x,x,,,,,,,,,,,,,,
+Terminal,com.apple.Terminal,,x,x,x,x,x,x,x,x,x,x,x,,x,,,,x,x,x,x,x,x,x
+TextEdit,com.apple.TextEdit,,,,x,x,x,x,x,x,x,,,x,,,,,x,,x,x,x,,
+VoiceOver Utility,com.apple.VoiceOverUtility,,,,,,,,,x,,,,,,,,,,,,,,,
+Vorschau,com.apple.Preview,,,,x,,,,x,x,x,,,x,,,,,x,,x,x,x,,
+Word,com.microsoft.Word,,,x,x,,,,x,x,x,,,,,,,,,,x,x,x,,x
+Xcode,com.apple.dt.Xcode,,,,x,,,,x,x,x,,,,,,,,,,x,x,x,,
