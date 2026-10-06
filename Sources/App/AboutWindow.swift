@@ -52,6 +52,7 @@ struct AboutTab: View {
     @State private var activationMessage: String?
     @State private var activationSuccess: Bool?
     @State private var autoCheck: Bool
+    @State private var betas = UpdateChannels.wantsBetas
     private let updater: SPUUpdater
 
     init(updater: SPUUpdater) {
@@ -119,6 +120,12 @@ struct AboutTab: View {
                     }
                     Toggle("Automatically check for updates", isOn: $autoCheck)
                         .onChange(of: autoCheck) { updater.automaticallyChecksForUpdates = $0 }
+                    Toggle("Include beta versions", isOn: $betas)
+                        .onChange(of: betas) { UpdateChannels.wantsBetas = $0 }
+                    if betas {
+                        Text("Betas come first and may still have rough edges. Turn this off to stay on the released versions; the next release replaces the beta.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("Developer") {

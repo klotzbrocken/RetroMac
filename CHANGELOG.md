@@ -55,6 +55,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   by any column and ends a process after XP's warning; Networking draws a graph per adapter with
   its link speed; Users lists who is logged in. "Task Manager" is in the XP Start menu now too.
 
+- **Betas on request.** About ▸ Software Updates ▸ "Include beta versions" brings test builds
+  through the regular updater; off, a Mac stays on the released versions.
+
 ### Adapted on purpose
 
 - **Solaris 8 — CDE.** The four workspaces are one button that opens Mission Control, and EXIT
@@ -102,6 +105,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   column when a screen is too short, as the Finder did.
 - **Mission Control and Exposé no longer show the title bars** as little windows of their own.
 - **Choosing a printer in the Control Strip no longer pauses the strip.**
+- **Rescue Desktop brings the menu bar back** when a theme or the menu-bar shortcut hid it, and
+  says so if macOS would not let it.
+- **The shader is off behind the lock screen and while the displays sleep.** "Stop overlay on
+  sleep or lock" now covers both; after unlocking or waking it comes back as the effect it was
+  (Live Wallpaper stays Live Wallpaper), if set to resume.
 
 ## 2.8.8
 

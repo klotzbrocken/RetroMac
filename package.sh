@@ -13,6 +13,9 @@
 #   ./package.sh --skip-build # package existing build
 #   ./package.sh --beta       # same, but named RetroMac-<version>-beta.dmg
 #
+# Then upload the DMG to the GitHub release and run ./appcast.sh (--beta, --phased): it checks
+# the DMG and the upload, signs, and writes the appcast item from CHANGELOG.md.
+#
 # A beta MUST NOT be written to RetroMac.dmg: that is the name the appcast and the
 # GitHub release asset use, and a beta sitting under it is indistinguishable from the
 # shipped build (it happened once, with 2.8).

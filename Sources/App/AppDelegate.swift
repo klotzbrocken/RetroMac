@@ -12,7 +12,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // signed with Apple Development and aren't notarized, so Gatekeeper rejects Sparkle's
     // installer helpers ("An error occurred while launching the installer"). Don't start it.
     private static let sparkleEnabled = !(Bundle.main.bundleIdentifier ?? "").hasSuffix(".dev")
-    private let updaterController = SPUStandardUpdaterController(startingUpdater: AppDelegate.sparkleEnabled, updaterDelegate: nil, userDriverDelegate: nil)
+    /// Sparkle holds its delegate weakly; the channels live as long as the app.
+    private static let updateChannels = UpdateChannels()
+    private let updaterController = SPUStandardUpdaterController(startingUpdater: AppDelegate.sparkleEnabled, updaterDelegate: AppDelegate.updateChannels, userDriverDelegate: nil)
     private(set) var overlayController: OverlayWindowController?
     private(set) var crtLiteOverlay: CRTLiteOverlay?
     /// Wallpaper-only desktop effect (renders below icons/windows; no screen capture).
