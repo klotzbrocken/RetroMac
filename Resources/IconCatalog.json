@@ -125,27 +125,36 @@
   "name": "Pages",
   "group": "iWork",
   "bundleIDs": [
+   "com.apple.Pages",
    "com.apple.iWork.Pages"
   ],
-  "verified": []
+  "verified": [
+   "com.apple.Pages"
+  ]
  },
  {
   "appID": "numbers",
   "name": "Numbers",
   "group": "iWork",
   "bundleIDs": [
+   "com.apple.Numbers",
    "com.apple.iWork.Numbers"
   ],
-  "verified": []
+  "verified": [
+   "com.apple.Numbers"
+  ]
  },
  {
   "appID": "keynote",
   "name": "Keynote",
   "group": "iWork",
   "bundleIDs": [
+   "com.apple.Keynote",
    "com.apple.iWork.Keynote"
   ],
-  "verified": []
+  "verified": [
+   "com.apple.Keynote"
+  ]
  },
  {
   "appID": "word",
