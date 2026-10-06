@@ -66,7 +66,14 @@ final class DesktopRescue {
         SystemUIHelper.restoreIfNeeded()
         SystemUIHelper.restoreDesktopIconsIfNeeded()
         DockController.shared.restoreSystemDockIfNeeded()
-        add(.done, "Menu bar, Dock and desktop icons are back as they were.")
+        // The menu bar is checked, not assumed: a theme or the shortcut may have hidden it, and
+        // macOS may not take the change (no Automation permission for System Events).
+        switch AppDelegate.shared?.rescueShowMenuBar() {
+        case true?: add(.done, "The menu bar shows again.")
+        case false?: add(.failed, "The menu bar is still set to hide. Turn it off in System Settings ▸ Control Center ▸ Automatically hide and show the menu bar.")
+        case nil: break
+        }
+        add(.done, "Dock and desktop icons are back as they were.")
         // macOS reports a new desktop picture a moment after it was set: asked at once, the
         // theme's still showed. Settled in finish().
         wallpaperLine = lines.count

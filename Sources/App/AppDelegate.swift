@@ -50,6 +50,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var viewportCloseObserver: NSObjectProtocol?
     private var perAppBundleID: String?
     private var wasActiveBeforeSleep = false
+    /// The lock screen is up: nothing resumes behind it, even when a display wakes to show it.
+    private var screenLocked = false
+    private var moreSleepObservers: [NSObjectProtocol] = []
     private var overlayStartTask: Task<Void, Never>?
     private var permissionPollTimer: Timer?
 
@@ -1735,6 +1738,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             self?.handleWake()
         }
+
+        // The displays asleep while the Mac is not, the lock screen, and coming back to this
+        // session: the shader is off behind each and comes back after (if set to resume), so it
+        // never captures a screen nobody sees.
+        let wsn = ws.notificationCenter, dist = DistributedNotificationCenter.default()
+        moreSleepObservers = [
+            wsn.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main) { [weak self] _ in self?.handleSleep() },
+            wsn.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main) { [weak self] _ in self?.handleWake() },
+            wsn.addObserver(forName: NSWorkspace.sessionDidBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in self?.handleWake() },
+            dist.addObserver(forName: .init("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak self] _ in
+                self?.screenLocked = true
+                self?.handleSleep()
+            },
+            dist.addObserver(forName: .init("com.apple.screenIsUnlocked"), object: nil, queue: .main) { [weak self] _ in
+                self?.screenLocked = false
+                self?.handleWake()
+            },
+        ]
     }
 
     private func handleSleep() {
@@ -1745,6 +1766,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleWake() {
+        guard !screenLocked else { return }   // a display woke to show the lock screen: wait for the unlock
         guard wasActiveBeforeSleep, AppSettings.shared.resumeAfterSleep else {
             wasActiveBeforeSleep = false
             return
@@ -1761,8 +1783,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         print("[RetroMac] Wake → resuming overlay")
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let self = self, !self.isActive else { return }
-            self.startOverlay(mode: .fullScreen)
+            guard let self = self, !self.isActive, !self.screenLocked else { return }
+            self.startCurrentEffect()   // the effect that was on: Live Wallpaper, Lite or the full overlay
         }
     }
 
@@ -2854,6 +2876,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Rescue Desktop's first step: Retro Mode, the theme and the shader off — the same paths
     /// the user's own switches take, so nothing they chose is forgotten (RET-05).
+    /// Rescue Desktop: the menu bar back, when RetroMac hid it (a theme such as Windows XP, or the
+    /// menu-bar shortcut). The setting stays as it is (RET-05); the next theme start hides the bar
+    /// again if that theme wants it so. A bar you set to hide in macOS yourself is left alone.
+    /// Returns nil when RetroMac had not hidden it, else whether it shows now.
+    func rescueShowMenuBar() -> Bool? {
+        guard AppSettings.shared.hideMenuBar || menuBarHiddenByHotkey else { return nil }
+        menuBarHiddenByHotkey = false
+        SystemUIHelper.setMenuBarAutoHide(false)
+        return !SystemUIHelper.isMenuBarAutoHidden()
+    }
+
     func rescueTurnEverythingOff() {
         if retroModeActive { toggleRetroMode() }
         disableTheme()
