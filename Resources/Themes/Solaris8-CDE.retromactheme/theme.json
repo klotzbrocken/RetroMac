@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "com.retromac.sun.solaris8-cde",
+  "minAppVersion": "3.0",
   "family": {
     "id": "sun",
     "name": "Sun Microsystems",

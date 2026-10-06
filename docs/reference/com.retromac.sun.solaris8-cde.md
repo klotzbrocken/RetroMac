@@ -9,6 +9,7 @@
 | System | SunOS 5.8 „Generic February 2000“ (Solaris 8, Erstausgabe 2/00). Gelesen im Console-Fenster von `solcdeshutdown.png`. | Original bestätigt |
 | Desktop | CDE mit dtwm, Standardpalette (mauve/grau), Backdrop „Solaris“ | Original bestätigt |
 | Sprache | Englisch | Original bestätigt |
+| Mindestversion | `minAppVersion: "3.0"` (ARC-03) | Gesetzt |
 | Auflösung | 1024 × 768, verlustfreie PNG | Original bestätigt |
 | Herkunft | Sieben Screenshots aus der GUI Gallery von Toastytech, „Solaris 8 CDE and OpenWindows“ [T1]: `solcde*.png`, von Maik geliefert. Die Seite beschreibt dazu das Verhalten von Subpanels, Fenstermenü, Icons und Workspace-Menü. | Original bestätigt |
 | Handbuch | Solaris CDE User's Guide 806-1360 [S1–S3] | Dokumentiert |
@@ -88,7 +89,6 @@ Alle Bilder stammen aus den gelieferten Screenshots, unverändert in Pixeln und 
 
 - WebApp-Rahmen: entfällt vorerst. Unter Solaris öffnet nichts eine Web-App, denn die starten nur über themeeigene Desktop-Icons und den Win95-Ordner „Fun Stuff“. Kommt, sobald ein Einstieg dazukommt.
 - Bootscreen (dtlogin) und Cursor (X11-Cursorfont): Es fehlen Vorlagen. Unter den sieben Screenshots ist weder ein Login noch ein Cursor. Maik liefert sie aus der VM oder als Datei (ICO-01: kein eigener Download).
-- `minAppVersion: "3.0"` (ARC-03): wird gesetzt, wenn die App-Version auf 3.0 geht. Vorher würde das Theme im 2.8.x-Build nicht laden.
 
 ## Quellen
 

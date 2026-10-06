@@ -1,6 +1,7 @@
 {
   "schemaVersion": 2,
-  "id": "com.retromac.qnx.qnx621-photon",
+  "id": "com.retromac.qnx.neutrino621-photon",
+  "minAppVersion": "3.0",
   "family": {
     "id": "qnx",
     "name": "QNX Software Systems",

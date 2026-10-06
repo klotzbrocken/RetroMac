@@ -37,7 +37,7 @@ Solaris-Icons/
 
 | Feld | Inhalt |
 |---|---|
-| `themeID` | Die Theme-ID, zum Beispiel `com.retromac.qnx.qnx621-photon`. Sie steht in der `theme.json` des Themes. |
+| `themeID` | Die Theme-ID, zum Beispiel `com.retromac.qnx.neutrino621-photon`. Sie steht in der `theme.json` des Themes. |
 | `appID` | Ein kurzer, fester Name für die App. Die Namen aus `Resources/IconCatalog.json` verwenden. |
 | `bundleIDs` | Genaue Bundle-IDs, keine App-Namen (ICO-08). Der Katalog nennt sie; `verified` sind die auf einem echten Mac geprüften. |
 | `kind` | `historical-original` für das echte Icon aus der Epoche, `era-adaptation` für eine moderne App im alten Stil (ICO-02) |

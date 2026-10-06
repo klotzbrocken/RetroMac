@@ -20,7 +20,7 @@ final class PhotonSnapshotTests: XCTestCase {
     @MainActor
     func testShelfAndTaskbar() throws {
         let t = try theme()
-        XCTAssertEqual(t.config.id, "com.retromac.qnx.qnx621-photon")
+        XCTAssertEqual(t.config.id, "com.retromac.qnx.neutrino621-photon")
         XCTAssertTrue(t.config.hidesDock, "the shelf and the taskbar stand in for the dock")
         XCTAssertEqual(PhotonShelfView.width, 135)
         XCTAssertEqual(PhotonTaskbarView.height, 31)

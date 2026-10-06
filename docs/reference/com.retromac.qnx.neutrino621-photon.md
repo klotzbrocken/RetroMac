@@ -1,6 +1,6 @@
 # Theme-Steckbrief: QNX 6.2.1 — Photon
 
-`com.retromac.qnx.qnx621-photon` · Lastenheft 3.0, Abschnitt 6 · Stand 5. Oktober 2026
+`com.retromac.qnx.neutrino621-photon` · Lastenheft 3.0, Abschnitt 6 · Stand 5. Oktober 2026
 
 ## Referenz
 
@@ -9,6 +9,7 @@
 | System | QNX Neutrino 6.2.1 (NC), Photon. Gelesen im Welcome-Fenster von `qnx621about2.png`: „Version 6.2.1(NC)“. Gebootet von der Non-Commercial-CD. | Original bestätigt |
 | Herkunft | Zehn Screenshots aus der GUI Gallery von Toastytech, „QNX 6.2.1“ [T1], von Maik geliefert (`~/Downloads/QNX621/qnx621*.png`) | Original bestätigt |
 | Auflösung | 800 × 600, verlustfreie PNG | Original bestätigt |
+| Theme-ID, Mindestversion | `com.retromac.qnx.neutrino621-photon`, `minAppVersion: "3.0"` (ARC-03) | Gesetzt |
 | Hintergrund | Toastytech hat das Standard-Hintergrundbild weggelassen, um die Dateien klein zu halten [T1]. Die einfarbige Fläche #7979A7 ist also nicht das Original-Wallpaper. | Abweichung |
 | Eigene Installation | REF-03: Installationsmedium und Patches einer eigenen 6.2.1-Installation sind noch zu dokumentieren. Bis dahin gelten diese Screenshots. | Offen |
 
