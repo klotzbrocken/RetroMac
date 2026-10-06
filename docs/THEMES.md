@@ -77,7 +77,9 @@ imports themes it did not write.
 - **`experienceLevel`**: `full` (dock, desktop, windows, boot, everything), `partial`, `minimal`.
 - **`chrome.style`** picks how windows, widgets and menus are drawn. One of `win31`, `win98`,
   `winxp`, `win7`, `macos6`, `system7`, `macos9`, `macosx`, `snowleopard`, `beos`, `nextstep`, `futurama`,
-  `maiksfav`, `default`. There is no "custom" chrome yet; pick the nearest.
+  `cde`, `photon`, `maiksfav`, `default`. There is no "custom" chrome yet; pick the nearest. `cde`
+  and `photon` bring Solaris's Front Panel and QNX's shelf and taskbar with them; set
+  `dock.dockStyle` to `none` alongside.
 
 ## Dock and taskbar
 
@@ -134,6 +136,10 @@ real macOS icon (or `fallbackIcon`, or the monochrome treatment). Folder tiles i
 addressed as `__folder__~/Path`, with `~` for the home directory. The user can override any
 mapping from the dock's context menu; those overrides are stored per theme `id`, not in the
 manifest.
+
+Icons for modern apps can also come as an icon package next to the theme, with the era's own
+icons and style adaptations told apart, checked on import and shown on every surface of the
+theme. The format is in [ICON-PACKAGES.md](ICON-PACKAGES.md) (German).
 
 ## Wallpaper
 

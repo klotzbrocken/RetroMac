@@ -60,8 +60,14 @@ More, and the videos, at [myretromac.app](https://myretromac.app).
   pass while your windows stay untouched. Nostalgia and work at the same time.
 - **Themes** — Windows 3.1, 95, 98 (with the Plus! schemes), Me, XP, 7; System 6 (true 1-bit), System 7.1 (authentic: 256 colours, the 1994 Control Strip, the Application menu and the Apple menu),
   Mac OS 9 (and an authentic cut with the Control Strip of system modules and the Application
-  menu instead of a dock), Mac OS X Cheetah, Mountain Lion, Snow Leopard; BeOS, OS/2 Warp 4,
+  menu instead of a dock), Mac OS X Cheetah, Mountain Lion, Snow Leopard; Windows Vista with its
+  Sidebar; Solaris 8 with CDE's Front Panel and QNX 6.2.1 with Photon's shelf; BeOS, OS/2 Warp 4,
   SGI IRIX, AmigaOS Workbench 4.1, NeXTSTEP, Futurama, and two of the maintainer's own.
+- **Rescue Desktop** — ⌃⌥⌘R turns every theme and effect off and brings back windows you
+  cannot reach, whatever state the desktop is in.
+- **Window switchers of the era** — ⌃⌥Tab does what the theme's era did, and nothing it did not.
+- **Historic icons for modern apps** — icon packages per theme, checked on import, shown
+  everywhere the theme shows apps.
 - **Retro Dock and taskbar** — floats over or replaces the system Dock; Start menus in the 9x and
   Luna shapes, Quick Launch, tray with clock, speaker and messenger; per-window task buttons.
 - **Cursors** — the theme's own pointer set, captured and restored exactly when the theme goes off.
@@ -80,7 +86,8 @@ More, and the videos, at [myretromac.app](https://myretromac.app).
 - **Retro Mode** — one click sets theme and shader and hides the modern Mac; one click brings
   it all back. Health Check, wallpaper and Dock restore are built in.
 
-The full history is in the [Changelog](CHANGELOG.md).
+How to use the 3.0 parts: [docs/GUIDE-3.0.md](docs/GUIDE-3.0.md). The full history is in the
+[Changelog](CHANGELOG.md).
 
 ## Install
 
