@@ -72,7 +72,7 @@ enum PerformanceProfile: String, CaseIterable, Identifiable {
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private let presetsDir: URL
 
     @Published var defaultPreset: String {
@@ -1060,12 +1060,14 @@ final class AppSettings: ObservableObject {
     static let defaultHotkeyCode = UInt32(kVK_ANSI_R)
     static let defaultHotkeyModifiers = UInt32(cmdKey | shiftKey)
 
-    init() {
+    /// `defaults` is the standard store; the migration test hands in a store of its own.
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         // MUST be the first thing here: it rewrites the theme-keyed defaults from display name to
         // stable id, and everything below reads those defaults. Running it later would mean
         // assigning through the @Published setters instead — and writing `dockTheme` re-enters
         // DockController's sink, replaying the whole theme switch on every launch.
-        ThemeIdentityMigration.runIfNeeded(defaults: .standard)
+        ThemeIdentityMigration.runIfNeeded(defaults: defaults)
 
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         presetsDir = appSupport.appendingPathComponent("RetroMac/Presets")
@@ -1418,6 +1420,15 @@ final class AppSettings: ObservableObject {
                 migrated[bundleID] = PerAppRule(presetID: presetID, reason: nil)
             }
             perAppRules = migrated
+        }
+        // Coming from 2.8: a shortcut of yours that already sits on a new default keeps it; the new
+        // action starts without one (set it in Settings ▸ Shortcuts) instead of taking yours.
+        if defaults.object(forKey: "rescueHotkeyModifiers") == nil, isRetroMacHotkey(code: rescueHotkeyCode, modifiers: rescueHotkeyModifiers) {
+            rescueHotkeyModifiers = 0
+        }
+        if defaults.object(forKey: "switcherHotkeyModifiers") == nil,
+           [switcherHotkeyModifiers, switcherHotkeyModifiers | 0x0200].contains(where: { isRetroMacHotkey(code: switcherHotkeyCode, modifiers: $0) }) {
+            switcherHotkeyModifiers = 0
         }
     }
 
