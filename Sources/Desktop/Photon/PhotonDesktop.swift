@@ -57,6 +57,7 @@ final class PhotonDesktopController {
         (shelf?.contentView as? PhotonShelfView)?.start()
         (taskbar?.contentView as? PhotonTaskbarView)?.start()
         CDEDesktop.shared.show(.photon)   // a right-click on the desktop posts the Launch menu (QNX-05)
+        PhotonLaunchMenu.prepare()
     }
 
     /// The taskbar across the bottom of the main display, the shelf from the top of the visible
@@ -511,7 +512,14 @@ enum PhotonLaunchMenu {
         }
     }
 
-    static func items() -> [CDEMenuItem] {
+    /// An installed app as the menu needs it, read from disk once.
+    struct Installed { let path: String; let name: String; let bundleID: String?; let category: String }
+
+    private static var scanned: [Installed]?
+
+    /// The app folders, read and sorted into categories: file reading, so never on the main thread
+    /// while a menu opens (PERF-05).
+    static func scan() -> [Installed] {
         let fm = FileManager.default
         var paths: [String] = []
         for dir in ["/Applications", "/System/Applications", "/System/Applications/Utilities", NSHomeDirectory() + "/Applications"] {
@@ -519,22 +527,41 @@ enum PhotonLaunchMenu {
         }
         let internet = Set(["https://example.com", "mailto:x@example.com"].flatMap { URL(string: $0).map { NSWorkspace.shared.urlsForApplications(toOpen: $0) } ?? [] }
             .map(\.path))
-        var byCategory: [String: [CDEMenuItem]] = [:]
-        var seen = Set<String>()
+        var seen = Set<String>(), out: [Installed] = []
         for path in Set(paths).sorted() {
             let name = fm.displayName(atPath: path).replacingOccurrences(of: ".app", with: "")
             guard seen.insert(name).inserted else { continue }   // one entry per name, as a menu shows it
-            let declared = Bundle(path: path)?.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String
-            let icon = Bundle(path: path)?.bundleIdentifier.map { ThemeManager.shared.icon(for: $0, size: 16) } ?? NSWorkspace.shared.icon(forFile: path)
-            let item = CDEMenuItem(title: name, icon: icon,
-                                   action: { NSWorkspace.shared.open(URL(fileURLWithPath: path)) })
-            byCategory[overrides[path] ?? category(of: path, category: declared, internet: internet), default: []].append(item)
+            let bundle = Bundle(path: path)
+            let declared = bundle?.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String
+            out.append(Installed(path: path, name: name, bundleID: bundle?.bundleIdentifier,
+                                 category: category(of: path, category: declared, internet: internet)))
+        }
+        return out
+    }
+
+    /// Reads the app folders in the background, for the next time the menu opens.
+    static func prepare() {
+        DispatchQueue.global(qos: .utility).async {
+            let apps = scan()
+            DispatchQueue.main.async { scanned = apps }
+        }
+    }
+
+    static func items() -> [CDEMenuItem] {
+        let apps = scanned ?? scan()   // the very first time, before the background read is in
+        prepare()                      // installs and removals show the next time
+        var byCategory: [String: [CDEMenuItem]] = [:]
+        let chosen = overrides
+        for app in apps {
+            let icon = app.bundleID.map { ThemeManager.shared.icon(for: $0, size: 16) } ?? NSWorkspace.shared.icon(forFile: app.path)
+            let path = app.path
+            let item = CDEMenuItem(title: app.name, icon: icon, action: { NSWorkspace.shared.open(URL(fileURLWithPath: path)) })
+            byCategory[chosen[path] ?? app.category, default: []].append(item)
         }
         func sorted(_ list: [CDEMenuItem]) -> [CDEMenuItem] {
             fit(list.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending })
         }
-        let theme = ThemeManager.shared.activeTheme
-        func icon(_ name: String) -> NSImage? { theme?.iconResource("\(name).png").flatMap { NSImage(contentsOf: $0) } }
+        func icon(_ name: String) -> NSImage? { themeIcon(name) }
         let configure: [CDEMenuItem] = PhotonShelfView.makeGroups().first { $0.id == "configure" }.flatMap {
             if case .items(let list) = $0.body { return list.map { i in CDEMenuItem(title: i.title, icon: icon(i.icon), action: i.action) } }
             return nil
@@ -552,6 +579,17 @@ enum PhotonLaunchMenu {
                CDEMenuItem(title: "Help", icon: icon("qnx_help"), action: CDEActions.app("com.apple.tips")),
                .separator,
                CDEMenuItem(title: "End Photon session", action: { AppDelegate.shared?.launcherDisableTheme() })]
+    }
+
+    /// The theme's own small pictures, read once.
+    private static var themeIcons: [String: NSImage] = [:]
+    static func themeIcon(_ name: String) -> NSImage? {
+        guard let theme = ThemeManager.shared.activeTheme else { return nil }
+        let key = theme.stableID + "/" + name
+        if let i = themeIcons[key] { return i }
+        let i = theme.iconResource("\(name).png").flatMap { NSImage(contentsOf: $0) }
+        themeIcons[key] = i
+        return i
     }
 
     /// A list taller than the screen ends in "More", which holds the rest, and so on down.

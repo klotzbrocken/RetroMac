@@ -218,8 +218,15 @@ final class IconPackStore {
             .flatMap { try? JSONDecoder().decode(IconImportReport.self, from: $0) }
     }
 
+    /// The app's entry, for the surfaces as they draw: only what is already in memory, so no file
+    /// is read while drawing (PERF-05). A package not yet read is read in the background, and the
+    /// surfaces draw again when it is in.
     func entry(themeID: String, bundleID: String) -> IconPackManifest.Entry? {
-        manifest(for: themeID)?.icons.first { $0.bundleIDs.contains(bundleID) }
+        lock.lock()
+        let cached = manifests[themeID]
+        lock.unlock()
+        guard let cached else { warm(themeID); return nil }
+        return cached?.icons.first { $0.bundleIDs.contains(bundleID) }
     }
 
     /// A key that changes with the package, for the icon cache (ICO-11).
@@ -260,8 +267,8 @@ final class IconPackStore {
         let started = generation
         lock.unlock()
         let folder = Self.folder(for: themeID)
-        let files = manifest(for: themeID)?.icons.flatMap { $0.variants.map(\.file) } ?? []
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let files = self?.manifest(for: themeID)?.icons.flatMap { $0.variants.map(\.file) } ?? []
             var out: [String: NSBitmapImageRep] = [:]
             for f in files {
                 guard let data = try? Data(contentsOf: folder.appendingPathComponent(f)),
@@ -274,6 +281,7 @@ final class IconPackStore {
             defer { self.lock.unlock() }
             guard self.generation == started else { return }   // a newer package came in meanwhile
             self.decoded[themeID] = out; self.warming.remove(themeID)
+            guard !files.isEmpty else { return }   // no package: nothing to draw again
             DispatchQueue.main.async {
                 ThemeManager.shared.clearCache()
                 NotificationCenter.default.post(name: .dockAppsChanged, object: nil)

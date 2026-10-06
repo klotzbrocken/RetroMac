@@ -214,11 +214,13 @@ private final class CDEDesktopView: NSView {
     /// The icon's window menu, under the label; a second click on the icon restores the window.
     private func postIconMenu(_ e: MinimizedWindowTracker.Entry, slot: NSRect) {
         let restore = { MinimizedWindowTracker.shared.activate(e) }
-        var close: (() -> Void)?
-        var ref: CFTypeRef?
-        if !e.isAppLevel, AXUIElementCopyAttributeValue(e.window, kAXCloseButtonAttribute as CFString, &ref) == .success, let ref {
-            let button = ref as! AXUIElement
-            close = { AXUIElementPerformAction(button, kAXPressAction as CFString) }
+        // The close button is asked for when Close is chosen, off the main thread (PERF-05).
+        let close: (() -> Void)? = e.isAppLevel ? nil : {
+            TitleBarOverlayController.axQueue.async {
+                var ref: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(e.window, kAXCloseButtonAttribute as CFString, &ref) == .success, let ref else { return }
+                AXUIElementPerformAction(ref as! AXUIElement, kAXPressAction as CFString)
+            }
         }
         let tl = screenPoint(NSPoint(x: slot.minX, y: slot.maxY))
         let br = screenPoint(NSPoint(x: slot.maxX, y: slot.minY))

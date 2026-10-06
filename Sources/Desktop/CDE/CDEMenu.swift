@@ -137,6 +137,9 @@ enum CDEEscape {
         }
     }
 
+    /// Whether Esc is held right now, for the leak check (PERF-06).
+    static var isHeld: Bool { hotKey != nil }
+
     static func release() {
         onEscape = nil
         if let ref = hotKey { UnregisterEventHotKey(ref); hotKey = nil }

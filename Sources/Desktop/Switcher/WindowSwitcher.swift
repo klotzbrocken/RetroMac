@@ -201,12 +201,17 @@ final class WindowSwitcher {
     }
 
     /// Raise the window and give its app the focus. False when the window is no longer there.
+    /// Whether it is there the WindowServer says at once; the raise goes through Accessibility,
+    /// off the main thread, as every slow query must (PERF-05).
     private func focus(_ t: Target) -> Bool {
         guard let app = NSRunningApplication(processIdentifier: t.pid), !app.isTerminated,
-              let w = TitleBarOverlayController.findAXWindow(t.wid, pid: t.pid) else { return false }
-        AXUIElementSetAttributeValue(w, kAXMainAttribute as CFString, kCFBooleanTrue)
-        AXUIElementPerformAction(w, kAXRaiseAction as CFString)
+              let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, t.wid) as? [[String: Any]], !info.isEmpty else { return false }
         app.activate(options: [.activateIgnoringOtherApps])
+        TitleBarOverlayController.axQueue.async {
+            guard let w = TitleBarOverlayController.findAXWindow(t.wid, pid: t.pid) else { return }
+            AXUIElementSetAttributeValue(w, kAXMainAttribute as CFString, kCFBooleanTrue)
+            AXUIElementPerformAction(w, kAXRaiseAction as CFString)
+        }
         return true
     }
 }
