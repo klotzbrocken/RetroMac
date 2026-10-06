@@ -119,19 +119,27 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Windows Vista with its Sidebar, and XP\u{2019}s Task Manager with every page")
+                Text("Solaris and QNX, a way out of any desktop, and the window switcher of each era")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("macwindow.on.rectangle", .cyan, "Windows Vista",
-                            "Aero glass windows on a black glass taskbar, the round Start orb, Start Search and the orange power button, the Welcome screen at start, eight Vista wallpapers from Aurora to the Ultimate orb, and Vista\u{2019}s own icons.")
-                    feature("sidebar.right", .blue, "The Vista Sidebar",
-                            "A column on the right edge with a clock, a calendar and a CPU meter whose two dials show your Mac\u{2019}s processor and memory load. The + at its top shows or hides each gadget; \u{201C}Close Sidebar\u{201D} puts it away and \u{201C}Windows Sidebar\u{201D} in the Start menu brings it back.")
+                    feature("sun.max.fill", .purple, "Solaris 8 \u{2014} CDE",
+                            "The Unix desktop of 2000: the Front Panel with its live clock and subpanels, mauve title bars with the window menu, the Workspace Menu on a right-click, minimised windows as icons, the Application Manager, and crashes on the Sun console.")
+                    feature("cpu", .blue, "QNX 6.2.1 \u{2014} Photon",
+                            "The realtime OS\u{2019}s desktop from its 2003 CD: the shelf with groups you fold open and shut and a live system monitor, the taskbar with Launch and one entry per window, and Photon\u{2019}s blue title bars.")
+                    feature("lifepreserver", .red, "Rescue Desktop",
+                            "One action turns the theme and every effect off and brings back windows you cannot reach. Your settings stay. \u{2303}\u{2325}\u{2318}R, the flyout or the menu-bar menu.")
+                    feature("rectangle.stack", .orange, "The window switcher of each era",
+                            "\u{2303}\u{2325}Tab does what the theme\u{2019}s era did: Solaris moves the focus window by window, Snow Leopard opens Expos\u{00E9}, Mountain Lion Mission Control.")
+                    feature("photo.on.rectangle.angled", .teal, "Historic icons for modern apps",
+                            "Import an icon package for a theme and your apps wear it everywhere the theme shows them. Settings \u{25B8} Dock \u{25B8} Historic icons shows what is in and what is missing.")
+                    feature("macwindow.on.rectangle", .cyan, "Windows Vista and its Sidebar",
+                            "Aero glass windows on a black glass taskbar with the round Start orb, eight Vista wallpapers, Vista\u{2019}s own icons, and the Sidebar with a clock, a calendar and a CPU meter.")
                     feature("gauge.with.dots.needle.33percent", .green, "Task Manager, all five pages",
-                            "Under Windows XP: Applications (End Task, Switch To, New Task), Processes with user, CPU and memory, sorted by any column, Networking with a graph per adapter, and Users. Open it with Ctrl+Option+Delete or from the Start menu.")
+                            "Under Windows XP: Applications, Processes, Performance, Networking and Users. Open it with Ctrl+Option+Delete or from the Start menu.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "A rolled-up window keeps its way back until it is really back, even across a crash. The Start button stays pressed while its menu is open. Widgets remembered on a bigger display come back whole on the screen you have now. A wallpaper that could not be set is no longer taken as set, and choosing a printer no longer pauses the Control Strip.")
+                            "A rolled-up window keeps its way back until it is really back, even across a crash. The Start button stays pressed while its menu is open. Mission Control no longer shows the title bars as little windows. A wallpaper that could not be set is no longer taken as set.")
 
                     sectionHeader("Also in 2.8.8")
 
@@ -142,16 +150,6 @@ struct WelcomeFlowView: View {
                     feature("rectangle.compress.vertical", .purple, "WindowShade",
                             "Under the Mac OS 8/9 title bars the collapse box and a double-click roll a window up to its bar and down again; under System 7.1 a double-click does it, as System 7.5\u{2019}s WindowShade did.")
 
-                    sectionHeader("Earlier in 2.8")
-
-                    feature("menubar.rectangle", .blue, "Mac OS 9 (authentic) and title bars in theme style",
-                            "Mac OS 9 laid out as the machine was, with the Control Strip and the menus of the day; and, as an experiment, a Platinum, Luna or Aqua title bar over every real window.")
-                    feature("desktopcomputer", .blue, "Windows Me, gone over in detail",
-                            "The animated Me boot logo, three original wallpapers, Defrag as its own program, and folder windows that are Explorer now.")
-                    feature("exclamationmark.triangle.fill", .red, "Retro Glitches & Crashes",
-                            "Failure, in period: the Windows 9x blue screen, the XP and 7 stop error, the Mac OS bomb. Nothing actually crashes \u{2014} by hand, or on a schedule.")
-                    feature("gamecontroller.fill", .green, "Live Wallpaper and the Game Library",
-                            "The selected shader over the whole desktop in one pass; and a cover gallery that installs the engines and fetches what the rights holders released for sharing.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }

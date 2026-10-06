@@ -3,7 +3,9 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## Unreleased
+## 3.0
+
+### New
 
 - **New theme: QNX 6.2.1 — Photon.** The realtime OS's desktop from its 2003 CD, measured off
   the original: the shelf down the right with groups you fold open and shut, a live system
@@ -48,11 +50,43 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   whose two dials show your Mac's processor and memory load. The **+** at its top shows or
   hides each gadget. "Close Sidebar" (right-click, or the **+**) puts it away; "Windows Sidebar"
   in the Start menu brings it back.
-- **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.
 - **Windows XP Task Manager, all five pages.** Applications lists the running programs (End
   Task, Switch To, New Task); Processes shows each process with its user, CPU and memory, sorts
   by any column and ends a process after XP's warning; Networking draws a graph per adapter with
   its link speed; Users lists who is logged in. "Task Manager" is in the XP Start menu now too.
+
+### Adapted on purpose
+
+- **Solaris 8 — CDE.** The four workspaces are one button that opens Mission Control, and EXIT
+  ends the theme, not your session. The window menu offers what macOS lets RetroMac do with
+  another app's window (Restore, Minimize, Maximize, Close); Move, Size, Lower and the workspace
+  entries are there but greyed out. Lucida Grande stands in for Sun's bitmap fonts. The clock,
+  calculator, Notepad and CPU monitor keep their own layout inside dtwm's frame.
+- **QNX 6.2.1 — Photon.** World View opens Mission Control instead of nine workspaces. The
+  shelf has no Dialer (there is no modem), its CD Player opens the Music app, and it scrolls when
+  a screen is too short, where the original cut it off. The desktop is the plain colour of the
+  reference screenshots, which left out the default picture. "End Photon session" ends the theme.
+- **Window switcher.** ⌃⌥Tab rather than Alt+Tab, so Command-Tab and every app's own shortcuts
+  stay as they are. Minimised windows are not in Solaris's focus cycle; macOS cannot give an
+  icon the focus.
+- Every adaptation of the two new themes is listed with its reason in docs/reference.
+
+### Known limits
+
+- **The Windows switchers are not in yet.** Alt+Tab for Windows 95 to XP and Flip and Flip 3D
+  for Vista and 7 come once their reference screenshots are in; until then ⌃⌥Tab does nothing
+  in those themes. QNX gets no Alt+Tab until it is shown for 6.2.1.
+- **No historic icon packages ship with 3.0.** The import, the checks and the status view are
+  there; the pictures come as packages of their own.
+- **Not yet in the new themes:** Solaris's dtlogin screen and X11 cursors, and QNX's boot
+  screen, crashes and cursors. None of them is in the reference screenshots.
+- **Window features need Accessibility.** The title bars, the window menu, minimised-window
+  icons, the taskbar entries and the switcher work with it; without it the taskbars show apps
+  instead of windows, as before. The title bars are still experimental.
+
+### Fixes
+
+- **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.
 - **WindowShade never loses a window.** A rolled-up window keeps its way back until it is
   really back: an app that does not answer leaves it rolled up, to be unrolled again, and on a
   theme switch or at quit it stays on record for the next start if it would not move. A theme
@@ -66,6 +100,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   (room for magnified icons and names) and swallowed the clicks on any icon down there, the
   Screen Saver under Mac OS X among them. Icons now keep above it and move on to the next
   column when a screen is too short, as the Finder did.
+- **Mission Control and Exposé no longer show the title bars** as little windows of their own.
 - **Choosing a printer in the Control Strip no longer pauses the strip.**
 
 ## 2.8.8
