@@ -65,5 +65,382 @@
   "bundleIDs": [
    "com.adobe.illustrator"
   ]
+ },
+ {
+  "appID": "onenote",
+  "file": "onenote-256.png",
+  "sha256": "9dd244ad33506b79dce9c25fdc7669256e5e75ab8723e98b7ed497fc4b533ff6",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Microsoft OneNote: purple spiral notebook with projecting section tabs, no letter. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 15483,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.microsoft.onenote.mac"
+  ]
+ },
+ {
+  "appID": "edge",
+  "file": "edge-256.png",
+  "sha256": "48480750f3778fa3b1ab1eadad9f17b4758f52cc98ddf8e0dc1b71a0ef67098c",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Microsoft Edge: recognizable curled blue and green wave swirl. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 22369,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.microsoft.edgemac"
+  ]
+ },
+ {
+  "appID": "brave",
+  "file": "brave-256.png",
+  "sha256": "b6254c74e75befa957bef88793155c4a29518fa3335f9e433f1ecfde463dab73",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Brave: orange frontal lion head geometric silhouette. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 15078,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.brave.Browser"
+  ]
+ },
+ {
+  "appID": "arc",
+  "file": "arc-256.png",
+  "sha256": "a76a1bf82c71c91931dd572837ca80a8fbdccac3ca695719f0f826a6b7d840c1",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Arc browser: recognizable multicolor arch with diagonal stroke, emblem not text. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 20197,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "company.thebrowser.Browser"
+  ]
+ },
+ {
+  "appID": "cursor",
+  "file": "cursor-256.png",
+  "sha256": "20f4a0b3aa0a896b81b442a4c79e259b2e2f6bdab1bbaaf4b5d0723b8ad2f4b1",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Cursor code editor: faceted black gray white three-dimensional cursor cube. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 5715,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.todesktop.230313mzl4w4u92"
+  ]
+ },
+ {
+  "appID": "slack",
+  "file": "slack-256.png",
+  "sha256": "be694d6d346cb17c88c830e116b2427da62783840468f03046765dba9a75a213",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Slack: recognizable four colored bar-and-dot pairs forming octothorpe. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 15325,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.tinyspeck.slackmacgap"
+  ]
+ },
+ {
+  "appID": "discord",
+  "file": "discord-256.png",
+  "sha256": "293d989e8b175cf0193d87eb8a794998cbe9a3f307f0369f4a126f4fe667757d",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Discord: purple game-controller face with two eyes. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 11030,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.hnc.Discord"
+  ]
+ },
+ {
+  "appID": "zoom",
+  "file": "zoom-256.png",
+  "sha256": "a12a109b166638561a20163e949045561763dbdd0372f09cb677678df13e6965",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Zoom: blue video camera symbol. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 15108,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "us.zoom.xos"
+  ]
+ },
+ {
+  "appID": "signal",
+  "file": "signal-256.png",
+  "sha256": "36c32f261efe7686f7e6f650069b358e0a789ab22cc83fd5b0e16c74e6bcdc58",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Signal: blue speech bubble with broken-line perimeter. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 13898,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "org.whispersystems.signal-desktop"
+  ]
+ },
+ {
+  "appID": "whatsapp",
+  "file": "whatsapp-256.png",
+  "sha256": "3f3df5c7e2d7954ebd4d5049dfc7ed70e71073917164de3bbb94d9380568091d",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: WhatsApp: green speech bubble with white telephone handset. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 15490,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "net.whatsapp.WhatsApp"
+  ]
+ },
+ {
+  "appID": "vscode",
+  "file": "vscode-256.png",
+  "sha256": "400be060e6823ee7a0b96fc3091cfdfc248b5c039c6765eafee503f7c09e51a9",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Visual Studio Code: recognizable blue folded angular ribbon. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 12284,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.microsoft.VSCode"
+  ]
+ },
+ {
+  "appID": "docker",
+  "file": "docker-256.png",
+  "sha256": "11028a7a04d812c16c3297c98ffc43859a7f0be5709362112bc99fe109445c95",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Docker: blue whale carrying a stack of container blocks. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 17985,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.docker.docker"
+  ]
+ },
+ {
+  "appID": "githubdesktop",
+  "file": "githubdesktop-256.png",
+  "sha256": "48f9ec07ac23717d736e3501d11e7c5597890315533cbe51a5ed388e971419ce",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: GitHub Desktop: purple disc with white Octocat silhouette. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 15140,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.github.GitHubClient"
+  ]
+ },
+ {
+  "appID": "affinitydesigner",
+  "file": "affinitydesigner-256.png",
+  "sha256": "509828f41cbf9862f746bdf4621cacf22996db00e421bc29c00b20e9235cb7d9",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Affinity Designer: blue angular triangular folded geometric emblem. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 13312,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.seriflabs.affinitydesigner2",
+   "com.seriflabs.affinitydesigner"
+  ]
+ },
+ {
+  "appID": "affinityphoto",
+  "file": "affinityphoto-256.png",
+  "sha256": "188a5e534b490363a98d0e19dd7075527144ec7c8a796fdfc1f9329c2a2aaca4",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Affinity Photo: purple magenta angular triangular aperture emblem. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 21589,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.seriflabs.affinityphoto2",
+   "com.seriflabs.affinityphoto"
+  ]
+ },
+ {
+  "appID": "affinitypublisher",
+  "file": "affinitypublisher-256.png",
+  "sha256": "ffb83a7bbb3bafa141ffc52f01ae6a6b368e66f1bc7cb2570c60f5bda36a5175",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Affinity Publisher: orange angular triangular folded emblem. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 16321,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.seriflabs.affinitypublisher2",
+   "com.seriflabs.affinitypublisher"
+  ]
+ },
+ {
+  "appID": "figma",
+  "file": "figma-256.png",
+  "sha256": "060c2e27879429a0d1c71bd9f3c69a93ac675804df58ca4010ad197696d23384",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · Snow Leopard",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for Snow Leopard. Subject: Figma: five-part vertical emblem red orange purple blue green, accurate geometry. Style: 2009 Mac OS X Snow Leopard. Refined skeuomorphic desktop application icon, convincing restrained material and dimensional shading, clear recognizable silhouette, polished but not excessively glossy, subtle short soft shadow, full color and alpha. No Big Sur rounded square tile and no flat iOS design. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 15580,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.figma.Desktop"
+  ]
  }
 ]

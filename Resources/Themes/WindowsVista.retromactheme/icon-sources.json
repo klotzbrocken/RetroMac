@@ -383,5 +383,225 @@
   "bundleIDs": [
    "com.adobe.illustrator"
   ]
+ },
+ {
+  "appID": "teams",
+  "file": "teams-256.png",
+  "sha256": "d1ca5f3e8ab48bb96205bc3306287a7c9df0516ef3156d1cffbbd357da3203af",
+  "kind": "era-adaptation",
+  "prompt": "ONE application icon, Microsoft Teams: purple silhouettes of people in the recognizable overlapping Teams arrangement, no T or letters. Era adaptation for Windows Vista and Windows 7 2007–2009 desktop: finely crafted realistic small object, restrained Aero gloss and dimensional lighting, NOT inflated balloon or excessive chrome. Preserve original app identity and color. Centered isolated icon fits within 80% of a square transparent canvas. Requested final 256x256 PNG. No lettering, words, numbers, labels, watermark, external frame or rounded-square tile. ONE icon only.",
+  "bundleIDs": [
+   "com.microsoft.teams2",
+   "com.microsoft.teams"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "edge",
+  "file": "edge-256.png",
+  "sha256": "21c919120f5f889c42295e7a4ae167abbef294394720d7c5ed30c0ce9074504c",
+  "kind": "era-adaptation",
+  "prompt": "ONE application icon, Microsoft Edge current recognizable curling blue and teal wave ribbon symbol with opening in center. Era adaptation for Windows Vista and Windows 7 2007–2009 desktop: finely crafted realistic small object, restrained Aero gloss and dimensional lighting, NOT inflated balloon or excessive chrome. Preserve original app identity and color. Centered isolated icon fits within 80% of a square transparent canvas. Requested final 256x256 PNG. No lettering, words, numbers, labels, watermark, external frame or rounded-square tile. ONE icon only.",
+  "bundleIDs": [
+   "com.microsoft.edgemac"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "brave",
+  "file": "brave-256.png",
+  "sha256": "ec6c28bd5ecd5218d3c2540155975bc6388e4f621d54a6e1a6aae95dc4c43462",
+  "kind": "era-adaptation",
+  "prompt": "ONE application icon, Brave browser recognizable orange lion head with white facial cutouts; lion silhouette only without external shield frame. Era adaptation for Windows Vista and Windows 7 2007–2009 desktop: finely crafted realistic small object, restrained Aero gloss and dimensional lighting, NOT inflated balloon or excessive chrome. Preserve original app identity and color. Centered isolated icon fits within 80% of a square transparent canvas. Requested final 256x256 PNG. No lettering, words, numbers, labels, watermark, external frame or rounded-square tile. ONE icon only.",
+  "bundleIDs": [
+   "com.brave.Browser"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "arc",
+  "file": "arc-256.png",
+  "sha256": "90ae489e685a975cb7af30c7a14d5e0117e35c80f07d80555e0b54efa155af59",
+  "kind": "era-adaptation",
+  "prompt": "ONE application icon, Arc browser recognizable arched rainbow ribbon bridge symbol with transverse crosspiece and open center, no typed letter. Era adaptation for Windows Vista and Windows 7 2007–2009 desktop: finely crafted realistic small object, restrained Aero gloss and dimensional lighting, NOT inflated balloon or excessive chrome. Preserve original app identity and color. Centered isolated icon fits within 80% of a square transparent canvas. Requested final 256x256 PNG. No lettering, words, numbers, labels, watermark, external frame or rounded-square tile. ONE icon only.",
+  "bundleIDs": [
+   "company.thebrowser.Browser"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "claude",
+  "file": "claude-256.png",
+  "sha256": "5b8afd725ec596acb0946739fe4aeffa78956d4f297c018b47a26102d3220e8b",
+  "kind": "era-adaptation",
+  "prompt": "Claude orange asymmetric radial sunburst, Aero-era glossy desktop icon, transparent, no text or enclosing frame.",
+  "bundleIDs": [
+   "com.anthropic.claudefordesktop"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "chatgpt",
+  "file": "chatgpt-256.png",
+  "sha256": "0c4fa26d896cc3f901e6ae1b3e89c797b3c57b871e5be95e7f36ece8fd2ea69e",
+  "kind": "era-adaptation",
+  "prompt": "Create ONE standalone application icon for ChatGPT / OpenAI sixfold interwoven rounded ribbon knot, exactly six loops and central hexagonal negative space, recognizable official knot silhouette, muted jade green. Historical style adaptation to Windows Vista / Windows 7 Aero 2007–2009: restrained glossy molded material, soft highlights, dimensional but readable small desktop icon. Square 256x256 target, centered with 12 percent transparent margin. True transparent background. Preserve app symbol identity. NO text, letters, numbers, outer border/frame, tile or square backing. No scene, no montage.",
+  "bundleIDs": [
+   "com.openai.chat",
+   "com.openai.codex"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "cursor",
+  "file": "cursor-256.png",
+  "sha256": "2867a75ee71aefd2e8e66ce9b5b546a776f4a01e0482ae07537b085954bdf051",
+  "kind": "era-adaptation",
+  "prompt": "Create ONE standalone application icon for Cursor AI code editor recognizable black and white faceted diagonal arrow/cube pointer symbol, retain geometric folded facets. Historical style adaptation to Windows Vista / Windows 7 Aero 2007–2009: restrained glossy molded material, soft highlights, dimensional but readable small desktop icon. Square 256x256 target, centered with 12 percent transparent margin. True transparent background. Preserve app symbol identity. NO text, letters, numbers, outer border/frame, tile or square backing. No scene, no montage.",
+  "bundleIDs": [
+   "com.todesktop.230313mzl4w4u92"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "slack",
+  "file": "slack-256.png",
+  "sha256": "1e46a632302fc5ab9fb1eb6fbfe696996854a2d86d1bcc4dfd46449c0578fe1f",
+  "kind": "era-adaptation",
+  "prompt": "ONE application icon, Slack recognizable four-color octothorpe symbol built from detached rounded bars and dots, red yellow green blue. Era adaptation for Windows Vista and Windows 7 2007–2009 desktop: finely crafted realistic small object, restrained Aero gloss and dimensional lighting, NOT inflated balloon or excessive chrome. Preserve original app identity and color. Centered isolated icon fits within 80% of a square transparent canvas. Requested final 256x256 PNG. No lettering, words, numbers, labels, watermark, external frame or rounded-square tile. ONE icon only.",
+  "bundleIDs": [
+   "com.tinyspeck.slackmacgap"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "discord",
+  "file": "discord-256.png",
+  "sha256": "1a0813e49f5b12c84ab29d940f1c0b689cf649f4e02b863bf62624e0cceaa623",
+  "kind": "era-adaptation",
+  "prompt": "ONE standalone application icon: Discord recognizable lavender game-controller mascot silhouette with two round eye holes and curved bottom. Carefully crafted Windows Vista / Windows 7 Aero-era 2007–2009 style adaptation, clear recognizable silhouette, restrained realistic materials, subtle dimensional lighting. No oversized glossy balloon effect. Transparent square canvas, icon centered with comfortable margin. No text, letters, numerals, watermark, surrounding frame or enclosing app tile. Target 256x256 PNG, one icon only.",
+  "bundleIDs": [
+   "com.hnc.Discord"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "zoom",
+  "file": "zoom-256.png",
+  "sha256": "a7ec66843e5feeb9158f92da9328f21e7ae1289cb189f125daf74a97ea820e3e",
+  "kind": "era-adaptation",
+  "prompt": "ONE standalone application icon: Zoom recognizable blue video-camera silhouette with short triangular lens, no enclosing tile. Carefully crafted Windows Vista / Windows 7 Aero-era 2007–2009 style adaptation, clear recognizable silhouette, restrained realistic materials, subtle dimensional lighting. No oversized glossy balloon effect. Transparent square canvas, icon centered with comfortable margin. No text, letters, numerals, watermark, surrounding frame or enclosing app tile. Target 256x256 PNG, one icon only.",
+  "bundleIDs": [
+   "us.zoom.xos"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "signal",
+  "file": "signal-256.png",
+  "sha256": "a9898785317ecef6176238aeb7cc41aa2a6f2f586ba788cd03c8e5a625bcb14d",
+  "kind": "era-adaptation",
+  "prompt": "ONE standalone application icon: Signal recognizable blue speech bubble surrounded by separated dashed perimeter, no outer app tile. Carefully crafted Windows Vista / Windows 7 Aero-era 2007–2009 style adaptation, clear recognizable silhouette, restrained realistic materials, subtle dimensional lighting. No oversized glossy balloon effect. Transparent square canvas, icon centered with comfortable margin. No text, letters, numerals, watermark, surrounding frame or enclosing app tile. Target 256x256 PNG, one icon only.",
+  "bundleIDs": [
+   "org.whispersystems.signal-desktop"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "whatsapp",
+  "file": "whatsapp-256.png",
+  "sha256": "e1a2df5c8e93ad163e5a9c6325f5568bbb19df53542850fd2d8df06fda9162f6",
+  "kind": "era-adaptation",
+  "prompt": "ONE standalone application icon: WhatsApp recognizable green speech bubble with white telephone handset, no app tile. Carefully crafted Windows Vista / Windows 7 Aero-era 2007–2009 style adaptation, clear recognizable silhouette, restrained realistic materials, subtle dimensional lighting. No oversized glossy balloon effect. Transparent square canvas, icon centered with comfortable margin. No text, letters, numerals, watermark, surrounding frame or enclosing app tile. Target 256x256 PNG, one icon only.",
+  "bundleIDs": [
+   "net.whatsapp.WhatsApp"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "vscode",
+  "file": "vscode-256.png",
+  "sha256": "f79001cf094155638dea64d711ba1d2893367e5ee808fd20e19446d652a851db",
+  "kind": "era-adaptation",
+  "prompt": "ONE standalone application icon: Visual Studio Code recognizable angular folded blue ribbon symbol, darker inner facet and wide upright right fold. Carefully crafted Windows Vista / Windows 7 Aero-era 2007–2009 style adaptation, clear recognizable silhouette, restrained realistic materials, subtle dimensional lighting. No oversized glossy balloon effect. Transparent square canvas, icon centered with comfortable margin. No text, letters, numerals, watermark, surrounding frame or enclosing app tile. Target 256x256 PNG, one icon only.",
+  "bundleIDs": [
+   "com.microsoft.VSCode"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "docker",
+  "file": "docker-256.png",
+  "sha256": "01dab59c503d6d1b6d5d09f6a53c1af78f9c11562c0d2dad979de12c987becaa",
+  "kind": "era-adaptation",
+  "prompt": "ONE standalone application icon: Docker recognizable blue whale silhouette carrying a stack of small shipping containers on its back. Carefully crafted Windows Vista / Windows 7 Aero-era 2007–2009 style adaptation, clear recognizable silhouette, restrained realistic materials, subtle dimensional lighting. No oversized glossy balloon effect. Transparent square canvas, icon centered with comfortable margin. No text, letters, numerals, watermark, surrounding frame or enclosing app tile. Target 256x256 PNG, one icon only.",
+  "bundleIDs": [
+   "com.docker.docker"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "githubdesktop",
+  "file": "githubdesktop-256.png",
+  "sha256": "77f67f6c8b4896264a7d9dafb6bb99f7f9ebb85d49c8423443541952fcaf0689",
+  "kind": "era-adaptation",
+  "prompt": "ONE standalone application icon: GitHub Desktop recognizable white Octocat silhouette against a purple circular disc, keep cat ears and curling tail; no square app tile. Carefully crafted Windows Vista / Windows 7 Aero-era 2007–2009 style adaptation, clear recognizable silhouette, restrained realistic materials, subtle dimensional lighting. No oversized glossy balloon effect. Transparent square canvas, icon centered with comfortable margin. No text, letters, numerals, watermark, surrounding frame or enclosing app tile. Target 256x256 PNG, one icon only.",
+  "bundleIDs": [
+   "com.github.GitHubClient"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "affinitydesigner",
+  "file": "affinitydesigner-256.png",
+  "sha256": "8b4252becdbb6bc79fc20e3f55e29029c45b398965c85923f8042fb388c16184",
+  "kind": "era-adaptation",
+  "prompt": "ONE standalone application icon: Affinity Designer recognizable blue angular triangular folded ribbon/vector emblem, no letters. Carefully crafted Windows Vista / Windows 7 Aero-era 2007–2009 style adaptation, clear recognizable silhouette, restrained realistic materials, subtle dimensional lighting. No oversized glossy balloon effect. Transparent square canvas, icon centered with comfortable margin. No text, letters, numerals, watermark, surrounding frame or enclosing app tile. Target 256x256 PNG, one icon only.",
+  "bundleIDs": [
+   "com.seriflabs.affinitydesigner2",
+   "com.seriflabs.affinitydesigner"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "affinityphoto",
+  "file": "affinityphoto-256.png",
+  "sha256": "b0fa63a04d1df6302e2ed643c2448d662cbc4db4402dc557ce26b02d39f7f7ef",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generatedOriginal": "/Users/maik/.codex/generated_images/01a0a4f0-27b6-7550-adf7-3d9233604181/exec-1fe97ab6-24aa-45d3-b05f-ddc8590f5c31.png",
+  "prompt": "ONE standalone icon for Affinity Photo purple-magenta angular triangular aperture emblem. Preserve recognizable app logo geometry. Windows Vista / Windows 7 Aero 2007–2009 aesthetic, restrained dimensional materials and shading, precise silhouette. Modern app era adaptation, not a historical original. Transparent square background, centered with margin, no text, letters, caption, enclosing tile, external frame or watermark. Target 256x256 PNG.",
+  "reason": "Affinity wurde erst nach den hier dargestellten Epochen eingeführt.",
+  "bundleIDs": [
+   "com.seriflabs.affinityphoto2",
+   "com.seriflabs.affinityphoto"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "affinitypublisher",
+  "file": "affinitypublisher-256.png",
+  "sha256": "aff5bff2f72aa1c467b0537b51227c006bd897d0fa0b8d1256056c67227f0273",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generatedOriginal": "/Users/maik/.codex/generated_images/01a0a4f0-27b6-7550-adf7-3d9233604181/exec-00513cc9-3919-4982-9c3f-753290359848.png",
+  "prompt": "ONE standalone icon for Affinity Publisher orange angular triangular folded ribbon emblem. Preserve recognizable app logo geometry. Windows Vista / Windows 7 Aero 2007–2009 aesthetic, restrained dimensional materials and shading, precise silhouette. Modern app era adaptation, not a historical original. Transparent square background, centered with margin, no text, letters, caption, enclosing tile, external frame or watermark. Target 256x256 PNG.",
+  "reason": "Affinity wurde erst nach den hier dargestellten Epochen eingeführt.",
+  "bundleIDs": [
+   "com.seriflabs.affinitypublisher2",
+   "com.seriflabs.affinitypublisher"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "figma",
+  "file": "figma-256.png",
+  "sha256": "e27c9bdff80504cab1c36c61faf29e97d111d3a753bdf8eadd53a1dce6dcb1d1",
+  "kind": "era-adaptation",
+  "prompt": "Create ONE standalone application icon for Figma recognizable five-lobed mark: red and orange top two lobes, purple and blue middle two lobes, green bottom-left lobe. Historical style adaptation to Windows Vista / Windows 7 Aero 2007–2009: restrained glossy molded material, soft highlights, dimensional but readable small desktop icon. Square 256x256 target, centered with 12 percent transparent margin. True transparent background. Preserve app symbol identity. NO text, letters, numbers, outer border/frame, tile or square backing. No scene, no montage.",
+  "bundleIDs": [
+   "com.figma.Desktop"
+  ],
+  "visualReview": "passed (Maik, 2026-10-07)"
  }
 ]

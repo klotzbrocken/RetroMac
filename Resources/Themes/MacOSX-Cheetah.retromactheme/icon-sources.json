@@ -1,0 +1,421 @@
+[
+ {
+  "appID": "onenote",
+  "file": "onenote-256.png",
+  "sha256": "ab88cae679870039028e5eef2f540316c115f660a94721561d1feaf4c70dea8b",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Microsoft OneNote: purple spiral notebook with projecting section tabs, no letter. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 18527,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.microsoft.onenote.mac"
+  ]
+ },
+ {
+  "appID": "edge",
+  "file": "edge-256.png",
+  "sha256": "b721be2bb6a386015107e95dd32726fab3f4b07d83d3ef9e1780203765ba28a6",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Microsoft Edge: recognizable curled blue and green wave swirl. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 21823,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.microsoft.edgemac"
+  ]
+ },
+ {
+  "appID": "brave",
+  "file": "brave-256.png",
+  "sha256": "68abe8032c3752d9a15590cf1f65585f7cd4361d250789e3ec85e02b3ed1c5b1",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Brave: orange frontal lion head geometric silhouette. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 14283,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.brave.Browser"
+  ]
+ },
+ {
+  "appID": "arc",
+  "file": "arc-256.png",
+  "sha256": "4fbeb7d92b7ed2c2eb29fd83e085e39395560025e9855a24976ff78076dceeaf",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Arc browser: recognizable multicolor arch with diagonal stroke, emblem not text. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 21257,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "company.thebrowser.Browser"
+  ]
+ },
+ {
+  "appID": "cursor",
+  "file": "cursor-256.png",
+  "sha256": "1d23fb9e88b0bb114a6eb2fd0fb9cf43cb72a7c379df5ce2bd4e0c73c3a008b8",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Cursor code editor: faceted black gray white three-dimensional cursor cube. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 8523,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.todesktop.230313mzl4w4u92"
+  ]
+ },
+ {
+  "appID": "slack",
+  "file": "slack-256.png",
+  "sha256": "44feb021d92fdd8f0849080e6a17a5f071376a0cb10ab429313ed5d37ae57ad7",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Slack: recognizable four colored bar-and-dot pairs forming octothorpe. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 16736,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.tinyspeck.slackmacgap"
+  ]
+ },
+ {
+  "appID": "discord",
+  "file": "discord-256.png",
+  "sha256": "edf5c9d7940bb2c6f8a12ed00bdb1ee6b8a92ddfdfdfa50dcd6464a94aefe1d2",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Discord: purple game-controller face with two eyes. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 12095,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.hnc.Discord"
+  ]
+ },
+ {
+  "appID": "zoom",
+  "file": "zoom-256.png",
+  "sha256": "5ae0bf0a8b901d1dcc07c431b05b3c0c756d30f64d25180e6965f0b9051a81b5",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Zoom: blue video camera symbol. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 10717,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "us.zoom.xos"
+  ]
+ },
+ {
+  "appID": "signal",
+  "file": "signal-256.png",
+  "sha256": "c9980400645d798b1dc1c67785b08f76fc1ee55c0e6d56f1918db823fb93caf6",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Signal: blue speech bubble with broken-line perimeter. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 11676,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "org.whispersystems.signal-desktop"
+  ]
+ },
+ {
+  "appID": "whatsapp",
+  "file": "whatsapp-256.png",
+  "sha256": "74a430f69cd991d1d5810d1a7e276a604c31ba554fb23a74f8f14a351b5558f1",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: WhatsApp: green speech bubble with white telephone handset. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 19321,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "net.whatsapp.WhatsApp"
+  ]
+ },
+ {
+  "appID": "vscode",
+  "file": "vscode-256.png",
+  "sha256": "bc2924e9e17588f26e5f04635393bc6b65b23892460a2b64458d1a7fa23cc3ee",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Visual Studio Code: recognizable blue folded angular ribbon. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 13850,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.microsoft.VSCode"
+  ]
+ },
+ {
+  "appID": "docker",
+  "file": "docker-256.png",
+  "sha256": "955897c925b922d37f346b0207b81d94eca4beab446eba7fe6e335dcc38fad55",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Docker: blue whale carrying a stack of container blocks. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 17521,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.docker.docker"
+  ]
+ },
+ {
+  "appID": "githubdesktop",
+  "file": "githubdesktop-256.png",
+  "sha256": "938396e6c754e3fac9b2da86ee95f419ccd96e1b7fab4ed9d1e7cdd031874d01",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: GitHub Desktop: purple disc with white Octocat silhouette. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 15068,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.github.GitHubClient"
+  ]
+ },
+ {
+  "appID": "spotify",
+  "file": "spotify-256.png",
+  "sha256": "1137685d8679e10340d41ccbbfb137702d43301b58beb54f47cc85ab0386ae08",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Spotify: green disc with three black curved sound waves. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 21575,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.spotify.client"
+  ]
+ },
+ {
+  "appID": "vlc",
+  "file": "vlc-128.png",
+  "sha256": "088c405fa68481bd25a0fa54bc0be980b102e99469a8a7242f11b55ffdbb11ab",
+  "kind": "era-adaptation",
+  "referenceVersion": "Vom Nutzer gelieferte VLC-Illustration",
+  "generated": true,
+  "historicalOriginal": false,
+  "processing": "Mit built-in image_gen freigestellt; als 128×128 RGBA-PNG exportiert.",
+  "prompt": "Nur weißen Hintergrund entfernen; Kegel, weiße Streifen, Farben, Konturen und Perspektive erhalten; vorhandenen Schatten halbtransparent erhalten.",
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "qualityStatus": "Nutzerbestimmter Ersatz für das abgelehnte historische VLC-Icon",
+  "outputSize": [
+   128,
+   128
+  ],
+  "bundleIDs": [
+   "org.videolan.vlc"
+  ]
+ },
+ {
+  "appID": "affinitydesigner",
+  "file": "affinitydesigner-256.png",
+  "sha256": "db9c2c0a0b7e62218a3d5f1eadc4b8ea944bf27a5086ec53c4064d357e01dd05",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Affinity Designer: blue angular triangular folded geometric emblem. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 12467,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.seriflabs.affinitydesigner2",
+   "com.seriflabs.affinitydesigner"
+  ]
+ },
+ {
+  "appID": "affinityphoto",
+  "file": "affinityphoto-256.png",
+  "sha256": "668e1cb380b3971c89faa4c7ddc1be233c33afb70b3d4941401b07fe69184c72",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Affinity Photo: purple magenta angular triangular aperture emblem. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 21094,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.seriflabs.affinityphoto2",
+   "com.seriflabs.affinityphoto"
+  ]
+ },
+ {
+  "appID": "affinitypublisher",
+  "file": "affinitypublisher-256.png",
+  "sha256": "c5dbc841a5ac0c2dc7c4fc4be6c18563258c94e7a77fc497c0162408305f4cbc",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Affinity Publisher: orange angular triangular folded emblem. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 18212,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.seriflabs.affinitypublisher2",
+   "com.seriflabs.affinitypublisher"
+  ]
+ },
+ {
+  "appID": "figma",
+  "file": "figma-256.png",
+  "sha256": "2a3ccadd638d6d9aea0c22e8149e5c76d9b55881138e1345f35ee8bff8939adc",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": true,
+  "provenanceType": "KI-Stiladaption · MacOS Cheetah",
+  "generationTool": "built-in image_gen",
+  "prompt": "Create exactly ONE standalone application icon for MacOS Cheetah. Subject: Figma: five-part vertical emblem red orange purple blue green, accurate geometry. Style: 2001 Mac OS X Cheetah early Aqua. A carefully drawn legible 128x128-era app icon, translucent candy-like material only if suitable for subject, restrained early Aqua dimensionality, crisp silhouette, modest soft shadow. Avoid modern rounded-square app tiles, Big Sur, flat modern icon design or excessive 3D. Full color and alpha are correct for this theme. Square transparent PNG, centered recognizable motif with about 10 percent clear margin. Preserve the recognizable modern app identity but translate it into this historical design language. No words, no letters, no captions, no frame, no added background tile, no extra unrelated objects. This is an explicitly fictional era adaptation, not a historical original. Output only the icon.",
+  "processing": "Proportionaler PNG-Export auf 256×256 mit Alpha",
+  "visibleColors": 17625,
+  "outputSize": [
+   256,
+   256
+  ],
+  "historicalOriginal": false,
+  "visualReview": "passed (Maik, 2026-10-07)",
+  "bundleIDs": [
+   "com.figma.Desktop"
+  ]
+ }
+]
