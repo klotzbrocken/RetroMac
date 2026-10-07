@@ -130,7 +130,8 @@
     "com.apple.FaceTime": "facetime.png",
     "com.apple.clock": "clock.png",
     "com.apple.podcasts": "podcasts.png",
-    "com.microsoft.Outlook": "outlook.png"
+    "com.microsoft.Outlook": "outlook.png",
+    "com.googlecode.iterm2": "iterm2-32.png"
   },
   "desktopIconsSide": "left",
   "desktopIcons": [

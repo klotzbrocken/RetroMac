@@ -253,7 +253,10 @@
     "com.apple.garageband": "garageband.png",
     "com.apple.iMovieApp": "imovie.png",
     "com.apple.Dictionary": "dictionary.png",
-    "com.apple.reminders": "reminders.png"
+    "com.apple.reminders": "reminders.png",
+    "com.microsoft.Word": "word-32.png",
+    "com.microsoft.Excel": "excel-32.png",
+    "com.adobe.Photoshop": "photoshop-32.png"
   },
   "screensaver": "flying-toasters",
   "menuBarApple": "rainbow",

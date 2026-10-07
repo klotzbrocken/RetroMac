@@ -1,0 +1,61 @@
+[
+ {
+  "appID": "outlook",
+  "file": "outlook-32.png",
+  "sha256": "4cd648e19141560d938318cbc1be823dc1468cee2d154f4a78e5f654daa44e9a",
+  "kind": "historical-original",
+  "referenceVersion": "Microsoft Office 97 für Windows",
+  "generated": false,
+  "sourceArchive": "Office97_resources.zip",
+  "sourceResource": "outlook_1.ico",
+  "sourceSHA256": "53b78288ddc81b106e2a05aa7b72a18f94fc926220dce36ede305e59a67a6b33",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "nativeBitDepth": 4,
+  "visibleColors": 8,
+  "outputSize": [
+   32,
+   32
+  ],
+  "nativeHighResolution": false,
+  "provenanceLimitation": "Extraktion laut Archivbetreiber; nicht selbst mit Microsoft-Installationsmedium abgeglichen.",
+  "preferredFile": "outlook-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Outlook"
+  ]
+ },
+ {
+  "appID": "iterm2",
+  "file": "iterm2-32.png",
+  "sha256": "f12d0a87acc47c5de4197289863833c0eb523fe0208247a688d2704f26a46a7a",
+  "kind": "historical-theme-asset",
+  "generated": false,
+  "referenceVersion": "MS-DOS-Eingabeaufforderung",
+  "windowsEquivalent": "MS-DOS-Eingabeaufforderung",
+  "preferredFile": "iterm2-32.png",
+  "sourceURL": null,
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "resampling": "none",
+  "sourceSHA256": "a48f67243b0b0571bf37dcdb9e01d0d7be4dc3c06129d4650d6499f025406204",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · MS-DOS-Eingabeaufforderung",
+  "note": "",
+  "provenanceLimitation": "Bestehendes Theme-Asset; ursprüngliche Extraktion nicht unabhängig belegt.",
+  "bundleIDs": [
+   "com.googlecode.iterm2"
+  ]
+ }
+]

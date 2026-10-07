@@ -120,7 +120,13 @@
     "com.apple.mail": "mail.png",
     "com.apple.Photos": "app2.png",
     "com.apple.MobileSMS": "app3.png",
-    "com.apple.Chess": "solitaire.png"
+    "com.apple.Chess": "solitaire.png",
+    "com.apple.reminders": "reminders-32.png",
+    "com.microsoft.Word": "word-32.png",
+    "com.microsoft.Excel": "excel-32.png",
+    "com.microsoft.Powerpoint": "powerpoint-32.png",
+    "com.googlecode.iterm2": "iterm2-32.png",
+    "com.adobe.Photoshop": "photoshop-32.png"
   },
   "programManager": {
     "title": "Program Manager",

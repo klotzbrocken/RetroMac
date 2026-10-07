@@ -234,7 +234,12 @@
     "com.apple.NetworkUtility": "networkutility.png",
     "com.apple.SoftwareUpdate": "softwareupdate.png",
     "com.apple.installer": "installer.png",
-    "com.apple.BluetoothFileExchange": "bluetooth.png"
+    "com.apple.BluetoothFileExchange": "bluetooth.png",
+    "com.googlecode.iterm2": "iterm2-256.png",
+    "com.spotify.client": "spotify-256.png",
+    "org.videolan.vlc": "vlc-128.png",
+    "com.adobe.Photoshop": "photoshop-256.png",
+    "com.adobe.illustrator": "illustrator-256.png"
   },
   "appearance": "light",
   "accentColor": "blue"

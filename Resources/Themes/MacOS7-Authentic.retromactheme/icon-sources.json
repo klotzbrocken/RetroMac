@@ -1,0 +1,85 @@
+[
+ {
+  "appID": "word",
+  "file": "word-32.png",
+  "sha256": "df6927a01414fd7d168ba340c55d86dfc78b9a89d69a4bf880921ceb66553cb2",
+  "kind": "historical-original",
+  "referenceVersion": "Word 5.1a (Mac), 1992",
+  "sourceURL": "https://github.com/mihaip/infinite-mac/blob/main/Library/Productivity/Microsoft%20Word.zip",
+  "method": "Originale ICN#-Maske und icl4/icl8 aus APPL-Ressource 128; 32×32 ohne Hochskalierung",
+  "resourceID": 128,
+  "quality": "pixel-exact-export",
+  "generated": false,
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "preferredFile": "word-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Word"
+  ]
+ },
+ {
+  "appID": "excel",
+  "file": "excel-32.png",
+  "sha256": "c442f44b6b5615151d4d91c0b326190cb611b53acb8ec0ca54ffe13ed14e256f",
+  "kind": "historical-original",
+  "referenceVersion": "Microsoft Excel 4.0 US (Mac), 1992",
+  "sourceURL": "https://www.macintoshrepository.org/37610-microsoft-excel-4-0",
+  "method": "Excel_4.0.sit → Disk 1/2 NDIF → KWAJ Microsoft Excel + continuation → original resource fork → ICN#/icl4 128; native 32px",
+  "generated": false,
+  "quality": "pixel-exact-export",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "preferredFile": "excel-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Excel"
+  ]
+ },
+ {
+  "appID": "photoshop",
+  "file": "photoshop-32.png",
+  "sha256": "738e219c74b1050b779770a742b73c03e9a80d4c177e0f29e6f4d90037fdd7f6",
+  "kind": "historical-original",
+  "referenceVersion": "Adobe Photoshop 3.0.5 (Mac), 1995",
+  "sourceURL": "https://github.com/mihaip/infinite-mac/blob/main/Library/Graphics/Adobe%20Photoshop%203.0.zip",
+  "method": "Original APPL icon: BNDL local ID 0 → icl8/ICN# 128; native 32px",
+  "generated": false,
+  "quality": "pixel-exact-export",
+  "note": "Historische Classic-Version, nicht die jeweils neueste Version zur Veröffentlichung des Betriebssystems.",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "preferredFile": "photoshop-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.adobe.Photoshop"
+  ]
+ }
+]

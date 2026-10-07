@@ -1,0 +1,139 @@
+[
+ {
+  "appID": "word",
+  "file": "word-32.png",
+  "sha256": "6c3cd2e7708458818f3fb7b5787431f600456b80958148e454d4f2f7ac977b88",
+  "referenceVersion": "Microsoft Office 98 für Macintosh",
+  "sourceArchive": "/Users/maik/Downloads/Themes/_sources/office98.sit",
+  "sourceResource": "/Users/maik/Downloads/Themes/_sources/office98-extracted/Microsoft Office 98",
+  "note": "Bereits extrahierte originale 32-Pixel-Ressource. Download-URL des lokalen Archivs nicht im aktuellen Metadatensatz dokumentiert.",
+  "kind": "historical-original",
+  "generated": false,
+  "preferredFile": "word-32.png",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Word"
+  ]
+ },
+ {
+  "appID": "excel",
+  "file": "excel-32.png",
+  "sha256": "af54b46baa83c46d49566d4d0c2175eb6334dfc4638e879b7144e5a01b165c0b",
+  "referenceVersion": "Microsoft Office 98 für Macintosh",
+  "sourceArchive": "/Users/maik/Downloads/Themes/_sources/office98.sit",
+  "sourceResource": "/Users/maik/Downloads/Themes/_sources/office98-extracted/Microsoft Office 98",
+  "note": "Bereits extrahierte originale 32-Pixel-Ressource. Download-URL des lokalen Archivs nicht im aktuellen Metadatensatz dokumentiert.",
+  "kind": "historical-original",
+  "generated": false,
+  "preferredFile": "excel-32.png",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Excel"
+  ]
+ },
+ {
+  "appID": "powerpoint",
+  "file": "powerpoint-32.png",
+  "sha256": "8161bd8880d7fba8d29afebebed3212f092bbc903deda604e5612f0ecdd2be9f",
+  "referenceVersion": "Microsoft Office 98 für Macintosh",
+  "sourceArchive": "/Users/maik/Downloads/Themes/_sources/office98.sit",
+  "sourceResource": "/Users/maik/Downloads/Themes/_sources/office98-extracted/Microsoft Office 98",
+  "note": "Bereits extrahierte originale 32-Pixel-Ressource. Download-URL des lokalen Archivs nicht im aktuellen Metadatensatz dokumentiert.",
+  "kind": "historical-original",
+  "generated": false,
+  "preferredFile": "powerpoint-32.png",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Powerpoint"
+  ]
+ },
+ {
+  "appID": "outlook",
+  "file": "outlook-32.png",
+  "sha256": "83f91fe82bdb8afd1588411c40fecc25ae0f22f3933294dfc895a4cda5572297",
+  "kind": "historical-original",
+  "referenceVersion": "Microsoft Outlook 2001 for Mac",
+  "generated": false,
+  "sourceURL": "https://archive.org/details/X08-35757",
+  "sourceArchive": "2001-07_X08-35757_X08-33965.7z",
+  "sourceResource": "Microsoft Outlook → FREF APPL / BNDL local 0 → ICN#/icl4 101",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "nativeBitDepth": 4,
+  "outputSize": [
+   32,
+   32
+  ],
+  "preferredFile": "outlook-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Outlook"
+  ]
+ },
+ {
+  "appID": "photoshop",
+  "file": "photoshop-32.png",
+  "sha256": "738e219c74b1050b779770a742b73c03e9a80d4c177e0f29e6f4d90037fdd7f6",
+  "kind": "historical-original",
+  "referenceVersion": "Adobe Photoshop 3.0.5 (Mac), 1995",
+  "sourceURL": "https://github.com/mihaip/infinite-mac/blob/main/Library/Graphics/Adobe%20Photoshop%203.0.zip",
+  "method": "Original APPL icon: BNDL local ID 0 → icl8/ICN# 128; native 32px",
+  "generated": false,
+  "quality": "pixel-exact-export",
+  "note": "Historische Classic-Version, nicht die jeweils neueste Version zur Veröffentlichung des Betriebssystems.",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "preferredFile": "photoshop-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.adobe.Photoshop"
+  ]
+ }
+]

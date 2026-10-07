@@ -1,0 +1,173 @@
+[
+ {
+  "appID": "reminders",
+  "file": "reminders-32.png",
+  "sha256": "583b1fdaf7b8ca2091d99756163037806ba2a77b7b66a99db1b05a2829558b1d",
+  "kind": "historical-theme-asset",
+  "generated": false,
+  "referenceVersion": "Kalender",
+  "windowsEquivalent": "Kalender",
+  "preferredFile": "reminders-32.png",
+  "sourceURL": null,
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "resampling": "none",
+  "sourceSHA256": "56e7e56cbbbab44d6b65ef62de99e8fc2c8f6654f9cf9c1e454e89a6e5941328",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · Kalender",
+  "note": "Funktionsannäherung; kein vollständiger Ersatz für die heutige Mac-App.",
+  "provenanceLimitation": "Bestehendes Theme-Asset; ursprüngliche Extraktion nicht unabhängig belegt.",
+  "bundleIDs": [
+   "com.apple.reminders"
+  ]
+ },
+ {
+  "appID": "word",
+  "file": "word-32.png",
+  "sha256": "cec5b6543ede580e4b92dd69fda37aa2295c2623fd6915f9d51131d371107378",
+  "kind": "historical-original",
+  "referenceVersion": "Word 6.0 für Windows / Office 4.3",
+  "sourceURL": "https://archive.org/details/office-43",
+  "sourceArchive": "OFFICE43.zip",
+  "sourceResource": "WINWORD-icons/1.ico",
+  "method": "KWAJ-Dateien dekomprimiert; EXE-Teile zusammengesetzt; NE GROUP_ICON und RT_ICON aus Originalprogramm extrahiert",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "nativeBitDepth": 4,
+  "outputSize": [
+   32,
+   32
+  ],
+  "generated": false,
+  "preferredFile": "word-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Word"
+  ]
+ },
+ {
+  "appID": "excel",
+  "file": "excel-32.png",
+  "sha256": "c0e26ef35edf5ab33661269fa30e89108c05f8e51ab8f51afbbf8cac964b009d",
+  "kind": "historical-original",
+  "referenceVersion": "Excel 5.0 für Windows / Office 4.3",
+  "sourceURL": "https://archive.org/details/office-43",
+  "sourceArchive": "OFFICE43.zip",
+  "sourceResource": "EXCEL-icons/257.ico",
+  "method": "KWAJ-Dateien dekomprimiert; EXE-Teile zusammengesetzt; NE GROUP_ICON und RT_ICON aus Originalprogramm extrahiert",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "nativeBitDepth": 4,
+  "outputSize": [
+   32,
+   32
+  ],
+  "generated": false,
+  "preferredFile": "excel-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Excel"
+  ]
+ },
+ {
+  "appID": "powerpoint",
+  "file": "powerpoint-32.png",
+  "sha256": "c3b6cfade5016a5117cafbb005ed937b5134553ba9b3396c1a6af52f15781c34",
+  "kind": "historical-original",
+  "referenceVersion": "PowerPoint 4.0 für Windows / Office 4.3",
+  "sourceURL": "https://archive.org/details/office-43",
+  "sourceArchive": "OFFICE43.zip",
+  "sourceResource": "POWERPNT-icons/1.ico",
+  "method": "KWAJ-Dateien dekomprimiert; EXE-Teile zusammengesetzt; NE GROUP_ICON und RT_ICON aus Originalprogramm extrahiert",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "nativeBitDepth": 4,
+  "outputSize": [
+   32,
+   32
+  ],
+  "generated": false,
+  "preferredFile": "powerpoint-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.microsoft.Powerpoint"
+  ]
+ },
+ {
+  "appID": "iterm2",
+  "file": "iterm2-32.png",
+  "sha256": "337a7056d97359c0e44c704f5cd6c877d4a48f9eef694c6fdf5073059d0a043a",
+  "kind": "historical-theme-asset",
+  "generated": false,
+  "referenceVersion": "MS-DOS-Eingabeaufforderung",
+  "windowsEquivalent": "MS-DOS-Eingabeaufforderung",
+  "preferredFile": "iterm2-32.png",
+  "sourceURL": null,
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "resampling": "none",
+  "sourceSHA256": "71f6b0e292aa41392407c8e5347066a6e4f753b486aec17d42a9a7bc76d638c7",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · MS-DOS-Eingabeaufforderung",
+  "note": "",
+  "provenanceLimitation": "Bestehendes Theme-Asset; ursprüngliche Extraktion nicht unabhängig belegt.",
+  "bundleIDs": [
+   "com.googlecode.iterm2"
+  ]
+ },
+ {
+  "appID": "photoshop",
+  "file": "photoshop-32.png",
+  "sha256": "45442c47e9dbd64a4a764c80d6bc9a63292e59cdebfcd0c470dcb791ebf388c7",
+  "kind": "historical-original",
+  "referenceVersion": "Adobe Photoshop 3.0 für Windows (1994)",
+  "sourceURL": "https://archive.org/details/adobe-photoshop-3.0-deluxe",
+  "sourceArchive": "photoshop3-win.iso",
+  "sourceResource": "PHOTOSHP.EXE / GROUP_ICON 1000 / ICON 1",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "nativeBitDepth": 4,
+  "outputSize": [
+   32,
+   32
+  ],
+  "generated": false,
+  "preferredFile": "photoshop-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.adobe.Photoshop"
+  ]
+ }
+]

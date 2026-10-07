@@ -1,0 +1,69 @@
+[
+ {
+  "appID": "iterm2",
+  "file": "iterm2-256.png",
+  "sha256": "61da5f06afaff2d4eed52a3f74ff0303dcc60c30f39c2e3efdd40b8ba9761733",
+  "kind": "historical-original",
+  "referenceVersion": "iTerm2 v1.0.0.20110727 (2011)",
+  "sourceURL": "https://raw.githubusercontent.com/gnachman/iTerm2/v1.0.0.20110727/iTerm.icns",
+  "generated": false,
+  "note": "512-Pixel-Ressource aus historischem Quellstand. macOS-Motiv als App-Symbol im Windows-Theme; jünger als Windows-7-Veröffentlichung.",
+  "reuseNote": "Zeitlich passendes vorhandenes historisches Motiv für Snow Leopard wiederverwendet.",
+  "bundleIDs": [
+   "com.googlecode.iterm2"
+  ]
+ },
+ {
+  "appID": "spotify",
+  "file": "spotify-256.png",
+  "sha256": "c0adf91f823dff3396aa3a609a16bbd043b032d423b894f6c4dfee06b58f23c6",
+  "kind": "historical-original",
+  "referenceVersion": "Spotify 2008, laut Archivbeschriftung",
+  "page": "https://frutigeraeroarchive.org/icons",
+  "rights": "Nicht abschließend geklärt; Marken- und Rechteinhaber behalten ihre Rechte.",
+  "reuseNote": "Zeitlich passendes vorhandenes historisches Motiv für Snow Leopard wiederverwendet.",
+  "bundleIDs": [
+   "com.spotify.client"
+  ]
+ },
+ {
+  "appID": "vlc",
+  "file": "vlc-128.png",
+  "sha256": "3e65f53944a23ae6b4c282b17c43295fa8db9f67e5105730ccc262cbf44c880d",
+  "kind": "historical-original",
+  "referenceVersion": "VLC 1.0.0 (2009)",
+  "sourceURL": "https://download.videolan.org/pub/videolan/vlc/1.0.0/vlc-1.0.0.tar.bz2",
+  "generated": false,
+  "note": "Unvergrößerte originale 128-Pixel-Ressource.",
+  "reuseNote": "Zeitlich passendes vorhandenes historisches Motiv für Snow Leopard wiederverwendet.",
+  "bundleIDs": [
+   "org.videolan.vlc"
+  ]
+ },
+ {
+  "appID": "photoshop",
+  "file": "photoshop-256.png",
+  "sha256": "08efa24c7eb4b0b8d070fd5ef450569ec976dbe0fb18393a2310e642967f18b6",
+  "kind": "historical-original",
+  "referenceVersion": "Adobe Photoshop CS4 (2008)",
+  "sourceURL": "https://commons.wikimedia.org/wiki/File:Adobe_Photoshop_CS4_icon.png",
+  "generated": false,
+  "note": "Quelle dokumentiert Extraktion aus Adobe CS4. Historisches versionspassendes Motiv, keine KI-Erstellung.",
+  "bundleIDs": [
+   "com.adobe.Photoshop"
+  ]
+ },
+ {
+  "appID": "illustrator",
+  "file": "illustrator-256.png",
+  "sha256": "3966e9c1ad650ec256b3eb6f181c9beb99882152e64b45df7d76091f857d6cc3",
+  "kind": "historical-original",
+  "referenceVersion": "Adobe Illustrator CS4 (2008)",
+  "sourceURL": "https://commons.wikimedia.org/wiki/File:Adobe_Illustrator_CS4_icon.png",
+  "generated": false,
+  "note": "Quelle dokumentiert Extraktion aus Adobe CS4. Historisches versionspassendes Motiv, keine KI-Erstellung.",
+  "bundleIDs": [
+   "com.adobe.illustrator"
+  ]
+ }
+]

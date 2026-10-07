@@ -1,0 +1,387 @@
+[
+ {
+  "appID": "contacts",
+  "file": "contacts-256.png",
+  "sha256": "624dd3fd40c6a9f7ed36e1da98c2456341afd664b0f1d17bfb3ab3892ec3686e",
+  "kind": "historical-original",
+  "generated": false,
+  "referenceVersion": "Windows-Kontakte",
+  "windowsEquivalent": "Windows-Kontakte",
+  "preferredFile": "contacts-256.png",
+  "sourceURL": "https://cdn.jsdelivr.net/gh/visnalize/resources@main/icons/win7/Filetypes%2C%20Devices%2C%20Miscellaneous/imageres_181.ico",
+  "nativeSize": [
+   256,
+   256
+  ],
+  "outputSize": [
+   256,
+   256
+  ],
+  "resampling": "none",
+  "sourceSHA256": "6bd383f61a63c50eabb5319d2bfe6f55ce84b98ce5932ec95b62039f2f25a7bd",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · Windows-Kontakte",
+  "note": "",
+  "provenanceLimitation": "Extraktion laut Iconarchiv; nicht selbst aus Microsoft-Installationsmedium extrahiert.",
+  "bundleIDs": [
+   "com.apple.AddressBook"
+  ]
+ },
+ {
+  "appID": "reminders",
+  "file": "reminders-256.png",
+  "sha256": "43077e14b4b56bac7e3f67202e610ae2119876f2dd9d0ba39b2638f5a1a002ae",
+  "kind": "historical-original",
+  "generated": false,
+  "referenceVersion": "Windows Journal",
+  "windowsEquivalent": "Windows Journal",
+  "preferredFile": "reminders-256.png",
+  "sourceURL": "https://cdn.jsdelivr.net/gh/visnalize/resources@main/icons/win7/Windows%20Journal/Journal_104.ico",
+  "nativeSize": [
+   256,
+   256
+  ],
+  "outputSize": [
+   256,
+   256
+  ],
+  "resampling": "none",
+  "sourceSHA256": "b6c59e0d4262edebc95261f15ba82f907745f4f87221689c89e8063ccd1e314a",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · Windows Journal",
+  "note": "Zeitgenössische Notizanwendung; nur inhaltliche Annäherung an Erinnerungen, keine Aufgabenalarme.",
+  "provenanceLimitation": "Extraktion laut Iconarchiv; nicht selbst aus Microsoft-Installationsmedium extrahiert.",
+  "bundleIDs": [
+   "com.apple.reminders"
+  ]
+ },
+ {
+  "appID": "preview",
+  "file": "preview-48.png",
+  "sha256": "13efb189ccc1f0288cdd9179e4262bab568cd86850b49cfcafae53add8dfe3e0",
+  "kind": "historical-original",
+  "generated": false,
+  "referenceVersion": "Windows Live Fotogalerie",
+  "windowsEquivalent": "Windows Live Fotogalerie",
+  "preferredFile": "preview-48.png",
+  "sourceURL": "https://cdn.jsdelivr.net/gh/visnalize/resources@main/icons/win7/Windows%20Live%20Photo%20Gallery/WLXPhotoLibraryResources_238.ico",
+  "nativeSize": [
+   48,
+   48
+  ],
+  "outputSize": [
+   48,
+   48
+  ],
+  "resampling": "none",
+  "sourceSHA256": "941dc7fdb023fd4bfb33589ecdb0c1c7a3e4b68e583f744e7d4e80ad88173d00",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · Windows Live Fotogalerie",
+  "note": "Zeitgenössischer Microsoft-Zusatz aus Windows Live Essentials, nicht ab Werk enthalten. Bildbetrachtung; keine PDF-Funktionsgleichheit.",
+  "provenanceLimitation": "Extraktion laut Iconarchiv; nicht selbst aus Microsoft-Installationsmedium extrahiert.",
+  "bundleIDs": [
+   "com.apple.Preview"
+  ]
+ },
+ {
+  "appID": "textedit",
+  "file": "textedit-256.png",
+  "sha256": "162ceb37617ede0e4f89fbfec375cbeb6fb2f514ad44b1d534f2f27ba07cb079",
+  "kind": "historical-original",
+  "generated": false,
+  "referenceVersion": "WordPad (Windows 7)",
+  "windowsEquivalent": "WordPad (Windows 7)",
+  "preferredFile": "textedit-256.png",
+  "sourceURL": "https://cdn.jsdelivr.net/gh/visnalize/resources@main/icons/win7/Wordpad/wordpad_128.ico",
+  "nativeSize": [
+   256,
+   256
+  ],
+  "outputSize": [
+   256,
+   256
+  ],
+  "resampling": "none",
+  "sourceSHA256": "fbe8a89b43d2e972eef8430c9475955b717b2cbb0db7add9cf62b5d11134ffae",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · WordPad (Windows 7)",
+  "note": "",
+  "provenanceLimitation": "Extraktion laut Iconarchiv; nicht selbst aus Microsoft-Installationsmedium extrahiert.",
+  "bundleIDs": [
+   "com.apple.TextEdit"
+  ]
+ },
+ {
+  "appID": "pages",
+  "file": "pages-256.png",
+  "sha256": "14f8de97bd54a1c2481760b6043a79aa8e986b60b4708c1d0fe39bb7c79172db",
+  "kind": "historical-original",
+  "referenceVersion": "iWork 09; Ressource aus Apple iWork 9.3 Update",
+  "sourceURL": "https://updates.cdn-apple.com/2019/cert/041-88015-20191017-af1b71b1-b454-4779-93ab-ed228dc830b9/iWork_9.3_Update.dmg",
+  "generated": false,
+  "note": "Originale macOS-App-Ressource; im Windows-Theme als historisches App-Motiv verwendet.",
+  "bundleIDs": [
+   "com.apple.Pages",
+   "com.apple.iWork.Pages"
+  ]
+ },
+ {
+  "appID": "numbers",
+  "file": "numbers-256.png",
+  "sha256": "f12346f88e79180151639c98c53f8b26f3d6cbac2e59f519c8b0c525f090dc90",
+  "kind": "historical-original",
+  "referenceVersion": "iWork 09; Ressource aus Apple iWork 9.3 Update",
+  "sourceURL": "https://updates.cdn-apple.com/2019/cert/041-88015-20191017-af1b71b1-b454-4779-93ab-ed228dc830b9/iWork_9.3_Update.dmg",
+  "generated": false,
+  "note": "Originale macOS-App-Ressource; im Windows-Theme als historisches App-Motiv verwendet.",
+  "bundleIDs": [
+   "com.apple.Numbers",
+   "com.apple.iWork.Numbers"
+  ]
+ },
+ {
+  "appID": "keynote",
+  "file": "keynote-256.png",
+  "sha256": "eff5704bc51b9103cc7f090a4922c65df4c44013e71994209b3ee68cb03d6d13",
+  "kind": "historical-original",
+  "referenceVersion": "iWork 09; Ressource aus Apple iWork 9.3 Update",
+  "sourceURL": "https://updates.cdn-apple.com/2019/cert/041-88015-20191017-af1b71b1-b454-4779-93ab-ed228dc830b9/iWork_9.3_Update.dmg",
+  "generated": false,
+  "note": "Originale macOS-App-Ressource; im Windows-Theme als historisches App-Motiv verwendet.",
+  "bundleIDs": [
+   "com.apple.Keynote",
+   "com.apple.iWork.Keynote"
+  ]
+ },
+ {
+  "appID": "word",
+  "file": "word-256.png",
+  "sha256": "1b2f5ba1472b5e20e867ff591e8dca25527c16c779abd0131a3b8dcc718e83b0",
+  "kind": "historical-original",
+  "referenceVersion": "Microsoft Office Word 2007 (Windows), archiviertes Motiv",
+  "generated": false,
+  "sourceURL": "https://archive.org/details/groove_202605",
+  "downloadURL": "https://archive.org/download/groove_202605/word.png",
+  "sourceDimensions": [
+   256,
+   256
+  ],
+  "sourceSHA256": "479a9b83f0194a9406f6b71fe7f6125dd3211a1c1e79f6b025be90162d966748",
+  "method": "Download; nur bei größeren Dateien proportional verkleinert und transparent auf quadratische Fläche gesetzt. Keine KI, keine Hochskalierung.",
+  "provenance": "Sekundärarchiv eines historischen Motivs. Keine nachgewiesene Extraktion aus einer Microsoft-Programmdatei; kann eine digitale Nachzeichnung des Originalmotivs sein.",
+  "historicalCheck": "2007-Motivfamilie: gerundete obere linke Rückplatte und geneigtes Vorderblatt; Abgleich mit zeitgenössischen 48px-Referenzen, soweit vorhanden.",
+  "usageStatus": "unchecked",
+  "bundleIDs": [
+   "com.microsoft.Word"
+  ]
+ },
+ {
+  "appID": "excel",
+  "file": "excel-256.png",
+  "sha256": "acfd795e56c9cd2d7833dcc0a8aaaab34af10d03b32337d84192f2478b1c7a48",
+  "kind": "historical-original",
+  "referenceVersion": "Microsoft Office Excel 2007 (Windows), archiviertes Motiv",
+  "generated": false,
+  "sourceURL": "https://www.pngaaa.com/detail/6909403",
+  "downloadURL": "https://www.pngaaa.com/api-download/6909403",
+  "sourceDimensions": [
+   2019,
+   1925
+  ],
+  "sourceSHA256": "8251b810dc35d0093b87d71c08c8709cd3f6564179bd263ec9bd12bb35d89093",
+  "method": "Download; nur bei größeren Dateien proportional verkleinert und transparent auf quadratische Fläche gesetzt. Keine KI, keine Hochskalierung.",
+  "provenance": "Sekundärarchiv eines historischen Motivs. Keine nachgewiesene Extraktion aus einer Microsoft-Programmdatei; kann eine digitale Nachzeichnung des Originalmotivs sein.",
+  "historicalCheck": "2007-Motivfamilie: gerundete obere linke Rückplatte und geneigtes Vorderblatt; Abgleich mit zeitgenössischen 48px-Referenzen, soweit vorhanden.",
+  "usageStatus": "unchecked",
+  "bundleIDs": [
+   "com.microsoft.Excel"
+  ]
+ },
+ {
+  "appID": "powerpoint",
+  "file": "powerpoint-256.png",
+  "sha256": "aa56fb7fdf739cd4199539ad0b4a6a81f0347a8643f57826e74931a72910ffbd",
+  "kind": "historical-original",
+  "referenceVersion": "Microsoft Office Powerpoint 2007 (Windows), archiviertes Motiv",
+  "generated": false,
+  "sourceURL": "https://archive.org/details/groove_202605",
+  "downloadURL": "https://archive.org/download/groove_202605/powerpoint.png",
+  "sourceDimensions": [
+   256,
+   256
+  ],
+  "sourceSHA256": "9b75c05e53091594121c23697e20b5bc23dd656e046b936bc8a51c23bc1cc6cb",
+  "method": "Download; nur bei größeren Dateien proportional verkleinert und transparent auf quadratische Fläche gesetzt. Keine KI, keine Hochskalierung.",
+  "provenance": "Sekundärarchiv eines historischen Motivs. Keine nachgewiesene Extraktion aus einer Microsoft-Programmdatei; kann eine digitale Nachzeichnung des Originalmotivs sein.",
+  "historicalCheck": "2007-Motivfamilie: gerundete obere linke Rückplatte und geneigtes Vorderblatt; Abgleich mit zeitgenössischen 48px-Referenzen, soweit vorhanden.",
+  "usageStatus": "unchecked",
+  "bundleIDs": [
+   "com.microsoft.Powerpoint"
+  ]
+ },
+ {
+  "appID": "outlook",
+  "file": "outlook-256.png",
+  "sha256": "42d126fc4ec642c078e7fcc659ef75c0b886feebdd48dd9d419e7a3204151fc8",
+  "kind": "historical-original",
+  "referenceVersion": "Microsoft Office Outlook 2007 (Windows), archiviertes Motiv",
+  "generated": false,
+  "sourceURL": "https://www.pngaaa.com/detail/249675",
+  "downloadURL": "https://www.pngaaa.com/api-download/249675",
+  "sourceDimensions": [
+   1058,
+   1002
+  ],
+  "sourceSHA256": "1497e35fdd4d7e2feed64d45829faa0bb3de29f7b283ac964eaf5016c70e7ea6",
+  "method": "Download; nur bei größeren Dateien proportional verkleinert und transparent auf quadratische Fläche gesetzt. Keine KI, keine Hochskalierung.",
+  "provenance": "Sekundärarchiv eines historischen Motivs. Keine nachgewiesene Extraktion aus einer Microsoft-Programmdatei; kann eine digitale Nachzeichnung des Originalmotivs sein.",
+  "historicalCheck": "2007-Motivfamilie: gerundete obere linke Rückplatte und geneigtes Vorderblatt; Abgleich mit zeitgenössischen 48px-Referenzen, soweit vorhanden.",
+  "usageStatus": "unchecked",
+  "bundleIDs": [
+   "com.microsoft.Outlook"
+  ]
+ },
+ {
+  "appID": "onenote",
+  "file": "onenote-256.png",
+  "sha256": "1a0b334c9331216fa56135a433857e239684117ac0d1fe23ca53e5a2ddeda7a0",
+  "kind": "historical-original",
+  "referenceVersion": "Microsoft Office Onenote 2007 (Windows), archiviertes Motiv",
+  "generated": false,
+  "sourceURL": "https://archive.org/details/groove_202605",
+  "downloadURL": "https://archive.org/download/groove_202605/onenote.png",
+  "sourceDimensions": [
+   256,
+   256
+  ],
+  "sourceSHA256": "5bf896d15a877d180969107368eedfdf81a40933cb301a831d9cbe8058749658",
+  "method": "Download; nur bei größeren Dateien proportional verkleinert und transparent auf quadratische Fläche gesetzt. Keine KI, keine Hochskalierung.",
+  "provenance": "Sekundärarchiv eines historischen Motivs. Keine nachgewiesene Extraktion aus einer Microsoft-Programmdatei; kann eine digitale Nachzeichnung des Originalmotivs sein.",
+  "historicalCheck": "2007-Motivfamilie: gerundete obere linke Rückplatte und geneigtes Vorderblatt; Abgleich mit zeitgenössischen 48px-Referenzen, soweit vorhanden.",
+  "usageStatus": "unchecked",
+  "bundleIDs": [
+   "com.microsoft.onenote.mac"
+  ]
+ },
+ {
+  "appID": "chrome",
+  "file": "chrome-256.png",
+  "sha256": "6b4c030b545ebf11a35df4da3aef7b6a499293614c638de667757a1b76fcf8fd",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "generated": false,
+  "provenanceType": "downloaded-historical-redraw",
+  "sourceURL": "https://logos.fandom.com/wiki/Google_Chrome",
+  "sourceFile": "/Users/maik/Downloads/Themes/_sources/chrome2008.png",
+  "note": "Google Chrome 2008–2011, heruntergeladene Vektornachzeichnung des historischen Motivs. Keine eigene KI-Generierung.",
+  "bundleIDs": [
+   "com.google.Chrome"
+  ]
+ },
+ {
+  "appID": "firefox",
+  "file": "firefox-256.png",
+  "sha256": "87d465ade29432389f67a3b5173cc820dde139998a170316e926b8ba85f4abcd",
+  "kind": "historical-original",
+  "referenceVersion": "Mozilla Firefox 3.6, 2010",
+  "sourceURL": "https://archive.mozilla.org/pub/firefox/releases/3.6/mac/en-US/Firefox%203.6.dmg",
+  "method": "firefox.icns aus offizieller Veröffentlichung; Original-512px-Version auf 256px reduziert.",
+  "generated": false,
+  "quality": "original-branding-512-downsampled",
+  "note": "Originales Firefox-Motiv aus dem Mac-Paket derselben Ära; nicht aus einer Windows-EXE.",
+  "bundleIDs": [
+   "org.mozilla.firefox"
+  ]
+ },
+ {
+  "appID": "xcode",
+  "file": "xcode-128.png",
+  "sha256": "6491f5c436fa9d9dfcd213f396b44ca02aa10359ee786b77b049fc7d0ae4d75f",
+  "kind": "historical-original",
+  "referenceVersion": "Mac OS X Snow Leopard – vorhandene historische Darstellung",
+  "generated": false,
+  "note": "Aus bestehendem RetroMac-Assetbestand übernommen, 128 Pixel unvergrößert. Ursprüngliche Downloadquelle nicht dokumentiert; keine bestätigte Extraktion aus Apple-Binaries.",
+  "bundleIDs": [
+   "com.apple.dt.Xcode"
+  ]
+ },
+ {
+  "appID": "iterm2",
+  "file": "iterm2-64.png",
+  "sha256": "f6ba62a0714798a0e371d1ebd0863c37e1cb757dc8c104431b1bcf2cd636ce66",
+  "kind": "historical-theme-asset",
+  "generated": false,
+  "referenceVersion": "Eingabeaufforderung (cmd.exe)",
+  "windowsEquivalent": "Eingabeaufforderung (cmd.exe)",
+  "preferredFile": "iterm2-64.png",
+  "sourceURL": null,
+  "nativeSize": [
+   64,
+   64
+  ],
+  "outputSize": [
+   64,
+   64
+  ],
+  "resampling": "none",
+  "sourceSHA256": "e3dfaf9e8500e4fdeab7a4d733379cb3fbf300b31771963f67fe9c717f399a06",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · Eingabeaufforderung (cmd.exe)",
+  "note": "",
+  "provenanceLimitation": "Bestehendes Theme-Asset; ursprüngliche Extraktion nicht unabhängig belegt.",
+  "bundleIDs": [
+   "com.googlecode.iterm2"
+  ]
+ },
+ {
+  "appID": "spotify",
+  "file": "spotify-256.png",
+  "sha256": "c0adf91f823dff3396aa3a609a16bbd043b032d423b894f6c4dfee06b58f23c6",
+  "kind": "historical-original",
+  "referenceVersion": "Spotify 2008, laut Archivbeschriftung",
+  "page": "https://frutigeraeroarchive.org/icons",
+  "rights": "Nicht abschließend geklärt; Marken- und Rechteinhaber behalten ihre Rechte.",
+  "bundleIDs": [
+   "com.spotify.client"
+  ]
+ },
+ {
+  "appID": "vlc",
+  "file": "vlc-128.png",
+  "sha256": "3e65f53944a23ae6b4c282b17c43295fa8db9f67e5105730ccc262cbf44c880d",
+  "kind": "historical-original",
+  "referenceVersion": "VLC 1.0.0 (2009)",
+  "sourceURL": "https://download.videolan.org/pub/videolan/vlc/1.0.0/vlc-1.0.0.tar.bz2",
+  "generated": false,
+  "note": "Unvergrößerte originale 128-Pixel-Ressource.",
+  "bundleIDs": [
+   "org.videolan.vlc"
+  ]
+ },
+ {
+  "appID": "photoshop",
+  "file": "photoshop-256.png",
+  "sha256": "c83afd4f998a477cb21d51c708baa98ddea44582e62f1b6e7366e62fdf1b9361",
+  "kind": "historical-original",
+  "referenceVersion": "Adobe Photoshop CS3 (2007), archiviertes Icon",
+  "sourceURL": "https://commons.wikimedia.org/wiki/File:Adobe_Photoshop_CS3_icon.png",
+  "generated": false,
+  "note": "256-Pixel-Archivdatei. Autor laut Commons: Adobe; keine eigene KI-Generierung. Herkunft nicht durch Extraktion aus Installer bestätigt.",
+  "bundleIDs": [
+   "com.adobe.Photoshop"
+  ]
+ },
+ {
+  "appID": "illustrator",
+  "file": "illustrator-256.png",
+  "sha256": "7bccdb672363ffa883892722b4194f344c10d8bfa1f81261c362073619cd9ef3",
+  "kind": "historical-original",
+  "referenceVersion": "Adobe Illustrator CS3 (2007), archiviertes Icon",
+  "sourceURL": "https://commons.wikimedia.org/wiki/File:Adobe_Illustrator_CS3_icon.png",
+  "generated": false,
+  "note": "256-Pixel-Archivdatei. Autor laut Commons: Adobe; keine eigene KI-Generierung. Herkunft nicht durch Extraktion aus Installer bestätigt.",
+  "bundleIDs": [
+   "com.adobe.illustrator"
+  ]
+ }
+]

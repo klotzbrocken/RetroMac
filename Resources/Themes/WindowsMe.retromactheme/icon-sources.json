@@ -1,0 +1,30 @@
+[
+ {
+  "appID": "iterm2",
+  "file": "iterm2-32.png",
+  "sha256": "f12d0a87acc47c5de4197289863833c0eb523fe0208247a688d2704f26a46a7a",
+  "kind": "historical-theme-asset",
+  "generated": false,
+  "referenceVersion": "MS-DOS-Eingabeaufforderung",
+  "windowsEquivalent": "MS-DOS-Eingabeaufforderung",
+  "preferredFile": "iterm2-32.png",
+  "sourceURL": null,
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "resampling": "none",
+  "sourceSHA256": "a48f67243b0b0571bf37dcdb9e01d0d7be4dc3c06129d4650d6499f025406204",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · MS-DOS-Eingabeaufforderung",
+  "note": "",
+  "provenanceLimitation": "Bestehendes Theme-Asset; ursprüngliche Extraktion nicht unabhängig belegt.",
+  "bundleIDs": [
+   "com.googlecode.iterm2"
+  ]
+ }
+]
