@@ -117,6 +117,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **No more log file on the Desktop.** The retro dock wrote every show and hide to
   `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with
   the new **Debug logging** switch there, which is off unless you turn it on.
+- **BeOS gets title bars**: the yellow tab, only as wide as the window's title, with the close
+  box on the left and the zoom box on the right; grey on windows behind; a double-click hides
+  the window. Part of the experimental title bars.
 - **The BeOS readme has a real BeOS window**: the yellow tab sits on the frame with the close
   box and the zoom box, and beside it the desktop shows through.
 - **Pac-Man could not start.** A build machine without SDL2_ttf and SDL2_mixer (Homebrew

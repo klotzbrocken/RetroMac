@@ -42,6 +42,7 @@ final class TitleBarOverlayController {
         case win31, win98, luna, aero          // the Windows bars (95, 98 and Me share win98)
         case cde                               // Solaris 8's CDE (dtwm): menu box left, minimise and maximise right
         case photon                            // QNX 6.2.1's Photon: menu box left, minimise, maximise, then close right
+        case beos                              // BeOS R5: the yellow tab, only as wide as its title, close box left, zoom box right
         case snowLights                        // the three lights only (Snow Leopard, Mountain Lion)
         var isBar: Bool { self != .snowLights }
         /// Windows caption buttons cluster on the right; the Mac's close box sits on the left.
@@ -54,7 +55,7 @@ final class TitleBarOverlayController {
             case .platinum, .system7: return .collapse
             case .system6: return nil
             case .win31, .win98, .luna, .aero, .cde, .photon: return .zoom
-            case .aqua, .snowLights: return .minimize
+            case .aqua, .snowLights, .beos: return .minimize   // BeOS: a double-click on the tab hid the window
             }
         }
     }
@@ -133,6 +134,7 @@ final class TitleBarOverlayController {
         case "win31":       return .win31
         case "cde":         return .cde        // Solaris 8
         case "photon":      return .photon     // QNX 6.2.1
+        case "beos":        return .beos
         case "win98":       return .win98      // Windows 95, 98 and Me
         case "winxp":       return .luna
         case "win7":        return .aero
@@ -423,7 +425,7 @@ final class TitleBarOverlayController {
            let uuid = Self.screen(for: info.bounds, screens: screens)?.displayUUID, fullScreenDisplays.contains(uuid) {
             drop(for: info.id); return
         }
-        let frame: NSRect
+        var frame: NSRect
         var lights: [ChromeButtonKind: NSRect] = [:]
         var deadZoneWidth: CGFloat = 0
         let drawStyle = style
@@ -441,6 +443,7 @@ final class TitleBarOverlayController {
             (frame, lights) = Self.lightsFrame(for: info.bounds, offsets: offsets)
         }
         let title = drawStyle.isBar ? title(for: info) : ""
+        if drawStyle == .beos { frame.size.width = Self.beosTabWidth(title, max: frame.width) }
         let icon: NSImage?
         if drawStyle == .platinum {
             icon = Self.classicIcon(for: info.pid)   // the theme's icon, or its generic one
@@ -678,6 +681,7 @@ final class TitleBarOverlayController {
         case .win31:    return 20
         case .cde:      return 20   // measured off Solaris 8: a 1 pt edge and a 19 pt bar
         case .photon:   return 21   // measured off QNX 6.2.1: black and #3F3F3F, then a 19 pt bar
+        case .beos:     return 22
         case .win98:    return 24
         case .luna:     return 30
         case .aero:     return 30
@@ -716,6 +720,13 @@ final class TitleBarOverlayController {
     /// it says. The Platinum bar's own black frame line stands on that hairline — a point out
     /// on each side — or the bar reads as set in from the window under it. Not when the window
     /// border is on: it covers the hairline, and window and bar share the border.
+    /// BeOS's tab is only as wide as the title it carries (with the two boxes), never wider than
+    /// the window; beside it the desktop shows. The panel is cut to it, so a click beside the
+    /// tab reaches whatever is there.
+    static let beosFont = NSFont(name: "Helvetica-Bold", size: 12) ?? .boldSystemFont(ofSize: 12)
+    static func beosTabWidth(_ title: String, max w: CGFloat) -> CGFloat {
+        min(w, max(90, ((title as NSString).size(withAttributes: [.font: beosFont]).width + 54).rounded(.up)))
+    }
     static func barFrame(for bounds: CGRect, style: Style, overhang: CGFloat? = nil) -> NSRect {
         let h = stripHeight(style)
         let overhang = overhang ?? platinumOverhang(for: style)
@@ -762,9 +773,10 @@ final class TitleBarOverlayController {
             guard let g = PrivateWindowAPI.bounds(of: wid) else { forget(wid); return }
             let previous = o.bounds
             o.bounds = g
-            let f: NSRect
+            var f: NSRect
             if o.view.isBarPanel {
                 f = Self.barFrame(for: g, style: style)
+                if style == .beos { f.size.width = Self.beosTabWidth(o.view.currentTitle, max: f.width) }
                 if let patch = o.patch {
                     let d = CGPoint(x: g.minX - previous.minX, y: g.minY - previous.minY)
                     if d != .zero { patch.setFrameOrigin(NSPoint(x: patch.frame.minX + d.x, y: patch.frame.minY - d.y)) }
@@ -1481,7 +1493,12 @@ final class TitleBarOverlayController {
             record.frame.origin = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)
             shaded[wid] = record
             let frame = record.frame
-            if let o = overlays[wid], let style { o.bounds = frame; o.panel.setFrame(Self.barFrame(for: frame, style: style), display: true) }
+            if let o = overlays[wid], let style {
+                o.bounds = frame
+                var f = Self.barFrame(for: frame, style: style)
+                if style == .beos { f.size.width = Self.beosTabWidth(o.view.currentTitle, max: f.width) }
+                o.panel.setFrame(f, display: true)
+            }
             return
         }
         dragTarget = (wid, CGPoint(x: origin.x + delta.x, y: origin.y - delta.y))   // AX is y-down
@@ -1566,6 +1583,7 @@ final class TitleBarOverlayView: NSView {
 
     private var style: TitleBarOverlayController.Style = .platinum
     private var title = ""
+    var currentTitle: String { title }
     private var icon: NSImage?
     private var isFront = true
     private var lights: [ChromeButtonKind: NSRect] = [:]
@@ -1673,6 +1691,14 @@ final class TitleBarOverlayView: NSView {
                 tracker.add(k, r, interactive: true)
                 buttonRects.append((k, r))
             }
+        case .beos:
+            // The close box at the tab's left, the zoom box at its right, both 13 pt.
+            let s: CGFloat = 13, y = ((h - s) / 2).rounded()
+            for (k, r) in [(ChromeButtonKind.close, NSRect(x: 5, y: y, width: s, height: s)),
+                           (.zoom, NSRect(x: w - 5 - s, y: y, width: s, height: s))] {
+                tracker.add(k, r.insetBy(dx: -2, dy: -2), interactive: true)
+                buttonRects.append((k, r))
+            }
         case .photon:
             // Photon, measured off the File Manager: the menu box on the left (one click closes,
             // as with dtwm here), minimise and maximise together on the right, close apart.
@@ -1733,6 +1759,7 @@ final class TitleBarOverlayView: NSView {
         case .win31:      drawWin31(b)
         case .cde:        drawCDE(b)
         case .photon:     drawPhoton(b)
+        case .beos:       drawBeOS(b)
         case .win98:      drawWin98(b)
         case .luna:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .luna)).addClip(); drawLuna(b)
         case .aero:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .aero)).addClip(); drawAero(b)
@@ -1896,6 +1923,46 @@ final class TitleBarOverlayView: NSView {
         let font = NSFont(name: "LucidaGrande", size: 12) ?? .systemFont(ofSize: 12)
         drawCentredTitle(in: NSRect(x: left + 4, y: 5, width: max(0, right - left - 8), height: 15), font: font,
                          color: isFront ? NSColor.fromHex("#000065") : .black)
+    }
+
+    /// BeOS R5's tab: yellow when the window is in front, grey behind, a dark outline on three
+    /// sides and none at the bottom, where it sits on the window. The close box is a raised
+    /// square; the zoom box a small square over a bigger one.
+    private func drawBeOS(_ b: NSRect) {
+        let face = isFront ? NSColor.fromHex("#FFCB00") : NSColor.fromHex("#E8E8E8")
+        let light = isFront ? NSColor.fromHex("#FFEC9C") : NSColor.fromHex("#FFFFFF")
+        let shade = isFront ? NSColor.fromHex("#C89A00") : NSColor.fromHex("#B8B8B8")
+        let edge = NSColor.fromHex("#505050")
+        face.setFill(); b.fill()
+        light.setFill()
+        NSRect(x: 1, y: 1, width: b.width - 2, height: 1).fill()
+        NSRect(x: 1, y: 1, width: 1, height: b.height - 1).fill()
+        shade.setFill(); NSRect(x: b.width - 2, y: 1, width: 1, height: b.height - 1).fill()
+        edge.setFill()
+        NSRect(x: 0, y: 0, width: b.width, height: 1).fill()
+        NSRect(x: 0, y: 0, width: 1, height: b.height).fill()
+        NSRect(x: b.width - 1, y: 0, width: 1, height: b.height).fill()
+        func box(_ r: NSRect, pressed: Bool) {
+            let g = NSGradient(starting: pressed ? shade : light, ending: pressed ? light : face)
+            g?.draw(in: r, angle: 45)
+            edge.setStroke(); NSBezierPath(rect: r.insetBy(dx: 0.5, dy: 0.5)).stroke()
+        }
+        for (k, r) in buttonRects {
+            let pressed = tracker.state(for: k) == .pressed
+            if k == .zoom {
+                box(r, pressed: pressed)
+                box(NSRect(x: r.minX + 2, y: r.minY + 2, width: 6, height: 6), pressed: pressed)
+            } else {
+                box(r, pressed: pressed)
+            }
+        }
+        let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 7
+        let right = (buttonRects.first { $0.0 == .zoom }?.1.minX ?? b.width) - 6
+        let attrs: [NSAttributedString.Key: Any] = [.font: TitleBarOverlayController.beosFont, .foregroundColor: NSColor.black]
+        let s = (title as NSString).size(withAttributes: attrs)
+        let r = NSRect(x: left, y: ((b.height - s.height) / 2).rounded(), width: max(0, right - left), height: s.height)
+        let para = NSMutableParagraphStyle(); para.lineBreakMode = .byTruncatingTail
+        (title as NSString).draw(in: r, withAttributes: attrs.merging([.paragraphStyle: para]) { $1 })
     }
 
     private func drawCDE(_ b: NSRect) {
