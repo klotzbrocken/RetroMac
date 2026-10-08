@@ -99,6 +99,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **The Rescue Desktop report shows RetroMac's icon**, so it is not taken for a message from
   macOS, and has **Don't show this again** for a rescue that simply worked; one that fails or
   needs a permission is still shown. Settings ▸ Shortcuts ▸ Rescue Desktop turns it back on.
+- **Dock reflections follow the icon.** In Snow Leopard a magnified icon kept the small
+  reflection of its resting size, off to one side, and every reflection faded the wrong way: faint
+  under the icon, strongest at the screen edge, where it was cut off. Now the reflection grows
+  with the icon, is brightest right under it and fades out on the shelf. A full Trash reflects
+  as full.
 - **No theme title bar over Reframe**, which draws its own retro window: when Reframe is
   installed it goes on the title-bar exclusion list once. Take it off there to change that.
 - **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.

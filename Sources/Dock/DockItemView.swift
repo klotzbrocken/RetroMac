@@ -3,7 +3,7 @@ import AppKit
 final class DockItemView: NSView {
     let bundleID: String
     private var iconImageView: NSImageView!
-    private var reflectionLayer: CALayer?
+    private(set) var reflectionLayer: CALayer?
     private var trackingArea: NSTrackingArea?
     private var isHovered = false
     private var indicatorLayer: CALayer?
@@ -57,6 +57,20 @@ final class DockItemView: NSView {
 
     func updateIcon(_ image: NSImage) {
         iconImageView.image = image
+        // A new picture (the Trash filling up) gets a new reflection too, not the old one's.
+        reflectionLayer?.sublayers?.first?.contents = Self.mirrored(image, size: iconImageView.frame.size)
+    }
+
+    /// The whole icon upside down. It is drawn when the layer needs it, at the size and
+    /// resolution the layer has then, so a magnified icon's reflection is as sharp as the icon.
+    private static func mirrored(_ image: NSImage, size: NSSize) -> NSImage {
+        NSImage(size: size, flipped: false) { rect in
+            guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+            ctx.translateBy(x: 0, y: rect.height)
+            ctx.scaleBy(x: 1, y: -1)
+            image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+            return true
+        }
     }
 
 
@@ -79,42 +93,39 @@ final class DockItemView: NSView {
         guard theme.icon.reflectionEnabled, !theme.isVertical,
               let image = iconImageView.image else { return }
 
-        let iconRect = iconImageView.frame
-        let reflectionHeight = iconRect.height * 0.45
-        let opacity = theme.icon.reflectionOpacity
+        let mirror = CALayer()
+        mirror.contents = Self.mirrored(image, size: iconImageView.frame.size)
+        // Shows the strip of the mirror image that lies right under the icon, fading downwards.
+        let strip = CALayer()
+        strip.masksToBounds = true
+        strip.opacity = Float(theme.icon.reflectionOpacity)
+        strip.addSublayer(mirror)
+        let fade = CAGradientLayer()
+        // The unit space of a layer starts at the BOTTOM on the Mac: 1 is the edge under the icon.
+        fade.colors = [NSColor.white.cgColor, NSColor.clear.cgColor]
+        fade.startPoint = CGPoint(x: 0.5, y: 1)
+        fade.endPoint = CGPoint(x: 0.5, y: 0)
+        strip.mask = fade
 
-        // Create flipped + faded reflection image
-        let reflectionImage = NSImage(size: NSSize(width: iconRect.width, height: reflectionHeight))
-        reflectionImage.lockFocus()
-        let ctx = NSGraphicsContext.current!.cgContext
-        // Flip vertically
-        ctx.translateBy(x: 0, y: reflectionHeight)
-        ctx.scaleBy(x: 1, y: -1)
-        // Draw the icon scaled into the reflection area (show the bottom portion flipped)
-        image.draw(in: NSRect(x: 0, y: 0, width: iconRect.width, height: iconRect.height),
-                   from: .zero, operation: .sourceOver, fraction: 1.0)
-        reflectionImage.unlockFocus()
+        layer?.insertSublayer(strip, at: 0)
+        reflectionLayer = strip
+        layoutReflection()
+    }
 
-        let refLayer = CALayer()
-        refLayer.contents = reflectionImage
-        refLayer.frame = CGRect(
-            x: iconRect.minX,
-            y: iconRect.minY - reflectionHeight + 2,
-            width: iconRect.width,
-            height: reflectionHeight
-        )
-        refLayer.opacity = Float(opacity)
-
-        // Gradient mask to fade reflection to transparent at the bottom
-        let maskLayer = CAGradientLayer()
-        maskLayer.frame = refLayer.bounds
-        maskLayer.colors = [NSColor.white.cgColor, NSColor.clear.cgColor]
-        maskLayer.startPoint = CGPoint(x: 0.5, y: 0)
-        maskLayer.endPoint = CGPoint(x: 0.5, y: 1)
-        refLayer.mask = maskLayer
-
-        layer?.insertSublayer(refLayer, at: 0)
-        self.reflectionLayer = refLayer
+    /// The reflection follows the icon: as wide as it, as far down as 45 % of its height, but
+    /// never past the bottom of the dock, so the fade ends on the shelf instead of being cut
+    /// off by the screen edge. Called again whenever magnification resizes the item.
+    private func layoutReflection() {
+        guard let strip = reflectionLayer, let mirror = strip.sublayers?.first else { return }
+        let icon = iconImageView.frame
+        let room = superview == nil ? icon.height : frame.minY + icon.minY   // down to the dock's bottom
+        let height = max(0, min(icon.height * 0.45, room))
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        strip.frame = CGRect(x: icon.minX, y: icon.minY - height, width: icon.width, height: height)
+        strip.mask?.frame = strip.bounds
+        mirror.frame = CGRect(x: 0, y: height - icon.height, width: icon.width, height: icon.height)
+        CATransaction.commit()
     }
 
     func setRunningIndicator(visible: Bool, theme: DockThemeConfig) {
@@ -223,6 +234,7 @@ final class DockItemView: NSView {
     /// its frame was computed against the ORIGINAL bounds and would drift left otherwise.
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
+        layoutReflection()
         guard let ind = indicatorLayer, indicatorW > 0 else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -318,6 +330,11 @@ final class DockItemView: NSView {
         } completionHandler: { [weak self] in
             self?.layer?.zPosition = 0
         }
+    }
+
+    override func setFrameOrigin(_ newOrigin: NSPoint) {
+        super.setFrameOrigin(newOrigin)
+        layoutReflection()   // how far down it may reach depends on where the item sits
     }
 
     func applyMagnification(scale: CGFloat, dx: CGFloat, dy: CGFloat) {
