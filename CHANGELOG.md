@@ -126,8 +126,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   dropped them when it moved SDL2 onto SDL3) left an empty game in the app, 2.8.8 included, and
   a click on Pac-Man did nothing. A release build now stops instead, and an app without the game
   hides it rather than offering it.
-- **No theme title bar over Reframe**, which draws its own retro window: when Reframe is
-  installed it goes on the title-bar exclusion list once. Take it off there to change that.
+- **No theme title bar over Reframe or Pac-Man**, which draw their own retro window: each goes
+  on the title-bar exclusion list once (Reframe when it is installed). Take it off there to
+  change that.
 - **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.
 - **WindowShade never loses a window.** A rolled-up window keeps its way back until it is
   really back: an app that does not answer leaves it rolled up, to be unrolled again, and on a

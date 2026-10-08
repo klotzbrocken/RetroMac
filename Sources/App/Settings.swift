@@ -1442,18 +1442,24 @@ final class AppSettings: ObservableObject {
            [switcherHotkeyModifiers, switcherHotkeyModifiers | 0x0200].contains(where: { isRetroMacHotkey(code: switcherHotkeyCode, modifiers: $0) }) {
             switcherHotkeyModifiers = 0
         }
-        // Reframe, our browser, draws its own retro window, so a theme title bar on top would be
-        // a second one. Put on the exclusion list once it is installed; taken off, it stays off.
-        if !defaults.bool(forKey: "reframeTitleBarExcluded"),
-           NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.reframeBundleID) != nil {
-            if !themeTitleBarsExcludedApps.contains(Self.reframeBundleID) {
-                themeTitleBarsExcludedApps.append(Self.reframeBundleID)
+        // Apps of ours that draw their own retro window, so a theme title bar on top would be a
+        // second one: Reframe, our browser, once it is installed, and the bundled Pac-Man, which
+        // draws the theme's frame itself. Each goes on the exclusion list once; taken off, it
+        // stays off.
+        for (id, flag, present) in [
+            (Self.reframeBundleID, "reframeTitleBarExcluded",
+             NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.reframeBundleID) != nil),
+            (Self.pacmanBundleID, "pacmanTitleBarExcluded", true),
+        ] where present && !defaults.bool(forKey: flag) {
+            if !themeTitleBarsExcludedApps.contains(id) {
+                themeTitleBarsExcludedApps.append(id)
                 defaults.set(themeTitleBarsExcludedApps, forKey: "themeTitleBarsExcludedApps")
             }
-            defaults.set(true, forKey: "reframeTitleBarExcluded")
+            defaults.set(true, forKey: flag)
         }
     }
     static let reframeBundleID = "app.myretromac.reframe"
+    static let pacmanBundleID = "com.retromac.demo.pacman"   // as build.sh signs it
 
     func presetForApp(bundleID: String) -> String? {
         Self.preset(for: bundleID, rules: perAppRules, legacy: perAppPresets)
