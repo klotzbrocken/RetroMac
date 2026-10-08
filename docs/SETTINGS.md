@@ -13,19 +13,20 @@ The sidebar has three groups:
 
 | Group | Tabs |
 |---|---|
-| (main) | Shader, Themes, Desktop, Retro Mode |
+| (main) | Themes, Shader, Desktop, Favourite |
 | Surfaces | Camera & Streaming, Games, Crashes |
-| System | Shortcuts, General, Health Check, About |
+| System | General, Shortcuts, Health Check, About |
 
-Two tabs are split into sub-pages: Shader by a "Section" menu (Preset, Look, Where, Per-App,
-Performance, When), Themes and Camera & Streaming by a two-way segmented switch.
+Three tabs are split into sub-pages by a segmented switch: Shader (Presets & Effects, Screen &
+Apps, Performance, On & Off), Themes and Camera & Streaming.
 
 ## What lives where
 
-**Shader** — everything about the effect. Preset: the installed and imported shaders. Look:
-scanline and reflection overlays. Where: the scope (whole screen, wallpaper, desktop) and what
-is hidden while the shader is on. Per-App: rules that switch presets by frontmost app.
-Performance: quality and frame rate. When: running now, on launch, per theme, around sleep.
+**Shader** — everything about the effect. Presets & Effects: the installed and imported
+shaders, and the scanline and reflection overlays. Screen & Apps: the scope (whole screen,
+wallpaper, desktop), what is hidden while the shader is on, and rules that switch presets by
+frontmost app. Performance: quality and frame rate. On & Off: running now, on launch, per
+theme, around sleep.
 
 **Themes** — the selected theme and the retro dock. Behaviour (RetroMac in the Dock, activate
 on launch, boot screens), Dock (on/off, position, per-theme dock styles, indicators, clock),
@@ -38,7 +39,7 @@ the theme files. The second sub-page is the Screensaver.
 reset), the menu bar (tint, Apple logo), desktop icons (show/hide, restore), icon size and
 widgets. Stored per theme.
 
-**Retro Mode** — the favourite look and what to hide in one click.
+**Favourite** (called Retro Mode before 3.0) — the favourite look and what to hide in one click.
 
 **Camera & Streaming** — the virtual camera (scenes, source, shader, lower third) and the
 television bookmarks and tube mode.

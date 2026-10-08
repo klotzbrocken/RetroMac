@@ -83,7 +83,7 @@ More, and the videos, at [myretromac.app](https://myretromac.app).
   the shareware episodes downloaded for you; Warcraft I and II on the bundled Stratagus engine
   with your own game data; an emulator installer and ROM library.
 - **Virtual camera** — the shader on your webcam for Zoom, Meet, Teams and OBS.
-- **Retro Mode** — one click sets theme and shader and hides the modern Mac; one click brings
+- **Favourite** — one click sets theme and shader and hides the modern Mac; one click brings
   it all back. Health Check, wallpaper and Dock restore are built in.
 
 How to use the 3.0 parts: [docs/GUIDE-3.0.md](docs/GUIDE-3.0.md). The full history is in the

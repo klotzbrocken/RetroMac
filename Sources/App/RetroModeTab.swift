@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// Settings for the one-click Retro Mode: pick the favourite look and what to hide.
+/// Settings for Favourite (called Retro Mode before): the look one click puts on, and what it hides.
 struct RetroModeTab: View {
     @ObservedObject private var settings = AppSettings.shared
 
@@ -10,12 +10,12 @@ struct RetroModeTab: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: RMSpacing.section) {
-                Text("Retro Mode applies a favourite look in one click and hides distractions, then restores everything when you turn it off. Toggle it from the wand icon at the top of the menu-bar popover.")
+                Text("Favourite puts on your favourite look in one click and hides distractions, then restores everything when you turn it off. Switch it from the wand icon at the top of the menu-bar popover.")
                     .font(.rmSecondary)
                     .foregroundColor(.rmTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                RMCard(title: "Favourite", bodyPadding: 0) {
+                RMCard(title: "Your favourite look", bodyPadding: 0) {
                     VStack(spacing: 0) {
                         RMRow(label: "Theme") {
                             Picker("", selection: $settings.retroModeTheme) {
@@ -49,7 +49,7 @@ struct RetroModeTab: View {
                 Button {
                     (NSApp.delegate as? AppDelegate)?.toggleRetroMode()
                 } label: {
-                    Label("Toggle Retro Mode now", systemImage: "wand.and.stars")
+                    Label("Switch Favourite now", systemImage: "wand.and.stars")
                 }
                 .buttonStyle(RMPrimaryButtonStyle())
             }

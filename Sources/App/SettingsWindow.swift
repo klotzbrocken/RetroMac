@@ -42,7 +42,7 @@ enum SettingsTab: String, CaseIterable {
         switch self {
         case .dock: return "Themes"
         case .desktop: return "Desktop"
-        case .retroMode: return "Retro Mode"
+        case .retroMode: return "Favourite"
         case .camera: return LicenseManager.shared.label("Camera & Streaming")
         case .games: return "Games"
         case .crashes: return LicenseManager.shared.label("Crashes")
@@ -141,9 +141,9 @@ struct SettingsSidebar: View {
     @ObservedObject private var settings = AppSettings.shared
 
     // Group tabs by section in order
-    private var mainTabs: [SettingsTab] { [.shader, .dock, .desktop, .retroMode] }
+    private var mainTabs: [SettingsTab] { [.dock, .shader, .desktop, .retroMode] }
     private var surfacesTabs: [SettingsTab] { [.camera, .games, .crashes] }
-    private var systemTabs: [SettingsTab] { [.shortcuts, .general, .health, .about] }
+    private var systemTabs: [SettingsTab] { [.general, .shortcuts, .health, .about] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -658,8 +658,7 @@ struct PerAppRulesTab: View {
     @State private var showAppPicker = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: RMSpacing.section) {
+        VStack(spacing: RMSpacing.section) {
                 // Rules list
                 RMCard(
                     title: "Per-app rules",
@@ -755,9 +754,6 @@ struct PerAppRulesTab: View {
                         }
                     }
                 }
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
         }
         .onAppear { refreshInstalledApps() }
     }

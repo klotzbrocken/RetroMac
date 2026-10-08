@@ -9,11 +9,10 @@ enum WelcomePage: Equatable {
     case setupAccessibility
     case coffee
 
-    /// One size for every page here AND for the Setup Assistant, taken from What's New because
-    /// that is the tallest and the least willing to shrink. The two wizards run back to back on
-    /// a first launch, and they used to resize between and between each other, which read as two
-    /// unrelated windows rather than one flow. The sparse pages have more air now; that is the
-    /// trade.
+    /// One size for every page here, taken from What's New because that is the tallest and the
+    /// least willing to shrink. The Setup Assistant shares the width but is shorter
+    /// (`SetupWizardView.windowHeight`): its pages are lists of switches, and at 700 points
+    /// most of them were empty.
     static let windowWidth: CGFloat = 460
     static let windowHeight: CGFloat = 700
 

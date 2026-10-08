@@ -666,7 +666,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             addSubview(quitButton)
 
             // Retro Mode toggle — left of quit (image + tint set in update())
-            retroButton.toolTip = "Retro Mode — hide desktop & apply your favourite"
+            retroButton.toolTip = "Favourite — your favourite look in one click, distractions hidden"
             addSubview(retroButton)
 
             // Floating launcher — left of Retro Mode. It used to be a line at the very bottom
@@ -683,7 +683,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         func update(shaderOn: Bool, presetName: String, statusText: String, retroActive: Bool) {
             let retroConfig = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
             retroButton.image = NSImage(systemSymbolName: retroActive ? "wand.and.stars.inverse" : "wand.and.stars",
-                                        accessibilityDescription: "Retro Mode")?.withSymbolConfiguration(retroConfig)
+                                        accessibilityDescription: "Favourite")?.withSymbolConfiguration(retroConfig)
             retroButton.contentTintColor = retroActive ? .controlAccentColor : .secondaryLabelColor
 
             let floatOn = AppSettings.shared.floatingLauncherEnabled
@@ -1364,21 +1364,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         themesMenu.addItem(offItem)
         themesMenu.addItem(.separator())
 
-        func themeCategory(_ theme: ThemeBundle) -> String {
-            // The manifest's own family first: an Apple theme is under Apple whatever it is
-            // called ("System 7.1 (authentic)" matched none of the name rules below).
-            if theme.config.family?.id == "apple" { return "Apple" }
-            let n = theme.name.lowercased()
-            // Check Unix & Amiga first so "BeOS Classic" isn't caught by the Apple "classic" rule.
-            if n.contains("beos") || n.contains("os/2") || n.contains("warp") || n.contains("sgi")
-                || n.contains("irix") || n.contains("amiga") || n.contains("workbench") { return "Unix & Amiga" }
-            if n.contains("mac os") || n.contains("aqua") || n.contains("snow leopard")
-                || n.contains("mountain lion") || n.contains("platinum") || n.contains("classic") { return "Apple" }
-            if n.contains("windows") { return "Windows" }
-            return "Other"
-        }
-        for category in ["Apple", "Windows", "Unix & Amiga", "Other"] {
-            let inCategory = ThemeManager.shared.availableThemes.filter { themeCategory($0) == category }
+        for category in ThemeManager.categories {
+            let inCategory = ThemeManager.shared.availableThemes.filter { ThemeManager.category(of: $0) == category }
             guard !inCategory.isEmpty else { continue }
             // Each category is its own submenu entry.
             let catItem = NSMenuItem(title: category, action: nil, keyEquivalent: "")

@@ -9,42 +9,40 @@ import UniformTypeIdentifiers
 /// the launch behaviour sat in three other places. Hotkeys and system setup moved out to tabs of
 /// their own; what stays is the effect, from the preset down to when it runs.
 struct ShaderTab: View {
-    @State private var section: ShaderSection = .preset
+    @State private var section: ShaderSection = .effect
 
+    /// Four tabs, each named for what it is about. Preset and Look were one topic in two places,
+    /// and so were Where and Per-App: where the effect draws, and for which app it changes.
     enum ShaderSection: String, CaseIterable, Identifiable {
-        case preset = "Preset"
-        case look = "Look"
-        case scope = "Where"
-        case rules = "Per-App"
+        case effect = "Presets & Effects"
+        case placement = "Screen & Apps"
         case performance = "Performance"
-        case when = "When"
+        case schedule = "On & Off"
         var id: String { rawValue }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Text("Section").font(.rmSecondary).foregroundColor(.rmTextSecondary)
-                Picker("", selection: $section) {
-                    ForEach(ShaderSection.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .labelsHidden().pickerStyle(.menu).frame(width: 180)
-                Spacer()
+            Picker("", selection: $section) {
+                ForEach(ShaderSection.allCases) { Text($0.rawValue).tag($0) }
             }
+            .labelsHidden().pickerStyle(.segmented)
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
 
             Rectangle().fill(Color.rmDivider).frame(height: 1)
 
-            Group {
-                switch section {
-                case .preset:      CustomPresetsSection()
-                case .look:        LookSection()
-                case .scope:       ScopeSection()
-                case .rules:       PerAppRulesTab()
-                case .performance: PerformanceSection()
-                case .when:        WhenSection()
+            ScrollView {
+                VStack(spacing: RMSpacing.section) {
+                    switch section {
+                    case .effect:      CustomPresetsSection(); LookSection()
+                    case .placement:   ScopeSection(); PerAppRulesTab()
+                    case .performance: PerformanceSection()
+                    case .schedule:    WhenSection()
+                    }
                 }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 20)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -57,8 +55,7 @@ private struct PerformanceSection: View {
     @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: RMSpacing.section) {
+        VStack(spacing: RMSpacing.section) {
                 RMCard(title: "Performance", subtitle: "Higher quality uses more GPU.", bodyPadding: 0) {
                     VStack(spacing: 0) {
                         RMRow(label: "Quality", hint: "Balances GPU load against visual fidelity.", isLast: false) {
@@ -110,9 +107,6 @@ private struct PerformanceSection: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-        }
     }
 }
 
@@ -141,8 +135,7 @@ private struct ScopeSection: View {
 
     var body: some View {
         let lock = license.isLicensed ? "" : " \u{1F512}"
-        ScrollView {
-            VStack(spacing: RMSpacing.section) {
+        VStack(spacing: RMSpacing.section) {
                 RMCard(title: "Effect scope",
                        subtitle: license.isLicensed
                             ? "Draw the effect over everything, or only on the wallpaper \u{2014} animated, behind your icons and windows."
@@ -180,9 +173,6 @@ private struct ScopeSection: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-        }
     }
 
     private var divider: some View {
@@ -219,8 +209,7 @@ private struct LookSection: View {
     @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: RMSpacing.section) {
+        VStack(spacing: RMSpacing.section) {
                 RMCard(title: "Overlay effects",
                        subtitle: "Extra layers drawn on top of the shader.",
                        bodyPadding: 0) {
@@ -255,9 +244,6 @@ private struct LookSection: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-        }
     }
 }
 
@@ -293,8 +279,7 @@ private struct WhenSection: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: RMSpacing.section) {
+        VStack(spacing: RMSpacing.section) {
                 RMCard(title: "Running", bodyPadding: 0) {
                     VStack(spacing: 0) {
                         RMRow(label: "Shader",
@@ -360,9 +345,6 @@ private struct WhenSection: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-        }
     }
 }
 
@@ -372,8 +354,7 @@ private struct CustomPresetsSection: View {
     @State private var files: [String] = []
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: RMSpacing.section) {
+        VStack(spacing: RMSpacing.section) {
                 installedCard
 
                 RMCard(title: "Custom presets",
@@ -404,9 +385,6 @@ private struct CustomPresetsSection: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-        }
         .onAppear(perform: refresh)
     }
 

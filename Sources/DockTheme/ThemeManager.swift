@@ -227,6 +227,30 @@ final class ThemeManager {
     }
 
     /// Apple-OS family themes — shown as "Mac OS …".
+    /// The groups theme lists show, in this order: the menu's Themes submenu and the Setup
+    /// Assistant.
+    static let categories = ["Apple", "Windows", "Unix & Amiga", "Other"]
+
+    static func category(of theme: ThemeBundle) -> String {
+        // The manifest's own family first: an Apple theme is under Apple whatever it is called
+        // ("System 7.1 (authentic)" matched none of the name rules below).
+        switch theme.config.family?.id {
+        case "apple": return "Apple"
+        case "microsoft", "windows": return "Windows"
+        case "be", "ibm", "sgi", "amiga", "sun", "qnx", "next": return "Unix & Amiga"
+        case .some: return "Other"
+        case nil: break
+        }
+        let n = theme.name.lowercased()
+        // Check Unix & Amiga first so "BeOS Classic" isn't caught by the Apple "classic" rule.
+        if n.contains("beos") || n.contains("os/2") || n.contains("warp") || n.contains("sgi")
+            || n.contains("irix") || n.contains("amiga") || n.contains("workbench") { return "Unix & Amiga" }
+        if n.contains("mac os") || n.contains("aqua") || n.contains("snow leopard")
+            || n.contains("mountain lion") || n.contains("platinum") || n.contains("classic") { return "Apple" }
+        if n.contains("windows") { return "Windows" }
+        return "Other"
+    }
+
     static func isMacOSTheme(_ name: String) -> Bool {
         let n = name.lowercased()
         return n.hasPrefix("mac os") || n == "mountain lion" || n == "snow leopard"

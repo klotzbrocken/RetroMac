@@ -51,11 +51,13 @@ struct SetupWizardView: View {
 
     // Theme page — which theme to switch to on finish ("" = keep current)
     @State private var selectedTheme: String = ThemeManager.shared.activeTheme?.config.name ?? ""
+    @State private var openThemeGroups: Set<String> = []
 
     /// Called when the user finishes or skips the wizard.
     let onFinish: () -> Void
 
     private static let reframeURL = "https://myretromac.app/reframe"
+    static let windowHeight: CGFloat = 580
 
     var body: some View {
         VStack(spacing: 0) {
@@ -71,9 +73,9 @@ struct SetupWizardView: View {
                 .padding(.horizontal, 22)
                 .padding(.vertical, 12)
         }
-        // Same window as the What's New flow, which runs straight after this one on a first
-        // launch. Two sizes made them read as two unrelated windows instead of one flow.
-        .frame(width: WelcomePage.windowWidth, height: WelcomePage.windowHeight)
+        // Its own height, not What's New's 700: the longest page here (Appearance) ends at about
+        // 500 points, and the rest of that window was empty.
+        .frame(width: WelcomePage.windowWidth, height: Self.windowHeight)
         .onAppear { refreshPermissions() }
     }
 
@@ -425,21 +427,56 @@ struct SetupWizardView: View {
 
     // MARK: - Theme page
 
-    private var themeChoices: [(String, String)] {
-        ThemeManager.shared.availableThemes.map { ($0.config.name, ThemeManager.displayName(for: $0.config.name)) }
+    /// The themes by category, as the menu groups them, each category folded until opened.
+    private var themeGroups: [(category: String, themes: [ThemeBundle])] {
+        ThemeManager.categories.compactMap { category in
+            let themes = ThemeManager.shared.availableThemes
+                .filter { ThemeManager.category(of: $0) == category }
+                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            return themes.isEmpty ? nil : (category, themes)
+        }
     }
 
     private var themePage: some View {
         pageScaffold(icon: "paintbrush.pointed.fill", tint: .indigo, title: "Choose a theme",
                      subtitle: "Which look should RetroMac start with? You can switch any time from the menu.") {
-            Picker("", selection: $selectedTheme) {
-                Text("Keep current / none").tag("")
-                ForEach(themeChoices, id: \.0) { name, display in
-                    Text(display).tag(name)
+            themeChoice("", "Keep current / none")
+            ForEach(themeGroups, id: \.category) { group in
+                DisclosureGroup(isExpanded: Binding(
+                    get: { openThemeGroups.contains(group.category) },
+                    set: { open in
+                        if open { openThemeGroups.insert(group.category) } else { openThemeGroups.remove(group.category) }
+                    })) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(group.themes, id: \.name) { theme in
+                            themeChoice(theme.config.name, ThemeManager.displayName(for: theme.config.name))
+                        }
+                    }
+                    .padding(.leading, 4)
+                } label: {
+                    Text("\(group.category)  (\(group.themes.count))").font(.system(size: 13, weight: .semibold))
                 }
             }
-            .labelsHidden().pickerStyle(.inline)
         }
+        .onAppear {
+            // The category of the theme that is on starts open, so the current choice shows.
+            if let current = ThemeManager.shared.activeTheme { openThemeGroups.insert(ThemeManager.category(of: current)) }
+        }
+    }
+
+    /// One theme as a radio line.
+    private func themeChoice(_ name: String, _ title: String) -> some View {
+        Button { selectedTheme = name } label: {
+            HStack(spacing: 8) {
+                Image(systemName: selectedTheme == name ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(selectedTheme == name ? Color.accentColor : .secondary)
+                Text(title)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+            .padding(.vertical, 3)
+        }
+        .buttonStyle(.plain)
     }
 
     /// Applied when the user finishes: switch to the chosen theme and add the requested game
@@ -679,7 +716,7 @@ final class SetupWizardWindowController: NSObject, NSWindowDelegate {
         let hosting = NSHostingView(rootView: view)
         let win = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: WelcomePage.windowWidth,
-                                height: WelcomePage.windowHeight),
+                                height: SetupWizardView.windowHeight),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
         win.title = "RetroMac Setup Assistant"

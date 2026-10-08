@@ -107,6 +107,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Amiga Workbench and SGI IRIX hide the Mac's menu bar**, as the Windows themes do. Their
   own bars sit at the top of the screen (Workbench's title bar with its clock, IRIX's Toolchest
   and Shelf), and the menu bar covered them.
+- **Settings are easier to find.** Themes comes first in the sidebar, General before Shortcuts.
+  The Shader settings are four tabs instead of a Section menu: Presets & Effects, Screen & Apps,
+  Performance, On & Off. **Retro Mode is called Favourite** now, which is what it is: your
+  favourite look in one click.
+- **The Setup Assistant is shorter** (580 instead of 700 points), and its theme list is grouped
+  by Apple, Windows, Unix & Amiga and Other, folded until opened. The menu's Themes submenu
+  now files Solaris, QNX and NeXTSTEP under Unix & Amiga instead of Other.
 - **No theme title bar over Reframe**, which draws its own retro window: when Reframe is
   installed it goes on the title-bar exclusion list once. Take it off there to change that.
 - **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.
