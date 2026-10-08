@@ -274,7 +274,13 @@
     "com.seriflabs.affinityphoto": "affinityphoto-256.png",
     "com.seriflabs.affinitypublisher2": "affinitypublisher-256.png",
     "com.seriflabs.affinitypublisher": "affinitypublisher-256.png",
-    "com.figma.Desktop": "figma-256.png"
+    "com.figma.Desktop": "figma-256.png",
+    "com.apple.Keynote": "keynote-256.png",
+    "com.apple.iWork.Keynote": "keynote-256.png",
+    "com.apple.Pages": "pages-256.png",
+    "com.apple.iWork.Pages": "pages-256.png",
+    "com.apple.Numbers": "numbers-256.png",
+    "com.apple.iWork.Numbers": "numbers-256.png"
   },
   "screensaver": "flying-toasters",
   "splashVideo": "boot.mp4",

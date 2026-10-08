@@ -418,5 +418,50 @@
    "com.figma.Desktop"
   ],
   "visualReview": "passed (Maik, 2026-10-07)"
+ },
+ {
+  "appID": "keynote",
+  "file": "keynote-256.png",
+  "sha256": "b9b9825fa5f0f1e787b1bd9c8508cfce6f8a0c66b31d64c262dff18c975cc5fc",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "deliveredFile": "Mac OS 9 (authentic)/MacOS9 Keynote.jpeg",
+  "processing": "JPEG 2048 px ohne Alpha: weißer Rand freigestellt (Flutfüllung vom Rand, Schwelle 238, 2 px eingezogen), auf 256 px verkleinert (Lanczos)",
+  "provenanceType": "Stiladaption · von Maik nachgeliefert 2026-10-08",
+  "visualReview": "passed (Maik, 2026-10-08)",
+  "bundleIDs": [
+   "com.apple.Keynote",
+   "com.apple.iWork.Keynote"
+  ]
+ },
+ {
+  "appID": "pages",
+  "file": "pages-256.png",
+  "sha256": "2c828b2e8e78962901471daf9fdef53944f3e2435e3bad83530d9e5ee7d50c42",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "deliveredFile": "Mac OS 9 (authentic)/MacOS9 Pages.jpeg",
+  "processing": "JPEG 2048 px ohne Alpha: weißer Rand freigestellt (Flutfüllung vom Rand, Schwelle 238, 2 px eingezogen), auf 256 px verkleinert (Lanczos)",
+  "provenanceType": "Stiladaption · von Maik nachgeliefert 2026-10-08",
+  "visualReview": "passed (Maik, 2026-10-08)",
+  "bundleIDs": [
+   "com.apple.Pages",
+   "com.apple.iWork.Pages"
+  ]
+ },
+ {
+  "appID": "numbers",
+  "file": "numbers-256.png",
+  "sha256": "5bfbbd8effc12e97ce6b535f7abfb0dfd6a06d25e90dec9d826774f96e6c604e",
+  "kind": "era-adaptation",
+  "referenceVersion": "Stiladaption",
+  "deliveredFile": "Mac OS 9 (authentic)/MacOS9 Numbers.jpeg",
+  "processing": "JPEG 2048 px ohne Alpha: weißer Rand freigestellt (Flutfüllung vom Rand, Schwelle 238, 2 px eingezogen), auf 256 px verkleinert (Lanczos)",
+  "provenanceType": "Stiladaption · von Maik nachgeliefert 2026-10-08",
+  "visualReview": "passed (Maik, 2026-10-08)",
+  "bundleIDs": [
+   "com.apple.Numbers",
+   "com.apple.iWork.Numbers"
+  ]
  }
 ]
