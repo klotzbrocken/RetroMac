@@ -241,6 +241,18 @@ if [ -d "vendor/pacman/src" ] && [ -d "/opt/homebrew/include/SDL2" ]; then
 PLIST
         command -v dylibbundler >/dev/null 2>&1 && \
             dylibbundler -of -cd -b -x "$PAC_C/MacOS/pacman" -d "$PAC_C/Frameworks" -p @executable_path/../Frameworks >/dev/null 2>&1
+        # Homebrew's SDL2 is sdl2-compat now, which loads SDL3 at run time (dlopen, so dylibbundler
+        # cannot see it). It looks for @loader_path/libSDL3.dylib first: put it there.
+        if [ -f "$PAC_C/Frameworks/libSDL2-2.0.0.dylib" ] && [ -f /opt/homebrew/opt/sdl3/lib/libSDL3.0.dylib ]; then
+            cp /opt/homebrew/opt/sdl3/lib/libSDL3.0.dylib "$PAC_C/Frameworks/libSDL3.dylib"
+            chmod u+w "$PAC_C/Frameworks/libSDL3.dylib"
+            install_name_tool -id @loader_path/libSDL3.dylib "$PAC_C/Frameworks/libSDL3.dylib" 2>/dev/null
+        fi
+        # Nothing may point into Homebrew any more, or the game only starts on a Mac that has it.
+        if otool -L "$PAC_C/MacOS/pacman" "$PAC_C/Frameworks/"*.dylib 2>/dev/null | grep -q '/opt/homebrew'; then
+            echo "  ⚠ Pac-Man still links Homebrew libraries (brew install dylibbundler) — it runs only on this Mac"
+            [ "$MODE" = "release" ] && { echo "❌ A release must not ship a Pac-Man that needs Homebrew."; exit 1; }
+        fi
         for dy in "$PAC_C/Frameworks/"*.dylib; do [ -f "$dy" ] && codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$dy"; done
         codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$PAC_C/MacOS/pacman"
         codesign --force --sign "$SIGN_ID" $SIGN_FLAGS --identifier "com.retromac.demo.pacman" "$PAC_APP"
