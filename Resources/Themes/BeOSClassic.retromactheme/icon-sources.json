@@ -1,0 +1,159 @@
+{
+ "set": "BeOS icons by StudioTwentyEight (Mac version: Matthew McClintock, Windows conversion: KoL)",
+ "sources": [
+  "http://www.studiotwentyeight.net",
+  "http://mc.clintock.com/first_floor/study_1/desk/computer_projects/icons/index.php"
+ ],
+ "license": "Design Science License, http://www.dsl.org/copyleft/dsl.txt",
+ "note": "Also the source of the theme's earlier app icons (finder, safari, mail, photos, messages, notes, calendar, settings, music, terminal, trash, generic). Not from this set: appfolder.png, beos_tv.png, cpu.png.",
+ "icons": [
+  {
+   "file": "acrobat.png",
+   "sourceFile": "png/128/BeOS_Acrobat.png",
+   "bundleIDs": [
+    "com.adobe.Acrobat.Pro",
+    "com.adobe.Reader"
+   ]
+  },
+  {
+   "file": "audioserver.png",
+   "sourceFile": "png/128/BeOS_Audio_server.png",
+   "bundleIDs": [
+    "com.apple.audio.AudioMIDISetup"
+   ]
+  },
+  {
+   "file": "bezilla.png",
+   "sourceFile": "png/128/BeZilla.png",
+   "bundleIDs": [
+    "org.mozilla.firefox"
+   ]
+  },
+  {
+   "file": "clock.png",
+   "sourceFile": "png/128/BeOS_clock.png",
+   "bundleIDs": [
+    "com.apple.clock"
+   ]
+  },
+  {
+   "file": "codycam.png",
+   "sourceFile": "png/128/CodyCam.png",
+   "bundleIDs": [
+    "com.apple.PhotoBooth"
+   ]
+  },
+  {
+   "file": "diskprobe.png",
+   "sourceFile": "png/128/disk_probe.png",
+   "bundleIDs": [
+    "com.apple.DiskUtility"
+   ]
+  },
+  {
+   "file": "font.png",
+   "sourceFile": "png/128/BeOS_font.png",
+   "bundleIDs": [
+    "com.apple.FontBook"
+   ]
+  },
+  {
+   "file": "globe.png",
+   "sourceFile": "png/128/Globe.png",
+   "bundleIDs": [
+    "com.apple.Maps"
+   ]
+  },
+  {
+   "file": "home.png",
+   "sourceFile": "png/128/BeOS_Home.png",
+   "bundleIDs": [
+    "com.apple.Home"
+   ]
+  },
+  {
+   "file": "info.png",
+   "sourceFile": "png/128/BeOS_info.png",
+   "bundleIDs": [
+    "com.apple.SystemProfiler"
+   ]
+  },
+  {
+   "file": "installer.png",
+   "sourceFile": "png/128/installer.png",
+   "bundleIDs": [
+    "com.apple.installer"
+   ]
+  },
+  {
+   "file": "library.png",
+   "sourceFile": "png/128/Library.png",
+   "bundleIDs": [
+    "com.apple.iBooksX"
+   ]
+  },
+  {
+   "file": "lock.png",
+   "sourceFile": "png/128/BeOS_lock.png",
+   "bundleIDs": [
+    "com.apple.keychainaccess"
+   ]
+  },
+  {
+   "file": "notes.png",
+   "sourceFile": "png/128/BeOS_Stickies.png",
+   "bundleIDs": [
+    "com.apple.Stickies"
+   ]
+  },
+  {
+   "file": "people.png",
+   "sourceFile": "png/128/BeOS_people.png",
+   "bundleIDs": [
+    "com.apple.AddressBook"
+   ]
+  },
+  {
+   "file": "pulse.png",
+   "sourceFile": "png/128/BeOS_Pulse.png",
+   "bundleIDs": [
+    "com.apple.ActivityMonitor"
+   ]
+  },
+  {
+   "file": "terminal.png",
+   "sourceFile": "png/128/BeOS_terminal.png",
+   "bundleIDs": [
+    "com.googlecode.iterm2"
+   ]
+  },
+  {
+   "file": "tv.png",
+   "sourceFile": "png/128/BeOS_TV.png",
+   "bundleIDs": [
+    "com.apple.TV"
+   ]
+  },
+  {
+   "file": "video.png",
+   "sourceFile": "png/128/BeOS_Video.png",
+   "bundleIDs": [
+    "com.apple.QuickTimePlayerX"
+   ]
+  },
+  {
+   "file": "write.png",
+   "sourceFile": "png/128/BeOS_write.png",
+   "bundleIDs": [
+    "com.apple.TextEdit"
+   ]
+  },
+  {
+   "file": "zip.png",
+   "sourceFile": "png/128/BeOS_Zip_archive.png",
+   "bundleIDs": [
+    "com.apple.archiveutility"
+   ]
+  }
+ ]
+}
