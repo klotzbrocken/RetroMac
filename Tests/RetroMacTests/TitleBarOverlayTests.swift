@@ -52,7 +52,14 @@ final class TitleBarOverlayTests: XCTestCase {
             XCTAssertEqual(style?.isBar, false, "\(key) should be lights only")
             XCTAssertEqual(TitleBarOverlayController.stripHeight(style!), 0)
         }
-        XCTAssertNil(TitleBarOverlayController.style(for: "beos"))
+        XCTAssertEqual(TitleBarOverlayController.style(for: "beos"), .beos)
+        XCTAssertNil(TitleBarOverlayController.style(for: "default"), "a chrome without a bar of its own runs none")
+        // BeOS's tab is as wide as its title, never as wide as a wide window, never wider than a narrow one.
+        let short = TitleBarOverlayController.beosTabWidth("Finder", max: 800)
+        let long = TitleBarOverlayController.beosTabWidth("A much longer window title for the tab", max: 800)
+        XCTAssertLessThan(short, long)
+        XCTAssertLessThan(long, 800)
+        XCTAssertEqual(TitleBarOverlayController.beosTabWidth("A much longer window title for the tab", max: 120), 120)
         XCTAssertEqual(TitleBarOverlayController.stripHeight(.platinum), 22, "Platinum's own height, nothing to cover any more")
         XCTAssertEqual(TitleBarOverlayController.stripHeight(.aqua), 23, "10.0's bar: edge, 21 pinstripes, the line under")
     }
