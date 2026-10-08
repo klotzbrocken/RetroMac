@@ -936,6 +936,11 @@ final class AppSettings: ObservableObject {
     }
 
     /// Rescue Desktop (Lastenheft 3.0, RET-01): ⌃⌥⌘R by default.
+    /// The report after Rescue Desktop. Turned off with its "Don't show this again"; a rescue
+    /// that fails or needs a permission still shows it.
+    @Published var rescueReportShown: Bool {
+        didSet { defaults.set(rescueReportShown, forKey: "rescueReportShown") }
+    }
     @Published var rescueHotkeyCode: UInt32 {
         didSet { defaults.set(rescueHotkeyCode, forKey: "rescueHotkeyCode") }
     }
@@ -1385,6 +1390,7 @@ final class AppSettings: ObservableObject {
         exposeHotkeyCode = defaults.object(forKey: "exposeHotkeyCode") as? UInt32 ?? 0x65
         exposeHotkeyModifiers = defaults.object(forKey: "exposeHotkeyModifiers") as? UInt32 ?? 0x1000
         exposeAppHotkeyCode = defaults.object(forKey: "exposeAppHotkeyCode") as? UInt32 ?? 0x6D
+        rescueReportShown = defaults.object(forKey: "rescueReportShown") as? Bool ?? true
         rescueHotkeyCode = defaults.object(forKey: "rescueHotkeyCode") as? UInt32 ?? 0x0F   // R
         rescueHotkeyModifiers = defaults.object(forKey: "rescueHotkeyModifiers") as? UInt32 ?? 0x1900   // ⌃⌥⌘
         switcherHotkeyCode = defaults.object(forKey: "switcherHotkeyCode") as? UInt32 ?? 0x30   // Tab

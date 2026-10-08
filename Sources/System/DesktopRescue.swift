@@ -121,13 +121,19 @@ final class DesktopRescue {
             // macOS only changes the picture of the Space on screen; the others follow when shown.
             let pending = ThemeManager.shared.pendingWallpaperSpaces
             if pending > 0 {
-                self.add(.skipped, "\(pending) other Space\(pending == 1 ? "" : "s") get\(pending == 1 ? "s" : "") its own wallpaper back when you switch to it.")
+                self.add(.skipped, pending == 1
+                    ? "1 other Space gets its own wallpaper back when you switch to it."
+                    : "\(pending) other Spaces get their own wallpaper back when you switch to them.")
             }
             self.showReport(finished: true)
         }
     }
 
     private func showReport(finished: Bool) {
+        // "Don't show this again" covers a rescue that simply worked, not one the user must act on.
+        let quiet = !AppSettings.shared.rescueReportShown && !needsAccessibility
+            && !lines.contains { $0.status == .failed }
+        if quiet { panel?.orderOut(nil); return }
         if panel == nil { panel = RescueReportPanel() }
         panel?.update(lines: lines, finished: finished, needsAccessibility: needsAccessibility)
         panel?.present()
@@ -222,6 +228,7 @@ final class DesktopRescue {
 private final class RescueReportPanel: NSPanel {
     private let text = NSTextField(wrappingLabelWithString: "")
     private let accessibility = NSButton(title: "Open Accessibility Settings", target: nil, action: nil)
+    private let dontShow = NSButton(checkboxWithTitle: "Don\u{2019}t show this again", target: nil, action: nil)
 
     init() {
         super.init(contentRect: NSRect(x: 0, y: 0, width: 440, height: 200),
@@ -236,17 +243,30 @@ private final class RescueReportPanel: NSPanel {
         accessibility.action = #selector(openAccessibility)
         let ok = NSButton(title: "OK", target: self, action: #selector(dismiss))
         ok.keyEquivalent = "\r"
+        dontShow.target = self
+        dontShow.action = #selector(toggleDontShow)
+        // RetroMac's icon, so the report is not taken for a message from macOS or another app.
+        let icon = NSImageView(image: NSApp.applicationIconImage)
+        icon.imageScaling = .scaleProportionallyUpOrDown
         let buttons = NSStackView(views: [accessibility, ok])
         let container = NSView()
-        for v in [text, buttons] as [NSView] { v.translatesAutoresizingMaskIntoConstraints = false; container.addSubview(v) }
+        for v in [icon, text, dontShow, buttons] as [NSView] { v.translatesAutoresizingMaskIntoConstraints = false; container.addSubview(v) }
         NSLayoutConstraint.activate([
+            icon.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
+            icon.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            icon.widthAnchor.constraint(equalToConstant: 64),
+            icon.heightAnchor.constraint(equalToConstant: 64),
             text.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
-            text.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            text.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: 16),
             text.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
             text.widthAnchor.constraint(equalToConstant: 400),
+            text.bottomAnchor.constraint(greaterThanOrEqualTo: icon.bottomAnchor),
             buttons.topAnchor.constraint(equalTo: text.bottomAnchor, constant: 16),
             buttons.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
             buttons.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16),
+            dontShow.leadingAnchor.constraint(equalTo: icon.leadingAnchor),
+            dontShow.centerYAnchor.constraint(equalTo: buttons.centerYAnchor),
+            dontShow.trailingAnchor.constraint(lessThanOrEqualTo: buttons.leadingAnchor, constant: -12),
         ])
         contentView = container
     }
@@ -256,6 +276,7 @@ private final class RescueReportPanel: NSPanel {
                             : "Still working on the windows — one app is slow to answer."
         text.stringValue = ([head, ""] + lines.map { "\($0.status.rawValue)  \($0.text)" }).joined(separator: "\n")
         accessibility.isHidden = !needsAccessibility
+        dontShow.state = AppSettings.shared.rescueReportShown ? .off : .on
         setContentSize(contentView?.fittingSize ?? frame.size)
     }
 
@@ -266,6 +287,8 @@ private final class RescueReportPanel: NSPanel {
     }
 
     @objc private func dismiss() { orderOut(nil) }
+
+    @objc private func toggleDontShow() { AppSettings.shared.rescueReportShown = dontShow.state == .off }
 
     @objc private func openAccessibility() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {

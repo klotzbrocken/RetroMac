@@ -34,7 +34,7 @@ struct ShortcutsTab: View {
                     : "Another app already uses this shortcut, so it does nothing here. Pick another one.",
                 hotkeyCode: settings.rescueHotkeyCode,
                 hotkeyModifiers: settings.rescueHotkeyModifiers,
-                isLast: true,
+                isLast: false,
                 onSet: { code, mods in
                     guard !settings.isRetroMacHotkey(code: code, modifiers: mods),
                           !(code == settings.switcherHotkeyCode && [settings.switcherHotkeyModifiers, settings.switcherHotkeyModifiers | UInt32(shiftKey)].contains(mods))
@@ -49,6 +49,11 @@ struct ShortcutsTab: View {
                     AppDelegate.shared?.registerHotkey()
                 }
             )
+            RMRow(label: "Show the report",
+                  hint: "What was done, after each rescue. One that fails or needs a permission is always shown.",
+                  isLast: true) {
+                Toggle("", isOn: $settings.rescueReportShown).labelsHidden().toggleStyle(.switch)
+            }
         }
     }
 

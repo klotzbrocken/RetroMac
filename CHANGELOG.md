@@ -96,6 +96,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   were on, and turning the theme off gave only that Space its picture back; the others kept the
   theme's for good. Now each Space shows the theme's picture once you switch to it, and gets its
   own picture back the same way, the one it had, not one picture for the whole screen.
+- **The Rescue Desktop report shows RetroMac's icon**, so it is not taken for a message from
+  macOS, and has **Don't show this again** for a rescue that simply worked; one that fails or
+  needs a permission is still shown. Settings ▸ Shortcuts ▸ Rescue Desktop turns it back on.
 - **No theme title bar over Reframe**, which draws its own retro window: when Reframe is
   installed it goes on the title-bar exclusion list once. Take it off there to change that.
 - **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.
