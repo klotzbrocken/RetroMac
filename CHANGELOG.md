@@ -117,6 +117,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **No more log file on the Desktop.** The retro dock wrote every show and hide to
   `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with
   the new **Debug logging** switch there, which is off unless you turn it on.
+- **The BeOS readme has a real BeOS window**: the yellow tab sits on the frame with the close
+  box and the zoom box, and beside it the desktop shows through.
+- **Pac-Man could not start.** A build machine without SDL2_ttf and SDL2_mixer (Homebrew
+  dropped them when it moved SDL2 onto SDL3) left an empty game in the app, 2.8.8 included, and
+  a click on Pac-Man did nothing. A release build now stops instead, and an app without the game
+  hides it rather than offering it.
 - **No theme title bar over Reframe**, which draws its own retro window: when Reframe is
   installed it goes on the title-bar exclusion list once. Take it off there to change that.
 - **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.

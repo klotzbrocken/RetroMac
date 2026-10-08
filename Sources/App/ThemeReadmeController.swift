@@ -56,6 +56,10 @@ final class ThemeReadmeController: NSObject, WKScriptMessageHandler, WKNavigatio
             // visible bar: make the native title bar transparent + full-height content, and hide the
             // native title text so it does not stack a second (Aqua) bar on top of the themed one.
             win.titlebarAppearsTransparent = true
+            // See-through where the page paints nothing: BeOS's tab is only as wide as its title,
+            // and beside it the desktop shows, not a grey window background.
+            win.isOpaque = false
+            win.backgroundColor = .clear
             win.titleVisibility = .hidden
             win.isMovableByWindowBackground = true
             // No Aqua traffic lights over a Win98/XP/NeXT title bar — the page draws its own chrome.

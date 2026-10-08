@@ -6,10 +6,16 @@
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; }
   body { background:#6f6f6f; font-family:"Helvetica Neue", "Swis721", Helvetica, Arial, sans-serif; color:#222; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
-  .win { max-width:640px; margin:0 auto; background:#d8d8d0; border:1px solid #888; box-shadow:0 10px 34px rgba(0,0,0,.38); border-radius:0 6px 6px 6px; }
-  .titlebar { background:#e8c400;color:#222;padding:5px 12px;font-size:13px;font-weight:700;border-radius:6px 6px 0 0;display:inline-block;margin:8px 0 0 8px; }
-  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
-  .body { padding:22px 26px 26px; }
+  /* A BeOS window: the yellow tab sits ON the frame, only as wide as the title, with the close
+     box at its left and the zoom box at its right; beside it you see what is behind the window. */
+  .win { max-width:640px; margin:0 auto; background:transparent; border:none; display:flex; flex-direction:column; }
+  .titlebar { align-self:flex-start; display:flex; align-items:center; gap:9px; height:22px; padding:0 6px;
+              background:linear-gradient(#ffe766,#ffcb00 55%,#e6b400); color:#000; font-size:12px; font-weight:700;
+              border:1px solid #5c4b00; border-bottom:none; box-shadow:inset 1px 1px 0 #fff3a8; }
+  .tb-box { width:11px; height:11px; border:1px solid #5c4b00; background:linear-gradient(135deg,#fff6c4,#e6b400); box-shadow:inset 1px 1px 0 #fffbe0; padding:0; cursor:default; }
+  .tb-zoom { position:relative; }
+  .tb-zoom::after { content:""; position:absolute; left:1px; top:1px; width:5px; height:5px; border:1px solid #5c4b00; background:#ffe766; }
+  .body { flex:1; padding:22px 26px 26px; background:#d8d8d0; border:1px solid #555; box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 0 #9a9a94; }
   .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
   .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border-radius:8px; }
   .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#222; }
@@ -30,7 +36,7 @@
 </style></head>
 <body>
   <div class="win">
-    <div class="titlebar"><span class="tb-title">BeOS</span></div>
+    <div class="titlebar"><button class="tb-box" data-readme-close aria-label="Close" onclick="try{window.webkit.messageHandlers.readmeClose.postMessage(1)}catch(e){}"></button><span class="tb-title">BeOS</span><span class="tb-box tb-zoom"></span></div>
     <div class="body">
       <div class="hero">
         <img src="appIcon.png" alt="BeOS">

@@ -246,10 +246,15 @@ PLIST
         codesign --force --sign "$SIGN_ID" $SIGN_FLAGS --identifier "com.retromac.demo.pacman" "$PAC_APP"
         echo "  ✓ Pac-Man demo built & embedded"
     else
-        echo "  ⚠ Pac-Man demo build failed (see /tmp/pacman_build.log) — skipping"
+        # No empty bundle left behind: the app takes an existing Pacman.app for a playable game,
+        # and 2.8.8 shipped one with nothing in it after Homebrew dropped sdl2_ttf/sdl2_mixer.
+        rm -rf "$PAC_APP"
+        echo "  ⚠ Pac-Man demo build failed (see /tmp/pacman_build.log). Missing headers usually mean: brew install sdl2_ttf sdl2_mixer"
+        [ "$MODE" = "release" ] && { echo "❌ A release must not ship without Pac-Man."; exit 1; }
     fi
 else
     echo "  ⚠ SDL2/vendor sources missing — Pac-Man demo not bundled"
+    [ "$MODE" = "release" ] && { echo "❌ A release must not ship without Pac-Man."; exit 1; }
 fi
 
 # --- Warcraft I + II via Stratagus (GPL-2 engine, vendored as submodules) ---
