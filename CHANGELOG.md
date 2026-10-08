@@ -114,6 +114,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **The Setup Assistant is shorter** (580 instead of 700 points), and its theme list is grouped
   by Apple, Windows, Unix & Amiga and Other, folded until opened. The menu's Themes submenu
   now files Solaris, QNX and NeXTSTEP under Unix & Amiga instead of Other.
+- **No more log file on the Desktop.** The retro dock wrote every show and hide to
+  `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with
+  the new **Debug logging** switch there, which is off unless you turn it on.
 - **No theme title bar over Reframe**, which draws its own retro window: when Reframe is
   installed it goes on the title-bar exclusion list once. Take it off there to change that.
 - **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.

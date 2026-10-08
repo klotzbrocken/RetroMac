@@ -48,6 +48,7 @@ struct DiagnosticsSectionView: View {
 
 struct AboutTab: View {
     @ObservedObject private var license = LicenseManager.shared
+    @ObservedObject private var settings = AppSettings.shared
     @State private var keyInput: String = ""
     @State private var activationMessage: String?
     @State private var activationSuccess: Bool?
@@ -527,6 +528,10 @@ struct AboutTab: View {
 
                 Section("Diagnostics") {
                     Text("Captures the app's console output (display matching, screen-capture errors, dock, etc.). Reproduce a problem, then Copy or Save the report and send it over.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Toggle("Debug logging", isOn: $settings.debugLogging)
+                    Text("Adds detailed lines to this log, such as every time the retro dock shows or hides and why. Off unless you are tracking down a problem.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     DiagnosticsSectionView()

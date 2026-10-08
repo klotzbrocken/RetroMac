@@ -936,6 +936,11 @@ final class AppSettings: ObservableObject {
     }
 
     /// Rescue Desktop (Lastenheft 3.0, RET-01): ⌃⌥⌘R by default.
+    /// Detailed lines in About ▸ Diagnostics (the dock's show/hide decisions and the like). Off
+    /// by default: they are for tracking down a problem, not for every day.
+    @Published var debugLogging: Bool {
+        didSet { defaults.set(debugLogging, forKey: "debugLogging") }
+    }
     /// The report after Rescue Desktop. Turned off with its "Don't show this again"; a rescue
     /// that fails or needs a permission still shows it.
     @Published var rescueReportShown: Bool {
@@ -1391,6 +1396,7 @@ final class AppSettings: ObservableObject {
         exposeHotkeyModifiers = defaults.object(forKey: "exposeHotkeyModifiers") as? UInt32 ?? 0x1000
         exposeAppHotkeyCode = defaults.object(forKey: "exposeAppHotkeyCode") as? UInt32 ?? 0x6D
         rescueReportShown = defaults.object(forKey: "rescueReportShown") as? Bool ?? true
+        debugLogging = defaults.bool(forKey: "debugLogging")
         rescueHotkeyCode = defaults.object(forKey: "rescueHotkeyCode") as? UInt32 ?? 0x0F   // R
         rescueHotkeyModifiers = defaults.object(forKey: "rescueHotkeyModifiers") as? UInt32 ?? 0x1900   // ⌃⌥⌘
         switcherHotkeyCode = defaults.object(forKey: "switcherHotkeyCode") as? UInt32 ?? 0x30   // Tab

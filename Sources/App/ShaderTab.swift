@@ -23,10 +23,25 @@ struct ShaderTab: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $section) {
-                ForEach(ShaderSection.allCases) { Text($0.rawValue).tag($0) }
+            // Tabs as wide as their names. A segmented Picker makes every segment as wide as
+            // "Presets & Effects", which came to more than the pane and pushed the window wider.
+            HStack(spacing: 2) {
+                ForEach(ShaderSection.allCases) { s in
+                    Button { section = s } label: {
+                        Text(s.rawValue)
+                            .font(.system(size: 12, weight: section == s ? .semibold : .regular))
+                            .foregroundColor(section == s ? .white : .rmTextPrimary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 10).padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(section == s ? Color.rmAccent : .clear))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .labelsHidden().pickerStyle(.segmented)
+            .padding(2)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color.rmTextPrimary.opacity(0.06)))
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
 

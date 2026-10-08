@@ -533,22 +533,11 @@ final class DockController {
 
     // MARK: - Visibility
 
-    private func dockLog(_ msg: String) {
-        let ts = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
-        let line = "[\(ts)] \(msg)\n"
-        let logURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first!
-            .appendingPathComponent("retromac_dock.log")
-        if let data = line.data(using: .utf8) {
-            if FileManager.default.fileExists(atPath: logURL.path) {
-                if let handle = try? FileHandle(forWritingTo: logURL) {
-                    handle.seekToEndOfFile()
-                    handle.write(data)
-                    handle.closeFile()
-                }
-            } else {
-                try? data.write(to: logURL)
-            }
-        }
+    /// Only with About ▸ Diagnostics ▸ Debug logging on, and into that log. It used to append to
+    /// a file on the user's Desktop, always, for everyone.
+    private func dockLog(_ msg: @autoclosure () -> String) {
+        guard AppSettings.shared.debugLogging else { return }
+        print("[Dock] \(msg())")
     }
 
     private func evaluateVisibility() {
