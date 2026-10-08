@@ -1430,7 +1430,18 @@ final class AppSettings: ObservableObject {
            [switcherHotkeyModifiers, switcherHotkeyModifiers | 0x0200].contains(where: { isRetroMacHotkey(code: switcherHotkeyCode, modifiers: $0) }) {
             switcherHotkeyModifiers = 0
         }
+        // Reframe, our browser, draws its own retro window, so a theme title bar on top would be
+        // a second one. Put on the exclusion list once it is installed; taken off, it stays off.
+        if !defaults.bool(forKey: "reframeTitleBarExcluded"),
+           NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.reframeBundleID) != nil {
+            if !themeTitleBarsExcludedApps.contains(Self.reframeBundleID) {
+                themeTitleBarsExcludedApps.append(Self.reframeBundleID)
+                defaults.set(themeTitleBarsExcludedApps, forKey: "themeTitleBarsExcludedApps")
+            }
+            defaults.set(true, forKey: "reframeTitleBarExcluded")
+        }
     }
+    static let reframeBundleID = "app.myretromac.reframe"
 
     func presetForApp(bundleID: String) -> String? {
         Self.preset(for: bundleID, rules: perAppRules, legacy: perAppPresets)

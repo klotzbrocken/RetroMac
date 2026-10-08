@@ -40,4 +40,10 @@ void skb_order_out(uint32_t wid);
 // NSWindow.isOnActiveSpace cannot tell for a window that joins all Spaces (the dock's).
 bool skb_display_shows_fullscreen_space(CFStringRef display_uuid);
 
+// The uuid of the Space showing on that display, the one macOS keeps across restarts ("" for a
+// first desktop that never got one). NULL when the window server does not say.
+CFStringRef skb_copy_current_space_uuid(CFStringRef display_uuid) CF_RETURNS_RETAINED;
+// The uuids of every Space that exists now, on every display. NULL when unknown.
+CFArrayRef skb_copy_space_uuids(void) CF_RETURNS_RETAINED;
+
 #endif

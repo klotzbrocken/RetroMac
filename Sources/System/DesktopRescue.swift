@@ -118,6 +118,11 @@ final class DesktopRescue {
             self.lines[self.wallpaperLine] = ThemeManager.shared.anyScreenShowsOwnWallpaper()
                 ? Line(status: .failed, text: "Wallpaper: a RetroMac picture is still showing.")
                 : Line(status: .done, text: "Wallpaper is your own again.")
+            // macOS only changes the picture of the Space on screen; the others follow when shown.
+            let pending = ThemeManager.shared.pendingWallpaperSpaces
+            if pending > 0 {
+                self.add(.skipped, "\(pending) other Space\(pending == 1 ? "" : "s") get\(pending == 1 ? "s" : "") its own wallpaper back when you switch to it.")
+            }
             self.showReport(finished: true)
         }
     }

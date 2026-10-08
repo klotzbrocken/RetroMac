@@ -232,3 +232,51 @@ bool skb_display_shows_fullscreen_space(CFStringRef display_uuid) {
     uint64_t sid = SLSManagedDisplayGetCurrentSpace(cid, display_uuid);
     return sid != 0 && SLSSpaceGetType(cid, sid) == 4;
 }
+
+// Every display's Spaces as the Dock keeps them: one dictionary per display ("Display Identifier"
+// is the display's uuid, or "Main" while all displays share one set of Spaces), with its
+// "Current Space" and all "Spaces", each carrying the "uuid" that survives a restart.
+extern CFArrayRef SLSCopyManagedDisplaySpaces(int cid);
+
+CFStringRef skb_copy_current_space_uuid(CFStringRef display_uuid) {
+    if (!display_uuid) return NULL;
+    CFArrayRef displays = SLSCopyManagedDisplaySpaces(SLSMainConnectionID());
+    if (!displays) return NULL;
+    CFStringRef result = NULL;
+    CFIndex n = CFArrayGetCount(displays);
+    for (CFIndex i = 0; i < n && !result; i++) {
+        CFDictionaryRef d = CFArrayGetValueAtIndex(displays, i);
+        if (CFGetTypeID(d) != CFDictionaryGetTypeID()) continue;
+        CFStringRef ident = CFDictionaryGetValue(d, CFSTR("Display Identifier"));
+        // One entry means the displays share their Spaces ("Main"); otherwise match the display.
+        bool match = n == 1 || (ident && CFGetTypeID(ident) == CFStringGetTypeID()
+                                && CFStringCompare(ident, display_uuid, kCFCompareCaseInsensitive) == kCFCompareEqualTo);
+        if (!match) continue;
+        CFDictionaryRef cur = CFDictionaryGetValue(d, CFSTR("Current Space"));
+        if (!cur || CFGetTypeID(cur) != CFDictionaryGetTypeID()) continue;
+        CFStringRef uuid = CFDictionaryGetValue(cur, CFSTR("uuid"));
+        if (uuid && CFGetTypeID(uuid) == CFStringGetTypeID()) result = CFStringCreateCopy(NULL, uuid);
+    }
+    CFRelease(displays);
+    return result;
+}
+
+CFArrayRef skb_copy_space_uuids(void) {
+    CFArrayRef displays = SLSCopyManagedDisplaySpaces(SLSMainConnectionID());
+    if (!displays) return NULL;
+    CFMutableArrayRef out = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
+    for (CFIndex i = 0; i < CFArrayGetCount(displays); i++) {
+        CFDictionaryRef d = CFArrayGetValueAtIndex(displays, i);
+        if (CFGetTypeID(d) != CFDictionaryGetTypeID()) continue;
+        CFArrayRef spaces = CFDictionaryGetValue(d, CFSTR("Spaces"));
+        if (!spaces || CFGetTypeID(spaces) != CFArrayGetTypeID()) continue;
+        for (CFIndex j = 0; j < CFArrayGetCount(spaces); j++) {
+            CFDictionaryRef s = CFArrayGetValueAtIndex(spaces, j);
+            if (CFGetTypeID(s) != CFDictionaryGetTypeID()) continue;
+            CFStringRef uuid = CFDictionaryGetValue(s, CFSTR("uuid"));
+            if (uuid && CFGetTypeID(uuid) == CFStringGetTypeID()) CFArrayAppendValue(out, uuid);
+        }
+    }
+    CFRelease(displays);
+    return out;
+}

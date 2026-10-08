@@ -1,6 +1,7 @@
 import AppKit
 import CoreImage
 import CoreText
+import SkyLightBridge
 
 final class ThemeManager {
     static let shared = ThemeManager()
@@ -14,6 +15,9 @@ final class ThemeManager {
     private let defaults = UserDefaults.standard
     private let overridesKey = "dockThemeIconOverrides"
     private let wallpaperBackupKey = "savedWallpaperBackup"
+    /// The user's own picture per screen AND Space (`WallpaperSpaces.key`). macOS sets a desktop
+    /// picture only on the Space a screen is showing, so each Space has its own original, and a
+    /// Space the user has not been back to since the theme went off is restored on the next visit.
     private var savedWallpapers: [String: URL] = [:]
 
     /// Re-apply the wallpaper when the displays change.
@@ -40,7 +44,25 @@ final class ThemeManager {
             self.wallpaperReapplyWork = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
         }
+        // A Space the theme has not visited yet still shows the user's picture, and one visited
+        // while the theme was on still shows ours after it went off. Both are only reachable
+        // while that Space is on screen.
+        spaceChangeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.spaceWallpaperWork?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                if self.activeTheme != nil { self.applyWallpaper(spaceChange: true) }
+                else if !self.savedWallpapers.isEmpty { self.restorePendingSpaces() }
+            }
+            self.spaceWallpaperWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
+        }
     }
+    private var spaceChangeObserver: NSObjectProtocol?
+    private var spaceWallpaperWork: DispatchWorkItem?
 
     init() {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -51,6 +73,9 @@ final class ThemeManager {
         // Restore wallpaper backup from UserDefaults (crash-safe)
         if let dict = defaults.dictionary(forKey: wallpaperBackupKey) as? [String: String] {
             savedWallpapers = dict.compactMapValues { URL(string: $0) }
+            if let live = skb_copy_space_uuids() as? [String] {
+                savedWallpapers = WallpaperSpaces.pruned(savedWallpapers, liveSpaces: Set(live))
+            }
             if !savedWallpapers.isEmpty {
                 print("[Theme] Restored wallpaper backup: \(savedWallpapers.count) screens")
             }
@@ -526,7 +551,20 @@ final class ThemeManager {
         return "displayID:\(displayID)"   // last resort — better than nothing
     }
 
-    func applyWallpaper() {
+    /// The backup key of what `screen` shows now: the screen plus its current Space.
+    private func wallpaperKey(for screen: NSScreen) -> String {
+        WallpaperSpaces.key(screen: screenKey(for: screen),
+                            space: screen.displayUUID.flatMap { skb_copy_current_space_uuid($0 as CFString) as String? })
+    }
+
+    /// A full-screen app's Space has no desktop picture to set or restore.
+    private func showsFullscreenSpace(_ screen: NSScreen) -> Bool {
+        screen.displayUUID.map { skb_display_shows_fullscreen_space($0 as CFString) } ?? false
+    }
+
+    /// `spaceChange`: only the picture of a Space just switched to. The appearance, cursor,
+    /// Terminal and Finder were already set for the theme, and they are the same on every Space.
+    func applyWallpaper(spaceChange: Bool = false) {
         // Announced lazily, immediately before the first screen that actually changes, and never
         // more than once per pass.
         //
@@ -541,11 +579,13 @@ final class ThemeManager {
             announced = true
             NotificationCenter.default.post(name: .desktopPictureWillChange, object: nil)
         }
-        guard let theme = activeTheme else {
+        // No theme picture: hand the desktop back (on a Space switch only this Space's picture).
+        func noThemePicture() {
+            if spaceChange { restorePendingSpaces(); return }
             announceChange()
             restoreWallpapers()
-            return
         }
+        guard let theme = activeTheme else { return noThemePicture() }
         // Highest priority: a custom wallpaper picked via "Browse…" (absolute path)
         let wpURL: URL
         if let customPath = AppSettings.shared.themeCustomWallpaper[theme.stableID],
@@ -557,16 +597,12 @@ final class ThemeManager {
             } else if let fallback = theme.wallpaperURL() {
                 wpURL = fallback
             } else {
-                announceChange()
-                restoreWallpapers()
-                return
+                return noThemePicture()
             }
         } else if let defaultURL = theme.wallpaperURL() {
             wpURL = defaultURL
         } else {
-            announceChange()
-            restoreWallpapers()
-            return
+            return noThemePicture()
         }
         let ws = NSWorkspace.shared
         // Tiled either for the whole theme (System 6, NeXTSTEP) or for this one option (the
@@ -577,7 +613,7 @@ final class ThemeManager {
         // answerable before: every step that could swallow it failed silently.
         var tintNotes: [String] = []
         var changed = 0
-        for screen in NSScreen.screens {
+        for screen in NSScreen.screens where !showsFullscreenSpace(screen) {
             // Pattern-tile wallpapers (e.g. System 6 8×8): setDesktopImageURL has no tiling
             // mode, so pre-render the tile to this screen's exact pixel size. Only for
             // theme-bundled files — a custom "Browse…" wallpaper is never tiled.
@@ -604,7 +640,7 @@ final class ThemeManager {
             } else {
                 tintNotes.append("\(screen.localizedName): could not be rendered")
             }
-            let screenKey = screenKey(for: screen)
+            let screenKey = wallpaperKey(for: screen)
             // Only capture the ORIGINAL once, and never capture one of OUR OWN wallpapers as the
             // "original" — not just the exact file we are about to set, but any theme file or
             // rendered tile. Capturing one of ours is how a screen got stranded: the backup then
@@ -614,6 +650,9 @@ final class ThemeManager {
                 if let current, !isOwnWallpaper(current) {
                     savedWallpapers[screenKey] = current
                     print("[Theme] Saved original wallpaper for screen \(screenKey) (\(screen.localizedName)): \(current.path)")
+                } else if let older = WallpaperSpaces.original(for: screenKey, in: savedWallpapers) {
+                    // Ours already, set by a build that kept one original per screen: that one.
+                    savedWallpapers[screenKey] = older
                 } else {
                     // No recoverable original (screen already shows one of ours, or macOS reports
                     // nothing). Remember that explicitly so the restore can still get the screen
@@ -645,6 +684,7 @@ final class ThemeManager {
         }
         persistWallpaperBackup()
         pruneWallpaperCacheSoon()
+        if spaceChange { return }
         print("[Theme] Wallpaper set on \(changed) of \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent) — menu-bar tint — \(tintNotes.joined(separator: "; "))")
         Self.lastMenuBarTintNote = tintNotes.joined(separator: ", ")
         AppearanceAdapter.apply(for: theme.config)
@@ -852,10 +892,7 @@ final class ThemeManager {
         SystemTweaksAdapter.restore() // and the real Finder/system look reverts too
         guard !savedWallpapers.isEmpty || anyScreenShowsOwnWallpaper() else { return }
         applyOriginalWallpapers()
-        savedWallpapers.removeAll()
-        lastSetWallpaper.removeAll()
-        persistWallpaperBackup()
-        print("[Theme] Wallpaper restore pass complete")
+        print("[Theme] Wallpaper restore pass complete — \(pendingWallpaperSpaces) other Space(s) get theirs back when next shown")
     }
 
     /// Launch recovery for the WALLPAPER ONLY. A previous session set a theme wallpaper but was
@@ -869,11 +906,18 @@ final class ThemeManager {
         // one of ours, run the pass anyway so `applyOriginalWallpapers` can rescue it.
         guard !savedWallpapers.isEmpty || anyScreenShowsOwnWallpaper() else { return }
         applyOriginalWallpapers()
-        savedWallpapers.removeAll()
-        lastSetWallpaper.removeAll()
-        persistWallpaperBackup()
         print("[Theme] Launch wallpaper recovery complete")
     }
+
+    /// The theme is off and a Space was just switched to: if it still shows our picture, the
+    /// user's goes back. Nothing to do (no IPC either) for a Space without a backup.
+    private func restorePendingSpaces() {
+        guard NSScreen.screens.contains(where: { savedWallpapers[wallpaperKey(for: $0)] != nil }) else { return }
+        applyOriginalWallpapers(onlyIfOurs: true)
+    }
+
+    /// Spaces that still show a theme picture and get the user's back when they are next shown.
+    var pendingWallpaperSpaces: Int { WallpaperSpaces.pendingSpaces(in: savedWallpapers) }
 
     /// True if any connected screen currently displays a RetroMac theme wallpaper.
     func anyScreenShowsOwnWallpaper() -> Bool {
@@ -883,30 +927,45 @@ final class ThemeManager {
         }
     }
 
-    private func applyOriginalWallpapers() {
+    /// Puts the user's picture back on the Space each screen shows now and forgets that Space's
+    /// backup. Other Spaces keep theirs until they are shown (`restorePendingSpaces`): macOS only
+    /// sets the picture of the Space on screen.
+    /// `onlyIfOurs`: only screens with a backup for this Space, and leave one alone that no longer
+    /// shows one of our pictures (the user picked another).
+    private func applyOriginalWallpapers(onlyIfOurs: Bool = false) {
         let ws = NSWorkspace.shared
-        for screen in NSScreen.screens {
-            let key = screenKey(for: screen)
+        for screen in NSScreen.screens where !showsFullscreenSpace(screen) {
+            let key = wallpaperKey(for: screen)
+            if onlyIfOurs, savedWallpapers[key] == nil { continue }
+            defer {
+                savedWallpapers.removeValue(forKey: key)
+                savedWallpapers.removeValue(forKey: screenKey(for: screen))   // an older build's one per screen
+            }
+            let current = (onlyIfOurs || WallpaperSpaces.original(for: key, in: savedWallpapers) == nil)
+                ? ws.desktopImageURL(for: screen) : nil
+            if onlyIfOurs, !(current.map(isOwnWallpaper) ?? false) { continue }
             // Prefer the captured original. If there is none (a screen connected only after the
             // theme was applied, or a backup lost with an older build), the screen must still not
             // be left showing OUR wallpaper — fall back to the system default in that case.
-            var target = savedWallpapers[key]
-            if target == nil, let current = ws.desktopImageURL(for: screen), isOwnWallpaper(current) {
+            var target = WallpaperSpaces.original(for: key, in: savedWallpapers)
+            if target == nil, let current, isOwnWallpaper(current) {
                 target = Self.systemDefaultWallpaper
-                print("[Theme] No backup for screen \(key) (\(screen.localizedName)) but it still shows a theme wallpaper — falling back to the system default")
+                print("[Theme] No backup for \(key) (\(screen.localizedName)) but it still shows a theme wallpaper — falling back to the system default")
             }
             guard let original = target else {
-                print("[Theme] No saved wallpaper for screen \(key) (\(screen.localizedName)) — leaving as-is")
+                print("[Theme] No saved wallpaper for \(key) (\(screen.localizedName)) — leaving as-is")
                 continue
             }
             let ok = FileManager.default.fileExists(atPath: original.path)
             do {
                 try ws.setDesktopImageURL(original, for: screen, options: [:])
-                print("[Theme] Restored screen \(key) (\(screen.localizedName)) → \(original.lastPathComponent)\(ok ? "" : " [WARNING: file missing]")")
+                print("[Theme] Restored \(key) (\(screen.localizedName)) → \(original.lastPathComponent)\(ok ? "" : " [WARNING: file missing]")")
             } catch {
-                print("[Theme] FAILED to restore screen \(key) (\(screen.localizedName)) → \(original.path): \(error.localizedDescription)")
+                print("[Theme] FAILED to restore \(key) (\(screen.localizedName)) → \(original.path): \(error.localizedDescription)")
             }
         }
+        lastSetWallpaper.removeAll()
+        persistWallpaperBackup()
     }
 
     private func persistWallpaperBackup() {
@@ -1342,5 +1401,32 @@ final class ThemeManager {
             }
         }
         print("[Theme] Reverted \(reverted) system app icons")
+    }
+}
+
+/// The wallpaper backup per screen and Space, as plain functions of its keys.
+///
+/// A key is `<screen uuid>|<Space uuid>`. A key without a Space is the one-per-screen backup an
+/// older build kept (or one taken while the window server named no Space); it stands in for any
+/// Space of that screen that has none of its own.
+enum WallpaperSpaces {
+    static func key(screen: String, space: String?) -> String {
+        space.map { "\(screen)|\($0)" } ?? screen
+    }
+
+    static func original(for key: String, in saved: [String: URL]) -> URL? {
+        saved[key] ?? key.split(separator: "|", maxSplits: 1).first.flatMap { saved[String($0)] }
+    }
+
+    /// Without the backups of Spaces that are gone: nobody can show them again.
+    static func pruned(_ saved: [String: URL], liveSpaces: Set<String>) -> [String: URL] {
+        saved.filter { key, _ in
+            guard let bar = key.firstIndex(of: "|") else { return true }
+            return liveSpaces.contains(String(key[key.index(after: bar)...]))
+        }
+    }
+
+    static func pendingSpaces(in saved: [String: URL]) -> Int {
+        saved.keys.filter { $0.contains("|") }.count
     }
 }

@@ -86,9 +86,18 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Window features need Accessibility.** The title bars, the window menu, minimised-window
   icons, the taskbar entries and the switcher work with it; without it the taskbars show apps
   instead of windows, as before. The title bars are still experimental.
+- **A Space you never go back to keeps the theme's wallpaper.** macOS changes the desktop
+  picture only on the Space on screen, so after a theme goes off each other Space gets yours back
+  the next time you switch to it.
 
 ### Fixes
 
+- **The wallpaper follows every Space.** A theme's picture used to land only on the Space you
+  were on, and turning the theme off gave only that Space its picture back; the others kept the
+  theme's for good. Now each Space shows the theme's picture once you switch to it, and gets its
+  own picture back the same way, the one it had, not one picture for the whole screen.
+- **No theme title bar over Reframe**, which draws its own retro window: when Reframe is
+  installed it goes on the title-bar exclusion list once. Take it off there to change that.
 - **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.
 - **WindowShade never loses a window.** A rolled-up window keeps its way back until it is
   really back: an app that does not answer leaves it rolled up, to be unrolled again, and on a
