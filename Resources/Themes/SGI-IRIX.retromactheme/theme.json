@@ -88,6 +88,7 @@
   },
   "fallbackIcon": "desktop.png",
   "defaultPreset": "lcd-sharp-lite",
+  "hideMenuBarDefault": true,
   "iconMappings": {},
   "sgiDesktop": {
     "toolchest": [

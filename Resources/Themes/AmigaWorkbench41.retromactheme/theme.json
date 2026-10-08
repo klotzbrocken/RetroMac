@@ -118,6 +118,7 @@
   ],
   "fallbackIcon": "drawer.png",
   "defaultPreset": "lcd-sharp-lite",
+  "hideMenuBarDefault": true,
   "iconMappings": {},
   "appearance": "light",
   "accentColor": "orange"

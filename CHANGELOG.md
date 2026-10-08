@@ -104,6 +104,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   under the icon, strongest at the screen edge, where it was cut off. Now the reflection grows
   with the icon, is brightest right under it and fades out on the shelf. A full Trash reflects
   as full.
+- **Amiga Workbench and SGI IRIX hide the Mac's menu bar**, as the Windows themes do. Their
+  own bars sit at the top of the screen (Workbench's title bar with its clock, IRIX's Toolchest
+  and Shelf), and the menu bar covered them.
 - **No theme title bar over Reframe**, which draws its own retro window: when Reframe is
   installed it goes on the title-bar exclusion list once. Take it off there to change that.
 - **The Start button stays pressed while its menu is open**, as on every Windows from 95 to 7.
