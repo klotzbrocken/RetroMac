@@ -1268,7 +1268,7 @@ final class AppSettings: ObservableObject {
         dockHideSystemDock = defaults.object(forKey: "dockHideSystemDock") as? Bool ?? true
         themeWindowBorders = defaults.bool(forKey: "themeWindowBorders")
         themeTitleBars = defaults.bool(forKey: "themeTitleBars")
-        themeTitleBarsExcludedApps = defaults.stringArray(forKey: "themeTitleBarsExcludedApps") ?? []
+        themeTitleBarsExcludedApps = Self.withOwnChromeExcluded(defaults.stringArray(forKey: "themeTitleBarsExcludedApps") ?? [], defaults: defaults)
         win98Scheme = defaults.string(forKey: "win98Scheme") ?? ""
         trayMessenger = defaults.string(forKey: "trayMessenger") ?? "msn"
         hideMenuBar = defaults.bool(forKey: "hideMenuBar")
@@ -1442,21 +1442,25 @@ final class AppSettings: ObservableObject {
            [switcherHotkeyModifiers, switcherHotkeyModifiers | 0x0200].contains(where: { isRetroMacHotkey(code: switcherHotkeyCode, modifiers: $0) }) {
             switcherHotkeyModifiers = 0
         }
-        // Apps of ours that draw their own retro window, so a theme title bar on top would be a
-        // second one: Reframe, our browser, once it is installed, and the bundled Pac-Man, which
-        // draws the theme's frame itself. Each goes on the exclusion list once; taken off, it
-        // stays off.
+    }
+    /// Apps of ours that draw their own retro window, so a theme title bar on top would be a
+    /// second one: Reframe, our browser, once it is installed, and the bundled Pac-Man, which
+    /// draws the theme's frame itself. Each goes on the exclusion list once; taken off, it stays
+    /// off. Worked out on the stored list BEFORE the property is first set: setting it later in
+    /// init runs its didSet, which asks the title bars to update, which reads
+    /// `AppSettings.shared` while it is still being made, and the app crashed at launch.
+    static func withOwnChromeExcluded(_ list: [String], defaults: UserDefaults) -> [String] {
+        var list = list
         for (id, flag, present) in [
-            (Self.reframeBundleID, "reframeTitleBarExcluded",
-             NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.reframeBundleID) != nil),
-            (Self.pacmanBundleID, "pacmanTitleBarExcluded", true),
+            (reframeBundleID, "reframeTitleBarExcluded",
+             NSWorkspace.shared.urlForApplication(withBundleIdentifier: reframeBundleID) != nil),
+            (pacmanBundleID, "pacmanTitleBarExcluded", true),
         ] where present && !defaults.bool(forKey: flag) {
-            if !themeTitleBarsExcludedApps.contains(id) {
-                themeTitleBarsExcludedApps.append(id)
-                defaults.set(themeTitleBarsExcludedApps, forKey: "themeTitleBarsExcludedApps")
-            }
+            if !list.contains(id) { list.append(id) }
+            defaults.set(list, forKey: "themeTitleBarsExcludedApps")
             defaults.set(true, forKey: flag)
         }
+        return list
     }
     static let reframeBundleID = "app.myretromac.reframe"
     static let pacmanBundleID = "com.retromac.demo.pacman"   // as build.sh signs it

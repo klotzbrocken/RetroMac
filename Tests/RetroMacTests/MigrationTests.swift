@@ -63,3 +63,20 @@ final class MigrationTests: XCTestCase {
         XCTAssertEqual(AppSettings(defaults: store).switcherHotkeyModifiers, 0x1800)
     }
 }
+
+/// Apps of ours that draw their own retro window go on the title-bar exclusion list once, and
+/// stay off it once the user takes them off.
+final class OwnChromeExclusionTests: XCTestCase {
+    func testPacmanGoesOnTheListOnce() {
+        let name = "OwnChromeExclusionTests"
+        let store = UserDefaults(suiteName: name)!
+        store.removePersistentDomain(forName: name)
+        defer { store.removePersistentDomain(forName: name) }
+        let first = AppSettings(defaults: store)
+        XCTAssertTrue(first.themeTitleBarsExcludedApps.contains(AppSettings.pacmanBundleID))
+        XCTAssertTrue(store.bool(forKey: "pacmanTitleBarExcluded"))
+        store.set([String](), forKey: "themeTitleBarsExcludedApps")   // the user takes it off
+        let second = AppSettings(defaults: store)
+        XCTAssertFalse(second.themeTitleBarsExcludedApps.contains(AppSettings.pacmanBundleID))
+    }
+}
