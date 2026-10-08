@@ -16,6 +16,13 @@
    ]
   },
   {
+   "file": "applications.png",
+   "sourceFile": "png/128/folder-applications.png",
+   "bundleIDs": [
+    "com.apple.apps.launcher"
+   ]
+  },
+  {
    "file": "audioserver.png",
    "sourceFile": "png/128/BeOS_Audio_server.png",
    "bundleIDs": [
@@ -30,6 +37,13 @@
    ]
   },
   {
+   "file": "blocks.png",
+   "sourceFile": "png/128/BeOS_blocks.png",
+   "bundleIDs": [
+    "com.apple.dt.Xcode"
+   ]
+  },
+  {
    "file": "clock.png",
    "sourceFile": "png/128/BeOS_clock.png",
    "bundleIDs": [
@@ -40,7 +54,8 @@
    "file": "codycam.png",
    "sourceFile": "png/128/CodyCam.png",
    "bundleIDs": [
-    "com.apple.PhotoBooth"
+    "com.apple.PhotoBooth",
+    "com.apple.FaceTime"
    ]
   },
   {
@@ -48,6 +63,13 @@
    "sourceFile": "png/128/disk_probe.png",
    "bundleIDs": [
     "com.apple.DiskUtility"
+   ]
+  },
+  {
+   "file": "eyeball.png",
+   "sourceFile": "png/128/BeOS_Eyeball.png",
+   "bundleIDs": [
+    "com.apple.Preview"
    ]
   },
   {
@@ -100,10 +122,24 @@
    ]
   },
   {
+   "file": "menu.png",
+   "sourceFile": "png/128/BeOS_Menu.png",
+   "bundleIDs": [
+    "com.apple.reminders"
+   ]
+  },
+  {
    "file": "notes.png",
    "sourceFile": "png/128/BeOS_Stickies.png",
    "bundleIDs": [
     "com.apple.Stickies"
+   ]
+  },
+  {
+   "file": "paint.png",
+   "sourceFile": "png/128/BeOS_paint.png",
+   "bundleIDs": [
+    "com.adobe.Photoshop"
    ]
   },
   {
@@ -118,6 +154,13 @@
    "sourceFile": "png/128/BeOS_Pulse.png",
    "bundleIDs": [
     "com.apple.ActivityMonitor"
+   ]
+  },
+  {
+   "file": "studiodisplay.png",
+   "sourceFile": "png/128/BeOS_17_Apple_Studio_Display.png",
+   "bundleIDs": [
+    "com.apple.AppStore"
    ]
   },
   {
@@ -138,7 +181,8 @@
    "file": "video.png",
    "sourceFile": "png/128/BeOS_Video.png",
    "bundleIDs": [
-    "com.apple.QuickTimePlayerX"
+    "com.apple.QuickTimePlayerX",
+    "org.videolan.vlc"
    ]
   },
   {
