@@ -376,8 +376,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.setAccessibilityLabel("RetroMac")   // VoiceOver: a name, not "image"
-        // The menu is popped up by the icon rather than hung on it (`statusItem.menu`): with it
-        // hung there, the click that closed it opened it again 18 ms later (measured).
+        // The menu hangs on the icon only while it is open (`statusItemClicked`): hung there all
+        // the time, the click that closed it opened it again 18 ms later (measured).
         statusItem.button?.target = self
         statusItem.button?.action = #selector(statusItemClicked)
         statusItem.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
@@ -398,12 +398,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if AppSettings.shared.debugLogging { print("[Menu] icon click \(click) closedBy=\(statusMenuClosedBy)") }
         guard click != statusMenuClosedBy else { return }
         shownStatusMenu = menu
-        button.highlight(true)
-        // In screen coordinates, under the icon: a point in the button's own (unflipped) space
-        // put the menu's top above the screen, and it opened scrolled with an arrow.
-        let icon = button.window?.convertToScreen(button.convert(button.bounds, to: nil)) ?? .zero
-        menu.popUp(positioning: nil, at: NSPoint(x: icon.minX, y: icon.minY - 4), in: nil)
-        button.highlight(false)
+        // Hung on the icon just for this click, so macOS places it as its own (a pop-up placed
+        // by hand opened scrolled under a notched menu bar), and taken off again when it closes.
+        statusItem.menu = menu
+        button.performClick(nil)
+        statusItem.menu = nil
     }
 
     // MARK: - Dock Mode + Launcher
@@ -4742,6 +4741,7 @@ extension NSScreen {
 extension AppDelegate: NSMenuDelegate {
     func menuDidClose(_ menu: NSMenu) {
         guard menu === shownStatusMenu else { return }
+        statusItem.menu = nil
         statusMenuClosedBy = NSApp.currentEvent?.timestamp ?? -1
         if AppSettings.shared.debugLogging { print("[Menu] close by \(NSApp.currentEvent?.type.rawValue ?? 0) at \(statusMenuClosedBy)") }
     }
