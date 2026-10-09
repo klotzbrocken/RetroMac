@@ -567,7 +567,7 @@ struct CameraTab: View {
     }
 
     private func sw(_ binding: Binding<Bool>) -> some View {
-        Toggle("", isOn: binding).toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+        Toggle("", isOn: binding).toggleStyle(.switch).tint(.rmAccent)
     }
 
     // MARK: - Lower-third accent / logo helpers

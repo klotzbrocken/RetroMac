@@ -195,11 +195,11 @@ private struct ScopeSection: View {
                     VStack(spacing: 0) {
                         RMRow(label: "Hide the system menu bar") {
                             Toggle("", isOn: $settings.hideMenuBar)
-                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                         RMRow(label: "Hide the desktop icons", isLast: true) {
                             Toggle("", isOn: $settings.hideDesktopIcons)
-                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                     }
                 }
@@ -317,11 +317,11 @@ private struct WhenSection: View {
                               hint: "The same switch as the one in the menu-bar popover.") {
                             Toggle("", isOn: Binding(get: { run.isOn },
                                                      set: { _ in AppDelegate.shared?.launcherToggleShader() }))
-                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                         RMRow(label: "Turn the shader on when RetroMac launches", isLast: true) {
                             Toggle("", isOn: $settings.enableOnLaunch)
-                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                     }
                 }
@@ -335,7 +335,7 @@ private struct WhenSection: View {
                                 Toggle("", isOn: Binding(
                                     get: { !disabledForTheme },
                                     set: { on in settings.themeShaderDisabled[themeKey] = on ? nil : true }))
-                                    .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                    .toggleStyle(.switch).tint(.rmAccent)
                             }
                             RMRow(label: "Preset",
                                   hint: "Kept even while the shader is off for this theme.",
@@ -359,18 +359,18 @@ private struct WhenSection: View {
                     VStack(spacing: 0) {
                         RMRow(label: "Stop overlay on sleep or lock") {
                             Toggle("", isOn: $settings.stopOnSleep)
-                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                         RMRow(label: "Resume overlay after wake") {
                             Toggle("", isOn: $settings.resumeAfterSleep)
-                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .toggleStyle(.switch).tint(.rmAccent)
                                 .disabled(!settings.stopOnSleep)
                         }
                         RMRow(label: "Reset to default preset after wake",
                               hint: "Restores \(presetDisplayName) regardless of last-used preset.",
                               isLast: true) {
                             Toggle("", isOn: $settings.resetOnWake)
-                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .toggleStyle(.switch).tint(.rmAccent)
                                 .disabled(!settings.stopOnSleep || !settings.resumeAfterSleep)
                         }
                     }

@@ -54,7 +54,7 @@ struct ScreensaverSettingsTab: View {
                     VStack(spacing: 0) {
                         RMRow(label: "Screensaver") {
                             Toggle("", isOn: $settings.screensaverEnabled)
-                                .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                         RMRow(label: "Start after",
                               hint: "Minutes without input.") {

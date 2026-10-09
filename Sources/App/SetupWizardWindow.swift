@@ -654,7 +654,7 @@ struct SetupWizardView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
-            Toggle(title, isOn: isOn).labelsHidden().toggleStyle(.switch)
+            Toggle("", isOn: isOn).toggleStyle(.switch).accessibilityLabel(title)
         }
     }
 

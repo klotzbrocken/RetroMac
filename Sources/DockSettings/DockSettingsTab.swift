@@ -179,7 +179,7 @@ struct DockSettingsTab: View {
     // MARK: - Behaviour, Dock, Extras, Integration
 
     private func toggle(_ binding: Binding<Bool>) -> some View {
-        Toggle("", isOn: binding).toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+        Toggle("", isOn: binding).toggleStyle(.switch).tint(.rmAccent)
     }
 
     /// Re-apply the selected theme so a change that is only read while the desktop is built
@@ -218,7 +218,7 @@ struct DockSettingsTab: View {
                     Toggle("", isOn: Binding(
                         get: { settings.themeBootscreenEnabled[settings.dockTheme] ?? selectedThemeHasBootScreen },
                         set: { settings.themeBootscreenEnabled[settings.dockTheme] = $0 }))
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        .toggleStyle(.switch).tint(.rmAccent)
                         .disabled(!settings.showSplashScreen || !selectedThemeHasBootScreen)
                 }
             }
@@ -357,7 +357,7 @@ struct DockSettingsTab: View {
                                     settings.deskbarShortcuts = list
                                 }
                             ))
-                            .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                            .toggleStyle(.switch).tint(.rmAccent)
                         }
                     }
                 }
@@ -424,7 +424,7 @@ struct DockSettingsTab: View {
                                     if newValue { enableReAmp() } else { disableReAmp() }
                                 }
                             ))
-                            .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                            .toggleStyle(.switch).tint(.rmAccent)
                         }
                     }
                     if hasPacman {
@@ -597,7 +597,7 @@ struct DockSettingsTab: View {
                 }
                 RMRow(label: "Match appearance", hint: "macOS appearance and accent colour to fit the theme.") {
                     Toggle("", isOn: $settings.themeAdaptAppearance)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        .toggleStyle(.switch).tint(.rmAccent)
                         .onChange(of: settings.themeAdaptAppearance) { _, on in
                             if on, settings.dockEnabled, let cfg = ThemeManager.shared.activeTheme?.config {
                                 AppearanceAdapter.apply(for: cfg)
@@ -608,7 +608,7 @@ struct DockSettingsTab: View {
                 }
                 RMRow(label: "Match cursor", hint: "The theme's own pointer set, system-wide.") {
                     Toggle("", isOn: $settings.themeAdaptCursor)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        .toggleStyle(.switch).tint(.rmAccent)
                         .onChange(of: settings.themeAdaptCursor) { _, on in
                             if on, settings.dockEnabled, let cfg = ThemeManager.shared.activeTheme?.config {
                                 CursorThemeManager.shared.apply(for: cfg)
@@ -641,7 +641,7 @@ struct DockSettingsTab: View {
                 }
                 RMRow(label: "Terminal profile", hint: "A matching Terminal profile: DOS green, BeOS, classic Mac, DOOM.") {
                     Toggle("", isOn: $settings.themeTerminalProfile)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        .toggleStyle(.switch).tint(.rmAccent)
                         .onChange(of: settings.themeTerminalProfile) { _, on in
                             if on, settings.dockEnabled, let cfg = ThemeManager.shared.activeTheme?.config {
                                 TerminalThemer.apply(forThemeNamed: cfg.name)
@@ -653,7 +653,7 @@ struct DockSettingsTab: View {
                 if selectedThemeConfig?.systemTweaks != nil {
                     RMRow(label: "Classic Finder", hint: "Opaque windows, classic scrollbars, list view, fewer animations.") {
                         Toggle("", isOn: $settings.themeApplySystemTweaks)
-                            .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                            .toggleStyle(.switch).tint(.rmAccent)
                             .onChange(of: settings.themeApplySystemTweaks) { _, on in
                                 guard let theme = ThemeManager.shared.activeTheme else { return }
                                 let cfg = theme.config

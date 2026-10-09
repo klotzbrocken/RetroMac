@@ -121,7 +121,7 @@ struct DesktopSettingsTab: View {
                         Toggle("", isOn: $settings.menuBarTint)
                             .toggleStyle(.switch)
                             .tint(.rmAccent)
-                            .labelsHidden()
+                            
                             .onChange(of: settings.menuBarTint) { _, _ in
                                 ThemeManager.shared.applyWallpaper()
                             }
@@ -181,7 +181,7 @@ struct DesktopSettingsTab: View {
                                 set: { visible in setVisible(entry.name, visible) }))
                             .toggleStyle(.switch)
                             .tint(.rmAccent)
-                            .labelsHidden()
+                            
                         }
                     }
                     if hiddenCount > 0 {
@@ -257,13 +257,13 @@ struct DesktopSettingsTab: View {
                             if !on { settings.desktopIconScale = settings.dockIconScale }
                             settings.desktopIconScaleLinked = on
                         }))
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        .toggleStyle(.switch).tint(.rmAccent)
                 }
                 RMRow(label: "Show theme widgets",
                       hint: "Clock, CPU monitor and the other gadgets a theme brings along.",
                       isLast: true) {
                     Toggle("", isOn: $settings.themeIncludeWidgets)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        .toggleStyle(.switch).tint(.rmAccent)
                         .onChange(of: settings.themeIncludeWidgets) { _, _ in
                             // Read while the theme is applied, so re-apply it now rather than
                             // leaving the switch to take effect at the next theme change.

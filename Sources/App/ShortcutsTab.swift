@@ -53,7 +53,7 @@ struct ShortcutsTab: View {
             RMRow(label: "Show the report",
                   hint: "What was done, after each rescue. One that fails or needs a permission is always shown.",
                   isLast: true) {
-                Toggle("", isOn: $settings.rescueReportShown).labelsHidden().toggleStyle(.switch)
+                Toggle("", isOn: $settings.rescueReportShown).toggleStyle(.switch)
             }
         }
     }

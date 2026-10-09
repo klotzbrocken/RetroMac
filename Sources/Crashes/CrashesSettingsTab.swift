@@ -118,7 +118,7 @@ struct CrashesTab: View {
                             RMRow(label: "Boot failures",
                                   hint: "Off makes every restart a clean one.") {
                                 Toggle("", isOn: $settings.crashBootFailures)
-                                    .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                                    .toggleStyle(.switch).tint(.rmAccent)
                             }
                             scenarioRows(bootSpecs)
                         }
@@ -133,7 +133,7 @@ struct CrashesTab: View {
                             RMRow(label: "Mild moments",
                                   hint: "About three times as often as a crash at the same setting, with no daily limit.") {
                                 Toggle("", isOn: $settings.crashMoments)
-                                    .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                                    .toggleStyle(.switch).tint(.rmAccent)
                             }
                             scenarioRows(momentSpecs)
                         }
@@ -147,23 +147,23 @@ struct CrashesTab: View {
                               ? "The pointer falls behind for five or six seconds and the drive starts hunting before the error appears. Off shows the error straight away."
                               : "Needs Screen Recording: the build-up is a photograph of your desktop laid over your desktop, and without it there is nothing to freeze. RetroMac shows the error over the live desktop instead.") {
                             Toggle("", isOn: $settings.crashFullSequence)
-                                .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                         RMRow(label: "Drive sounds",
                               hint: "The failing hard disk, the floppy, the Zip drive. Synthesised, not sampled.") {
                             Toggle("", isOn: $settings.crashSoundEnabled)
-                                .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                         RMRow(label: "Graphics glitches",
                               hint: "The frozen desktop comes apart the way the era's did: redraw trails, torn bands, a wrecked palette.") {
                             Toggle("", isOn: $settings.crashGlitches)
-                                .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                         RMRow(label: "Show “simulated crash”",
                               hint: "A red note in the bottom corner. Turn it off for a video, but leave it on if anyone else can see your screen.",
                               isLast: true) {
                             Toggle("", isOn: $settings.crashShowBadge)
-                                .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                                .toggleStyle(.switch).tint(.rmAccent)
                         }
                     }
                 }
@@ -199,8 +199,8 @@ struct CrashesTab: View {
                     Button("Show") { fire(spec.id) }
                         .buttonStyle(RMGhostButtonStyle())
                         .disabled(!license.isLicensed)
-                    Toggle(spec.title, isOn: enabledBinding(spec.id))   // label for VoiceOver; hidden
-                        .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
+                    Toggle("", isOn: enabledBinding(spec.id))   // label for VoiceOver; hidden
+                        .toggleStyle(.switch).tint(.rmAccent).accessibilityLabel(spec.title)
                 }
             }
         }

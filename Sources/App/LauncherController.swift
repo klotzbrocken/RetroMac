@@ -522,11 +522,11 @@ struct LauncherView: View {
                     .font(.system(size: 10)).foregroundStyle(.secondary)
             }
             Spacer()
-            Toggle("Only on this Space", isOn: Binding(
+            Toggle("", isOn: Binding(
                 get: { settings.themeOnChosenSpaces && ThemeSpaces.shared.showsThemeHere },
                 set: { _ in AppDelegate.shared?.toggleThemeOnThisSpace() }))
-                .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
-                .disabled(ThemeSpaces.currentSpace == nil)
+                .toggleStyle(.switch).controlSize(.small).tint(switchGreen)
+                .disabled(ThemeSpaces.currentSpace == nil).accessibilityLabel("Only on this Space")
         }
     }
 
@@ -538,8 +538,9 @@ struct LauncherView: View {
                     .font(.system(size: 10)).foregroundStyle(.secondary)
             }
             Spacer()
-            Toggle("Dock only", isOn: $settings.dockOnly)
-                .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
+            Toggle("", isOn: $settings.dockOnly)
+                .toggleStyle(.switch).controlSize(.small).tint(switchGreen)
+                .accessibilityLabel("Dock only")
                 .onChange(of: settings.dockOnly) { _, _ in
                     AppDelegate.shared?.refreshDockOnlyScope()
                 }
@@ -552,9 +553,9 @@ struct LauncherView: View {
             HStack {
                 Label("CRT Shader", systemImage: "tv")
                 Spacer()
-                Toggle("CRT Shader", isOn: Binding(get: { model.shaderActive && !model.wallpaperOnlyActive },
+                Toggle("", isOn: Binding(get: { model.shaderActive && !model.wallpaperOnlyActive },
                                          set: { _ in AppDelegate.shared?.launcherToggleShader(); model.refresh() }))
-                    .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
+                    .toggleStyle(.switch).controlSize(.small).tint(switchGreen).accessibilityLabel("CRT Shader")
             }
 
             if model.shaderActive {
@@ -569,17 +570,17 @@ struct LauncherView: View {
                     Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary).accessibilityLabel("Pro")
                 }
                 Spacer()
-                Toggle("Live Wallpaper", isOn: Binding(get: { model.wallpaperOnlyActive },
+                Toggle("", isOn: Binding(get: { model.wallpaperOnlyActive },
                                          set: { _ in AppDelegate.shared?.launcherToggleLiveWallpaper(); model.refresh() }))
-                    .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
+                    .toggleStyle(.switch).controlSize(.small).tint(switchGreen).accessibilityLabel("Live Wallpaper")
             }
 
             HStack {
                 Label("TV Tube", systemImage: "sparkles.tv")
                 Spacer()
-                Toggle("TV Tube", isOn: Binding(get: { model.tubeActive },
+                Toggle("", isOn: Binding(get: { model.tubeActive },
                                          set: { _ in AppDelegate.shared?.toggleTubeMode(); model.refreshState() }))
-                    .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
+                    .toggleStyle(.switch).controlSize(.small).tint(switchGreen).accessibilityLabel("TV Tube")
             }
 
             // Crash Now: the Party-mode trigger where a demo can reach it in one click, without

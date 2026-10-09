@@ -154,7 +154,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   effect scope is three radio buttons, the drawn panels (Control Strip, Front Panel, Deskbar …)
   no longer read "content is empty", RetroMac's own decoration no longer announces "new window",
   the Applications window and the dock's stacks are named with their items as buttons,
-  decorative pictures are left out and icon-only buttons have names. The title-bar list shows
+  decorative pictures are left out and icon-only buttons have names. Every switch reads as a
+  switch ("switch, on"), no longer as a "toggle button". The title-bar list shows
   Pac-Man by name.
 - **No more log file on the Desktop.** The retro dock wrote every show and hide to
   `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with

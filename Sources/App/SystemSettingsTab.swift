@@ -53,7 +53,7 @@ struct SystemSettingsTab: View {
                             if on, settings.themeSpaces.isEmpty, let here = ThemeSpaces.currentSpace { settings.themeSpaces = [here] }
                             settings.themeOnChosenSpaces = on
                         }))
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        .toggleStyle(.switch).tint(.rmAccent)
                 }
                 if settings.themeOnChosenSpaces {
                     ForEach(settings.themeSpaces, id: \.self) { space in
@@ -124,7 +124,7 @@ struct SystemSettingsTab: View {
                 // to the per-theme switch it has to agree with.
                 RMRow(label: "Start RetroMac at login", isLast: true) {
                     Toggle("", isOn: $settings.launchAtLogin)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        .toggleStyle(.switch).tint(.rmAccent)
                 }
             }
         }

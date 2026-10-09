@@ -56,7 +56,7 @@ struct GamesSettingsTab: View {
             VStack(spacing: 0) {
                 RMRow(label: "CRT effect in games") {
                     Toggle("", isOn: $settings.gamesCRTEnabled)
-                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                        .toggleStyle(.switch).tint(.rmAccent)
                 }
                 RMRow(label: "Warcraft I + II") {
                     Picker("", selection: $settings.warcraftPresetID) {
