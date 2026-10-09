@@ -611,6 +611,11 @@ final class ThemeManager {
             restoreWallpapers()
         }
         guard let theme = activeTheme else { return noThemePicture() }
+        // A Space the theme is kept off (ThemeSpaces) keeps its own picture and the system's
+        // cursor, whichever way this pass came: a Space switch, a theme switch, or the display
+        // change that showing the Mac's Dock and menu bar there sets off.
+        let here = ThemeSpaces.shared.showsThemeHere
+        if !here { restorePendingSpaces() }
         // Highest priority: a custom wallpaper picked via "Browse…" (absolute path)
         let wpURL: URL
         if let customPath = AppSettings.shared.themeCustomWallpaper[theme.stableID],
@@ -638,7 +643,7 @@ final class ThemeManager {
         // answerable before: every step that could swallow it failed silently.
         var tintNotes: [String] = []
         var changed = 0
-        for screen in NSScreen.screens where !showsFullscreenSpace(screen) {
+        for screen in NSScreen.screens where here && !showsFullscreenSpace(screen) {
             // Pattern-tile wallpapers (e.g. System 6 8×8): setDesktopImageURL has no tiling
             // mode, so pre-render the tile to this screen's exact pixel size. Only for
             // theme-bundled files — a custom "Browse…" wallpaper is never tiled.
@@ -713,7 +718,7 @@ final class ThemeManager {
         print("[Theme] Wallpaper set on \(changed) of \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent) — menu-bar tint — \(tintNotes.joined(separator: "; "))")
         Self.lastMenuBarTintNote = tintNotes.joined(separator: ", ")
         AppearanceAdapter.apply(for: theme.config)
-        CursorThemeManager.shared.apply(for: theme.config)
+        if here { CursorThemeManager.shared.apply(for: theme.config) }
         TerminalThemer.apply(forThemeNamed: theme.config.name)
         SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)   // "Classic Finder" defaults tweaks (opt-in, built-in themes only)
     }

@@ -124,6 +124,7 @@ final class ThemeSpaces {
         if back { CursorThemeManager.shared.restore() }
         else if let config = ThemeManager.shared.activeTheme?.config { CursorThemeManager.shared.apply(for: config) }
         WindowBorderController.shared.update()   // and the title bars with it
+        ThemeManager.shared.applyWallpaper(spaceChange: true)   // this Space's picture, also without a Space switch
     }
 
     /// "Desktop 3", or nil for a Space that is gone.
