@@ -45,5 +45,9 @@ bool skb_display_shows_fullscreen_space(CFStringRef display_uuid);
 CFStringRef skb_copy_current_space_uuid(CFStringRef display_uuid) CF_RETURNS_RETAINED;
 // The uuids of every Space that exists now, on every display. NULL when unknown.
 CFArrayRef skb_copy_space_uuids(void) CF_RETURNS_RETAINED;
+// The window server's id for the Space with this uuid (0 when there is none), and moving one
+// of our windows onto that Space.
+uint64_t skb_space_id_for_uuid(CFStringRef uuid);
+bool skb_move_window_to_space(uint32_t wid, uint64_t sid);
 
 #endif

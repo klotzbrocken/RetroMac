@@ -102,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Reflect the persisted window-borders flag at launch (gated internally; no-op when off).
         WindowBorderController.shared.update()
+        ThemeSpaces.shared.start()   // the theme on chosen Spaces only, when that is set
 
         // Restore system UI if previous session crashed while UI was hidden
         SystemUIHelper.restoreIfNeeded()
@@ -1382,6 +1383,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             catItem.submenu = catMenu
             themesMenu.addItem(catItem)
         }
+        // Where the theme shows: on every Space, or only on the ones ticked here.
+        themesMenu.addItem(.separator())
+        let s = AppSettings.shared
+        let allSpaces = NSMenuItem(title: "On All Spaces", action: #selector(themeOnAllSpaces), keyEquivalent: "")
+        allSpaces.target = self
+        allSpaces.state = s.themeOnChosenSpaces ? .off : .on
+        themesMenu.addItem(allSpaces)
+        let thisSpace = NSMenuItem(title: "On This Space", action: #selector(toggleThemeOnThisSpace), keyEquivalent: "")
+        thisSpace.target = self
+        thisSpace.state = s.themeOnChosenSpaces && ThemeSpaces.shared.showsThemeHere ? .on : .off
+        thisSpace.isEnabled = ThemeSpaces.currentSpace != nil
+        themesMenu.addItem(thisSpace)
         themesItem.submenu = themesMenu
         menu.addItem(themesItem)
 
@@ -1745,6 +1758,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.handleWake()
             },
         ]
+    }
+
+    /// ThemeSpaces: the shader is off on a Space without the theme and back on one with it.
+    private var pausedForSpace = false
+    func setEffectPausedForSpace(_ paused: Bool) {
+        if paused {
+            guard isActive else { return }
+            pausedForSpace = true
+            disableAll()
+        } else {
+            guard pausedForSpace else { return }
+            pausedForSpace = false
+            if !isActive, !screenLocked { startCurrentEffect() }
+        }
     }
 
     private func handleSleep() {
@@ -2882,6 +2909,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isActive { disableAll() }
     }
 
+    @objc private func themeOnAllSpaces() {
+        AppSettings.shared.themeOnChosenSpaces = false
+    }
+
+    /// From every Space to this one only; after that, this Space in or out of the list. The
+    /// last one taken out means every Space again, not none.
+    @objc private func toggleThemeOnThisSpace() {
+        guard let here = ThemeSpaces.currentSpace else { return }
+        let s = AppSettings.shared
+        if !s.themeOnChosenSpaces {
+            s.themeSpaces = [here]
+            s.themeOnChosenSpaces = true
+        } else if s.themeSpaces.contains(here) {
+            s.themeSpaces.removeAll { $0 == here }
+            if s.themeSpaces.isEmpty { s.themeOnChosenSpaces = false }
+        } else {
+            s.themeSpaces.append(here)
+        }
+    }
+
     @objc private func disableTheme() {
         AppSettings.shared.dockEnabled = false
         AppSettings.shared.menuBarAppleStyle = 0   // menu-bar Apple logo returns to the system one
@@ -2899,6 +2946,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         TaskManagerController.shared.stop()
         ThemeManager.shared.clearActiveTheme()
         ThemeManager.shared.restoreWallpapers()
+        ThemeSpaces.shared.evaluate()   // its windows back on every Space, the shader back if it paused
         // Also stop the CRT overlay when disabling theme
         if isActive { disableAll() }
         rebuildMenu()

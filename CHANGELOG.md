@@ -7,6 +7,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **A theme on chosen Spaces only.** Themes ▸ On This Space in the menu, or Settings ▸ General
+  ▸ Spaces: the theme stays on those Spaces and slides away with them, and the others are plain
+  macOS, with the Mac's Dock, menu bar, cursor and own wallpaper, and the shader paused.
 - **New theme: QNX 6.2.1 — Photon.** The realtime OS's desktop from its 2003 CD, measured off
   the original: the shelf down the right with groups you fold open and shut, a live system
   monitor, the CD player and World View; the taskbar with Launch, one entry per window and the
@@ -86,6 +89,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Window features need Accessibility.** The title bars, the window menu, minimised-window
   icons, the taskbar entries and the switcher work with it; without it the taskbars show apps
   instead of windows, as before. The title bars are still experimental.
+- **On a Space without the theme**, the appearance, accent colour, Finder and Terminal changes
+  and hidden desktop icons stay as the theme set them: they are one setting for the whole Mac,
+  and switching them costs seconds. The main display's Space decides for every display.
 - **A Space you never go back to keeps the theme's wallpaper.** macOS changes the desktop
   picture only on the Space on screen, so after a theme goes off each other Space gets yours back
   the next time you switch to it.

@@ -153,6 +153,7 @@ final class TitleBarOverlayController {
             && AppSettings.shared.dockEnabled
             && !AppSettings.shared.dockOnly
             && Self.accessibilityGranted
+            && !ThemeSpaces.shared.heldBack   // a Space without the theme
             && Self.style(for: RetroFrameTheme.key()) != nil   // an unsupported theme runs nothing at all
         if want { start() } else { stop() }
     }

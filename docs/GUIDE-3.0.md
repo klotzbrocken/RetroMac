@@ -23,6 +23,21 @@ command line. Change the shortcut in Settings ▸ Shortcuts.
 Bringing windows back needs the Accessibility permission. Without it the rest is still done and
 the report says the windows were not checked.
 
+## A theme on some Spaces only
+
+To keep the theme to one Space (or a few) and plain macOS on the others:
+
+1. Switch to the Space that should have the theme.
+2. Choose **Themes ▸ On This Space** in the menu-bar menu.
+
+The theme's dock, desktop and panels now live on that Space and slide away with it. On the
+other Spaces you have the Mac's Dock, menu bar, cursor and your own wallpaper, and the shader
+pauses. Add more Spaces the same way, or in Settings ▸ General ▸ Spaces. **Themes ▸ On All
+Spaces** puts the theme back everywhere.
+
+The appearance, accent colour, Finder and Terminal changes and hidden desktop icons stay on
+every Space: macOS keeps them for the whole Mac.
+
 ## The window switcher
 
 **⌃⌥Tab** switches windows the way the theme's era did; **⌃⌥⇧Tab** goes the other way.

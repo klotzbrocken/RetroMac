@@ -32,6 +32,8 @@ final class DockController {
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var didHideSystemDock = false
+    /// Whether the theme has the Mac's Dock hidden right now (ThemeSpaces shows it on a plain Space).
+    var hidesSystemDock: Bool { didHideSystemDock }
     private var hidViaCoreDock = false             // true → hidden live via CoreDock (no killall, no window restack)
     private var lastAppliedHidePosition: String?   // guards against re-running killall Dock per theme switch
     private var systemDockWatch: Timer?            // notices the real Dock being brought back from outside

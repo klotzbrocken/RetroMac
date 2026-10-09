@@ -54,7 +54,8 @@ final class ThemeManager {
             self.spaceWallpaperWork?.cancel()
             let work = DispatchWorkItem { [weak self] in
                 guard let self else { return }
-                if self.activeTheme != nil { self.applyWallpaper(spaceChange: true) }
+                // A Space the theme is kept off (ThemeSpaces) gets its own picture back like any other.
+                if self.activeTheme != nil, ThemeSpaces.shared.showsThemeHere { self.applyWallpaper(spaceChange: true) }
                 else if !self.savedWallpapers.isEmpty { self.restorePendingSpaces() }
             }
             self.spaceWallpaperWork = work

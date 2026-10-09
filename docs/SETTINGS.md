@@ -61,7 +61,7 @@ switcher and "Use it in this theme" is on.
 rescue was interrupted, the next launch turns nothing on and finishes it; launching with
 `--rescue-desktop` (`open -a RetroMac --args --rescue-desktop`) does the same on request.
 
-**General** — the Setup Assistant, start at login, and the three permissions with Grant buttons.
+**General** — the Setup Assistant, start at login, Spaces (the theme on every Space or only on chosen ones), and the three permissions with Grant buttons.
 
 **Health Check** — read-only: system capabilities, capture status, GPU and displays, the theme.
 

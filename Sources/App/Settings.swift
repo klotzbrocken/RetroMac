@@ -941,6 +941,13 @@ final class AppSettings: ObservableObject {
     @Published var debugLogging: Bool {
         didSet { defaults.set(debugLogging, forKey: "debugLogging") }
     }
+    /// The theme only on the Spaces in `themeSpaces` (their uuids), plain macOS on the others.
+    @Published var themeOnChosenSpaces: Bool {
+        didSet { defaults.set(themeOnChosenSpaces, forKey: "themeOnChosenSpaces"); ThemeSpaces.shared.evaluate() }
+    }
+    @Published var themeSpaces: [String] {
+        didSet { defaults.set(themeSpaces, forKey: "themeSpaces"); ThemeSpaces.shared.evaluate() }
+    }
     /// The report after Rescue Desktop. Turned off with its "Don't show this again"; a rescue
     /// that fails or needs a permission still shows it.
     @Published var rescueReportShown: Bool {
@@ -1397,6 +1404,8 @@ final class AppSettings: ObservableObject {
         exposeAppHotkeyCode = defaults.object(forKey: "exposeAppHotkeyCode") as? UInt32 ?? 0x6D
         rescueReportShown = defaults.object(forKey: "rescueReportShown") as? Bool ?? true
         debugLogging = defaults.bool(forKey: "debugLogging")
+        themeOnChosenSpaces = defaults.bool(forKey: "themeOnChosenSpaces")
+        themeSpaces = defaults.stringArray(forKey: "themeSpaces") ?? []
         rescueHotkeyCode = defaults.object(forKey: "rescueHotkeyCode") as? UInt32 ?? 0x0F   // R
         rescueHotkeyModifiers = defaults.object(forKey: "rescueHotkeyModifiers") as? UInt32 ?? 0x1900   // ⌃⌥⌘
         switcherHotkeyCode = defaults.object(forKey: "switcherHotkeyCode") as? UInt32 ?? 0x30   // Tab

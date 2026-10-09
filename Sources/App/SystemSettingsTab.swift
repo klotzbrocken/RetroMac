@@ -27,6 +27,7 @@ struct SystemSettingsTab: View {
             VStack(spacing: RMSpacing.section) {
                 setupCard
                 startupCard
+                spacesCard
                 permissionsCard
                 defaultsCard
             }
@@ -34,6 +35,49 @@ struct SystemSettingsTab: View {
             .padding(.vertical, 20)
         }
         .task { checkPermissions() }
+    }
+
+    /// The theme on every Space, or only on chosen ones. Spaces are added from the Space itself
+    /// (Themes ▸ On This Space in the menu, or the button here), because macOS has no names for them.
+    private var spacesCard: some View {
+        RMCard(title: "Spaces",
+               subtitle: "Keep the theme to some Spaces and plain macOS on the others. Appearance, accent colour, Finder and Terminal changes stay on every Space.",
+               bodyPadding: 0) {
+            VStack(spacing: 0) {
+                RMRow(label: "Only on chosen Spaces",
+                      hint: "Off: the theme is on every Space.",
+                      isLast: !settings.themeOnChosenSpaces) {
+                    Toggle("", isOn: Binding(
+                        get: { settings.themeOnChosenSpaces },
+                        set: { on in
+                            if on, settings.themeSpaces.isEmpty, let here = ThemeSpaces.currentSpace { settings.themeSpaces = [here] }
+                            settings.themeOnChosenSpaces = on
+                        }))
+                        .toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                }
+                if settings.themeOnChosenSpaces {
+                    ForEach(settings.themeSpaces, id: \.self) { space in
+                        RMRow(label: ThemeSpaces.label(for: space) ?? "A Space that is gone",
+                              hint: space == ThemeSpaces.currentSpace ? "The one you are on." : nil) {
+                            Button("Remove") {
+                                settings.themeSpaces.removeAll { $0 == space }
+                                if settings.themeSpaces.isEmpty { settings.themeOnChosenSpaces = false }
+                            }
+                            .buttonStyle(RMGhostButtonStyle())
+                        }
+                    }
+                    RMRow(label: "Add the Space you are on",
+                          hint: "Or switch to a Space and choose Themes ▸ On This Space in the menu.",
+                          isLast: true) {
+                        Button("Add") {
+                            if let here = ThemeSpaces.currentSpace, !settings.themeSpaces.contains(here) { settings.themeSpaces.append(here) }
+                        }
+                        .buttonStyle(RMDefaultButtonStyle())
+                        .disabled(ThemeSpaces.currentSpace.map { settings.themeSpaces.contains($0) } ?? true)
+                    }
+                }
+            }
+        }
     }
 
     private var setupCard: some View {

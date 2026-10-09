@@ -69,6 +69,7 @@ final class WindowBorderController {
         let want = AppSettings.shared.themeWindowBorders
             && AppSettings.shared.dockEnabled
             && !AppSettings.shared.dockOnly
+            && !ThemeSpaces.shared.heldBack   // a Space without the theme
         if want { start() } else { stop() }
     }
 

@@ -280,3 +280,39 @@ CFArrayRef skb_copy_space_uuids(void) {
     CFRelease(displays);
     return out;
 }
+
+uint64_t skb_space_id_for_uuid(CFStringRef uuid) {
+    if (!uuid) return 0;
+    CFArrayRef displays = SLSCopyManagedDisplaySpaces(SLSMainConnectionID());
+    if (!displays) return 0;
+    uint64_t sid = 0;
+    for (CFIndex i = 0; i < CFArrayGetCount(displays) && !sid; i++) {
+        CFDictionaryRef d = CFArrayGetValueAtIndex(displays, i);
+        if (CFGetTypeID(d) != CFDictionaryGetTypeID()) continue;
+        CFArrayRef spaces = CFDictionaryGetValue(d, CFSTR("Spaces"));
+        if (!spaces || CFGetTypeID(spaces) != CFArrayGetTypeID()) continue;
+        for (CFIndex j = 0; j < CFArrayGetCount(spaces); j++) {
+            CFDictionaryRef s = CFArrayGetValueAtIndex(spaces, j);
+            if (CFGetTypeID(s) != CFDictionaryGetTypeID()) continue;
+            CFStringRef u = CFDictionaryGetValue(s, CFSTR("uuid"));
+            CFNumberRef n = CFDictionaryGetValue(s, CFSTR("ManagedSpaceID"));
+            if (u && n && CFGetTypeID(u) == CFStringGetTypeID() && CFEqual(u, uuid)) {
+                CFNumberGetValue(n, kCFNumberSInt64Type, &sid);
+                break;
+            }
+        }
+    }
+    CFRelease(displays);
+    return sid;
+}
+
+bool skb_move_window_to_space(uint32_t wid, uint64_t sid) {
+    if (!wid || !sid) return false;
+    CFNumberRef n = CFNumberCreate(NULL, kCFNumberSInt32Type, &wid);
+    const void *vals[1] = { n };
+    CFArrayRef list = CFArrayCreate(NULL, vals, 1, &kCFTypeArrayCallBacks);
+    CGError err = SLSMoveWindowsToManagedSpace(SLSMainConnectionID(), list, sid);
+    CFRelease(list);
+    CFRelease(n);
+    return err == kCGErrorSuccess;
+}
