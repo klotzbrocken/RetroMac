@@ -227,7 +227,7 @@ final class SplashController {
         // AVPlayerLayer rather than AVPlayerView: it is the lighter of the two and, more to the
         // point, it says when it can actually draw. AVPlayerView does not expose that.
         let videoLayer = AVPlayerLayer(player: player)
-        videoLayer.videoGravity = .resizeAspect   // 4:3 boot videos keep their bottom animation; black bars on the sides read as authentic
+        videoLayer.videoGravity = .resizeAspect   // until the clip's size is known; see `aspectFillRect`
         videoLayer.frame = NSRect(origin: .zero, size: frame.size)
         videoLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
         let host = NSView(frame: NSRect(origin: .zero, size: frame.size))
@@ -281,9 +281,29 @@ final class SplashController {
         }
         readyObservation = videoLayer.observe(\.isReadyForDisplay, options: [.initial, .new]) { layer, _ in
             guard layer.isReadyForDisplay else { return }
-            DispatchQueue.main.async(execute: reveal)
+            DispatchQueue.main.async {
+                if let size = player.currentItem?.presentationSize,
+                   Self.aspectFillRect(content: size, in: frame.size) != nil {
+                    layer.videoGravity = .resizeAspectFill
+                }
+                reveal()
+            }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: giveUp)
+    }
+
+    /// Where a boot screen goes to fill the display without black bars, cut at its sides — or nil
+    /// to keep the bars. Only the sides are ever cut, because the progress bars and copyright
+    /// lines sit at the top and bottom: a 16:9 clip on a 16:10 display loses under 8 % a side to
+    /// its plain background, while a 4:3 clip on any wide display keeps its bars.
+    static func aspectFillRect(content: NSSize, in bounds: NSSize) -> NSRect? {
+        guard content.width > 0, content.height > 0, bounds.width > 0, bounds.height > 0 else { return nil }
+        let a = content.width / content.height, b = bounds.width / bounds.height
+        guard a >= b, a / b <= 1.17 else { return nil }
+        let scale = max(bounds.width / content.width, bounds.height / content.height)
+        let size = NSSize(width: content.width * scale, height: content.height * scale)
+        return NSRect(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2,
+                      width: size.width, height: size.height)
     }
 
     private func show(image: NSImage, on screen: NSScreen, fullscreen: Bool) {
@@ -303,11 +323,14 @@ final class SplashController {
         let win = bootWindow(frame, opaque: true)
         win.hasShadow = !fullscreen
 
-        let iv = NSImageView(frame: NSRect(origin: .zero, size: frame.size))
+        let fill = fullscreen ? Self.aspectFillRect(content: image.size, in: frame.size) : nil
+        let iv = NSImageView(frame: fill ?? NSRect(origin: .zero, size: frame.size))
         iv.image = image
         iv.imageScaling = .scaleProportionallyUpOrDown
         iv.animates = true      // boot screens may be animated GIFs (Windows Me is)
-        let dv = dismissView(NSRect(origin: .zero, size: frame.size), content: iv)
+        let holder = NSView(frame: NSRect(origin: .zero, size: frame.size))   // clips a filled picture
+        holder.addSubview(iv)
+        let dv = dismissView(NSRect(origin: .zero, size: frame.size), content: holder)
         win.contentView = dv
 
         addCoverScreens(except: screen)

@@ -98,6 +98,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Boot screens fill the screen.** A 16:9 boot screen on a 16:10 display (a MacBook) had black
+  bars above and below; it now fills the display and loses a few percent of plain background at
+  its sides. Mac OS 9.2 Classic's clip had black bars inside the video itself, now cut away.
+  Windows 95 and Windows Me boot in 16:9: their 4:3 pictures are widened, not enlarged — the
+  sky and the white continue at the sides and the progress bar runs the full width.
 - **Folders in the Snow Leopard dock reflect too.** A reflection used to start at the edge of the
   picture file; a folder stands on transparent rows (about an eighth of its height), so the fade
   had nearly run out before the folder showed. It now starts at the picture's visible bottom.
