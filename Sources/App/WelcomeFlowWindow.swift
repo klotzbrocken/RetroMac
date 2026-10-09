@@ -141,8 +141,8 @@ struct WelcomeFlowView: View {
                             "\u{2303}\u{2325}Tab does what the theme\u{2019}s era did: Solaris moves the focus window by window, Snow Leopard opens Expos\u{00E9}, Mountain Lion Mission Control.")
                     feature("gauge.with.dots.needle.33percent", .green, "Task Manager, all five pages",
                             "Under Windows XP: Applications, Processes, Performance, Networking and Users. Open it with Ctrl+Option+Delete or from the Start menu.")
-                    feature("accessibility", .blue, "VoiceOver",
-                            "RetroMac\u{2019}s drawing no longer shows up as empty windows, and the docks, taskbars, Start menus and panels are named buttons and menus VoiceOver can use.")
+                    feature("accessibility", .blue, "VoiceOver and the keyboard",
+                            "RetroMac\u{2019}s drawing no longer shows up as empty windows, and the docks, taskbars, Start menus and panels are named buttons and menus VoiceOver can use. \u{2303}Esc opens the theme\u{2019}s Start or main menu, \u{2303}\u{21E7}Esc walks the dock, and the arrow keys find their way through every theme menu.")
                     feature("gearshape.2", .gray, "Settings, tidied up",
                             "Themes first, the shader in four clear tabs, Retro Mode is now Favourite, a shorter Setup Assistant with themes by family, and betas on request in About.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
