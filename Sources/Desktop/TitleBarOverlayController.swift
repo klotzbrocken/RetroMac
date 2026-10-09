@@ -153,7 +153,6 @@ final class TitleBarOverlayController {
             && AppSettings.shared.dockEnabled
             && !AppSettings.shared.dockOnly
             && Self.accessibilityGranted
-            && !ThemeSpaces.shared.heldBack   // a Space without the theme
             && Self.style(for: RetroFrameTheme.key()) != nil   // an unsupported theme runs nothing at all
         if want { start() } else { stop() }
     }
@@ -291,6 +290,13 @@ final class TitleBarOverlayController {
 
     private func sync() {
         guard running, style != nil else { return }
+        // A Space without the theme (ThemeSpaces): no bars on its windows, but the title bars keep
+        // running. Stopping them would take back the square-corner default, and writing that
+        // restarts the Finder on every Space switch.
+        if ThemeSpaces.shared.heldBack {
+            for wid in Array(overlays.keys) { drop(for: wid) }
+            return
+        }
         if syncInFlight { syncPending = true; return }
         syncInFlight = true
         let generation = syncGeneration
