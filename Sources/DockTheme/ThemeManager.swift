@@ -50,7 +50,8 @@ final class ThemeManager {
         spaceChangeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
+            // With the theme on chosen Spaces, ThemeSpaces sets the picture as part of its switch.
+            guard let self, !AppSettings.shared.themeOnChosenSpaces else { return }
             self.spaceWallpaperWork?.cancel()
             let work = DispatchWorkItem { [weak self] in
                 guard let self else { return }

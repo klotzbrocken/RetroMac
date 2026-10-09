@@ -77,6 +77,9 @@ final class ThemeSpaces {
         boundTo = target.map { skb_space_id_for_uuid($0 as CFString) } ?? 0
         for w in bound.allObjects { _ = skb_move_window_to_space(UInt32(w.windowNumber), boundTo) }
         bindNewWindows()
+        // The picture first: setting it goes through the Dock process too, and the Dock coming
+        // or going at the same moment showed it flicker in and out.
+        ThemeManager.shared.applyWallpaper(spaceChange: true)
         if sweep == nil {
             // New theme windows (a widget opened, the dock rebuilt) join every Space again.
             let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.bindNewWindows() }
@@ -94,7 +97,11 @@ final class ThemeSpaces {
         for w in bound.allObjects { w.collectionBehavior.insert(.canJoinAllSpaces) }
         bound.removeAllObjects()
         boundTo = 0
-        if themeOn { setHeldBack(false); return }
+        if themeOn {
+            setHeldBack(false)
+            ThemeManager.shared.applyWallpaper(spaceChange: true)
+            return
+        }
         guard heldBack else { return }
         heldBack = false
         AppDelegate.shared?.setEffectPausedForSpace(false)
@@ -121,14 +128,22 @@ final class ThemeSpaces {
         guard back != heldBack else { return }
         heldBack = back
         lastSwitch = Date()
+        if AppSettings.shared.debugLogging { print("[Spaces] theme \(back ? "held back on" : "back on") Space \(Self.currentSpace ?? "?")") }
         let s = AppSettings.shared
         AppDelegate.shared?.setEffectPausedForSpace(back)
-        if DockController.shared.hidesSystemDock { CoreDockBridge.setAutoHide(!back) }
-        if s.hideMenuBar { DispatchQueue.global(qos: .userInitiated).async { SystemUIHelper.setMenuBarAutoHide(!back) } }
+        // The Dock and menu bar a moment after the picture, once, and only if the Space is still
+        // the same kind by then.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self, self.heldBack == back else { return }
+            if DockController.shared.hidesSystemDock {
+                if s.debugLogging { print("[Spaces] Mac Dock \(back ? "shown" : "hidden")") }
+                CoreDockBridge.setAutoHide(!back)
+            }
+            if s.hideMenuBar { DispatchQueue.global(qos: .userInitiated).async { SystemUIHelper.setMenuBarAutoHide(!back) } }
+        }
         if back { CursorThemeManager.shared.restore() }
         else if let config = ThemeManager.shared.activeTheme?.config { CursorThemeManager.shared.apply(for: config) }
         WindowBorderController.shared.update()   // and the title bars with it
-        ThemeManager.shared.applyWallpaper(spaceChange: true)   // this Space's picture, also without a Space switch
     }
 
     /// "Desktop 3", or nil for a Space that is gone.
