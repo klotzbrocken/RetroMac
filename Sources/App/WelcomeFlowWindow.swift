@@ -117,28 +117,36 @@ struct WelcomeFlowView: View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
-                Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Solaris and QNX, a way out of any desktop, and the window switcher of each era")
+                Text("What's New in RetroMac \(whatsNewVersion) Beta").font(.title2.bold())   // drop "Beta" for the release
+                Text("Spaces, new themes, historic icons \u{2014} and a lot of fixes")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("sun.max.fill", .purple, "Solaris 8 \u{2014} CDE",
+                    feature("rectangle.split.3x1", .indigo, "A theme on your Spaces of choice",
+                            "Keep the theme to one Space, or a few, and plain macOS on the others: Only on this Space in the flyout. The theme slides away with its Space; the others have the Mac\u{2019}s Dock, menu bar and your own wallpaper. Every Space also gets its own wallpaper back when a theme goes off.")
+                    feature("sun.max.fill", .purple, "New: Solaris 8 \u{2014} CDE",
                             "The Unix desktop of 2000: the Front Panel with its live clock and subpanels, mauve title bars with the window menu, the Workspace Menu on a right-click, minimised windows as icons, the Application Manager, and crashes on the Sun console.")
-                    feature("cpu", .blue, "QNX 6.2.1 \u{2014} Photon",
+                    feature("cpu", .blue, "New: QNX 6.2.1 \u{2014} Photon",
                             "The realtime OS\u{2019}s desktop from its 2003 CD: the shelf with groups you fold open and shut and a live system monitor, the taskbar with Launch and one entry per window, and Photon\u{2019}s blue title bars.")
+                    feature("macwindow.on.rectangle", .cyan, "New: Windows Vista and its Sidebar",
+                            "Aero glass windows on a black glass taskbar with the round Start orb, eight Vista wallpapers, Vista\u{2019}s own icons, and the Sidebar with a clock, a calendar and a CPU meter.")
+                    feature("paintbrush.pointed.fill", .yellow, "Themes, closer to the originals",
+                            "BeOS gets its yellow window tabs. Snow Leopard\u{2019}s dock reflections grow with the icon and fade out on the shelf. Amiga Workbench and SGI IRIX have the top of the screen to themselves.")
+                    feature("photo.on.rectangle.angled", .teal, "Historic icons for modern apps",
+                            "Over 200 new icons: Office, Teams, Slack, Zoom, Figma, VS Code, Firefox, Spotify and many more, drawn in the style of Mac OS 9, System 7, Mac OS X, BeOS, Windows 3.1 to 7. Import your own icon packages in Settings \u{25B8} Dock \u{25B8} Historic icons.")
                     feature("lifepreserver", .red, "Rescue Desktop",
-                            "One action turns the theme and every effect off and brings back windows you cannot reach. Your settings stay. \u{2303}\u{2325}\u{2318}R, the flyout or the menu-bar menu.")
+                            "One action turns the theme and every effect off, brings back windows you cannot reach and the menu bar a theme hid. Your settings stay. \u{2303}\u{2325}\u{2318}R, the flyout or the menu-bar menu.")
                     feature("rectangle.stack", .orange, "The window switcher of each era",
                             "\u{2303}\u{2325}Tab does what the theme\u{2019}s era did: Solaris moves the focus window by window, Snow Leopard opens Expos\u{00E9}, Mountain Lion Mission Control.")
-                    feature("photo.on.rectangle.angled", .teal, "Historic icons for modern apps",
-                            "Import an icon package for a theme and your apps wear it everywhere the theme shows them. Settings \u{25B8} Dock \u{25B8} Historic icons shows what is in and what is missing.")
-                    feature("macwindow.on.rectangle", .cyan, "Windows Vista and its Sidebar",
-                            "Aero glass windows on a black glass taskbar with the round Start orb, eight Vista wallpapers, Vista\u{2019}s own icons, and the Sidebar with a clock, a calendar and a CPU meter.")
                     feature("gauge.with.dots.needle.33percent", .green, "Task Manager, all five pages",
                             "Under Windows XP: Applications, Processes, Performance, Networking and Users. Open it with Ctrl+Option+Delete or from the Start menu.")
+                    feature("accessibility", .blue, "VoiceOver",
+                            "RetroMac\u{2019}s drawing no longer shows up as empty windows, and the docks, taskbars, Start menus and panels are named buttons and menus VoiceOver can use.")
+                    feature("gearshape.2", .gray, "Settings, tidied up",
+                            "Themes first, the shader in four clear tabs, Retro Mode is now Favourite, a shorter Setup Assistant with themes by family, and betas on request in About.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "A rolled-up window keeps its way back until it is really back, even across a crash. The Start button stays pressed while its menu is open. Mission Control no longer shows the title bars as little windows. A wallpaper that could not be set is no longer taken as set.")
+                            "Theme switches no longer restart the Dock and Finder for nothing. Pac-Man starts again. The shader is off behind the lock screen. No more log file on the Desktop. A rolled-up window keeps its way back, even across a crash. Mission Control no longer shows the title bars as little windows.")
 
                     sectionHeader("Also in 2.8.8")
 
