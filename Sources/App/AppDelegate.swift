@@ -399,7 +399,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard click != statusMenuClosedBy else { return }
         shownStatusMenu = menu
         button.highlight(true)
-        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 5), in: button)
+        // In screen coordinates, under the icon: a point in the button's own (unflipped) space
+        // put the menu's top above the screen, and it opened scrolled with an arrow.
+        let icon = button.window?.convertToScreen(button.convert(button.bounds, to: nil)) ?? .zero
+        menu.popUp(positioning: nil, at: NSPoint(x: icon.minX, y: icon.minY - 4), in: nil)
         button.highlight(false)
     }
 
