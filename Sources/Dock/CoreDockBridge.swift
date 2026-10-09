@@ -24,6 +24,7 @@ enum CoreDockBridge {
     @discardableResult
     static func setAutoHide(_ enabled: Bool) -> Bool {
         guard let f = symbol("CoreDockSetAutoHideEnabled", as: SetAutoHideFn.self) else { return false }
+        if AppSettings.shared.debugLogging { print("[Spaces] CoreDock auto-hide → \(enabled)") }
         f(DarwinBoolean(enabled))
         return true
     }

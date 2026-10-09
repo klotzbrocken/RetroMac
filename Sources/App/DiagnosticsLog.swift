@@ -29,6 +29,9 @@ final class DiagnosticsLog {
         guard !started else { return }
         started = true
         signal(SIGPIPE, SIG_IGN)   // never die if a redirected fd's reader goes away
+        // Line by line: stdout into a pipe is block-buffered, and the log (and About ▸ Diagnostics)
+        // then showed nothing until 4 KB had piled up.
+        setvbuf(stdout, nil, _IOLBF, 0)
         append("=== RetroMac diagnostics ===")
         append(systemInfo())
         append("--- console ---")

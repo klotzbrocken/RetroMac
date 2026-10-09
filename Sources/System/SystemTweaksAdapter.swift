@@ -223,8 +223,11 @@ enum SystemTweaksAdapter {
         }
         persistSnapshot(stored)   // crash-safe: snapshot on disk before the system is touched
 
-        // 3. Write each target tweak (the snapshot above already records how to undo them).
-        for t in target {
+        // 3. Write each target tweak that is not already so (the snapshot above records how to
+        //    undo them). Only a real change restarts the Dock or the Finder: writing every key
+        //    and restarting both on every pass made them flicker on each theme switch and display
+        //    change, and on every Space switch with the theme on chosen Spaces.
+        for t in target where !Self.holds(sb.readDefault(t.domain, t.key), type: t.type, value: t.value) {
             sb.runDefaults(["write", t.domain, t.key, flag(t.type), literal(t.type, t.value)])
             kill.formUnion(refreshTargets(domain: t.domain, refresh: t.refresh))
         }
@@ -247,6 +250,22 @@ enum SystemTweaksAdapter {
             d.set(true, forKey: snapKey)
         }
         d.synchronize()
+    }
+
+    /// Whether `current` (as `defaults read` prints it) already is `value`: bools as 1/0,
+    /// numbers by value, anything else as text.
+    static func holds(_ current: String?, type: String, value: String) -> Bool {
+        guard let current = current?.trimmingCharacters(in: .whitespacesAndNewlines) else { return false }
+        switch type {
+        case "bool":
+            func b(_ s: String) -> Bool? { ["1", "true", "yes"].contains(s.lowercased()) ? true : ["0", "false", "no"].contains(s.lowercased()) ? false : nil }
+            return b(current) != nil && b(current) == b(value)
+        case "int", "float":
+            guard let c = Double(current), let v = Double(value) else { return false }
+            return abs(c - v) < 1e-9
+        default:
+            return current == value
+        }
     }
 
     private static func flag(_ type: String) -> String {

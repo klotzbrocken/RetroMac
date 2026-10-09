@@ -71,6 +71,7 @@ final class ThemeSpaces {
         let themeOn = s.dockEnabled && ThemeManager.shared.activeTheme != nil
         guard s.themeOnChosenSpaces, themeOn else { release(themeOn: themeOn); return }
         let here = showsThemeHere
+        if s.debugLogging { print("[Spaces] evaluate: Space \(Self.currentSpace ?? "?") theme here=\(here)") }
         // The windows live on this Space when it is one of the theme's, else on the first of
         // them that still exists.
         let target = here ? Self.currentSpace : s.themeSpaces.first { skb_space_id_for_uuid($0 as CFString) != 0 }

@@ -608,6 +608,7 @@ final class DockController {
 
     private func show() {
         guard !isVisible else { return }
+        if AppSettings.shared.debugLogging { print("[Spaces] theme dock show") }
         repositionWindow()
         window?.orderFrontRegardless()
         isVisible = true
@@ -618,6 +619,7 @@ final class DockController {
 
     private func hide() {
         guard isVisible else { return }
+        if AppSettings.shared.debugLogging { print("[Spaces] theme dock hide") }
         window?.orderOut(nil)
         isVisible = false
         autoHideVisible = false
@@ -1223,6 +1225,7 @@ final class DockController {
     /// keeps the lightweight CoreDock path (no window restacking).
     private func restoreSystemDock(synchronous: Bool = false, forceReload: Bool = false) {
         guard didHideSystemDock else { return }
+        if AppSettings.shared.debugLogging { print("[Spaces] restoreSystemDock") }
         systemDockWatch?.invalidate(); systemDockWatch = nil
         let restoreHide = originalDockAutoHide ?? false
         let restorePos = originalDockPosition ?? "bottom"
@@ -1348,6 +1351,7 @@ final class DockController {
     private func setSystemDockPrefs(autohide: Bool, position: String,
                                     minimizeToApp: Bool? = nil, minEffect: String? = nil,
                                     autohideDelay: String? = nil, deleteAutohideDelay: Bool = false) -> Bool {
+        if AppSettings.shared.debugLogging { print("[Spaces] Dock prefs written: autohide=\(autohide) position=\(position) delay=\(autohideDelay ?? "-")") }
         var ok = true
         /// Run one `defaults` invocation through SystemBridge; track failure unless it's an
         /// ignorable delete (the `autohide-delay` key may legitimately not exist).

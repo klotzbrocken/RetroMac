@@ -57,3 +57,17 @@ final class SystemTweaksAllowlistTests: XCTestCase {
         }
     }
 }
+
+/// A tweak that is already in place is not written again, so the Dock and Finder do not restart.
+final class SystemTweakHoldsTests: XCTestCase {
+    func testAlreadyInPlace() {
+        XCTAssertTrue(SystemTweaksAdapter.holds("1", type: "bool", value: "true"))
+        XCTAssertTrue(SystemTweaksAdapter.holds("0\n", type: "bool", value: "false"))
+        XCTAssertFalse(SystemTweaksAdapter.holds("0", type: "bool", value: "true"))
+        XCTAssertTrue(SystemTweaksAdapter.holds("0.5", type: "float", value: "0.5"))
+        XCTAssertTrue(SystemTweaksAdapter.holds("12", type: "int", value: "12"))
+        XCTAssertFalse(SystemTweaksAdapter.holds("14", type: "int", value: "12"))
+        XCTAssertTrue(SystemTweaksAdapter.holds("Nlsv", type: "string", value: "Nlsv"))
+        XCTAssertFalse(SystemTweaksAdapter.holds(nil, type: "string", value: "Nlsv"), "an unset key is not in place")
+    }
+}
