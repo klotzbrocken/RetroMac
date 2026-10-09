@@ -969,10 +969,10 @@ final class AppSettings: ObservableObject {
     }
     /// The theme only on the Spaces in `themeSpaces` (their uuids), plain macOS on the others.
     @Published var themeOnChosenSpaces: Bool {
-        didSet { defaults.set(themeOnChosenSpaces, forKey: "themeOnChosenSpaces"); ThemeSpaces.shared.evaluate() }
+        didSet { defaults.set(themeOnChosenSpaces, forKey: "themeOnChosenSpaces"); ThemeSpaces.shared.evaluate(); AppDelegate.shared?.refreshStatusMenu() }
     }
     @Published var themeSpaces: [String] {
-        didSet { defaults.set(themeSpaces, forKey: "themeSpaces"); ThemeSpaces.shared.evaluate() }
+        didSet { defaults.set(themeSpaces, forKey: "themeSpaces"); ThemeSpaces.shared.evaluate(); AppDelegate.shared?.refreshStatusMenu() }
     }
     /// The report after Rescue Desktop. Turned off with its "Don't show this again"; a rescue
     /// that fails or needs a permission still shows it.

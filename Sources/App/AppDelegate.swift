@@ -993,6 +993,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// again 18 ms later (measured), so the menu seemed not to close at all.
     private var statusMenuClosedByClickAt: CFTimeInterval = 0
 
+    /// The menu-bar menu again, for state it shows that changed elsewhere (the Spaces ticks:
+    /// without it "On This Space" kept its old tick, and a second try took the Space out again).
+    func refreshStatusMenu() { rebuildMenu() }
+
     private func rebuildMenu() {
         if statusMenuOpen {
             if AppSettings.shared.debugLogging && !statusMenuRebuildPending { print("[Menu] rebuild while open, deferred") }
