@@ -119,6 +119,11 @@ final class ThemeSpaces {
         let launcher = FloatingLauncherButton.shared.buttonWindow
         for w in NSApp.windows where w.collectionBehavior.contains(.canJoinAllSpaces) && !bound.contains(w) {
             guard w !== launcher, !Self.ownControls.contains(String(describing: type(of: w))) else { continue }
+            // Not the shader's windows (nor anything else the mouse goes through): the shader
+            // pauses on a Space without the theme anyway, and moving its fresh windows to a
+            // Space through the window server undid their stacking — Live Wallpaper's picture,
+            // which sits behind the app windows, came up over the dock and cut it off.
+            guard !w.ignoresMouseEvents else { continue }
             w.collectionBehavior.remove(.canJoinAllSpaces)
             bound.add(w)
             _ = skb_move_window_to_space(UInt32(w.windowNumber), boundTo)
