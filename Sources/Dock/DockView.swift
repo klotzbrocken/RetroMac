@@ -249,6 +249,57 @@ final class DockView: NSView {
         magnifiedDockBarRect ?? dockBarRect
     }
 
+    /// The bottom of the bar, for running lights that sit on the shelf's front edge.
+    var shelfBottomY: CGFloat { currentBarRect.minY }
+
+    // MARK: - Mountain Lion shelf
+
+    /// Height of the shelf's front face, the lit edge the running lights sit on.
+    static let frostedFrontHeight: CGFloat = 5
+
+    /// The Mountain Lion floor: the front face across the whole width, and above it the glass
+    /// surface running back with its sides drawn in, as Snow Leopard's did; the front corners
+    /// a little rounded.
+    static func frostedShelfPath(_ r: NSRect) -> NSBezierPath {
+        let face = frostedFrontHeight, top = r.minY + face
+        let lean = (r.maxY - top) * CGFloat(tan(27.3 * Double.pi / 180))
+        let p = NSBezierPath()
+        p.move(to: NSPoint(x: r.minX + 2, y: r.minY))
+        p.line(to: NSPoint(x: r.maxX - 2, y: r.minY))
+        p.appendArc(from: NSPoint(x: r.maxX, y: r.minY), to: NSPoint(x: r.maxX, y: r.minY + 2), radius: 2)
+        p.line(to: NSPoint(x: r.maxX, y: top))
+        p.line(to: NSPoint(x: r.maxX - lean, y: r.maxY))
+        p.line(to: NSPoint(x: r.minX + lean, y: r.maxY))
+        p.line(to: NSPoint(x: r.minX, y: top))
+        p.line(to: NSPoint(x: r.minX, y: r.minY + 2))
+        p.appendArc(from: NSPoint(x: r.minX, y: r.minY), to: NSPoint(x: r.minX + 2, y: r.minY), radius: 2)
+        p.close()
+        return p
+    }
+
+    /// Frosted glass, lighter and less see-through than Snow Leopard's, lit along the back; a
+    /// darker front face under a bright edge. `alpha` is the user's dock transparency.
+    static func drawFrostedShelf(_ r: NSRect, alpha: CGFloat) {
+        let path = frostedShelfPath(r)
+        let top = r.minY + frostedFrontHeight
+        NSGraphicsContext.saveGraphicsState()
+        path.addClip()
+        NSGradient(colors: [NSColor(srgbRed: 0.80, green: 0.81, blue: 0.84, alpha: 0.86 * alpha),
+                            NSColor(srgbRed: 0.93, green: 0.93, blue: 0.95, alpha: 0.74 * alpha)])?
+            .draw(in: NSRect(x: r.minX, y: top, width: r.width, height: r.maxY - top), angle: 90)
+        NSGradient(colors: [NSColor(srgbRed: 0.42, green: 0.43, blue: 0.47, alpha: 0.92 * alpha),
+                            NSColor(srgbRed: 0.62, green: 0.63, blue: 0.67, alpha: 0.92 * alpha)])?
+            .draw(in: NSRect(x: r.minX, y: r.minY, width: r.width, height: frostedFrontHeight), angle: 90)
+        NSColor.white.withAlphaComponent(0.85 * alpha).setFill()
+        NSRect(x: r.minX, y: top - 0.5, width: r.width, height: 1).fill()            // the lit front edge
+        NSColor.white.withAlphaComponent(0.55 * alpha).setFill()
+        NSRect(x: r.minX, y: r.maxY - 1, width: r.width, height: 1).fill()            // the back edge
+        NSGraphicsContext.restoreGraphicsState()
+        NSColor.black.withAlphaComponent(0.22 * alpha).setStroke()
+        path.lineWidth = 0.5
+        path.stroke()
+    }
+
     /// Background + border paths for a vertical dock: flush (square) on the
     /// screen-edge side, rounded on the other three. The border path is open and
     /// covers only the top, bottom, and interior sides (no border on the edge side).
@@ -2333,6 +2384,8 @@ final class DockView: NSView {
             let paths = verticalBarPaths(rect: rect, radius: cr)
             bgPath = paths.fill
             verticalBorderPath = paths.border
+        } else if theme.hasFrostedShelf {
+            bgPath = Self.frostedShelfPath(shelfRect)
         } else if theme.has3DShelf {
             // Snow Leopard glass shelf: side walls converge toward the back (top).
             // Target angles measured from the real dock (from vertical): left 26.7°,
@@ -2377,7 +2430,13 @@ final class DockView: NSView {
             bgPath.fill()
             ctx.restoreGState()
         }
-        if theme.hasGradientBackground,
+        if theme.hasFrostedShelf && !theme.isVertical {
+            Self.drawFrostedShelf(shelfRect, alpha: bgAlpha)
+        } else if theme.hasFrostedShelf {
+            // Mountain Lion's side dock: smoked glass, not the frosted floor.
+            NSColor(white: 0.12, alpha: 0.55 * bgAlpha).setFill()
+            bgPath.fill()
+        } else if theme.hasGradientBackground,
            let gradTop = theme.parsedGradientTop?.withAlphaComponent(
                (theme.parsedGradientTop?.alphaComponent ?? 1) * bgAlpha),
            let gradBottom = theme.parsedGradientBottom?.withAlphaComponent(
@@ -2437,7 +2496,7 @@ final class DockView: NSView {
         }
 
         // 3D shelf: glass highlight on upper portion
-        if theme.has3DShelf && !theme.isVertical {
+        if theme.has3DShelf && !theme.hasFrostedShelf && !theme.isVertical {
             let topInset = shelfRect.height * 0.15
             let glassHeight = shelfRect.height * 0.4
             let glassRect = NSRect(x: shelfRect.minX + topInset * 0.6, y: shelfRect.maxY - glassHeight,
@@ -2498,8 +2557,8 @@ final class DockView: NSView {
 
         // Border — vertical docks stroke only the 3 visible sides (top, bottom, and
         // the interior side toward screen center); the screen-edge side stays flush.
-        if theme.dock.borderWidth > 0 {
-            theme.parsedBorderColor.setStroke()
+        if theme.dock.borderWidth > 0, !(theme.hasFrostedShelf && !theme.isVertical) {
+            (theme.hasFrostedShelf ? NSColor.white.withAlphaComponent(0.28) : theme.parsedBorderColor).setStroke()
             let strokePath = verticalBorderPath ?? bgPath
             strokePath.lineWidth = theme.dock.borderWidth
             strokePath.stroke()

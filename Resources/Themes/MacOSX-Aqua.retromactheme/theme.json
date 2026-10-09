@@ -32,8 +32,9 @@
     "launchBounce": true,
     "height": 78,
     "iconSize": 52,
-    "padding": 12,
+    "padding": 24,
     "spacing": 8,
+    "shelfStyle": "frosted",
     "cornerRadius": 16,
     "backgroundColor": "#EDEDF0B8",
     "backgroundImage": null,
@@ -55,10 +56,10 @@
     "hoverAnimationDuration": 0.15
   },
   "indicator": {
-    "style": "dot",
-    "color": "#333333",
-    "size": 5,
-    "offset": 6
+    "style": "lightbar",
+    "color": "#F4FAFF",
+    "size": 9,
+    "offset": 0
   },
   "wallpaper": "wallpaper.jpg",
   "wallpapers": [

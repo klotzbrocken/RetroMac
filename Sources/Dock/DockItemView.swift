@@ -7,6 +7,8 @@ final class DockItemView: NSView {
     /// How much of the picture's height is transparent at its bottom (a folder's is about 13 %).
     /// The reflection starts where the picture does, not at the edge of the image file.
     private var bottomPad: CGFloat = 0
+    /// How far above the dock's bottom the reflection must stop: Mountain Lion's front face.
+    private var reflectionFloor: CGFloat = 0
     private var trackingArea: NSTrackingArea?
     private var isHovered = false
     private var indicatorLayer: CALayer?
@@ -127,6 +129,7 @@ final class DockItemView: NSView {
         // Vertical docks (left/right) drop the 3D floor entirely — no reflection.
         guard theme.icon.reflectionEnabled, !theme.isVertical,
               let image = iconImageView.image else { return }
+        reflectionFloor = theme.hasFrostedShelf ? DockView.frostedFrontHeight : 0
 
         let mirror = CALayer()
         mirror.contents = Self.mirrored(image, size: iconImageView.frame.size)
@@ -156,7 +159,7 @@ final class DockItemView: NSView {
         let icon = iconImageView.frame
         let pad = icon.height * bottomPad
         let floor = icon.minY + pad                     // where the picture stands
-        let room = superview == nil ? icon.height : frame.minY + floor   // down to the dock's bottom
+        let room = superview == nil ? icon.height : frame.minY + floor - reflectionFloor   // down to the dock's floor
         let height = max(0, min((icon.height - pad) * 0.45, room))
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -205,6 +208,23 @@ final class DockItemView: NSView {
         indicatorW = dot.frame.width; indicatorH = dot.frame.height; indicatorYOrigin = dot.frame.origin.y
 
         let color = NSColor.fromHex(theme.indicator.color)
+        if theme.indicator.style == "lightbar", !theme.isVertical {
+            // Mountain Lion: a short bright light set into the shelf's front edge, glowing.
+            let light = CALayer()
+            light.backgroundColor = color.cgColor
+            light.cornerRadius = 1.25
+            light.shadowColor = NSColor(srgbRed: 0.55, green: 0.80, blue: 1, alpha: 1).cgColor
+            light.shadowOpacity = 1
+            light.shadowRadius = 3
+            light.shadowOffset = .zero
+            indicatorW = sz; indicatorH = 2.5
+            lightOnShelf = true
+            layer?.addSublayer(light)
+            indicatorLayer = light
+            layoutLightOnShelf()
+            return
+        }
+        lightOnShelf = false
         if theme.indicator.style == "glow" {
             // Snow Leopard running indicator: a soft, oval light-blue bloom at the icon's base
             // (radial gradient → transparent edge = washed-out glow).
@@ -268,11 +288,23 @@ final class DockItemView: NSView {
         indicatorLayer = dot
     }
 
+    /// The light sits on the dock's front edge, wherever the item stands above it.
+    private var lightOnShelf = false
+    private func layoutLightOnShelf() {
+        guard lightOnShelf, let light = indicatorLayer, let dock = superview as? DockView else { return }
+        let y = dock.shelfBottomY + DockView.frostedFrontHeight / 2 - frame.minY - indicatorH / 2
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        light.frame = CGRect(x: (bounds.width - indicatorW) / 2, y: y, width: indicatorW, height: indicatorH)
+        CATransaction.commit()
+    }
+
     /// Keep the running dot centred when the item is resized (magnification effect) —
     /// its frame was computed against the ORIGINAL bounds and would drift left otherwise.
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         layoutReflection()
+        if lightOnShelf { layoutLightOnShelf(); return }
         guard let ind = indicatorLayer, indicatorW > 0 else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -373,6 +405,7 @@ final class DockItemView: NSView {
     override func setFrameOrigin(_ newOrigin: NSPoint) {
         super.setFrameOrigin(newOrigin)
         layoutReflection()   // how far down it may reach depends on where the item sits
+        layoutLightOnShelf()
     }
 
     func applyMagnification(scale: CGFloat, dx: CGFloat, dy: CGFloat) {

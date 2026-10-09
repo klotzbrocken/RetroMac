@@ -233,7 +233,7 @@ struct DockThemeConfig: Codable {
         var showClock: Bool?
         var magnification: Bool?
         var magnificationScale: CGFloat?
-        var shelfStyle: String?  // "flat" (default) or "3d" (Snow Leopard perspective)
+        var shelfStyle: String?  // "flat" (default), "3d" (Snow Leopard perspective) or "frosted" (Mountain Lion)
         var alignment: String?   // "center" (default), "left", "right"
         var edgeOffset: CGFloat? // distance from screen edge in px (default 8)
         var borderStyle: String? // nil = normal bevel/border; "pacman" = animated pellet border; "doomslayer" = Doom Slayer patrols the lower edge
@@ -349,7 +349,9 @@ extension DockThemeConfig {
     var hasClock: Bool { dock.showClock == true }
     var hasMagnification: Bool { dock.magnification == true }
     var magnificationMaxScale: CGFloat { dock.magnificationScale ?? 2.0 }
-    var has3DShelf: Bool { dock.shelfStyle == "3d" }
+    var has3DShelf: Bool { dock.shelfStyle == "3d" || hasFrostedShelf }
+    /// Mountain Lion: the same perspective, frosted glass with a lit front edge.
+    var hasFrostedShelf: Bool { dock.shelfStyle == "frosted" }
     /// This theme's default menu-bar Apple style (0 off, 1 rainbow, 2 aqua, 3 aqua classic), or nil to leave as-is.
     var menuBarAppleStyleDefault: Int? {
         switch menuBarApple?.lowercased() {

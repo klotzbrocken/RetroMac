@@ -98,6 +98,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Mountain Lion's dock is Mountain Lion's.** It was a flat rounded bar with dark dots. Now it is the
+  10.8 shelf: frosted glass running back in perspective, a darker front face under a lit edge,
+  reflections that end on the glass, and running apps shown as small glowing lights set into the
+  front edge. On the side of the screen it is smoked glass.
+- **Windows themes: minimising is quick and looks like Windows.** Only the title bar flies into
+  the taskbar button, in a fifth of a second, as Windows animated it; the whole window used to
+  squash into the button over twice as long. Windows XP has Claude and ChatGPT icons (the
+  Windows 7 art).
 - **Windows themes: a minimised window flies into its taskbar button.** It used to shrink
   towards wherever the hidden Mac Dock kept that app, a different place for every app. Now the
   title bar's minimise box, ⌘M and a click on the active window's taskbar button all send the

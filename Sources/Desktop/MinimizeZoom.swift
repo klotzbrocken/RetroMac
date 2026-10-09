@@ -25,6 +25,8 @@ final class MinimizeZoom {
     }
 
     static let duration: TimeInterval = 0.4
+    /// Windows' caption flight to the taskbar: quick, as fast as a maximise feels.
+    static let captionDuration: TimeInterval = 0.2
 
     private var cover: NSPanel?
     private var zoom: NSPanel?
@@ -48,11 +50,12 @@ final class MinimizeZoom {
               let shotCG = CGWindowListCreateImage(.null, .optionIncludingWindow, wid, [.boundsIgnoreFraming, .bestResolution]),
               shotCG.width > 1, shotCG.height > 1 else { return false }
 
-        // The picture that zooms: the window with its bar on top, as they stood.
-        let union = windowFrame.union(bar.frame)
+        // The picture that zooms: the window with its bar on top, as they stood. Into a
+        // taskbar button only the bar goes, as Windows animated the caption alone.
+        let union = button == nil ? windowFrame.union(bar.frame) : bar.frame
         let picture = NSImage(size: union.size)
         picture.lockFocus()
-        NSImage(cgImage: shotCG, size: windowFrame.size).draw(in: NSRect(origin: NSPoint(x: windowFrame.minX - union.minX, y: windowFrame.minY - union.minY), size: windowFrame.size))
+        if button == nil { NSImage(cgImage: shotCG, size: windowFrame.size).draw(in: NSRect(origin: NSPoint(x: windowFrame.minX - union.minX, y: windowFrame.minY - union.minY), size: windowFrame.size)) }
         if let rep = barView.bitmapImageRepForCachingDisplay(in: barView.bounds) {
             barView.cacheDisplay(in: barView.bounds, to: rep)
             let barImage = NSImage(size: barView.bounds.size); barImage.addRepresentation(rep)
@@ -100,8 +103,8 @@ final class MinimizeZoom {
         let endScale = button.map { CATransform3DMakeScale($0.width / union.width, $0.height / union.height, 1) }
             ?? CATransform3DMakeScale(0.02, 0.02, 1)
         CATransaction.begin()
-        CATransaction.setAnimationDuration(Self.duration)
-        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeIn))
+        CATransaction.setAnimationDuration(button == nil ? Self.duration : Self.captionDuration)
+        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: button == nil ? .easeIn : .easeInEaseOut))
         CATransaction.setCompletionBlock { [weak self] in self?.dropZoom(zoomPanel) }
         let move = CABasicAnimation(keyPath: "position"); move.fromValue = layer.position; move.toValue = target
         let shrink = CABasicAnimation(keyPath: "transform"); shrink.fromValue = CATransform3DIdentity; shrink.toValue = endScale
