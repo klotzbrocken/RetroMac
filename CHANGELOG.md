@@ -89,8 +89,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Window features need Accessibility.** The title bars, the window menu, minimised-window
   icons, the taskbar entries and the switcher work with it; without it the taskbars show apps
   instead of windows, as before. The title bars are still experimental.
-- **On a Space without the theme**, the appearance, accent colour, Finder and Terminal changes
-  and hidden desktop icons stay as the theme set them: they are one setting for the whole Mac,
+- **On a Space without the theme**, the appearance, accent colour, Finder and Terminal changes,
+  square window corners and hidden desktop icons stay as the theme set them: they are one setting for the whole Mac,
   and switching them costs seconds. The main display's Space decides for every display.
 - **A Space you never go back to keeps the theme's wallpaper.** macOS changes the desktop
   picture only on the Space on screen, so after a theme goes off each other Space gets yours back
@@ -120,6 +120,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **The Setup Assistant is shorter** (580 instead of 700 points), and its theme list is grouped
   by Apple, Windows, Unix & Amiga and Other, folded until opened. The menu's Themes submenu
   now files Solaris, QNX and NeXTSTEP under Unix & Amiga instead of Other.
+- **Theme switches no longer restart the Dock and Finder for nothing.** The theme's Finder and
+  window tweaks were written again, and both restarted, on every wallpaper pass (several per
+  theme switch, and on every display change), even when nothing had changed. Now only a real
+  change restarts them.
 - **No more log file on the Desktop.** The retro dock wrote every show and hide to
   `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with
   the new **Debug logging** switch there, which is off unless you turn it on.
