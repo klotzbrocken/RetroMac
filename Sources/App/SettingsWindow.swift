@@ -270,6 +270,9 @@ struct SidebarNavItem: View {
             )
         }
         .buttonStyle(.plain)
+        // VoiceOver: the tab's name, and which one is open. The icon and bar said nothing.
+        .accessibilityLabel(tab.label)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
