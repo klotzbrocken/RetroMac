@@ -189,39 +189,7 @@ struct ShortcutsTab: View {
                     }
                 )
 
-                // 3. Cycle effect preset
-                HotkeyRow(
-                    label: "Cycle effect preset",
-                    hint: "Steps through the library forwards.",
-                    hotkeyCode: settings.cyclePresetHotkeyCode,
-                    hotkeyModifiers: settings.cyclePresetHotkeyModifiers,
-                    onSet: { code, mods in
-                        settings.cyclePresetHotkeyCode = code
-                        settings.cyclePresetHotkeyModifiers = mods
-                    },
-                    onClear: {
-                        settings.cyclePresetHotkeyCode = 0
-                        settings.cyclePresetHotkeyModifiers = 0
-                    }
-                )
-
-                // 4. Bump intensity
-                HotkeyRow(
-                    label: "Bump intensity \u{00B1}",
-                    hint: "\u{2303}\u{2325}+ and \u{2303}\u{2325}\u{2212} change the active preset\u{2019}s strength.",
-                    hotkeyCode: settings.bumpIntensityHotkeyCode,
-                    hotkeyModifiers: settings.bumpIntensityHotkeyModifiers,
-                    onSet: { code, mods in
-                        settings.bumpIntensityHotkeyCode = code
-                        settings.bumpIntensityHotkeyModifiers = mods
-                    },
-                    onClear: {
-                        settings.bumpIntensityHotkeyCode = 0
-                        settings.bumpIntensityHotkeyModifiers = 0
-                    }
-                )
-
-                // 5. Toggle menu bar visibility
+                // 3. Toggle menu bar visibility
                 HotkeyRow(
                     label: "Toggle menu bar visibility",
                     hint: nil,
@@ -239,7 +207,7 @@ struct ShortcutsTab: View {
                     }
                 )
 
-                // 6. Screenshot with shader
+                // 4. Screenshot with shader
                 HotkeyRow(
                     label: "Screenshot with shader",
                     hint: "Captures the screen including the active CRT effect.",
@@ -257,7 +225,7 @@ struct ShortcutsTab: View {
                     }
                 )
 
-                // 7. Dashboard — listed here at last. It has had a hotkey since the layer was
+                // 5. Dashboard — listed here at last. It has had a hotkey since the layer was
                 // built, but no row, so the only way to change it was a defaults write.
                 HotkeyRow(
                     label: "Dashboard",
@@ -276,7 +244,7 @@ struct ShortcutsTab: View {
                     }
                 )
 
-                // 8. Exposé, everything on this desktop
+                // 6. Exposé, everything on this desktop
                 HotkeyRow(
                     label: "Expos\u{00E9} \u{2014} all windows",
                     hint: "Every window on this desktop, shrunk so none overlap. \u{2303}F9 by default.",
@@ -294,7 +262,7 @@ struct ShortcutsTab: View {
                     }
                 )
 
-                // 9. Exposé, the frontmost app only
+                // 7. Exposé, the frontmost app only
                 HotkeyRow(
                     label: "Expos\u{00E9} \u{2014} application windows",
                     hint: "Only the frontmost app\u{2019}s windows. \u{2303}F10 by default.",

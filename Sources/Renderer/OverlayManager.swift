@@ -6,20 +6,6 @@ enum OverlayType: String, CaseIterable {
     case reflection
 }
 
-struct OverlayInfo: Identifiable, Hashable {
-    let id: String
-    let displayName: String
-    let type: OverlayType
-    let isCustom: Bool
-
-    init(id: String, displayName: String, type: OverlayType, isCustom: Bool = false) {
-        self.id = id
-        self.displayName = displayName
-        self.type = type
-        self.isCustom = isCustom
-    }
-}
-
 final class OverlayManager {
     let device: MTLDevice
     private let textureLoader: MTKTextureLoaderLite
@@ -56,33 +42,6 @@ final class OverlayManager {
         }
     }
 
-    // MARK: - Built-in Registry
-
-    static let builtinScanlines: [OverlayInfo] = [
-        OverlayInfo(id: "scanline-fine", displayName: "Fine", type: .scanline),
-        OverlayInfo(id: "scanline-medium", displayName: "Medium", type: .scanline),
-        OverlayInfo(id: "scanline-heavy", displayName: "Heavy", type: .scanline),
-    ]
-
-    static let builtinReflections: [OverlayInfo] = [
-        OverlayInfo(id: "reflection-center", displayName: "Center Highlight", type: .reflection),
-        OverlayInfo(id: "reflection-corner", displayName: "Corner Glare", type: .reflection),
-    ]
-
-    static func customOverlays(type: OverlayType) -> [OverlayInfo] {
-        let dir = overlaysDirectory().appendingPathComponent(type.rawValue)
-        guard let files = try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else {
-            return []
-        }
-        return files
-            .filter { ["png", "jpg", "jpeg", "tiff"].contains($0.pathExtension.lowercased()) }
-            .map { url in
-                let name = url.deletingPathExtension().lastPathComponent
-                return OverlayInfo(id: "custom:\(name)", displayName: name, type: type, isCustom: true)
-            }
-            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-    }
-
     static func overlaysDirectory() -> URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         return appSupport.appendingPathComponent(overlaysDirName)
@@ -117,9 +76,9 @@ final class OverlayManager {
         let height: Int
         let darkRows: Int
         switch name {
-        case "scanline-fine": height = 2; darkRows = 1
-        case "scanline-medium": height = 3; darkRows = 1
-        case "scanline-heavy": height = 4; darkRows = 2
+        case "scanlines-light": height = 2; darkRows = 1
+        case "scanlines-medium": height = 3; darkRows = 1
+        case "scanlines-heavy": height = 4; darkRows = 2
         default: return nil
         }
 
@@ -148,7 +107,7 @@ final class OverlayManager {
         var pixels = [UInt8](repeating: 0, count: size * size * 4)
 
         switch name {
-        case "reflection-center":
+        case "reflection-strong":
             // Subtle oval highlight in upper-center area of screen
             for y in 0..<size {
                 for x in 0..<size {
@@ -162,7 +121,7 @@ final class OverlayManager {
                     pixels[idx] = 255; pixels[idx+1] = 255; pixels[idx+2] = 255; pixels[idx+3] = val
                 }
             }
-        case "reflection-corner":
+        case "reflection-subtle":
             // Subtle glare from top-left corner
             for y in 0..<size {
                 for x in 0..<size {

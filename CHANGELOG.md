@@ -98,6 +98,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Scanline and glass-reflection overlays draw again.** Settings ▸ Shader offered Light,
+  Medium, Heavy and Subtle, Strong under names the overlay code did not know, so every choice
+  drew nothing. The two shortcut rows "Cycle effect preset" and "Bump intensity" are gone:
+  they recorded a key but nothing ever listened for it.
 - **The wallpaper follows every Space.** A theme's picture used to land only on the Space you
   were on, and turning the theme off gave only that Space its picture back; the others kept the
   theme's for good. Now each Space shows the theme's picture once you switch to it, and gets its

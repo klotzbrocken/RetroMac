@@ -880,19 +880,6 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(lastSettingsTab, forKey: "lastSettingsTab") }
     }
 
-    // Settings Redesign — new hotkeys
-    @Published var cyclePresetHotkeyCode: UInt32 {
-        didSet { defaults.set(cyclePresetHotkeyCode, forKey: "cyclePresetHotkeyCode") }
-    }
-    @Published var cyclePresetHotkeyModifiers: UInt32 {
-        didSet { defaults.set(cyclePresetHotkeyModifiers, forKey: "cyclePresetHotkeyModifiers") }
-    }
-    @Published var bumpIntensityHotkeyCode: UInt32 {
-        didSet { defaults.set(bumpIntensityHotkeyCode, forKey: "bumpIntensityHotkeyCode") }
-    }
-    @Published var bumpIntensityHotkeyModifiers: UInt32 {
-        didSet { defaults.set(bumpIntensityHotkeyModifiers, forKey: "bumpIntensityHotkeyModifiers") }
-    }
     @Published var menuBarToggleHotkeyCode: UInt32 {
         didSet { defaults.set(menuBarToggleHotkeyCode, forKey: "menuBarToggleHotkeyCode") }
     }
@@ -1413,10 +1400,6 @@ final class AppSettings: ObservableObject {
 
         // Settings Redesign
         lastSettingsTab = defaults.string(forKey: "lastSettingsTab") ?? "overview"
-        cyclePresetHotkeyCode = defaults.object(forKey: "cyclePresetHotkeyCode") as? UInt32 ?? 0
-        cyclePresetHotkeyModifiers = defaults.object(forKey: "cyclePresetHotkeyModifiers") as? UInt32 ?? 0
-        bumpIntensityHotkeyCode = defaults.object(forKey: "bumpIntensityHotkeyCode") as? UInt32 ?? 0
-        bumpIntensityHotkeyModifiers = defaults.object(forKey: "bumpIntensityHotkeyModifiers") as? UInt32 ?? 0
         menuBarToggleHotkeyCode = defaults.object(forKey: "menuBarToggleHotkeyCode") as? UInt32 ?? 0
         menuBarToggleHotkeyModifiers = defaults.object(forKey: "menuBarToggleHotkeyModifiers") as? UInt32 ?? 0
         screenshotHotkeyCode = defaults.object(forKey: "screenshotHotkeyCode") as? UInt32 ?? 0
