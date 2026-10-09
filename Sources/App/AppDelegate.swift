@@ -376,8 +376,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.setAccessibilityLabel("RetroMac")   // VoiceOver: a name, not "image"
+        // The menu is popped up by the icon rather than hung on it (`statusItem.menu`): with it
+        // hung there, the click that closed it opened it again 18 ms later (measured).
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(statusItemClicked)
+        statusItem.button?.sendAction(on: [.leftMouseDown, .rightMouseDown])
         updateMenuBarIcon()
         rebuildMenu()
+    }
+
+    /// The menu-bar menu, rebuilt whenever what it shows changes; the one on screen stays put.
+    private var statusMenu: NSMenu?
+    /// The click that last closed the menu. If that same click also reaches the icon, it closes
+    /// the menu and nothing more — told apart by the event itself, not by how soon it came.
+    private var statusMenuClosedBy: TimeInterval = -1
+    private weak var shownStatusMenu: NSMenu?
+
+    @objc private func statusItemClicked() {
+        guard let button = statusItem.button, let menu = statusMenu else { return }
+        let click = NSApp.currentEvent?.timestamp ?? 0
+        if AppSettings.shared.debugLogging { print("[Menu] icon click \(click) closedBy=\(statusMenuClosedBy)") }
+        guard click != statusMenuClosedBy else { return }
+        shownStatusMenu = menu
+        button.highlight(true)
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 5), in: button)
+        button.highlight(false)
     }
 
     // MARK: - Dock Mode + Launcher
@@ -984,25 +1007,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return ThemeManager.shared.theme(for: s.dockTheme)?.name ?? s.dockTheme
     }
 
-    /// The menu-bar menu is not rebuilt while it is open: put in its place, a new menu made the
-    /// second click on the icon close the old one and open the new one at once, so the menu
-    /// seemed not to close. The rebuild waits for `menuDidClose`.
-    private var statusMenuOpen = false
-    private var statusMenuRebuildPending = false
-    /// When the menu last closed on a click: the click on the icon that closes it also opened it
-    /// again 18 ms later (measured), so the menu seemed not to close at all.
-    private var statusMenuClosedByClickAt: CFTimeInterval = 0
-
     /// The menu-bar menu again, for state it shows that changed elsewhere (the Spaces ticks:
     /// without it "On This Space" kept its old tick, and a second try took the Space out again).
     func refreshStatusMenu() { rebuildMenu() }
 
     private func rebuildMenu() {
-        if statusMenuOpen {
-            if AppSettings.shared.debugLogging && !statusMenuRebuildPending { print("[Menu] rebuild while open, deferred") }
-            statusMenuRebuildPending = true
-            return
-        }
         // Overlay/preset state has settled by the time the menu is rebuilt (incl. the
         // async full-overlay completion). Notify the flyout so its shader toggle and
         // preset dropdown reflect the real state even after async activation.
@@ -1483,7 +1492,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Quit moved to a power symbol in the header; Reset Permissions moved to Settings.
         menu.delegate = self
-        statusItem.menu = menu
+        statusMenu = menu
     }
 
     /// Reset this app's Screen Recording + Camera TCC grants, then point the user at the
@@ -4728,27 +4737,9 @@ extension NSScreen {
 }
 
 extension AppDelegate: NSMenuDelegate {
-    func menuWillOpen(_ menu: NSMenu) {
-        guard menu === statusItem.menu else { return }
-        // The same click reopening what it just closed: let it stay closed.
-        // ponytail: a time window, not the cause; that sits in the status item's own tracking.
-        if CACurrentMediaTime() - statusMenuClosedByClickAt < 0.25 {
-            statusMenuClosedByClickAt = 0
-            DispatchQueue.main.async { menu.cancelTrackingWithoutAnimation() }
-            return
-        }
-        statusMenuOpen = true
-        if AppSettings.shared.debugLogging { print("[Menu] open  \(CACurrentMediaTime()) event=\(NSApp.currentEvent?.type.rawValue ?? 0)") }
-    }
-
     func menuDidClose(_ menu: NSMenu) {
-        guard menu === statusItem.menu else { return }
-        statusMenuOpen = false
-        let closingEvent = NSApp.currentEvent?.type
-        statusMenuClosedByClickAt = (closingEvent == .leftMouseUp || closingEvent == .leftMouseDown) ? CACurrentMediaTime() : 0
-        if AppSettings.shared.debugLogging { print("[Menu] close \(CACurrentMediaTime()) event=\(NSApp.currentEvent?.type.rawValue ?? 0)") }
-        guard statusMenuRebuildPending else { return }
-        statusMenuRebuildPending = false
-        DispatchQueue.main.async { [weak self] in self?.rebuildMenu() }
+        guard menu === shownStatusMenu else { return }
+        statusMenuClosedBy = NSApp.currentEvent?.timestamp ?? -1
+        if AppSettings.shared.debugLogging { print("[Menu] close by \(NSApp.currentEvent?.type.rawValue ?? 0) at \(statusMenuClosedBy)") }
     }
 }

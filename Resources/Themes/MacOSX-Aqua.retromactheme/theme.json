@@ -35,6 +35,7 @@
     "padding": 24,
     "spacing": 8,
     "shelfStyle": "frosted",
+    "edgeOffset": 0,
     "cornerRadius": 16,
     "backgroundColor": "#EDEDF0B8",
     "backgroundImage": null,

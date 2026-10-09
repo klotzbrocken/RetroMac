@@ -98,6 +98,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **The menu-bar icon opens and closes its menu reliably.** The menu is popped up by the icon
+  instead of hanging on it, and the click that closes it is recognised as that same click — not
+  by a quarter-second window, which also swallowed a quick deliberate reopen. Mountain Lion's
+  dock sits on the bottom edge of the screen, as 10.8's did.
 - **Mountain Lion's dock is Mountain Lion's.** It was a flat rounded bar with dark dots. Now it is the
   10.8 shelf: frosted glass running back in perspective, a darker front face under a lit edge,
   reflections that end on the glass, and running apps shown as small glowing lights set into the
