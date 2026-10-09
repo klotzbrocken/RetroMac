@@ -19,6 +19,8 @@ final class TaskButtonView: NSView {
     /// edge-to-edge themed tabs.
     private let enlargeIcon: Bool
     var onClick: (() -> Void)?
+    /// The window this button stands for (nil for a program without Accessibility).
+    var axWindow: AXUIElement?
 
     // VoiceOver: the window's button, pressed state for the active one.
     override func isAccessibilityElement() -> Bool { true }

@@ -223,6 +223,7 @@
   "fallbackIcon": "generic.png",
   "defaultPreset": "lcd-retro-lite",
   "iconMappings": {
+    "com.google.Chrome": "chrome.png",
     "com.apple.finder": "finder.png",
     "com.apple.Safari": "safari.png",
     "com.apple.mail": "mail.png",

@@ -724,7 +724,7 @@ final class DockView: NSView {
             // Win98 / XP show their open windows as elongated taskbar buttons (one per window),
             // plus a launch button for each pinned app that isn't running. Other horizontal
             // themes keep the classic icon tiles.
-            let winTaskbar = (theme.dock.startMenuStyle == "classic" || theme.isXPStartMenu)
+            let winTaskbar = theme.hasTaskButtons
             if winTaskbar {
                 // Authentic Win98/XP layout: Start | Quick Launch (pinned apps as small icon
                 // tiles) | separator | task buttons (one elongated button per open window).
@@ -1283,6 +1283,7 @@ final class DockView: NSView {
                                      // visible size is iconSize-4; cap tab icons to that, never larger.
                                      maxIconSize: max(0, iconSize - 4),
                                      enlargeIcon: m.system)
+            btn.axWindow = m.window
             if limited {
                 btn.toolTip = "\(m.label) — the program, not a window. Grant Accessibility for one button per window."
             }
@@ -1309,8 +1310,8 @@ final class DockView: NSView {
     /// so they are NOT repeated here as launch buttons — only their open windows show (exactly
     /// like real Windows, where a quick-launch icon and its taskbar button are separate). Pinned
     /// apps' windows are grouped first for a stable order, then any remaining windows.
-    private func buildTaskModels() -> [(label: String, icon: NSImage?, active: Bool, system: Bool, action: () -> Void)] {
-        var models: [(label: String, icon: NSImage?, active: Bool, system: Bool, action: () -> Void)] = []
+    private func buildTaskModels() -> [TaskModel] {
+        var models: [TaskModel] = []
         let all = MinimizedWindowTracker.shared.allWindows
         let pinnedBundles = Set(AppManager.shared.apps.map { $0.bundleID })
         for bid in AppManager.shared.apps.map({ $0.bundleID }) {
@@ -1322,7 +1323,16 @@ final class DockView: NSView {
         return models
     }
 
-    private func windowModel(_ w: MinimizedWindowTracker.Entry) -> (label: String, icon: NSImage?, active: Bool, system: Bool, action: () -> Void) {
+    private typealias TaskModel = (label: String, icon: NSImage?, active: Bool, system: Bool, window: AXUIElement?, action: () -> Void)
+
+    /// Where a window's taskbar button is on screen, for the minimise to fly into.
+    func taskButtonScreenRect(for window: AXUIElement) -> NSRect? {
+        guard let btn = taskButtonViews.first(where: { $0.axWindow.map { CFEqual($0, window) } == true }),
+              let win = btn.window else { return nil }
+        return win.convertToScreen(btn.convert(btn.bounds, to: nil))
+    }
+
+    private func windowModel(_ w: MinimizedWindowTracker.Entry) -> TaskModel {
         // Use the themed icon (respects the theme's custom icon mapping / pixelation),
         // not the raw system icon, so program tabs match the rest of the themed dock.
         let icon = ThemeManager.shared.icon(for: w.bundleID, size: 24)
@@ -1331,8 +1341,13 @@ final class DockView: NSView {
         // tabs. Flag those so the tab can enlarge them to match.
         let mapped = ThemeManager.shared.hasThemedIcon(for: w.bundleID)
         // Active (focused, non-minimized) → minimize; minimized or background → restore + raise.
-        return (w.title, icon, w.isFocused && !w.isMinimized, !mapped, {
-            if !w.isMinimized && w.isFocused { MinimizedWindowTracker.shared.minimize(w) }
+        return (w.title, icon, w.isFocused && !w.isMinimized, !mapped, w.isAppLevel ? nil : w.window, {
+            if !w.isMinimized && w.isFocused {
+                // Through the title bar's minimise when there is one, so it flies into this button.
+                if w.isAppLevel || !TitleBarOverlayController.shared.minimizeThroughBar(w.window) {
+                    MinimizedWindowTracker.shared.minimize(w)
+                }
+            }
             else { MinimizedWindowTracker.shared.activate(w) }
         })
     }

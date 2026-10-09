@@ -17,8 +17,12 @@ final class MinimizeZoom {
     static let shared = MinimizeZoom()
     private init() {}
 
-    /// Only under the theme without a dock: Mac OS 9 (authentic).
-    static var wanted: Bool { ThemeManager.shared.activeTheme?.config.isControlStripModules == true }
+    /// Under the theme without a dock, Mac OS 9 (authentic), and under a Windows taskbar, where a
+    /// window goes into its button.
+    static var wanted: Bool {
+        guard let config = ThemeManager.shared.activeTheme?.config else { return false }
+        return config.isControlStripModules || config.hasTaskButtons
+    }
 
     static let duration: TimeInterval = 0.4
 
@@ -31,7 +35,8 @@ final class MinimizeZoom {
     /// Put the still over the window and start the zoom. `windowBounds` is the window in
     /// Quartz coordinates (top-left origin), `bar` its bar panel, still on screen. Returns
     /// false when nothing could be photographed; the minimise then runs as macOS plays it.
-    func begin(wid: CGWindowID, windowBounds: CGRect, bar: NSPanel, barView: NSView, patch: NSPanel?) -> Bool {
+    /// `target`: the taskbar button to fly into (screen coordinates); nil zooms to the top.
+    func begin(wid: CGWindowID, windowBounds: CGRect, bar: NSPanel, barView: NSView, patch: NSPanel?, target button: NSRect? = nil) -> Bool {
         end()
         guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(bar.frame) }) ?? NSScreen.main else { return false }
         let primaryTop = NSScreen.screens.first?.frame.maxY ?? screen.frame.maxY
@@ -88,14 +93,18 @@ final class MinimizeZoom {
         CATransaction.flush()
 
         // Away to the top of the desktop, under the menu bar, shrinking to nothing — solid all
-        // the way, as the zoom rectangles of the day were, not a ghost.
-        let target = CGPoint(x: screen.frame.midX - screen.frame.minX, y: screen.visibleFrame.maxY - screen.frame.minY - 12)
+        // the way, as the zoom rectangles of the day were, not a ghost. Under Windows, into the
+        // window's taskbar button, shrinking to its size.
+        let target = button.map { CGPoint(x: $0.midX - screen.frame.minX, y: $0.midY - screen.frame.minY) }
+            ?? CGPoint(x: screen.frame.midX - screen.frame.minX, y: screen.visibleFrame.maxY - screen.frame.minY - 12)
+        let endScale = button.map { CATransform3DMakeScale($0.width / union.width, $0.height / union.height, 1) }
+            ?? CATransform3DMakeScale(0.02, 0.02, 1)
         CATransaction.begin()
         CATransaction.setAnimationDuration(Self.duration)
         CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeIn))
         CATransaction.setCompletionBlock { [weak self] in self?.dropZoom(zoomPanel) }
         let move = CABasicAnimation(keyPath: "position"); move.fromValue = layer.position; move.toValue = target
-        let shrink = CABasicAnimation(keyPath: "transform"); shrink.fromValue = CATransform3DIdentity; shrink.toValue = CATransform3DMakeScale(0.02, 0.02, 1)
+        let shrink = CABasicAnimation(keyPath: "transform"); shrink.fromValue = CATransform3DIdentity; shrink.toValue = endScale
         for a in [move, shrink] { a.isRemovedOnCompletion = false; a.fillMode = .forwards; layer.add(a, forKey: a.keyPath) }
         CATransaction.commit()
 

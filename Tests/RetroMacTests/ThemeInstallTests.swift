@@ -149,6 +149,33 @@ final class FolderIconMappingTests: XCTestCase {
 /// neighbours even though the file is the right size. That is invisible in review and only shows
 /// up in the dock, so it is pinned here: the first pass at the new Snow Leopard icons shipped
 /// Claude at 77% and ChatGPT at 75% while Safari and Mail measure 98%.
+final class SameAppIconTests: XCTestCase {
+    /// ChatGPT reports `com.openai.codex` now; a theme that maps only `com.openai.chat` still
+    /// dresses it, and every theme that knows Claude knows ChatGPT under both ids.
+    func testChatGPTWearsTheThemeIconUnderEitherId() throws {
+        let themes = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../Resources/Themes")
+        for dir in try FileManager.default.contentsOfDirectory(at: themes, includingPropertiesForKeys: nil)
+        where dir.pathExtension == "retromactheme" {
+            let theme = try ThemeBundle(url: dir, isBuiltIn: true)
+            guard theme.iconURL(for: "com.openai.chat") != nil || theme.iconURL(for: "com.openai.codex") != nil else { continue }
+            XCTAssertNotNil(theme.iconURL(for: "com.openai.chat"), dir.lastPathComponent)
+            XCTAssertNotNil(theme.iconURL(for: "com.openai.codex"), dir.lastPathComponent)
+        }
+    }
+
+    /// What Maik asked for on 2026-10-09: Claude, Chrome and ChatGPT dressed in these themes.
+    func testClaudeChromeAndChatGPTAreDressed() throws {
+        let themes = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../Resources/Themes")
+        for name in ["MacOS9-Classic", "MacOSX-Aqua"] {
+            let theme = try ThemeBundle(url: themes.appendingPathComponent(name + ".retromactheme"), isBuiltIn: true)
+            for id in ["com.anthropic.claudefordesktop", "com.google.Chrome", "com.openai.codex"] {
+                let url = try XCTUnwrap(theme.iconURL(for: id), "\(name): \(id)")
+                XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), "\(name): \(id)")
+            }
+        }
+    }
+}
+
 final class IconContentExtentTests: XCTestCase {
 
     private var iconsDir: URL {

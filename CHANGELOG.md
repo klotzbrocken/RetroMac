@@ -98,6 +98,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Windows themes: a minimised window flies into its taskbar button.** It used to shrink
+  towards wherever the hidden Mac Dock kept that app, a different place for every app. Now the
+  title bar's minimise box, ⌘M and a click on the active window's taskbar button all send the
+  window into its own button. A window that has no button yet minimises the Mac's way.
+- **Rescue Desktop reaches every Space.** With the theme on chosen Spaces, the other Spaces kept
+  RetroMac's wallpaper after a rescue or after turning the theme off, because nothing handed
+  them back when you switched to them. They get your own picture back on the first visit again.
+- **Claude, Chrome and ChatGPT wear the theme's icon** in Mac OS 9.2 Classic and Mountain Lion
+  (the Mac OS 9 and Snow Leopard art), and Chrome in Windows XP. ChatGPT now reports itself as
+  `com.openai.codex`; every theme that dresses `com.openai.chat` dresses it too.
 - **Boot screens fill the screen.** A 16:9 boot screen on a 16:10 display (a MacBook) had black
   bars above and below; it now fills the display and loses a few percent of plain background at
   its sides. Mac OS 9.2 Classic's clip had black bars inside the video itself, now cut away.

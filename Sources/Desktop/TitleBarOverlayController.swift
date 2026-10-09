@@ -241,6 +241,15 @@ final class TitleBarOverlayController {
 
     /// ⌘M: the front window with a bar goes through the bar's own minimise; one without (an
     /// app left alone, a panel) is minimised plainly, so the key is never dead.
+    /// A taskbar button minimising its window: through the bar's own minimise when the window
+    /// wears one, so it flies into the button. False when it has none.
+    func minimizeThroughBar(_ window: AXUIElement) -> Bool {
+        var wid: CGWindowID = 0
+        guard axUIElementGetWindow?(window, &wid) == .success, let o = overlays[wid] else { return false }
+        perform(.minimize, on: wid, pid: o.pid)
+        return true
+    }
+
     func minimizeFront() {
         if let o = overlays[frontWindowID] { perform(.minimize, on: frontWindowID, pid: o.pid); return }
         guard let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier else { return }
@@ -1385,9 +1394,15 @@ final class TitleBarOverlayController {
         guard button != nil || attr == kAXMinimizeButtonAttribute else { return }
         // Under the theme without a dock the window zooms away in picture, a still of the
         // desktop under it hiding the real minimise; photographed while the bar still stands.
+        // Under a Windows taskbar it flies into its own button there, not to where the hidden
+        // Mac Dock would have taken it; a window without a button yet minimises the Mac's way.
         var zoomed = false
         if attr == kAXMinimizeButtonAttribute, MinimizeZoom.wanted, let o = overlays[wid] {
-            zoomed = MinimizeZoom.shared.begin(wid: wid, windowBounds: o.bounds, bar: o.panel, barView: o.view, patch: o.patch)
+            let button = DockController.shared.taskButtonScreenRect(for: w)
+            if button != nil || ThemeManager.shared.activeTheme?.config.hasTaskButtons != true {
+                zoomed = MinimizeZoom.shared.begin(wid: wid, windowBounds: o.bounds, bar: o.panel, barView: o.view,
+                                                   patch: o.patch, target: button)
+            }
         }
         // The bar goes before the window does; a bar over a fading window is the one thing
         // that gives the trick away. Comes back on the next sync if the app asked to save.

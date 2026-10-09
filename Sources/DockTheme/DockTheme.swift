@@ -371,6 +371,8 @@ extension DockThemeConfig {
     var startMenuStyle: String { dock.startMenuStyle ?? "classic" }
     var showQuickLaunch: Bool { dock.showQuickLaunch ?? true }
     var isXPStartMenu: Bool { startMenuStyle == "xp" }
+    /// A Windows taskbar: one button per open window (Windows 95 to 7).
+    var hasTaskButtons: Bool { dock.startMenuStyle == "classic" || isXPStartMenu }
     var hasDiskFree: Bool { dock.showDiskFree == true }
     var isControlStrip: Bool { dock.dockStyle == "controlStrip" }
     /// Mac OS 9 (authentic): a Control Strip of system modules (network, sharing, colours,

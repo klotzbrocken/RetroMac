@@ -51,7 +51,9 @@ final class ThemeManager {
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
             // With the theme on chosen Spaces, ThemeSpaces sets the picture as part of its switch.
-            guard let self, !AppSettings.shared.themeOnChosenSpaces else { return }
+            // Once the theme is off (turned off, or Rescue Desktop) nothing does that any more,
+            // and the Spaces it had dressed must still get their own pictures back here.
+            guard let self, !(AppSettings.shared.themeOnChosenSpaces && self.activeTheme != nil) else { return }
             self.spaceWallpaperWork?.cancel()
             let work = DispatchWorkItem { [weak self] in
                 guard let self else { return }

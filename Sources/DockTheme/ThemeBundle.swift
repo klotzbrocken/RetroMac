@@ -175,8 +175,13 @@ final class ThemeBundle {
         return nil
     }
 
+    /// The same app under two ids: OpenAI's ChatGPT app now reports `com.openai.codex`, older
+    /// installs `com.openai.chat`, and most themes map only one of them.
+    static let sameApp: [String: String] = ["com.openai.codex": "com.openai.chat", "com.openai.chat": "com.openai.codex"]
+
     func iconURL(for bundleID: String) -> URL? {
         if let direct = iconResource(config.iconMappings[bundleID]) { return direct }
+        if let other = Self.sameApp[bundleID], let u = iconResource(config.iconMappings[other]) { return u }
         // Folder items in the dock carry a synthetic id built from an absolute path
         // ("__folder__/Users/maik/Downloads"), which a shipped theme cannot know. Retry with
         // the home directory folded to "~" so a manifest can write "__folder__~/Downloads".
