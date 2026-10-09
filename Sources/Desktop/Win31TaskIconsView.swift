@@ -71,9 +71,23 @@ final class Win31TaskIconsView: NSView {
         let p = convert(event.locationInWindow, from: nil)
         let idx = Int(p.x / cellW)
         guard idx >= 0, idx < apps.count else { return }
-        let app = apps[idx]
+        bringToFront(apps[idx])
+    }
+
+    private func bringToFront(_ app: NSRunningApplication) {
         app.unhide()
         app.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
+    }
+
+    /// VoiceOver gets each drawn icon as a button named after its app; pressing it brings the
+    /// app to the front, as a click does.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        axParts = apps.enumerated().prefix { CGFloat($0.offset + 1) * cellW <= bounds.width }.map { i, app in
+            AccessibleHotspot(in: self, label: app.localizedName ?? app.bundleIdentifier ?? "App",
+                              rect: NSRect(x: CGFloat(i) * cellW, y: 0, width: cellW, height: cellH)) { [weak self] in self?.bringToFront(app) }
+        }
+        return axParts
     }
 
     /// Only claim clicks that land on an actual icon — empty desktop clicks fall through.

@@ -135,6 +135,11 @@ final class CDEFrontPanelView: NSView {
     private static let workspaces = NSRect(x: 350, y: 10, width: 254, height: 66)
     private static let lock = NSRect(x: 315, y: 6, width: 24, height: 26)
     private static let exit = NSRect(x: 606, y: 44, width: 32, height: 32)
+    private static let fixed: [(label: String, rect: NSRect, action: () -> Void)] = [
+        ("Workspaces", workspaces, CDEActions.missionControl),                          // TH-12: one way in to the workspace overview
+        ("Lock screen", lock, { ScreensaverController.shared.start() }),
+        ("Exit", exit, { AppDelegate.shared?.launcherDisableTheme() }),                // CDE-11: "Exit" ends the theme, never the session
+    ]
 
     init(theme: ThemeBundle) {
         self.theme = theme
@@ -293,15 +298,41 @@ final class CDEFrontPanelView: NSView {
         if let c = arrow(at: p), let kind = c.subpanel {
             CDESubpanel.toggle(kind, above: c.cell, in: self)
         } else if let c = control(at: p), c.id == was {
-            CDESubpanel.closeAll()
-            c.action()
-        } else if Self.workspaces.contains(p) {
-            CDEActions.missionControl()         // TH-12: one way in to the workspace overview
-        } else if Self.lock.contains(p) {
-            ScreensaverController.shared.start()
-        } else if Self.exit.contains(p) {
-            AppDelegate.shared?.launcherDisableTheme()   // CDE-11: "Exit" ends the theme, never the session
+            Self.run(c)
+        } else if let f = Self.fixed.first(where: { $0.rect.contains(p) }) {
+            f.action()
         }
+    }
+
+    private static func run(_ c: CDEControl) {
+        CDESubpanel.closeAll()
+        c.action()
+    }
+
+    // MARK: VoiceOver
+
+    /// The panel is one picture, so VoiceOver gets each control, the arrow above it that opens
+    /// its subpanel, and the workspace switch, lock and Exit, pressed as a click would.
+    /// Kept here because the accessibility server keeps no reference to them.
+    private var axParts: [AccessibleHotspot] = []
+
+    override func accessibilityChildren() -> [Any]? {
+        var parts: [AccessibleHotspot] = []
+        for c in controls {
+            let name = c.tooltip.components(separatedBy: ":")[0]   // "File Manager: your home folder…" → "File Manager"
+            parts.append(AccessibleHotspot(in: self, label: name, rect: c.cell) { Self.run(c) })
+            if let kind = c.subpanel {
+                let arrow = NSRect(x: c.cell.minX, y: Self.arrowRow.lowerBound, width: c.cell.width,
+                                   height: Self.arrowRow.upperBound - Self.arrowRow.lowerBound + 1)
+                parts.append(AccessibleHotspot(in: self, label: "\(name) subpanel", rect: arrow) { [weak self] in
+                    guard let self else { return }
+                    CDESubpanel.toggle(kind, above: c.cell, in: self)
+                })
+            }
+        }
+        for f in Self.fixed { parts.append(AccessibleHotspot(in: self, label: f.label, rect: f.rect, press: f.action)) }
+        axParts = parts
+        return parts
     }
 
     // MARK: Drop on the Trash (CDE-06: the one drop zone with a plain, safe meaning)

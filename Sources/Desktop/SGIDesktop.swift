@@ -175,6 +175,18 @@ final class SGIDesktopView: NSView {
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         guard toolchestRect.contains(p) else { return }
+        openToolchest()
+    }
+
+    /// VoiceOver gets the Toolchest button besides the real subviews (catalog windows, Shelf
+    /// items, minimized windows), which are accessible themselves.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        axParts = [AccessibleHotspot(in: self, label: "Toolchest", rect: toolchestRect) { [weak self] in self?.openToolchest() }]
+        return axParts + (super.accessibilityChildren() ?? [])
+    }
+
+    private func openToolchest() {
         let items = cfg.toolchest.map { toMenuItem($0) }
         Win31Menu.present(items: items, topLeft: NSPoint(x: toolchestRect.minX, y: toolchestRect.minY),
                           in: self, style: .sgi, header: "Desk 1")
@@ -203,8 +215,16 @@ final class SGIDesktopView: NSView {
 final class SGIMinRep: NSView {
     private let title: String
     var onRestore: (() -> Void)?
-    init(title: String) { self.title = title; super.init(frame: .zero) }
+    init(title: String) {
+        self.title = title
+        super.init(frame: .zero)
+        // VoiceOver: a button named after the window; pressing it restores it (a double click).
+        setAccessibilityElement(true)
+        setAccessibilityRole(.button)
+        setAccessibilityLabel(title)
+    }
     required init?(coder: NSCoder) { fatalError() }
+    override func accessibilityPerformPress() -> Bool { onRestore?(); return true }
     override var isFlipped: Bool { false }
     override func draw(_ dirtyRect: NSRect) {
         SGIChrome.face.setFill(); bounds.fill()

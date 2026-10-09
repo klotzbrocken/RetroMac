@@ -46,6 +46,7 @@ enum CDEMenu {
         p.hidesOnDeactivate = false
         p.acceptsMouseMovedEvents = true
         p.collectionBehavior = [.canJoinAllSpaces, .ignoresCycle]
+        p.title = title ?? "Menu"   // what VoiceOver calls it
         let view = CDEMenuView(frame: NSRect(origin: .zero, size: screen.frame.size))
         view.anchor = anchor.map { NSRect(x: $0.minX - screen.frame.minX, y: screen.frame.maxY - $0.maxY, width: $0.width, height: $0.height) }
         view.onAnchorDoubleClick = onAnchorDoubleClick
@@ -209,15 +210,19 @@ final class CDEMenuView: NSView {
     /// Arm the row under the pointer; a cascade opens as soon as its row is armed.
     private func track(_ p: NSPoint) {
         guard let h = hit(p) else { return }
-        if levels[h.level].armed == h.item { return }
-        levels[h.level].armed = h.item
-        levels = Array(levels.prefix(h.level + 1))
-        if let i = h.item, let sub = levels[h.level].items[i].submenu,
-           let row = rows(levels[h.level]).first(where: { $0.1 == i })?.0 {
+        arm(h.level, h.item)
+    }
+
+    private func arm(_ level: Int, _ item: Int?) {
+        if levels[level].armed == item { return }
+        levels[level].armed = item
+        levels = Array(levels.prefix(level + 1))
+        if let i = item, let sub = levels[level].items[i].submenu,
+           let row = rows(levels[level]).first(where: { $0.1 == i })?.0 {
             if CDEMenu.look == .photon {   // Photon: the cascade's first bar level with its entry, edges shared
-                open(sub, title: nil, at: NSPoint(x: levels[h.level].frame.maxX - 1, y: row.minY - CDEMenu.photonTop), level: h.level + 1)
+                open(sub, title: nil, at: NSPoint(x: levels[level].frame.maxX - 1, y: row.minY - CDEMenu.photonTop), level: level + 1)
             } else {
-                open(sub, title: levels[h.level].items[i].title, at: NSPoint(x: levels[h.level].frame.maxX - 2, y: row.minY + 4), level: h.level + 1)
+                open(sub, title: levels[level].items[i].title, at: NSPoint(x: levels[level].frame.maxX - 2, y: row.minY + 4), level: level + 1)
             }
         }
         needsDisplay = true
@@ -244,10 +249,38 @@ final class CDEMenuView: NSView {
     private func release(_ event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         guard let h = hit(p), let i = h.item else { return }
-        let item = levels[h.level].items[i]
+        choose(levels[h.level].items[i])
+    }
+
+    private func choose(_ item: CDEMenuItem) {
         guard item.submenu == nil, let action = item.action else { return }
         CDEMenu.close()
         action()
+    }
+
+    // MARK: VoiceOver
+
+    /// The menus are drawn, so VoiceOver gets one menu item per row of every open level:
+    /// pressing one chooses it, or opens its cascade. Separators are left out; a dimmed row is
+    /// named so and does nothing. Kept here because the accessibility server keeps no reference.
+    private var axParts: [AccessibleHotspot] = []
+
+    override func accessibilityChildren() -> [Any]? {
+        var parts: [AccessibleHotspot] = []
+        for (li, l) in levels.enumerated() {
+            for (r, i) in rows(l) where !l.items[i].isSeparator {
+                let it = l.items[i]
+                parts.append(AccessibleHotspot(in: self, label: it.enabled ? it.title : it.title + " (dimmed)", rect: r, role: .menuItem) { [weak self] in
+                    guard let self, it.enabled, li < self.levels.count, i < self.levels[li].items.count else { return }
+                    if it.submenu != nil {
+                        self.arm(li, i)
+                        NSAccessibility.post(element: self, notification: .layoutChanged)
+                    } else { self.choose(it) }
+                })
+            }
+        }
+        axParts = parts
+        return parts
     }
 
     // MARK: Drawing

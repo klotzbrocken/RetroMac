@@ -33,7 +33,6 @@ final class PhotonDesktopController {
         p.level = NSWindow.Level(rawValue: 5)   // over the windows, like the dock it stands in for
         p.isOpaque = true
         p.hasShadow = false
-        p.title = "Photon"   // what VoiceOver calls it; nothing shows it
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         p.hidesOnDeactivate = false
         return p
@@ -42,6 +41,7 @@ final class PhotonDesktopController {
     private func show(theme: ThemeBundle) {
         if shelf == nil {
             let s = Self.panel(), t = Self.panel()
+            s.title = "Shelf"; t.title = "Taskbar"   // what VoiceOver calls them
             s.contentView = PhotonShelfView(theme: theme)
             t.contentView = PhotonTaskbarView(theme: theme)
             shelf = s; taskbar = t
@@ -350,16 +350,47 @@ final class PhotonShelfView: NSView {
         pressed = nil; needsDisplay = true
         guard let h = hit(convert(event.locationInWindow, from: nil)) else { return }
         switch (h.group.body, h.row) {
-        case (_, nil):
-            var c = Self.collapsed
-            if c.contains(h.group.id) { c.remove(h.group.id) } else { c.insert(h.group.id) }
-            Self.collapsed = c
-            clampScroll()
+        case (_, nil): toggle(h.group)
         case (.items(let items), let row?) where was?.group == h.group.id && was?.row == row && row < items.count:
             items[row].action()
         case (.image(_, let action), _?): action()
         default: break
         }
+    }
+
+    private func toggle(_ g: Group) {
+        var c = Self.collapsed
+        if c.contains(g.id) { c.remove(g.id) } else { c.insert(g.id) }
+        Self.collapsed = c
+        clampScroll()
+    }
+
+    /// VoiceOver: every header folds its group, every launcher and picture opens what a click
+    /// opens, the monitor reads its four values. Only what is scrolled into view.
+    /// Held until the next question: the accessibility server keeps no reference of its own.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        var parts: [AccessibleHotspot] = []
+        func add(_ label: String, _ r: NSRect, role: NSAccessibility.Role = .button, _ press: @escaping () -> Void) {
+            if r.intersects(bounds) { parts.append(AccessibleHotspot(in: self, label: label, rect: r, role: role, press: press)) }
+        }
+        let closed = Self.collapsed
+        for (g, header, body) in layout() {
+            add("\(g.title) group, \(closed.contains(g.id) ? "collapsed" : "expanded")", header) { [weak self] in self?.toggle(g) }
+            guard let body else { continue }
+            switch g.body {
+            case .items(let items):
+                for (i, item) in items.enumerated() {
+                    add(item.title, NSRect(x: body.minX, y: body.minY + CGFloat(i) * Self.rowH, width: body.width, height: Self.rowH), item.action)
+                }
+            case .monitor:
+                let pc = { (v: Double) in "\(Int((v * 100).rounded())) %" }
+                add("CPU \(pc(cpu)), memory \(pc(memory)), swap \(pc(swap)), commit \(pc(commit))", body, role: .staticText) {}
+            case .image(_, let action): add(g.title, body, action)
+            }
+        }
+        axParts = parts
+        return parts
     }
 
     /// When the open groups are taller than the screen, the wheel brings the rest into view
@@ -461,12 +492,33 @@ final class PhotonTaskbarView: NSView {
     override func mouseUp(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if launchRect.contains(p) {
-            PhotonLaunchMenu.show(above: window?.convertToScreen(convert(launchRect, to: nil)) ?? .zero)
+            showLaunchMenu()
         } else if clockRect.contains(p) {
             CDEActions.settings("com.apple.Date-Time-Settings.extension")()
         } else if let i = (0..<min(tasks.count, visibleTasks)).first(where: { taskRect($0).contains(p) }) {
             MinimizedWindowTracker.shared.activate(tasks[i])   // QNX-06: brings the window back to the front
         }
+    }
+
+    private func showLaunchMenu() {
+        PhotonLaunchMenu.show(above: window?.convertToScreen(convert(launchRect, to: nil)) ?? .zero)
+    }
+
+    /// VoiceOver: the Launch button, one entry per window it shows (named after the window) and
+    /// the clock, each doing what a click does.
+    /// Held until the next question: the accessibility server keeps no reference of its own.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        var parts = [AccessibleHotspot(in: self, label: "Launch", rect: launchRect) { [weak self] in self?.showLaunchMenu() }]
+        for (i, t) in tasks.prefix(visibleTasks).enumerated() {
+            let name = t.title.isEmpty ? (NSRunningApplication(processIdentifier: t.pid)?.localizedName ?? "Window") : t.title
+            parts.append(AccessibleHotspot(in: self, label: name, rect: taskRect(i)) { MinimizedWindowTracker.shared.activate(t) })
+        }
+        parts.append(AccessibleHotspot(in: self, label: "Clock, \(Self.clockText())", rect: clockRect) {
+            CDEActions.settings("com.apple.Date-Time-Settings.extension")()
+        })
+        axParts = parts
+        return parts
     }
 }
 

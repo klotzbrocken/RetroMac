@@ -113,9 +113,10 @@ final class PlatinumMenuController {
         installMonitors()
     }
 
-    fileprivate func openSubmenu(_ items: [PlatinumMenuItem], from parent: PlatinumMenuPanel, rowRectInScreen: NSRect, level: Int) {
+    fileprivate func openSubmenu(_ items: [PlatinumMenuItem], title: String, from parent: PlatinumMenuPanel, rowRectInScreen: NSRect, level: Int) {
         while panels.count > level { panels.removeLast().orderOut(nil) }
         let panel = makePanel(items: items, level: level)
+        panel.title = title
         let size = panel.contentSize
         let screen = NSScreen.screens.first { $0.frame.intersects(rowRectInScreen) } ?? NSScreen.main!
         let vf = screen.visibleFrame
@@ -160,6 +161,7 @@ final class PlatinumMenuController {
         let panel = PlatinumMenuPanel(contentRect: NSRect(origin: .zero, size: view.intrinsicSize),
                                       styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.level = .popUpMenu
+        panel.title = "Menu"   // what VoiceOver calls it; a submenu is renamed after its row
         panel.isOpaque = false; panel.backgroundColor = .clear
         panel.hasShadow = look == .aqua   // Platinum's drawn 1 px shadow is its shadow; Aqua's is soft
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
@@ -471,20 +473,46 @@ private final class PlatinumMenuView: NSView {
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if scrolls, !rowBand.contains(p) { return }
-        for i in items.indices where rowRect(i).contains(p) {
-            switch items[i].kind {
-            case .action(let run): if !items[i].dimmed { controller?.dismissAll(); run() }
-            case .submenu, .lazySubmenu:
-                if let sub = items[i].submenuRows() { openChild(sub, rowIndex: i) }
-            case .separator: break
-            }
-            return
+        if let i = items.indices.first(where: { rowRect($0).contains(p) }) { choose(i) }
+    }
+
+    private func choose(_ i: Int) {
+        switch items[i].kind {
+        case .action(let run): if !items[i].dimmed { controller?.dismissAll(); run() }
+        case .submenu, .lazySubmenu:
+            if let sub = items[i].submenuRows() { openChild(sub, rowIndex: i) }
+        case .separator: break
         }
+    }
+
+    /// VoiceOver gets each row on show as a menu item (dimmed ones disabled) and, on a menu
+    /// that scrolls, the two arrow rows as buttons. Pressing a row chooses it as a click does,
+    /// opening its submenu if it has one.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        var parts: [AccessibleHotspot] = []
+        for i in items.indices where !isSeparator(items[i]) {
+            let r = rowRect(i)
+            if scrolls, r.maxY <= rowBand.minY || r.minY >= rowBand.maxY { continue }
+            let item = AccessibleHotspot(in: self, label: items[i].title, rect: r, role: .menuItem) { [weak self] in
+                guard let self else { return }
+                self.setHovered(i)
+                self.choose(i)
+            }
+            item.setAccessibilityEnabled(!items[i].dimmed)
+            parts.append(item)
+        }
+        if scrolls {
+            parts.insert(AccessibleHotspot(in: self, label: "Scroll up", rect: upArrowRect) { [weak self] in self?.scroll(by: -1) }, at: 0)
+            parts.append(AccessibleHotspot(in: self, label: "Scroll down", rect: downArrowRect) { [weak self] in self?.scroll(by: 1) })
+        }
+        axParts = parts
+        return parts
     }
 
     private func openChild(_ sub: [PlatinumMenuItem], rowIndex: Int) {
         guard let panel = ownerPanel else { return }
         let inScreen = panel.convertToScreen(convert(rowRect(rowIndex), to: nil))
-        controller?.openSubmenu(sub, from: panel, rowRectInScreen: inScreen, level: level + 1)
+        controller?.openSubmenu(sub, title: items[rowIndex].title, from: panel, rowRectInScreen: inScreen, level: level + 1)
     }
 }

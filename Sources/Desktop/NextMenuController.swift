@@ -196,12 +196,17 @@ final class NextMenuView: NSView {
         let p = convert(event.locationInWindow, from: nil)
         guard let i = indexAt(p) else { return }
         hoverIndex = i; needsDisplay = true
+        choose(i)
+    }
+
+    private func choose(_ i: Int) {
         let item = items[i]
         if let sub = item.submenu {
+            guard let window else { return }
             // Pop the submenu out to the RIGHT, aligned with this cell's top.
             let cellTopInWindow = convert(NSPoint(x: bounds.maxX, y: cellRect(i).minY), to: nil)
-            let onScreen = window!.convertPoint(toScreen: cellTopInWindow)
-            NextSubmenuPanel.shared.present(items: sub, at: onScreen)
+            let onScreen = window.convertPoint(toScreen: cellTopInWindow)
+            NextSubmenuPanel.shared.present(items: sub, title: item.title, at: onScreen)
         } else {
             NextSubmenuPanel.shared.dismiss()
             if item.enabled { item.action?() }
@@ -210,6 +215,26 @@ final class NextMenuView: NSView {
 
     override func mouseUp(with event: NSEvent) {
         hoverIndex = nil; needsDisplay = true
+    }
+
+    /// VoiceOver: every cell as a menu item; pressing one opens its submenu or runs it, the
+    /// greyed ones are dimmed. Held until the next question: the accessibility server keeps no
+    /// reference of its own.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        axParts = NextMenuController.Item.hotspots(items, in: self, rect: cellRect) { [weak self] i in self?.choose(i) }
+        return axParts
+    }
+}
+
+extension NextMenuController.Item {
+    /// One menu-item hotspot per entry, shared by the main menu and its submenus.
+    static func hotspots(_ items: [Self], in view: NSView, rect: (Int) -> NSRect, choose: @escaping (Int) -> Void) -> [AccessibleHotspot] {
+        items.indices.map { i in
+            let h = AccessibleHotspot(in: view, label: items[i].title, rect: rect(i), role: .menuItem) { choose(i) }
+            h.setAccessibilityEnabled(items[i].enabled)
+            return h
+        }
     }
 }
 
@@ -223,7 +248,8 @@ final class NextSubmenuPanel {
     private var monitor: Any?
     private init() {}
 
-    func present(items: [NextMenuController.Item], at topLeft: NSPoint) {
+    /// `title` (the main-menu entry it hangs off) is what VoiceOver calls the panel.
+    func present(items: [NextMenuController.Item], title: String, at topLeft: NSPoint) {
         dismiss()
         let view = NextSubmenuView(items: items) { [weak self] item in
             self?.dismiss()
@@ -233,6 +259,7 @@ final class NextSubmenuPanel {
         let p = NSPanel(contentRect: NSRect(x: topLeft.x, y: topLeft.y - h, width: NextSubmenuView.width, height: h),
                         styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         p.level = NSWindow.Level(rawValue: 5)
+        p.title = title
         p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         p.hidesOnDeactivate = false
@@ -300,5 +327,16 @@ final class NextSubmenuView: NSView {
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if let i = items.indices.first(where: { cellRect($0).contains(p) }) { onPick(items[i]) }
+    }
+
+    /// VoiceOver: the entries as menu items, pressing one picks it as a click does.
+    /// Held until the next question: the accessibility server keeps no reference of its own.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        axParts = NextMenuController.Item.hotspots(items, in: self, rect: cellRect) { [weak self] i in
+            guard let self else { return }
+            self.onPick(self.items[i])
+        }
+        return axParts
     }
 }

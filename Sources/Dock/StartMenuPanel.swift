@@ -130,6 +130,8 @@ final class StartMenuPanel: NSPanel {
         // the whole point of this mode is that the desktop stays workable.
         level = NSWindow.Level(rawValue: 27)
         collectionBehavior = [.canJoinAllSpaces, .stationary]
+        // VoiceOver names the window by this; flyouts rename themselves after their row.
+        title = "Start"
     }
 
     // MARK: - Classic Win98 Style
@@ -296,6 +298,7 @@ private func makeProgramsFlyout(items: [StartMenuPanel.MenuItem],
     let size = NSSize(width: width, height: height)
     content.frame = NSRect(origin: .zero, size: size)
     let panel = StartMenuPanel()
+    panel.title = "All Programs"
     panel.contentView = content
 
     // The corner the caller nominated: over the menu, sitting on the All Programs row.
@@ -425,7 +428,10 @@ private final class XPStartMenuContentView: NSView, StartMenuPanel.SubmenuHost {
     override func mouseDown(with event: NSEvent) {
         let local = convert(event.locationInWindow, from: nil)
         guard let section = hitSection(at: local) else { return }
+        choose(section)
+    }
 
+    private func choose(_ section: HoverSection) {
         switch section {
         case .left(let idx):
             let item = data.leftItems[idx]
@@ -469,6 +475,35 @@ private final class XPStartMenuContentView: NSView, StartMenuPanel.SubmenuHost {
     func dismissSubmenu() {
         submenuPanel?.dismiss()
         submenuPanel = nil
+    }
+
+    /// VoiceOver gets every row of both columns, All Programs and the two footer buttons as
+    /// menu items, laid out the way `hitSection` walks them; pressing one is a click on it.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        let bw = borderWidth
+        let contentTop = bw + footerHeight + contentHeight
+        var parts: [AccessibleHotspot] = []
+        func add(_ label: String, _ rect: NSRect, _ section: HoverSection) {
+            parts.append(AccessibleHotspot(in: self, label: label, rect: rect, role: .menuItem) { [weak self] in self?.choose(section) })
+        }
+        var y = contentTop
+        for (i, item) in data.leftItems.enumerated() {
+            let h = item.isSeparator ? separatorHeight : largeItemHeight
+            y -= h
+            if !item.isSeparator { add(item.title, NSRect(x: bw, y: y, width: leftColumnWidth, height: h), .left(i)) }
+        }
+        add("All Programs", allProgramsRect(), .allPrograms)
+        y = contentTop
+        for (i, item) in data.rightItems.enumerated() {
+            let h = item.isSeparator ? separatorHeight : itemHeight
+            y -= h
+            if !item.isSeparator { add(item.title, NSRect(x: bw + leftColumnWidth, y: y, width: bounds.width - bw * 2 - leftColumnWidth, height: h), .right(i)) }
+        }
+        add("Log Off", NSRect(x: bw, y: bw, width: bounds.width / 2 - bw, height: footerHeight), .logOff)
+        add("Turn Off Computer", NSRect(x: bounds.width / 2, y: bw, width: bounds.width / 2 - bw, height: footerHeight), .shutDown)
+        axParts = parts
+        return parts
     }
 
     private func toggleProgramsFlyout(_ items: [StartMenuPanel.MenuItem]) {
@@ -1041,6 +1076,28 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
     }
     override func mouseDown(with event: NSEvent) {
         guard let h = sectionAt(convert(event.locationInWindow, from: nil)) else { return }
+        choose(h)
+    }
+
+    /// VoiceOver gets the program list (or All Programs, when it is showing), the places,
+    /// All Programs/Back, the search field and Shut down as menu items from `computeRects`.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        let L = computeRects()
+        var parts: [AccessibleHotspot] = []
+        func add(_ label: String, _ rect: NSRect, _ h: Hover) {
+            parts.append(AccessibleHotspot(in: self, label: label, rect: rect, role: .menuItem) { [weak self] in self?.choose(h) })
+        }
+        for (i, r) in L.programs.enumerated() { add(programs[i].title, r, .left(i)) }
+        for (i, r) in L.places.enumerated() { add(places[i].title, r, .right(i)) }
+        add(showingAllPrograms ? "Back" : "All Programs", L.allPrograms, .allPrograms)
+        add(RetroFrameTheme.isVista ? "Start Search" : "Search programs and files", L.search, .search)
+        add("Shut down", L.shutDown, .shutDown)
+        axParts = parts
+        return parts
+    }
+
+    private func choose(_ h: Hover) {
         switch h {
         case .left(let i): programs[i].action?(); onDismiss?()
         case .right(let i): places[i].action?(); onDismiss?()
@@ -1296,6 +1353,27 @@ private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuH
         onDismiss?()
     }
 
+    /// VoiceOver gets each row as a menu item. Pressing one with a submenu opens it, as
+    /// hovering does for the mouse; any other row runs like a click.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        axParts = items.indices.filter { !items[$0].isSeparator }.map { i in
+            AccessibleHotspot(in: self, label: items[i].title, rect: rectForItem(at: i), role: .menuItem) { [weak self] in
+                guard let self else { return }
+                if let sub = self.items[i].submenuItems, !sub.isEmpty {
+                    self.hoveredIndex = i
+                    self.needsDisplay = true
+                    self.dismissSubmenu()
+                    self.showSubmenu(for: i, subItems: sub)
+                } else {
+                    self.items[i].action?()
+                    self.onDismiss?()
+                }
+            }
+        }
+        return axParts
+    }
+
     override func rightMouseDown(with event: NSEvent) {
         let local = convert(event.locationInWindow, from: nil)
         guard let idx = itemIndex(at: local), !items[idx].isSeparator,
@@ -1330,6 +1408,7 @@ private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuH
         subContent.onDismiss = { [weak self] in self?.onDismiss?() }
         subContent.frame = NSRect(origin: .zero, size: size)
         let panel = StartMenuPanel()
+        panel.title = items[index].title
         panel.contentView = subContent
 
         guard let window = self.window else { return }
@@ -1615,6 +1694,22 @@ private final class SubmenuContentView: NSView {
         guard let idx = itemIndex(at: local), !items[idx].isSeparator else { return }
         items[idx].action?()
         onDismiss?()
+    }
+
+    /// VoiceOver gets each row as a menu item; pressing it runs it like a click.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        var parts: [AccessibleHotspot] = []
+        var y = bounds.height - bevelWidth - 1
+        for item in items {
+            let h = item.isSeparator ? 9.0 : itemHeight
+            y -= h
+            guard !item.isSeparator else { continue }
+            parts.append(AccessibleHotspot(in: self, label: item.title, rect: NSRect(x: bevelWidth, y: y, width: bounds.width - bevelWidth * 2, height: h),
+                                           role: .menuItem) { [weak self] in item.action?(); self?.onDismiss?() })
+        }
+        axParts = parts
+        return parts
     }
 
     override func rightMouseDown(with event: NSEvent) {

@@ -45,6 +45,7 @@ final class CDESubpanel: NSView {
         p.hasShadow = true
         p.contentView = view
         p.hidesOnDeactivate = false
+        p.title = kind.title   // what VoiceOver calls it
         window = p; openKind = kind
         NSApp.activate(ignoringOtherApps: true)
         p.makeKeyAndOrderFront(nil)
@@ -250,9 +251,23 @@ final class CDESubpanel: NSView {
     override func mouseUp(with event: NSEvent) {
         let was = pressedRow; pressedRow = nil; needsDisplay = true
         guard let r = row(at: convert(event.locationInWindow, from: nil)), r > 0, r == was else { return }
-        let item = items[r - 1]
+        choose(items[r - 1])
+    }
+
+    private func choose(_ item: Item) {
         Self.closeAll()
         item.action()
+    }
+
+    /// VoiceOver gets one button per launcher row, pressed as a click would. Install Icon is
+    /// left out: it only takes drops. Kept here because the accessibility server keeps no reference.
+    private var axParts: [AccessibleHotspot] = []
+
+    override func accessibilityChildren() -> [Any]? {
+        axParts = items.enumerated().map { i, item in
+            AccessibleHotspot(in: self, label: item.title, rect: rowRect(i + 1)) { [weak self] in self?.choose(item) }
+        }
+        return axParts
     }
 
     override func rightMouseDown(with event: NSEvent) {

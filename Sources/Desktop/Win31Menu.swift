@@ -74,8 +74,26 @@ final class Win31MenuOverlay: NSView {
         origin.x = max(2, min(origin.x, hostBounds.maxX - size.width - 2))
         origin.y = max(2, origin.y)
         menuRect = NSRect(origin: origin, size: size)
+        // VoiceOver: the overlay is the menu itself (it has no window of its own).
+        setAccessibilityElement(true)
+        setAccessibilityRole(.menu)
+        setAccessibilityLabel(header ?? "Menu")
     }
     required init?(coder: NSCoder) { fatalError() }
+
+    /// VoiceOver gets each row (separators and the header left out) as a menu item, from the
+    /// same `rows()` the mouse hit-tests; pressing one chooses it, opening its submenu if it has one.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        axParts = rows().filter { $0.index >= 0 && !items[$0.index].isSeparator }.map { row in
+            let item = AccessibleHotspot(in: self, label: displayTitle(items[row.index].title), rect: row.rect, role: .menuItem) { [weak self] in
+                self?.choose(row.index)
+            }
+            item.setAccessibilityEnabled(items[row.index].enabled)
+            return item
+        }
+        return axParts
+    }
 
     private var trackingAreaRef: NSTrackingArea?
     func activate() {

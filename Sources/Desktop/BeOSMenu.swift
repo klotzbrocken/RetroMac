@@ -49,12 +49,13 @@ final class BeOSMenuController {
     /// `openLeft` makes the root left-aligned to the anchor's right edge (right-side corners).
     private var openUpState = false
 
-    func show(_ items: [BeOSMenuItem], anchor: NSRect, openUp: Bool, openLeft: Bool) {
+    /// `title` is what VoiceOver calls the menu; nothing shows it.
+    func show(_ items: [BeOSMenuItem], title: String = "Menu", anchor: NSRect, openUp: Bool, openLeft: Bool) {
         dismissAll()
         openUpState = openUp
         // Growing upward (bottom corners) → reverse so the first entry sits nearest the logo.
         let display = openUp ? Array(items.reversed()) : items
-        let panel = makePanel(items: display, level: 0, openLeft: openLeft)
+        let panel = makePanel(items: display, title: title, level: 0, openLeft: openLeft)
         let size = panel.contentSize
         let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) ?? NSScreen.main!
         let vf = screen.visibleFrame
@@ -73,11 +74,11 @@ final class BeOSMenuController {
         installMonitors()
     }
 
-    fileprivate func openSubmenu(_ items: [BeOSMenuItem], from parent: BeOSMenuPanel, rowRectInScreen: NSRect, level: Int, openLeft: Bool) {
+    fileprivate func openSubmenu(_ items: [BeOSMenuItem], title: String, from parent: BeOSMenuPanel, rowRectInScreen: NSRect, level: Int, openLeft: Bool) {
         // Close any deeper panels first.
         while panels.count > level { panels.removeLast().orderOut(nil) }
         let display = openUpState ? Array(items.reversed()) : items
-        let panel = makePanel(items: display, level: level, openLeft: openLeft)
+        let panel = makePanel(items: display, title: title, level: level, openLeft: openLeft)
         let size = panel.contentSize
         let screen = NSScreen.screens.first(where: { $0.frame.intersects(rowRectInScreen) }) ?? NSScreen.main!
         let vf = screen.visibleFrame
@@ -105,11 +106,12 @@ final class BeOSMenuController {
         if wasOpen { let cb = onDismiss; onDismiss = nil; cb?() }
     }
 
-    private func makePanel(items: [BeOSMenuItem], level: Int, openLeft: Bool) -> BeOSMenuPanel {
+    private func makePanel(items: [BeOSMenuItem], title: String, level: Int, openLeft: Bool) -> BeOSMenuPanel {
         let view = BeOSMenuView(items: items, level: level, openLeft: openLeft, controller: self)
         let panel = BeOSMenuPanel(contentRect: NSRect(origin: .zero, size: view.intrinsicSize),
                                   styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.level = NSWindow.Level(rawValue: 26)
+        panel.title = title
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         panel.hidesOnDeactivate = false
@@ -256,14 +258,26 @@ private final class BeOSMenuView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        for i in items.indices where rowRect(i).contains(p) {
-            switch items[i].kind {
-            case .action(let run): controller?.dismissAll(); run()
-            case .submenu(let sub): openChild(sub, rowIndex: i)
-            case .separator: break
-            }
-            return
+        if let i = items.indices.first(where: { rowRect($0).contains(p) }) { choose(i) }
+    }
+
+    private func choose(_ i: Int) {
+        switch items[i].kind {
+        case .action(let run): controller?.dismissAll(); run()
+        case .submenu(let sub): openChild(sub, rowIndex: i)
+        case .separator: break
         }
+    }
+
+    /// VoiceOver: every entry but the separators, as a menu item; pressing one chooses it, or
+    /// opens its submenu. Held until the next question: the accessibility server keeps no
+    /// reference of its own.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        axParts = items.indices.filter { !isSeparator(items[$0]) }.map { i in
+            AccessibleHotspot(in: self, label: items[i].title, rect: rowRect(i), role: .menuItem) { [weak self] in self?.choose(i) }
+        }
+        return axParts
     }
 
     private func openChild(_ sub: [BeOSMenuItem], rowIndex: Int) {
@@ -272,6 +286,6 @@ private final class BeOSMenuView: NSView {
         // row rect → screen coords
         let inWindow = convert(rr, to: nil)
         let inScreen = panel.convertToScreen(inWindow)
-        controller?.openSubmenu(sub, from: panel, rowRectInScreen: inScreen, level: level + 1, openLeft: openLeft)
+        controller?.openSubmenu(sub, title: items[rowIndex].title, from: panel, rowRectInScreen: inScreen, level: level + 1, openLeft: openLeft)
     }
 }

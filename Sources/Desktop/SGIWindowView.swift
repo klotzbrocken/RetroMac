@@ -35,6 +35,24 @@ final class SGIWindowView: NSView {
             clientContainer.addSubview(iv); items.append(iv)
         }
         relayout()
+        // VoiceOver: a group named like the title bar, holding its buttons and the icons.
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
+        setAccessibilityLabel(group.name)
+    }
+
+    /// VoiceOver gets the title bar's window-menu, minimize, maximize and close buttons ahead
+    /// of the icons (ProgramItemViews, accessible themselves). Moving and resizing have no
+    /// VoiceOver counterpart.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        axParts = [
+            AccessibleHotspot(in: self, label: "Window menu", rect: menuBtnRect) { [weak self] in self?.showWindowMenu() },
+            AccessibleHotspot(in: self, label: "Minimize", rect: minBtnRect) { [weak self] in self?.onMinimizeRequested?() },
+            AccessibleHotspot(in: self, label: isMax ? "Restore" : "Maximize", rect: maxBtnRect) { [weak self] in self?.toggleMax() },
+            AccessibleHotspot(in: self, label: "Close", rect: closeBtnRect) { [weak self] in self?.onClose?() },
+        ]
+        return axParts + (super.accessibilityChildren() ?? [])
     }
     required init?(coder: NSCoder) { fatalError() }
     override var isFlipped: Bool { false }
@@ -111,17 +129,7 @@ final class SGIWindowView: NSView {
         if closeBtnRect.contains(p) { onClose?(); return }
         if minBtnRect.contains(p) { onMinimizeRequested?(); return }
         if maxBtnRect.contains(p) { toggleMax(); return }
-        if menuBtnRect.contains(p) {
-            guard let host = window?.contentView else { return }
-            let tl = convert(NSPoint(x: menuBtnRect.minX, y: menuBtnRect.minY), to: host)
-            Win31Menu.present(items: [
-                Win31MenuItem("Maximize", enabled: !isMax) { [weak self] in self?.toggleMax() },
-                Win31MenuItem("Minimize") { [weak self] in self?.onMinimizeRequested?() },
-                .separator,
-                Win31MenuItem("Close") { [weak self] in self?.onClose?() },
-            ], topLeft: tl, in: host)
-            return
-        }
+        if menuBtnRect.contains(p) { showWindowMenu(); return }
         if !isMax {
             let e = edges(at: p)
             if e.l || e.r || e.t || e.b { resizeEdges = e; resizeStart = frame; return }
@@ -133,6 +141,17 @@ final class SGIWindowView: NSView {
                 dragOff = NSPoint(x: pp.x - frame.minX, y: pp.y - frame.minY)
             }
         }
+    }
+
+    private func showWindowMenu() {
+        guard let host = window?.contentView else { return }
+        let tl = convert(NSPoint(x: menuBtnRect.minX, y: menuBtnRect.minY), to: host)
+        Win31Menu.present(items: [
+            Win31MenuItem("Maximize", enabled: !isMax) { [weak self] in self?.toggleMax() },
+            Win31MenuItem("Minimize") { [weak self] in self?.onMinimizeRequested?() },
+            .separator,
+            Win31MenuItem("Close") { [weak self] in self?.onClose?() },
+        ], topLeft: tl, in: host)
     }
 
     override func mouseDragged(with event: NSEvent) {

@@ -128,6 +128,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   their lights over every app window and the window animations showed up as untitled, empty
   windows in VoiceOver's Window Chooser. They are left out now; the dock, desktop, panels,
   widgets and settings stay in.
+- **VoiceOver can use the themes.** The theme windows have names (Dock, Desktop, Front Panel,
+  Shelf, Taskbar, Deskbar, Control Strip …), and what they hold are buttons and menu items with
+  their names that VoiceOver can press: dock items (running apps by their name, no longer their
+  bundle id, in the tooltip too), desktop icons, the Start button, Start menus, clock and tray,
+  taskbar window buttons, the CDE Front Panel and its subpanels, the Photon shelf and taskbar,
+  the BeOS Deskbar, the NeXT dock, the Control Strip, the IRIX Toolchest and the theme menus.
+  Dragging (moving icons and windows, resizing the Control Strip) and the Mac OS 9 volume slider
+  have no VoiceOver form yet.
 - **No more log file on the Desktop.** The retro dock wrote every show and hide to
   `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with
   the new **Debug logging** switch there, which is off unless you turn it on.

@@ -261,10 +261,9 @@ final class BeOSDeskbarView: NSView {
     /// Be menu's Applications submenu — toward the interior, above the status view.
     private func drawApps() {
         appRects = []
-        let ar = appsRect
         let font = BeOSMenuController.menuFont
         for (i, row) in appRows().enumerated() {
-            let r = NSRect(x: ar.minX, y: ar.minY + 2 + CGFloat(i) * appRowH, width: ar.width, height: appRowH)
+            let r = appRowRect(i)
             appRects.append((r, row.id))
             let selected = i == appHover
             if selected { hiColor.setFill(); r.insetBy(dx: 1, dy: 0).fill() }
@@ -286,6 +285,10 @@ final class BeOSDeskbarView: NSView {
                 tri.fill()
             }
         }
+    }
+
+    private func appRowRect(_ i: Int) -> NSRect {
+        NSRect(x: appsRect.minX, y: appsRect.minY + 2 + CGFloat(i) * appRowH, width: appsRect.width, height: appRowH)
     }
 
     override func updateTrackingAreas() {
@@ -316,7 +319,7 @@ final class BeOSDeskbarView: NSView {
         let ctrl = BeOSMenuController.shared
         ctrl.ignoreClickWindow = window
         ctrl.onDismiss = { [weak self] in self?.hoverMenuID = nil }
-        ctrl.show(items, anchor: anchor, openUp: false, openLeft: openMenuLeft)
+        ctrl.show(items, title: id == "__music__" ? "Music" : "Applications", anchor: anchor, openUp: false, openLeft: openMenuLeft)
         hoverMenuID = id
     }
 
@@ -362,17 +365,21 @@ final class BeOSDeskbarView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        for (r, bid) in appRects where r.contains(p) {
-            if bid == "__appfolder__" { AppFolderController.shared.toggle() }
-            else if bid == "__music__" { AppFolderController.tv.show() }
-            else { AppLauncher.launchOrActivate(bundleID: bid) }
-            return
-        }
+        for (r, bid) in appRects where r.contains(p) { openRow(bid); return }
         if clockRect.contains(p) { ClockWidgetController.shared.toggle(); return }
         if cpuRect.contains(p) { CPUMonitorController.shared.toggle(); return }
         if pacRect.contains(p) { PacmanGame.launch(); return }
         if mailRect.contains(p) { AppLauncher.launchOrActivate(bundleID: "com.apple.mail"); return }
-        guard headerRect.contains(p) else { return }
+        if headerRect.contains(p) { toggleBeMenu() }
+    }
+
+    private func openRow(_ bid: String) {
+        if bid == "__appfolder__" { AppFolderController.shared.toggle() }
+        else if bid == "__music__" { AppFolderController.tv.show() }
+        else { AppLauncher.launchOrActivate(bundleID: bid) }
+    }
+
+    private func toggleBeMenu() {
         if BeOSMenuController.shared.isOpen { BeOSMenuController.shared.dismissAll(); return }
         menuOpen = true; needsDisplay = true
         // Anchor the menu to the Be logo so it flies out BESIDE the logo.
@@ -380,7 +387,28 @@ final class BeOSDeskbarView: NSView {
         let ctrl = BeOSMenuController.shared
         ctrl.ignoreClickWindow = window
         ctrl.onDismiss = { [weak self] in self?.menuOpen = false; self?.needsDisplay = true }
-        ctrl.show(buildBeMenu(), anchor: anchor, openUp: openMenuUp, openLeft: openMenuLeft)
+        ctrl.show(buildBeMenu(), title: "Be Menu", anchor: anchor, openUp: openMenuUp, openLeft: openMenuLeft)
+    }
+
+    /// VoiceOver: the Be button, the tray (Mail, Processor, Pac-Man, the clock) and the app
+    /// rows, each doing what a click does. The tray rects come from the last draw.
+    /// Held until the next question: the accessibility server keeps no reference of its own.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        var parts = [AccessibleHotspot(in: self, label: "Be Menu", rect: headerRect) { [weak self] in self?.toggleBeMenu() }]
+        let fmt = DateFormatter(); fmt.dateFormat = AppSettings.applyClockFormat("h:mm a")
+        let tray: [(String, NSRect, () -> Void)] = [
+            ("Mail", mailRect, { AppLauncher.launchOrActivate(bundleID: "com.apple.mail") }),
+            ("Processor", cpuRect, { CPUMonitorController.shared.toggle() }),
+            ("Pac-Man", pacRect, { PacmanGame.launch() }),
+            ("Clock, \(fmt.string(from: Date()))", clockRect, { ClockWidgetController.shared.toggle() }),
+        ]
+        for (label, r, press) in tray where !r.isEmpty { parts.append(AccessibleHotspot(in: self, label: label, rect: r, press: press)) }
+        for (i, row) in appRows().enumerated() {
+            parts.append(AccessibleHotspot(in: self, label: row.label, rect: appRowRect(i)) { [weak self] in self?.openRow(row.id) })
+        }
+        axParts = parts
+        return parts
     }
 
     // MARK: Be menu contents

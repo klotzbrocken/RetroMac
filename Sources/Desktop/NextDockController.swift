@@ -76,6 +76,7 @@ final class NextDockView: NSView {
     /// composited on top (edge-to-edge for shipped NeXT art, inset for custom images).
     /// `isClock` draws the live clock/calendar instead of an icon.
     private struct Tile {
+        let label: String          // what VoiceOver calls it
         let icon: String?          // theme icon file; nil = clock tile
         var isClock: Bool = false
         var dots: Bool = false     // NeXT "…" mark shown on a docked app that isn't running
@@ -100,13 +101,13 @@ final class NextDockView: NSView {
         // Curated NeXT column (top→down). The nx_* icons are the authentic "Fleet" tiles that
         // already carry the grey bevel, so they are composited edge-to-edge on the silver cell.
         tiles = [
-            Tile(icon: "nx_workspace.png", action: { NextAppsWindowController.shared.toggle() }),   // NeXT cube → File Viewer
-            Tile(icon: nil, isClock: true, action: { ClockWidgetController.shared.show() }),  // Clock widget
-            Tile(icon: "nx_media.png", action: { CPUMonitorController.shared.show() }),             // Processor Monitor widget
-            Tile(icon: "nx_edit.png", action: { NotepadController.shared.show() }),                 // Notepad widget
-            Tile(icon: "nx_home.png", action: { [weak self] in self?.openHome() }),
-            Tile(icon: "nx_mail.png", dots: true, action: nil),
-            Tile(icon: "nx_librarian.png", dots: true, action: nil),
+            Tile(label: "Workspace", icon: "nx_workspace.png", action: { NextAppsWindowController.shared.toggle() }),   // NeXT cube → File Viewer
+            Tile(label: "Clock", icon: nil, isClock: true, action: { ClockWidgetController.shared.show() }),  // Clock widget
+            Tile(label: "Processor Monitor", icon: "nx_media.png", action: { CPUMonitorController.shared.show() }),             // Processor Monitor widget
+            Tile(label: "Notepad", icon: "nx_edit.png", action: { NotepadController.shared.show() }),                 // Notepad widget
+            Tile(label: "Home", icon: "nx_home.png", action: { [weak self] in self?.openHome() }),
+            Tile(label: "Mail", icon: "nx_mail.png", dots: true, action: nil),
+            Tile(label: "Librarian", icon: "nx_librarian.png", dots: true, action: nil),
         ]
     }
 
@@ -183,7 +184,7 @@ final class NextDockView: NSView {
     /// Bottom-pinned Recycler tile. Uses the authentic full-tile NeXT recycler art (grey bevel
     /// already baked in), drawn edge-to-edge like the other dock tiles.
     private func drawRecycler(in ctx: CGContext) {
-        let r = NSRect(x: (bounds.width - tile) / 2, y: bounds.minY + 4, width: tile, height: tile)
+        let r = recyclerRect
         NeXTChrome.dockTile(r, flipped: false, in: ctx)   // silver base, like every dock cell
         if let img = theme.iconResource("nx_recycler.png").flatMap({ NSImage(contentsOf: $0) }) {
             img.draw(in: r, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true,
@@ -237,13 +238,29 @@ final class NextDockView: NSView {
 
     // MARK: Clicks
 
+    private var recyclerRect: NSRect { NSRect(x: (bounds.width - tile) / 2, y: bounds.minY + 4, width: tile, height: tile) }
+
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         layoutTiles()
         // Recycler first (bottom).
-        let rr = NSRect(x: (bounds.width - tile) / 2, y: bounds.minY + 4, width: tile, height: tile)
-        if rr.contains(p) { openTrash(); return }
+        if recyclerRect.contains(p) { openTrash(); return }
         for t in tiles where t.rect.contains(p) { t.action?(); return }
+    }
+
+    /// VoiceOver: every tile by name and the Recycler, each doing what a click does; the docked
+    /// apps that do nothing on a click (Mail, Librarian) are dimmed.
+    /// Held until the next question: the accessibility server keeps no reference of its own.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        layoutTiles()
+        let time = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
+        axParts = tiles.map { t in
+            let h = AccessibleHotspot(in: self, label: t.isClock ? "Clock, \(time)" : t.label, rect: t.rect) { t.action?() }
+            h.setAccessibilityEnabled(t.action != nil)
+            return h
+        } + [AccessibleHotspot(in: self, label: "Recycler", rect: recyclerRect) { [weak self] in self?.openTrash() }]
+        return axParts
     }
 
     // MARK: Context menu (right-click) — "Change Icon…" per dock tile.
