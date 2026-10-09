@@ -27,12 +27,15 @@ for arg in "$@"; do
 done
 
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist)"
+# What Sparkle compares is the build number (CFBundleVersion), not the version people read: a
+# second beta of 3.0 is 3.0 to read and 3.0.1 to the updater, or it is never offered.
+BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Info.plist)"
 if [ "$BETA" = true ]; then DMG="RetroMac-${VERSION}-beta.dmg"; else DMG="RetroMac.dmg"; fi
 URL="https://github.com/klotzbrocken/RetroMac/releases/download/v${VERSION}/${DMG}"
 SIGN_UPDATE=".build/artifacts/sparkle/Sparkle/bin/sign_update"
 
-if grep -q "<sparkle:version>${VERSION}</sparkle:version>" appcast.xml && [ "$DRY" = false ]; then
-    echo "❌ appcast.xml already has ${VERSION}."; exit 1
+if grep -q "<sparkle:version>${BUILD}</sparkle:version>" appcast.xml && [ "$DRY" = false ]; then
+    echo "❌ appcast.xml already has build ${BUILD}. Raise CFBundleVersion in Info.plist."; exit 1
 fi
 
 if [ "$DRY" = true ]; then
@@ -61,9 +64,9 @@ else
     echo "$SIGNATURE" | grep -q 'sparkle:edSignature=' || { echo "❌ sign_update gave no signature."; exit 1; }
 fi
 
-VERSION="$VERSION" URL="$URL" SIGNATURE="$SIGNATURE" BETA="$BETA" PHASED="$PHASED" DRY="$DRY" python3 - <<'PY'
+VERSION="$VERSION" BUILD="$BUILD" URL="$URL" SIGNATURE="$SIGNATURE" BETA="$BETA" PHASED="$PHASED" DRY="$DRY" python3 - <<'PY'
 import os, re, html, datetime
-v, url, sig = os.environ["VERSION"], os.environ["URL"], os.environ["SIGNATURE"]
+v, build, url, sig = os.environ["VERSION"], os.environ["BUILD"], os.environ["URL"], os.environ["SIGNATURE"]
 beta, phased, dry = os.environ["BETA"] == "true", os.environ["PHASED"] == "true", os.environ["DRY"] == "true"
 
 # The notes: the version's CHANGELOG section, its "New", "Known limits" and "Fixes" as lists.
@@ -101,7 +104,7 @@ if phased: extra += "\n      <sparkle:phasedRolloutInterval>86400</sparkle:phase
 item = f"""    <item>
       <title>Version {v}{' beta' if beta else ''}</title>
       <pubDate>{date}</pubDate>
-      <sparkle:version>{v}</sparkle:version>
+      <sparkle:version>{build}</sparkle:version>
       <sparkle:shortVersionString>{v}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>{extra}
       <description><![CDATA[
@@ -119,6 +122,9 @@ if dry:
     raise SystemExit(0)
 
 feed = open("appcast.xml", encoding="utf-8").read()
+# An earlier item for the same download (a beta rebuilt under its name) goes: the file it points
+# at is the new one now, and the old signature would fail on every Mac that tried it.
+feed = re.sub(r"    <item>(?:(?!</item>).)*?" + re.escape(url) + r".*?</item>\n", "", feed, flags=re.S)
 first = feed.index("    <item>")
 feed = feed[:first] + item + feed[first:]
 # The five newest downloadable releases stay; informational items (no enclosure) always stay.
