@@ -1105,6 +1105,14 @@ final class DockController {
                 DispatchQueue.main.async {
                     guard let self = self, gen == self.dockOpGeneration else { return }  // superseded
                     if ok { self.watchSystemDock() }
+                    // On a Space without the theme the Mac's Dock stays: ThemeSpaces may have
+                    // decided that before this hide (it does at launch), and the restart just put
+                    // the Dock away again. Once the restarted Dock is up, show it here.
+                    if ThemeSpaces.shared.heldBack {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                            if ThemeSpaces.shared.heldBack { CoreDockBridge.setAutoHide(false) }
+                        }
+                    }
                     if !ok {
                         // Partial/failed hide — KEEP the recovery keys + captured original state so a
                         // later restore / quit / relaunch can put the Dock back (the Dock may be left

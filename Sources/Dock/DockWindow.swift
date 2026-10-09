@@ -21,7 +21,12 @@ final class DockWindow: NSPanel {
         isMovableByWindowBackground = false
         hidesOnDeactivate = false
         animationBehavior = .utilityWindow
-        acceptsMouseMovedEvents = true
+        // The dock's own tracking areas report the pointer. Accepting mouse moves on the window
+        // as well sent them, while RetroMac was the active app and the dock window key, to the
+        // window's first responder instead: the dock heard the pointer enter and leave but
+        // nothing in between, and did not magnify until another app's window was clicked. (And a
+        // key window hears every move on the screen, not only its own.)
+        acceptsMouseMovedEvents = false
         title = "Dock"   // what VoiceOver calls it; nothing shows it
     }
 

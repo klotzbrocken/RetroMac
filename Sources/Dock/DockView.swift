@@ -3690,7 +3690,19 @@ final class DockView: NSView {
         statSince = now
     }
 
+    /// Debug logging: the first move after a quiet spell, with what AppKit thinks of the window,
+    /// to see why the dock sometimes does not react to a pointer coming down from the menu bar.
+    private var lastMoveLog: CFTimeInterval = 0
+    override func mouseEntered(with event: NSEvent) {
+        super.mouseEntered(with: event)
+        if AppSettings.shared.debugLogging { print("[DockMouse] entered key=\(window?.isKeyWindow ?? false) onActiveSpace=\(window?.isOnActiveSpace ?? false) appActive=\(NSApp.isActive) front=\(NSWorkspace.shared.frontmostApplication?.localizedName ?? "?")") }
+    }
+
     override func mouseMoved(with event: NSEvent) {
+        if AppSettings.shared.debugLogging, CACurrentMediaTime() - lastMoveLog > 2 {
+            lastMoveLog = CACurrentMediaTime()
+            print("[DockMouse] moved onActiveSpace=\(window?.isOnActiveSpace ?? false) visible=\(window?.isVisible ?? false) level=\(window?.level.rawValue ?? -1)")
+        }
         if Self.dockStats {
             let now = CACurrentMediaTime()
             if statLastMove > 0 { let gap = now - statLastMove; if gap > 0.02 { statGaps += 1 }; statMaxGap = max(statMaxGap, gap) }
@@ -3751,6 +3763,12 @@ final class DockView: NSView {
     }
 
     override func mouseExited(with event: NSEvent) {
+        if AppSettings.shared.debugLogging {
+            let p = convert(event.locationInWindow, from: nil)
+            let under = NSWindow.windowNumber(at: NSEvent.mouseLocation, belowWindowWithWindowNumber: 0)
+            let owner = NSApp.windows.first { $0.windowNumber == under }
+            print("[DockMouse] exited at \(Int(p.x)),\(Int(p.y)) in \(Int(bounds.width))x\(Int(bounds.height)) under=\(under) ours=\(owner.map { String(describing: type(of: $0)) + " " + $0.title } ?? "no") magPhase=\(magPhase)")
+        }
         if startButtonHovered {
             startButtonHovered = false
             needsDisplay = true

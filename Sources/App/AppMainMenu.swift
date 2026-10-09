@@ -4,7 +4,32 @@ import AppKit
 /// but key equivalents still go through `NSApp.mainMenu`: without one, ⌘W closed nothing, Esc
 /// did not dismiss Settings, and ⌘C/⌘V only worked while Settings had put an Edit menu in.
 enum AppMainMenu {
+    /// Only while one of RetroMac's titled windows is key: that is where ⌘W and Esc are wanted.
+    /// Standing all the time, a main menu changed how the menu-bar icon's own menu behaved (a
+    /// second click on the icon no longer closed it), as Settings' Edit menu once taught.
+    private static var observers: [NSObjectProtocol] = []
+    private static var menu: NSMenu?
+
     static func install() {
+        guard observers.isEmpty else { return }
+        let nc = NotificationCenter.default
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification, NSWindow.willCloseNotification] {
+            observers.append(nc.addObserver(forName: name, object: nil, queue: .main) { _ in
+                DispatchQueue.main.async { sync() }   // after the key window has settled
+            })
+        }
+    }
+
+    private static func sync() {
+        let wanted = NSApp.keyWindow.map { $0.styleMask.contains(.titled) && $0.isVisible } ?? false
+        if wanted, NSApp.mainMenu == nil {
+            NSApp.mainMenu = menu ?? build()
+        } else if !wanted, let m = menu, NSApp.mainMenu === m {
+            NSApp.mainMenu = nil
+        }
+    }
+
+    private static func build() -> NSMenu {
         let main = NSMenu()
 
         let app = NSMenuItem(); app.submenu = NSMenu(); main.addItem(app)
@@ -30,7 +55,8 @@ enum AppMainMenu {
         windowMenu.addItem(esc)
         window.submenu = windowMenu; main.addItem(window)
 
-        NSApp.mainMenu = main
+        menu = main
+        return main
     }
 
     final class Closer: NSObject, NSMenuItemValidation {

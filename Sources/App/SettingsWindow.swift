@@ -968,8 +968,6 @@ struct PerAppRuleRow: View {
 
 final class SettingsWindowController {
     private var window: NSWindow?
-    private var savedMenu: NSMenu?
-    private var installedEditMenu = false
     private var windowDelegate: SettingsWindowDelegate?
     var updater: SPUUpdater?
 
@@ -977,7 +975,6 @@ final class SettingsWindowController {
         if let window = window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
-            installEditMenu()
             return
         }
 
@@ -1014,46 +1011,8 @@ final class SettingsWindowController {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         self.window = window
-        installEditMenu()
     }
 
-    /// Install a standard Edit menu so Cmd+C/V/A work in TextFields
-    func installEditMenu() {
-        // Don't clobber a menu someone else owns; only install (and later remove)
-        // our own. Remember the previous menu so removeEditMenu() can restore it.
-        guard NSApp.mainMenu == nil else { return }
-        savedMenu = NSApp.mainMenu
-        installedEditMenu = true
-
-        let mainMenu = NSMenu()
-
-        let appMenuItem = NSMenuItem()
-        appMenuItem.submenu = NSMenu()
-        mainMenu.addItem(appMenuItem)
-
-        let editMenuItem = NSMenuItem()
-        let editMenu = NSMenu(title: "Edit")
-        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
-        editMenu.addItem(NSMenuItem.separator())
-        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
-        editMenuItem.submenu = editMenu
-        mainMenu.addItem(editMenuItem)
-
-        NSApp.mainMenu = mainMenu
-    }
-
-    func removeEditMenu() {
-        // Only tear down a menu we installed ourselves — never nil out a menu
-        // that already existed before Settings opened.
-        guard installedEditMenu else { return }
-        NSApp.mainMenu = savedMenu
-        savedMenu = nil
-        installedEditMenu = false
-    }
 }
 
 private final class SettingsWindowDelegate: NSObject, NSWindowDelegate {
@@ -1063,7 +1022,5 @@ private final class SettingsWindowDelegate: NSObject, NSWindowDelegate {
         self.controller = controller
     }
 
-    func windowWillClose(_ notification: Notification) {
-        controller?.removeEditMenu()
-    }
+    func windowWillClose(_ notification: Notification) {}
 }

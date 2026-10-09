@@ -411,38 +411,10 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
     /// Also how the flow view finds this window to resize it per page.
     static let windowTitle = "Welcome to RetroMac"
     private var window: NSWindow?
-    private var savedMenu: NSMenu?
-    private var installedEditMenu = false
 
     /// RetroMac is an agent app with no menu bar, so Cmd+C/V/A don't reach text fields
     /// (e.g. the license-key field) unless a main menu with those key equivalents exists.
     /// Install a minimal Edit menu while this window is open; restore on close.
-    private func installEditMenu() {
-        guard NSApp.mainMenu == nil else { return }
-        savedMenu = NSApp.mainMenu
-        installedEditMenu = true
-        let mainMenu = NSMenu()
-        let appItem = NSMenuItem(); appItem.submenu = NSMenu(); mainMenu.addItem(appItem)
-        let editItem = NSMenuItem()
-        let edit = NSMenu(title: "Edit")
-        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
-        edit.addItem(NSMenuItem.separator())
-        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
-        editItem.submenu = edit
-        mainMenu.addItem(editItem)
-        NSApp.mainMenu = mainMenu
-    }
-
-    private func removeEditMenu() {
-        guard installedEditMenu else { return }
-        NSApp.mainMenu = savedMenu
-        savedMenu = nil
-        installedEditMenu = false
-    }
 
     private var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -513,7 +485,6 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
         win.delegate = self
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        installEditMenu()   // enable Cmd+V etc. in the license-key field
         self.window = win
     }
 
@@ -522,7 +493,6 @@ final class WelcomeFlowWindowController: NSObject, NSWindowDelegate {
         let s = AppSettings.shared
         s.onboardingComplete = true
         s.lastSeenVersion = currentVersion
-        removeEditMenu()
         window = nil
     }
 }

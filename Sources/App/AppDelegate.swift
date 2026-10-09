@@ -984,7 +984,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return ThemeManager.shared.theme(for: s.dockTheme)?.name ?? s.dockTheme
     }
 
+    /// The menu-bar menu is not rebuilt while it is open: put in its place, a new menu made the
+    /// second click on the icon close the old one and open the new one at once, so the menu
+    /// seemed not to close. The rebuild waits for `menuDidClose`.
+    private var statusMenuOpen = false
+    private var statusMenuRebuildPending = false
+    /// When the menu last closed on a click: the click on the icon that closes it also opened it
+    /// again 18 ms later (measured), so the menu seemed not to close at all.
+    private var statusMenuClosedByClickAt: CFTimeInterval = 0
+
     private func rebuildMenu() {
+        if statusMenuOpen {
+            if AppSettings.shared.debugLogging && !statusMenuRebuildPending { print("[Menu] rebuild while open, deferred") }
+            statusMenuRebuildPending = true
+            return
+        }
         // Overlay/preset state has settled by the time the menu is rebuilt (incl. the
         // async full-overlay completion). Notify the flyout so its shader toggle and
         // preset dropdown reflect the real state even after async activation.
@@ -1464,6 +1478,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(wizardItem)
 
         // Quit moved to a power symbol in the header; Reset Permissions moved to Settings.
+        menu.delegate = self
         statusItem.menu = menu
     }
 
@@ -4705,5 +4720,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 extension NSScreen {
     var displayID: CGDirectDisplayID {
         (deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) ?? 0
+    }
+}
+
+extension AppDelegate: NSMenuDelegate {
+    func menuWillOpen(_ menu: NSMenu) {
+        guard menu === statusItem.menu else { return }
+        // The same click reopening what it just closed: let it stay closed.
+        // ponytail: a time window, not the cause; that sits in the status item's own tracking.
+        if CACurrentMediaTime() - statusMenuClosedByClickAt < 0.25 {
+            statusMenuClosedByClickAt = 0
+            DispatchQueue.main.async { menu.cancelTrackingWithoutAnimation() }
+            return
+        }
+        statusMenuOpen = true
+        if AppSettings.shared.debugLogging { print("[Menu] open  \(CACurrentMediaTime()) event=\(NSApp.currentEvent?.type.rawValue ?? 0)") }
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        guard menu === statusItem.menu else { return }
+        statusMenuOpen = false
+        let closingEvent = NSApp.currentEvent?.type
+        statusMenuClosedByClickAt = (closingEvent == .leftMouseUp || closingEvent == .leftMouseDown) ? CACurrentMediaTime() : 0
+        if AppSettings.shared.debugLogging { print("[Menu] close \(CACurrentMediaTime()) event=\(NSApp.currentEvent?.type.rawValue ?? 0)") }
+        guard statusMenuRebuildPending else { return }
+        statusMenuRebuildPending = false
+        DispatchQueue.main.async { [weak self] in self?.rebuildMenu() }
     }
 }

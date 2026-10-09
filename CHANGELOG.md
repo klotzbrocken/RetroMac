@@ -157,6 +157,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   decorative pictures are left out and icon-only buttons have names. Every switch reads as a
   switch ("switch, on"), no longer as a "toggle button". The title-bar list shows
   Pac-Man by name.
+- **The dock magnifies when the pointer comes down from the menu bar**, not only after another
+  app's window was clicked: while RetroMac was the active app the dock heard the pointer enter
+  and leave but none of the moves in between.
+- **A second click on RetroMac's menu-bar icon closes its menu** instead of opening it again
+  at once.
+- **On a Space without the theme the Mac's Dock is there after launch** too; the theme hid it
+  again right after the Space had shown it.
 - **No more log file on the Desktop.** The retro dock wrote every show and hide to
   `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with
   the new **Debug logging** switch there, which is off unless you turn it on.
