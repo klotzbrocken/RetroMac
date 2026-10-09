@@ -26,7 +26,7 @@ try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath:
 print("[RetroMac] Starting... PID=\(ProcessInfo.processInfo.processIdentifier)")
 fflush(stdout)
 
-let app = NSApplication.shared
+let app = RetroMacApplication.shared   // first call: makes NSApp this subclass
 let delegate = AppDelegate()
 app.delegate = delegate
 app.run()

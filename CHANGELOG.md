@@ -124,6 +124,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   window tweaks were written again, and both restarted, on every wallpaper pass (several per
   theme switch, and on every display change), even when nothing had changed. Now only a real
   change restarts them.
+- **VoiceOver no longer lists RetroMac's drawing as windows.** The shader, the title bars and
+  their lights over every app window and the window animations showed up as untitled, empty
+  windows in VoiceOver's Window Chooser. They are left out now; the dock, desktop, panels,
+  widgets and settings stay in.
 - **No more log file on the Desktop.** The retro dock wrote every show and hide to
   `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with
   the new **Debug logging** switch there, which is off unless you turn it on.
