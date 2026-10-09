@@ -308,6 +308,7 @@ struct LauncherView: View {
             header
             quickAccess
             dockOnlyRow
+            spaceRow
             effects
             Divider()
             powerRow
@@ -510,6 +511,23 @@ struct LauncherView: View {
             Text("Add").font(.system(size: 9)).foregroundStyle(.secondary).frame(height: 24)
         }
         .frame(width: 64, height: 74)
+    }
+
+    /// The theme on this Space only (and on any other Space switched on the same way).
+    private var spaceRow: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Only on this Space").font(.system(size: 12))
+                Text("Other Spaces stay plain macOS")
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Toggle("", isOn: Binding(
+                get: { settings.themeOnChosenSpaces && ThemeSpaces.shared.showsThemeHere },
+                set: { _ in AppDelegate.shared?.toggleThemeOnThisSpace() }))
+                .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
+                .disabled(ThemeSpaces.currentSpace == nil)
+        }
     }
 
     private var dockOnlyRow: some View {

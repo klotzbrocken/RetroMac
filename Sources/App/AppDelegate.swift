@@ -426,6 +426,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         themeItem.submenu = themeMenu
         menu.addItem(themeItem)
+        let spaceItem = NSMenuItem(title: "Theme Only on This Space", action: #selector(toggleThemeOnThisSpace), keyEquivalent: "")
+        spaceItem.target = self
+        spaceItem.state = AppSettings.shared.themeOnChosenSpaces && ThemeSpaces.shared.showsThemeHere ? .on : .off
+        menu.addItem(spaceItem)
 
         menu.addItem(.separator())
         let shader = NSMenuItem(title: "Shader", action: #selector(toggleOverlay), keyEquivalent: "")
@@ -2915,7 +2919,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// From every Space to this one only; after that, this Space in or out of the list. The
     /// last one taken out means every Space again, not none.
-    @objc private func toggleThemeOnThisSpace() {
+    @objc func toggleThemeOnThisSpace() {
         guard let here = ThemeSpaces.currentSpace else { return }
         let s = AppSettings.shared
         if !s.themeOnChosenSpaces {
