@@ -208,6 +208,7 @@ final class DesktopIconsController {
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = false
+            panel.title = "Desktop"   // what VoiceOver calls it; nothing shows it
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             panel.ignoresMouseEvents = false
             panel.isMovableByWindowBackground = false

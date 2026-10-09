@@ -37,6 +37,7 @@ final class NextMenuController {
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = true
+            panel.title = "Menu"   // what VoiceOver calls it; nothing shows it
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             panel.hidesOnDeactivate = false
             window = panel

@@ -35,6 +35,7 @@ final class NextDockController {
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = false
+            panel.title = "Dock"   // what VoiceOver calls it; nothing shows it
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             panel.hidesOnDeactivate = false
             window = panel

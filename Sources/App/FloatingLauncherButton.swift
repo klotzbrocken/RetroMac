@@ -47,6 +47,10 @@ final class FloatingLauncherButton {
         win.ignoresMouseEvents = false
         win.alphaValue = 0.5
         win.contentView = view
+        win.title = "RetroMac"   // what VoiceOver calls it
+        view.setAccessibilityElement(true)
+        view.setAccessibilityRole(.button)
+        view.setAccessibilityLabel("RetroMac")
         view.hostWindow = win
         window = win
     }
@@ -79,6 +83,7 @@ final class FloatingLauncherButton {
 /// click-vs-drag aware. Hover raises the window's opacity so it stays unobtrusive at rest.
 private final class FloatingButtonView: NSView {
     var onClick: (() -> Void)?
+    override func accessibilityPerformPress() -> Bool { onClick?(); return onClick != nil }
     var onMoved: ((NSPoint) -> Void)?
     weak var hostWindow: NSWindow?
 

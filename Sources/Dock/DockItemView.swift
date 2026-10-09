@@ -48,8 +48,20 @@ final class DockItemView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    // VoiceOver: each item is a button named after its app (or folder, or the Trash).
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityLabel() -> String? { tooltipText() }
+    override func accessibilityPerformPress() -> Bool { onLeftClick?(bundleID); return true }
+    override func accessibilityPerformShowMenu() -> Bool {
+        guard let window else { return false }
+        onRightClick?(bundleID, window.convertPoint(toScreen: convert(NSPoint(x: bounds.midX, y: bounds.midY), to: nil)))
+        return true
+    }
+
     private func setupIcon() {
         iconImageView = NSImageView(frame: bounds.insetBy(dx: 2, dy: 2))
+        iconImageView.setAccessibilityElement(false)   // the item speaks for it
         iconImageView.imageScaling = .scaleProportionallyUpOrDown
         iconImageView.autoresizingMask = [.width, .height]
         addSubview(iconImageView)
@@ -453,6 +465,18 @@ final class DockItemView: NSView {
         }
         if bundleID.hasPrefix("__folder__") {
             return (bundleID.replacingOccurrences(of: "__folder__", with: "") as NSString).lastPathComponent
+        }
+        // An app that is only running, not kept in the dock: its own name, not its bundle id
+        // ("com.adguard.mac.vpn" was what the tooltip and VoiceOver said).
+        if let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first?.localizedName {
+            return running
+        }
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+        }
+        // The dock's own tiles: "__dashboard__" → "Dashboard".
+        if bundleID.hasPrefix("__"), bundleID.hasSuffix("__") {
+            return bundleID.trimmingCharacters(in: CharacterSet(charactersIn: "_")).capitalized
         }
         return bundleID
     }

@@ -68,6 +68,7 @@ final class SGIDesktopController {
             let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
             panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
+            panel.title = "Desktop"   // what VoiceOver calls it; nothing shows it
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             panel.ignoresMouseEvents = false
             panel.contentView = NSView(frame: NSRect(origin: .zero, size: frame.size))

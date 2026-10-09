@@ -68,6 +68,7 @@ final class ProgramManagerController {
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = false
+            panel.title = "Program Manager"   // what VoiceOver calls it; nothing shows it
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             panel.ignoresMouseEvents = false
             panel.isMovableByWindowBackground = false

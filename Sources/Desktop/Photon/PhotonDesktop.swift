@@ -33,6 +33,7 @@ final class PhotonDesktopController {
         p.level = NSWindow.Level(rawValue: 5)   // over the windows, like the dock it stands in for
         p.isOpaque = true
         p.hasShadow = false
+        p.title = "Photon"   // what VoiceOver calls it; nothing shows it
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         p.hidesOnDeactivate = false
         return p

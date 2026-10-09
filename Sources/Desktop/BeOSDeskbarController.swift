@@ -49,6 +49,7 @@ final class BeOSDeskbarController {
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.hasShadow = true
+            panel.title = "Deskbar"   // what VoiceOver calls it; nothing shows it
             panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             panel.hidesOnDeactivate = false
             self.window = panel

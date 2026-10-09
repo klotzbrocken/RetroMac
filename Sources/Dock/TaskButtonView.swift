@@ -19,6 +19,13 @@ final class TaskButtonView: NSView {
     /// edge-to-edge themed tabs.
     private let enlargeIcon: Bool
     var onClick: (() -> Void)?
+
+    // VoiceOver: the window's button, pressed state for the active one.
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityLabel() -> String? { title }
+    override func accessibilityValue() -> Any? { isActive ? "active" : nil }
+    override func accessibilityPerformPress() -> Bool { onClick?(); return true }
     private var pressed = false
     private var hovered = false
     private var trackingArea: NSTrackingArea?

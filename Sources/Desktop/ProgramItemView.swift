@@ -104,4 +104,14 @@ final class ProgramItemView: NSView {
     override func rightMouseDown(with event: NSEvent) {
         onContextMenu?(self, event)
     }
+
+    // VoiceOver: a button that starts what a double-click starts.
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityLabel() -> String? { entry.name }
+    override func accessibilityPerformPress() -> Bool { DesktopLauncher.launch(entry); return true }
+    override func accessibilityPerformShowMenu() -> Bool {
+        guard onContextMenu != nil, let e = syntheticRightClick() else { return false }
+        onContextMenu?(self, e); return true
+    }
 }

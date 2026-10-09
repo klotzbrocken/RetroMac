@@ -3418,6 +3418,51 @@ final class DockView: NSView {
         onDockContextMenu?(local)
     }
 
+    /// VoiceOver: the parts the taskbar paints itself, next to the item views it hosts.
+    /// Held until the next question: the accessibility server keeps no reference of its own.
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        var parts: [AccessibleHotspot] = []
+        if hasStartButton, !startButtonFrame.isEmpty {
+            let name = ThemeManager.shared.activeTheme?.config.dock.startButtonLabel ?? "Start"
+            parts.append(AccessibleHotspot(in: self, label: name.capitalized, rect: startButtonFrame) { [weak self] in self?.toggleStartMenu() })
+        }
+        if !clockFrame.isEmpty {
+            parts.append(AccessibleHotspot(in: self, label: "Clock, \(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short))",
+                                           rect: clockFrame) { ClockWidgetController.shared.toggle() })
+        }
+        if !traySpeakerFrame.isEmpty {
+            parts.append(AccessibleHotspot(in: self, label: "Volume", rect: traySpeakerFrame) { [weak self] in
+                guard let self else { return }
+                VolumePopup.shared.onChange = { [weak self] in self?.needsDisplay = true }
+                VolumePopup.shared.toggle(anchor: self.window?.convertToScreen(self.convert(self.traySpeakerFrame, to: nil)) ?? self.traySpeakerFrame)
+            })
+        }
+        if RetroFrameTheme.key() != "win7", !trayIconFrame.isEmpty {
+            parts.append(AccessibleHotspot(in: self, label: "Messages", rect: trayIconFrame) { AppLauncher.launchOrActivate(bundleID: "com.apple.MobileSMS") })
+        }
+        if RetroFrameTheme.key() == "win7" {
+            if !win7NetFrame.isEmpty { parts.append(AccessibleHotspot(in: self, label: "Network", rect: win7NetFrame) { [weak self] in self?.openSettingsPane("com.apple.Network-Settings.extension") }) }
+            if !win7VolFrame.isEmpty { parts.append(AccessibleHotspot(in: self, label: "Volume", rect: win7VolFrame) { [weak self] in self?.openSettingsPane("com.apple.Sound-Settings.extension") }) }
+        }
+        axParts = parts
+        return (super.accessibilityChildren() ?? []) + parts
+    }
+
+    private func toggleStartMenu() {
+        if let panel = startMenuPanel, panel.isVisible {
+            panel.dismiss()
+            startButtonPressed = false
+            needsDisplay = true
+        } else {
+            startButtonPressed = true
+            needsDisplay = true
+            showStartMenu()
+            startButtonPressed = false
+            needsDisplay = true
+        }
+    }
+
     override func mouseDown(with event: NSEvent) {
         let local = convert(event.locationInWindow, from: nil)
 
@@ -3471,18 +3516,7 @@ final class DockView: NSView {
         }
 
         if hasStartButton && startButtonFrame.contains(local) {
-            // Toggle: if start menu is visible, dismiss it; otherwise show it
-            if let panel = startMenuPanel, panel.isVisible {
-                panel.dismiss()
-                startButtonPressed = false
-                needsDisplay = true
-            } else {
-                startButtonPressed = true
-                needsDisplay = true
-                showStartMenu()
-                startButtonPressed = false
-                needsDisplay = true
-            }
+            toggleStartMenu()   // shown, or dismissed when it is
             return
         }
         super.mouseDown(with: event)

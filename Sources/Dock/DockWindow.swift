@@ -22,6 +22,7 @@ final class DockWindow: NSPanel {
         hidesOnDeactivate = false
         animationBehavior = .utilityWindow
         acceptsMouseMovedEvents = true
+        title = "Dock"   // what VoiceOver calls it; nothing shows it
     }
 
     override var canBecomeKey: Bool { true }

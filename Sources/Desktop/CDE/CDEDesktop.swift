@@ -30,6 +30,7 @@ final class CDEDesktop {
             p.hasShadow = false
             p.ignoresMouseEvents = false
             p.hidesOnDeactivate = false
+            p.title = "Desktop"   // what VoiceOver calls it; nothing shows it
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = CDEDesktopView(frame: NSRect(origin: .zero, size: screen.frame.size))
             panel = p

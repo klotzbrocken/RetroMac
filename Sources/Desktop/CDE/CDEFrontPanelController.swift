@@ -41,6 +41,7 @@ final class CDEFrontPanelController {
             p.isOpaque = false
             p.backgroundColor = .clear
             p.hasShadow = false
+            p.title = "Front Panel"   // what VoiceOver calls it; nothing shows it
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.hidesOnDeactivate = false
             panel = p

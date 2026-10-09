@@ -89,6 +89,7 @@ final class ControlStripController {
             p.isOpaque = false
             p.backgroundColor = .clear
             p.hasShadow = false
+            p.title = "Control Strip"   // what VoiceOver calls it; nothing shows it
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.hidesOnDeactivate = false
             adoptModules(of: theme)

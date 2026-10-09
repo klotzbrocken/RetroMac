@@ -216,6 +216,19 @@ final class DesktopIconView: NSView {
         onContextMenu?(self, event)
     }
 
+    // VoiceOver: a button that opens what a double-click opens, with the icon's menu.
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityLabel() -> String? { entry.name }
+    override func accessibilityPerformPress() -> Bool {
+        guard let target, let action else { return false }
+        return NSApp.sendAction(action, to: target, from: self)
+    }
+    override func accessibilityPerformShowMenu() -> Bool {
+        guard let e = syntheticRightClick() else { return false }
+        onContextMenu?(self, e); return true
+    }
+
     /// Deselect this icon.
     func deselect() {
         guard isSelected else { return }

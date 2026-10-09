@@ -118,7 +118,13 @@ final class NextAppIconPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         hidesOnDeactivate = false
         isMovableByWindowBackground = false
-        contentView = NextAppIconView(icon: icon, fillWhole: fillWhole)
+        let tile = NextAppIconView(icon: icon, fillWhole: fillWhole)
+        tile.setAccessibilityElement(true)
+        tile.setAccessibilityRole(.button)
+        tile.setAccessibilityLabel(app.localizedName)
+        tile.onPress = { [weak self] in self?.raiseApp() }
+        contentView = tile
+        title = app.localizedName ?? ""
     }
 
     override var canBecomeKey: Bool { false }
@@ -181,6 +187,8 @@ final class NextAppIconPanel: NSPanel {
 }
 
 final class NextAppIconView: NSView {
+    var onPress: (() -> Void)?   // VoiceOver's press: what a click does
+    override func accessibilityPerformPress() -> Bool { onPress?(); return onPress != nil }
     private let icon: NSImage
     private let fillWhole: Bool
     init(icon: NSImage, fillWhole: Bool) {
