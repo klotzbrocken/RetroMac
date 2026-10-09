@@ -732,7 +732,8 @@ final class TitleBarOverlayController {
     /// tab reaches whatever is there.
     static let beosFont = NSFont(name: "Helvetica-Bold", size: 12) ?? .boldSystemFont(ofSize: 12)
     static func beosTabWidth(_ title: String, max w: CGFloat) -> CGFloat {
-        min(w, max(90, ((title as NSString).size(withAttributes: [.font: beosFont]).width + 54).rounded(.up)))
+        // Air beside the title as on R5: the tab was never cut tight to its text.
+        min(w, max(120, ((title as NSString).size(withAttributes: [.font: beosFont]).width + 84).rounded(.up)))
     }
     static func barFrame(for bounds: CGRect, style: Style, overhang: CGFloat? = nil) -> NSRect {
         let h = stripHeight(style)

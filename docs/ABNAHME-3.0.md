@@ -1,6 +1,6 @@
 # Abnahme RetroMac 3.0
 
-Lastenheft 3.0, Abschnitte 7.5, 8.5, 9.5, 13 und Release-Abnahme. Stand 6. Oktober 2026, Build 3.0.
+Lastenheft 3.0, Abschnitte 7.5, 8.5, 9.5, 13 und Release-Abnahme. Stand 9. Oktober 2026, Build 3.0.
 
 So ist der Status zu lesen:
 
@@ -12,7 +12,7 @@ So ist der Status zu lesen:
 
 | Punkt | Status | Nachweis |
 |---|---|---|
-| RET-A1 Drei Einstiege, ein Ergebnis | Im Code | Kürzel ⌃⌥⌘R, Flyout und Menüleistenmenü rufen alle `DesktopRescue.run()`. Manuell zu prüfen: jeden Einstieg einmal auslösen. |
+| RET-A1 Drei Einstiege, ein Ergebnis | Bestanden | Live geprüft am 9. Oktober: Kürzel ⌃⌥⌘R, Flyout und Menüleistenmenü, alle über `DesktopRescue.run()`. Der Bericht zeigt RetroMacs Icon und hat „Don't show this again“; eine Rettung mit Fehler oder fehlendem Recht zeigt ihn trotzdem. |
 | RET-A2 Aufrollen + Theme-Wechsel + Rettung | Bestanden | Parken und Zurückholen laufen über eine serielle Warteschlange (`TitleBarOverlayController.axQueue`); `WindowShadeTests`. |
 | RET-A3 Hängende App blockiert nichts | Im Code | Fenster-Sweep auf der AX-Warteschlange mit 0,5 s Zeitlimit; der Bericht steht unabhängig davon. |
 | RET-A4 Abgezogener Monitor | Bestanden | `DesktopRescueTests.testAWindowLeftOnAnUnpluggedDisplayComesToTheNearestOne` |
@@ -59,12 +59,12 @@ So ist der Status zu lesen:
 
 | Punkt | Status | Nachweis |
 |---|---|---|
-| ICO-A1 Ein geliefertes Icon erscheint überall | Im Code | Alle Theme-Oberflächen fragen denselben Resolver. Live offen: Es gibt noch kein Paket. |
+| ICO-A1 Ein geliefertes Icon erscheint überall | Im Code | Alle Theme-Oberflächen fragen denselben Resolver. Maiks Lieferungen stecken jetzt in den Themes selbst (`iconMappings`), nicht in einem Paket; der Paket-Import bleibt für eigene Sammlungen. |
 | ICO-A2 Kaputte Datei, funktionierende bleiben | Bestanden | `IconPackTests.testFaultsAreNamed`, `testAnImportKeepsWhatWorked`, `testImportThenDraw` |
 | ICO-A3 Unbekannte App zeigt ihr Icon | Bestanden | `testImportThenDraw` |
 | ICO-A4 1×/2×, kleine Icons, Transparenz | Bestanden | `testImportThenDraw` (32 und 64 Pixel in einem Bild), `testTheNearestSizeIsTaken`, Alphakanal ist Pflicht beim Import. |
 | ICO-A5 Ohne Neustart, kein alter Cache | Bestanden | Paket-Revision im Cache-Schlüssel; der Import leert den Cache und zeichnet neu. |
-| Bildabdeckung | Offen | Noch kein Paket geliefert. Der Status steht unter Settings ▸ Dock ▸ Historic icons. |
+| Bildabdeckung | Teilweise | 219 Icons aus Maiks Lieferungen in zehn Themes: 65 Originale, 121 KI-Stiladaptionen erst nach seiner Prüfseite, 3 nachgelieferte für Mac OS 9, 30 aus dem StudioTwentyEight-Set für BeOS. Herkunft je Theme in `icon-sources.json`. Lücken: `docs/ICON-GAPS.md` (Stand vor den Lieferungen, neu zu rechnen). |
 
 ## Release-Abnahme
 
@@ -72,16 +72,32 @@ So ist der Status zu lesen:
 |---|---|
 | Neue Themes bedienbar, keine unmarkierten Platzhalter | Bestanden. Alle Grafiken stammen aus den Referenzen. Fehlendes (Bootscreen, Cursor) ist in den Steckbriefen benannt. |
 | Detailwerte belegt oder als Anpassung benannt | Bestanden. Die Steckbriefe unter `docs/reference` stehen statt `deviations.md` (Entscheidung vom 5. Oktober). |
-| Desktop retten über drei Einstiege | Im Code (RET-A1) |
+| Desktop retten über drei Einstiege | Bestanden (RET-A1, live) |
 | Recovery-Daten gehen nicht verloren | Bestanden (RET-A6) |
 | Nicht freigegebene Switcher sind aus | Bestanden (SW-02) |
-| Icon-Lieferungen integriert, Fallback und Status | Bestanden für die Infrastruktur. Bilder offen. |
+| Icon-Lieferungen integriert, Fallback und Status | Bestanden: Infrastruktur und 219 Icons in zehn Themes |
 | Migration von Themes, Kürzeln, Zuordnungen | Bestanden: `MigrationTests` (Einstellungen und Kürzel aus 2.8.8). Eigene Icons und Themes behalten ihre IDs. |
-| Tests, Referenzvergleiche, Leistungsprotokoll | Bestanden: 274 Tests, Steckbriefe, `docs/PERFORMANCE-3.0.md` |
+| Tests, Referenzvergleiche, Leistungsprotokoll | Bestanden: 286 Tests, Steckbriefe, `docs/PERFORMANCE-3.0.md` (Vergleichsmessung und M1-Kontrolllauf offen) |
 | Release Notes nach neu, angepasst, Grenzen | Bestanden: CHANGELOG, Abschnitt 3.0 |
+
+## Seit dem 6. Oktober dazugekommen
+
+| Punkt | Status | Nachweis |
+|---|---|---|
+| Theme nur auf gewählten Spaces | Bestanden | Live geprüft am 9. Oktober auf zwei Spaces, ein Display: Theme-Fenster bleiben auf ihrem Space, auf dem anderen macOS-Dock, eigenes Bild, kein Flackern. `ThemeSpacesTests`. Zwei Displays nicht geprüft. |
+| Hintergrundbild pro Space | Bestanden | Live geprüft: jeder Space bekommt sein Original zurück. `WallpaperSpacesTests`. |
+| BeOS-Titelleisten | Bestanden | Live geprüft; Lasche danach etwas breiter. `TitleBarOverlayTests`. |
+| Dock-Spiegelungen (Snow Leopard, Mountain Lion) | Bestanden | Live geprüft in Snow Leopard. `DockReflectionTests`. |
+| Pac-Man | Bestanden | Live gestartet. Der Build bündelt SDL3 neben sdl2-compat; ein Release-Build bricht ab, wenn das Spiel fehlt oder Homebrew braucht. 2.8.8 hatte ein leeres Spiel ausgeliefert. |
+| Amiga und IRIX ohne Mac-Menüleiste | Im Code | `hideMenuBarDefault` wie bei Windows |
+| Settings: Reihenfolge, Shader-Tabs, „Favourite“, kleinerer Setup-Assistent | Im Code | Offscreen gerendert |
+| Kein Neustart von Dock und Finder ohne Änderung | Bestanden | Live über die Spaces-Zeitleiste belegt; `SystemTweakHoldsTests` |
+| Kein Log mehr auf dem Schreibtisch | Im Code | Nur mit About ▸ Diagnostics ▸ Debug logging, in das Diagnose-Log |
 
 ## Vor dem Release noch zu tun
 
-1. RET-A1 manuell: Desktop retten einmal über das Kürzel, das Flyout und das Menüleistenmenü auslösen.
-2. SW-A8: Solaris-Zyklus mit vielen Fenstern auf zwei Displays.
-3. Entscheiden, ob 3.0 ohne die Windows-Wechsler, ohne Bootscreens und Cursor der neuen Themes und ohne Icon-Pakete erscheint. Die Release Notes nennen das unter „Known limits“.
+1. SW-A8: Solaris-Zyklus mit vielen Fenstern auf zwei Displays; dabei Spaces mit zwei Displays.
+2. Entscheiden, ob 3.0 ohne die Windows-Wechsler (Alt+Tab, Flip, Flip 3D), ohne Bootscreens, Crash-Szenen und Cursor von Solaris und QNX und ohne eigene Installationen (REF-01, REF-03) erscheint. Die Release Notes nennen das unter „Known limits“.
+3. `./build.sh release` mit den neuen Pac-Man-Prüfungen, Notarisierung, `./appcast.sh --dry-run`.
+4. Leistungsprotokoll: Vergleichsmessung PERF-02, Kontrolllauf auf einem M1.
+5. Pushen (48 lokale Commits, Stand 9. Oktober).
