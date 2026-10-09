@@ -11,6 +11,13 @@ final class PhotonDesktopController {
     private var taskbar: NSPanel?
     private var observers: [NSObjectProtocol] = []
 
+    /// The launcher shortcut on Photon: the Launch menu, standing on the taskbar's button.
+    func openLaunchMenu() -> Bool {
+        guard taskbar?.isVisible == true, let view = taskbar?.contentView as? PhotonTaskbarView else { return false }
+        view.showLaunchMenu()
+        return true
+    }
+
     static var isActiveTheme: Bool { ThemeManager.shared.activeTheme?.config.chrome?.style == "photon" }
 
     func update() {
@@ -500,7 +507,7 @@ final class PhotonTaskbarView: NSView {
         }
     }
 
-    private func showLaunchMenu() {
+    func showLaunchMenu() {
         PhotonLaunchMenu.show(above: window?.convertToScreen(convert(launchRect, to: nil)) ?? .zero)
     }
 

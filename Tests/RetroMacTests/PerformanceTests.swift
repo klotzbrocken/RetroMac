@@ -67,7 +67,7 @@ final class PerformanceTests: XCTestCase {
         }
         RunLoop.main.run(until: Date().addingTimeInterval(0.2))
         XCTAssertFalse(CDEMenu.isOpen)
-        XCTAssertFalse(CDEEscape.isHeld, "Esc let go")
+        XCTAssertFalse(HeldKeys.isHeld, "Esc let go")
         XCTAssertEqual(NSApp.windows.filter(\.isVisible).count, before, "no menu panel left on screen")
         XCTAssertLessThanOrEqual(NSApp.windows.count, allBefore + 1, "no menu window kept alive")
         print("[PERF-06] 100 open/close: visible windows \(before) before, \(NSApp.windows.filter(\.isVisible).count) after; all windows \(NSApp.windows.count)")

@@ -72,6 +72,11 @@ final class BeOSMenuController {
         panel.orderFrontRegardless()
         panels = [panel]
         installMonitors()
+        MenuKeyboard.attach("beos", levels: { [weak self] in self?.panels.compactMap { $0.contentView as? BeOSMenuView } ?? [] },
+                            close: { [weak self] level in
+            guard let self else { return }
+            if level == 0 { self.dismissAll() } else { self.closeDeeperThan(level - 1) }
+        })
     }
 
     fileprivate func openSubmenu(_ items: [BeOSMenuItem], title: String, from parent: BeOSMenuPanel, rowRectInScreen: NSRect, level: Int, openLeft: Bool) {
@@ -103,6 +108,7 @@ final class BeOSMenuController {
         panels.removeAll()
         if let m = globalMonitor { NSEvent.removeMonitor(m); globalMonitor = nil }
         if let m = localMonitor { NSEvent.removeMonitor(m); localMonitor = nil }
+        MenuKeyboard.detach("beos")
         if wasOpen { let cb = onDismiss; onDismiss = nil; cb?() }
     }
 
@@ -288,4 +294,20 @@ private final class BeOSMenuView: NSView {
         let inScreen = panel.convertToScreen(inWindow)
         controller?.openSubmenu(sub, title: items[rowIndex].title, from: panel, rowRectInScreen: inScreen, level: level + 1, openLeft: openLeft)
     }
+}
+
+extension BeOSMenuView: KeyMenuLevel {
+    var keyRows: [KeyMenuRow] {
+        items.map { it in
+            if case .submenu = it.kind { return KeyMenuRow(label: it.title, submenu: true) }
+            return KeyMenuRow(label: it.title, selectable: !isSeparator(it))
+        }
+    }
+    var keyHighlight: Int? { hovered >= 0 ? hovered : nil }
+    func setKeyHighlight(_ i: Int) {
+        controller?.closeDeeperThan(level)
+        hovered = i
+        needsDisplay = true
+    }
+    func activateKeyRow(_ i: Int) { choose(i) }
 }

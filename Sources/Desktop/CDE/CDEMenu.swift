@@ -1,5 +1,4 @@
 import AppKit
-import Carbon.HIToolbox
 
 /// One entry of a CDE menu. A separator has no title; a cascade has a submenu.
 struct CDEMenuItem {
@@ -58,7 +57,10 @@ enum CDEMenu {
         outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
             DispatchQueue.main.async { close() }
         }
-        CDEEscape.hold { close() }
+        // The arrow keys, Return and Esc while it is open; Esc closes it (CDE-02).
+        MenuKeyboard.attach("cde-menu", levels: { view.keyLevels }, close: { level in
+            if level == 0 { close() } else { view.closeKeyLevel(level) }
+        })
     }
 
     static func close() {
@@ -66,7 +68,7 @@ enum CDEMenu {
         panel = nil
         p.orderOut(nil)
         if let m = outsideMonitor { NSEvent.removeMonitor(m); outsideMonitor = nil }
-        CDEEscape.release()
+        MenuKeyboard.detach("cde-menu")
     }
 
     static var isOpen: Bool { panel != nil }
@@ -104,46 +106,6 @@ enum CDEMenu {
         w += 1 + 4 + (hasArrows ? 20 : 12) + 1
         if let title { w = max(w, (title as NSString).size(withAttributes: [.font: font]).width + 40) }
         return NSSize(width: ceil(w), height: h)
-    }
-}
-
-/// While a subpanel or menu is open, Esc closes it (CDE-02). RetroMac stays in the background
-/// (macOS no longer lets it take the keyboard from the app in front), so Esc is held as a
-/// hotkey for that time only and let go on close. A hotkey needs no permission; an event tap
-/// would need Input Monitoring.
-enum CDEEscape {
-    private static var hotKey: EventHotKeyRef?
-    private static var handler: EventHandlerRef?
-    private static var onEscape: (() -> Void)?
-    private static let signature = OSType(0x52434445)   // "RCDE"
-
-    static func hold(_ action: @escaping () -> Void) {
-        onEscape = action
-        if handler == nil {
-            var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-            InstallEventHandler(GetApplicationEventTarget(), { _, event, _ -> OSStatus in
-                var id = EventHotKeyID()
-                GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil,
-                                  MemoryLayout<EventHotKeyID>.size, nil, &id)
-                guard id.signature == CDEEscape.signature else { return OSStatus(eventNotHandledErr) }
-                DispatchQueue.main.async { CDEEscape.onEscape?() }
-                return noErr
-            }, 1, &spec, nil, &handler)
-        }
-        guard hotKey == nil else { return }
-        var ref: EventHotKeyRef?
-        // id 99: ids 1–11 are AppDelegate's hotkeys
-        if RegisterEventHotKey(UInt32(kVK_Escape), 0, EventHotKeyID(signature: signature, id: 99), GetApplicationEventTarget(), 0, &ref) == noErr {
-            hotKey = ref
-        }
-    }
-
-    /// Whether Esc is held right now, for the leak check (PERF-06).
-    static var isHeld: Bool { hotKey != nil }
-
-    static func release() {
-        onEscape = nil
-        if let ref = hotKey { UnregisterEventHotKey(ref); hotKey = nil }
     }
 }
 
@@ -257,6 +219,33 @@ final class CDEMenuView: NSView {
         CDEMenu.close()
         action()
     }
+
+    // MARK: Keyboard
+
+    /// Each open level as the keyboard sees it (`MenuKeyNavigator`).
+    var keyLevels: [KeyMenuLevel] { levels.indices.map { CDEKeyLevel(view: self, index: $0) } }
+
+    func closeKeyLevel(_ level: Int) {
+        guard level > 0, level < levels.count else { return }
+        levels = Array(levels.prefix(level))
+        needsDisplay = true
+    }
+
+    fileprivate func keyRows(_ level: Int) -> [KeyMenuRow] {
+        levels[level].items.map { KeyMenuRow(label: $0.title, selectable: !$0.isSeparator && $0.enabled, submenu: $0.submenu != nil) }
+    }
+    fileprivate func armed(_ level: Int) -> Int? { levels[level].armed }
+    fileprivate func keyArm(_ level: Int, _ item: Int) {
+        // A cascade opens as its row is armed, as with the mouse; the keyboard stays on this level.
+        arm(level, item)
+    }
+    fileprivate func keyActivate(_ level: Int, _ item: Int) {
+        let it = levels[level].items[item]
+        if it.submenu != nil {
+            if levels[level].armed != item || levels.count <= level + 1 { levels[level].armed = nil; arm(level, item) }
+        } else { choose(it) }
+    }
+    fileprivate var levelCount: Int { levels.count }
 
     // MARK: VoiceOver
 
@@ -378,4 +367,16 @@ final class CDEMenuView: NSView {
         let lower = NSBezierPath(); lower.move(to: tip); lower.line(to: NSPoint(x: o.x + 1, y: o.y + 10))
         Self.light.setStroke(); lower.lineWidth = 1; lower.stroke()
     }
+}
+
+/// One level of a CDE posting for the keyboard; the levels all live in the one view.
+private final class CDEKeyLevel: KeyMenuLevel {
+    private weak var view: CDEMenuView?
+    private let index: Int
+    init(view: CDEMenuView, index: Int) { self.view = view; self.index = index }
+    private var alive: CDEMenuView? { view.flatMap { index < $0.levelCount ? $0 : nil } }
+    var keyRows: [KeyMenuRow] { alive?.keyRows(index) ?? [] }
+    var keyHighlight: Int? { alive?.armed(index) }
+    func setKeyHighlight(_ i: Int) { alive?.keyArm(index, i) }
+    func activateKeyRow(_ i: Int) { alive?.keyActivate(index, i) }
 }

@@ -23,6 +23,7 @@ final class NextMenuController {
     }
 
     func hide() {
+        endKeyboard()
         NextSubmenuPanel.shared.dismiss()
         window?.orderOut(nil)
         window = nil
@@ -47,6 +48,35 @@ final class NextMenuController {
         view = v
         reposition()
         window?.orderFront(nil)
+    }
+
+    // MARK: Keyboard
+
+    private var clickMonitor: Any?
+
+    /// The launcher shortcut: the always-open main menu takes the arrow keys, its first cell lit.
+    func focusFromKeyboard() -> Bool {
+        guard view != nil else { return false }
+        MenuKeyboard.attach("next", levels: { [weak self] in self?.keyLevels ?? [] }, close: { [weak self] level in
+            NextSubmenuPanel.shared.dismiss()
+            if level == 0 { self?.endKeyboard() }
+        })
+        if clickMonitor == nil {
+            clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in self?.endKeyboard() }
+        }
+        return true
+    }
+
+    private var keyLevels: [KeyMenuLevel] {
+        guard let view else { return [] }
+        return [view] + (NextSubmenuPanel.shared.view.map { [$0] } ?? [])
+    }
+
+    /// Back to the mouse: the keys let go, the highlight cleared (the menu itself stays).
+    func endKeyboard() {
+        if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
+        MenuKeyboard.detach("next")
+        view?.clearKeyHighlight()
     }
 
     private func reposition() {
@@ -276,6 +306,8 @@ final class NextSubmenuPanel {
         if let m = monitor { NSEvent.removeMonitor(m); monitor = nil }
         panel?.orderOut(nil); panel = nil
     }
+
+    var view: NextSubmenuView? { panel?.contentView as? NextSubmenuView }
 }
 
 final class NextSubmenuView: NSView {
@@ -338,5 +370,33 @@ final class NextSubmenuView: NSView {
             self.onPick(self.items[i])
         }
         return axParts
+    }
+}
+
+extension NextMenuController.Item {
+    var keyRow: KeyMenuRow { KeyMenuRow(label: title, selectable: enabled, submenu: submenu != nil) }
+}
+
+extension NextMenuView: KeyMenuLevel {
+    var keyRows: [KeyMenuRow] { items.map(\.keyRow) }
+    var keyHighlight: Int? { hoverIndex }
+    func setKeyHighlight(_ i: Int) {
+        NextSubmenuPanel.shared.dismiss()
+        hoverIndex = i; needsDisplay = true
+    }
+    func activateKeyRow(_ i: Int) {
+        if items[i].submenu == nil { NextMenuController.shared.endKeyboard() }
+        choose(i)
+    }
+    func clearKeyHighlight() { hoverIndex = nil; needsDisplay = true }
+}
+
+extension NextSubmenuView: KeyMenuLevel {
+    var keyRows: [KeyMenuRow] { items.map(\.keyRow) }
+    var keyHighlight: Int? { hoverIndex }
+    func setKeyHighlight(_ i: Int) { hoverIndex = i; needsDisplay = true }
+    func activateKeyRow(_ i: Int) {
+        NextMenuController.shared.endKeyboard()
+        onPick(items[i])
     }
 }

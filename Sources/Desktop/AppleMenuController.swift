@@ -16,6 +16,20 @@ final class AppleMenuController {
         PlatinumMenuController.shared.show(items(), below: rect, look: aqua ? .aqua : .platinum)
     }
 
+    /// The launcher shortcut on a theme with its own Apple menu: the menu, below the Apple in the
+    /// menu bar (or where it would be, when the cover is not up).
+    func popUpFromKeyboard() -> Bool {
+        guard ThemeManager.shared.activeTheme?.config.hasAppleMenu == true, let screen = NSScreen.main else { return false }
+        if let cover = RainbowAppleController.shared.coverWindow {
+            popUp(below: cover.frame, in: cover)
+        } else {
+            let bar = screen.frame.maxY - screen.visibleFrame.maxY
+            PlatinumMenuController.shared.show(items(), below: NSRect(x: screen.frame.minX + 8, y: screen.frame.maxY - bar, width: 30, height: bar),
+                                               look: ThemeManager.shared.activeTheme?.config.hasMacOSXAppleMenu == true ? .aqua : .platinum)
+        }
+        return true
+    }
+
     /// The menu of the day, first level in the theme's own pictures (icons/…).
     func items() -> [PlatinumMenuItem] {
         if ThemeManager.shared.activeTheme?.config.hasSystem7AppleMenu == true { return system7Items() }

@@ -56,6 +56,30 @@ Settings ▸ Shortcuts ▸ Window switcher says what it does in the theme you ha
 keys, and turns it off for a theme. While it is off, or the theme has none, the keys are left to
 other apps.
 
+## Keyboard access
+
+The theme works without the mouse, and without VoiceOver too.
+
+- **⌃Esc** opens the theme's main menu with its first entry highlighted: Start on Windows 95 to
+  7, the Apple menu on System 7, Mac OS 9 and Mac OS X 10.0, the Be menu, CDE's Workspace Menu
+  (at the pointer, as dtwm posted it), Photon's Launch menu, the NeXT main menu, IRIX's
+  Toolchest. On Windows 3.1 the program items in Program Manager take the focus.
+- In every menu RetroMac draws: **↑ ↓** move the highlight, **→** or **Return** opens a
+  submenu, **←** closes it, **Return** chooses, **Esc** closes the menu. Separators and dimmed
+  entries are passed over. This works however the menu was opened, by mouse too.
+- **⌃⇧Esc** moves into the dock or taskbar: a focus ring goes round the first item, **← →**
+  (or **↑ ↓** on a dock that stands upright) go from item to item, **Return** opens the item,
+  **Esc** leaves. Press ⌃⇧Esc again for the next bar where a theme has more than one (Photon's
+  Shelf after its Taskbar, the Control Strip, the desktop icons); after the last it leaves.
+
+VoiceOver says the highlighted entry or the focused item as it changes. RetroMac stays behind
+the app you are working in while you do this, so while a menu or the focus is open the arrow
+keys, Return and Esc go to RetroMac, and they go back to your app when it closes.
+
+Change both shortcuts in Settings ▸ Shortcuts ▸ Keyboard access. If one of your own RetroMac
+shortcuts already used ⌃Esc or ⌃⇧Esc when you updated, that one stays yours and the new action
+starts without a shortcut.
+
 ## Historic icons for modern apps
 
 A theme can wear icons for today's apps, drawn in its era's style (Claude in Solaris colours,

@@ -111,7 +111,14 @@ final class PlatinumMenuController {
         panel.orderFrontRegardless()
         panels = [panel]
         installMonitors()
+        MenuKeyboard.attach("platinum", levels: { [weak self] in self?.keyLevels ?? [] }, close: { [weak self] level in
+            guard let self else { return }
+            if level == 0 { self.dismissAll() } else { self.closeDeeperThan(level - 1) }
+        })
     }
+
+    /// The open menus as the keyboard sees them (`MenuKeyNavigator`).
+    private var keyLevels: [KeyMenuLevel] { panels.compactMap { $0.contentView as? PlatinumMenuView } }
 
     fileprivate func openSubmenu(_ items: [PlatinumMenuItem], title: String, from parent: PlatinumMenuPanel, rowRectInScreen: NSRect, level: Int) {
         while panels.count > level { panels.removeLast().orderOut(nil) }
@@ -153,6 +160,7 @@ final class PlatinumMenuController {
         panels.removeAll()
         if let m = globalMonitor { NSEvent.removeMonitor(m); globalMonitor = nil }
         if let m = localMonitor { NSEvent.removeMonitor(m); localMonitor = nil }
+        MenuKeyboard.detach("platinum")
     }
 
     private func makePanel(items: [PlatinumMenuItem], level: Int) -> PlatinumMenuPanel {
@@ -515,4 +523,19 @@ private final class PlatinumMenuView: NSView {
         let inScreen = panel.convertToScreen(convert(rowRect(rowIndex), to: nil))
         controller?.openSubmenu(sub, title: items[rowIndex].title, from: panel, rowRectInScreen: inScreen, level: level + 1)
     }
+}
+
+extension PlatinumMenuView: KeyMenuLevel {
+    var keyRows: [KeyMenuRow] {
+        items.map { KeyMenuRow(label: $0.title, selectable: !isSeparator($0) && !$0.dimmed, submenu: $0.isSubmenu) }
+    }
+    var keyHighlight: Int? { hovered >= 0 ? hovered : nil }
+    func setKeyHighlight(_ i: Int) {
+        // A long menu rolls the row into view first (rolling clears the highlight).
+        while scrolls, rowRect(i).maxY > rowBand.maxY + 0.5, canScrollDown { scroll(by: 1) }
+        while scrolls, rowRect(i).minY < rowBand.minY - 0.5, canScrollUp { scroll(by: -1) }
+        controller?.closeDeeperThan(level)
+        setHovered(i)
+    }
+    func activateKeyRow(_ i: Int) { choose(i) }
 }

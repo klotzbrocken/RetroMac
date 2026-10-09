@@ -136,6 +136,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   the BeOS Deskbar, the NeXT dock, the Control Strip, the IRIX Toolchest and the theme menus.
   Dragging (moving icons and windows, resizing the Control Strip) and the Mac OS 9 volume slider
   have no VoiceOver form yet.
+- **The themes by keyboard.** ⌃Esc opens the theme's main menu (Start, the Apple menu, the Be
+  menu, the Workspace Menu, Launch, the NeXT menu, the Toolchest; Program Manager on Windows
+  3.1). In every menu RetroMac draws, the arrow keys move the highlight, → and Return open a
+  submenu, ← closes it, Return chooses and Esc closes, however the menu was opened. ⌃⇧Esc moves
+  into the dock or taskbar: ← → go from item to item under a focus ring, Return opens, Esc
+  leaves, and ⌃⇧Esc again goes on to the next bar. VoiceOver says the highlighted entry. Both
+  shortcuts are in Settings ▸ Shortcuts ▸ Keyboard access; one that is already yours is not
+  taken.
 - **No more log file on the Desktop.** The retro dock wrote every show and hide to
   `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with
   the new **Debug logging** switch there, which is off unless you turn it on.

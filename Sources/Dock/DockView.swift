@@ -136,7 +136,7 @@ final class DockView: NSView {
         ThemeManager.shared.activeTheme?.config.effectiveDockPosition ?? "bottom"
     }
 
-    private var hasStartButton: Bool {
+    var hasStartButton: Bool {
         ThemeManager.shared.activeTheme?.config.hasStartButton ?? false
     }
 
@@ -3449,7 +3449,7 @@ final class DockView: NSView {
         return (super.accessibilityChildren() ?? []) + parts
     }
 
-    private func toggleStartMenu() {
+    func toggleStartMenu() {
         if let panel = startMenuPanel, panel.isVisible {
             panel.dismiss()
             startButtonPressed = false

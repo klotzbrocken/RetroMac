@@ -12,6 +12,13 @@ final class BeOSDeskbarController {
     private var view: BeOSDeskbarView?
     private var settingsObserver: NSObjectProtocol?
 
+    /// The launcher shortcut on BeOS: the Be menu, as the Be button opens it.
+    func openBeMenu() -> Bool {
+        guard let view, window?.isVisible == true else { return false }
+        view.toggleBeMenu()
+        return true
+    }
+
     private init() {}
 
     func update() {
@@ -379,7 +386,7 @@ final class BeOSDeskbarView: NSView {
         else { AppLauncher.launchOrActivate(bundleID: bid) }
     }
 
-    private func toggleBeMenu() {
+    func toggleBeMenu() {
         if BeOSMenuController.shared.isOpen { BeOSMenuController.shared.dismissAll(); return }
         menuOpen = true; needsDisplay = true
         // Anchor the menu to the Be logo so it flies out BESIDE the logo.

@@ -49,7 +49,12 @@ a *particular* game is in the Game Library window, not here.
 
 **Crashes** — Retro Crashes: mode, how often, what can happen, boot failures, moments, the scene.
 
-**Shortcuts** — Rescue Desktop on top, then the window switcher, then the global hotkeys.
+**Shortcuts** — Rescue Desktop on top, then the window switcher, keyboard access, then the
+global hotkeys.
+
+**Keyboard access**: the theme's main menu (⌃Esc) and moving into its dock or taskbar (⌃⇧Esc),
+both changeable; a combination another RetroMac shortcut has is refused. See
+[GUIDE-3.0.md](GUIDE-3.0.md#keyboard-access).
 
 **Window switcher** (⌃⌥Tab, Shift the other way) does what the active theme's era did, from a
 release matrix per theme: Solaris moves the focus window by window, Snow Leopard opens Exposé,

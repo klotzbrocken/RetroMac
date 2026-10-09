@@ -31,8 +31,9 @@ struct Win31MenuItem {
 /// Presents a pixel-accurate retro dropdown as a full-screen overlay inside the host panel.
 enum Win31Menu {
     /// `topLeft` is the menu's top-left corner in `host` coordinates (non-flipped, y up).
+    @discardableResult
     static func present(items: [Win31MenuItem], topLeft: NSPoint, in host: NSView,
-                        style: RetroMenuStyle = .win31, header: String? = nil) {
+                        style: RetroMenuStyle = .win31, header: String? = nil) -> Win31MenuOverlay {
         host.subviews.compactMap { $0 as? Win31MenuOverlay }.forEach { $0.dismiss() }
         let overlay = Win31MenuOverlay(items: items, topLeft: topLeft, hostBounds: host.bounds,
                                        style: style, header: header)
@@ -40,7 +41,13 @@ enum Win31Menu {
         host.addSubview(overlay)
         overlay.window?.acceptsMouseMovedEvents = true
         overlay.activate()
+        current = overlay
+        MenuKeyboard.attach("win31", levels: { current.map { [$0] } ?? [] }, close: { _ in current?.dismiss() })
+        return overlay
     }
+
+    /// The menu open now, the one the keys go to.
+    fileprivate(set) static weak var current: Win31MenuOverlay?
 }
 
 final class Win31MenuOverlay: NSView {
@@ -101,6 +108,19 @@ final class Win31MenuOverlay: NSView {
         addTrackingArea(ta); trackingAreaRef = ta
     }
     func dismiss() { window?.acceptsMouseMovedEvents = false; removeFromSuperview() }
+
+    /// However it goes (a choice, a click outside, its window closing), it lets go of the keys.
+    override func viewWillMove(toSuperview newSuperview: NSView?) {
+        super.viewWillMove(toSuperview: newSuperview)
+        if newSuperview == nil, Win31Menu.current === self {
+            Win31Menu.current = nil
+            MenuKeyboard.detach("win31")
+        }
+    }
+
+    /// Left in a submenu: the menu it came from, with its row highlighted again (a submenu
+    /// takes its parent's place here).
+    fileprivate var back: (() -> Void)?
 
     // MARK: Layout
 
@@ -232,8 +252,16 @@ final class Win31MenuOverlay: NSView {
             let rowRect = rows().first(where: { $0.index == i })?.rect ?? menuRect
             let host = superview
             let tl = NSPoint(x: menuRect.maxX - 4, y: rowRect.maxY)
+            let (parentItems, parentTopLeft, parentStyle, parentHeader, parentBack) = (items, topLeft, style, header, back)
             dismiss()
-            if let host = host { Win31Menu.present(items: sub, topLeft: tl, in: host, style: style) }
+            if let host = host {
+                Win31Menu.present(items: sub, topLeft: tl, in: host, style: style).back = { [weak host] in
+                    guard let host else { return }
+                    let parent = Win31Menu.present(items: parentItems, topLeft: parentTopLeft, in: host, style: parentStyle, header: parentHeader)
+                    parent.back = parentBack
+                    parent.setKeyHighlight(i)
+                }
+            }
             return
         }
         let action = it.action
@@ -253,4 +281,21 @@ final class Win31MenuOverlay: NSView {
     override func keyDown(with event: NSEvent) { if event.keyCode == 53 { dismiss() } }
     override var acceptsFirstResponder: Bool { true }
     override func hitTest(_ point: NSPoint) -> NSView? { self }
+}
+
+extension Win31MenuOverlay: KeyMenuLevel {
+    var keyRows: [KeyMenuRow] {
+        items.map { KeyMenuRow(label: displayTitle($0.title), selectable: !$0.isSeparator && $0.enabled, submenu: $0.submenu?.isEmpty == false) }
+    }
+    var keyHighlight: Int? { hovered }
+    func setKeyHighlight(_ i: Int) { hovered = i; needsDisplay = true }
+    func activateKeyRow(_ i: Int) {
+        let opensSubmenu = items[i].submenu?.isEmpty == false
+        choose(i)
+        // A submenu takes this menu's place; its first row is lit, and the navigator says it.
+        if opensSubmenu, let sub = Win31Menu.current, sub !== self, let first = MenuKeyNavigator.step(sub.keyRows, from: nil, by: 1) {
+            sub.setKeyHighlight(first)
+        }
+    }
+    func keyBack() { back?() }
 }

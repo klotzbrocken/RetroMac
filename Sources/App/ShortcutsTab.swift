@@ -11,6 +11,7 @@ struct ShortcutsTab: View {
             VStack(spacing: RMSpacing.section) {
                 rescueCard
                 switcherCard
+                keyboardCard
                 globalHotkeysCard
                 // "Hide the menu bar / desktop icons while the shader is on" moved to Shader ▸
                 // Where, next to the scope they belong to; the Apple logo to Desktop ▸ Menu bar;
@@ -95,6 +96,56 @@ struct ShortcutsTab: View {
                         }))
                     .padding(.horizontal, 16).padding(.vertical, 10)
                 }
+            }
+        }
+    }
+
+    // MARK: - Keyboard access
+
+    /// The theme without the mouse: its main menu, and its dock or taskbar, by keyboard. Inside
+    /// them the arrow keys, Return and Esc work, and VoiceOver says what is highlighted.
+    private var keyboardCard: some View {
+        RMCard(title: "Keyboard access", bodyPadding: 0) {
+            VStack(spacing: 0) {
+                HotkeyRow(
+                    label: "Open the theme\u{2019}s menu",
+                    hint: "Start, the Apple menu, the Be menu, the Workspace Menu, Launch, the NeXT menu or the Toolchest. Arrow keys move, Return chooses, Esc closes. \u{2303}Esc by default.",
+                    hotkeyCode: settings.launcherHotkeyCode,
+                    hotkeyModifiers: settings.launcherHotkeyModifiers,
+                    onSet: { code, mods in
+                        guard !settings.isHotkeyTaken(code: code, modifiers: mods,
+                                                      byOtherThan: (settings.launcherHotkeyCode, settings.launcherHotkeyModifiers))
+                        else { NSSound.beep(); return }
+                        settings.launcherHotkeyCode = code
+                        settings.launcherHotkeyModifiers = mods
+                        AppDelegate.shared?.registerHotkey()
+                    },
+                    onClear: {
+                        settings.launcherHotkeyCode = 0
+                        settings.launcherHotkeyModifiers = 0
+                        AppDelegate.shared?.registerHotkey()
+                    }
+                )
+                HotkeyRow(
+                    label: "Move into the dock or taskbar",
+                    hint: "Left and Right go from item to item, Return opens one, Esc leaves. Press it again for the next bar (Photon\u{2019}s Shelf, the Control Strip). \u{2303}\u{21E7}Esc by default.",
+                    hotkeyCode: settings.dockFocusHotkeyCode,
+                    hotkeyModifiers: settings.dockFocusHotkeyModifiers,
+                    isLast: true,
+                    onSet: { code, mods in
+                        guard !settings.isHotkeyTaken(code: code, modifiers: mods,
+                                                      byOtherThan: (settings.dockFocusHotkeyCode, settings.dockFocusHotkeyModifiers))
+                        else { NSSound.beep(); return }
+                        settings.dockFocusHotkeyCode = code
+                        settings.dockFocusHotkeyModifiers = mods
+                        AppDelegate.shared?.registerHotkey()
+                    },
+                    onClear: {
+                        settings.dockFocusHotkeyCode = 0
+                        settings.dockFocusHotkeyModifiers = 0
+                        AppDelegate.shared?.registerHotkey()
+                    }
+                )
             }
         }
     }

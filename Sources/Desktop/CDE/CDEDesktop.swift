@@ -57,6 +57,14 @@ final class CDEDesktop {
         panel = nil
     }
 
+    /// The launcher shortcut on CDE: the Workspace Menu, at the pointer as dtwm posted it from
+    /// the keyboard. (Photon's Launch menu stands on its taskbar instead.)
+    func openWorkspaceMenu() -> Bool {
+        guard panel?.isVisible == true, mode == .cde, let theme = ThemeManager.shared.activeTheme else { return false }
+        CDEMenu.show(CDEDesktop.workspaceMenu(theme: theme), title: "Workspace Menu", at: NSEvent.mouseLocation)
+        return true
+    }
+
     private func reload() {
         guard let view = panel?.contentView as? CDEDesktopView, let screen = NSScreen.screens.first else { return }
         view.top = screen.frame.maxY - screen.visibleFrame.maxY

@@ -27,6 +27,8 @@ final class RainbowAppleController {
     private let fallbackGlyphCenterX: CGFloat = 14   // only used if AX fails
 
     private var windows: [NSWindow] = []
+    /// The cover over the Apple on the main screen's menu bar, while it is up.
+    var coverWindow: NSWindow? { windows.first { $0.isVisible && $0.screen == NSScreen.main } ?? windows.first { $0.isVisible } }
     private var observers: [NSObjectProtocol] = []
     private var imageCache: [String: NSImage] = [:]
 

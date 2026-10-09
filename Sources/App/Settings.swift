@@ -927,12 +927,38 @@ final class AppSettings: ObservableObject {
     @Published var exposeAppHotkeyModifiers: UInt32 {
         didSet { defaults.set(exposeAppHotkeyModifiers, forKey: "exposeAppHotkeyModifiers") }
     }
-    /// Whether one of RetroMac's own hotkeys already uses this combination.
-    func isRetroMacHotkey(code: UInt32, modifiers: UInt32) -> Bool {
+    /// Keyboard access (3.0): the theme's main menu — Start, Apple, Be, Workspace, Launch, the
+    /// NeXT menu, the Toolchest. ⌃Esc by default, the shortcut Windows itself opens Start with.
+    @Published var launcherHotkeyCode: UInt32 {
+        didSet { defaults.set(launcherHotkeyCode, forKey: "launcherHotkeyCode") }
+    }
+    @Published var launcherHotkeyModifiers: UInt32 {
+        didSet { defaults.set(launcherHotkeyModifiers, forKey: "launcherHotkeyModifiers") }
+    }
+    /// Into the dock, taskbar or panel with the arrow keys: ⌃⇧Esc by default.
+    @Published var dockFocusHotkeyCode: UInt32 {
+        didSet { defaults.set(dockFocusHotkeyCode, forKey: "dockFocusHotkeyCode") }
+    }
+    @Published var dockFocusHotkeyModifiers: UInt32 {
+        didSet { defaults.set(dockFocusHotkeyModifiers, forKey: "dockFocusHotkeyModifiers") }
+    }
+    private var retroMacHotkeys: [(UInt32, UInt32)] {
         [(hotkeyCode, hotkeyModifiers), (screenshotHotkeyCode, screenshotHotkeyModifiers),
          (menuBarToggleHotkeyCode, menuBarToggleHotkeyModifiers), (dashboardHotkeyCode, dashboardHotkeyModifiers),
-         (exposeHotkeyCode, exposeHotkeyModifiers), (exposeAppHotkeyCode, exposeAppHotkeyModifiers)]
-            .contains { $0.0 == code && $0.1 == modifiers && modifiers != 0 }
+         (exposeHotkeyCode, exposeHotkeyModifiers), (exposeAppHotkeyCode, exposeAppHotkeyModifiers),
+         (launcherHotkeyCode, launcherHotkeyModifiers), (dockFocusHotkeyCode, dockFocusHotkeyModifiers)]
+    }
+    /// Whether one of RetroMac's own hotkeys already uses this combination.
+    func isRetroMacHotkey(code: UInt32, modifiers: UInt32) -> Bool {
+        retroMacHotkeys.contains { $0.0 == code && $0.1 == modifiers && modifiers != 0 }
+    }
+    /// Whether a combination is taken by another of RetroMac's shortcuts than the one being
+    /// set: the global ones, Rescue Desktop and the switcher (either way round).
+    func isHotkeyTaken(code: UInt32, modifiers: UInt32, byOtherThan own: (UInt32, UInt32)) -> Bool {
+        guard modifiers != 0 else { return false }
+        let others = retroMacHotkeys + [(rescueHotkeyCode, rescueHotkeyModifiers), (switcherHotkeyCode, switcherHotkeyModifiers),
+                                        (switcherHotkeyCode, switcherHotkeyModifiers == 0 ? 0 : switcherHotkeyModifiers | 0x0200)]
+        return others.filter { $0.0 == code && $0.1 == modifiers }.count > (own == (code, modifiers) ? 1 : 0)
     }
 
     /// Rescue Desktop (Lastenheft 3.0, RET-01): ⌃⌥⌘R by default.
@@ -1411,6 +1437,10 @@ final class AppSettings: ObservableObject {
         switcherHotkeyCode = defaults.object(forKey: "switcherHotkeyCode") as? UInt32 ?? 0x30   // Tab
         switcherHotkeyModifiers = defaults.object(forKey: "switcherHotkeyModifiers") as? UInt32 ?? 0x1800   // ⌃⌥
         switcherOffThemes = defaults.stringArray(forKey: "switcherOffThemes") ?? []
+        launcherHotkeyCode = defaults.object(forKey: "launcherHotkeyCode") as? UInt32 ?? 0x35   // Esc
+        launcherHotkeyModifiers = defaults.object(forKey: "launcherHotkeyModifiers") as? UInt32 ?? 0x1000   // ⌃
+        dockFocusHotkeyCode = defaults.object(forKey: "dockFocusHotkeyCode") as? UInt32 ?? 0x35   // Esc
+        dockFocusHotkeyModifiers = defaults.object(forKey: "dockFocusHotkeyModifiers") as? UInt32 ?? 0x1200   // ⌃⇧
         exposeAppHotkeyModifiers = defaults.object(forKey: "exposeAppHotkeyModifiers") as? UInt32 ?? 0x1000
         showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true   // boot screen on by default (per-theme toggle still applies)
         crashMode = defaults.string(forKey: "crashMode") ?? "authentic"
@@ -1450,6 +1480,14 @@ final class AppSettings: ObservableObject {
         if defaults.object(forKey: "switcherHotkeyModifiers") == nil,
            [switcherHotkeyModifiers, switcherHotkeyModifiers | 0x0200].contains(where: { isRetroMacHotkey(code: switcherHotkeyCode, modifiers: $0) }) {
             switcherHotkeyModifiers = 0
+        }
+        if defaults.object(forKey: "launcherHotkeyModifiers") == nil,
+           isHotkeyTaken(code: launcherHotkeyCode, modifiers: launcherHotkeyModifiers, byOtherThan: (launcherHotkeyCode, launcherHotkeyModifiers)) {
+            launcherHotkeyModifiers = 0
+        }
+        if defaults.object(forKey: "dockFocusHotkeyModifiers") == nil,
+           isHotkeyTaken(code: dockFocusHotkeyCode, modifiers: dockFocusHotkeyModifiers, byOtherThan: (dockFocusHotkeyCode, dockFocusHotkeyModifiers)) {
+            dockFocusHotkeyModifiers = 0
         }
     }
     /// Apps of ours that draw their own retro window, so a theme title bar on top would be a

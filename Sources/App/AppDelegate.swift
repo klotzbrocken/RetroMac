@@ -29,6 +29,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var exposeHotKeyRef: EventHotKeyRef?
     private var exposeAppHotKeyRef: EventHotKeyRef?
     private var rescueHotKeyRef: EventHotKeyRef?
+    private var launcherHotKeyRef: EventHotKeyRef?
+    private var dockFocusHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var menuBarHiddenByHotkey = false
     private(set) var currentIntensity: Float!
@@ -1587,6 +1589,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // 7. Keyboard access: the theme's main menu (id: 12) and the dock focus (id: 13).
+        if settings.launcherHotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 12)
+            if RegisterEventHotKey(settings.launcherHotkeyCode, settings.launcherHotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                launcherHotKeyRef = ref
+            }
+        }
+        if settings.dockFocusHotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 13)
+            if RegisterEventHotKey(settings.dockFocusHotkeyCode, settings.dockFocusHotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                dockFocusHotKeyRef = ref
+            }
+        }
+
         // Install event handler (once)
         if eventHandlerRef == nil {
             var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
@@ -1608,6 +1628,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     case 9: DispatchQueue.main.async { ExposeController.shared.toggle(.allWindows) }
                     case 10: DispatchQueue.main.async { ExposeController.shared.toggle(.applicationWindows) }
                     case 11: DispatchQueue.main.async { DesktopRescue.shared.run() }
+                    case 12: DispatchQueue.main.async { ThemeLauncher.open() }
+                    case 13: DispatchQueue.main.async { KeyboardFocus.shared.toggle() }
                     default: return OSStatus(eventNotHandledErr)
                     }
                     return noErr
@@ -1618,6 +1640,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func unregisterHotkey() {
+        for ref in [launcherHotKeyRef, dockFocusHotKeyRef].compactMap({ $0 }) { UnregisterEventHotKey(ref) }
+        launcherHotKeyRef = nil
+        dockFocusHotKeyRef = nil
         if let ref = rescueHotKeyRef {
             UnregisterEventHotKey(ref)
             rescueHotKeyRef = nil

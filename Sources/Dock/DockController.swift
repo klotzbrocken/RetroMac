@@ -16,6 +16,13 @@ final class DockController {
 
     private var window: DockWindow?
     private var dockView: DockView?
+
+    /// The launcher shortcut on a Windows theme: the Start menu, as the button opens it.
+    func openStartMenuFromKeyboard() -> Bool {
+        guard let w = window, w.isVisible, let dockView, dockView.hasStartButton else { return false }
+        dockView.toggleStartMenu()
+        return true
+    }
     private var isStarted = false       // guards re-entrancy for dock-less themes (Win 3.1)
     private var screenObserver: NSObjectProtocol?
     private var fullscreenObserver: NSObjectProtocol?

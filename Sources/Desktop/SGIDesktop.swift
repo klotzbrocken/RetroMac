@@ -49,6 +49,13 @@ final class SGIDesktopController {
     private var desktopView: SGIDesktopView?
     private init() {}
 
+    /// The launcher shortcut on IRIX: the Toolchest.
+    func openToolchest() -> Bool {
+        guard window?.isVisible == true, let desktopView else { return false }
+        desktopView.openToolchest()
+        return true
+    }
+
     func update() {
         // Note: for SGI IRIX the desktop IS the dock (dockStyle "none" → no DockView),
         // so it must show even in dock-only mode — not gated on dockOnly.
@@ -186,7 +193,7 @@ final class SGIDesktopView: NSView {
         return axParts + (super.accessibilityChildren() ?? [])
     }
 
-    private func openToolchest() {
+    func openToolchest() {
         let items = cfg.toolchest.map { toMenuItem($0) }
         Win31Menu.present(items: items, topLeft: NSPoint(x: toolchestRect.minX, y: toolchestRect.minY),
                           in: self, style: .sgi, header: "Desk 1")

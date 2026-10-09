@@ -236,6 +236,16 @@ final class StartMenuPanel: NSPanel {
             self.dismiss()
             return event
         }
+        // The arrow keys, Return and Esc while it is open: the menu, and the flyout hanging off it.
+        MenuKeyboard.attach("start", levels: { [weak self] in self?.keyLevels ?? [] }, close: { [weak self] level in
+            if level == 0 { self?.dismiss() } else { (self?.menuContentView as? StartMenuPanel.SubmenuHost)?.dismissSubmenu() }
+        })
+    }
+
+    private var keyLevels: [KeyMenuLevel] {
+        guard isVisible, let root = menuContentView as? KeyMenuLevel else { return [] }
+        let flyout = (menuContentView as? StartMenuPanel.SubmenuHost)?.submenuPanel?.contentView as? KeyMenuLevel
+        return [root] + (flyout.map { [$0] } ?? [])
     }
 
     /// Told when the menu goes away, however it was closed, so the Start button can pop back up.
@@ -246,6 +256,7 @@ final class StartMenuPanel: NSPanel {
         orderOut(nil)
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor); globalMonitor = nil }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor); localMonitor = nil }
+        if menuContentView != nil { MenuKeyboard.detach("start") }   // a flyout has no content of its own here
         onClose?()
     }
 }
@@ -1852,5 +1863,77 @@ private final class SubmenuContentView: NSView {
                 arrow.draw(at: NSPoint(x: itemRect.maxX - asz.width - 8, y: itemRect.midY - asz.height / 2), withAttributes: arrowAttrs)
             }
         }
+    }
+}
+
+// MARK: - Keyboard (`MenuKeyNavigator`)
+
+extension ClassicStartMenuContentView: KeyMenuLevel {
+    var keyRows: [KeyMenuRow] {
+        items.map { KeyMenuRow(label: $0.title, selectable: !$0.isSeparator, submenu: $0.submenuItems?.isEmpty == false) }
+    }
+    var keyHighlight: Int? { hoveredIndex }
+    func setKeyHighlight(_ i: Int) {
+        dismissSubmenu()
+        hoveredIndex = i; needsDisplay = true
+    }
+    func activateKeyRow(_ i: Int) {
+        if let sub = items[i].submenuItems, !sub.isEmpty {
+            if submenuPanel == nil { showSubmenu(for: i, subItems: sub) }
+        } else {
+            items[i].action?()
+            onDismiss?()
+        }
+    }
+}
+
+extension SubmenuContentView: KeyMenuLevel {
+    var keyRows: [KeyMenuRow] { items.map { KeyMenuRow(label: $0.title, selectable: !$0.isSeparator) } }
+    var keyHighlight: Int? { hoveredIndex }
+    func setKeyHighlight(_ i: Int) { hoveredIndex = i; needsDisplay = true }
+    func activateKeyRow(_ i: Int) {
+        items[i].action?()
+        onDismiss?()
+    }
+}
+
+extension XPStartMenuContentView: KeyMenuLevel {
+    /// Both columns, top to bottom, then the footer: the order VoiceOver reads them in.
+    private var keySections: [(HoverSection, String)] {
+        data.leftItems.indices.filter { !data.leftItems[$0].isSeparator }.map { (.left($0), data.leftItems[$0].title) }
+            + [(.allPrograms, "All Programs")]
+            + data.rightItems.indices.filter { !data.rightItems[$0].isSeparator }.map { (.right($0), data.rightItems[$0].title) }
+            + [(.logOff, "Log Off"), (.shutDown, "Turn Off Computer")]
+    }
+    var keyRows: [KeyMenuRow] {
+        let flyout = data.allProgramsItems?.isEmpty == false
+        return keySections.map { KeyMenuRow(label: $0.1, submenu: $0.0 == .allPrograms && flyout) }
+    }
+    var keyHighlight: Int? { hoveredSection.flatMap { h in keySections.firstIndex { $0.0 == h } } }
+    func setKeyHighlight(_ i: Int) {
+        dismissSubmenu()
+        hoveredSection = keySections[i].0; needsDisplay = true
+    }
+    func activateKeyRow(_ i: Int) {
+        let section = keySections[i].0
+        if section == .allPrograms, submenuPanel != nil { return }   // open already; choosing it again would close it
+        choose(section)
+    }
+}
+
+extension Win7StartMenuContentView: KeyMenuLevel {
+    private var keySections: [(Hover, String)] {
+        programs.indices.map { (.left($0), programs[$0].title) } + places.indices.map { (.right($0), places[$0].title) }
+            + [(.allPrograms, showingAllPrograms ? "Back" : "All Programs"),
+               (.search, RetroFrameTheme.isVista ? "Start Search" : "Search programs and files"), (.shutDown, "Shut down")]
+    }
+    var keyRows: [KeyMenuRow] { keySections.map { KeyMenuRow(label: $0.1) } }
+    var keyHighlight: Int? { hovered.flatMap { h in keySections.firstIndex { $0.0 == h } } }
+    func setKeyHighlight(_ i: Int) { hovered = keySections[i].0; needsDisplay = true }
+    func activateKeyRow(_ i: Int) {
+        let h = keySections[i].0
+        choose(h)
+        // All Programs swaps the list in place: the keyboard carries on at its first entry.
+        if h == .allPrograms, data.allProgramsItems?.isEmpty == false, !programs.isEmpty { hovered = .left(0); needsDisplay = true }
     }
 }

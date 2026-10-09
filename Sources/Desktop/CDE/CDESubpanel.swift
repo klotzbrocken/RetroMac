@@ -53,7 +53,7 @@ final class CDESubpanel: NSView {
         outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
             DispatchQueue.main.async { closeAll() }
         }
-        CDEEscape.hold { closeAll() }   // Esc closes it (CDE-02)
+        HeldKeys.hold("cde-subpanel", keys: [.escape]) { _ in closeAll() }   // Esc closes it (CDE-02)
         resignObserver = NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: p, queue: .main) { _ in
             closeAll()   // a click anywhere else closes it
         }
@@ -67,7 +67,7 @@ final class CDESubpanel: NSView {
         guard let w = window else { return }
         window = nil; openKind = nil
         w.orderOut(nil)
-        CDEEscape.release()
+        HeldKeys.release("cde-subpanel")
     }
 
     // MARK: Content
