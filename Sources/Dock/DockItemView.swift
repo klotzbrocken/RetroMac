@@ -4,6 +4,9 @@ final class DockItemView: NSView {
     let bundleID: String
     private var iconImageView: NSImageView!
     private(set) var reflectionLayer: CALayer?
+    /// How much of the picture's height is transparent at its bottom (a folder's is about 13 %).
+    /// The reflection starts where the picture does, not at the edge of the image file.
+    private var bottomPad: CGFloat = 0
     private var trackingArea: NSTrackingArea?
     private var isHovered = false
     private var indicatorLayer: CALayer?
@@ -69,8 +72,28 @@ final class DockItemView: NSView {
 
     func updateIcon(_ image: NSImage) {
         iconImageView.image = image
+        bottomPad = Self.bottomPadding(image)
         // A new picture (the Trash filling up) gets a new reflection too, not the old one's.
         reflectionLayer?.sublayers?.first?.contents = Self.mirrored(image, size: iconImageView.frame.size)
+        layoutReflection()
+    }
+
+    /// The transparent rows under the picture, as a fraction of its height (measured at 64 px).
+    static func bottomPadding(_ image: NSImage) -> CGFloat {
+        let n = 64
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: n, pixelsHigh: n, bitsPerSample: 8,
+                                         samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: n * 4, bitsPerPixel: 32),
+              let data = rep.bitmapData else { return 0 }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        image.draw(in: NSRect(x: 0, y: 0, width: n, height: n))
+        NSGraphicsContext.restoreGraphicsState()
+        // The bitmap's rows run top-down: count empty rows up from the last one.
+        for row in stride(from: n - 1, through: 0, by: -1) {
+            if (0..<n).contains(where: { data[(row * n + $0) * 4 + 3] > 20 }) { return CGFloat(n - 1 - row) / CGFloat(n) }
+        }
+        return 0
     }
 
     /// The whole icon upside down. It is drawn when the layer needs it, at the size and
@@ -124,19 +147,22 @@ final class DockItemView: NSView {
         layoutReflection()
     }
 
-    /// The reflection follows the icon: as wide as it, as far down as 45 % of its height, but
-    /// never past the bottom of the dock, so the fade ends on the shelf instead of being cut
-    /// off by the screen edge. Called again whenever magnification resizes the item.
+    /// The reflection follows the icon: mirrored at the picture's visible bottom edge, as wide as
+    /// it, as far down as 45 % of the picture's height, but never past the bottom of the dock, so
+    /// the fade ends on the shelf instead of being cut off by the screen edge. Called again
+    /// whenever magnification resizes the item.
     private func layoutReflection() {
         guard let strip = reflectionLayer, let mirror = strip.sublayers?.first else { return }
         let icon = iconImageView.frame
-        let room = superview == nil ? icon.height : frame.minY + icon.minY   // down to the dock's bottom
-        let height = max(0, min(icon.height * 0.45, room))
+        let pad = icon.height * bottomPad
+        let floor = icon.minY + pad                     // where the picture stands
+        let room = superview == nil ? icon.height : frame.minY + floor   // down to the dock's bottom
+        let height = max(0, min((icon.height - pad) * 0.45, room))
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        strip.frame = CGRect(x: icon.minX, y: icon.minY - height, width: icon.width, height: height)
+        strip.frame = CGRect(x: icon.minX, y: floor - height, width: icon.width, height: height)
         strip.mask?.frame = strip.bounds
-        mirror.frame = CGRect(x: 0, y: height - icon.height, width: icon.width, height: icon.height)
+        mirror.frame = CGRect(x: 0, y: height - icon.height + pad, width: icon.width, height: icon.height)
         CATransaction.commit()
     }
 

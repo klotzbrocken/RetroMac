@@ -98,6 +98,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Folders in the Snow Leopard dock reflect too.** A reflection used to start at the edge of the
+  picture file; a folder stands on transparent rows (about an eighth of its height), so the fade
+  had nearly run out before the folder showed. It now starts at the picture's visible bottom.
+- **Futurama's web-app windows close again.** Their close button was drawn but no click
+  reached it; every window style now hands its buttons to the same tracker.
 - **Scanline and glass-reflection overlays draw again.** Settings ▸ Shader offered Light,
   Medium, Heavy and Subtle, Strong under names the overlay code did not know, so every choice
   drew nothing. The two shortcut rows "Cycle effect preset" and "Bump intensity" are gone:

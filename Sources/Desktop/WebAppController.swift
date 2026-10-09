@@ -466,14 +466,13 @@ final class WebAppChromeView: NSView {
     private let iconImage: NSImage?
     private let style: Style
     private let showNav: Bool
-    private var closeHit: CGRect = .zero
     private var backHit: CGRect = .zero
     private var fwdHit: CGRect = .zero
     private weak var hosted: NSView?
     private var grip: ResizeGripView?
 
-    /// Shared chrome model + interaction tracker. Non-nil only for styles migrated to the
-    /// model (currently XP); other styles keep the legacy `closeHit` path.
+    /// Shared chrome model (nil for Futurama and the plain fallback). Every style registers its
+    /// caption buttons with `tracker`, which handles hover, press and mouse-up-inside.
     private let chromeStyle: ChromeStyle?
     private var tracker = ChromeButtonTracker()
 
@@ -599,7 +598,6 @@ final class WebAppChromeView: NSView {
         AquaChrome.edge.setStroke()
         outline.lineWidth = 2
         NSGraphicsContext.saveGraphicsState(); outline.addClip(); outline.stroke(); NSGraphicsContext.restoreGraphicsState()
-        closeHit = .zero   // close is tracked via `tracker`
     }
 
     // ---- Mac OS X 10.6 Snow Leopard. Every measurement lives in `SnowLeopardChrome`, which
@@ -658,7 +656,6 @@ final class WebAppChromeView: NSView {
         outline.appendRoundedRect(b.insetBy(dx: 0.5, dy: 0.5), xRadius: r, yRadius: r)
         outline.lineWidth = 1; outline.stroke()
 
-        closeHit = .zero   // close is tracked via `tracker`
     }
 
     // ---- Futurama: cream body, sage-green rounded title bar, macOS traffic lights LEFT,
@@ -703,7 +700,6 @@ final class WebAppChromeView: NSView {
         let closeR = NSRect(x: bar.minX + 12, y: ly, width: d, height: d)
         tracker.reset()
         tracker.add(.close, closeR.insetBy(dx: -4, dy: -4), interactive: true)
-        closeHit = .zero
 
         // Centered title.
         let p = NSMutableParagraphStyle(); p.alignment = .center; p.lineBreakMode = .byTruncatingTail
@@ -733,7 +729,6 @@ final class WebAppChromeView: NSView {
         tracker.add(.close, closeR.insetBy(dx: -3, dy: -3), interactive: true)
         NeXTChrome.button(miniR, kind: .miniaturize, flipped: true, in: ctx)
         NeXTChrome.button(closeR, kind: .close, pressed: tracker.state(for: .close) == .pressed, flipped: true, in: ctx)
-        closeHit = .zero   // close handled via `tracker`
     }
 
     // ---- Mac System 6 (authentic 1-bit B/W) — shared with the TV window via System6Chrome ----
@@ -756,7 +751,6 @@ final class WebAppChromeView: NSView {
         System6Chrome.closeBox(closeR, state: tracker.state(for: .close))
         System6Chrome.resizeBox(zoomR, state: tracker.state(for: .zoom))
         System6Chrome.titlePlaque(title, bar: bar, font: cs.titleFont, active: true)
-        closeHit = .zero   // close is tracked via `tracker`
     }
 
     // ---- System 7.1 at 256 colours — shared with the TV window and the title bars via System7Chrome ----
@@ -774,7 +768,6 @@ final class WebAppChromeView: NSView {
         System7Chrome.zoomBox(zoomR, pressed: tracker.state(for: .zoom) == .pressed, flipped: true)
         System7Chrome.title(title, bar: bar, active: true, flipped: true, minX: closeR.maxX, maxX: zoomR.minX,
                             font: (chromeStyle ?? ChromeStyleFactory.system7()).titleFont)
-        closeHit = .zero   // close is tracked via `tracker`
     }
 
     // ---- Classic Mac (System 6 / Platinum) — shared look with the TV window via ClassicMacChrome ----
@@ -797,7 +790,6 @@ final class WebAppChromeView: NSView {
         PlatinumBar.collapseGlyph(in: boxes.collapse, active: true)
         let proxy = iconImage.map { img -> NSImage in let c = img.copy() as! NSImage; c.size = NSSize(width: 16, height: 16); return c }
         PlatinumBar.drawTitle(title, icon: proxy, in: bar, active: true, minX: boxes.close.maxX + 8, maxX: boxes.zoom.minX - 8)
-        closeHit = .zero   // close is tracked via `tracker`
     }
 
     // ---- Windows 98 (SPEC: #C4C4C4 surface, 4-step bevel, #00007B→#1085D2 caption) ----
@@ -843,7 +835,6 @@ final class WebAppChromeView: NSView {
         x.move(to: NSPoint(x: closeR.maxX - 6 + o, y: closeR.minY + 5 + o))
         x.line(to: NSPoint(x: closeR.minX + 6 + o, y: closeR.maxY - 5 + o))
         x.stroke()
-        closeHit = .zero   // Win98 close is tracked via `tracker`, not the legacy hit rect
 
         // program icon at the far left of the caption (Win95/98 title bars always show one)
         var titleX = cap.minX + 6
@@ -992,7 +983,6 @@ final class WebAppChromeView: NSView {
         x.move(to: NSPoint(x: closeR.maxX - 6, y: closeR.minY + 5))
         x.line(to: NSPoint(x: closeR.minX + 6, y: closeR.maxY - 5))
         x.stroke()
-        closeHit = .zero   // XP close is tracked via `tracker`, not the legacy hit rect
 
         var titleX: CGFloat = 9
         backHit = .zero; fwdHit = .zero
@@ -1101,7 +1091,6 @@ final class WebAppChromeView: NSView {
         win7Glyph(.minimize, in: minR, color: NSColor.black.withAlphaComponent(0.72))
         win7Glyph(.maximize, in: maxR, color: NSColor.black.withAlphaComponent(0.72))
         win7Glyph(.close, in: closeR, color: .white)
-        closeHit = .zero   // Win7 close is tracked via `tracker`
         backHit = .zero; fwdHit = .zero
 
         // Title text: black with a white glow halo for legibility on glass.
@@ -1171,7 +1160,8 @@ final class WebAppChromeView: NSView {
         let closeR = NSRect(x: cap.minX + 5, y: cap.minY + 4, width: 14, height: 14)
         NSColor(srgbRed: 0.92, green: 0.73, blue: 0.16, alpha: 1).setFill(); ctx.fill(closeR)
         NSColor.black.setStroke(); NSBezierPath(rect: closeR).stroke()
-        closeHit = closeR.insetBy(dx: -3, dy: -3)
+        tracker.reset()
+        tracker.add(.close, closeR.insetBy(dx: -3, dy: -3), interactive: true)
         (title as NSString).draw(at: NSPoint(x: closeR.maxX + 6, y: cap.minY + 3),
                                  withAttributes: [.font: NSFont.boldSystemFont(ofSize: 12),
                                                   .foregroundColor: NSColor.black])
@@ -1183,7 +1173,6 @@ final class WebAppChromeView: NSView {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
-        guard chromeStyle != nil else { return }
         addTrackingArea(NSTrackingArea(
             rect: .zero,
             options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
@@ -1191,7 +1180,6 @@ final class WebAppChromeView: NSView {
     }
 
     override func mouseMoved(with event: NSEvent) {
-        guard chromeStyle != nil else { return }
         if tracker.mouseMoved(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
     }
 
@@ -1201,14 +1189,10 @@ final class WebAppChromeView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        if chromeStyle != nil {
-            // A tracked caption button: press it (visual only); it fires on mouse-up-inside.
-            if tracker.hitTest(p) != nil {
-                if tracker.mouseDown(at: p) { needsDisplay = true }
-                return
-            }
-        } else if closeHit.contains(p) {
-            onClose?(); return
+        // A tracked caption button: press it (visual only); it fires on mouse-up-inside.
+        if tracker.hitTest(p) != nil {
+            if tracker.mouseDown(at: p) { needsDisplay = true }
+            return
         }
         if backHit.contains(p) { onBack?(); return }
         if fwdHit.contains(p) { onForward?(); return }
@@ -1216,12 +1200,10 @@ final class WebAppChromeView: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard chromeStyle != nil else { return }
         if tracker.mouseDragged(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
     }
 
     override func mouseUp(with event: NSEvent) {
-        guard chromeStyle != nil else { return }
         let r = tracker.mouseUp(at: convert(event.locationInWindow, from: nil))
         if r.needsRedraw { needsDisplay = true }
         switch r.fire {
