@@ -243,7 +243,7 @@ struct ROMLibrarySection: View {
             Spacer()
 
             // Shader preset picker
-            Picker("", selection: Binding(
+            Picker("Shader preset", selection: Binding(
                 get: { rom.presetID ?? "" },
                 set: { newValue in
                     var updated = rom
@@ -276,6 +276,7 @@ struct ROMLibrarySection: View {
                 Text("Amber Monitor").tag("amber-monitor")
             }
             .pickerStyle(.menu)
+            .labelsHidden()   // the label is for VoiceOver
             .frame(width: 140)
             .help("CRT shader preset")
 

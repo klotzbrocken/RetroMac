@@ -10,7 +10,7 @@ struct CameraStreamingTab: View {
     }
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $section) {
+            Picker("Section", selection: $section) {
                 ForEach(Sec.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented).labelsHidden()
@@ -37,7 +37,7 @@ struct DockThemesTab: View {
     }
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: $section) {
+            Picker("Section", selection: $section) {
                 ForEach(Sec.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented).labelsHidden()

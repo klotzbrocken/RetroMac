@@ -19,7 +19,7 @@ struct LiteShaderPicker: View {
     ]
 
     var body: some View {
-        Picker("", selection: $selection) {
+        Picker("Lite shader", selection: $selection) {
             Text("None").tag("none")
             Divider()
             ForEach(Self.liteShaders, id: \.id) { shader in
@@ -27,5 +27,6 @@ struct LiteShaderPicker: View {
             }
         }
         .pickerStyle(.menu)
+        .labelsHidden()   // the label is for VoiceOver
     }
 }

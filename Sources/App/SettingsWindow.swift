@@ -914,7 +914,7 @@ struct PerAppRuleRow: View {
                         .tracking(0.5)
                         .foregroundColor(.rmTextTertiary)
 
-                    Picker("", selection: Binding(
+                    Picker("Uses preset", selection: Binding(
                         get: { rule.presetID },
                         set: { newID in
                             settings.perAppRules[bundleID] = .init(presetID: newID, reason: rule.reason)

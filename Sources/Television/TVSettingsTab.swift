@@ -36,7 +36,7 @@ struct TVSettingsTab: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Text("TV bezel").frame(width: 90, alignment: .leading)
-                            Picker("", selection: $settings.tvTubeBezel) {
+                            Picker("TV bezel", selection: $settings.tvTubeBezel) {
                                 Text("Simple frame (built-in)").tag("")
                                 ForEach(BezelStore.shared.available) { b in
                                     Text(BezelStore.shared.isDownloaded(b) ? b.name : "\(b.name)  (download)")
@@ -67,7 +67,7 @@ struct TVSettingsTab: View {
                         }
                         HStack {
                             Text("Shader").frame(width: 90, alignment: .leading)
-                            Picker("", selection: $settings.tvTubePreset) {
+                            Picker("Shader", selection: $settings.tvTubePreset) {
                                 ForEach(allPresets.filter { !$0.0.isEmpty }, id: \.0) { id, name in
                                     Text(name).tag(id)
                                 }
@@ -79,7 +79,7 @@ struct TVSettingsTab: View {
                         }
                         HStack {
                             Text("Display").frame(width: 90, alignment: .leading)
-                            Picker("", selection: $settings.tvTubeDisplayID) {
+                            Picker("Display", selection: $settings.tvTubeDisplayID) {
                                 Text("Auto (external if connected)").tag(CGDirectDisplayID(0))
                                 ForEach(NSScreen.screens, id: \.displayID) { s in
                                     Text(s.localizedName).tag(s.displayID)
@@ -138,7 +138,7 @@ struct TVSettingsTab: View {
                 HStack {
                     Text("Preset").font(.rmSecondary).foregroundColor(.rmTextSecondary)
                     Spacer()
-                    Picker("", selection: Binding(
+                    Picker("Preset", selection: Binding(
                         get: { bookmark.presetID ?? "" },
                         set: { newVal in
                             var updated = settings.tvBookmarks

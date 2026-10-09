@@ -522,7 +522,7 @@ struct LauncherView: View {
                     .font(.system(size: 10)).foregroundStyle(.secondary)
             }
             Spacer()
-            Toggle("", isOn: Binding(
+            Toggle("Only on this Space", isOn: Binding(
                 get: { settings.themeOnChosenSpaces && ThemeSpaces.shared.showsThemeHere },
                 set: { _ in AppDelegate.shared?.toggleThemeOnThisSpace() }))
                 .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
@@ -538,7 +538,7 @@ struct LauncherView: View {
                     .font(.system(size: 10)).foregroundStyle(.secondary)
             }
             Spacer()
-            Toggle("", isOn: $settings.dockOnly)
+            Toggle("Dock only", isOn: $settings.dockOnly)
                 .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
                 .onChange(of: settings.dockOnly) { _, _ in
                     AppDelegate.shared?.refreshDockOnlyScope()
@@ -552,7 +552,7 @@ struct LauncherView: View {
             HStack {
                 Label("CRT Shader", systemImage: "tv")
                 Spacer()
-                Toggle("", isOn: Binding(get: { model.shaderActive && !model.wallpaperOnlyActive },
+                Toggle("CRT Shader", isOn: Binding(get: { model.shaderActive && !model.wallpaperOnlyActive },
                                          set: { _ in AppDelegate.shared?.launcherToggleShader(); model.refresh() }))
                     .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }
@@ -569,7 +569,7 @@ struct LauncherView: View {
                     Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Toggle("", isOn: Binding(get: { model.wallpaperOnlyActive },
+                Toggle("Live Wallpaper", isOn: Binding(get: { model.wallpaperOnlyActive },
                                          set: { _ in AppDelegate.shared?.launcherToggleLiveWallpaper(); model.refresh() }))
                     .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }
@@ -577,7 +577,7 @@ struct LauncherView: View {
             HStack {
                 Label("TV Tube", systemImage: "sparkles.tv")
                 Spacer()
-                Toggle("", isOn: Binding(get: { model.tubeActive },
+                Toggle("TV Tube", isOn: Binding(get: { model.tubeActive },
                                          set: { _ in AppDelegate.shared?.toggleTubeMode(); model.refreshState() }))
                     .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(switchGreen)
             }

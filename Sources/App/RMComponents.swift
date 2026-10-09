@@ -66,6 +66,9 @@ struct RMRow<Control: View>: View {
     var isLast: Bool = false
     var stacked: Bool = false
     @ViewBuilder var control: () -> Control
+    /// Ties the row's label to its control for VoiceOver. Without it a switch, picker or slider
+    /// with a hidden label took its name from whatever text was nearest, often the next row's.
+    @Namespace private var axPair
 
     var body: some View {
         VStack(spacing: 0) {
@@ -73,6 +76,7 @@ struct RMRow<Control: View>: View {
                 VStack(alignment: .leading, spacing: 8) {
                     text
                     control()
+                        .accessibilityLabeledPair(role: .content, id: "row", in: axPair)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.vertical, 11)
@@ -82,6 +86,7 @@ struct RMRow<Control: View>: View {
                     text
                     Spacer(minLength: 12)
                     control()
+                        .accessibilityLabeledPair(role: .content, id: "row", in: axPair)
                         .frame(minHeight: 22)
                 }
                 .padding(.vertical, 11)
@@ -103,6 +108,7 @@ struct RMRow<Control: View>: View {
                 .font(.rmBody)
                 .foregroundColor(.rmTextPrimary)
                 .lineSpacing(1.35)
+                .accessibilityLabeledPair(role: .label, id: "row", in: axPair)
             if let hint = hint {
                 Text(hint)
                     .font(.rmSecondary)

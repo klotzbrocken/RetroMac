@@ -654,7 +654,7 @@ struct SetupWizardView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
-            Toggle("", isOn: isOn).labelsHidden().toggleStyle(.switch)
+            Toggle(title, isOn: isOn).labelsHidden().toggleStyle(.switch)
         }
     }
 

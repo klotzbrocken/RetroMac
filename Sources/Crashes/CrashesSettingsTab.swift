@@ -199,7 +199,7 @@ struct CrashesTab: View {
                     Button("Show") { fire(spec.id) }
                         .buttonStyle(RMGhostButtonStyle())
                         .disabled(!license.isLicensed)
-                    Toggle("", isOn: enabledBinding(spec.id))
+                    Toggle(spec.title, isOn: enabledBinding(spec.id))   // label for VoiceOver; hidden
                         .labelsHidden().toggleStyle(.switch).tint(.rmAccent)
                 }
             }

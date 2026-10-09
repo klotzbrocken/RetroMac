@@ -82,7 +82,7 @@ struct DockSettingsTab: View {
             RMSectionHeaderView(title: "Theme")
 
             HStack(spacing: RMSpacing.md) {
-                Picker("", selection: $settings.dockTheme) {
+                Picker("Theme", selection: $settings.dockTheme) {
                     // Tag by stable id: the selection is what gets STORED, and it must not change
                     // when a theme is renamed. The label stays the display name.
                     ForEach(themes, id: \.stableID) { theme in
