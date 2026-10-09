@@ -132,9 +132,9 @@ struct WelcomeFlowView: View {
                     feature("macwindow.on.rectangle", .cyan, "New: Windows Vista and its Sidebar",
                             "Aero glass windows on a black glass taskbar with the round Start orb, eight Vista wallpapers, Vista\u{2019}s own icons, and the Sidebar with a clock, a calendar and a CPU meter.")
                     feature("paintbrush.pointed.fill", .yellow, "Themes, closer to the originals",
-                            "BeOS gets its yellow window tabs. Snow Leopard\u{2019}s dock reflections grow with the icon and fade out on the shelf. Amiga Workbench and SGI IRIX have the top of the screen to themselves.")
+                            "Mountain Lion gets its own dock: frosted glass on the screen\u{2019}s edge with glowing lights for running apps. BeOS gets its yellow window tabs. Snow Leopard\u{2019}s reflections grow with the icon, folders included. Under Windows a minimised window flies into its taskbar button. Boot screens fill wide displays, and Windows 95 and Me boot in 16:9. Amiga Workbench and SGI IRIX have the top of the screen to themselves.")
                     feature("photo.on.rectangle.angled", .teal, "Historic icons for modern apps",
-                            "Over 200 new icons: Office, Teams, Slack, Zoom, Figma, VS Code, Firefox, Spotify and many more, drawn in the style of Mac OS 9, System 7, Mac OS X, BeOS, Windows 3.1 to 7. Import your own icon packages in Settings \u{25B8} Dock \u{25B8} Historic icons.")
+                            "Over 200 new icons: Office, Teams, Slack, Zoom, Figma, VS Code, Firefox, Spotify and many more, drawn in the style of Mac OS 9, System 7, Mac OS X, BeOS, Windows 3.1 to 7. Claude, Chrome and ChatGPT now wear the theme in Mac OS 9.2, Mountain Lion and Windows XP too. Import your own icon packages in Settings \u{25B8} Dock \u{25B8} Historic icons.")
                     feature("lifepreserver", .red, "Rescue Desktop",
                             "One action turns the theme and every effect off, brings back windows you cannot reach and the menu bar a theme hid. Your settings stay. \u{2303}\u{2325}\u{2318}R, the flyout or the menu-bar menu.")
                     feature("rectangle.stack", .orange, "The window switcher of each era",
@@ -146,7 +146,7 @@ struct WelcomeFlowView: View {
                     feature("gearshape.2", .gray, "Settings, tidied up",
                             "Themes first, the shader in four clear tabs, Retro Mode is now Favourite, a shorter Setup Assistant with themes by family, and betas on request in About.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "Theme switches no longer restart the Dock and Finder for nothing. Pac-Man starts again. The shader is off behind the lock screen. No more log file on the Desktop. A rolled-up window keeps its way back, even across a crash. Mission Control no longer shows the title bars as little windows.")
+                            "Theme switches no longer restart the Dock and Finder for nothing. Pac-Man starts again. The shader is off behind the lock screen. No more log file on the Desktop. A rolled-up window keeps its way back, even across a crash. Mission Control no longer shows the title bars as little windows. The menu-bar icon closes its menu on a second click, the dock answers the mouse coming down from the menu bar, Rescue Desktop gives every Space its wallpaper back, the shader\u{2019}s scanline and glass overlays draw again, and Futurama\u{2019}s windows close.")
 
                     sectionHeader("Also in 2.8.8")
 
