@@ -40,6 +40,9 @@ final class ThemeSpaces {
 
     /// True while RetroMac holds the theme back because this Space is not one of them.
     private(set) var heldBack = false
+    /// When the theme last went or came back on a Space switch; the Mac's Dock takes a moment
+    /// to settle after that, and the Dock watcher must not read the moment as a change of its own.
+    private(set) var lastSwitch = Date.distantPast
     private let bound = NSHashTable<NSWindow>.weakObjects()   // windows we took off "every Space"
     private var boundTo: UInt64 = 0
     private var observers: [NSObjectProtocol] = []
@@ -117,6 +120,7 @@ final class ThemeSpaces {
     private func setHeldBack(_ back: Bool) {
         guard back != heldBack else { return }
         heldBack = back
+        lastSwitch = Date()
         let s = AppSettings.shared
         AppDelegate.shared?.setEffectPausedForSpace(back)
         if DockController.shared.hidesSystemDock { CoreDockBridge.setAutoHide(!back) }

@@ -1129,7 +1129,7 @@ final class DockController {
     private func checkSystemDock() {
         guard didHideSystemDock, !hidViaCoreDock else { systemDockWatch?.invalidate(); systemDockWatch = nil; return }
         // On a Space without the theme (ThemeSpaces) the Dock is shown on purpose.
-        guard !ThemeSpaces.shared.heldBack else { return }
+        guard !ThemeSpaces.shared.heldBack, Date().timeIntervalSince(ThemeSpaces.shared.lastSwitch) > 5 else { return }
         let domain = "com.apple.dock" as CFString
         CFPreferencesAppSynchronize(domain)   // the Dock's own file, as System Settings left it
         let autohide = (CFPreferencesCopyAppValue("autohide" as CFString, domain) as? NSNumber)?.boolValue ?? false
