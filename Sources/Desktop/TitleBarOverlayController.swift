@@ -494,6 +494,7 @@ final class TitleBarOverlayController {
         // window minimised natively with our lights still sitting on it. The tracking area
         // gives the view its own hover now.
         panel.ignoresMouseEvents = false
+        panel.setAccessibilityElement(false)   // over another app's window: no "new window" for VoiceOver
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         // Transient: Mission Control and Exposé leave it out. At the window's own (normal) level it
@@ -604,6 +605,7 @@ final class TitleBarOverlayController {
             // whose "Move & Resize" popover would pop up out of nowhere. A click there behaves
             // like a click on the bar: it brings the window forward, and a drag moves it.
             panel.ignoresMouseEvents = false
+            panel.setAccessibilityElement(false)   // no "new window" for VoiceOver
             panel.hidesOnDeactivate = false
             panel.isReleasedWhenClosed = false
             panel.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary, .transient]   // not in Mission Control

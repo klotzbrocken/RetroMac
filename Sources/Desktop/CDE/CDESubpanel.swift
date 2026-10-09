@@ -262,6 +262,10 @@ final class CDESubpanel: NSView {
     /// VoiceOver gets one button per launcher row, pressed as a click would. Install Icon is
     /// left out: it only takes drops. Kept here because the accessibility server keeps no reference.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
 
     override func accessibilityChildren() -> [Any]? {
         axParts = items.enumerated().map { i, item in

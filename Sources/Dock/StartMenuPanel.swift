@@ -491,6 +491,10 @@ private final class XPStartMenuContentView: NSView, StartMenuPanel.SubmenuHost {
     /// VoiceOver gets every row of both columns, All Programs and the two footer buttons as
     /// menu items, laid out the way `hitSection` walks them; pressing one is a click on it.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         let bw = borderWidth
         let contentTop = bw + footerHeight + contentHeight
@@ -1093,6 +1097,10 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
     /// VoiceOver gets the program list (or All Programs, when it is showing), the places,
     /// All Programs/Back, the search field and Shut down as menu items from `computeRects`.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         let L = computeRects()
         var parts: [AccessibleHotspot] = []
@@ -1367,6 +1375,10 @@ private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuH
     /// VoiceOver gets each row as a menu item. Pressing one with a submenu opens it, as
     /// hovering does for the mouse; any other row runs like a click.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         axParts = items.indices.filter { !items[$0].isSeparator }.map { i in
             AccessibleHotspot(in: self, label: items[i].title, rect: rectForItem(at: i), role: .menuItem) { [weak self] in
@@ -1709,6 +1721,10 @@ private final class SubmenuContentView: NSView {
 
     /// VoiceOver gets each row as a menu item; pressing it runs it like a click.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         var parts: [AccessibleHotspot] = []
         var y = bounds.height - bevelWidth - 1

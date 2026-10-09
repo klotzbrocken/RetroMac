@@ -252,6 +252,10 @@ final class NextDockView: NSView {
     /// apps that do nothing on a click (Mail, Librarian) are dimmed.
     /// Held until the next question: the accessibility server keeps no reference of its own.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         layoutTiles()
         let time = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)

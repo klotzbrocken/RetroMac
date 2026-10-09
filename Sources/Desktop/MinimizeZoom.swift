@@ -127,6 +127,7 @@ final class MinimizeZoom {
         p.backgroundColor = .clear
         p.hasShadow = false
         p.ignoresMouseEvents = true
+        p.setAccessibilityElement(false)   // drawing only: no "new window" for VoiceOver
         p.hidesOnDeactivate = false
         p.isReleasedWhenClosed = false
         p.animationBehavior = .none

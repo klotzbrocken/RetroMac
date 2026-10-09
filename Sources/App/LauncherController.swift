@@ -322,7 +322,7 @@ struct LauncherView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Button { changingSlot = nil } label: {
-                    Image(systemName: "chevron.left").font(.system(size: 13, weight: .semibold))
+                    Image(systemName: "chevron.left").font(.system(size: 13, weight: .semibold)).accessibilityLabel("Back")
                 }.buttonStyle(.plain)
                 Text("Choose a theme").font(.system(size: 13, weight: .bold))
                 Spacer()
@@ -392,9 +392,9 @@ struct LauncherView: View {
         HStack(spacing: 8) {
             Group {
                 if let icon = (NSApp.delegate as? AppDelegate)?.menuBarIconImage(size: NSSize(width: 18, height: 18)) {
-                    Image(nsImage: icon).renderingMode(.template).foregroundStyle(.secondary)
+                    Image(nsImage: icon).renderingMode(.template).foregroundStyle(.secondary).accessibilityHidden(true)
                 } else {
-                    Image(systemName: "sparkles.tv").font(.system(size: 16, weight: .semibold)).foregroundStyle(.secondary)
+                    Image(systemName: "sparkles.tv").font(.system(size: 16, weight: .semibold)).foregroundStyle(.secondary).accessibilityHidden(true)
                 }
             }
             Text("RetroMac").font(.system(size: 14, weight: .bold))
@@ -439,7 +439,7 @@ struct LauncherView: View {
                         Button { setSlot(i, "") } label: {
                             Image(systemName: "minus.circle.fill")
                                 .font(.system(size: 15)).foregroundStyle(destructive)
-                                .background(Circle().fill(.white).frame(width: 13, height: 13))
+                                .background(Circle().fill(.white).frame(width: 13, height: 13)).accessibilityLabel("Remove")
                         }
                         .buttonStyle(.plain).offset(x: -5, y: -5)
                     }
@@ -490,7 +490,7 @@ struct LauncherView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 13)).foregroundStyle(accentBlue)
                         .background(Circle().fill(.white).frame(width: 11, height: 11))
-                        .offset(x: 5, y: -5)
+                        .offset(x: 5, y: -5).accessibilityHidden(true)
                 }
             }
             Text(name).font(.system(size: 9)).lineLimit(2).multilineTextAlignment(.center)
@@ -507,7 +507,7 @@ struct LauncherView: View {
                 .frame(width: 56, height: 44)
                 .overlay(RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    .foregroundStyle(.secondary.opacity(0.5)))
+                    .foregroundStyle(.secondary.opacity(0.5))).accessibilityHidden(true)
             Text("Add").font(.system(size: 9)).foregroundStyle(.secondary).frame(height: 24)
         }
         .frame(width: 64, height: 74)
@@ -566,7 +566,7 @@ struct LauncherView: View {
             HStack {
                 Label("Live Wallpaper", systemImage: "photo.on.rectangle.angled")
                 if !LicenseManager.shared.isLicensed {
-                    Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary)
+                    Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary).accessibilityLabel("Pro")
                 }
                 Spacer()
                 Toggle("Live Wallpaper", isOn: Binding(get: { model.wallpaperOnlyActive },
@@ -589,7 +589,7 @@ struct LauncherView: View {
                 HStack {
                     Label("Crash Now", systemImage: "exclamationmark.triangle")
                     if !LicenseManager.shared.isLicensed {
-                        Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary)
+                        Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary).accessibilityLabel("Pro")
                     }
                     Spacer()
                     Button("Crash") { AppDelegate.shared?.launcherCrashNow() }
@@ -611,7 +611,7 @@ struct LauncherView: View {
                 .resizable().interpolation(.high).scaledToFit()
                 .frame(width: 16, height: 16)
                 .saturation(style == 0 ? 0 : 1)
-                .opacity(style == 0 ? 0.4 : 1)
+                .opacity(style == 0 ? 0.4 : 1).accessibilityHidden(true)
             Text("Apple logo: " + Self.appleStyleName(style))
             Spacer()
         }
@@ -638,7 +638,7 @@ struct LauncherView: View {
     private var powerRow: some View {
         HStack(spacing: 10) {
             Button { AppDelegate.shared?.launcherOpenSettings(); onClose() } label: {
-                Image(systemName: "gearshape").foregroundStyle(.secondary)
+                Image(systemName: "gearshape").foregroundStyle(.secondary).accessibilityLabel("Settings")
             }
             .help("Settings")
             .accessibilityLabel("Settings")
@@ -652,7 +652,7 @@ struct LauncherView: View {
             .help("Turn the theme and every effect off and bring back windows you cannot reach")
             Spacer()
             Button(role: .destructive) { NSApp.terminate(nil) } label: {
-                Image(systemName: "power").foregroundStyle(destructive)
+                Image(systemName: "power").foregroundStyle(destructive).accessibilityLabel("Quit RetroMac")
             }
             .help("Quit")
             .accessibilityLabel("Quit")

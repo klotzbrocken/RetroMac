@@ -114,7 +114,7 @@ struct DockSettingsTab: View {
                 .scaledToFit()
                 .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: RMRadius.card))
-                .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: RMRadius.card).strokeBorder(Color.rmBorder, lineWidth: 1)).accessibilityHidden(true)
         } else {
             // Placeholder until a screenshot exists — keep a sensible 16:9 box.
             let gradient = themeGradient(selectedThemeName)
@@ -126,7 +126,7 @@ struct DockSettingsTab: View {
                         LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
                         VStack(spacing: 6) {
                             Image(systemName: "photo.on.rectangle.angled")
-                                .font(.system(size: 28)).foregroundStyle(.white.opacity(0.85))
+                                .font(.system(size: 28)).foregroundStyle(.white.opacity(0.85)).accessibilityHidden(true)
                             Text(themeShortName(selectedThemeName))
                                 .font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
                             Text("Preview image coming soon")
@@ -535,16 +535,19 @@ struct DockSettingsTab: View {
             .fixedSize()
         }
         ForEach(Array(excluded.enumerated()), id: \.element) { index, bundleID in
-            RMRow(label: Self.appName(for: bundleID), hint: bundleID, isLast: index == excluded.count - 1) {
+            // The app's name only: its bundle id under it read like leftover code, to VoiceOver too.
+            RMRow(label: Self.appName(for: bundleID), isLast: index == excluded.count - 1) {
                 Button("Remove") {
                     settings.themeTitleBarsExcludedApps.removeAll { $0 == bundleID }
                 }
                 .buttonStyle(RMGhostButtonStyle())
+                .accessibilityLabel("Remove \(Self.appName(for: bundleID))")
             }
         }
     }
 
     private static func appName(for bundleID: String) -> String {
+        if bundleID == AppSettings.pacmanBundleID { return "Pac-Man" }   // inside RetroMac, not in /Applications
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return bundleID }
         return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
     }
@@ -915,7 +918,7 @@ struct DockSettingsTab: View {
                 } label: {
                     Image(systemName: hasCustom ? "paintbrush.fill" : "paintbrush")
                         .font(.system(size: 11))
-                        .foregroundColor(hasCustom ? .rmAccent : .rmTextTertiary)
+                        .foregroundColor(hasCustom ? .rmAccent : .rmTextTertiary).accessibilityLabel("Custom icon")
                 }
                 .buttonStyle(.plain)
 
@@ -932,7 +935,7 @@ struct DockSettingsTab: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 12))
-                        .foregroundColor(.rmTextTertiary)
+                        .foregroundColor(.rmTextTertiary).accessibilityLabel("More")
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
@@ -1103,10 +1106,10 @@ struct DockAppIconView: View {
         if let path = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)?.path {
             let icon = NSWorkspace.shared.icon(forFile: path)
             Image(nsImage: icon)
-                .resizable()
+                .resizable().accessibilityHidden(true)
         } else {
             Image(systemName: "app")
-                .resizable()
+                .resizable().accessibilityHidden(true)
         }
     }
 }

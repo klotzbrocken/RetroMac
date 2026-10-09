@@ -160,6 +160,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.ignoresMouseEvents = true
+        window.setAccessibilityElement(false)   // drawing only: no "new window" for VoiceOver
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         window.hasShadow = false
         window.contentView = metalView

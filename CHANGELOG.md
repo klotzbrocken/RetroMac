@@ -144,6 +144,18 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   leaves, and ⌃⇧Esc again goes on to the next bar. VoiceOver says the highlighted entry. Both
   shortcuts are in Settings ▸ Shortcuts ▸ Keyboard access; one that is already yours is not
   taken.
+- **Automation can be granted.** The released app could never send Apple Events (an entitlement
+  was missing under the hardened runtime), so macOS never asked, RetroMac never appeared under
+  Automation, and Grant only opened an empty pane. Grant now brings up macOS's own prompt;
+  System Settings opens only after an earlier refusal.
+- **⌘W and Esc close RetroMac's windows** (Settings, readmes, Setup, What's New, the Game
+  Library), and ⌘C/⌘V work in all of them.
+- **More for VoiceOver:** the Settings sidebar and the Shader tabs are a group of tabs, the
+  effect scope is three radio buttons, the drawn panels (Control Strip, Front Panel, Deskbar …)
+  no longer read "content is empty", RetroMac's own decoration no longer announces "new window",
+  the Applications window and the dock's stacks are named with their items as buttons,
+  decorative pictures are left out and icon-only buttons have names. The title-bar list shows
+  Pac-Man by name.
 - **No more log file on the Desktop.** The retro dock wrote every show and hide to
   `retromac_dock.log` on your Desktop. Those lines now go to About ▸ Diagnostics, and only with
   the new **Debug logging** switch there, which is off unless you turn it on.

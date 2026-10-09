@@ -90,6 +90,7 @@ final class DockPreviewController {
         p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         p.ignoresMouseEvents = true     // preview is non-interactive; icon hover controls it
+        p.setAccessibilityElement(false)   // a picture of a window, not one: no "new window" for VoiceOver
         p.hidesOnDeactivate = false
         return p
     }
@@ -217,6 +218,7 @@ final class DockStackController {
         view.onPick = { [weak self] picked in NSWorkspace.shared.open(picked); self?.hide() }
         view.onOpenFolder = { [weak self] in NSWorkspace.shared.open(url); self?.hide() }
         p.contentView = view
+        p.title = FileManager.default.displayName(atPath: url.path)   // what VoiceOver calls the stack
         p.invalidateShadow()      // the outline changes shape between folders
         p.orderFrontRegardless()
         panel = p
@@ -317,6 +319,19 @@ private final class DockStackView: NSView, NSDraggingSource {
 
     override var isFlipped: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    /// VoiceOver: each file a button named after it that opens it, as a click does.
+    private var axParts: [AccessibleHotspot] = []
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+    override func accessibilityLabel() -> String? { folderURL.map { FileManager.default.displayName(atPath: $0.path) } }
+    override func accessibilityChildren() -> [Any]? {
+        axParts = files.indices.map { i in
+            let url = files[i]
+            return AccessibleHotspot(in: self, label: FileManager.default.displayName(atPath: url.path), rect: cellRect(i)) { [weak self] in self?.onPick?(url) }
+        }
+        return axParts
+    }
 
     private func cellRect(_ i: Int) -> NSRect {
         let row = i / cols, col = i % cols

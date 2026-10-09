@@ -82,6 +82,10 @@ final class Win31TaskIconsView: NSView {
     /// VoiceOver gets each drawn icon as a button named after its app; pressing it brings the
     /// app to the front, as a click does.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         axParts = apps.enumerated().prefix { CGFloat($0.offset + 1) * cellW <= bounds.width }.map { i, app in
             AccessibleHotspot(in: self, label: app.localizedName ?? app.bundleIdentifier ?? "App",

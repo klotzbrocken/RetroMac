@@ -3421,6 +3421,10 @@ final class DockView: NSView {
     /// VoiceOver: the parts the taskbar paints itself, next to the item views it hosts.
     /// Held until the next question: the accessibility server keeps no reference of its own.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         var parts: [AccessibleHotspot] = []
         if hasStartButton, !startButtonFrame.isEmpty {

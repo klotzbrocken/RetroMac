@@ -253,6 +253,10 @@ final class CDEMenuView: NSView {
     /// pressing one chooses it, or opens its cascade. Separators are left out; a dimmed row is
     /// named so and does nothing. Kept here because the accessibility server keeps no reference.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
 
     override func accessibilityChildren() -> [Any]? {
         var parts: [AccessibleHotspot] = []

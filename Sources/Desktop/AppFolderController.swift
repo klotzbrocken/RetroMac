@@ -100,6 +100,7 @@ final class AppFolderController: NSObject, WKScriptMessageHandler, WKNavigationD
             p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.contentView = container
+            p.title = "Applications"   // what VoiceOver calls it; the page draws the visible title
             self.panel = p; self.webView = wv; self.dragOverlay = overlay
             blurTokens = installMacOS9BlurTracking(panel: p) { [weak self] in self?.webView }
         }

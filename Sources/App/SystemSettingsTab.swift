@@ -164,10 +164,18 @@ struct SystemSettingsTab: View {
                 )
                 PermissionRow(
                     name: "Automation",
-                    hint: "Lets RetroMac auto-switch presets per app.",
+                    hint: "Lets RetroMac hide the Dock and menu bar through System Events.",
                     granted: automationGranted,
                     isLast: true,
-                    pane: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
+                    pane: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation",
+                    // Ask first: that is what brings up macOS's prompt and puts RetroMac in the
+                    // Automation list. Only a refusal from before needs System Settings.
+                    request: { done in
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            let ok = SystemUIHelper.testAutomation()
+                            DispatchQueue.main.async { automationGranted = ok; done(ok) }
+                        }
+                    }
                 )
             }
             .padding(.vertical, 4)
@@ -177,7 +185,12 @@ struct SystemSettingsTab: View {
     private func checkPermissions() {
         screenRecordingGranted = nil
         accessibilityGranted = AXIsProcessTrusted()
-        automationGranted = SystemUIHelper.testAutomation()
+        // Off the main thread: the first time, asking System Events shows macOS's prompt, and
+        // the question waits for the answer.
+        DispatchQueue.global(qos: .userInitiated).async {
+            let ok = SystemUIHelper.testAutomation()
+            DispatchQueue.main.async { automationGranted = ok }
+        }
         Task {
             do {
                 _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
@@ -195,6 +208,8 @@ private struct PermissionRow: View {
     var granted: Bool?
     var isLast: Bool
     var pane: String = "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
+    /// Ask macOS directly before sending anyone to System Settings; `done(true)` when granted.
+    var request: ((@escaping (Bool) -> Void) -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -205,7 +220,7 @@ private struct PermissionRow: View {
                         .frame(width: 18, height: 18)
                     Image(systemName: granted == true ? "checkmark" : "xmark")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(granted == true ? .rmAccent : .rmDanger)
+                        .foregroundColor(granted == true ? .rmAccent : .rmDanger).accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 0) {
                     Text(name).font(.system(size: 13, weight: .medium)).foregroundColor(.rmTextPrimary)
@@ -218,7 +233,8 @@ private struct PermissionRow: View {
                     ProgressView().controlSize(.small)
                 } else {
                     Button("Grant\u{2026}") {
-                        if let url = URL(string: pane) { NSWorkspace.shared.open(url) }
+                        let openPane = { if let url = URL(string: pane) { NSWorkspace.shared.open(url) } }
+                        if let request { request { granted in if !granted { openPane() } } } else { openPane() }
                     }
                     .buttonStyle(RMDefaultButtonStyle())
                 }

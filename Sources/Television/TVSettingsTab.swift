@@ -131,7 +131,7 @@ struct TVSettingsTab: View {
                     }
                     Spacer()
                     Button { settings.tvBookmarks.remove(at: index) } label: {
-                        Image(systemName: "minus.circle.fill").foregroundColor(.rmDanger)
+                        Image(systemName: "minus.circle.fill").foregroundColor(.rmDanger).accessibilityLabel("Remove")
                     }
                     .buttonStyle(.plain)
                 }

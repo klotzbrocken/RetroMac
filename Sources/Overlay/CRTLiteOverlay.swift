@@ -268,6 +268,7 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
         win.isOpaque = false
         win.backgroundColor = .clear
         win.ignoresMouseEvents = true
+        win.setAccessibilityElement(false)   // drawing only: no "new window" for VoiceOver
         win.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         win.hasShadow = false
 

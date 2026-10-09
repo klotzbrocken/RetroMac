@@ -91,6 +91,9 @@ final class Win31MenuOverlay: NSView {
     /// VoiceOver gets each row (separators and the header left out) as a menu item, from the
     /// same `rows()` the mouse hit-tests; pressing one chooses it, opening its submenu if it has one.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
     override func accessibilityChildren() -> [Any]? {
         axParts = rows().filter { $0.index >= 0 && !items[$0.index].isSeparator }.map { row in
             let item = AccessibleHotspot(in: self, label: displayTitle(items[row.index].title), rect: row.rect, role: .menuItem) { [weak self] in

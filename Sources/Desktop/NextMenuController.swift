@@ -251,6 +251,10 @@ final class NextMenuView: NSView {
     /// greyed ones are dimmed. Held until the next question: the accessibility server keeps no
     /// reference of its own.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         axParts = NextMenuController.Item.hotspots(items, in: self, rect: cellRect) { [weak self] i in self?.choose(i) }
         return axParts
@@ -364,6 +368,10 @@ final class NextSubmenuView: NSView {
     /// VoiceOver: the entries as menu items, pressing one picks it as a click does.
     /// Held until the next question: the accessibility server keeps no reference of its own.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         axParts = NextMenuController.Item.hotspots(items, in: self, rect: cellRect) { [weak self] i in
             guard let self else { return }

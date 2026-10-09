@@ -279,6 +279,10 @@ private final class BeOSMenuView: NSView {
     /// opens its submenu. Held until the next question: the accessibility server keeps no
     /// reference of its own.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         axParts = items.indices.filter { !isSeparator(items[$0]) }.map { i in
             AccessibleHotspot(in: self, label: items[i].title, rect: rowRect(i), role: .menuItem) { [weak self] in self?.choose(i) }

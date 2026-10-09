@@ -484,6 +484,10 @@ final class ControlStripView: NSView {
     /// buttons, from the same 1× rects `mouseDown` hit-tests, scaled to the view. Dragging
     /// (resize, rearrange, move) has no VoiceOver counterpart.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         let s = Self.scale
         func v(_ r: NSRect) -> NSRect { NSRect(x: r.minX * s, y: r.minY * s, width: r.width * s, height: r.height * s) }

@@ -89,7 +89,7 @@ struct AboutTab: View {
                                 .resizable()
                                 .frame(width: 64, height: 64)
                                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .shadow(color: .black.opacity(0.2), radius: 3, y: 1)
+                                .shadow(color: .black.opacity(0.2), radius: 3, y: 1).accessibilityHidden(true)
 
                             Text("RetroMac")
                                 .font(.title2)
@@ -150,7 +150,7 @@ struct AboutTab: View {
                     HStack {
                         Image(systemName: license.isLicensed ? "checkmark.seal.fill" : "sparkles")
                             .font(.system(size: 20))
-                            .foregroundStyle(license.isLicensed ? .green : .orange)
+                            .foregroundStyle(license.isLicensed ? .green : .orange).accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(license.isLicensed ? LicenseManager.unlockedTitle : "Basic Edition")
                                 .font(.caption)

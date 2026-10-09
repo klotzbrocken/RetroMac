@@ -60,6 +60,7 @@ final class GarageDoor {
         panel.backgroundColor = .clear
         panel.hasShadow = false
         panel.ignoresMouseEvents = true
+        panel.setAccessibilityElement(false)   // drawing only: no "new window" for VoiceOver
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.animationBehavior = .none

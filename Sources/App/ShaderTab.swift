@@ -41,6 +41,13 @@ struct ShaderTab: View {
             }
             .padding(2)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.rmTextPrimary.opacity(0.06)))
+            // VoiceOver: the tabs as tabs, the way the native segmented switch reads.
+            .accessibilityRepresentation {
+                Picker("Shader settings", selection: $section) {
+                    ForEach(ShaderSection.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
@@ -172,6 +179,15 @@ private struct ScopeSection: View {
                         divider
                         choice(2, "Desktop: wallpaper, icons and dock" + lock,
                                "One pass over the picture, RetroMac's desktop icons and the retro dock. While this is on, the retro dock sits behind your application windows.")
+                    }
+                    // VoiceOver: three radio buttons, which is what they are.
+                    .accessibilityRepresentation {
+                        Picker("Effect scope", selection: mode) {
+                            Text("Whole screen").tag(0)
+                            Text("Wallpaper only" + lock).tag(1)
+                            Text("Desktop: wallpaper, icons and dock" + lock).tag(2)
+                        }
+                        .pickerStyle(.radioGroup)
                     }
                 }
 

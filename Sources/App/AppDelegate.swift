@@ -105,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Reflect the persisted window-borders flag at launch (gated internally; no-op when off).
         WindowBorderController.shared.update()
         ThemeSpaces.shared.start()   // the theme on chosen Spaces only, when that is set
+        AppMainMenu.install()        // ⌘W, Esc and the Edit keys in RetroMac's own windows
 
         // Restore system UI if previous session crashed while UI was hidden
         SystemUIHelper.restoreIfNeeded()
@@ -374,6 +375,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.button?.setAccessibilityLabel("RetroMac")   // VoiceOver: a name, not "image"
         updateMenuBarIcon()
         rebuildMenu()
     }

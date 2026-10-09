@@ -384,7 +384,7 @@ private struct HotkeyRow: View {
                         Button(action: onClear) {
                             Image(systemName: "xmark")
                                 .font(.system(size: 10, weight: .medium))
-                                .foregroundColor(.rmTextTertiary)
+                                .foregroundColor(.rmTextTertiary).accessibilityLabel("Clear shortcut")
                         }
                         .buttonStyle(.plain)
                         .frame(width: 20, height: 20)

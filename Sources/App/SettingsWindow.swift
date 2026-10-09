@@ -154,7 +154,7 @@ struct SettingsSidebar: View {
                     Image(nsImage: appIcon)
                         .resizable()
                         .frame(width: 24, height: 24)
-                        .clipShape(RoundedRectangle(cornerRadius: 5))
+                        .clipShape(RoundedRectangle(cornerRadius: 5)).accessibilityHidden(true)
                 }
                 Text("RetroMac")
                     .font(.system(size: 13, weight: .semibold))
@@ -194,6 +194,14 @@ struct SettingsSidebar: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.top, 4)
+                // VoiceOver: one choice among the tabs, as a radio group (it reads like the
+                // Themes/Screensaver switch), not a column of unrelated buttons.
+                .accessibilityRepresentation {
+                    Picker("Settings", selection: $selectedTab) {
+                        ForEach(mainTabs + surfacesTabs + systemTabs, id: \.self) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.radioGroup)
+                }
             }
 
             Spacer()
@@ -628,7 +636,7 @@ struct CameraTab: View {
             HStack(spacing: 6) {
                 Image(systemName: active ? "checkmark.circle.fill" : "camera.filters")
                     .font(.system(size: 12))
-                    .foregroundColor(active ? .rmAccent : .rmTextSecondary)
+                    .foregroundColor(active ? .rmAccent : .rmTextSecondary).accessibilityHidden(true)
                 Text(scene.name).font(.rmBody).foregroundColor(.rmTextPrimary).lineLimit(1)
                 Spacer(minLength: 0)
             }
@@ -737,7 +745,7 @@ struct PerAppRulesTab: View {
                                                     if settings.perAppRules.keys.contains(app.id) {
                                                         Image(systemName: "checkmark")
                                                             .foregroundColor(.rmAccent)
-                                                            .font(.caption)
+                                                            .font(.caption).accessibilityHidden(true)
                                                     }
                                                 }
                                                 .contentShape(Rectangle())
@@ -881,7 +889,7 @@ struct PerAppRuleRow: View {
                     Image(nsImage: icon)
                         .resizable()
                         .frame(width: 28, height: 28)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .clipShape(RoundedRectangle(cornerRadius: 6)).accessibilityHidden(true)
                 } else {
                     RoundedRectangle(cornerRadius: 6)
                         .fill(Color.rmSurface2)
@@ -889,7 +897,7 @@ struct PerAppRuleRow: View {
                         .overlay(
                             Image(systemName: "app")
                                 .font(.system(size: 13))
-                                .foregroundColor(.rmTextTertiary)
+                                .foregroundColor(.rmTextTertiary).accessibilityHidden(true)
                         )
                 }
 
@@ -939,7 +947,7 @@ struct PerAppRuleRow: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 12))
-                        .foregroundColor(.rmTextTertiary)
+                        .foregroundColor(.rmTextTertiary).accessibilityLabel("More")
                 }
                 .buttonStyle(.plain)
             }

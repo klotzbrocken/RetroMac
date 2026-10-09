@@ -138,7 +138,8 @@ final class WallpaperShaderController: NSObject, MTKViewDelegate {
         window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.normalWindow)) - 2)
         window.isOpaque = true
         window.backgroundColor = .black
-        window.ignoresMouseEvents = true                // clicks pass through to the real desktop
+        window.ignoresMouseEvents = true
+        window.setAccessibilityElement(false)   // drawing only: no "new window" for VoiceOver                // clicks pass through to the real desktop
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window.hasShadow = false
         window.contentView = metalView

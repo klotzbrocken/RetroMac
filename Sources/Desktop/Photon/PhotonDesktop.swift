@@ -376,6 +376,10 @@ final class PhotonShelfView: NSView {
     /// opens, the monitor reads its four values. Only what is scrolled into view.
     /// Held until the next question: the accessibility server keeps no reference of its own.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         var parts: [AccessibleHotspot] = []
         func add(_ label: String, _ r: NSRect, role: NSAccessibility.Role = .button, _ press: @escaping () -> Void) {
@@ -515,6 +519,10 @@ final class PhotonTaskbarView: NSView {
     /// the clock, each doing what a click does.
     /// Held until the next question: the accessibility server keeps no reference of its own.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         var parts = [AccessibleHotspot(in: self, label: "Launch", rect: launchRect) { [weak self] in self?.showLaunchMenu() }]
         for (i, t) in tasks.prefix(visibleTasks).enumerated() {

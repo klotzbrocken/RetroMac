@@ -823,7 +823,11 @@ body.theme-cde .be-count{height:20px;background:none;border:none;box-shadow:none
       if(list) el.style.width = listW+'px';
       const cl=document.body.classList, themed=cl.contains('theme-cde')||cl.contains('theme-macos6')||cl.contains('theme-macos9')||cl.contains('theme-winxp')||cl.contains('theme-maiksfav')||cl.contains('theme-macosx')||cl.contains('theme-win98');
       const icHTML=(themed && it.img) ? `<img src="${it.img}">` : BEOS_ICONS.get(it.icon);
-      el.innerHTML=`<div class="ic">${icHTML}</div><div class="lbl">${esc(it.name)}</div>`;
+      el.innerHTML=`<div class="ic" aria-hidden="true">${icHTML}</div><div class="lbl">${esc(it.name)}</div>`;
+      // VoiceOver: a button named after the app that opens it (VO-Space), not an unnamed picture.
+      el.setAttribute('role','button'); el.setAttribute('aria-label', it.name); el.tabIndex = 0;
+      el.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); post({a:'open',id:it.id,path:it.path,name:it.name}); } });
+      el.addEventListener('click', (e)=>{ if(e.detail===0) post({a:'open',id:it.id,path:it.path,name:it.name}); });   // a click with no mouse behind it: VoiceOver's press
       el.addEventListener('mousedown',(e)=>{
         e.preventDefault(); closeMenus();
         grid.querySelectorAll('.be-item.sel').forEach(s=>s.classList.remove('sel')); el.classList.add('sel');
@@ -968,7 +972,7 @@ body.theme-cde .be-count{height:20px;background:none;border:none;box-shadow:none
   }
   window.setOwnIcon=function(dataURL){
     if(!selected) return; const i=apps.indexOf(selected);
-    if(i>=0 && grid.children[i]) grid.children[i].querySelector('.ic').innerHTML='<img src="'+dataURL+'" style="width:44px;height:44px;object-fit:contain">';
+    if(i>=0 && grid.children[i]) grid.children[i].querySelector('.ic').innerHTML='<img alt="" src="'+dataURL+'" style="width:44px;height:44px;object-fit:contain">';
   };
 
   function fileSpec(){
@@ -1028,7 +1032,7 @@ body.theme-cde .be-count{height:20px;background:none;border:none;box-shadow:none
     names.forEach((n,i)=>{
       if(i>0){ const l=document.createElement('i'); l.className='cde-link'; row.appendChild(l); }
       const c=document.createElement('span'); c.className='cde-crumb';
-      c.innerHTML=`<img src="${folderURL}"><span>${esc(n)}</span>`;
+      c.innerHTML=`<img alt="" src="${folderURL}"><span>${esc(n)}</span>`;
       c.addEventListener('dblclick',()=>post({a:'cdecrumb',i:i}));
       row.appendChild(c);
     });

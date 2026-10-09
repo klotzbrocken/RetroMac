@@ -45,6 +45,9 @@ final class SGIWindowView: NSView {
     /// of the icons (ProgramItemViews, accessible themselves). Moving and resizing have no
     /// VoiceOver counterpart.
     private var axParts: [AccessibleHotspot] = []
+    /// A group, so VoiceOver asks it for the controls it paints: a view with no subviews that
+    /// is no element of its own was skipped, and the window read "content is empty".
+    override func isAccessibilityElement() -> Bool { true }
     override func accessibilityChildren() -> [Any]? {
         axParts = [
             AccessibleHotspot(in: self, label: "Window menu", rect: menuBtnRect) { [weak self] in self?.showWindowMenu() },

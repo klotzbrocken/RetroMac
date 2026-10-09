@@ -11,5 +11,9 @@
     <false/>
     <key>com.apple.security.device.camera</key>
     <true/>
+    <!-- Apple Events to System Events (Dock and menu-bar auto-hide). Under the hardened runtime
+         macOS refuses them without this, silently: no prompt, no entry under Automation. -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
 </dict>
 </plist>
