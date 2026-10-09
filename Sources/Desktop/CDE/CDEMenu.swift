@@ -263,7 +263,7 @@ final class CDEMenuView: NSView {
         for (li, l) in levels.enumerated() {
             for (r, i) in rows(l) where !l.items[i].isSeparator {
                 let it = l.items[i]
-                parts.append(AccessibleHotspot(in: self, label: it.enabled ? it.title : it.title + " (dimmed)", rect: r, role: .menuItem) { [weak self] in
+                parts.append(AccessibleHotspot.make(in: self, label: it.enabled ? it.title : it.title + " (dimmed)", rect: r, role: .menuItem) { [weak self] in
                     guard let self, it.enabled, li < self.levels.count, i < self.levels[li].items.count else { return }
                     if it.submenu != nil {
                         self.arm(li, i)

@@ -88,7 +88,7 @@ final class Win31TaskIconsView: NSView {
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         axParts = apps.enumerated().prefix { CGFloat($0.offset + 1) * cellW <= bounds.width }.map { i, app in
-            AccessibleHotspot(in: self, label: app.localizedName ?? app.bundleIdentifier ?? "App",
+            AccessibleHotspot.make(in: self, label: app.localizedName ?? app.bundleIdentifier ?? "App",
                               rect: NSRect(x: CGFloat(i) * cellW, y: 0, width: cellW, height: cellH)) { [weak self] in self?.bringToFront(app) }
         }
         return axParts

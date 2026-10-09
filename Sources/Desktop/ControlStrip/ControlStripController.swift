@@ -491,23 +491,23 @@ final class ControlStripView: NSView {
     override func accessibilityChildren() -> [Any]? {
         let s = Self.scale
         func v(_ r: NSRect) -> NSRect { NSRect(x: r.minX * s, y: r.minY * s, width: r.width * s, height: r.height * s) }
-        var parts = [AccessibleHotspot(in: self, label: collapsed ? "Expand Control Strip" : "Collapse Control Strip", rect: v(tabRect)) { [weak self] in
+        var parts = [AccessibleHotspot.make(in: self, label: collapsed ? "Expand Control Strip" : "Collapse Control Strip", rect: v(tabRect)) { [weak self] in
             self?.controller.toggleCollapsed()
         }]
         if !collapsed {
-            parts.append(AccessibleHotspot(in: self, label: "Scroll left", rect: v(leftArrowRect)) { [weak self] in
+            parts.append(AccessibleHotspot.make(in: self, label: "Scroll left", rect: v(leftArrowRect)) { [weak self] in
                 guard let self else { return }; self.controller.scroll(by: self.mirrored ? 1 : -1)
             })
             for (m, r) in placedModules() {
                 var name = Self.moduleNames[m.id] ?? m.id.capitalized
                 if let res = m as? ResolutionModule, !res.label.isEmpty { name += ", \(res.label)" }
-                parts.append(AccessibleHotspot(in: self, label: name, rect: v(r)) { [weak self] in self?.controller.activate(m, anchor: v(r)) })
+                parts.append(AccessibleHotspot.make(in: self, label: name, rect: v(r)) { [weak self] in self?.controller.activate(m, anchor: v(r)) })
             }
-            parts.append(AccessibleHotspot(in: self, label: "Scroll right", rect: v(rightArrowRect)) { [weak self] in
+            parts.append(AccessibleHotspot.make(in: self, label: "Scroll right", rect: v(rightArrowRect)) { [weak self] in
                 guard let self else { return }; self.controller.scroll(by: self.mirrored ? -1 : 1)
             })
             // The System 7 strip's tab at the far end closes it too.
-            if mono { parts.append(AccessibleHotspot(in: self, label: "Collapse Control Strip", rect: v(sizeBoxRect)) { [weak self] in self?.controller.toggleCollapsed() }) }
+            if mono { parts.append(AccessibleHotspot.make(in: self, label: "Collapse Control Strip", rect: v(sizeBoxRect)) { [weak self] in self?.controller.toggleCollapsed() }) }
         }
         axParts = parts
         return parts

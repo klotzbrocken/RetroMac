@@ -506,7 +506,7 @@ private final class PlatinumMenuView: NSView {
         for i in items.indices where !isSeparator(items[i]) {
             let r = rowRect(i)
             if scrolls, r.maxY <= rowBand.minY || r.minY >= rowBand.maxY { continue }
-            let item = AccessibleHotspot(in: self, label: items[i].title, rect: r, role: .menuItem) { [weak self] in
+            let item = AccessibleHotspot.make(in: self, label: items[i].title, rect: r, role: .menuItem) { [weak self] in
                 guard let self else { return }
                 self.setHovered(i)
                 self.choose(i)
@@ -515,8 +515,8 @@ private final class PlatinumMenuView: NSView {
             parts.append(item)
         }
         if scrolls {
-            parts.insert(AccessibleHotspot(in: self, label: "Scroll up", rect: upArrowRect) { [weak self] in self?.scroll(by: -1) }, at: 0)
-            parts.append(AccessibleHotspot(in: self, label: "Scroll down", rect: downArrowRect) { [weak self] in self?.scroll(by: 1) })
+            parts.insert(AccessibleHotspot.make(in: self, label: "Scroll up", rect: upArrowRect) { [weak self] in self?.scroll(by: -1) }, at: 0)
+            parts.append(AccessibleHotspot.make(in: self, label: "Scroll down", rect: downArrowRect) { [weak self] in self?.scroll(by: 1) })
         }
         axParts = parts
         return parts

@@ -187,7 +187,7 @@ final class SystemBridge {
     }
 
     func probeMenuBarAutohide(
-        automationOK: () -> Bool = { SystemUIHelper.testAutomation() }
+        automationOK: () -> Bool = { SystemUIHelper.automationAlreadyGranted() }
     ) -> CapabilityStatus {
         // Writing _HIHideMenuBar to NSGlobalDomain is the mechanism; Automation (System Events)
         // is the fallback path. If neither is permitted the feature degrades.

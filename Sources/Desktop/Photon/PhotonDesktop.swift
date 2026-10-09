@@ -383,7 +383,7 @@ final class PhotonShelfView: NSView {
     override func accessibilityChildren() -> [Any]? {
         var parts: [AccessibleHotspot] = []
         func add(_ label: String, _ r: NSRect, role: NSAccessibility.Role = .button, _ press: @escaping () -> Void) {
-            if r.intersects(bounds) { parts.append(AccessibleHotspot(in: self, label: label, rect: r, role: role, press: press)) }
+            if r.intersects(bounds) { parts.append(AccessibleHotspot.make(in: self, label: label, rect: r, role: role, press: press)) }
         }
         let closed = Self.collapsed
         for (g, header, body) in layout() {
@@ -524,12 +524,12 @@ final class PhotonTaskbarView: NSView {
     override func isAccessibilityElement() -> Bool { true }
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
-        var parts = [AccessibleHotspot(in: self, label: "Launch", rect: launchRect) { [weak self] in self?.showLaunchMenu() }]
+        var parts = [AccessibleHotspot.make(in: self, label: "Launch", rect: launchRect) { [weak self] in self?.showLaunchMenu() }]
         for (i, t) in tasks.prefix(visibleTasks).enumerated() {
             let name = t.title.isEmpty ? (NSRunningApplication(processIdentifier: t.pid)?.localizedName ?? "Window") : t.title
-            parts.append(AccessibleHotspot(in: self, label: name, rect: taskRect(i)) { MinimizedWindowTracker.shared.activate(t) })
+            parts.append(AccessibleHotspot.make(in: self, label: name, rect: taskRect(i)) { MinimizedWindowTracker.shared.activate(t) })
         }
-        parts.append(AccessibleHotspot(in: self, label: "Clock, \(Self.clockText())", rect: clockRect) {
+        parts.append(AccessibleHotspot.make(in: self, label: "Clock, \(Self.clockText())", rect: clockRect) {
             CDEActions.settings("com.apple.Date-Time-Settings.extension")()
         })
         axParts = parts

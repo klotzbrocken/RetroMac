@@ -62,6 +62,18 @@ enum SystemUIHelper {
         runAppleScript("tell application \"System Events\" to return name of first process")
     }
 
+    /// Whether RetroMac may already send System Events Apple events, asked without putting up
+    /// macOS's prompt: at launch the prompt came up unasked, under the welcome window, and
+    /// VoiceOver users lost it. False when undecided or refused; `testAutomation` asks.
+    static func automationAlreadyGranted() -> Bool {
+        var target = AEAddressDesc()
+        let id = "com.apple.systemevents"
+        let made = id.withCString { AECreateDesc(DescType(typeApplicationBundleID), $0, id.utf8.count, &target) }
+        guard made == noErr else { return false }
+        defer { AEDisposeDesc(&target) }
+        return AEDeterminePermissionToAutomateTarget(&target, AEEventClass(typeWildCard), AEEventID(typeWildCard), false) == noErr
+    }
+
     // MARK: - Menu Bar Auto-Hide
 
     static func setMenuBarAutoHide(_ hide: Bool) {

@@ -285,7 +285,7 @@ private final class BeOSMenuView: NSView {
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         axParts = items.indices.filter { !isSeparator(items[$0]) }.map { i in
-            AccessibleHotspot(in: self, label: items[i].title, rect: rowRect(i), role: .menuItem) { [weak self] in self?.choose(i) }
+            AccessibleHotspot.make(in: self, label: items[i].title, rect: rowRect(i), role: .menuItem) { [weak self] in self?.choose(i) }
         }
         return axParts
     }

@@ -98,6 +98,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **VoiceOver, from a blind tester's second round.** The Control Strip, the docks, the Start
+  menus and the panels keep each control as the same element between VoiceOver's questions;
+  built anew each time, VoiceOver stopped after the second one (the Control Strip's Scroll
+  left) and read the tree again and again. At first launch the onboarding hints are readable
+  with Next, Skip and GitHub buttons instead of an empty dialog, and RetroMac no longer asks
+  for Automation by itself (it asks on Grant, or when a theme hides the menu bar), so macOS's
+  prompt is not buried. Boot screens are skipped while VoiceOver runs: a full-screen picture
+  that took the focus for five seconds. Removing an app from a list puts VoiceOver on the
+  next one, and the Settings tabs are no longer read with "Settings" in front.
 - **The menu-bar icon opens and closes its menu reliably.** The menu is popped up by the icon
   instead of hanging on it, and the click that closes it is recognised as that same click — not
   by a quarter-second window, which also swallowed a quick deliberate reopen. Mountain Lion's

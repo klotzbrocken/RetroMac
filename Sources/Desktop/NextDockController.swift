@@ -260,10 +260,10 @@ final class NextDockView: NSView {
         layoutTiles()
         let time = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
         axParts = tiles.map { t in
-            let h = AccessibleHotspot(in: self, label: t.isClock ? "Clock, \(time)" : t.label, rect: t.rect) { t.action?() }
+            let h = AccessibleHotspot.make(in: self, label: t.isClock ? "Clock, \(time)" : t.label, rect: t.rect) { t.action?() }
             h.setAccessibilityEnabled(t.action != nil)
             return h
-        } + [AccessibleHotspot(in: self, label: "Recycler", rect: recyclerRect) { [weak self] in self?.openTrash() }]
+        } + [AccessibleHotspot.make(in: self, label: "Recycler", rect: recyclerRect) { [weak self] in self?.openTrash() }]
         return axParts
     }
 

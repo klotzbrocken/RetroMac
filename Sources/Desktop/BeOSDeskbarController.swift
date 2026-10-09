@@ -406,7 +406,7 @@ final class BeOSDeskbarView: NSView {
     override func isAccessibilityElement() -> Bool { true }
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
-        var parts = [AccessibleHotspot(in: self, label: "Be Menu", rect: headerRect) { [weak self] in self?.toggleBeMenu() }]
+        var parts = [AccessibleHotspot.make(in: self, label: "Be Menu", rect: headerRect) { [weak self] in self?.toggleBeMenu() }]
         let fmt = DateFormatter(); fmt.dateFormat = AppSettings.applyClockFormat("h:mm a")
         let tray: [(String, NSRect, () -> Void)] = [
             ("Mail", mailRect, { AppLauncher.launchOrActivate(bundleID: "com.apple.mail") }),
@@ -414,9 +414,9 @@ final class BeOSDeskbarView: NSView {
             ("Pac-Man", pacRect, { PacmanGame.launch() }),
             ("Clock, \(fmt.string(from: Date()))", clockRect, { ClockWidgetController.shared.toggle() }),
         ]
-        for (label, r, press) in tray where !r.isEmpty { parts.append(AccessibleHotspot(in: self, label: label, rect: r, press: press)) }
+        for (label, r, press) in tray where !r.isEmpty { parts.append(AccessibleHotspot.make(in: self, label: label, rect: r, press: press)) }
         for (i, row) in appRows().enumerated() {
-            parts.append(AccessibleHotspot(in: self, label: row.label, rect: appRowRect(i)) { [weak self] in self?.openRow(row.id) })
+            parts.append(AccessibleHotspot.make(in: self, label: row.label, rect: appRowRect(i)) { [weak self] in self?.openRow(row.id) })
         }
         axParts = parts
         return parts

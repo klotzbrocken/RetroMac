@@ -3503,25 +3503,25 @@ final class DockView: NSView {
         var parts: [AccessibleHotspot] = []
         if hasStartButton, !startButtonFrame.isEmpty {
             let name = ThemeManager.shared.activeTheme?.config.dock.startButtonLabel ?? "Start"
-            parts.append(AccessibleHotspot(in: self, label: name.capitalized, rect: startButtonFrame) { [weak self] in self?.toggleStartMenu() })
+            parts.append(AccessibleHotspot.make(in: self, label: name.capitalized, rect: startButtonFrame) { [weak self] in self?.toggleStartMenu() })
         }
         if !clockFrame.isEmpty {
-            parts.append(AccessibleHotspot(in: self, label: "Clock, \(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short))",
+            parts.append(AccessibleHotspot.make(in: self, label: "Clock, \(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short))",
                                            rect: clockFrame) { ClockWidgetController.shared.toggle() })
         }
         if !traySpeakerFrame.isEmpty {
-            parts.append(AccessibleHotspot(in: self, label: "Volume", rect: traySpeakerFrame) { [weak self] in
+            parts.append(AccessibleHotspot.make(in: self, label: "Volume", rect: traySpeakerFrame) { [weak self] in
                 guard let self else { return }
                 VolumePopup.shared.onChange = { [weak self] in self?.needsDisplay = true }
                 VolumePopup.shared.toggle(anchor: self.window?.convertToScreen(self.convert(self.traySpeakerFrame, to: nil)) ?? self.traySpeakerFrame)
             })
         }
         if RetroFrameTheme.key() != "win7", !trayIconFrame.isEmpty {
-            parts.append(AccessibleHotspot(in: self, label: "Messages", rect: trayIconFrame) { AppLauncher.launchOrActivate(bundleID: "com.apple.MobileSMS") })
+            parts.append(AccessibleHotspot.make(in: self, label: "Messages", rect: trayIconFrame) { AppLauncher.launchOrActivate(bundleID: "com.apple.MobileSMS") })
         }
         if RetroFrameTheme.key() == "win7" {
-            if !win7NetFrame.isEmpty { parts.append(AccessibleHotspot(in: self, label: "Network", rect: win7NetFrame) { [weak self] in self?.openSettingsPane("com.apple.Network-Settings.extension") }) }
-            if !win7VolFrame.isEmpty { parts.append(AccessibleHotspot(in: self, label: "Volume", rect: win7VolFrame) { [weak self] in self?.openSettingsPane("com.apple.Sound-Settings.extension") }) }
+            if !win7NetFrame.isEmpty { parts.append(AccessibleHotspot.make(in: self, label: "Network", rect: win7NetFrame) { [weak self] in self?.openSettingsPane("com.apple.Network-Settings.extension") }) }
+            if !win7VolFrame.isEmpty { parts.append(AccessibleHotspot.make(in: self, label: "Volume", rect: win7VolFrame) { [weak self] in self?.openSettingsPane("com.apple.Sound-Settings.extension") }) }
         }
         axParts = parts
         return (super.accessibilityChildren() ?? []) + parts

@@ -500,7 +500,7 @@ private final class XPStartMenuContentView: NSView, StartMenuPanel.SubmenuHost {
         let contentTop = bw + footerHeight + contentHeight
         var parts: [AccessibleHotspot] = []
         func add(_ label: String, _ rect: NSRect, _ section: HoverSection) {
-            parts.append(AccessibleHotspot(in: self, label: label, rect: rect, role: .menuItem) { [weak self] in self?.choose(section) })
+            parts.append(AccessibleHotspot.make(in: self, label: label, rect: rect, role: .menuItem) { [weak self] in self?.choose(section) })
         }
         var y = contentTop
         for (i, item) in data.leftItems.enumerated() {
@@ -1105,7 +1105,7 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
         let L = computeRects()
         var parts: [AccessibleHotspot] = []
         func add(_ label: String, _ rect: NSRect, _ h: Hover) {
-            parts.append(AccessibleHotspot(in: self, label: label, rect: rect, role: .menuItem) { [weak self] in self?.choose(h) })
+            parts.append(AccessibleHotspot.make(in: self, label: label, rect: rect, role: .menuItem) { [weak self] in self?.choose(h) })
         }
         for (i, r) in L.programs.enumerated() { add(programs[i].title, r, .left(i)) }
         for (i, r) in L.places.enumerated() { add(places[i].title, r, .right(i)) }
@@ -1381,7 +1381,7 @@ private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuH
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
         axParts = items.indices.filter { !items[$0].isSeparator }.map { i in
-            AccessibleHotspot(in: self, label: items[i].title, rect: rectForItem(at: i), role: .menuItem) { [weak self] in
+            AccessibleHotspot.make(in: self, label: items[i].title, rect: rectForItem(at: i), role: .menuItem) { [weak self] in
                 guard let self else { return }
                 if let sub = self.items[i].submenuItems, !sub.isEmpty {
                     self.hoveredIndex = i
@@ -1732,7 +1732,7 @@ private final class SubmenuContentView: NSView {
             let h = item.isSeparator ? 9.0 : itemHeight
             y -= h
             guard !item.isSeparator else { continue }
-            parts.append(AccessibleHotspot(in: self, label: item.title, rect: NSRect(x: bevelWidth, y: y, width: bounds.width - bevelWidth * 2, height: h),
+            parts.append(AccessibleHotspot.make(in: self, label: item.title, rect: NSRect(x: bevelWidth, y: y, width: bounds.width - bevelWidth * 2, height: h),
                                            role: .menuItem) { [weak self] in item.action?(); self?.onDismiss?() })
         }
         axParts = parts

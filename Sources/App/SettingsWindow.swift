@@ -197,7 +197,9 @@ struct SettingsSidebar: View {
                 // VoiceOver: one choice among the tabs, as a radio group (it reads like the
                 // Themes/Screensaver switch), not a column of unrelated buttons.
                 .accessibilityRepresentation {
-                    Picker("Settings", selection: $selectedTab) {
+                    // No name of its own: VoiceOver read "Settings" before every tab, in a
+                    // window that says Settings already.
+                    Picker("", selection: $selectedTab) {
                         ForEach(mainTabs + surfacesTabs + systemTabs, id: \.self) { Text($0.label).tag($0) }
                     }
                     .pickerStyle(.radioGroup)

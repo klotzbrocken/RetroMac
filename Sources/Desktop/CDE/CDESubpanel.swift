@@ -269,7 +269,7 @@ final class CDESubpanel: NSView {
 
     override func accessibilityChildren() -> [Any]? {
         axParts = items.enumerated().map { i, item in
-            AccessibleHotspot(in: self, label: item.title, rect: rowRect(i + 1)) { [weak self] in self?.choose(item) }
+            AccessibleHotspot.make(in: self, label: item.title, rect: rowRect(i + 1)) { [weak self] in self?.choose(item) }
         }
         return axParts
     }

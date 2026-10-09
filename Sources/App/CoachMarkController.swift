@@ -238,6 +238,33 @@ private final class CoachMarkView: NSView {
     }
 
     private func advance() {
-        if index < steps.count - 1 { index += 1; needsDisplay = true } else { onFinish() }
+        if index < steps.count - 1 {
+            index += 1; needsDisplay = true
+            NSAccessibility.post(element: self, notification: .layoutChanged)
+            announce()
+        } else { onFinish() }
+    }
+
+    // VoiceOver: the card as a group that reads its step, with its buttons. Drawn only, it was
+    // an empty window that took the focus at first launch.
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+    override func accessibilityLabel() -> String? { "\(steps[index].title). \(steps[index].body)" }
+    private var axParts: [AccessibleHotspot] = []
+    override func accessibilityChildren() -> [Any]? {
+        let isLast = index == steps.count - 1
+        var parts = [AccessibleHotspot.make(in: self, label: isLast ? "Got it" : "Next", rect: nextRect) { [weak self] in self?.advance() }]
+        if steps[index].showGitHub {
+            parts.append(AccessibleHotspot.make(in: self, label: "View on GitHub", rect: githubRect) { [weak self] in
+                AppDelegate.shared?.openGitHubRepo(); self?.onFinish()
+            })
+        }
+        parts.append(AccessibleHotspot.make(in: self, label: "Skip", rect: skipRect) { [weak self] in self?.onFinish() })
+        axParts = parts
+        return parts
+    }
+    func announce() {
+        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
+                             userInfo: [.announcement: accessibilityLabel() ?? "", .priority: NSAccessibilityPriorityLevel.high.rawValue])
     }
 }

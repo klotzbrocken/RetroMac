@@ -328,7 +328,7 @@ private final class DockStackView: NSView, NSDraggingSource {
     override func accessibilityChildren() -> [Any]? {
         axParts = files.indices.map { i in
             let url = files[i]
-            return AccessibleHotspot(in: self, label: FileManager.default.displayName(atPath: url.path), rect: cellRect(i)) { [weak self] in self?.onPick?(url) }
+            return AccessibleHotspot.make(in: self, label: FileManager.default.displayName(atPath: url.path), rect: cellRect(i)) { [weak self] in self?.onPick?(url) }
         }
         return axParts
     }

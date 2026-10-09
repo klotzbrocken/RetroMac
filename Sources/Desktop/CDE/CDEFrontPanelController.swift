@@ -324,17 +324,17 @@ final class CDEFrontPanelView: NSView {
         var parts: [AccessibleHotspot] = []
         for c in controls {
             let name = c.tooltip.components(separatedBy: ":")[0]   // "File Manager: your home folder…" → "File Manager"
-            parts.append(AccessibleHotspot(in: self, label: name, rect: c.cell) { Self.run(c) })
+            parts.append(AccessibleHotspot.make(in: self, label: name, rect: c.cell) { Self.run(c) })
             if let kind = c.subpanel {
                 let arrow = NSRect(x: c.cell.minX, y: Self.arrowRow.lowerBound, width: c.cell.width,
                                    height: Self.arrowRow.upperBound - Self.arrowRow.lowerBound + 1)
-                parts.append(AccessibleHotspot(in: self, label: "\(name) subpanel", rect: arrow) { [weak self] in
+                parts.append(AccessibleHotspot.make(in: self, label: "\(name) subpanel", rect: arrow) { [weak self] in
                     guard let self else { return }
                     CDESubpanel.toggle(kind, above: c.cell, in: self)
                 })
             }
         }
-        for f in Self.fixed { parts.append(AccessibleHotspot(in: self, label: f.label, rect: f.rect, press: f.action)) }
+        for f in Self.fixed { parts.append(AccessibleHotspot.make(in: self, label: f.label, rect: f.rect, press: f.action)) }
         axParts = parts
         return parts
     }

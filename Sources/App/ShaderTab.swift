@@ -43,7 +43,7 @@ struct ShaderTab: View {
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.rmTextPrimary.opacity(0.06)))
             // VoiceOver: the tabs as tabs, the way the native segmented switch reads.
             .accessibilityRepresentation {
-                Picker("Shader settings", selection: $section) {
+                Picker("Shader", selection: $section) {
                     ForEach(ShaderSection.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)

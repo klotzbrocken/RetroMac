@@ -50,10 +50,10 @@ final class SGIWindowView: NSView {
     override func isAccessibilityElement() -> Bool { true }
     override func accessibilityChildren() -> [Any]? {
         axParts = [
-            AccessibleHotspot(in: self, label: "Window menu", rect: menuBtnRect) { [weak self] in self?.showWindowMenu() },
-            AccessibleHotspot(in: self, label: "Minimize", rect: minBtnRect) { [weak self] in self?.onMinimizeRequested?() },
-            AccessibleHotspot(in: self, label: isMax ? "Restore" : "Maximize", rect: maxBtnRect) { [weak self] in self?.toggleMax() },
-            AccessibleHotspot(in: self, label: "Close", rect: closeBtnRect) { [weak self] in self?.onClose?() },
+            AccessibleHotspot.make(in: self, label: "Window menu", rect: menuBtnRect) { [weak self] in self?.showWindowMenu() },
+            AccessibleHotspot.make(in: self, label: "Minimize", rect: minBtnRect) { [weak self] in self?.onMinimizeRequested?() },
+            AccessibleHotspot.make(in: self, label: isMax ? "Restore" : "Maximize", rect: maxBtnRect) { [weak self] in self?.toggleMax() },
+            AccessibleHotspot.make(in: self, label: "Close", rect: closeBtnRect) { [weak self] in self?.onClose?() },
         ]
         return axParts + (super.accessibilityChildren() ?? [])
     }

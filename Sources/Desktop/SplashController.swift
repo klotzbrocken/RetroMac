@@ -64,7 +64,9 @@ final class SplashController {
         // would sit through the whole deadline again.
         if CFAbsoluteTimeGetCurrent() - lastCoverFailure < 5 { work(); return }
 
-        guard AppSettings.shared.showSplashScreen,
+        // Not under VoiceOver: a boot screen is only a picture, and as a full-screen key window
+        // above everything it took the focus and every key for five seconds, a system prompt's too.
+        guard AppSettings.shared.showSplashScreen, !NSWorkspace.shared.isVoiceOverEnabled,
               AppSettings.shared.themeBootscreenEnabled[theme.stableID] ?? bootscreenDefaultOn(theme)
         else { work(); return }
 

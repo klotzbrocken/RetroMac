@@ -10,6 +10,9 @@ struct DockSettingsTab: View {
     @State private var iconOverrideRefresh: Bool = false
     @State private var showAllApps: Bool = false
     @State private var showAdvanced: Bool = false
+    /// Where VoiceOver goes when the row it was on is removed: the next one, else "Add app…".
+    /// Left to itself it landed far from Settings.
+    @AccessibilityFocusState private var exclusionFocus: String?
 
     // `settings.dockTheme` holds the theme's STABLE ID, so every lookup here goes through
     // `ThemeManager.resolve` (id first, display name as the pre-Manifest-2.0 fallback) and
@@ -533,15 +536,19 @@ struct DockSettingsTab: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
+            .accessibilityFocused($exclusionFocus, equals: "")
         }
         ForEach(Array(excluded.enumerated()), id: \.element) { index, bundleID in
             // The app's name only: its bundle id under it read like leftover code, to VoiceOver too.
             RMRow(label: Self.appName(for: bundleID), isLast: index == excluded.count - 1) {
                 Button("Remove") {
+                    let next = index + 1 < excluded.count ? excluded[index + 1] : (index > 0 ? excluded[index - 1] : "")
                     settings.themeTitleBarsExcludedApps.removeAll { $0 == bundleID }
+                    DispatchQueue.main.async { exclusionFocus = next }
                 }
                 .buttonStyle(RMGhostButtonStyle())
                 .accessibilityLabel("Remove \(Self.appName(for: bundleID))")
+                .accessibilityFocused($exclusionFocus, equals: bundleID)
             }
         }
     }

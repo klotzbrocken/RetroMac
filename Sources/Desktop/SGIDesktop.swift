@@ -193,7 +193,7 @@ final class SGIDesktopView: NSView {
     override func isAccessibilityElement() -> Bool { true }
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityChildren() -> [Any]? {
-        axParts = [AccessibleHotspot(in: self, label: "Toolchest", rect: toolchestRect) { [weak self] in self?.openToolchest() }]
+        axParts = [AccessibleHotspot.make(in: self, label: "Toolchest", rect: toolchestRect) { [weak self] in self?.openToolchest() }]
         return axParts + (super.accessibilityChildren() ?? [])
     }
 

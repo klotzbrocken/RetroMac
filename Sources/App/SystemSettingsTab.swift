@@ -185,10 +185,9 @@ struct SystemSettingsTab: View {
     private func checkPermissions() {
         screenRecordingGranted = nil
         accessibilityGranted = AXIsProcessTrusted()
-        // Off the main thread: the first time, asking System Events shows macOS's prompt, and
-        // the question waits for the answer.
+        // Without the prompt: that comes from Grant, when it is asked for.
         DispatchQueue.global(qos: .userInitiated).async {
-            let ok = SystemUIHelper.testAutomation()
+            let ok = SystemUIHelper.automationAlreadyGranted()
             DispatchQueue.main.async { automationGranted = ok }
         }
         Task {

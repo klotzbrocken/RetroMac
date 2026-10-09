@@ -265,7 +265,7 @@ extension NextMenuController.Item {
     /// One menu-item hotspot per entry, shared by the main menu and its submenus.
     static func hotspots(_ items: [Self], in view: NSView, rect: (Int) -> NSRect, choose: @escaping (Int) -> Void) -> [AccessibleHotspot] {
         items.indices.map { i in
-            let h = AccessibleHotspot(in: view, label: items[i].title, rect: rect(i), role: .menuItem) { choose(i) }
+            let h = AccessibleHotspot.make(in: view, label: items[i].title, rect: rect(i), role: .menuItem) { choose(i) }
             h.setAccessibilityEnabled(items[i].enabled)
             return h
         }

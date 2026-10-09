@@ -96,7 +96,7 @@ final class Win31MenuOverlay: NSView {
     override func isAccessibilityElement() -> Bool { true }
     override func accessibilityChildren() -> [Any]? {
         axParts = rows().filter { $0.index >= 0 && !items[$0.index].isSeparator }.map { row in
-            let item = AccessibleHotspot(in: self, label: displayTitle(items[row.index].title), rect: row.rect, role: .menuItem) { [weak self] in
+            let item = AccessibleHotspot.make(in: self, label: displayTitle(items[row.index].title), rect: row.rect, role: .menuItem) { [weak self] in
                 self?.choose(row.index)
             }
             item.setAccessibilityEnabled(items[row.index].enabled)
