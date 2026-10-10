@@ -7,6 +7,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **See what a theme changes before you turn it on.** The theme's page in Settings ▸ Themes lists
+  every change it makes to macOS with your switches as they are — Dock, menu bar, wallpaper,
+  appearance and accent, pointer, Terminal profile, window corners and each Classic Finder
+  setting — as yours → the theme's.
+- **Restore my settings.** RetroMac now remembers each macOS setting as it was before it first
+  changed it, and Settings ▸ General puts exactly those back: your Finder view, your Dock, your
+  menu bar — not the factory defaults, which "Restore macOS defaults" still offers.
 - **A theme on chosen Spaces only.** Themes ▸ On This Space in the menu, or Settings ▸ General
   ▸ Spaces: the theme stays on those Spaces and slides away with them, and the others are plain
   macOS, with the Mac's Dock, menu bar, cursor and own wallpaper, and the shader paused.

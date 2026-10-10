@@ -111,7 +111,8 @@ enum AppearanceAdapter {
     /// system-wide appearance refresh (and makes running apps re-read the accent colour;
     /// a bare `defaults write` + distributed notification does NOT refresh live UI).
     /// Falls back to the defaults write when Automation permission is denied.
-    private static func setDarkMode(_ dark: Bool) {
+    static func setDarkMode(_ dark: Bool) {
+        OriginalSettings.remember("-g", "AppleInterfaceStyle")
         let ok = SystemUIHelper.runAppleScript(
             "tell application \"System Events\" to tell appearance preferences to set dark mode to \(dark)")
         if !ok {

@@ -2949,6 +2949,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.runModal()
     }
 
+    /// Settings ▸ General ▸ "Restore my settings": the Mac as the user had it before RetroMac.
+    func restoreMySettings() {
+        if retroModeActive { toggleRetroMode() }
+        disableTheme()
+        let report = SystemDefaultsRestorer.restoreMine()
+        rebuildMenu()
+        let alert = NSAlert()
+        alert.messageText = "Your settings are back"
+        alert.informativeText = report.text + "\n\nApps already open keep their window corners until you open them again."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+
     @objc func rescueDesktop() { DesktopRescue.shared.run() }
 
     /// Rescue Desktop's first step: Retro Mode, the theme and the shader off — the same paths

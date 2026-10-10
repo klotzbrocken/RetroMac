@@ -36,6 +36,7 @@ struct DockSettingsTab: View {
                 dockCard
                 extrasCard
                 integrationCard
+                changesCard
                 appsCard
                 iconPackCard
 
@@ -682,6 +683,32 @@ struct DockSettingsTab: View {
                             .buttonStyle(RMDefaultButtonStyle())
                         Button("Revert") { ThemeManager.shared.revertSystemIcons() }
                             .buttonStyle(RMDangerButtonStyle())
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - What the theme changes
+
+    /// Before it is turned on: every change the theme makes to macOS with the switches above,
+    /// "yours → the theme's". All of them are undone when it goes off.
+    @ViewBuilder
+    private var changesCard: some View {
+        if let config = selectedThemeConfig {
+            let changes = ThemeSystemChanges.list(for: config, isBuiltIn: selectedThemeBundle?.isBuiltIn ?? true,
+                                                  hasCursors: ThemeSystemChanges.hasCursors(config.name),
+                                                  terminalProfile: TerminalThemer.profileName(forThemeNamed: config.name))
+            RMCard(title: "What \(themeDisplayName) changes on your Mac",
+                   subtitle: "Yours on the left, the theme's on the right. Everything goes back when the theme goes off.",
+                   bodyPadding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(changes.enumerated()), id: \.offset) { i, c in
+                        RMRow(label: c.what, isLast: i == changes.count - 1) {
+                            Text("\(c.before)  \u{2192}  \(c.after)")
+                                .font(.rmSecondary).foregroundColor(.rmTextSecondary)
+                                .accessibilityLabel("from \(c.before) to \(c.after)")
+                        }
                     }
                 }
             }

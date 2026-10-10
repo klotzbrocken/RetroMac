@@ -24,6 +24,9 @@ enum TerminalThemer {
     }
 
     /// Theme name (lowercased `contains` match) → profile.
+    /// The profile's name for a theme, for Settings' list of what the theme changes.
+    static func profileName(forThemeNamed name: String) -> String? { profile(forThemeNamed: name)?.name }
+
     private static func profile(forThemeNamed name: String) -> Profile? {
         let n = name.lowercased()
         if n.contains("windows") || n.contains("dos") {

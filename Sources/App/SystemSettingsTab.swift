@@ -98,21 +98,40 @@ struct SystemSettingsTab: View {
         RMCard(title: "macOS defaults",
                subtitle: "If something stayed behind — cursors, square window corners, a hidden or moved Dock — this puts the system back, whether or not RetroMac remembers changing it.",
                bodyPadding: 0) {
-            RMRow(label: "Restore macOS defaults",
-                  hint: "Turns the theme and the shader off, then restores the cursors, the window corners and every Finder and animation default, the Dock (shown, bottom, Genie), the menu bar, the desktop icons, the wallpaper, the appearance and the Terminal profile.",
-                  isLast: true) {
-                Button("Restore\u{2026}") {
-                    let alert = NSAlert()
-                    alert.messageText = "Restore macOS defaults?"
-                    alert.informativeText = "The theme and the shader are turned off, and cursors, window corners, the Dock, the menu bar, the desktop icons, the wallpaper, the appearance and the Terminal profile go back to macOS — including settings you may have chosen yourself (the Finder's view style, the Dock's position). RetroMac's own settings stay."
-                    alert.alertStyle = .warning
-                    alert.addButton(withTitle: "Restore")
-                    alert.addButton(withTitle: "Cancel")
-                    if alert.runModal() == .alertFirstButtonReturn {
-                        (NSApp.delegate as? AppDelegate)?.restoreMacOSDefaults()
+            VStack(spacing: 0) {
+                RMRow(label: "Restore my settings",
+                      hint: OriginalSettings.count == 0
+                        ? "RetroMac has not changed any macOS setting yet."
+                        : "The \(OriginalSettings.count) macOS settings RetroMac has changed\(OriginalSettings.since.map { " since " + $0.formatted(date: .abbreviated, time: .omitted) } ?? ""), back to how you had them: your Finder view, your Dock, your menu bar. Turns the theme and the shader off.") {
+                    Button("Restore\u{2026}") {
+                        let alert = NSAlert()
+                        alert.messageText = "Restore your settings?"
+                        alert.informativeText = "The theme and the shader are turned off, and every macOS setting RetroMac has changed goes back to what it was before. RetroMac's own settings stay."
+                        alert.addButton(withTitle: "Restore")
+                        alert.addButton(withTitle: "Cancel")
+                        if alert.runModal() == .alertFirstButtonReturn {
+                            (NSApp.delegate as? AppDelegate)?.restoreMySettings()
+                        }
                     }
+                    .buttonStyle(RMDefaultButtonStyle())
+                    .disabled(OriginalSettings.count == 0)
                 }
-                .buttonStyle(RMDefaultButtonStyle())
+                RMRow(label: "Restore macOS defaults",
+                      hint: "Factory settings instead of yours: turns the theme and the shader off, then restores the cursors, the window corners and every Finder and animation default, the Dock (shown, bottom, Genie), the menu bar, the desktop icons, the wallpaper, the appearance and the Terminal profile.",
+                      isLast: true) {
+                    Button("Restore\u{2026}") {
+                        let alert = NSAlert()
+                        alert.messageText = "Restore macOS defaults?"
+                        alert.informativeText = "The theme and the shader are turned off, and cursors, window corners, the Dock, the menu bar, the desktop icons, the wallpaper, the appearance and the Terminal profile go back to macOS — including settings you may have chosen yourself (the Finder's view style, the Dock's position). RetroMac's own settings stay."
+                        alert.alertStyle = .warning
+                        alert.addButton(withTitle: "Restore")
+                        alert.addButton(withTitle: "Cancel")
+                        if alert.runModal() == .alertFirstButtonReturn {
+                            (NSApp.delegate as? AppDelegate)?.restoreMacOSDefaults()
+                        }
+                    }
+                    .buttonStyle(RMDefaultButtonStyle())
+                }
             }
         }
     }

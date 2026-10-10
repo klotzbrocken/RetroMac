@@ -119,7 +119,9 @@ final class SystemBridge {
 
     @discardableResult
     func runDefaults(_ args: [String]) -> Result<String, SystemBridgeError> {
-        runProcess("/usr/bin/defaults", args)
+        // The user's own value is kept before RetroMac first changes it (Restore my settings).
+        if args.count >= 3, args[0] == "write" || args[0] == "delete" { OriginalSettings.remember(args[1], args[2]) }
+        return runProcess("/usr/bin/defaults", args)
     }
 
     /// Read a single `defaults` value, or nil if unset / unreadable.

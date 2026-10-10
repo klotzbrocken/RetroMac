@@ -14,6 +14,24 @@ enum SystemDefaultsRestorer {
         var text: String { lines.joined(separator: "\n") }
     }
 
+    /// The user's own Mac back: everything RetroMac restores from its snapshots, then every
+    /// setting it ever changed set to what it was before the first change (`OriginalSettings`).
+    /// Settings the user changed themselves since are left alone unless RetroMac touched them.
+    @discardableResult
+    static func restoreMine() -> Report {
+        var report = Report()
+        CursorThemeManager.shared.restore(force: true)
+        report.lines.append("Cursors: the system set is back.")
+        SystemTweaksAdapter.restore(sync: true)
+        DockController.shared.restoreSystemDockIfNeeded()
+        ThemeManager.shared.restoreWallpapers()
+        AppearanceAdapter.restore()
+        TerminalThemer.restore()
+        report.lines.append("Wallpaper, appearance and Terminal profile: restored where RetroMac had changed them.")
+        report.lines += OriginalSettings.restore()
+        return report
+    }
+
     /// Runs on the main thread; the theme and shader have been turned off by the caller.
     /// Returns what was done, for the alert.
     @discardableResult

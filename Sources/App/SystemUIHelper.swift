@@ -77,6 +77,7 @@ enum SystemUIHelper {
     // MARK: - Menu Bar Auto-Hide
 
     static func setMenuBarAutoHide(_ hide: Bool) {
+        OriginalSettings.remember("-g", "_HIHideMenuBar")
         // Primary: AppleScript via System Events (updates both preference and live state)
         let success = runAppleScript(
             "tell application \"System Events\" to tell dock preferences to set autohide menu bar to \(hide)"
