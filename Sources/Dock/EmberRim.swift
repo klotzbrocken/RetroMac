@@ -29,6 +29,13 @@ final class EmberRim {
         halo?.path = barPath
         lavaMask?.path = barPath
         sparks?.path = barPath
+        // Shadows with a given shape: without one, Core Animation renders each shadowed layer
+        // off screen to find its outline, again at every new path — every step of the rubber
+        // band — and the dock stuttered.
+        let outline = barPath.copy(strokingWithWidth: 6, lineCap: .round, lineJoin: .round, miterLimit: 2)
+        halo?.shadowPath = outline
+        glow?.shadowPath = outline
+        lavaMask?.shadowPath = outline
         // The gradients turn behind the mask: squares round the bar, so no corner is ever bare.
         let side = hypot(bar.width, bar.height) + 20
         for g in [lava, undertow] {
@@ -96,7 +103,6 @@ final class EmberRim {
                            NSColor(srgbRed: 1.0, green: 0.60, blue: 0.10, alpha: 0.8), NSColor(srgbRed: 0.35, green: 0.02, blue: 0.0, alpha: 0),
                            NSColor(srgbRed: 1.0, green: 0.92, blue: 0.55, alpha: 0.85), NSColor(srgbRed: 0.35, green: 0.02, blue: 0.0, alpha: 0),
                            NSColor(srgbRed: 1.0, green: 0.85, blue: 0.35, alpha: 0.9)].map(\.cgColor)
-        undertow.compositingFilter = "screenBlendMode"
         let maskHolder = CALayer()
         let lavaMask = CAShapeLayer()
         lavaMask.fillColor = nil

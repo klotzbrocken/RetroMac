@@ -36,7 +36,7 @@
     "dirtyGlass": true,
     "aboveLiveWallpaper": true,
     "bulge": true,
-    "shadowEnabled": true,
+    "shadowEnabled": false,
     "shadowColor": "#00000080",
     "shadowRadius": 16,
     "bevelTopColor": null,

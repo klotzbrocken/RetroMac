@@ -299,26 +299,26 @@ final class DockView: NSView {
 
     private var dirtLayer: CALayer?
 
-    /// The dirt over the bar, under the icons (`dirtyGlass`), in the bar's shape, or none.
-    private func updateDirt(path: NSBezierPath, on: Bool) {
+    /// The dirt over the bar, under the icons (`dirtyGlass`), or none. Rounded by the layer's
+    /// own corners, not a mask: a mask in the rubber band's shape was drawn again off screen at
+    /// every step of the magnification, and the dock stuttered. The arch itself stays clear glass.
+    private func updateDirt(rect: NSRect, radius: CGFloat, on: Bool) {
         guard on, let host = layer else { dirtLayer?.removeFromSuperlayer(); dirtLayer = nil; return }
         let dirt = dirtLayer ?? {
             let l = CALayer()
             l.contents = Self.dirtImage
             l.contentsGravity = .resize
-            l.mask = CAShapeLayer()
+            l.masksToBounds = true
             l.zPosition = -2
             host.addSublayer(l)
             dirtLayer = l
             return l
         }()
-        let box = path.bounds
-        var toLayer = CGAffineTransform(translationX: -box.minX, y: -box.minY)
+        guard dirt.frame != rect || dirt.cornerRadius != radius else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        dirt.frame = box
-        (dirt.mask as? CAShapeLayer)?.frame = CGRect(origin: .zero, size: box.size)
-        (dirt.mask as? CAShapeLayer)?.path = path.cgPath.copy(using: &toLayer)
+        dirt.frame = rect
+        dirt.cornerRadius = radius
         CATransaction.commit()
     }
 
@@ -2470,7 +2470,7 @@ final class DockView: NSView {
 
         // ── Mac OS 9 Control Strip ──────────────────────────────────────
         if theme.isControlStrip {
-            emberRim.teardown(); updateDirt(path: NSBezierPath(), on: false)   // left from a theme before
+            emberRim.teardown(); updateDirt(rect: .zero, radius: 0, on: false)   // left from a theme before
             drawControlStrip(ctx: ctx, theme: theme, barRect: rect, bgAlpha: bgAlpha)
             return
         }
@@ -2565,7 +2565,7 @@ final class DockView: NSView {
             bgPath.fill()
         }
 
-        updateDirt(path: bgPath, on: theme.dock.dirtyGlass == true && !theme.isVertical)
+        updateDirt(rect: rect, radius: cr, on: theme.dock.dirtyGlass == true && !theme.isVertical)
 
         // Futurama: turn the flat teal bar into the riveted metal girder from the mockup. The metal
         // is solid in the mockup, so the beam is drawn fully opaque regardless of the slider.

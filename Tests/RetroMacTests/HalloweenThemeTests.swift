@@ -98,3 +98,20 @@ final class SystemDockEdgeTests: XCTestCase {
         XCTAssertTrue(DockController.isBelow(NSRect(x: 200, y: -832, width: 1280, height: 832), primary: monitor))
     }
 }
+
+/// The rubber band is recomputed at every step of the magnification: it must stay cheap.
+final class RubberBandCostTests: XCTestCase {
+    func testOneStepIsCheap() {
+        let bar = NSRect(x: 75, y: 16, width: 900, height: 70)
+        var icons = (0..<14).map { NSRect(x: 90 + CGFloat($0) * 62, y: 26, width: 50, height: 50) }
+        for (i, s) in [(5, 58.0), (6, 70.0), (7, 80.0), (8, 70.0), (9, 58.0)] { icons[i].size = NSSize(width: s, height: s) }
+        let start = CACurrentMediaTime()
+        for _ in 0..<100 {
+            let p = DockView.bulgePath(bar: bar, radius: 20, icons: icons).cgPath
+            _ = p.copy(strokingWithWidth: 6, lineCap: .round, lineJoin: .round, miterLimit: 2)
+        }
+        let perStep = (CACurrentMediaTime() - start) / 100
+        print("[RubberBand] one step: \(String(format: "%.2f", perStep * 1000)) ms")
+        XCTAssertLessThan(perStep, 0.004, "a step must leave the frame most of its 8–16 ms")
+    }
+}
