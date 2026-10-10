@@ -52,7 +52,7 @@ final class HalloweenThemeTests: XCTestCase {
         guard let dir = ProcessInfo.processInfo.environment["RETROMAC_SNAPSHOT_DIR"] else { return }
         let bar = NSRect(x: 60, y: 14, width: 600, height: 70)
         var icons = (0..<9).map { NSRect(x: 80 + CGFloat($0) * 62, y: 24, width: 50, height: 50) }
-        icons[3] = NSRect(x: 250, y: 24, width: 80, height: 80); icons[2].size = NSSize(width: 62, height: 62); icons[4].size = NSSize(width: 62, height: 62)
+        for (i, size) in [(1, 56.0), (2, 68.0), (3, 80.0), (4, 68.0), (5, 56.0)] { icons[i].size = NSSize(width: size, height: size) }
         let shape = DockView.bulgePath(bar: bar, radius: 20, icons: icons)
         let view = Backdrop(frame: NSRect(x: 0, y: 0, width: 720, height: 200),
                             wallpaper: NSImage(contentsOf: t.url.appendingPathComponent("wallpaper.jpg")),

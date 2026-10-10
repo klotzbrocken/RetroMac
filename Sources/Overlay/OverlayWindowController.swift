@@ -300,10 +300,7 @@ final class OverlayWindowController: NSObject, MTKViewDelegate {
         try await Task.sleep(nanoseconds: 500_000_000)
 
         let windowIDs = await MainActor.run {
-            // A dock that stays above the shader is left out of the picture it filters, or it
-            // would show twice: filtered under itself.
             self.windows.map { CGWindowID($0.windowNumber) }
-                + (DockController.shared.keepsAboveShader ? DockController.shared.captureWindowID.map { [$0] } ?? [] : [])
         }
         if isDesktopScope {
             self.desktopScopeWindowIDs = await MainActor.run { self.desktopBandWindowIDs() }

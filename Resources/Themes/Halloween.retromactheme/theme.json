@@ -34,7 +34,7 @@
     "borderWidth": 0,
     "borderStyle": "ember",
     "dirtyGlass": true,
-    "aboveShader": true,
+    "aboveLiveWallpaper": true,
     "bulge": true,
     "shadowEnabled": true,
     "shadowColor": "#00000080",

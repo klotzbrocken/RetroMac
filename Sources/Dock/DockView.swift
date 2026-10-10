@@ -324,22 +324,27 @@ final class DockView: NSView {
 
     // MARK: - Rubber-band magnification (Halloween)
 
-    /// The bar with its top edge lifted round magnified icons, as if the bar were a rubber band
-    /// the icons push up: each icon raises the edge by what it has grown, falling off smoothly
-    /// to either side. At rest it is the plain rounded bar.
+    /// The bar with its top edge lifted round magnified icons, as if a band lay over them: one
+    /// smooth arch, highest over the icon that grew most, wide enough to clear every icon that
+    /// grew, and flat where it meets the bar on either side. At rest it is the plain rounded bar.
     static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect]) -> NSBezierPath {
         let rest = icons.map(\.height).min() ?? 0
-        let lifts = icons.compactMap { f -> (x: CGFloat, lift: CGFloat, reach: CGFloat)? in
-            let lift = f.height - rest
-            return lift > 0.5 ? (f.midX, lift, f.width * 1.1) : nil
+        let lifted = icons.filter { $0.height - rest > 0.5 }
+        guard let peakIcon = lifted.max(by: { $0.height < $1.height }) else {
+            return NSBezierPath(roundedRect: r, xRadius: radius, yRadius: radius)
         }
-        guard !lifts.isEmpty else { return NSBezierPath(roundedRect: r, xRadius: radius, yRadius: radius) }
+        let peak = peakIcon.height - rest, centre = peakIcon.midX
+        // A raised cosine, 0.5·(1 + cos(πd/h)): wide enough that every grown icon's far top corner
+        // stays under it, and at least a resting icon past the outermost one, so it eases in.
+        var half = lifted.map { abs($0.midX - centre) + $0.width / 2 }.max()! + rest
+        for f in lifted where f.height - rest < peak - 0.5 {
+            let d = abs(f.midX - centre) + f.width / 2
+            let need = 2 * (f.height - rest) / peak - 1   // cos(πd/h) must reach this
+            if need > -1 { half = max(half, .pi * d / acos(max(-1, min(1, need)))) }
+        }
         func top(_ x: CGFloat) -> CGFloat {
-            let lift = lifts.map { l -> CGFloat in
-                let t = max(0, 1 - abs(x - l.x) / l.reach)
-                return l.lift * t * t * (3 - 2 * t)   // smoothstep
-            }.max() ?? 0
-            return r.maxY + lift
+            let d = abs(x - centre)
+            return d >= half ? r.maxY : r.maxY + peak * 0.5 * (1 + cos(.pi * d / half))
         }
         let p = NSBezierPath()
         p.move(to: NSPoint(x: r.minX + radius, y: r.minY))

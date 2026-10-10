@@ -1415,6 +1415,9 @@ final class DockController {
     private(set) var loweredForDesktopShader = false
 
     func setLoweredForDesktopShader(_ lowered: Bool) {
+        // A theme whose dock stays clear of the Live Wallpaper is not lowered into its band: it
+        // stays over the windows, out of the capture, unfiltered.
+        let lowered = lowered && ThemeManager.shared.activeTheme?.config.dock.aboveLiveWallpaper != true
         guard loweredForDesktopShader != lowered else { return }
         loweredForDesktopShader = lowered
         if let window { applyDockLevel(to: window) }
@@ -1423,13 +1426,9 @@ final class DockController {
     private func applyDockLevel(to window: NSWindow) {
         let level = loweredForDesktopShader
             ? Int(CGWindowLevelForKey(.normalWindow)) - 3
-            : keepsAboveShader ? DockWindow.aboveShaderLevel : DockWindow.defaultLevel
+            : DockWindow.defaultLevel
         window.level = NSWindow.Level(rawValue: level)
     }
-
-    /// A theme that keeps its dock out of the shader: the capture leaves the dock out, and the
-    /// dock sits one level over the shader's window, so it shows on top, unfiltered.
-    var keepsAboveShader: Bool { ThemeManager.shared.activeTheme?.config.dock.aboveShader == true }
 
     /// The dock window's id, for the desktop-scope capture.
     ///

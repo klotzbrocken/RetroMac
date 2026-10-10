@@ -9,7 +9,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 - **New theme: Halloween.** A dark, grimy glass dock — smears, drips, dust — with a rim of molten
   lava that churns and glows, sparks running round it (still under Reduce Motion), that
-  stretches up round a magnified icon like a rubber band and stays clear of the CRT shader; the
+  arches up over a magnified icon like a band laid over it and stays clear of the Live Wallpaper; the
   jack-o'-lantern in place of the Apple, dark mode with an orange accent, and a Halloween night
   for the wallpaper. The pumpkin is also a menu-bar Apple style of its own. With Match appearance
   on, macOS tints every app icon in the accent colour (the Tinted icon style of macOS 26 and
