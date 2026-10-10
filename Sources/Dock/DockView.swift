@@ -325,22 +325,28 @@ final class DockView: NSView {
     // MARK: - Rubber-band magnification (Halloween)
 
     /// The bar with its top edge lifted round magnified icons, as if a band lay over them: one
-    /// smooth arch, highest over the icon that grew most, wide enough to clear every icon that
-    /// grew, and flat where it meets the bar on either side. At rest it is the plain rounded bar.
+    /// smooth arch, flat where it meets the bar on either side. At rest it is the plain rounded bar.
+    ///
+    /// Everything about the arch moves continuously with the icons. It is centred on the icons'
+    /// centre weighted by how much each grew, and as wide as it must be for each grown icon to
+    /// stay under it, with the bar's own margin above the icons as the slack. Taken from the
+    /// largest icon instead, the arch jumped a whole icon each time the largest one changed.
     static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect]) -> NSBezierPath {
         let rest = icons.map(\.height).min() ?? 0
-        let lifted = icons.filter { $0.height - rest > 0.5 }
-        guard let peakIcon = lifted.max(by: { $0.height < $1.height }) else {
+        let lifted = icons.map { ($0, $0.height - rest) }.filter { $0.1 > 0.5 }
+        let total = lifted.reduce(0) { $0 + $1.1 }
+        guard let peak = lifted.map(\.1).max(), total > 0 else {
             return NSBezierPath(roundedRect: r, xRadius: radius, yRadius: radius)
         }
-        let peak = peakIcon.height - rest, centre = peakIcon.midX
-        // A raised cosine, 0.5·(1 + cos(πd/h)): wide enough that every grown icon's far top corner
-        // stays under it, and at least a resting icon past the outermost one, so it eases in.
-        var half = lifted.map { abs($0.midX - centre) + $0.width / 2 }.max()! + rest
-        for f in lifted where f.height - rest < peak - 0.5 {
+        let centre = lifted.reduce(0) { $0 + $1.0.midX * $1.1 } / total
+        let slack = max(0, (r.height - rest) / 2) * 0.8
+        // A raised cosine, peak · ½(1 + cos(πd/h)): each icon needs it to reach (lift − slack) at
+        // its far top corner, which is a continuous width for each.
+        var half = rest * 1.5
+        for (f, lift) in lifted where lift - slack > 0 {
             let d = abs(f.midX - centre) + f.width / 2
-            let need = 2 * (f.height - rest) / peak - 1   // cos(πd/h) must reach this
-            if need > -1 { half = max(half, .pi * d / acos(max(-1, min(1, need)))) }
+            let need = min(1, 2 * (lift - slack) / peak - 1)
+            half = max(half, .pi * d / acos(max(-1, need)))
         }
         func top(_ x: CGFloat) -> CGFloat {
             let d = abs(x - centre)

@@ -100,6 +100,27 @@ final class SystemDockEdgeTests: XCTestCase {
 }
 
 /// The rubber band is recomputed at every step of the magnification: it must stay cheap.
+final class RubberBandContinuityTests: XCTestCase {
+    /// The mouse sliding a few points must move the arch a few points, never a whole icon.
+    func testTheArchMovesSmoothly() {
+        let bar = NSRect(x: 0, y: 16, width: 900, height: 70)
+        func icons(mouse: CGFloat) -> [NSRect] {
+            (0..<14).map { i -> NSRect in
+                let x = 20 + CGFloat(i) * 62 + 25
+                let t = max(0, 1 - abs(x - mouse) / 150)
+                let size = 50 * (1 + 0.6 * t * t * (3 - 2 * t))
+                return NSRect(x: x - size / 2, y: 26, width: size, height: size)
+            }
+        }
+        var last: NSRect?
+        for mouse in stride(from: CGFloat(300), through: 420, by: 2) {
+            let box = DockView.bulgePath(bar: bar, radius: 20, icons: icons(mouse: mouse)).bounds
+            if let last { XCTAssertLessThan(abs(box.maxY - last.maxY), 3); XCTAssertLessThan(abs(box.midX - last.midX), 6) }
+            last = box
+        }
+    }
+}
+
 final class RubberBandCostTests: XCTestCase {
     func testOneStepIsCheap() {
         let bar = NSRect(x: 75, y: 16, width: 900, height: 70)
