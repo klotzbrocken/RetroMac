@@ -2689,7 +2689,7 @@ final class DockView: NSView {
         // Pac-Man pellet border — drawn via dedicated CALayers (see updatePacmanBorder),
         // not into this view's backing, so the animation never re-rasterizes the dock.
         if theme.dock.borderStyle == "ember", let host = layer {
-            emberRim.update(host: host, path: bgPath.cgPath)
+            emberRim.update(host: host, path: bgPath.cgPath, restBar: rect)
         } else {
             emberRim.teardown()
         }

@@ -7,8 +7,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
-- **New theme: Halloween.** A dark, grimy glass dock — smears, drips, dust — with a rim of molten
-  lava that churns and glows, sparks running round it (still under Reduce Motion), that
+- **New theme: Halloween.** A dark, grimy glass dock — smears, drips, dust — with a smouldering
+  fire round it: a charred edge with embers glowing up and dying down, a flickering red heat, small
+  flames, sparks and smoke rising from the top (still under Reduce Motion). The dock
   arches up over a magnified icon like a band laid over it and stays clear of the Live Wallpaper; the
   jack-o'-lantern in place of the Apple, dark mode with an orange accent, and a Halloween night
   for the wallpaper — changed with a right-click on the desktop, where Macintosh HD and your Desktop

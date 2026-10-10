@@ -62,7 +62,7 @@ final class HalloweenThemeTests: XCTestCase {
                             path: shape, color: NSColor.fromHex(t.config.dock.backgroundColor))
         let rim = EmberRim()
         view.layoutSubtreeIfNeeded(); view.display()
-        rim.update(host: view.layer!, path: shape.cgPath)
+        rim.update(host: view.layer!, path: shape.cgPath, restBar: bar)
         let scale: CGFloat = 2
         let w = Int(view.bounds.width * scale), h = Int(view.bounds.height * scale)
         guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
