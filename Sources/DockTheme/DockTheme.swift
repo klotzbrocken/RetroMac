@@ -354,6 +354,9 @@ extension DockThemeConfig {
     var has3DShelf: Bool { dock.shelfStyle == "3d" || hasFrostedShelf }
     /// Mountain Lion: the same perspective, frosted glass with a lit front edge.
     var hasFrostedShelf: Bool { dock.shelfStyle == "frosted" }
+    /// Room under a bottom dock for a glow round its bar (the Halloween ember rim), which the
+    /// window's edge would otherwise cut off.
+    var rimRoom: CGFloat { dock.borderStyle == "ember" && !isVertical ? 16 : 0 }
     /// This theme's default menu-bar Apple style (0 off, 1 rainbow, 2 aqua, 3 aqua classic), or nil to leave as-is.
     var menuBarAppleStyleDefault: Int? {
         switch menuBarApple?.lowercased() {

@@ -460,7 +460,7 @@ final class DockController {
             ? effectiveIconSize * (maxScale - 1.0) + labelRoom
             : max(0, effectiveIconSize * (hoverScale - 1.0) * 1.5)   // headroom up for the hover pop
         let effectiveHMagOverflow = hMagOverflow * dynScale
-        let shortAxis = dockBarHeight * dynScale + magOverflow
+        let shortAxis = dockBarHeight * dynScale + magOverflow + (theme?.rimRoom ?? 0)
 
         let width: CGFloat
         let height: CGFloat
@@ -506,7 +506,7 @@ final class DockController {
         // Anchor the bottom edge to the PHYSICAL screen bottom (screen.frame.minY) so a
         // zero-offset dock sits flush against the edge. In the common case this equals
         // visibleFrame.minY (the menu bar only affects the top), so no regression.
-        let yBottom = screen.frame.minY + offset
+        let yBottom = screen.frame.minY + offset - (config?.rimRoom ?? 0)
         let yTop = visible.maxY - height - offset
         let y = (position == "top") ? yTop : yBottom
 

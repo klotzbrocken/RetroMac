@@ -241,8 +241,9 @@ final class DockView: NSView {
             return NSRect(x: x, y: horizontalMagOverflow, width: thickness, height: len)
         }
         let barWidth = bounds.width - horizontalMagOverflow * 2
-        let barHeight = bounds.height - magnificationOverflow
-        return NSRect(x: horizontalMagOverflow, y: 0, width: barWidth, height: barHeight)
+        let rim = ThemeManager.shared.activeTheme?.config.rimRoom ?? 0
+        let barHeight = bounds.height - magnificationOverflow - rim
+        return NSRect(x: horizontalMagOverflow, y: rim, width: barWidth, height: barHeight)
     }
 
     /// The rect to use for drawing — expands during magnification
