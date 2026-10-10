@@ -43,7 +43,7 @@ final class EmberRim {
         farHalo?.shadowPath = outline
         glow?.shadowPath = outline
         lavaMask?.shadowPath = outline
-        // The gradients turn behind the mask: squares round the bar, so no corner is ever bare.
+        // The gradients lie behind the mask: squares round the bar, so no corner is ever bare.
         let side = hypot(bar.width, bar.height) + 20
         for g in [lava, undertow] {
             g?.bounds = CGRect(x: 0, y: 0, width: side, height: side)
@@ -80,13 +80,13 @@ final class EmberRim {
     private static func flameCell() -> CAEmitterCell {
         let c = CAEmitterCell()
         c.contents = blob
-        c.birthRate = 24; c.lifetime = 1.5; c.lifetimeRange = 0.5
-        c.velocity = 8; c.velocityRange = 4
-        c.emissionLongitude = .pi / 2; c.emissionRange = 0.35   // up
-        c.yAcceleration = 9
-        c.scale = 0.5; c.scaleRange = 0.18; c.scaleSpeed = -0.28
+        c.birthRate = 42; c.lifetime = 2.1; c.lifetimeRange = 0.6
+        c.velocity = 13; c.velocityRange = 5
+        c.emissionLongitude = .pi / 2; c.emissionRange = 0.25   // up
+        c.yAcceleration = 15
+        c.scale = 0.6; c.scaleRange = 0.2; c.scaleSpeed = -0.24
         c.color = NSColor(srgbRed: 1.0, green: 0.42, blue: 0.06, alpha: 0.75).cgColor
-        c.greenSpeed = -0.25; c.alphaSpeed = -0.55
+        c.greenSpeed = -0.2; c.alphaSpeed = -0.42
         return c
     }
 
@@ -235,26 +235,11 @@ final class EmberRim {
                 a.preferredFrameRateRange = slow
                 layer.add(a, forKey: key)
             }
-            // Fire flickers: quick, uneven, never quite the same.
-            waver(farHalo, "opacity", [0.15, 0.4, 0.2, 0.5, 0.18, 0.32, 0.45, 0.15], 5.2)
-            waver(halo, "opacity", [0.45, 0.25, 0.55, 0.3, 0.4, 0.22, 0.55, 0.45], 3.1)
-            waver(glow, "opacity", [0.45, 0.25, 0.55, 0.35, 0.5, 0.22, 0.45], 2.2)
-            waver(undertow, "opacity", [0.4, 1, 0.55, 0.85, 0.3, 0.9, 0.4], 4.4)
-            let against = CABasicAnimation(keyPath: "transform.rotation.z")
-            against.fromValue = 0; against.toValue = -2 * Double.pi
-            against.duration = 17; against.repeatCount = .infinity
-            against.preferredFrameRateRange = slow
-            undertow.add(against, forKey: "turn")
-            let turn = CABasicAnimation(keyPath: "transform.rotation.z")
-            turn.fromValue = 0; turn.toValue = 2 * Double.pi
-            turn.duration = 26; turn.repeatCount = .infinity
-            turn.preferredFrameRateRange = slow
-            lava.add(turn, forKey: "turn")
-            let run = CABasicAnimation(keyPath: "lineDashPhase")
-            run.fromValue = 0; run.toValue = -135
-            run.duration = 8; run.repeatCount = .infinity
-            run.preferredFrameRateRange = slow
-            sparks.add(run, forKey: "run")
+            // A quiet flicker: the flames do the moving now.
+            waver(farHalo, "opacity", [0.3, 0.38, 0.32, 0.4, 0.3], 5.2)
+            waver(halo, "opacity", [0.42, 0.36, 0.45, 0.38, 0.42], 3.1)
+            waver(glow, "opacity", [0.45, 0.38, 0.5, 0.4, 0.45], 2.2)
+            waver(undertow, "opacity", [0.6, 0.85, 0.65, 0.8, 0.6], 4.4)
         }
         self.root = root; self.glow = glow; self.halo = halo; self.farHalo = farHalo; self.lavaMask = lavaMask; self.maskHolder = maskHolder; self.lava = lava; self.undertow = undertow; self.sparks = sparks
     }
