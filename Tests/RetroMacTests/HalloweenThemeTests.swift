@@ -162,6 +162,10 @@ final class BandTearTests: XCTestCase {
         let ripped = DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0, tear: 1)
         XCTAssertFalse(ripped.contains(NSPoint(x: 175, y: bar.maxY - 3)), "the rip is open downward over the icon")
         XCTAssertTrue(ripped.contains(NSPoint(x: 60, y: bar.maxY - 3)), "the band is whole away from it")
+        // The rip stays where the icon broke through, whatever the arch does now.
+        let kept = DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0, tear: 1, ripX: 300)
+        XCTAssertFalse(kept.contains(NSPoint(x: 300, y: bar.maxY - 3)), "open where it tore")
+        XCTAssertTrue(kept.contains(NSPoint(x: 175, y: bar.maxY - 3)), "whole where the mouse is now")
         let flung = DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0, tear: -0.9)
         XCTAssertGreaterThan(flung.bounds.maxY, bar.maxY + 10, "the moment it tears the ends go up with the icon")
     }

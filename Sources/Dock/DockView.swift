@@ -335,7 +335,9 @@ final class DockView: NSView {
     /// an icon tore out of it, a little below 0 as it springs back. `tear`: the rip the icon left
     /// — 0 closed, 1 open downward (torn walls down to the icon's top), below 0 the moment it
     /// tears, the torn ends flung up with the icon before they fall back into the rip.
-    static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect], amount: CGFloat = 1, tear: CGFloat = 0) -> NSBezierPath {
+    /// `ripX`: where the rip is — where the icon broke through, which it keeps.
+    static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect], amount: CGFloat = 1, tear: CGFloat = 0,
+                          ripX: CGFloat? = nil) -> NSBezierPath {
         let rest = icons.map(\.height).min() ?? 0
         let lifted = icons.map { ($0, $0.height - rest) }.filter { $0.1 > 0.5 }
         let total = lifted.reduce(0) { $0 + $1.1 }
@@ -360,16 +362,17 @@ final class DockView: NSView {
         func top(_ x: CGFloat) -> CGFloat {
             let d = abs(x - centre)
             var y = d >= half ? r.maxY : r.maxY + peak * amount * 0.5 * (1 + cos(.pi * d / half))
-            guard ripHalf > 1, d < ripHalf else { return y }
+            let rd = abs(x - (ripX ?? centre))
+            guard ripHalf > 1, rd < ripHalf else { return y }
             if tear >= 0 {
                 // The rip, open downward: steep torn walls, a ragged floor. Fixed sines, so the
                 // same rip every time.
-                let wall = pow(sin(.pi / 2 * (1 - d / ripHalf)), 0.3)
+                let wall = pow(sin(.pi / 2 * (1 - rd / ripHalf)), 0.3)
                 let rag = sin(x * 0.9) * 0.22 + sin(x * 2.3 + 1) * 0.14 + sin(x * 5.1) * 0.08
                 y -= (y - r.maxY + ripDepth) * wall * (0.85 + rag) * min(1, tear * 1.4)
             } else {
                 // The moment it tears: the torn ends flung up with the icon, before they fall.
-                let tuft = pow(sin(.pi * d / ripHalf), 0.7)
+                let tuft = pow(sin(.pi * rd / ripHalf), 0.7)
                 let shards = 0.45 + 0.55 * abs(sin(x * 1.6)) * (0.75 + 0.25 * sin(x * 0.55 + 2))
                 y += ripUp * tuft * shards
             }
@@ -410,17 +413,21 @@ final class DockView: NSView {
     /// The tear waiting for the mouse to stay: the icon it would tear, and the pending tear.
     private var tearCandidate: Int?
     private var tearPending: DispatchWorkItem?
+    /// The icon that tore out, and where: the rip stays there until that icon is caught again.
+    private var tornIndex: Int?
+    private var ripX: CGFloat?
 
     private func updateBandTear(icons: [NSRect], maxScale: CGFloat, bar: NSRect) {
         let rest = icons.map(\.height).min() ?? 0
         guard rest > 0, maxScale > 1,
               let idx = icons.indices.max(by: { icons[$0].height < icons[$1].height }) else { return }
-        let growth = (icons[idx].height - rest) / (rest * (maxScale - 1))
-        let wants = Self.bandTears(growth: growth, torn: bandTorn)
+        func growth(_ i: Int) -> CGFloat { (icons[i].height - rest) / (rest * (maxScale - 1)) }
         if bandTorn {
-            if !wants { setBandTorn(false, burstAt: nil) }   // shrunk: the band takes it again
+            // Caught again once the icon that tore out has shrunk — wherever the mouse is now.
+            if let t = tornIndex, t < icons.count, !Self.bandTears(growth: growth(t), torn: true) { setBandTorn(false, burstAt: nil) }
             return
         }
+        let wants = Self.bandTears(growth: growth(idx), torn: false)
         // It tears only when the mouse stays on one icon for a second: sweeping along the dock
         // only stretches the band.
         guard wants else { tearPending?.cancel(); tearPending = nil; tearCandidate = nil; return }
@@ -434,6 +441,8 @@ final class DockView: NSView {
             let rest = now.map(\.height).min() ?? 0
             guard idx < now.count, now.max(by: { $0.height < $1.height }) == now[idx],
                   rest > 0, (now[idx].height - rest) / (rest * (maxScale - 1)) > 0.75 else { return }
+            self.tornIndex = idx
+            self.ripX = now[idx].midX
             self.setBandTorn(true, burstAt: CGPoint(x: now[idx].midX, y: self.currentBarRect.maxY + (now[idx].height - rest) * 0.5))
         }
         tearPending = work
@@ -441,7 +450,7 @@ final class DockView: NSView {
     }
 
     /// How long the mouse stays on an icon before it tears out of the band.
-    static let tearDwell: TimeInterval = 1.0
+    static let tearDwell: TimeInterval = 0
 
     private func setBandTorn(_ torn: Bool, burstAt point: CGPoint?) {
         bandTorn = torn
@@ -475,6 +484,7 @@ final class DockView: NSView {
                abs(self.bandTear - ripTarget) < 0.002, abs(self.bandTearVelocity) < 0.01 {
                 self.bandAmount = target; self.bandVelocity = 0
                 self.bandTear = ripTarget; self.bandTearVelocity = 0
+                if !self.bandTorn { self.ripX = nil; self.tornIndex = nil }   // healed
                 timer.invalidate(); self.bandTimer = nil
             }
             self.needsDisplay = true
@@ -2655,7 +2665,7 @@ final class DockView: NSView {
             if theme.dock.bulge == true {
                 let icons = itemViews.map(\.frame)
                 updateBandTear(icons: icons, maxScale: theme.magnificationMaxScale, bar: rect)
-                bgPath = Self.bulgePath(bar: rect, radius: cr, icons: icons, amount: bandAmount, tear: bandTear)
+                bgPath = Self.bulgePath(bar: rect, radius: cr, icons: icons, amount: bandAmount, tear: bandTear, ripX: ripX)
             } else {
                 bgPath = NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
             }
