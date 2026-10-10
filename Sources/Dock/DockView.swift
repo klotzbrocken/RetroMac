@@ -332,8 +332,10 @@ final class DockView: NSView {
     /// stay under it, with the bar's own margin above the icons as the slack. Taken from the
     /// largest icon instead, the arch jumped a whole icon each time the largest one changed.
     /// `amount`: how much of the lift the band takes — 1 holding the icons, 0 back at rest after
-    /// an icon tore out of it, a little below 0 as it springs back.
-    static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect], amount: CGFloat = 1) -> NSBezierPath {
+    /// an icon tore out of it, a little below 0 as it springs back. `tear`: how far the rip the
+    /// icon left is open, 0 closed to 1 — a ragged gap in the top edge over the icon, its torn
+    /// edges running down to the icon's top.
+    static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect], amount: CGFloat = 1, tear: CGFloat = 0) -> NSBezierPath {
         let rest = icons.map(\.height).min() ?? 0
         let lifted = icons.map { ($0, $0.height - rest) }.filter { $0.1 > 0.5 }
         let total = lifted.reduce(0) { $0 + $1.1 }
@@ -350,9 +352,18 @@ final class DockView: NSView {
             let need = min(1, 2 * (lift - slack) / peak - 1)
             half = max(half, .pi * d / acos(max(-1, need)))
         }
+        let ripHalf = (icons.max(by: { $0.height < $1.height })?.width ?? rest) * 0.62 * min(1, max(0, tear))
+        let ripDepth = max(0, (r.height - rest) / 2) + rest * 0.3
         func top(_ x: CGFloat) -> CGFloat {
             let d = abs(x - centre)
-            return d >= half ? r.maxY : r.maxY + peak * amount * 0.5 * (1 + cos(.pi * d / half))
+            var y = d >= half ? r.maxY : r.maxY + peak * amount * 0.5 * (1 + cos(.pi * d / half))
+            if ripHalf > 1, d < ripHalf {
+                // Steep torn walls, a ragged floor: fixed sines, so the same rip every time.
+                let wall = pow(sin(.pi / 2 * (1 - d / ripHalf)), 0.3)
+                let rag = sin(x * 0.9) * 0.22 + sin(x * 2.3 + 1) * 0.14 + sin(x * 5.1) * 0.08
+                y -= (y - r.maxY + ripDepth) * wall * (0.85 + rag) * min(1, tear * 1.4)
+            }
+            return y
         }
         let p = NSBezierPath()
         p.move(to: NSPoint(x: r.minX + radius, y: r.minY))
@@ -375,6 +386,9 @@ final class DockView: NSView {
     /// holding the icons (1) and lying back at rest (0).
     private var bandAmount: CGFloat = 1
     private var bandVelocity: CGFloat = 0
+    /// How far the rip is open (0…1): fast to open, slow to heal.
+    private var bandTear: CGFloat = 0
+    private var bandTearVelocity: CGFloat = 0
     private var bandTorn = false
     private var bandTimer: Timer?
 
@@ -402,8 +416,16 @@ final class DockView: NSView {
             let force = -260 * (self.bandAmount - target) - 15 * self.bandVelocity
             self.bandVelocity += force / 60
             self.bandAmount += self.bandVelocity / 60
-            if abs(self.bandAmount - target) < 0.002, abs(self.bandVelocity) < 0.01 {
+            // The rip: it bursts open, and closes slowly once the band holds the icon again.
+            let ripTarget: CGFloat = self.bandTorn ? 1 : 0
+            let stiffness: CGFloat = self.bandTorn ? 420 : 60
+            let ripForce = -stiffness * (self.bandTear - ripTarget) - 2 * sqrt(stiffness) * self.bandTearVelocity
+            self.bandTearVelocity += ripForce / 60
+            self.bandTear = max(0, self.bandTear + self.bandTearVelocity / 60)
+            if abs(self.bandAmount - target) < 0.002, abs(self.bandVelocity) < 0.01,
+               abs(self.bandTear - ripTarget) < 0.002, abs(self.bandTearVelocity) < 0.01 {
                 self.bandAmount = target; self.bandVelocity = 0
+                self.bandTear = ripTarget; self.bandTearVelocity = 0
                 timer.invalidate(); self.bandTimer = nil
             }
             self.needsDisplay = true
@@ -2584,7 +2606,7 @@ final class DockView: NSView {
             if theme.dock.bulge == true {
                 let icons = itemViews.map(\.frame)
                 updateBandTear(icons: icons, maxScale: theme.magnificationMaxScale, bar: rect)
-                bgPath = Self.bulgePath(bar: rect, radius: cr, icons: icons, amount: bandAmount)
+                bgPath = Self.bulgePath(bar: rect, radius: cr, icons: icons, amount: bandAmount, tear: bandTear)
             } else {
                 bgPath = NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
             }

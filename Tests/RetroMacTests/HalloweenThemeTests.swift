@@ -56,7 +56,7 @@ final class HalloweenThemeTests: XCTestCase {
         let bar = NSRect(x: 60, y: 14, width: 600, height: 70)
         var icons = (0..<9).map { NSRect(x: 80 + CGFloat($0) * 62, y: 24, width: 50, height: 50) }
         for (i, size) in [(1, 56.0), (2, 68.0), (3, 80.0), (4, 68.0), (5, 56.0)] { icons[i].size = NSSize(width: size, height: size) }
-        let shape = DockView.bulgePath(bar: bar, radius: 20, icons: icons)
+        let shape = DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0.15, tear: 1)
         let view = Backdrop(frame: NSRect(x: 0, y: 0, width: 720, height: 200),
                             wallpaper: NSImage(contentsOf: t.url.appendingPathComponent("wallpaper.jpg")),
                             path: shape, color: NSColor.fromHex(t.config.dock.backgroundColor))
@@ -150,5 +150,8 @@ final class BandTearTests: XCTestCase {
         icons[2] = NSRect(x: 135, y: 26, width: 80, height: 80)
         XCTAssertEqual(DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0).bounds.maxY, bar.maxY, accuracy: 0.5,
                        "torn: the band lies back at rest")
+        let ripped = DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0, tear: 1)
+        XCTAssertFalse(ripped.contains(NSPoint(x: 175, y: bar.maxY - 3)), "the rip is open over the icon")
+        XCTAssertTrue(ripped.contains(NSPoint(x: 60, y: bar.maxY - 3)), "the band is whole away from it")
     }
 }
