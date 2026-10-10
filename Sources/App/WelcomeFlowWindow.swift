@@ -146,7 +146,7 @@ struct WelcomeFlowView: View {
                     feature("accessibility", .blue, "VoiceOver and the keyboard",
                             "RetroMac\u{2019}s drawing no longer shows up as empty windows, and the docks, taskbars, Start menus and panels are named buttons and menus VoiceOver can use. \u{2303}Esc opens the theme\u{2019}s Start or main menu, \u{2303}\u{21E7}Esc walks the dock, and the arrow keys find their way through every theme menu.")
                     feature("gearshape.2", .gray, "Settings, tidied up",
-                            "Themes first, the shader in four clear tabs, Retro Mode is now Favourite, a shorter Setup Assistant with themes by family, and betas on request in About.")
+                            "Themes first, the shader in four clear tabs, Retro Mode is now Favourite, a shorter Setup Assistant with themes by family, and betas on request in About. The flyout keeps the everyday switches; the menu-bar menu has a More menu for Dock Only, the Game Library, the Setup Assistant and Rescue Desktop.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
                             "Theme switches no longer restart the Dock and Finder for nothing. Pac-Man starts again. The shader is off behind the lock screen. No more log file on the Desktop. A rolled-up window keeps its way back, even across a crash. Mission Control no longer shows the title bars as little windows. The menu-bar icon closes its menu on a second click, the dock answers the mouse coming down from the menu bar, Rescue Desktop gives every Space its wallpaper back, the shader\u{2019}s scanline and glass overlays draw again, and Futurama\u{2019}s windows close.")
 
