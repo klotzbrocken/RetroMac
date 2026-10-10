@@ -9,7 +9,7 @@ When the desktop is stuck (a window rolled up that will not come back, a window 
 screen, a theme that misbehaves), rescue it:
 
 - press **⌃⌥⌘R**, or
-- choose **Rescue Desktop** in the flyout or in the menu-bar menu.
+- choose **Rescue Desktop** in the flyout or in the menu-bar menu under More.
 
 RetroMac turns the theme, the shader and every desktop effect off, unrolls rolled-up windows,
 brings windows whose title bar you cannot reach back onto a screen, and restores the Dock, the
@@ -28,8 +28,8 @@ the report says the windows were not checked.
 To keep the theme to one Space (or a few) and plain macOS on the others:
 
 1. Switch to the Space that should have the theme.
-2. Switch on **Only on this Space** in the flyout (or choose Themes ▸ On This Space in the
-   menu-bar menu, or Theme Only on This Space on the Dock icon).
+2. Choose Themes ▸ On This Space in the menu-bar menu (or Theme Only on This Space on the
+   Dock icon).
 
 The theme's dock, desktop and panels now live on that Space and slide away with it. On the
 other Spaces you have the Mac's Dock, menu bar, cursor and your own wallpaper, and the shader

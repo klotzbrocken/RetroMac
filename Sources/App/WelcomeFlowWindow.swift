@@ -124,7 +124,7 @@ struct WelcomeFlowView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     feature("rectangle.split.3x1", .indigo, "A theme on your Spaces of choice",
-                            "Keep the theme to one Space, or a few, and plain macOS on the others: Only on this Space in the flyout. The theme slides away with its Space; the others have the Mac\u{2019}s Dock, menu bar and your own wallpaper. Every Space also gets its own wallpaper back when a theme goes off.")
+                            "Keep the theme to one Space, or a few, and plain macOS on the others: Themes \u{25B8} On This Space in the menu-bar menu. The theme slides away with its Space; the others have the Mac\u{2019}s Dock, menu bar and your own wallpaper. Every Space also gets its own wallpaper back when a theme goes off.")
                     feature("sun.max.fill", .purple, "New: Solaris 8 \u{2014} CDE",
                             "The Unix desktop of 2000: the Front Panel with its live clock and subpanels, mauve title bars with the window menu, the Workspace Menu on a right-click, minimised windows as icons, the Application Manager, and crashes on the Sun console.")
                     feature("cpu", .blue, "New: QNX 6.2.1 \u{2014} Photon",
@@ -136,7 +136,7 @@ struct WelcomeFlowView: View {
                     feature("photo.on.rectangle.angled", .teal, "Historic icons for modern apps",
                             "Over 200 new icons: Office, Teams, Slack, Zoom, Figma, VS Code, Firefox, Spotify and many more, drawn in the style of Mac OS 9, System 7, Mac OS X, BeOS, Windows 3.1 to 7. Claude, Chrome and ChatGPT now wear the theme in Mac OS 9.2, Mountain Lion and Windows XP too. Import your own icon packages in Settings \u{25B8} Dock \u{25B8} Historic icons.")
                     feature("lifepreserver", .red, "Rescue Desktop",
-                            "One action turns the theme and every effect off, brings back windows you cannot reach and the menu bar a theme hid. Your settings stay. \u{2303}\u{2325}\u{2318}R, the flyout or the menu-bar menu.")
+                            "One action turns the theme and every effect off, brings back windows you cannot reach and the menu bar a theme hid. Your settings stay. \u{2303}\u{2325}\u{2318}R, the flyout or the menu-bar menu\u{2019}s More.")
                     feature("arrow.uturn.backward.circle", .mint, "Your Mac, as you had it",
                             "Each theme\u{2019}s page lists what it changes on your Mac before you turn it on, yours against the theme\u{2019}s. RetroMac remembers every macOS setting it touches, and Restore my settings in Settings \u{25B8} General puts them back as you had them.")
                     feature("rectangle.stack", .orange, "The window switcher of each era",

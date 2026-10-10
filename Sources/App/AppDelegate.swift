@@ -1448,14 +1448,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(crashItem)
         }
 
-        // Games: one click, straight into the Library. It used to be a submenu, but since the
-        // individual "Play …" entries moved into the Library window there was nothing else in it
-        // — a submenu whose only job was to hold a single item.
-        let gamesItem = NSMenuItem(title: "Game Library\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
-        gamesItem.target = self
-        gamesItem.image = sfIcon("gamecontroller")
-        menu.addItem(gamesItem)
-
         // Imported ROMs are a different thing from the Library — the user's own files, played
         // through RetroArch — so they keep their own submenu, and only when there are any.
         let romEntries = ROMLibrary.shared.entries
@@ -1481,16 +1473,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        let rescueItem = NSMenuItem(title: "Rescue Desktop", action: #selector(rescueDesktop), keyEquivalent: "")
-        rescueItem.target = self
-        rescueItem.image = sfIcon("lifepreserver")
-        menu.addItem(rescueItem)
-
+        // More: what is used now and then, out of the way of the everyday switches.
+        let moreItem = NSMenuItem(title: "More", action: nil, keyEquivalent: "")
+        moreItem.image = sfIcon("ellipsis.circle")
+        let moreMenu = NSMenu()
+        moreMenu.autoenablesItems = false
+        let dockOnlyItem = NSMenuItem(title: "Dock Only", action: #selector(toggleDockOnly), keyEquivalent: "")
+        dockOnlyItem.target = self
+        dockOnlyItem.state = settings.dockOnly ? .on : .off
+        dockOnlyItem.toolTip = "Restyle the Dock, not the whole system"
+        dockOnlyItem.image = sfIcon("dock.rectangle")
+        moreMenu.addItem(dockOnlyItem)
+        let gamesItem = NSMenuItem(title: "Game Library\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
+        gamesItem.target = self
+        gamesItem.image = sfIcon("gamecontroller")
+        moreMenu.addItem(gamesItem)
         let wizardItem = NSMenuItem(title: "Setup Assistant\u{2026}", action: #selector(openSetupWizard), keyEquivalent: "")
         wizardItem.target = self
         // Not the wand: that is Retro Mode / favourite, up in the header.
         wizardItem.image = sfIcon("checklist")
-        menu.addItem(wizardItem)
+        moreMenu.addItem(wizardItem)
+        moreMenu.addItem(NSMenuItem.separator())
+        let rescueItem = NSMenuItem(title: "Rescue Desktop", action: #selector(rescueDesktop), keyEquivalent: "")
+        rescueItem.target = self
+        rescueItem.image = sfIcon("lifepreserver")
+        moreMenu.addItem(rescueItem)
+        moreItem.submenu = moreMenu
+        menu.addItem(moreItem)
 
         // Quit moved to a power symbol in the header; Reset Permissions moved to Settings.
         menu.delegate = self
@@ -2965,6 +2974,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func rescueDesktop() { DesktopRescue.shared.run() }
+
+    @objc private func toggleDockOnly() {
+        AppSettings.shared.dockOnly.toggle()
+        refreshDockOnlyScope()
+        rebuildMenu()
+    }
 
     /// Rescue Desktop's first step: Retro Mode, the theme and the shader off — the same paths
     /// the user's own switches take, so nothing they chose is forgotten (RET-05).

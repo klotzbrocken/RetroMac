@@ -62,7 +62,7 @@ Mountain Lion Mission Control. Themes whose era had none get none; the Windows A
 Flip wait for their reference screenshots. Its keys are only taken while the theme has a
 switcher and "Use it in this theme" is on.
 
-**Rescue Desktop** is also in the flyout and the menu-bar menu, and works with no theme on. If a
+**Rescue Desktop** is also in the flyout and in the menu-bar menu under More, and works with no theme on. If a
 rescue was interrupted, the next launch turns nothing on and finishes it; launching with
 `--rescue-desktop` (`open -a RetroMac --args --rescue-desktop`) does the same on request.
 

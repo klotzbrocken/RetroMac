@@ -105,6 +105,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **A tidier flyout and menu.** The flyout keeps the everyday switches; Only on this Space, Dock only
+  and TV Tube left it (Spaces and TV Tube stay in the menu-bar menu). The menu-bar menu has a
+  More submenu for Dock Only, the Game Library, the Setup Assistant and Rescue Desktop.
 - **VoiceOver, from a blind tester's second round.** The Control Strip, the docks, the Start
   menus and the panels keep each control as the same element between VoiceOver's questions;
   built anew each time, VoiceOver stopped after the second one (the Control Strip's Scroll

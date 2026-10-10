@@ -165,7 +165,6 @@ final class LauncherModel: ObservableObject {
     @Published var shaderActive = false
     @Published var wallpaperOnlyActive = false
     @Published var webcamRunning = false
-    @Published var tubeActive = false
     @Published var currentPreset: String = ""
 
     let presetGroups: [PresetGroup] = PresetRegistry.categorizedPresets.map { cat, infos in
@@ -220,7 +219,6 @@ final class LauncherModel: ObservableObject {
         shaderActive = AppDelegate.shared?.launcherShaderActive ?? false
         wallpaperOnlyActive = AppDelegate.shared?.launcherLiveWallpaperActive ?? false
         webcamRunning = VirtualCameraManager.shared.isRunning
-        tubeActive = TubeModeController.shared.isActive
         currentPreset = AppDelegate.shared?.launcherCurrentPreset ?? ""
     }
 }
@@ -307,8 +305,6 @@ struct LauncherView: View {
         VStack(alignment: .leading, spacing: 14) {
             header
             quickAccess
-            dockOnlyRow
-            spaceRow
             effects
             Divider()
             powerRow
@@ -513,40 +509,6 @@ struct LauncherView: View {
         .frame(width: 64, height: 74)
     }
 
-    /// The theme on this Space only (and on any other Space switched on the same way).
-    private var spaceRow: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Only on this Space").font(.system(size: 12))
-                Text("Other Spaces stay plain macOS")
-                    .font(.system(size: 10)).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Toggle("", isOn: Binding(
-                get: { settings.themeOnChosenSpaces && ThemeSpaces.shared.showsThemeHere },
-                set: { _ in AppDelegate.shared?.toggleThemeOnThisSpace() }))
-                .toggleStyle(.switch).controlSize(.small).tint(switchGreen)
-                .disabled(ThemeSpaces.currentSpace == nil).accessibilityLabel("Only on this Space")
-        }
-    }
-
-    private var dockOnlyRow: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Dock only").font(.system(size: 12))
-                Text("Restyle the Dock, not the whole system")
-                    .font(.system(size: 10)).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Toggle("", isOn: $settings.dockOnly)
-                .toggleStyle(.switch).controlSize(.small).tint(switchGreen)
-                .accessibilityLabel("Dock only")
-                .onChange(of: settings.dockOnly) { _, _ in
-                    AppDelegate.shared?.refreshDockOnlyScope()
-                }
-        }
-    }
-
     private var effects: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("EFFECTS").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
@@ -573,14 +535,6 @@ struct LauncherView: View {
                 Toggle("", isOn: Binding(get: { model.wallpaperOnlyActive },
                                          set: { _ in AppDelegate.shared?.launcherToggleLiveWallpaper(); model.refresh() }))
                     .toggleStyle(.switch).controlSize(.small).tint(switchGreen).accessibilityLabel("Live Wallpaper")
-            }
-
-            HStack {
-                Label("TV Tube", systemImage: "sparkles.tv")
-                Spacer()
-                Toggle("", isOn: Binding(get: { model.tubeActive },
-                                         set: { _ in AppDelegate.shared?.toggleTubeMode(); model.refreshState() }))
-                    .toggleStyle(.switch).controlSize(.small).tint(switchGreen).accessibilityLabel("TV Tube")
             }
 
             // Crash Now: the Party-mode trigger where a demo can reach it in one click, without
