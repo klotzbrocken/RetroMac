@@ -15,6 +15,9 @@ final class HalloweenThemeTests: XCTestCase {
         XCTAssertEqual(c.dock.dirtyGlass, true)
         XCTAssertEqual(c.menuBarAppleStyleDefault, 7)
         XCTAssertEqual(c.appearance, "dark")
+        // A desktop of RetroMac's own, so a right-click reaches its wallpaper menu; the user's
+        // Desktop folder stays one double-click away while the Finder's icons are hidden.
+        XCTAssertEqual(c.desktopIcons?.map(\.path), ["/", "~/Desktop"])
     }
 
     /// macOS 26+ answers with the current icon style (read only); the theme asks for tinted.

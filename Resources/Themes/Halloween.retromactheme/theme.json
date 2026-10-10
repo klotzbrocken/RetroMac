@@ -64,5 +64,9 @@
     "size": 4,
     "offset": 4
   },
+  "desktopIcons": [
+    { "name": "Macintosh HD", "icon": "", "type": "folder", "path": "/", "gridX": 0, "gridY": 0 },
+    { "name": "Desktop", "icon": "", "type": "folder", "path": "~/Desktop", "gridX": 0, "gridY": 1 }
+  ],
   "iconMappings": {}
 }
