@@ -1,7 +1,7 @@
 import XCTest
 @testable import RetroMac
 
-/// The Halloween theme: a glass dock with a few cracks and a glowing ember rim, the pumpkin
+/// The Halloween theme: a grimy glass dock with a glowing ember rim, the pumpkin
 /// for the Apple. With RETROMAC_SNAPSHOT_DIR set the dock is drawn to halloween-dock.png.
 final class HalloweenThemeTests: XCTestCase {
     private func theme() throws -> ThemeBundle {
@@ -12,7 +12,7 @@ final class HalloweenThemeTests: XCTestCase {
     func testTheManifest() throws {
         let c = try theme().config
         XCTAssertEqual(c.dock.borderStyle, "ember")
-        XCTAssertEqual(c.dock.glassCracks, true)
+        XCTAssertEqual(c.dock.dirtyGlass, true)
         XCTAssertEqual(c.menuBarAppleStyleDefault, 7)
         XCTAssertEqual(c.appearance, "dark")
     }
@@ -41,7 +41,9 @@ final class HalloweenThemeTests: XCTestCase {
             wallpaper?.draw(in: bounds, from: NSRect(x: 0, y: 0, width: wallpaper!.size.width, height: wallpaper!.size.width * bounds.height / bounds.width), operation: .copy, fraction: 1)
             let path = NSBezierPath(roundedRect: bar, xRadius: 20, yRadius: 20)
             color.setFill(); path.fill()
-            DockView.drawGlassCracks(in: bar, clip: path, alpha: 1)
+            NSGraphicsContext.saveGraphicsState(); path.addClip()
+            DockView.dirtImage.draw(in: bar)
+            NSGraphicsContext.restoreGraphicsState()
         }
     }
 

@@ -10,6 +10,7 @@ final class EmberRim {
     private var lavaMask: CAShapeLayer?
     private var maskHolder: CALayer?
     private var lava: CAGradientLayer?
+    private var undertow: CAGradientLayer?
     private var sparks: CAShapeLayer?
     private var configured: NSRect = .zero
 
@@ -29,8 +30,10 @@ final class EmberRim {
         sparks?.path = path
         // The gradient turns behind the mask: a square around the bar, so no corner is ever bare.
         let side = hypot(barRect.width, barRect.height) + 20
-        lava?.bounds = CGRect(x: 0, y: 0, width: side, height: side)
-        lava?.position = CGPoint(x: barRect.midX, y: barRect.midY)
+        for g in [lava, undertow] {
+            g?.bounds = CGRect(x: 0, y: 0, width: side, height: side)
+            g?.position = CGPoint(x: barRect.midX, y: barRect.midY)
+        }
         CATransaction.commit()
     }
 
@@ -42,7 +45,7 @@ final class EmberRim {
 
     func teardown() {
         root?.removeFromSuperlayer()
-        root = nil; glow = nil; halo = nil; lavaMask = nil; maskHolder = nil; lava = nil; sparks = nil
+        root = nil; glow = nil; halo = nil; lavaMask = nil; maskHolder = nil; lava = nil; undertow = nil; sparks = nil
         configured = .zero
     }
 
@@ -56,10 +59,10 @@ final class EmberRim {
         let halo = CAShapeLayer()
         halo.fillColor = nil
         halo.strokeColor = NSColor(srgbRed: 0.85, green: 0.16, blue: 0.0, alpha: 0.9).cgColor
-        halo.lineWidth = 3
+        halo.lineWidth = 6
         halo.shadowColor = NSColor(srgbRed: 1.0, green: 0.22, blue: 0.0, alpha: 1).cgColor
         halo.shadowOffset = .zero
-        halo.shadowRadius = 16
+        halo.shadowRadius = 24
         halo.shadowOpacity = 1
         root.addSublayer(halo)
 
@@ -67,14 +70,15 @@ final class EmberRim {
         let glow = CAShapeLayer()
         glow.fillColor = nil
         glow.strokeColor = ember
-        glow.lineWidth = 2
+        glow.lineWidth = 3
         glow.shadowColor = NSColor(srgbRed: 1.0, green: 0.45, blue: 0.0, alpha: 1).cgColor
         glow.shadowOffset = .zero
-        glow.shadowRadius = 9
+        glow.shadowRadius = 12
         glow.shadowOpacity = 1
         root.addSublayer(glow)
 
-        // The lava: deep red to yellow-orange, turning slowly under a hairline mask.
+        // The lava: a molten band with soft edges, two flows of crust and glow turning against
+        // each other inside it, so it churns like something liquid.
         let lava = CAGradientLayer()
         lava.type = .conic
         lava.startPoint = CGPoint(x: 0.5, y: 0.5)
@@ -83,12 +87,26 @@ final class EmberRim {
                        NSColor(srgbRed: 1.0, green: 0.78, blue: 0.30, alpha: 1), NSColor(srgbRed: 0.95, green: 0.30, blue: 0.0, alpha: 1),
                        NSColor(srgbRed: 0.55, green: 0.06, blue: 0.0, alpha: 1), NSColor(srgbRed: 1.0, green: 0.55, blue: 0.08, alpha: 1),
                        NSColor(srgbRed: 0.55, green: 0.06, blue: 0.0, alpha: 1)].map(\.cgColor)
+        let undertow = CAGradientLayer()
+        undertow.type = .conic
+        undertow.startPoint = CGPoint(x: 0.5, y: 0.5)
+        undertow.endPoint = CGPoint(x: 0.5, y: 0)
+        undertow.colors = [NSColor(srgbRed: 1.0, green: 0.85, blue: 0.35, alpha: 0.9), NSColor(srgbRed: 0.35, green: 0.02, blue: 0.0, alpha: 0),
+                           NSColor(srgbRed: 1.0, green: 0.60, blue: 0.10, alpha: 0.8), NSColor(srgbRed: 0.35, green: 0.02, blue: 0.0, alpha: 0),
+                           NSColor(srgbRed: 1.0, green: 0.92, blue: 0.55, alpha: 0.85), NSColor(srgbRed: 0.35, green: 0.02, blue: 0.0, alpha: 0),
+                           NSColor(srgbRed: 1.0, green: 0.85, blue: 0.35, alpha: 0.9)].map(\.cgColor)
+        undertow.compositingFilter = "screenBlendMode"
         let maskHolder = CALayer()
         let lavaMask = CAShapeLayer()
         lavaMask.fillColor = nil
         lavaMask.strokeColor = NSColor.white.cgColor
-        lavaMask.lineWidth = 2
+        lavaMask.lineWidth = 5
+        lavaMask.shadowColor = NSColor.white.cgColor   // feathered edges: molten, not drawn
+        lavaMask.shadowOffset = .zero
+        lavaMask.shadowRadius = 2.5
+        lavaMask.shadowOpacity = 1
         maskHolder.addSublayer(lava)
+        maskHolder.addSublayer(undertow)
         maskHolder.mask = lavaMask
         root.addSublayer(maskHolder)
 
@@ -111,12 +129,17 @@ final class EmberRim {
                 a.calculationMode = .cubic
                 layer.add(a, forKey: key)
             }
-            waver(halo, "shadowRadius", [12, 22, 15, 26, 13, 19, 12], 5.3)
+            waver(halo, "shadowRadius", [18, 32, 22, 36, 20, 28, 18], 5.3)
             waver(halo, "opacity", [0.75, 1, 0.8, 0.95, 0.7, 1, 0.75], 3.7)
-            waver(halo, "lineWidth", [2.5, 4.5, 3, 5, 2.5], 4.1)
-            waver(glow, "shadowRadius", [7, 12, 8, 14, 9, 11, 7], 2.3)
+            waver(halo, "lineWidth", [5, 9, 6, 10, 5], 4.1)
+            waver(glow, "shadowRadius", [10, 17, 12, 19, 11, 15, 10], 2.3)
             waver(glow, "shadowOpacity", [1, 0.7, 1, 0.8, 0.95, 0.65, 1], 1.7)
-            waver(glow, "lineWidth", [1.6, 2.6, 1.8, 2.4, 1.6], 2.9)
+            waver(glow, "lineWidth", [2.5, 4, 3, 4.5, 2.5], 2.9)
+            waver(lavaMask, "lineWidth", [4, 7, 4.5, 8, 5, 6.5, 4], 3.3)
+            let against = CABasicAnimation(keyPath: "transform.rotation.z")
+            against.fromValue = 0; against.toValue = -2 * Double.pi
+            against.duration = 9; against.repeatCount = .infinity
+            undertow.add(against, forKey: "turn")
             let turn = CABasicAnimation(keyPath: "transform.rotation.z")
             turn.fromValue = 0; turn.toValue = 2 * Double.pi
             turn.duration = 14; turn.repeatCount = .infinity
@@ -126,6 +149,6 @@ final class EmberRim {
             run.duration = 4.5; run.repeatCount = .infinity
             sparks.add(run, forKey: "run")
         }
-        self.root = root; self.glow = glow; self.halo = halo; self.lavaMask = lavaMask; self.maskHolder = maskHolder; self.lava = lava; self.sparks = sparks
+        self.root = root; self.glow = glow; self.halo = halo; self.lavaMask = lavaMask; self.maskHolder = maskHolder; self.lava = lava; self.undertow = undertow; self.sparks = sparks
     }
 }

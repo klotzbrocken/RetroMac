@@ -254,52 +254,69 @@ final class DockView: NSView {
     /// The bottom of the bar, for running lights that sit on the shelf's front edge.
     var shelfBottomY: CGFloat { currentBarRect.minY }
 
-    // MARK: - Cracked glass (Halloween)
+    // MARK: - Dirty glass (Halloween)
 
-    /// A pane with a few cracks: two points of impact near the ends, each with a handful of
-    /// jagged cracks running out and a ring of short ones round it. Drawn from a fixed seed, so
-    /// the same cracks every time, scaled with the bar; a hairline of light with a darker edge
-    /// beside it, as a crack catches the light.
-    static func drawGlassCracks(in r: NSRect, clip: NSBezierPath, alpha: CGFloat) {
-        var seed: UInt64 = 0x48_41_4C_4C_4F_57   // "HALLOW"
-        func rnd() -> CGFloat {
-            seed = seed &* 6364136223846793005 &+ 1442695040888963407
-            return CGFloat(seed >> 33) / CGFloat(UInt32.max >> 1)
-        }
-        let light = NSBezierPath(), dark = NSBezierPath()
-        let impacts = [NSPoint(x: r.minX + r.width * 0.13, y: r.minY + r.height * 0.62),
-                       NSPoint(x: r.minX + r.width * 0.81, y: r.minY + r.height * 0.30)]
-        for (n, c) in impacts.enumerated() {
-            let rays = n == 0 ? 7 : 5
-            let reach = r.height * (n == 0 ? 1.6 : 1.1)
-            var ringPoints: [NSPoint] = []
-            for i in 0..<rays {
-                var angle = (CGFloat(i) / CGFloat(rays)) * 2 * .pi + rnd() * 0.5
-                var p = c
-                light.move(to: p); dark.move(to: NSPoint(x: p.x + 0.6, y: p.y - 0.6))
-                let steps = 4 + Int(rnd() * 3)
-                for s in 0..<steps {
-                    angle += (rnd() - 0.5) * 0.7
-                    let len = reach / CGFloat(steps) * (0.6 + rnd() * 0.8)
-                    p = NSPoint(x: p.x + cos(angle) * len, y: p.y + sin(angle) * len * 0.55)
-                    light.line(to: p); dark.line(to: NSPoint(x: p.x + 0.6, y: p.y - 0.6))
-                    if s == 1 { ringPoints.append(p) }
-                }
+    /// The grime on the Halloween dock's glass, made once: soft smears, drips running down from
+    /// the top edge, dust, and dirt settled along the bottom. From a fixed seed, so the same
+    /// dirt every time; laid over the bar as a layer and stretched with it, so magnifying the
+    /// dock costs nothing.
+    static let dirtImage: NSImage = {
+        let size = NSSize(width: 900, height: 90)
+        return NSImage(size: size, flipped: false) { r in
+            var seed: UInt64 = 0x47_52_49_4D_45   // "GRIME"
+            func rnd() -> CGFloat {
+                seed = seed &* 6364136223846793005 &+ 1442695040888963407
+                return CGFloat(seed >> 33) / CGFloat(UInt32.max >> 1)
             }
-            // The ring: short cracks joining the rays near the impact.
-            for (a, b) in zip(ringPoints, ringPoints.dropFirst() + ringPoints.prefix(1)) where rnd() > 0.3 {
-                light.move(to: a)
-                light.line(to: NSPoint(x: (a.x + b.x) / 2 + (rnd() - 0.5) * 4, y: (a.y + b.y) / 2 + (rnd() - 0.5) * 3))
-                light.line(to: b)
+            let grime = NSColor(srgbRed: 0.55, green: 0.47, blue: 0.38, alpha: 1)
+            // Dirt settled along the bottom.
+            NSGradient(colors: [grime.withAlphaComponent(0.32), grime.withAlphaComponent(0)])?
+                .draw(in: NSRect(x: 0, y: 0, width: r.width, height: r.height * 0.5), angle: 90)
+            // Smears: soft blotches, lighter and darker.
+            for _ in 0..<34 {
+                let rad = 10 + rnd() * 46
+                let c = NSPoint(x: rnd() * r.width, y: rnd() * r.height)
+                let tone = rnd() > 0.5 ? NSColor(white: 0.85, alpha: 1) : grime
+                NSGradient(colors: [tone.withAlphaComponent(0.08 + rnd() * 0.12), tone.withAlphaComponent(0)])?
+                    .draw(fromCenter: c, radius: 0, toCenter: c, radius: rad, options: [])
             }
+            // Drips: thin streaks running down from the top edge, fading as they go.
+            for _ in 0..<9 {
+                let x = rnd() * r.width, len = r.height * (0.3 + rnd() * 0.55), w = 1 + rnd() * 2.2
+                let streak = NSRect(x: x, y: r.height - len, width: w, height: len)
+                NSGradient(colors: [grime.withAlphaComponent(0), grime.withAlphaComponent(0.16 + rnd() * 0.12)])?
+                    .draw(in: NSBezierPath(roundedRect: streak, xRadius: w / 2, yRadius: w / 2), angle: 90)
+            }
+            // Dust.
+            for _ in 0..<260 {
+                let d = 0.4 + rnd() * 1.3
+                NSColor(white: 0.75 + rnd() * 0.25, alpha: 0.06 + rnd() * 0.18).setFill()
+                NSBezierPath(ovalIn: NSRect(x: rnd() * r.width, y: rnd() * r.height, width: d, height: d)).fill()
+            }
+            return true
         }
-        NSGraphicsContext.saveGraphicsState()
-        clip.addClip()
-        NSColor.black.withAlphaComponent(0.35 * alpha).setStroke()
-        dark.lineWidth = 0.7; dark.stroke()
-        NSColor.white.withAlphaComponent(0.30 * alpha).setStroke()
-        light.lineWidth = 0.6; light.stroke()
-        NSGraphicsContext.restoreGraphicsState()
+    }()
+
+    private var dirtLayer: CALayer?
+
+    /// The dirt over the bar, under the icons (`dirtyGlass`), or none.
+    private func updateDirt(rect: NSRect, radius: CGFloat, on: Bool) {
+        guard on, let host = layer else { dirtLayer?.removeFromSuperlayer(); dirtLayer = nil; return }
+        let dirt = dirtLayer ?? {
+            let l = CALayer()
+            l.contents = Self.dirtImage
+            l.contentsGravity = .resize
+            l.masksToBounds = true
+            l.zPosition = -2
+            host.addSublayer(l)
+            dirtLayer = l
+            return l
+        }()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        dirt.frame = rect
+        dirt.cornerRadius = radius
+        CATransaction.commit()
     }
 
     // MARK: - Mountain Lion shelf
@@ -605,7 +622,7 @@ final class DockView: NSView {
 
             // Pinned apps
             for (i, app) in apps.enumerated() {
-                let y = (barRect.height - iconSize) / 2
+                let y = barRect.minY + (barRect.height - iconSize) / 2
                 addItem(bundleID: app.bundleID,
                         frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                         theme: theme, iconSize: iconSize)
@@ -617,7 +634,7 @@ final class DockView: NSView {
             // Running apps not in dock (transient)
             let transientApps = runningAppsNotInDock()
             for (i, bundleID) in transientApps.enumerated() {
-                let y = (barRect.height - iconSize) / 2
+                let y = barRect.minY + (barRect.height - iconSize) / 2
                 addItem(bundleID: bundleID,
                         frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                         theme: theme, iconSize: iconSize)
@@ -753,7 +770,7 @@ final class DockView: NSView {
                 if RetroFrameTheme.key() == "win7" { clockWidth += 34 }
                 let isSunkenClock = theme.dock.startButtonStyle == "sunken"
                 if isXP || isSunkenClock {
-                    clockFrame = NSRect(x: rightEdge - clockWidth, y: 0, width: clockWidth, height: barRect.height)
+                    clockFrame = NSRect(x: rightEdge - clockWidth, y: barRect.minY, width: clockWidth, height: barRect.height)
                 } else {
                     let clockHeight = barRect.height - 6
                     clockFrame = NSRect(x: rightEdge - clockWidth - 3, y: 3, width: clockWidth, height: clockHeight)
@@ -814,10 +831,10 @@ final class DockView: NSView {
                     let clockLeft = clockFrame.isEmpty ? barRect.maxX : clockFrame.minX
                     let dfRight = barRect.midX + (clockLeft - barRect.midX) * 0.42
                     let dfX = max(startButtonFrame.maxX + spacing, dfRight - dfWidth)
-                    diskFreeFrame = NSRect(x: dfX, y: 0, width: dfWidth, height: barRect.height)
+                    diskFreeFrame = NSRect(x: dfX, y: barRect.minY, width: dfWidth, height: barRect.height)
                     // rightEdge stays at the clock — gauge no longer consumes right tray space
                 } else {
-                    diskFreeFrame = NSRect(x: rightEdge - dfWidth, y: 0, width: dfWidth, height: barRect.height)
+                    diskFreeFrame = NSRect(x: rightEdge - dfWidth, y: barRect.minY, width: dfWidth, height: barRect.height)
                     rightEdge = diskFreeFrame.minX
                 }
             } else {
@@ -835,13 +852,13 @@ final class DockView: NSView {
                 let quickLaunchStart = x
                 if theme.showQuickLaunch {
                     if hasShowDesktop {
-                        addShowDesktopItem(frame: NSRect(x: x, y: (barRect.height - iconSize) / 2,
+                        addShowDesktopItem(frame: NSRect(x: x, y: barRect.minY + (barRect.height - iconSize) / 2,
                                                          width: iconSize, height: iconSize),
                                            theme: theme, iconSize: iconSize)
                         x += iconSize + spacing
                     }
                     for app in apps {
-                        let y = (barRect.height - iconSize) / 2
+                        let y = barRect.minY + (barRect.height - iconSize) / 2
                         addItem(bundleID: app.bundleID,
                                 frame: NSRect(x: x, y: y, width: iconSize, height: iconSize),
                                 theme: theme, iconSize: iconSize)
@@ -864,7 +881,7 @@ final class DockView: NSView {
                 // added to the dock it reached three of the four places that enumerate the row
                 // and not the fourth, so the bar came out a tile too narrow and the trash was
                 // drawn beside it.
-                let y = (barRect.height - iconSize) / 2
+                let y = barRect.minY + (barRect.height - iconSize) / 2
                 for t in tiles {
                     if t.separator == .transients { separatorX = x + (t.gapBefore - spacing) / 2 }   // mid-gap
                     if t.separator == .rightGroup { trashSeparatorX = x + (t.gapBefore - spacing) / 2 }
@@ -953,7 +970,7 @@ final class DockView: NSView {
             let totalCount = apps.count + transientApps.count
             for i in 0..<apps.count {
                 guard idx < itemViews.count else { break }
-                let y = (barRect.height - iconSize) / 2
+                let y = barRect.minY + (barRect.height - iconSize) / 2
                 itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                 idx += 1
                 x += iconSize + arrowWidth
@@ -963,7 +980,7 @@ final class DockView: NSView {
             }
             for i in 0..<transientApps.count {
                 guard idx < itemViews.count else { break }
-                let y = (barRect.height - iconSize) / 2
+                let y = barRect.minY + (barRect.height - iconSize) / 2
                 itemViews[idx].frame = NSRect(x: x, y: y, width: iconSize, height: iconSize)
                 idx += 1
                 x += iconSize + arrowWidth
@@ -1096,7 +1113,7 @@ final class DockView: NSView {
                 if RetroFrameTheme.key() == "win7" { clockWidth += 34 }
                 let isSunkenClock = theme.dock.startButtonStyle == "sunken"
                 if isXP || isSunkenClock {
-                    clockFrame = NSRect(x: rightEdge - clockWidth, y: 0, width: clockWidth, height: barRect.height)
+                    clockFrame = NSRect(x: rightEdge - clockWidth, y: barRect.minY, width: clockWidth, height: barRect.height)
                 } else {
                     let clockHeight = barRect.height - 6
                     clockFrame = NSRect(x: rightEdge - clockWidth - 3, y: 3, width: clockWidth, height: clockHeight)
@@ -1155,9 +1172,9 @@ final class DockView: NSView {
                     let clockLeft = clockFrame.isEmpty ? barRect.maxX : clockFrame.minX
                     let dfRight = barRect.midX + (clockLeft - barRect.midX) * 0.42
                     let dfX = max(startButtonFrame.maxX + spacing, dfRight - dfWidth)
-                    diskFreeFrame = NSRect(x: dfX, y: 0, width: dfWidth, height: barRect.height)
+                    diskFreeFrame = NSRect(x: dfX, y: barRect.minY, width: dfWidth, height: barRect.height)
                 } else {
-                    diskFreeFrame = NSRect(x: rightEdge - dfWidth, y: 0, width: dfWidth, height: barRect.height)
+                    diskFreeFrame = NSRect(x: rightEdge - dfWidth, y: barRect.minY, width: dfWidth, height: barRect.height)
                     rightEdge = diskFreeFrame.minX
                 }
             } else {
@@ -1168,7 +1185,7 @@ final class DockView: NSView {
             // its Quick Launch group, divider and task-button strip are placed together in
             // rebuildItems(), and having a second, subtly different implementation here is what
             // made Show Desktop jump from the front of the group to the back after a relayout.
-            let y = (barRect.height - iconSize) / 2
+            let y = barRect.minY + (barRect.height - iconSize) / 2
             for tile in tiles {
                 guard idx < itemViews.count else { break }
                 if tile.separator == .transients { separatorX = x + (tile.gapBefore - spacing) / 2 }   // mid-gap
@@ -1363,7 +1380,7 @@ final class DockView: NSView {
         // Buttons sit a touch narrower than the bar (more "Rand" top/bottom), matching the real
         // Windows Me taskbar where the buttons don't fill the whole bar height.
         let h = barRect.height - 8
-        let y = (barRect.height - h) / 2
+        let y = barRect.minY + (barRect.height - h) / 2
         var x = startX
         if limited {
             // Without Accessibility the buttons are programs, not windows. Say so where the
@@ -2411,6 +2428,7 @@ final class DockView: NSView {
 
         // ── Mac OS 9 Control Strip ──────────────────────────────────────
         if theme.isControlStrip {
+            emberRim.teardown(); updateDirt(rect: rect, radius: 0, on: false)   // left from a theme before
             drawControlStrip(ctx: ctx, theme: theme, barRect: rect, bgAlpha: bgAlpha)
             return
         }
@@ -2503,9 +2521,7 @@ final class DockView: NSView {
             bgPath.fill()
         }
 
-        if theme.dock.glassCracks == true {
-            Self.drawGlassCracks(in: rect, clip: bgPath, alpha: bgAlpha)
-        }
+        updateDirt(rect: rect, radius: cr, on: theme.dock.dirtyGlass == true && !theme.isVertical)
 
         // Futurama: turn the flat teal bar into the riveted metal girder from the mockup. The metal
         // is solid in the mockup, so the beam is drawn fully opaque regardless of the slider.

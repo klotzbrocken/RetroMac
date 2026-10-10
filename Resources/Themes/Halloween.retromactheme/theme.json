@@ -33,7 +33,7 @@
     "borderColor": "#00000000",
     "borderWidth": 0,
     "borderStyle": "ember",
-    "glassCracks": true,
+    "dirtyGlass": true,
     "shadowEnabled": true,
     "shadowColor": "#00000080",
     "shadowRadius": 16,

@@ -238,7 +238,7 @@ struct DockThemeConfig: Codable {
         var alignment: String?   // "center" (default), "left", "right"
         var edgeOffset: CGFloat? // distance from screen edge in px (default 8)
         var borderStyle: String? // nil = normal bevel/border; "pacman" = animated pellet border; "doomslayer" = Doom Slayer patrols the lower edge; "ember" = glowing lava rim (Halloween)
-        var glassCracks: Bool?   // a pane of glass with a few cracks in it (Halloween)
+        var dirtyGlass: Bool?    // grimy glass: smears, drips, dust (Halloween)
         var showTrash: Bool?     // show trash icon at end of dock
         var showUrlLauncher: Bool?   // editable URL-launcher tile, placed left of the trash
         var pinstripe: Bool?         // fine horizontal Aqua pinstripe texture over the dock bg
