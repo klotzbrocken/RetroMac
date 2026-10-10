@@ -407,18 +407,53 @@ final class DockView: NSView {
     /// it again. The gap between the two keeps it from snapping back and forth at one point.
     static func bandTears(growth: CGFloat, torn: Bool) -> Bool { torn ? growth > 0.33 : growth > 0.75 }
 
+    /// The tear waiting for the mouse to stay: the icon it would tear, and the pending tear.
+    private var tearCandidate: Int?
+    private var tearPending: DispatchWorkItem?
+
     private func updateBandTear(icons: [NSRect], maxScale: CGFloat, bar: NSRect) {
         let rest = icons.map(\.height).min() ?? 0
-        guard rest > 0, maxScale > 1, let biggest = icons.max(by: { $0.height < $1.height }) else { return }
-        let growth = (biggest.height - rest) / (rest * (maxScale - 1))
-        let torn = Self.bandTears(growth: growth, torn: bandTorn)
-        guard torn != bandTorn else { return }
+        guard rest > 0, maxScale > 1,
+              let idx = icons.indices.max(by: { icons[$0].height < icons[$1].height }) else { return }
+        let growth = (icons[idx].height - rest) / (rest * (maxScale - 1))
+        let wants = Self.bandTears(growth: growth, torn: bandTorn)
+        if bandTorn {
+            if !wants { setBandTorn(false, burstAt: nil) }   // shrunk: the band takes it again
+            return
+        }
+        // It tears only when the mouse stays on one icon for a second: sweeping along the dock
+        // only stretches the band.
+        guard wants else { tearPending?.cancel(); tearPending = nil; tearCandidate = nil; return }
+        guard tearPending == nil || tearCandidate != idx else { return }
+        tearPending?.cancel()
+        tearCandidate = idx
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, !self.bandTorn else { return }
+            self.tearPending = nil
+            let now = self.itemViews.map(\.frame)
+            let rest = now.map(\.height).min() ?? 0
+            guard idx < now.count, now.max(by: { $0.height < $1.height }) == now[idx],
+                  rest > 0, (now[idx].height - rest) / (rest * (maxScale - 1)) > 0.75 else { return }
+            self.setBandTorn(true, burstAt: CGPoint(x: now[idx].midX, y: self.currentBarRect.maxY + (now[idx].height - rest) * 0.5))
+        }
+        tearPending = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.tearDwell, execute: work)
+    }
+
+    /// How long the mouse stays on an icon before it tears out of the band.
+    static let tearDwell: TimeInterval = 1.0
+
+    private func setBandTorn(_ torn: Bool, burstAt point: CGPoint?) {
         bandTorn = torn
         if torn {
             bandVelocity = -9   // a snap, so it overshoots below rest and wobbles
             bandTear = -0.9; bandTearVelocity = 0   // the torn ends go up with the icon first
-            emberRim.burst(at: CGPoint(x: biggest.midX, y: bar.maxY + (biggest.height - rest) * 0.5))
+            if let point { emberRim.burst(at: point) }
         }
+        startBandSpring()
+    }
+
+    private func startBandSpring() {
         guard bandTimer == nil else { return }
         let t = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] timer in
             guard let self else { timer.invalidate(); return }
