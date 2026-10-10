@@ -19,6 +19,7 @@ extension CursorThemeManager {
         // is bundled, so it borrows it. 95 is that set with its own hourglass.
         case "Windows 3.1", "Windows Me":               return loadBundledSet("Cursors/Retrosmart")
         case "Windows 95":                              return loadBundledSet("Cursors/Windows95")
+        case "Halloween":                               return loadBundledSet("Cursors/Halloween")   // the knife, arrow only
         case "Windows XP":                              return loadBundledSet("Cursors/WindowsXP", scale: AppSettings.shared.xpCursorScale)
         case "Windows 98":
             // The default Windows 98 scheme keeps the system pointer; the Plus! schemes ship a set.

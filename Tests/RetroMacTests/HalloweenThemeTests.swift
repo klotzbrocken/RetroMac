@@ -28,6 +28,15 @@ final class HalloweenThemeTests: XCTestCase {
         XCTAssertEqual(IconStyle.Value([8, 0, 1]), IconStyle.tinted)
     }
 
+    /// The knife: Maik's arrow, 32 pt with the click at the blade's tip; the rest stay the system's.
+    func testTheKnifePointer() throws {
+        let dir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../Resources/Cursors/Halloween")
+        let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: dir.appendingPathComponent("manifest.json"))) as? [String: [String: Any]]
+        XCTAssertEqual(manifest?.keys.sorted(), ["arrow"])
+        XCTAssertEqual(manifest?["arrow"]?["hotspot"] as? [Double], [5, 2.5])
+        XCTAssertEqual(NSImage(contentsOf: dir.appendingPathComponent("arrow.png"))?.representations.first?.pixelsWide, 64)
+    }
+
     func testThePumpkinIsTheSystemEmojiTrimmed() {
         let p = RainbowAppleController.pumpkin()
         XCTAssertGreaterThan(p.size.width, 50)

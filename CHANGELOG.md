@@ -12,7 +12,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   flames, sparks and smoke rising from the top (still under Reduce Motion). The dock
   arches up over a magnified icon like a band laid over it and stays clear of the Live Wallpaper; the
   jack-o'-lantern in place of the Apple, dark mode with an orange accent, and a Halloween night
-  for the wallpaper — changed with a right-click on the desktop, where Macintosh HD and your Desktop
+  for the wallpaper — changed with a right-click on the desktop — and a kitchen knife for the pointer, where Macintosh HD and your Desktop
   folder stand. The pumpkin is also a menu-bar Apple style of its own. With Match appearance
   on, macOS tints every app icon in the accent colour (the Tinted icon style of macOS 26 and
   later), and your own icon style comes back when the theme goes off.
