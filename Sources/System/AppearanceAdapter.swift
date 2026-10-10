@@ -39,9 +39,7 @@ enum AppearanceAdapter {
             d.set([icons.theme, icons.tint, icons.appearance].map(Int.init), forKey: origIconKey)
         }
         let original = (d.array(forKey: origIconKey) as? [Int]).flatMap(IconStyle.Value.init)
-        if let wanted = config.iconStyle == "tinted" ? IconStyle.tinted : original, wanted != IconStyle.current() {
-            IconStyle.set(wanted)
-        }
+        let iconsWanted = config.iconStyle == "tinted" ? IconStyle.tinted : original
         DispatchQueue.global(qos: .utility).async {
             let sb = SystemBridge.shared
             if let name = config.accentColor?.lowercased(), let a = accents[name] {
@@ -61,6 +59,12 @@ enum AppearanceAdapter {
                 // distributed notification at least reaches freshly launched apps.
             }
             notifyChanged()
+            // The tint IS the accent colour on macOS 26+, read when the style is saved: so the
+            // style goes last, once the accent is written, as System Settings does it. Set first,
+            // the icons took the old accent (blue) and kept it.
+            if let iconsWanted {
+                DispatchQueue.main.async { if iconsWanted != IconStyle.current() { IconStyle.set(iconsWanted) } }
+            }
             print("[Appearance] Matched to theme: accent=\(config.accentColor ?? "-") appearance=\(config.appearance ?? "-")")
         }
     }
@@ -149,7 +153,8 @@ enum AppearanceAdapter {
 /// macOS 26's icon and widget style, through SkyLight's `SLSIconAppearanceConfiguration`, the
 /// class System Settings ▸ Appearance uses. Its numbers are not documented; measured on macOS 27
 /// by setting the style there and reading it back: Default (dark) is theme 2, appearance 0;
-/// Tinted (dark) is theme 8, appearance 1; tint 0 follows the accent colour. Nil where the class
+/// Tinted (dark) is theme 8, appearance 1; the tint is the accent colour (choosing an orange tint
+/// there sets AppleAccentColor to orange and leaves the tint at 0). Nil where the class
 /// is missing (before macOS 26), and then nothing is changed.
 enum IconStyle {
     struct Value: Equatable {
