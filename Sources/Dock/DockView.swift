@@ -331,7 +331,9 @@ final class DockView: NSView {
     /// centre weighted by how much each grew, and as wide as it must be for each grown icon to
     /// stay under it, with the bar's own margin above the icons as the slack. Taken from the
     /// largest icon instead, the arch jumped a whole icon each time the largest one changed.
-    static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect]) -> NSBezierPath {
+    /// `amount`: how much of the lift the band takes — 1 holding the icons, 0 back at rest after
+    /// an icon tore out of it, a little below 0 as it springs back.
+    static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect], amount: CGFloat = 1) -> NSBezierPath {
         let rest = icons.map(\.height).min() ?? 0
         let lifted = icons.map { ($0, $0.height - rest) }.filter { $0.1 > 0.5 }
         let total = lifted.reduce(0) { $0 + $1.1 }
@@ -350,7 +352,7 @@ final class DockView: NSView {
         }
         func top(_ x: CGFloat) -> CGFloat {
             let d = abs(x - centre)
-            return d >= half ? r.maxY : r.maxY + peak * 0.5 * (1 + cos(.pi * d / half))
+            return d >= half ? r.maxY : r.maxY + peak * amount * 0.5 * (1 + cos(.pi * d / half))
         }
         let p = NSBezierPath()
         p.move(to: NSPoint(x: r.minX + radius, y: r.minY))
@@ -365,6 +367,49 @@ final class DockView: NSView {
         p.appendArc(from: NSPoint(x: r.minX, y: r.minY), to: NSPoint(x: r.minX + radius, y: r.minY), radius: radius)
         p.close()
         return p
+    }
+
+    // MARK: - The band tearing (Halloween)
+
+    /// How much of the lift the band takes now, and how fast that is changing: a spring between
+    /// holding the icons (1) and lying back at rest (0).
+    private var bandAmount: CGFloat = 1
+    private var bandVelocity: CGFloat = 0
+    private var bandTorn = false
+    private var bandTimer: Timer?
+
+    /// Past three quarters of its full magnification an icon tears out of the band, which springs
+    /// back down with a shower of sparks; once it has shrunk below a third the band takes hold of
+    /// it again. The gap between the two keeps it from snapping back and forth at one point.
+    static func bandTears(growth: CGFloat, torn: Bool) -> Bool { torn ? growth > 0.33 : growth > 0.75 }
+
+    private func updateBandTear(icons: [NSRect], maxScale: CGFloat, bar: NSRect) {
+        let rest = icons.map(\.height).min() ?? 0
+        guard rest > 0, maxScale > 1, let biggest = icons.max(by: { $0.height < $1.height }) else { return }
+        let growth = (biggest.height - rest) / (rest * (maxScale - 1))
+        let torn = Self.bandTears(growth: growth, torn: bandTorn)
+        guard torn != bandTorn else { return }
+        bandTorn = torn
+        if torn {
+            bandVelocity = -9   // a snap, so it overshoots below rest and wobbles
+            emberRim.burst(at: CGPoint(x: biggest.midX, y: bar.maxY + (biggest.height - rest) * 0.5))
+        }
+        guard bandTimer == nil else { return }
+        let t = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] timer in
+            guard let self else { timer.invalidate(); return }
+            let target: CGFloat = self.bandTorn ? 0 : 1
+            // A damped spring: stiff enough to snap, loose enough to wobble once.
+            let force = -260 * (self.bandAmount - target) - 15 * self.bandVelocity
+            self.bandVelocity += force / 60
+            self.bandAmount += self.bandVelocity / 60
+            if abs(self.bandAmount - target) < 0.002, abs(self.bandVelocity) < 0.01 {
+                self.bandAmount = target; self.bandVelocity = 0
+                timer.invalidate(); self.bandTimer = nil
+            }
+            self.needsDisplay = true
+        }
+        RunLoop.main.add(t, forMode: .common)
+        bandTimer = t
     }
 
     // MARK: - Mountain Lion shelf
@@ -2536,9 +2581,13 @@ final class DockView: NSView {
             open.line(to: NSPoint(x: rect.maxX - 0.5, y: rect.minY))
             verticalBorderPath = open
         } else {
-            bgPath = theme.dock.bulge == true
-                ? Self.bulgePath(bar: rect, radius: cr, icons: itemViews.map(\.frame))
-                : NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
+            if theme.dock.bulge == true {
+                let icons = itemViews.map(\.frame)
+                updateBandTear(icons: icons, maxScale: theme.magnificationMaxScale, bar: rect)
+                bgPath = Self.bulgePath(bar: rect, radius: cr, icons: icons, amount: bandAmount)
+            } else {
+                bgPath = NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
+            }
         }
 
         // Shadow (uses the actual bgPath so it matches trapezoid shape)

@@ -136,3 +136,19 @@ final class RubberBandCostTests: XCTestCase {
         XCTAssertLessThan(perStep, 0.004, "a step must leave the frame most of its 8–16 ms")
     }
 }
+
+/// An icon tears out of the band past three quarters of its growth and is caught again below a
+/// third: no flapping at one point in between.
+final class BandTearTests: XCTestCase {
+    func testTearAndCatch() {
+        XCTAssertFalse(DockView.bandTears(growth: 0.7, torn: false))
+        XCTAssertTrue(DockView.bandTears(growth: 0.8, torn: false))
+        XCTAssertTrue(DockView.bandTears(growth: 0.5, torn: true), "still out while it shrinks a little")
+        XCTAssertFalse(DockView.bandTears(growth: 0.3, torn: true), "caught again")
+        let bar = NSRect(x: 0, y: 16, width: 400, height: 70)
+        var icons = (0..<6).map { NSRect(x: 20 + CGFloat($0) * 60, y: 26, width: 50, height: 50) }
+        icons[2] = NSRect(x: 135, y: 26, width: 80, height: 80)
+        XCTAssertEqual(DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0).bounds.maxY, bar.maxY, accuracy: 0.5,
+                       "torn: the band lies back at rest")
+    }
+}

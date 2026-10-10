@@ -15,6 +15,7 @@ final class EmberRim {
     private var undertow: CAGradientLayer?
     private var sparks: CAShapeLayer?
     private var flames: CAEmitterLayer?
+    private var shower: CAEmitterLayer?
     private var configuredPath: CGPath?
 
     /// `path`: the bar's outline in the host's coordinates — a rounded rect, or the rubber band;
@@ -55,6 +56,38 @@ final class EmberRim {
         CATransaction.commit()
     }
 
+    /// A shower of sparks where an icon tore out of the band. Not under Reduce Motion.
+    func burst(at point: CGPoint) {
+        guard let root, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        let shower = self.shower ?? {
+            let e = CAEmitterLayer()
+            e.emitterShape = .point
+            e.renderMode = .additive
+            let c = CAEmitterCell()
+            c.contents = Self.blob
+            c.birthRate = 500; c.lifetime = 0.7; c.lifetimeRange = 0.3
+            c.velocity = 70; c.velocityRange = 40
+            c.emissionLongitude = .pi / 2; c.emissionRange = .pi * 0.8
+            c.yAcceleration = -160
+            c.scale = 0.08; c.scaleRange = 0.04
+            c.color = NSColor(srgbRed: 1.0, green: 0.8, blue: 0.4, alpha: 1).cgColor
+            c.alphaSpeed = -1.4
+            e.emitterCells = [c]
+            e.birthRate = 0
+            root.addSublayer(e)
+            self.shower = e
+            return e
+        }()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        shower.frame = root.bounds
+        shower.emitterPosition = point
+        shower.beginTime = CACurrentMediaTime()
+        shower.birthRate = 1
+        CATransaction.commit()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { shower.birthRate = 0 }
+    }
+
     func refreshAnimationState(visible: Bool) {
         guard let root else { return }
         if visible { root.speed = 1; root.timeOffset = 0 }
@@ -63,7 +96,7 @@ final class EmberRim {
 
     func teardown() {
         root?.removeFromSuperlayer()
-        root = nil; glow = nil; halo = nil; farHalo = nil; lavaMask = nil; maskHolder = nil; lava = nil; undertow = nil; sparks = nil; flames = nil
+        root = nil; glow = nil; halo = nil; farHalo = nil; lavaMask = nil; maskHolder = nil; lava = nil; undertow = nil; sparks = nil; flames = nil; shower = nil
         configuredPath = nil
     }
 
