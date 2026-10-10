@@ -12,6 +12,7 @@ enum AppearanceAdapter {
     private static let origHighlightKey = "appearanceOrigHighlight"
     private static let origAquaKey = "appearanceOrigAquaVariant"
     private static let origStyleKey = "appearanceOrigInterfaceStyle"
+    private static let origIconKey = "appearanceOrigIconStyle"       // [theme, tint, appearance]
 
     /// accent name → (AppleAccentColor, AppleAquaColorVariant, AppleHighlightColor).
     /// Blue is the system default: accent 4, aqua 1, highlight unset.
@@ -32,6 +33,15 @@ enum AppearanceAdapter {
         guard AppSettings.shared.themeAdaptAppearance,
               config.appearance != nil || config.accentColor != nil else { return }
         snapshotIfNeeded()
+        // The icon style: tinted for a theme that asks for it, the user's own for any other. Kept
+        // apart from the snapshot above, which an earlier theme may have taken without it.
+        if d.array(forKey: origIconKey) == nil, config.iconStyle != nil, let icons = IconStyle.current() {
+            d.set([icons.theme, icons.tint, icons.appearance].map(Int.init), forKey: origIconKey)
+        }
+        let original = (d.array(forKey: origIconKey) as? [Int]).flatMap(IconStyle.Value.init)
+        if let wanted = config.iconStyle == "tinted" ? IconStyle.tinted : original, wanted != IconStyle.current() {
+            IconStyle.set(wanted)
+        }
         DispatchQueue.global(qos: .utility).async {
             let sb = SystemBridge.shared
             if let name = config.accentColor?.lowercased(), let a = accents[name] {
@@ -65,6 +75,10 @@ enum AppearanceAdapter {
             (origStyleKey, "AppleInterfaceStyle", false),
         ]
         let values = orig.map { (spec: $0, value: d.string(forKey: $0.key)) }
+        if let icons = (d.array(forKey: origIconKey) as? [Int]).flatMap(IconStyle.Value.init), icons != IconStyle.current() {
+            IconStyle.set(icons)
+        }
+        d.removeObject(forKey: origIconKey)
         DispatchQueue.global(qos: .utility).async {
             let sb = SystemBridge.shared
             for (spec, value) in values where spec.global != "AppleInterfaceStyle" {
@@ -129,5 +143,56 @@ enum AppearanceAdapter {
             DistributedNotificationCenter.default().postNotificationName(
                 Notification.Name(n), object: nil, userInfo: nil, deliverImmediately: true)
         }
+    }
+}
+
+/// macOS 26's icon and widget style, through SkyLight's `SLSIconAppearanceConfiguration`, the
+/// class System Settings ▸ Appearance uses. Its numbers are not documented; measured on macOS 27
+/// by setting the style there and reading it back: Default (dark) is theme 2, appearance 0;
+/// Tinted (dark) is theme 8, appearance 1; tint 0 follows the accent colour. Nil where the class
+/// is missing (before macOS 26), and then nothing is changed.
+enum IconStyle {
+    struct Value: Equatable {
+        var theme: UInt32, tint: UInt32, appearance: UInt32
+        init(theme: UInt32, tint: UInt32, appearance: UInt32) { self.theme = theme; self.tint = tint; self.appearance = appearance }
+        init?(_ saved: [Int]) {
+            guard saved.count == 3 else { return nil }
+            self.init(theme: UInt32(saved[0]), tint: UInt32(saved[1]), appearance: UInt32(saved[2]))
+        }
+    }
+    static let tinted = Value(theme: 8, tint: 0, appearance: 1)
+
+    private static func configuration() -> NSObject? {
+        let fetch = NSSelectorFromString("fetchCurrentIconAppearanceConfiguration")
+        guard let cls = NSClassFromString("SLSIconAppearanceConfiguration") as? NSObject.Type,
+              cls.responds(to: fetch) else { return nil }
+        return cls.perform(fetch)?.takeUnretainedValue() as? NSObject
+    }
+    private static func get(_ o: NSObject, _ name: String) -> UInt32? {
+        let sel = NSSelectorFromString(name)
+        guard o.responds(to: sel) else { return nil }
+        typealias Getter = @convention(c) (AnyObject, Selector) -> UInt32
+        return unsafeBitCast(o.method(for: sel), to: Getter.self)(o, sel)
+    }
+    private static func set(_ o: NSObject, _ name: String, _ v: UInt32) {
+        let sel = NSSelectorFromString(name)
+        guard o.responds(to: sel) else { return }
+        typealias Setter = @convention(c) (AnyObject, Selector, UInt32) -> Void
+        unsafeBitCast(o.method(for: sel), to: Setter.self)(o, sel, v)
+    }
+
+    static func current() -> Value? {
+        guard let c = configuration(), let theme = get(c, "iconAppearanceTheme"), let tint = get(c, "iconTintColorName"),
+              let appearance = get(c, "appearanceTheme") else { return nil }
+        return Value(theme: theme, tint: tint, appearance: appearance)
+    }
+
+    static func set(_ v: Value) {
+        guard let c = configuration(), c.responds(to: NSSelectorFromString("save")) else { return }
+        set(c, "setIconAppearanceTheme:", v.theme)
+        set(c, "setIconTintColorName:", v.tint)
+        set(c, "setAppearanceTheme:", v.appearance)
+        c.perform(NSSelectorFromString("save"))
+        print("[Appearance] Icon style → theme \(v.theme), tint \(v.tint), appearance \(v.appearance)")
     }
 }

@@ -20,7 +20,7 @@
   "menuBarApple": "pumpkin",
   "appearance": "dark",
   "accentColor": "orange",
-  "iconTint": "orange",
+  "iconStyle": "tinted",
   "dock": {
     "height": 70,
     "iconSize": 50,

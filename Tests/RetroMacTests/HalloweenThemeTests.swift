@@ -17,6 +17,14 @@ final class HalloweenThemeTests: XCTestCase {
         XCTAssertEqual(c.appearance, "dark")
     }
 
+    /// macOS 26+ answers with the current icon style (read only); the theme asks for tinted.
+    func testTheIconStyleCanBeRead() throws {
+        XCTAssertEqual(try theme().config.iconStyle, "tinted")
+        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26 else { return }
+        XCTAssertNotNil(IconStyle.current())
+        XCTAssertEqual(IconStyle.Value([8, 0, 1]), IconStyle.tinted)
+    }
+
     func testThePumpkinIsTheSystemEmojiTrimmed() {
         let p = RainbowAppleController.pumpkin()
         XCTAssertGreaterThan(p.size.width, 50)

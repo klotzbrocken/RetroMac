@@ -108,6 +108,7 @@ struct DockThemeConfig: Codable {
     struct SidebarConfig: Codable { var gadgets: [String]? = nil }
     var appearance: String? = nil     // system appearance to match when "Match appearance" is on: light|dark
     var accentColor: String? = nil    // system accent to match: graphite|blue|red|orange|yellow|green|purple|pink
+    var iconStyle: String? = nil      // "tinted": macOS 26's icon style, tinted in the accent colour (with Match appearance)
     var splashScreen: String? = nil   // boot splash image shown briefly on theme activation
     var splashFullscreen: Bool? = nil // true = fill the whole screen (e.g. Win 98 boot)
     var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present

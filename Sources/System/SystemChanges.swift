@@ -129,6 +129,10 @@ enum ThemeSystemChanges {
                 let now = (before("-g", "AppleInterfaceStyle") as? String)?.lowercased() == "dark" ? "Dark" : "Light"
                 out.append(Change(what: "Appearance", before: now, after: look.capitalized))
             }
+            if config.iconStyle == "tinted" {
+                out.append(Change(what: "App icons", before: IconStyle.current() == IconStyle.tinted ? "Tinted" : "Yours",
+                                  after: "Tinted in the accent colour"))
+            }
             if let accent = config.accentColor {
                 out.append(Change(what: "Accent colour", before: accentName(before("-g", "AppleAccentColor")), after: accent.capitalized))
             }
