@@ -80,26 +80,40 @@ final class EmberRim {
     private static func flameCell() -> CAEmitterCell {
         let c = CAEmitterCell()
         c.contents = blob
-        c.birthRate = 9; c.lifetime = 0.9; c.lifetimeRange = 0.35
-        c.velocity = 14; c.velocityRange = 6
+        c.birthRate = 24; c.lifetime = 1.5; c.lifetimeRange = 0.5
+        c.velocity = 8; c.velocityRange = 4
         c.emissionLongitude = .pi / 2; c.emissionRange = 0.35   // up
-        c.yAcceleration = 20
-        c.scale = 0.42; c.scaleRange = 0.15; c.scaleSpeed = -0.35
+        c.yAcceleration = 9
+        c.scale = 0.5; c.scaleRange = 0.18; c.scaleSpeed = -0.28
         c.color = NSColor(srgbRed: 1.0, green: 0.42, blue: 0.06, alpha: 0.75).cgColor
-        c.greenSpeed = -0.35; c.alphaSpeed = -0.8
+        c.greenSpeed = -0.25; c.alphaSpeed = -0.55
         return c
     }
 
     private static func sparkCell() -> CAEmitterCell {
         let c = CAEmitterCell()
         c.contents = blob
-        c.birthRate = 2.5; c.lifetime = 2.2; c.lifetimeRange = 0.8
-        c.velocity = 26; c.velocityRange = 12
+        c.birthRate = 8; c.lifetime = 3; c.lifetimeRange = 1
+        c.velocity = 16; c.velocityRange = 8
         c.emissionLongitude = .pi / 2; c.emissionRange = 0.6
         c.yAcceleration = 6; c.xAcceleration = 3
         c.scale = 0.09; c.scaleRange = 0.04
         c.color = NSColor(srgbRed: 1.0, green: 0.78, blue: 0.35, alpha: 1).cgColor
-        c.alphaSpeed = -0.45
+        c.alphaSpeed = -0.33
+        return c
+    }
+
+    /// The crackle: tiny bright sparks that jump out of the embers and fall back, gone at once.
+    private static func crackleCell() -> CAEmitterCell {
+        let c = CAEmitterCell()
+        c.contents = blob
+        c.birthRate = 14; c.lifetime = 0.45; c.lifetimeRange = 0.2
+        c.velocity = 34; c.velocityRange = 18
+        c.emissionLongitude = .pi / 2; c.emissionRange = 1.1
+        c.yAcceleration = -70
+        c.scale = 0.06; c.scaleRange = 0.03
+        c.color = NSColor(srgbRed: 1.0, green: 0.88, blue: 0.55, alpha: 1).cgColor
+        c.alphaSpeed = -2
         return c
     }
 
@@ -107,9 +121,9 @@ final class EmberRim {
         let c = CAEmitterCell()
         c.contents = blob
         c.birthRate = 1.2; c.lifetime = 3.5; c.lifetimeRange = 1
-        c.velocity = 9; c.velocityRange = 4
+        c.velocity = 5; c.velocityRange = 3
         c.emissionLongitude = .pi / 2; c.emissionRange = 0.4
-        c.xAcceleration = 2
+        c.xAcceleration = 1.5
         c.scale = 0.9; c.scaleRange = 0.3; c.scaleSpeed = 0.35
         c.color = NSColor(white: 0.55, alpha: 0.10).cgColor
         c.alphaSpeed = -0.03
@@ -139,8 +153,8 @@ final class EmberRim {
             root.addSublayer(l)
             return l
         }
-        let farHalo = heat(radius: 36, width: 9)
-        let halo = heat(radius: 20, width: 6)
+        let farHalo = heat(radius: 26, width: 6)
+        let halo = heat(radius: 14, width: 4)
 
         // The glow: a brighter orange close to the line, on a quicker, uneven beat.
         let glow = CAShapeLayer()
@@ -149,7 +163,7 @@ final class EmberRim {
         glow.lineWidth = 3
         glow.shadowColor = NSColor(srgbRed: 1.0, green: 0.45, blue: 0.0, alpha: 1).cgColor
         glow.shadowOffset = .zero
-        glow.shadowRadius = 12
+        glow.shadowRadius = 7
         glow.shadowOpacity = 1
         glow.shouldRasterize = true
         root.addSublayer(glow)
@@ -202,7 +216,7 @@ final class EmberRim {
             flames.emitterShape = .line
             flames.emitterMode = .outline
             flames.renderMode = .additive
-            flames.emitterCells = [Self.flameCell(), Self.sparkCell(), Self.smokeCell()]
+            flames.emitterCells = [Self.flameCell(), Self.sparkCell(), Self.crackleCell(), Self.smokeCell()]
             root.addSublayer(flames)
             self.flames = flames
         }
@@ -222,23 +236,23 @@ final class EmberRim {
                 layer.add(a, forKey: key)
             }
             // Fire flickers: quick, uneven, never quite the same.
-            waver(farHalo, "opacity", [0.25, 0.7, 0.35, 0.9, 0.3, 0.55, 0.8, 0.25], 2.9)
-            waver(halo, "opacity", [0.8, 0.45, 0.95, 0.5, 0.7, 0.4, 1, 0.8], 1.6)
-            waver(glow, "opacity", [0.7, 0.4, 0.85, 0.55, 0.9, 0.35, 0.7], 1.1)
-            waver(undertow, "opacity", [0.4, 1, 0.55, 0.85, 0.3, 0.9, 0.4], 2.3)
+            waver(farHalo, "opacity", [0.15, 0.4, 0.2, 0.5, 0.18, 0.32, 0.45, 0.15], 5.2)
+            waver(halo, "opacity", [0.45, 0.25, 0.55, 0.3, 0.4, 0.22, 0.55, 0.45], 3.1)
+            waver(glow, "opacity", [0.45, 0.25, 0.55, 0.35, 0.5, 0.22, 0.45], 2.2)
+            waver(undertow, "opacity", [0.4, 1, 0.55, 0.85, 0.3, 0.9, 0.4], 4.4)
             let against = CABasicAnimation(keyPath: "transform.rotation.z")
             against.fromValue = 0; against.toValue = -2 * Double.pi
-            against.duration = 9; against.repeatCount = .infinity
+            against.duration = 17; against.repeatCount = .infinity
             against.preferredFrameRateRange = slow
             undertow.add(against, forKey: "turn")
             let turn = CABasicAnimation(keyPath: "transform.rotation.z")
             turn.fromValue = 0; turn.toValue = 2 * Double.pi
-            turn.duration = 14; turn.repeatCount = .infinity
+            turn.duration = 26; turn.repeatCount = .infinity
             turn.preferredFrameRateRange = slow
             lava.add(turn, forKey: "turn")
             let run = CABasicAnimation(keyPath: "lineDashPhase")
             run.fromValue = 0; run.toValue = -135
-            run.duration = 4.5; run.repeatCount = .infinity
+            run.duration = 8; run.repeatCount = .infinity
             run.preferredFrameRateRange = slow
             sparks.add(run, forKey: "run")
         }
