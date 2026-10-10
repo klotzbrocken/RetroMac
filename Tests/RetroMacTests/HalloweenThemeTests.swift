@@ -151,7 +151,7 @@ final class BandTearTests: XCTestCase {
         XCTAssertEqual(DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0).bounds.maxY, bar.maxY, accuracy: 0.5,
                        "torn: the band lies back at rest")
         let ripped = DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0, tear: 1)
-        XCTAssertFalse(ripped.contains(NSPoint(x: 175, y: bar.maxY - 3)), "the rip is open over the icon")
-        XCTAssertTrue(ripped.contains(NSPoint(x: 60, y: bar.maxY - 3)), "the band is whole away from it")
+        XCTAssertGreaterThan(ripped.bounds.maxY, bar.maxY + 10, "the torn ends stand up")
+        XCTAssertFalse(ripped.contains(NSPoint(x: 30, y: bar.maxY + 3)), "away from the icon the band lies flat")
     }
 }

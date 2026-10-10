@@ -333,8 +333,8 @@ final class DockView: NSView {
     /// largest icon instead, the arch jumped a whole icon each time the largest one changed.
     /// `amount`: how much of the lift the band takes — 1 holding the icons, 0 back at rest after
     /// an icon tore out of it, a little below 0 as it springs back. `tear`: how far the rip the
-    /// icon left is open, 0 closed to 1 — a ragged gap in the top edge over the icon, its torn
-    /// edges running down to the icon's top.
+    /// icon left is open, 0 closed to 1 — the band's torn ends standing up either side of the
+    /// icon, pulled up as it broke through.
     static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect], amount: CGFloat = 1, tear: CGFloat = 0) -> NSBezierPath {
         let rest = icons.map(\.height).min() ?? 0
         let lifted = icons.map { ($0, $0.height - rest) }.filter { $0.1 > 0.5 }
@@ -352,16 +352,18 @@ final class DockView: NSView {
             let need = min(1, 2 * (lift - slack) / peak - 1)
             half = max(half, .pi * d / acos(max(-1, need)))
         }
-        let ripHalf = (icons.max(by: { $0.height < $1.height })?.width ?? rest) * 0.62 * min(1, max(0, tear))
-        let ripDepth = max(0, (r.height - rest) / 2) + rest * 0.3
+        let ripHalf = (icons.max(by: { $0.height < $1.height })?.width ?? rest) * 0.75 * min(1, max(0, tear))
+        let ripUp = rest * 0.5 * min(1, max(0, tear))
         func top(_ x: CGFloat) -> CGFloat {
             let d = abs(x - centre)
             var y = d >= half ? r.maxY : r.maxY + peak * amount * 0.5 * (1 + cos(.pi * d / half))
             if ripHalf > 1, d < ripHalf {
-                // Steep torn walls, a ragged floor: fixed sines, so the same rip every time.
-                let wall = pow(sin(.pi / 2 * (1 - d / ripHalf)), 0.3)
-                let rag = sin(x * 0.9) * 0.22 + sin(x * 2.3 + 1) * 0.14 + sin(x * 5.1) * 0.08
-                y -= (y - r.maxY + ripDepth) * wall * (0.85 + rag) * min(1, tear * 1.4)
+                // The torn ends, pulled up by the icon that broke through: two tufts of shards
+                // standing up either side of it, low over its middle. Fixed sines, the same rip
+                // every time.
+                let tuft = pow(sin(.pi * d / ripHalf), 0.7)
+                let shards = 0.45 + 0.55 * abs(sin(x * 1.6)) * (0.75 + 0.25 * sin(x * 0.55 + 2))
+                y += ripUp * tuft * shards
             }
             return y
         }
