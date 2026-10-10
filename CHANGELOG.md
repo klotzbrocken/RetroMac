@@ -7,6 +7,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **New theme: Halloween.** A dark glass dock with a few cracks in it and a fine rim of glowing
+  embers that wavers like lava, sparks running round it (still under Reduce Motion); the
+  jack-o'-lantern in place of the Apple, dark mode with an orange accent, and a Halloween night
+  for the wallpaper. The pumpkin is also a menu-bar Apple style of its own.
 - **See what a theme changes before you turn it on.** The theme's page in Settings ▸ Themes lists
   every change it makes to macOS with your switches as they are — Dock, menu bar, wallpaper,
   appearance and accent, pointer, Terminal profile, window corners and each Classic Finder

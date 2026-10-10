@@ -141,6 +141,7 @@ struct DesktopSettingsTab: View {
                         Text("Apple Hell").tag(4)
                         Text("Futurama").tag(5)
                         Text("Black (1-bit)").tag(6)
+                        Text("Pumpkin").tag(7)
                     }
                     .labelsHidden().pickerStyle(.menu).frame(width: 140)
                     .disabled(!RainbowAppleController.canPlaceCover)

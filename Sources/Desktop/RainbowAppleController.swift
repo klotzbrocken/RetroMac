@@ -265,6 +265,13 @@ final class RainbowAppleController {
             imageCache["futurama_apple"] = img
             return img
         }
+        // Halloween: the jack-o'-lantern, macOS's own emoji, trimmed to the glyph like the apples.
+        if AppSettings.shared.menuBarAppleStyle == 7 {
+            if let c = imageCache["pumpkin"] { return c }
+            let img = Self.pumpkin()
+            imageCache["pumpkin"] = img
+            return img
+        }
         // The 1-bit Mac's apple: solid black (System 7.1 (authentic)).
         if AppSettings.shared.menuBarAppleStyle == 6 {
             if let c = imageCache["mono_apple"] { return c }
@@ -320,6 +327,26 @@ final class RainbowAppleController {
         let crop = CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
         guard let cropped = cg.cropping(to: crop) else { return base }
         return NSImage(cgImage: cropped, size: NSSize(width: crop.width, height: crop.height))
+    }
+
+    /// The system's 🎃, rendered large and cut to its outline (no artwork of our own).
+    static func pumpkin() -> NSImage {
+        let text = "\u{1F383}" as NSString
+        let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 160)]
+        let size = text.size(withAttributes: attrs)
+        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height), bitsPerSample: 8,
+                                   samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        text.draw(at: .zero, withAttributes: attrs)
+        NSGraphicsContext.restoreGraphicsState()
+        var minX = rep.pixelsWide, minY = rep.pixelsHigh, maxX = -1, maxY = -1
+        for y in 0..<rep.pixelsHigh { for x in 0..<rep.pixelsWide where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.05 {
+            minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
+        } }
+        guard maxX >= minX, let cg = rep.cgImage?.cropping(to: CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1))
+        else { return NSImage(size: size) }
+        return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
     }
 
     /// Fallback only if the bundled PNG is missing: six-stripe rainbow from the

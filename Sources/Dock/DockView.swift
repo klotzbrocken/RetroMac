@@ -103,6 +103,7 @@ final class DockView: NSView {
 
     // Doom Slayer — DOOM-themed counterpart to the Pac-Man border (borderStyle "doomslayer").
     private let doomSlayer = DoomSlayerController()
+    private let emberRim = EmberRim()
     private var clockLabelLayers: [CATextLayer] = []
     private var lastClockHour: Int = -1
     // Ghosts that chase Pac-Man (spawned on icon hover; max 2).
@@ -252,6 +253,54 @@ final class DockView: NSView {
     /// The bottom of the bar, for running lights that sit on the shelf's front edge.
     var shelfBottomY: CGFloat { currentBarRect.minY }
 
+    // MARK: - Cracked glass (Halloween)
+
+    /// A pane with a few cracks: two points of impact near the ends, each with a handful of
+    /// jagged cracks running out and a ring of short ones round it. Drawn from a fixed seed, so
+    /// the same cracks every time, scaled with the bar; a hairline of light with a darker edge
+    /// beside it, as a crack catches the light.
+    static func drawGlassCracks(in r: NSRect, clip: NSBezierPath, alpha: CGFloat) {
+        var seed: UInt64 = 0x48_41_4C_4C_4F_57   // "HALLOW"
+        func rnd() -> CGFloat {
+            seed = seed &* 6364136223846793005 &+ 1442695040888963407
+            return CGFloat(seed >> 33) / CGFloat(UInt32.max >> 1)
+        }
+        let light = NSBezierPath(), dark = NSBezierPath()
+        let impacts = [NSPoint(x: r.minX + r.width * 0.13, y: r.minY + r.height * 0.62),
+                       NSPoint(x: r.minX + r.width * 0.81, y: r.minY + r.height * 0.30)]
+        for (n, c) in impacts.enumerated() {
+            let rays = n == 0 ? 7 : 5
+            let reach = r.height * (n == 0 ? 1.6 : 1.1)
+            var ringPoints: [NSPoint] = []
+            for i in 0..<rays {
+                var angle = (CGFloat(i) / CGFloat(rays)) * 2 * .pi + rnd() * 0.5
+                var p = c
+                light.move(to: p); dark.move(to: NSPoint(x: p.x + 0.6, y: p.y - 0.6))
+                let steps = 4 + Int(rnd() * 3)
+                for s in 0..<steps {
+                    angle += (rnd() - 0.5) * 0.7
+                    let len = reach / CGFloat(steps) * (0.6 + rnd() * 0.8)
+                    p = NSPoint(x: p.x + cos(angle) * len, y: p.y + sin(angle) * len * 0.55)
+                    light.line(to: p); dark.line(to: NSPoint(x: p.x + 0.6, y: p.y - 0.6))
+                    if s == 1 { ringPoints.append(p) }
+                }
+            }
+            // The ring: short cracks joining the rays near the impact.
+            for (a, b) in zip(ringPoints, ringPoints.dropFirst() + ringPoints.prefix(1)) where rnd() > 0.3 {
+                light.move(to: a)
+                light.line(to: NSPoint(x: (a.x + b.x) / 2 + (rnd() - 0.5) * 4, y: (a.y + b.y) / 2 + (rnd() - 0.5) * 3))
+                light.line(to: b)
+            }
+        }
+        NSGraphicsContext.saveGraphicsState()
+        clip.addClip()
+        NSColor.black.withAlphaComponent(0.35 * alpha).setStroke()
+        dark.lineWidth = 0.7; dark.stroke()
+        NSColor.white.withAlphaComponent(0.30 * alpha).setStroke()
+        light.lineWidth = 0.6; light.stroke()
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
     // MARK: - Mountain Lion shelf
 
     /// Height of the shelf's front face, the lit edge the running lights sit on.
@@ -353,6 +402,7 @@ final class DockView: NSView {
         clockTimer?.invalidate()
         pacmanTimer?.invalidate()
         doomSlayer.teardown()
+        emberRim.teardown()
         trashPollTimer?.invalidate()
         trashMonitorSource?.cancel()
         if trashDirectoryFD >= 0 { close(trashDirectoryFD) }
@@ -413,6 +463,7 @@ final class DockView: NSView {
             guard let self = self, (note.object as AnyObject?) === self.window else { return }
             self.refreshPacmanAnimationState()
             self.doomSlayer.refreshAnimationState(visible: self.window?.occlusionState.contains(.visible) ?? true)
+            self.emberRim.refreshAnimationState(visible: self.window?.occlusionState.contains(.visible) ?? true)
         }
 
         let wsNC = NSWorkspace.shared.notificationCenter
@@ -2451,6 +2502,10 @@ final class DockView: NSView {
             bgPath.fill()
         }
 
+        if theme.dock.glassCracks == true {
+            Self.drawGlassCracks(in: rect, clip: bgPath, alpha: bgAlpha)
+        }
+
         // Futurama: turn the flat teal bar into the riveted metal girder from the mockup. The metal
         // is solid in the mockup, so the beam is drawn fully opaque regardless of the slider.
         if RetroFrameTheme.key() == "futurama" {
@@ -2566,6 +2621,11 @@ final class DockView: NSView {
 
         // Pac-Man pellet border — drawn via dedicated CALayers (see updatePacmanBorder),
         // not into this view's backing, so the animation never re-rasterizes the dock.
+        if theme.dock.borderStyle == "ember", let host = layer {
+            emberRim.update(host: host, barRect: rect, cornerRadius: cr)
+        } else {
+            emberRim.teardown()
+        }
         if theme.dock.borderStyle == "pacman", !theme.isVertical {
             updatePacmanBorder(rect: rect, scale: scale)
             doomSlayer.teardown()

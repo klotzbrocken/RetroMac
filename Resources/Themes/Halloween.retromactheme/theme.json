@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.seasonal.halloween",
+  "family": {
+    "id": "seasonal",
+    "name": "Seasonal",
+    "order": 12
+  },
+  "release": {
+    "label": "Halloween"
+  },
+  "minAppVersion": "3.0",
+  "chrome": {
+    "style": "default"
+  },
+  "name": "Halloween",
+  "version": "1.0",
+  "author": "RetroMac",
+  "wallpaper": "wallpaper.jpg",
+  "menuBarApple": "pumpkin",
+  "appearance": "dark",
+  "accentColor": "orange",
+  "iconTint": "orange",
+  "dock": {
+    "height": 70,
+    "iconSize": 50,
+    "padding": 10,
+    "spacing": 6,
+    "cornerRadius": 20,
+    "backgroundColor": "#140A0699",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#00000000",
+    "borderWidth": 0,
+    "borderStyle": "ember",
+    "glassCracks": true,
+    "shadowEnabled": true,
+    "shadowColor": "#00000080",
+    "shadowRadius": 16,
+    "bevelTopColor": null,
+    "bevelBottomColor": null,
+    "bevelWidth": 0,
+    "edgeOffset": 8,
+    "magnification": true,
+    "magnificationScale": 1.6,
+    "showLabels": true,
+    "folderStacks": true,
+    "showTrash": true,
+    "launchBounce": true,
+    "runningAppsSeparator": true
+  },
+  "icon": {
+    "renderStyle": "smooth",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.2,
+    "hoverAnimationDuration": 0.12
+  },
+  "indicator": {
+    "style": "dot",
+    "color": "#FF8A1C",
+    "size": 4,
+    "offset": 4
+  },
+  "iconMappings": {}
+}

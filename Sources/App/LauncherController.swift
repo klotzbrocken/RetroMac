@@ -247,6 +247,8 @@ struct LauncherView: View {
     private static let aquaAppleIcon: NSImage = bundledIcon("aqua_apple")
     private static let aquaClassicAppleIcon: NSImage = bundledIcon("aqua_classic_apple")
     private static let hellAppleIcon: NSImage = bundledIcon("apple_hell")
+    private static let pumpkinAppleIcon = RainbowAppleController.pumpkin()
+
     /// Futurama style 5 has no bundled PNG — it's the drawn teal apple. Render a small teal
     /// `apple.logo` silhouette for the flyout row so it can be picked like the others.
     private static let futuramaAppleIcon: NSImage = {
@@ -270,6 +272,7 @@ struct LauncherView: View {
         case 3: return aquaClassicAppleIcon
         case 4: return hellAppleIcon
         case 5: return futuramaAppleIcon
+        case 7: return pumpkinAppleIcon
         default: return rainbowAppleIcon
         }
     }
@@ -280,6 +283,8 @@ struct LauncherView: View {
         case 3: return "Aqua Classic"
         case 4: return "Apple Hell"
         case 5: return "Futurama"
+        case 6: return "Black"
+        case 7: return "Pumpkin"
         default: return "Off"
         }
     }
@@ -571,9 +576,9 @@ struct LauncherView: View {
             Spacer()
         }
         .contentShape(Rectangle())
-        // Cycle through all six styles incl. Futurama (teal): Off → Rainbow → Aqua → Aqua
-        // Classic → Apple Hell → Futurama → Off.
-        .onTapGesture { settings.menuBarAppleStyle = (settings.menuBarAppleStyle + 1) % 7 }
+        // Cycle through every style: Off → Rainbow → Aqua → Aqua Classic → Apple Hell →
+        // Futurama → Black → Pumpkin → Off.
+        .onTapGesture { settings.menuBarAppleStyle = (settings.menuBarAppleStyle + 1) % 8 }
     }
 
     private var shaderPicker: some View {

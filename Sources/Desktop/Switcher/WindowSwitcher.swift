@@ -73,6 +73,7 @@ struct SwitcherCapability: Equatable {
         "com.retromac.tv.futurama": none("A made-up theme gets no made-up switcher."),
         "com.retromac.personal.maiks-favourite": none("A made-up theme gets no made-up switcher."),
         "com.retromac.personal.maiks-favourite-2": none("A made-up theme gets no made-up switcher."),
+        "com.retromac.seasonal.halloween": none("Today's Mac with a costume on: the Mac's own switcher stays."),
     ]
 
     /// SW-A1: a theme without an entry starts no switcher.
