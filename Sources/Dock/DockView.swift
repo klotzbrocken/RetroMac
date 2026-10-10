@@ -299,24 +299,61 @@ final class DockView: NSView {
 
     private var dirtLayer: CALayer?
 
-    /// The dirt over the bar, under the icons (`dirtyGlass`), or none.
-    private func updateDirt(rect: NSRect, radius: CGFloat, on: Bool) {
+    /// The dirt over the bar, under the icons (`dirtyGlass`), in the bar's shape, or none.
+    private func updateDirt(path: NSBezierPath, on: Bool) {
         guard on, let host = layer else { dirtLayer?.removeFromSuperlayer(); dirtLayer = nil; return }
         let dirt = dirtLayer ?? {
             let l = CALayer()
             l.contents = Self.dirtImage
             l.contentsGravity = .resize
-            l.masksToBounds = true
+            l.mask = CAShapeLayer()
             l.zPosition = -2
             host.addSublayer(l)
             dirtLayer = l
             return l
         }()
+        let box = path.bounds
+        var toLayer = CGAffineTransform(translationX: -box.minX, y: -box.minY)
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        dirt.frame = rect
-        dirt.cornerRadius = radius
+        dirt.frame = box
+        (dirt.mask as? CAShapeLayer)?.frame = CGRect(origin: .zero, size: box.size)
+        (dirt.mask as? CAShapeLayer)?.path = path.cgPath.copy(using: &toLayer)
         CATransaction.commit()
+    }
+
+    // MARK: - Rubber-band magnification (Halloween)
+
+    /// The bar with its top edge lifted round magnified icons, as if the bar were a rubber band
+    /// the icons push up: each icon raises the edge by what it has grown, falling off smoothly
+    /// to either side. At rest it is the plain rounded bar.
+    static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect]) -> NSBezierPath {
+        let rest = icons.map(\.height).min() ?? 0
+        let lifts = icons.compactMap { f -> (x: CGFloat, lift: CGFloat, reach: CGFloat)? in
+            let lift = f.height - rest
+            return lift > 0.5 ? (f.midX, lift, f.width * 1.1) : nil
+        }
+        guard !lifts.isEmpty else { return NSBezierPath(roundedRect: r, xRadius: radius, yRadius: radius) }
+        func top(_ x: CGFloat) -> CGFloat {
+            let lift = lifts.map { l -> CGFloat in
+                let t = max(0, 1 - abs(x - l.x) / l.reach)
+                return l.lift * t * t * (3 - 2 * t)   // smoothstep
+            }.max() ?? 0
+            return r.maxY + lift
+        }
+        let p = NSBezierPath()
+        p.move(to: NSPoint(x: r.minX + radius, y: r.minY))
+        p.line(to: NSPoint(x: r.maxX - radius, y: r.minY))
+        p.appendArc(from: NSPoint(x: r.maxX, y: r.minY), to: NSPoint(x: r.maxX, y: r.minY + radius), radius: radius)
+        p.line(to: NSPoint(x: r.maxX, y: top(r.maxX - radius) - radius))
+        p.appendArc(from: NSPoint(x: r.maxX, y: top(r.maxX - radius)), to: NSPoint(x: r.maxX - radius, y: top(r.maxX - radius)), radius: radius)
+        var x = r.maxX - radius
+        while x > r.minX + radius { x -= 2; p.line(to: NSPoint(x: max(x, r.minX + radius), y: top(max(x, r.minX + radius)))) }
+        p.appendArc(from: NSPoint(x: r.minX, y: top(r.minX + radius)), to: NSPoint(x: r.minX, y: top(r.minX + radius) - radius), radius: radius)
+        p.line(to: NSPoint(x: r.minX, y: r.minY + radius))
+        p.appendArc(from: NSPoint(x: r.minX, y: r.minY), to: NSPoint(x: r.minX + radius, y: r.minY), radius: radius)
+        p.close()
+        return p
     }
 
     // MARK: - Mountain Lion shelf
@@ -2428,7 +2465,7 @@ final class DockView: NSView {
 
         // ── Mac OS 9 Control Strip ──────────────────────────────────────
         if theme.isControlStrip {
-            emberRim.teardown(); updateDirt(rect: rect, radius: 0, on: false)   // left from a theme before
+            emberRim.teardown(); updateDirt(path: NSBezierPath(), on: false)   // left from a theme before
             drawControlStrip(ctx: ctx, theme: theme, barRect: rect, bgAlpha: bgAlpha)
             return
         }
@@ -2488,7 +2525,9 @@ final class DockView: NSView {
             open.line(to: NSPoint(x: rect.maxX - 0.5, y: rect.minY))
             verticalBorderPath = open
         } else {
-            bgPath = NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
+            bgPath = theme.dock.bulge == true
+                ? Self.bulgePath(bar: rect, radius: cr, icons: itemViews.map(\.frame))
+                : NSBezierPath(roundedRect: rect, xRadius: cr, yRadius: cr)
         }
 
         // Shadow (uses the actual bgPath so it matches trapezoid shape)
@@ -2521,7 +2560,7 @@ final class DockView: NSView {
             bgPath.fill()
         }
 
-        updateDirt(rect: rect, radius: cr, on: theme.dock.dirtyGlass == true && !theme.isVertical)
+        updateDirt(path: bgPath, on: theme.dock.dirtyGlass == true && !theme.isVertical)
 
         // Futurama: turn the flat teal bar into the riveted metal girder from the mockup. The metal
         // is solid in the mockup, so the beam is drawn fully opaque regardless of the slider.
@@ -2639,7 +2678,7 @@ final class DockView: NSView {
         // Pac-Man pellet border — drawn via dedicated CALayers (see updatePacmanBorder),
         // not into this view's backing, so the animation never re-rasterizes the dock.
         if theme.dock.borderStyle == "ember", let host = layer {
-            emberRim.update(host: host, barRect: rect, cornerRadius: cr)
+            emberRim.update(host: host, path: bgPath.cgPath)
         } else {
             emberRim.teardown()
         }

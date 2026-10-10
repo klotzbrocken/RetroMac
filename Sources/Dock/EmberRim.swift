@@ -12,27 +12,28 @@ final class EmberRim {
     private var lava: CAGradientLayer?
     private var undertow: CAGradientLayer?
     private var sparks: CAShapeLayer?
-    private var configured: NSRect = .zero
+    private var configuredPath: CGPath?
 
-    func update(host: CALayer, barRect: NSRect, cornerRadius: CGFloat) {
+    /// `path`: the bar's outline in the host's coordinates — a rounded rect, or the rubber band.
+    func update(host: CALayer, path barPath: CGPath) {
         if root == nil { build(in: host) }
-        guard let root, barRect != configured else { return }
-        configured = barRect
+        guard let root, barPath != configuredPath else { return }
+        configuredPath = barPath
+        let bar = barPath.boundingBox
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         root.frame = host.bounds
         maskHolder?.frame = root.bounds
         lavaMask?.frame = root.bounds
-        let path = CGPath(roundedRect: barRect.insetBy(dx: 0.75, dy: 0.75), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
-        glow?.path = path
-        halo?.path = path
-        lavaMask?.path = path
-        sparks?.path = path
-        // The gradient turns behind the mask: a square around the bar, so no corner is ever bare.
-        let side = hypot(barRect.width, barRect.height) + 20
+        glow?.path = barPath
+        halo?.path = barPath
+        lavaMask?.path = barPath
+        sparks?.path = barPath
+        // The gradients turn behind the mask: squares round the bar, so no corner is ever bare.
+        let side = hypot(bar.width, bar.height) + 20
         for g in [lava, undertow] {
             g?.bounds = CGRect(x: 0, y: 0, width: side, height: side)
-            g?.position = CGPoint(x: barRect.midX, y: barRect.midY)
+            g?.position = CGPoint(x: bar.midX, y: bar.midY)
         }
         CATransaction.commit()
     }
@@ -46,7 +47,7 @@ final class EmberRim {
     func teardown() {
         root?.removeFromSuperlayer()
         root = nil; glow = nil; halo = nil; lavaMask = nil; maskHolder = nil; lava = nil; undertow = nil; sparks = nil
-        configured = .zero
+        configuredPath = nil
     }
 
     private func build(in host: CALayer) {

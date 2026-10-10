@@ -34,6 +34,8 @@
     "borderWidth": 0,
     "borderStyle": "ember",
     "dirtyGlass": true,
+    "aboveShader": true,
+    "bulge": true,
     "shadowEnabled": true,
     "shadowColor": "#00000080",
     "shadowRadius": 16,

@@ -8,7 +8,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 ### New
 
 - **New theme: Halloween.** A dark, grimy glass dock — smears, drips, dust — with a rim of molten
-  lava that churns and glows, sparks running round it (still under Reduce Motion); the
+  lava that churns and glows, sparks running round it (still under Reduce Motion), that
+  stretches up round a magnified icon like a rubber band and stays clear of the CRT shader; the
   jack-o'-lantern in place of the Apple, dark mode with an orange accent, and a Halloween night
   for the wallpaper. The pumpkin is also a menu-bar Apple style of its own. With Match appearance
   on, macOS tints every app icon in the accent colour (the Tinted icon style of macOS 26 and
@@ -111,6 +112,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Windows minimise down into the dock again with a second display beside the main one.** A
+  MacBook next to a monitor, sitting a little lower, counted as a display below it; the hidden Mac
+  Dock went to the left edge, and every minimised window flew off to the left.
 - **A tidier flyout and menu.** The flyout keeps the everyday switches; Only on this Space, Dock only
   and TV Tube left it (Spaces and TV Tube stay in the menu-bar menu). The menu-bar menu has a
   More submenu for Dock Only, the Game Library, the Setup Assistant and Rescue Desktop.

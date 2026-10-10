@@ -1195,8 +1195,14 @@ final class DockController {
         guard NSScreen.screens.count > 1,
               let primary = NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main
         else { return false }
-        return NSScreen.screens.contains(where: { $0 !== primary && $0.frame.minY < primary.frame.minY })
+        return NSScreen.screens.contains { $0 !== primary && Self.isBelow($0.frame, primary: primary.frame) }
     }
+
+    /// Below, not beside: a display entirely under the primary's bottom edge. One beside it that
+    /// merely sits a little lower (a MacBook next to a monitor, 84 pt down) counted as below,
+    /// the hidden Mac Dock went to the left edge, and every window minimised off to the left
+    /// instead of down into the theme's dock.
+    static func isBelow(_ other: NSRect, primary: NSRect) -> Bool { other.maxY <= primary.minY + 1 }
 
     private func systemDockEdge(forThemeEdge themeEdge: String) -> String {
         // A hidden "bottom" system Dock only re-homes onto a secondary screen when one sits BELOW
@@ -1417,9 +1423,13 @@ final class DockController {
     private func applyDockLevel(to window: NSWindow) {
         let level = loweredForDesktopShader
             ? Int(CGWindowLevelForKey(.normalWindow)) - 3
-            : DockWindow.defaultLevel
+            : keepsAboveShader ? DockWindow.aboveShaderLevel : DockWindow.defaultLevel
         window.level = NSWindow.Level(rawValue: level)
     }
+
+    /// A theme that keeps its dock out of the shader: the capture leaves the dock out, and the
+    /// dock sits one level over the shader's window, so it shows on top, unfiltered.
+    var keepsAboveShader: Bool { ThemeManager.shared.activeTheme?.config.dock.aboveShader == true }
 
     /// The dock window's id, for the desktop-scope capture.
     ///

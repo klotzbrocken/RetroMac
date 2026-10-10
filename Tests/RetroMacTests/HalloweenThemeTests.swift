@@ -32,17 +32,16 @@ final class HalloweenThemeTests: XCTestCase {
     }
 
     private final class Backdrop: NSView {
-        let wallpaper: NSImage?, bar: NSRect, color: NSColor
-        init(frame: NSRect, wallpaper: NSImage?, bar: NSRect, color: NSColor) {
-            self.wallpaper = wallpaper; self.bar = bar; self.color = color; super.init(frame: frame); wantsLayer = true
+        let wallpaper: NSImage?, path: NSBezierPath, color: NSColor
+        init(frame: NSRect, wallpaper: NSImage?, path: NSBezierPath, color: NSColor) {
+            self.wallpaper = wallpaper; self.path = path; self.color = color; super.init(frame: frame); wantsLayer = true
         }
         required init?(coder: NSCoder) { fatalError() }
         override func draw(_ dirtyRect: NSRect) {
             wallpaper?.draw(in: bounds, from: NSRect(x: 0, y: 0, width: wallpaper!.size.width, height: wallpaper!.size.width * bounds.height / bounds.width), operation: .copy, fraction: 1)
-            let path = NSBezierPath(roundedRect: bar, xRadius: 20, yRadius: 20)
             color.setFill(); path.fill()
             NSGraphicsContext.saveGraphicsState(); path.addClip()
-            DockView.dirtImage.draw(in: bar)
+            DockView.dirtImage.draw(in: path.bounds)
             NSGraphicsContext.restoreGraphicsState()
         }
     }
@@ -52,12 +51,15 @@ final class HalloweenThemeTests: XCTestCase {
         let t = try theme()
         guard let dir = ProcessInfo.processInfo.environment["RETROMAC_SNAPSHOT_DIR"] else { return }
         let bar = NSRect(x: 60, y: 14, width: 600, height: 70)
+        var icons = (0..<9).map { NSRect(x: 80 + CGFloat($0) * 62, y: 24, width: 50, height: 50) }
+        icons[3] = NSRect(x: 250, y: 24, width: 80, height: 80); icons[2].size = NSSize(width: 62, height: 62); icons[4].size = NSSize(width: 62, height: 62)
+        let shape = DockView.bulgePath(bar: bar, radius: 20, icons: icons)
         let view = Backdrop(frame: NSRect(x: 0, y: 0, width: 720, height: 200),
                             wallpaper: NSImage(contentsOf: t.url.appendingPathComponent("wallpaper.jpg")),
-                            bar: bar, color: NSColor.fromHex(t.config.dock.backgroundColor))
+                            path: shape, color: NSColor.fromHex(t.config.dock.backgroundColor))
         let rim = EmberRim()
         view.layoutSubtreeIfNeeded(); view.display()
-        rim.update(host: view.layer!, barRect: bar, cornerRadius: 20)
+        rim.update(host: view.layer!, path: shape.cgPath)
         let scale: CGFloat = 2
         let w = Int(view.bounds.width * scale), h = Int(view.bounds.height * scale)
         guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
@@ -66,5 +68,30 @@ final class HalloweenThemeTests: XCTestCase {
         view.layer!.render(in: ctx)
         if let cg = ctx.makeImage() { try NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:])?
             .write(to: URL(fileURLWithPath: dir).appendingPathComponent("halloween-dock.png")) }
+    }
+}
+
+/// Where the hidden Mac Dock goes decides where windows minimise to.
+final class RubberBandTests: XCTestCase {
+    /// At rest the bar is the plain rounded bar; a magnified icon lifts the top edge over itself
+    /// by what it grew, and the edge is back down well to either side.
+    func testTheTopFollowsTheMagnifiedIcon() {
+        let bar = NSRect(x: 0, y: 16, width: 400, height: 70)
+        let rest = (0..<6).map { NSRect(x: 20 + CGFloat($0) * 60, y: 26, width: 50, height: 50) }
+        XCTAssertEqual(DockView.bulgePath(bar: bar, radius: 20, icons: rest).bounds.maxY, bar.maxY, accuracy: 0.5)
+        var magnified = rest
+        magnified[2] = NSRect(x: 135, y: 26, width: 80, height: 80)   // grew by 30
+        let path = DockView.bulgePath(bar: bar, radius: 20, icons: magnified)
+        XCTAssertEqual(path.bounds.maxY, bar.maxY + 30, accuracy: 1)
+        XCTAssertFalse(path.contains(NSPoint(x: 30, y: bar.maxY + 5)), "far from the icon the edge is down")
+        XCTAssertTrue(path.contains(NSPoint(x: 175, y: bar.maxY + 25)), "over the icon it is up")
+    }
+}
+
+final class SystemDockEdgeTests: XCTestCase {
+    func testBesideALittleLowerIsNotBelow() {
+        let monitor = NSRect(x: 0, y: 0, width: 1920, height: 1080)
+        XCTAssertFalse(DockController.isBelow(NSRect(x: -1280, y: -84, width: 1280, height: 832), primary: monitor))
+        XCTAssertTrue(DockController.isBelow(NSRect(x: 200, y: -832, width: 1280, height: 832), primary: monitor))
     }
 }
