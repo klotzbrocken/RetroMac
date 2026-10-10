@@ -332,9 +332,9 @@ final class DockView: NSView {
     /// stay under it, with the bar's own margin above the icons as the slack. Taken from the
     /// largest icon instead, the arch jumped a whole icon each time the largest one changed.
     /// `amount`: how much of the lift the band takes — 1 holding the icons, 0 back at rest after
-    /// an icon tore out of it, a little below 0 as it springs back. `tear`: how far the rip the
-    /// icon left is open, 0 closed to 1 — the band's torn ends standing up either side of the
-    /// icon, pulled up as it broke through.
+    /// an icon tore out of it, a little below 0 as it springs back. `tear`: the rip the icon left
+    /// — 0 closed, 1 open downward (torn walls down to the icon's top), below 0 the moment it
+    /// tears, the torn ends flung up with the icon before they fall back into the rip.
     static func bulgePath(bar r: NSRect, radius: CGFloat, icons: [NSRect], amount: CGFloat = 1, tear: CGFloat = 0) -> NSBezierPath {
         let rest = icons.map(\.height).min() ?? 0
         let lifted = icons.map { ($0, $0.height - rest) }.filter { $0.1 > 0.5 }
@@ -352,15 +352,23 @@ final class DockView: NSView {
             let need = min(1, 2 * (lift - slack) / peak - 1)
             half = max(half, .pi * d / acos(max(-1, need)))
         }
-        let ripHalf = (icons.max(by: { $0.height < $1.height })?.width ?? rest) * 0.75 * min(1, max(0, tear))
-        let ripUp = rest * 0.5 * min(1, max(0, tear))
+        let big = icons.max(by: { $0.height < $1.height })?.width ?? rest
+        let open = min(1, abs(tear))
+        let ripHalf = big * (tear >= 0 ? 0.62 : 0.75) * open
+        let ripDepth = max(0, (r.height - rest) / 2) + rest * 0.3
+        let ripUp = rest * 0.5 * open
         func top(_ x: CGFloat) -> CGFloat {
             let d = abs(x - centre)
             var y = d >= half ? r.maxY : r.maxY + peak * amount * 0.5 * (1 + cos(.pi * d / half))
-            if ripHalf > 1, d < ripHalf {
-                // The torn ends, pulled up by the icon that broke through: two tufts of shards
-                // standing up either side of it, low over its middle. Fixed sines, the same rip
-                // every time.
+            guard ripHalf > 1, d < ripHalf else { return y }
+            if tear >= 0 {
+                // The rip, open downward: steep torn walls, a ragged floor. Fixed sines, so the
+                // same rip every time.
+                let wall = pow(sin(.pi / 2 * (1 - d / ripHalf)), 0.3)
+                let rag = sin(x * 0.9) * 0.22 + sin(x * 2.3 + 1) * 0.14 + sin(x * 5.1) * 0.08
+                y -= (y - r.maxY + ripDepth) * wall * (0.85 + rag) * min(1, tear * 1.4)
+            } else {
+                // The moment it tears: the torn ends flung up with the icon, before they fall.
                 let tuft = pow(sin(.pi * d / ripHalf), 0.7)
                 let shards = 0.45 + 0.55 * abs(sin(x * 1.6)) * (0.75 + 0.25 * sin(x * 0.55 + 2))
                 y += ripUp * tuft * shards
@@ -388,7 +396,7 @@ final class DockView: NSView {
     /// holding the icons (1) and lying back at rest (0).
     private var bandAmount: CGFloat = 1
     private var bandVelocity: CGFloat = 0
-    /// How far the rip is open (0…1): fast to open, slow to heal.
+    /// The rip (see `bulgePath`): flung up at -0.9 when it tears, falling to 1, healing to 0.
     private var bandTear: CGFloat = 0
     private var bandTearVelocity: CGFloat = 0
     private var bandTorn = false
@@ -408,6 +416,7 @@ final class DockView: NSView {
         bandTorn = torn
         if torn {
             bandVelocity = -9   // a snap, so it overshoots below rest and wobbles
+            bandTear = -0.9; bandTearVelocity = 0   // the torn ends go up with the icon first
             emberRim.burst(at: CGPoint(x: biggest.midX, y: bar.maxY + (biggest.height - rest) * 0.5))
         }
         guard bandTimer == nil else { return }
@@ -420,10 +429,13 @@ final class DockView: NSView {
             self.bandAmount += self.bandVelocity / 60
             // The rip: it bursts open, and closes slowly once the band holds the icon again.
             let ripTarget: CGFloat = self.bandTorn ? 1 : 0
-            let stiffness: CGFloat = self.bandTorn ? 420 : 60
-            let ripForce = -stiffness * (self.bandTear - ripTarget) - 2 * sqrt(stiffness) * self.bandTearVelocity
+            // Torn: the ends fall from up to down with one small bounce. Healing: slowly, no bounce.
+            let stiffness: CGFloat = self.bandTorn ? 110 : 60
+            let damping = (self.bandTorn ? 1.4 : 2) * sqrt(stiffness)
+            let ripForce = -stiffness * (self.bandTear - ripTarget) - damping * self.bandTearVelocity
             self.bandTearVelocity += ripForce / 60
-            self.bandTear = max(0, self.bandTear + self.bandTearVelocity / 60)
+            self.bandTear += self.bandTearVelocity / 60
+            if !self.bandTorn { self.bandTear = max(0, self.bandTear) }
             if abs(self.bandAmount - target) < 0.002, abs(self.bandVelocity) < 0.01,
                abs(self.bandTear - ripTarget) < 0.002, abs(self.bandTearVelocity) < 0.01 {
                 self.bandAmount = target; self.bandVelocity = 0
