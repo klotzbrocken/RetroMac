@@ -17,6 +17,7 @@ final class DockController {
     private var window: DockWindow?
     private var dockView: DockView?
     func taskButtonScreenRect(for window: AXUIElement) -> NSRect? { dockView?.taskButtonScreenRect(for: window) }
+    func itemScreenRect(bundleID: String) -> NSRect? { dockView?.itemScreenRect(bundleID: bundleID) }
 
     /// The launcher shortcut on a Windows theme: the Start menu, as the button opens it.
     func openStartMenuFromKeyboard() -> Bool {

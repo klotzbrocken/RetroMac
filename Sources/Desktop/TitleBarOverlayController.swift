@@ -238,7 +238,7 @@ final class TitleBarOverlayController {
     /// does — the picture zooms away, no shrinking into a corner (`MinimizeZoom`).
     private func takeCommandM() {
         MinimizeZoom.shared.onCommandM = { [weak self] in self?.minimizeFront() }
-        MinimizeZoom.shared.setHotKey(MinimizeZoom.wanted && style?.isBar == true)
+        MinimizeZoom.shared.setHotKey(MinimizeZoom.wanted && (style?.isBar == true || style == .fireLights))
     }
 
     /// ⌘M: the front window with a bar goes through the bar's own minimise; one without (an
@@ -1400,10 +1400,18 @@ final class TitleBarOverlayController {
         // Mac Dock would have taken it; a window without a button yet minimises the Mac's way.
         var zoomed = false
         if attr == kAXMinimizeButtonAttribute, MinimizeZoom.wanted, let o = overlays[wid] {
-            let button = DockController.shared.taskButtonScreenRect(for: w)
-            if button != nil || ThemeManager.shared.activeTheme?.config.hasTaskButtons != true {
+            if MinimizeZoom.intoDockIcon {
+                let bundleID = NSRunningApplication(processIdentifier: o.pid)?.bundleIdentifier
+                let icon = bundleID.flatMap { DockController.shared.itemScreenRect(bundleID: $0) }
+                    ?? DockController.shared.barScreenFrame.map { NSRect(x: $0.midX - 24, y: $0.minY, width: 48, height: 48) }
                 zoomed = MinimizeZoom.shared.begin(wid: wid, windowBounds: o.bounds, bar: o.panel, barView: o.view,
-                                                   patch: o.patch, target: button)
+                                                   patch: o.patch, icon: icon)
+            } else {
+                let button = DockController.shared.taskButtonScreenRect(for: w)
+                if button != nil || ThemeManager.shared.activeTheme?.config.hasTaskButtons != true {
+                    zoomed = MinimizeZoom.shared.begin(wid: wid, windowBounds: o.bounds, bar: o.panel, barView: o.view,
+                                                       patch: o.patch, target: button)
+                }
             }
         }
         // The bar goes before the window does; a bar over a fading window is the one thing

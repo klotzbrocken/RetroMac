@@ -1619,6 +1619,12 @@ final class DockView: NSView {
 
     private typealias TaskModel = (label: String, icon: NSImage?, active: Bool, system: Bool, window: AXUIElement?, action: () -> Void)
 
+    /// Where an app's icon is on screen, for a window minimising into it (Halloween).
+    func itemScreenRect(bundleID: String) -> NSRect? {
+        guard let item = itemViews.first(where: { $0.bundleID == bundleID }), let win = item.window else { return nil }
+        return win.convertToScreen(item.convert(item.bounds, to: nil))
+    }
+
     /// Where a window's taskbar button is on screen, for the minimise to fly into.
     func taskButtonScreenRect(for window: AXUIElement) -> NSRect? {
         guard let btn = taskButtonViews.first(where: { $0.axWindow.map { CFEqual($0, window) } == true }),

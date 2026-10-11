@@ -21,8 +21,13 @@ final class MinimizeZoom {
     /// window goes into its button.
     static var wanted: Bool {
         guard let config = ThemeManager.shared.activeTheme?.config else { return false }
-        return config.isControlStripModules || config.hasTaskButtons
+        return config.isControlStripModules || config.hasTaskButtons || intoDockIcon
     }
+
+    /// Halloween: its fireballs stand in for the lights, so the Mac's own minimise would show the
+    /// real lights on the shrinking window. The picture, fireballs and all, goes into the app's
+    /// dock icon instead.
+    static var intoDockIcon: Bool { TitleBarOverlayController.style(for: RetroFrameTheme.key()) == .fireLights }
 
     static let duration: TimeInterval = 0.4
     /// Windows' caption flight to the taskbar: quick, as fast as a maximise feels.
@@ -38,7 +43,9 @@ final class MinimizeZoom {
     /// Quartz coordinates (top-left origin), `bar` its bar panel, still on screen. Returns
     /// false when nothing could be photographed; the minimise then runs as macOS plays it.
     /// `target`: the taskbar button to fly into (screen coordinates); nil zooms to the top.
-    func begin(wid: CGWindowID, windowBounds: CGRect, bar: NSPanel, barView: NSView, patch: NSPanel?, target button: NSRect? = nil) -> Bool {
+    /// `icon`: the dock icon the whole window shrinks into, evenly (Halloween).
+    func begin(wid: CGWindowID, windowBounds: CGRect, bar: NSPanel, barView: NSView, patch: NSPanel?, target button: NSRect? = nil,
+               icon: NSRect? = nil) -> Bool {
         end()
         guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(bar.frame) }) ?? NSScreen.main else { return false }
         let primaryTop = NSScreen.screens.first?.frame.maxY ?? screen.frame.maxY
@@ -56,7 +63,21 @@ final class MinimizeZoom {
         let picture = NSImage(size: union.size)
         picture.lockFocus()
         if button == nil { NSImage(cgImage: shotCG, size: windowFrame.size).draw(in: NSRect(origin: NSPoint(x: windowFrame.minX - union.minX, y: windowFrame.minY - union.minY), size: windowFrame.size)) }
-        if let rep = barView.bitmapImageRepForCachingDisplay(in: barView.bounds) {
+        if let barLayer = barView.layer, !(barLayer.sublayers ?? []).isEmpty {
+            // Layers of its own (the fireballs) are no part of what the view draws: render them.
+            let scale = bar.backingScaleFactor
+            if let ctx = CGContext(data: nil, width: Int(barView.bounds.width * scale), height: Int(barView.bounds.height * scale),
+                                   bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+                ctx.scaleBy(x: scale, y: scale)
+                if barView.isFlipped { ctx.translateBy(x: 0, y: barView.bounds.height); ctx.scaleBy(x: 1, y: -1) }
+                (barLayer.presentation() ?? barLayer).render(in: ctx)
+                if let cg = ctx.makeImage() {
+                    NSImage(cgImage: cg, size: barView.bounds.size)
+                        .draw(in: NSRect(origin: NSPoint(x: bar.frame.minX - union.minX, y: bar.frame.minY - union.minY), size: bar.frame.size))
+                }
+            }
+        } else if let rep = barView.bitmapImageRepForCachingDisplay(in: barView.bounds) {
             barView.cacheDisplay(in: barView.bounds, to: rep)
             let barImage = NSImage(size: barView.bounds.size); barImage.addRepresentation(rep)
             barImage.draw(in: NSRect(origin: NSPoint(x: bar.frame.minX - union.minX, y: bar.frame.minY - union.minY), size: bar.frame.size))
@@ -98,9 +119,12 @@ final class MinimizeZoom {
         // Away to the top of the desktop, under the menu bar, shrinking to nothing — solid all
         // the way, as the zoom rectangles of the day were, not a ghost. Under Windows, into the
         // window's taskbar button, shrinking to its size.
-        let target = button.map { CGPoint(x: $0.midX - screen.frame.minX, y: $0.midY - screen.frame.minY) }
+        // Halloween: the whole window, evenly, into its app's dock icon.
+        let into = button ?? icon
+        let target = into.map { CGPoint(x: $0.midX - screen.frame.minX, y: $0.midY - screen.frame.minY) }
             ?? CGPoint(x: screen.frame.midX - screen.frame.minX, y: screen.visibleFrame.maxY - screen.frame.minY - 12)
         let endScale = button.map { CATransform3DMakeScale($0.width / union.width, $0.height / union.height, 1) }
+            ?? icon.map { let s = min($0.width / union.width, $0.height / union.height); return CATransform3DMakeScale(s, s, 1) }
             ?? CATransform3DMakeScale(0.02, 0.02, 1)
         CATransaction.begin()
         CATransaction.setAnimationDuration(button == nil ? Self.duration : Self.captionDuration)
