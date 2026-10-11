@@ -126,6 +126,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **A tidier flyout and menu.** The flyout keeps the everyday switches; Only on this Space, Dock only
   and TV Tube left it (Spaces and TV Tube stay in the menu-bar menu). The menu-bar menu has a
   More submenu for Dock Only, the Game Library, the Setup Assistant and Rescue Desktop.
+- **VoiceOver, from the blind tester's third round.** Switching themes no longer leaves the
+  arrows, Return and Esc held for the whole Mac — with a drawn menu or the Start menu open at the
+  switch they stayed RetroMac's, and VoiceOver's own menu bar and menus stopped answering until
+  RetroMac was force-quit. The shader shortcut says "Shader on" or "Shader off". The Control
+  Strip's scroll arrows say which modules came into view. Shader, Live Wallpaper, Virtual Camera,
+  Retro Viewport and TV Tube in the menu read as switches with their state.
+- **"Turn the shader on when RetroMac launches" works with "Activate theme on launch".** The
+  theme coming on at launch marked the shader as running without starting it, so the launch
+  switch skipped it and every shader switch read on while the screen was plain; under VoiceOver
+  the theme's own preset was skipped too.
 - **VoiceOver, from a blind tester's second round.** The Control Strip, the docks, the Start
   menus and the panels keep each control as the same element between VoiceOver's questions;
   built anew each time, VoiceOver stopped after the second one (the Control Strip's Scroll

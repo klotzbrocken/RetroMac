@@ -541,7 +541,7 @@ struct SetupWizardView: View {
                 Picker("Theme on", selection: Binding(
                     get: { settings.themeOnChosenSpaces },
                     set: { only in
-                        if only { settings.themeSpaces = [ThemeSpaces.currentSpace ?? ""] }
+                        if only, let here = ThemeSpaces.currentSpace { settings.themeSpaces = [here] }
                         settings.themeOnChosenSpaces = only
                     })) {
                     Text("Every Space").tag(false)

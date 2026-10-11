@@ -55,6 +55,15 @@ enum HeldKeys {
     /// Whether any key is held right now, for the leak check (PERF-06).
     static var isHeld: Bool { !refs.isEmpty }
 
+    /// Lets every key go. A theme switch takes down the menus and bars that held them without
+    /// closing them, and the arrows, Return and Esc then stayed RetroMac's for the whole Mac —
+    /// VoiceOver's menu bar and menus with them, until RetroMac was force-quit.
+    static func releaseAll() {
+        guard !holders.isEmpty else { return }
+        holders.removeAll()
+        register()
+    }
+
     private static func register() {
         installHandler()
         refs.forEach { UnregisterEventHotKey($0) }
@@ -189,6 +198,8 @@ enum MenuKeyNavigator {
 enum MenuKeyboard {
     static func attach(_ owner: String, highlightFirst: Bool = false, levels: @escaping () -> [KeyMenuLevel], close: @escaping (Int) -> Void) {
         HeldKeys.hold(owner) { key in
+            // The menu went without saying so: give the keys back rather than swallow them.
+            guard !levels().isEmpty else { HeldKeys.release(owner); return }
             if let say = MenuKeyNavigator.handle(key, levels: levels, close: close) { announce(say) }
         }
         if highlightFirst || openingFromKeyboard { highlightTop(levels()) }

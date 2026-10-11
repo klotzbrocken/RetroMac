@@ -73,6 +73,17 @@ final class PerformanceTests: XCTestCase {
         print("[PERF-06] 100 open/close: visible windows \(before) before, \(NSApp.windows.filter(\.isVisible).count) after; all windows \(NSApp.windows.count)")
     }
 
+    /// A theme switch lets go of every held key at once: left held, the arrows, Return and Esc
+    /// were taken from VoiceOver for the whole Mac.
+    @MainActor
+    func testThemeSwitchLetsGoOfHeldKeys() {
+        MenuKeyboard.attach("test-gone", levels: { [] }, close: { _ in })
+        HeldKeys.hold("test-focus") { _ in }
+        XCTAssertTrue(HeldKeys.isHeld)
+        HeldKeys.releaseAll()
+        XCTAssertFalse(HeldKeys.isHeld)
+    }
+
     /// PERF-02: what the new surfaces add while idle. Each wakes once a second (the shelf only while
     /// shown with its monitor open), takes its readings and draws again; that second's work is
     /// measured here and given as a share of one core.

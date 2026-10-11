@@ -496,15 +496,13 @@ final class ControlStripView: NSView {
         }]
         if !collapsed {
             parts.append(AccessibleHotspot.make(in: self, label: "Scroll left", rect: v(leftArrowRect)) { [weak self] in
-                guard let self else { return }; self.controller.scroll(by: self.mirrored ? 1 : -1)
+                guard let self else { return }; self.scrollAndSay(self.mirrored ? 1 : -1)
             })
             for (m, r) in placedModules() {
-                var name = Self.moduleNames[m.id] ?? m.id.capitalized
-                if let res = m as? ResolutionModule, !res.label.isEmpty { name += ", \(res.label)" }
-                parts.append(AccessibleHotspot.make(in: self, label: name, rect: v(r)) { [weak self] in self?.controller.activate(m, anchor: v(r)) })
+                parts.append(AccessibleHotspot.make(in: self, label: axName(m), rect: v(r)) { [weak self] in self?.controller.activate(m, anchor: v(r)) })
             }
             parts.append(AccessibleHotspot.make(in: self, label: "Scroll right", rect: v(rightArrowRect)) { [weak self] in
-                guard let self else { return }; self.controller.scroll(by: self.mirrored ? -1 : 1)
+                guard let self else { return }; self.scrollAndSay(self.mirrored ? -1 : 1)
             })
             // The System 7 strip's tab at the far end closes it too.
             if mono { parts.append(AccessibleHotspot.make(in: self, label: "Collapse Control Strip", rect: v(sizeBoxRect)) { [weak self] in self?.controller.toggleCollapsed() }) }
@@ -512,6 +510,23 @@ final class ControlStripView: NSView {
         axParts = parts
         return parts
     }
+    private func axName(_ m: ControlStripModule) -> String {
+        var name = Self.moduleNames[m.id] ?? m.id.capitalized
+        if let res = m as? ResolutionModule, !res.label.isEmpty { name += ", \(res.label)" }
+        return name
+    }
+
+    /// Scrolls and says what came into view, the way an aria-live region would: the arrows
+    /// changed the strip in silence, and a VoiceOver user had to go looking for what moved.
+    private func scrollAndSay(_ delta: Int) {
+        let before = Set(placedModules().map { ObjectIdentifier($0.0) })
+        controller.scroll(by: delta)
+        let shown = placedModules().map(\.0).filter { !before.contains(ObjectIdentifier($0)) }
+        NSAccessibility.post(element: self, notification: .layoutChanged)
+        MenuKeyboard.announce(shown.isEmpty ? "No more modules this way"
+                                            : shown.map(axName).joined(separator: ", ") + " in view")
+    }
+
     private var canScrollOn: Bool { placedModules().count + scrollIndex < controller.available.count }
 
     override func draw(_ dirtyRect: NSRect) {

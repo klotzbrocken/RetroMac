@@ -160,6 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Apply theme shader and update desktop overlays when theme changes via Settings
         dockThemeObserver = NotificationCenter.default.addObserver(forName: .dockThemeChanged, object: nil, queue: .main) { [weak self] _ in
+            HeldKeys.releaseAll()
             self?.applyThemePresetIfNeeded()
             self?.updateDockIcon()   // Dock Mode: keep the Dock icon in sync with the theme
             DesktopIconsController.shared.update()
@@ -266,7 +267,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 ThemeManager.shared.setActiveTheme(name: settings.dockTheme)
                 if !settings.dockEnabled { settings.dockEnabled = true; DockController.shared.start() }
-                self.isActive = true
+                // No boot screen (VoiceOver, or switched off): the theme came on right away, while
+                // the dock was still off, so its shader preset was skipped; take it now. The shader
+                // itself is the launch switch's to start, below — `isActive = true` used to stand
+                // here with nothing running, which blocked that switch and made every shader
+                // switch read "on" while the screen was plain.
+                if !SplashController.shared.isPresenting { self.applyThemePresetIfNeeded() }
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_APPS"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         CPUMonitorController.shared.show()
@@ -793,9 +799,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         private let highlightView = NSView()
         private var hotkeyField: NSTextField?
 
+        private let label: String
+
         init(icon: String, label: String, hotkeyHint: String?, pill: PillToggleView, onToggle: @escaping () -> Void) {
             self.pillToggle = pill
             self.onToggle = onToggle
+            self.label = label
             super.init(frame: NSRect(x: 0, y: 0, width: 300, height: 26))
             autoresizingMask = .width
 
@@ -865,9 +874,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             addTrackingArea(area)
         }
 
-        override func mouseUp(with event: NSEvent) {
+        override func mouseUp(with event: NSEvent) { toggle() }
+
+        private func toggle() {
             pillToggle.toggle()
             onToggle?()
+        }
+
+        // One switch to VoiceOver, with its state: the row was a label and an unnamed picture,
+        // so Virtual Camera, Retro Viewport and TV Tube never said whether they were on.
+        override func isAccessibilityElement() -> Bool { true }
+        override func accessibilityRole() -> NSAccessibility.Role? { .checkBox }
+        override func accessibilitySubrole() -> NSAccessibility.Subrole? { .switch }
+        override func accessibilityLabel() -> String? { label }
+        override func accessibilityValue() -> Any? { pillToggle.isOn ? 1 : 0 }
+        override func accessibilityChildren() -> [Any]? { [] }
+        override func accessibilityPerformPress() -> Bool {
+            toggle()
+            NSAccessibility.post(element: self, notification: .valueChanged)
+            return true
         }
 
         override func mouseEntered(with event: NSEvent) {
@@ -1662,7 +1687,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                       EventParamType(typeEventHotKeyID), nil,
                                       MemoryLayout<EventHotKeyID>.size, nil, &hkID)
                     switch hkID.id {
-                    case 1: DispatchQueue.main.async { d.toggleOverlay() }
+                    case 1: DispatchQueue.main.async {
+                        // Said out loud: the shortcut changes nothing VoiceOver could see.
+                        let on = !d.isActive
+                        d.toggleOverlay()
+                        MenuKeyboard.announce(on ? "Shader on" : "Shader off")
+                    }
                     case 6: DispatchQueue.main.async { d.captureScreenshotWithShader() }
                     case 7: DispatchQueue.main.async { d.toggleMenuBar() }
                     case 8: DispatchQueue.main.async { DashboardController.shared.toggle() }
