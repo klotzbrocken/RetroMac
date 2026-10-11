@@ -19,7 +19,7 @@ final class HalloweenThemeTests: XCTestCase {
         for wp in c.wallpapers ?? [] {
             XCTAssertTrue(FileManager.default.fileExists(atPath: try theme().url.appendingPathComponent(wp.file).path), wp.file)
         }
-        XCTAssertEqual(c.wallpapers?.count, 5)
+        XCTAssertEqual(c.wallpapers?.count, 4)
         // A desktop of RetroMac's own, so a right-click reaches its wallpaper menu; the user's
         // Desktop folder stays one double-click away while the Finder's icons are hidden.
         XCTAssertEqual(c.desktopIcons?.map(\.path), ["/", "~/Desktop"])

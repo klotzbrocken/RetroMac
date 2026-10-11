@@ -21,8 +21,7 @@
     { "name": "Mask in Flames", "file": "wallpaper-mask-flames.jpg" },
     { "name": "The House", "file": "wallpaper-mask-house.jpg" },
     { "name": "Knife and Pumpkin", "file": "wallpaper-knife.jpg" },
-    { "name": "In the Doorway", "file": "wallpaper-doorway.jpg" },
-    { "name": "Title Card", "file": "wallpaper-title.jpg" }
+    { "name": "In the Doorway", "file": "wallpaper-doorway.jpg" }
   ],
   "menuBarApple": "pumpkin",
   "appearance": "dark",

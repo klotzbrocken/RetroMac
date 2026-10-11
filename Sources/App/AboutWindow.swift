@@ -256,6 +256,12 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("Halloween Theme Credits") {
+                    Text("The Halloween theme\u{2019}s wallpapers were generated with Google Gemini. The knife pointer is Maik\u{2019}s own; the pumpkin in the menu bar is macOS\u{2019}s emoji. The Halloween films and their characters belong to their respective owners; the theme is an unofficial fan-made tribute, and RetroMac is not affiliated with, sponsored by, or endorsed by them.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("DOOM Theme Credits") {
                     Text("DOOM® and DOOM® II are trademarks of id Software LLC, a ZeniMax Media company. The “Maiks Favourite II” theme uses DOOM character sprites (Doom Slayer, Lost Soul) and is an unofficial fan-made tribute. No ownership of the DOOM name or artwork is claimed. RetroMac is not affiliated with, sponsored by, or endorsed by id Software, Bethesda Softworks, or ZeniMax Media.")
                         .font(.caption)
