@@ -2383,7 +2383,9 @@ final class LightsPatchView: NSView {
 /// opacity only, at about 15 frames a second, and not at all under Reduce Motion.
 final class Fireball: CALayer {
     private let core = CAGradientLayer()
+    private let heat = CAGradientLayer()
     private let glow = CALayer()
+    private let shade = CALayer()
     private let glyph = CAShapeLayer()
     private let kind: ChromeButtonKind
 
@@ -2407,6 +2409,16 @@ final class Fireball: CALayer {
         core.startPoint = CGPoint(x: 0.42, y: 0.38)   // the light comes from above, a little left
         core.endPoint = CGPoint(x: 1.05, y: 1.05)
         addSublayer(core)
+        // The ember inside: a bright spot that flares and dies down.
+        heat.type = .radial
+        heat.colors = [NSColor(srgbRed: 1, green: 0.95, blue: 0.7, alpha: 0.95).cgColor, NSColor(srgbRed: 1, green: 0.6, blue: 0.2, alpha: 0).cgColor]
+        heat.startPoint = CGPoint(x: 0.5, y: 0.5)
+        heat.endPoint = CGPoint(x: 1, y: 1)
+        addSublayer(heat)
+        // Pressed or in a window behind: darker, never see-through — the real light lies under it.
+        shade.backgroundColor = NSColor.black.cgColor
+        shade.opacity = 0
+        addSublayer(shade)
         glyph.fillColor = nil
         glyph.strokeColor = NSColor.black.withAlphaComponent(0.6).cgColor
         glyph.lineCap = .round
@@ -2422,13 +2434,22 @@ final class Fireball: CALayer {
         flicker.calculationMode = .cubic
         flicker.preferredFrameRateRange = slow
         glow.add(flicker, forKey: "flicker")
-        let pulse = CAKeyframeAnimation(keyPath: "transform.scale")
-        pulse.values = [0.95, 1.03, 0.97, 1.02, 0.95]
-        pulse.duration = (beat[kind] ?? 1.5) * 1.6
-        pulse.repeatCount = .infinity
-        pulse.calculationMode = .cubic
-        pulse.preferredFrameRateRange = slow
-        core.add(pulse, forKey: "pulse")
+        // Visible at 12 pt: the hot spot wanders inside the ball, and the ember flares.
+        let wander = CAKeyframeAnimation(keyPath: "startPoint")
+        wander.values = [CGPoint(x: 0.42, y: 0.38), CGPoint(x: 0.6, y: 0.45), CGPoint(x: 0.5, y: 0.62),
+                         CGPoint(x: 0.36, y: 0.52), CGPoint(x: 0.42, y: 0.38)].map { NSValue(point: $0) }
+        wander.duration = (beat[kind] ?? 1.5) * 2.2
+        wander.repeatCount = .infinity
+        wander.calculationMode = .cubic
+        wander.preferredFrameRateRange = slow
+        core.add(wander, forKey: "wander")
+        let flare = CAKeyframeAnimation(keyPath: "opacity")
+        flare.values = [0.15, 0.85, 0.3, 1, 0.2, 0.7, 0.15]
+        flare.duration = (beat[kind] ?? 1.5) * 1.3
+        flare.repeatCount = .infinity
+        flare.calculationMode = .cubic
+        flare.preferredFrameRateRange = slow
+        heat.add(flare, forKey: "flare")
     }
 
     override init(layer: Any) {
@@ -2440,8 +2461,10 @@ final class Fireball: CALayer {
     override func layoutSublayers() {
         super.layoutSublayers()
         let b = bounds
-        for l in [core, glow] as [CALayer] { l.frame = b; l.cornerRadius = b.width / 2 }
+        for l in [core, glow, shade] as [CALayer] { l.frame = b; l.cornerRadius = b.width / 2 }
         core.masksToBounds = true
+        heat.frame = b.insetBy(dx: b.width * 0.12, dy: b.height * 0.12)
+        heat.cornerRadius = heat.frame.width / 2
         glow.shadowPath = CGPath(ellipseIn: b, transform: nil)
         glyph.frame = b
         let i = b.width * 0.3, p = CGMutablePath()
@@ -2461,7 +2484,6 @@ final class Fireball: CALayer {
 
     func show(glyph visible: Bool, pressed: Bool, active: Bool) {
         glyph.isHidden = !visible
-        core.opacity = pressed ? 0.7 : 1
-        opacity = active ? 1 : 0.5
+        shade.opacity = pressed ? 0.3 : (active ? 0 : 0.45)
     }
 }
