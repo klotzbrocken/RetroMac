@@ -19,6 +19,11 @@ final class ThemeManager {
     /// picture only on the Space a screen is showing, so each Space has its own original, and a
     /// Space the user has not been back to since the theme went off is restored on the next visit.
     private var savedWallpapers: [String: URL] = [:]
+    /// Each Space's own picture as macOS's wallpaper store had it when this theme first set one,
+    /// read before anything of ours went in. The fallback when a Space already shows one of our
+    /// pictures the first time RetroMac sees it (one set on several Spaces at once, a session
+    /// that ended early): that used to fall back to macOS's default picture on every such Space.
+    private var storeOriginals: [String: URL]?
 
     /// Re-apply the wallpaper when the displays change.
     ///
@@ -164,7 +169,15 @@ final class ThemeManager {
             }
     }
 
+    /// Spaces off screen that still show one of the theme's pictures: macOS lets RetroMac change
+    /// only the Space on screen, so they get theirs back only when shown while RetroMac runs.
+    var otherSpacesWearingTheme: Int {
+        let onScreen = Set(NSScreen.screens.map { wallpaperKey(for: $0) })
+        return savedWallpapers.keys.filter { $0.contains("|") && !onScreen.contains($0) }.count
+    }
+
     func clearActiveTheme() {
+        storeOriginals = nil   // read again at the next theme's first picture
         activeTheme = nil
         iconCache.removeAllObjects()
         NotificationCenter.default.post(name: .dockThemeChanged, object: nil)
@@ -678,9 +691,13 @@ final class ThemeManager {
             // "original" — not just the exact file we are about to set, but any theme file or
             // rendered tile. Capturing one of ours is how a screen got stranded: the backup then
             // pointed at a theme image, so "restore" put the theme wallpaper back for good.
+            if storeOriginals == nil { storeOriginals = WallpaperStore.originals(isOwn: isOwnWallpaper) }
             if savedWallpapers[screenKey] == nil {
                 let current = ws.desktopImageURL(for: screen)
-                if let current, !isOwnWallpaper(current) {
+                if let current, isOwnWallpaper(current), let stored = storeOriginals?[screenKey] {
+                    savedWallpapers[screenKey] = stored
+                    print("[Theme] Original wallpaper for \(screenKey) taken from macOS's wallpaper store: \(stored.path)")
+                } else if let current, !isOwnWallpaper(current) {
                     savedWallpapers[screenKey] = current
                     print("[Theme] Saved original wallpaper for screen \(screenKey) (\(screen.localizedName)): \(current.path)")
                 } else if let older = WallpaperSpaces.original(for: screenKey, in: savedWallpapers) {
@@ -1461,5 +1478,40 @@ enum WallpaperSpaces {
 
     static func pendingSpaces(in saved: [String: URL]) -> Int {
         saved.keys.filter { $0.contains("|") }.count
+    }
+}
+
+/// macOS's own record of every Space's desktop picture (com.apple.wallpaper/Store/Index.plist),
+/// read only, never written: Spaces ▸ Space uuid ("" for the first) ▸ Displays ▸ display uuid ▸
+/// Desktop ▸ Content ▸ Choices, an image choice carrying its file as a small property list.
+enum WallpaperStore {
+    static var url: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/com.apple.wallpaper/Store/Index.plist")
+    }
+
+    static func originals(isOwn: (URL) -> Bool) -> [String: URL] {
+        guard let data = try? Data(contentsOf: url) else { return [:] }
+        return originals(from: data, isOwn: isOwn)
+    }
+
+    /// `<display uuid>|<Space uuid>` → the picture file, for image choices only (a dynamic or
+    /// colour wallpaper has no file to set back) and none of ours.
+    static func originals(from data: Data, isOwn: (URL) -> Bool) -> [String: URL] {
+        guard let root = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+              let spaces = root["Spaces"] as? [String: Any] else { return [:] }
+        var out: [String: URL] = [:]
+        for (space, value) in spaces {
+            guard let displays = (value as? [String: Any])?["Displays"] as? [String: Any] else { continue }
+            for (display, entry) in displays {
+                guard let choices = (((entry as? [String: Any])?["Desktop"] as? [String: Any])?["Content"] as? [String: Any])?["Choices"] as? [[String: Any]],
+                      let config = choices.first(where: { ($0["Provider"] as? String) == "com.apple.wallpaper.choice.image" })?["Configuration"] as? Data,
+                      let plist = try? PropertyListSerialization.propertyList(from: config, format: nil) as? [String: Any],
+                      let relative = (plist["url"] as? [String: Any])?["relative"] as? String,
+                      let file = URL(string: relative), file.isFileURL, !isOwn(file) else { continue }
+                out[WallpaperSpaces.key(screen: display, space: space)] = file
+            }
+        }
+        return out
     }
 }

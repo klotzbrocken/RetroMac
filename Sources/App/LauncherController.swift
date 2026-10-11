@@ -611,7 +611,7 @@ struct LauncherView: View {
             }
             .help("Turn the theme and every effect off and bring back windows you cannot reach")
             Spacer()
-            Button(role: .destructive) { NSApp.terminate(nil) } label: {
+            Button(role: .destructive) { AppDelegate.shared?.quitApp() } label: {
                 Image(systemName: "power").foregroundStyle(destructive).accessibilityLabel("Quit RetroMac")
             }
             .help("Quit")

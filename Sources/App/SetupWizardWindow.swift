@@ -527,6 +527,30 @@ struct SetupWizardView: View {
                       subtitle: "Recommended — a small, draggable button (bottom-right) that opens the launcher.",
                       isOn: $settings.floatingLauncherEnabled)
             Divider()
+            // Spaces: asked here, so nobody has to find it in Settings first (a beta tester did,
+            // after a while of the theme turning up on the wrong Space).
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "rectangle.split.3x1").font(.system(size: 18)).foregroundStyle(.indigo).frame(width: 26)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Spaces").font(.headline)
+                    Text("Every Space, or only the one you are on now — the others stay plain macOS. Add more later with Themes ▸ On This Space in the menu bar.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Picker("Theme on", selection: Binding(
+                    get: { settings.themeOnChosenSpaces },
+                    set: { only in
+                        if only { settings.themeSpaces = [ThemeSpaces.currentSpace ?? ""] }
+                        settings.themeOnChosenSpaces = only
+                    })) {
+                    Text("Every Space").tag(false)
+                    Text("This Space").tag(true)
+                }
+                .pickerStyle(.segmented).labelsHidden().frame(width: 190)
+                .accessibilityLabel("Theme on")
+            }
+            Divider()
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "globe").font(.system(size: 18)).foregroundStyle(.indigo).frame(width: 26)
                 VStack(alignment: .leading, spacing: 3) {

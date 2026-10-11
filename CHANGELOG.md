@@ -115,6 +115,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Spaces, from a beta tester.** The Setup Assistant asks whether the theme goes on every Space or
+  only the one you are on. Each Space's own wallpaper is read from macOS's wallpaper store before
+  the theme sets one, so a Space RetroMac finds already wearing a theme picture gets its own back
+  instead of macOS's default. Quitting RetroMac while other Spaces still show the theme's wallpaper
+  says so first (they get theirs back only when shown while RetroMac runs).
 - **Windows minimise down into the dock again with a second display beside the main one.** A
   MacBook next to a monitor, sitting a little lower, counted as a display below it; the hidden Mac
   Dock went to the left edge, and every minimised window flew off to the left.

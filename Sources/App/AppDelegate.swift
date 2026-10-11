@@ -4720,9 +4720,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cleanupBeforeQuit()
     }
 
-    @objc private func quitApp() {
+    /// The user quitting RetroMac (menu, flyout, Dock) — not a logout, a restart or an update,
+    /// which must never wait on a question. With Spaces off screen that still wear the theme's
+    /// wallpaper, they keep it, since only a running RetroMac gives it back when each is shown:
+    /// said once, before it happens.
+    @objc func quitApp() {
+        guard confirmQuitWithThemedSpaces() else { return }
         NSApp.terminate(nil)
     }
+
+    private func confirmQuitWithThemedSpaces() -> Bool {
+        let others = ThemeManager.shared.otherSpacesWearingTheme
+        guard others > 0, !UserDefaults.standard.bool(forKey: "quitSpacesWallpaperHintOff") else { return true }
+        let alert = NSAlert()
+        alert.messageText = others == 1 ? "Another Space still shows the theme's wallpaper"
+                                        : "\(others) other Spaces still show the theme's wallpaper"
+        alert.informativeText = "macOS lets RetroMac change only the Space on screen. Switch to each of them before you quit and they get your own picture back; quit now and they keep the theme's until you change it."
+        alert.addButton(withTitle: "Quit Anyway")
+        alert.addButton(withTitle: "Cancel")
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = "Don't tell me again"
+        NSApp.activate(ignoringOtherApps: true)
+        let answer = alert.runModal()
+        if alert.suppressionButton?.state == .on { UserDefaults.standard.set(true, forKey: "quitSpacesWallpaperHintOff") }
+        return answer == .alertFirstButtonReturn
+    }
+
 
     private func cleanupBeforeQuit() {
         // First, before anything else can take time: never leave a simulated crash on screen.
