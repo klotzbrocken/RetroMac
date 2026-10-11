@@ -2485,5 +2485,14 @@ final class Fireball: CALayer {
     func show(glyph visible: Bool, pressed: Bool, active: Bool) {
         glyph.isHidden = !visible
         shade.opacity = pressed ? 0.3 : (active ? 0 : 0.45)
+        // Only the front window's fire burns; the others stand still where they are.
+        if active, speed == 0 {
+            let paused = timeOffset
+            speed = 1; timeOffset = 0; beginTime = 0
+            beginTime = convertTime(CACurrentMediaTime(), from: nil) - paused
+        } else if !active, speed != 0 {
+            let now = convertTime(CACurrentMediaTime(), from: nil)
+            speed = 0; timeOffset = now
+        }
     }
 }

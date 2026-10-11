@@ -46,6 +46,11 @@ final class HalloweenThemeTests: XCTestCase {
     func testTheFireballs() throws {
         XCTAssertEqual(TitleBarOverlayController.style(for: "halloween"), .fireLights)
         XCTAssertFalse(TitleBarOverlayController.Style.fireLights.isBar)
+        let still = Fireball(kind: .zoom)
+        still.show(glyph: false, pressed: false, active: false)
+        XCTAssertEqual(still.speed, 0, "a window behind: the fire stands still")
+        still.show(glyph: false, pressed: false, active: true)
+        XCTAssertEqual(still.speed, 1, "the front window: it burns")
         guard let dir = ProcessInfo.processInfo.environment["RETROMAC_SNAPSHOT_DIR"] else { return }
         let host = CALayer(); host.frame = CGRect(x: 0, y: 0, width: 90, height: 30)
         host.backgroundColor = NSColor(white: 0.16, alpha: 1).cgColor
