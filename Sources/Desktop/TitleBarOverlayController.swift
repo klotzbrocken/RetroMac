@@ -1638,6 +1638,9 @@ final class TitleBarOverlayView: NSView {
         self.style = style; self.title = title; self.icon = icon; self.isFront = isFront; self.lights = lights
         self.deadZoneWidth = deadZoneWidth; self.zoomed = zoomed
         if style != .fireLights { fireballs.values.forEach { $0.removeFromSuperlayer() }; fireballs.removeAll() }
+        // Layer-backed before the first draw: turned on during it, the balls became part of the
+        // window's drawn picture — shown, but still.
+        else if !wantsLayer { wantsLayer = true }
         needsDisplay = true
     }
 
@@ -2191,7 +2194,6 @@ final class TitleBarOverlayView: NSView {
     private var fireballs: [ChromeButtonKind: Fireball] = [:]
 
     private func placeFireballs() {
-        wantsLayer = true
         guard let host = layer else { return }
         let hovering = (tracker.hovered != nil || tracker.pressed != nil) && isFront
         CATransaction.begin()

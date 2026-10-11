@@ -65,8 +65,9 @@ enum AppearanceAdapter {
             // Saved even when it is tinted already: the save is what makes the Dock tint again,
             // with the accent just written. Skipped because it was "unchanged", the icons kept
             // the blue of before.
+            // A moment after the announcement, so the Dock has the new accent when it tints.
             if let iconsWanted {
-                DispatchQueue.main.async {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     if iconsWanted == IconStyle.tinted || iconsWanted != IconStyle.current() { IconStyle.set(iconsWanted) }
                 }
             }
@@ -148,7 +149,11 @@ enum AppearanceAdapter {
     }
 
     private static func notifyChanged() {
-        for n in ["AppleColorPreferencesChangedNotification", "AppleInterfaceThemeChangedNotification"] {
+        // All four System Settings sends with an accent change: AppKit's and CoreUI's own for the
+        // accent (AppleAquaColorVariantChanged, kCUI…) are what make running apps and the Dock
+        // read it again; the first two alone left the Dock's tinted icons in the old colour.
+        for n in ["AppleColorPreferencesChangedNotification", "AppleInterfaceThemeChangedNotification",
+                  "AppleAquaColorVariantChanged", "kCUINotificationAquaColorVariantChanged"] {
             DistributedNotificationCenter.default().postNotificationName(
                 Notification.Name(n), object: nil, userInfo: nil, deliverImmediately: true)
         }
