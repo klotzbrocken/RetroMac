@@ -44,7 +44,8 @@ final class TitleBarOverlayController {
         case photon                            // QNX 6.2.1's Photon: menu box left, minimise, maximise, then close right
         case beos                              // BeOS R5: the yellow tab, only as wide as its title, close box left, zoom box right
         case snowLights                        // the three lights only (Snow Leopard, Mountain Lion)
-        var isBar: Bool { self != .snowLights }
+        case fireLights                        // three glowing fireballs in place of the lights (Halloween)
+        var isBar: Bool { self != .snowLights && self != .fireLights }
         /// Windows caption buttons cluster on the right; the Mac's close box sits on the left.
         var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero || self == .cde || self == .photon }
         /// What a double-click on the bar did in each era: Mac OS 8/9 rolled the window up, and
@@ -55,7 +56,7 @@ final class TitleBarOverlayController {
             case .platinum, .system7: return .collapse
             case .system6: return nil
             case .win31, .win98, .luna, .aero, .cde, .photon: return .zoom
-            case .aqua, .snowLights, .beos: return .minimize   // BeOS: a double-click on the tab hid the window
+            case .aqua, .snowLights, .fireLights, .beos: return .minimize   // BeOS: a double-click on the tab hid the window
             }
         }
     }
@@ -140,6 +141,7 @@ final class TitleBarOverlayController {
         case "win7":        return .aero
         case "macosx":      return .aqua       // the white pinstriped bar, the gems and the pill
         case "snowleopard": return .snowLights // and Mountain Lion, which declares the same chrome
+        case "halloween":   return .fireLights
         default:            return nil
         }
     }
@@ -704,7 +706,7 @@ final class TitleBarOverlayController {
         case .luna:     return 30
         case .aero:     return 30
         case .aqua:     return AquaChrome.barHeight
-        case .snowLights: return 0   // sized from the real lights instead
+        case .snowLights, .fireLights: return 0   // sized from the real lights instead
         }
     }
 
@@ -1635,6 +1637,7 @@ final class TitleBarOverlayView: NSView {
                 || deadZoneWidth != self.deadZoneWidth || zoomed != self.zoomed else { return }
         self.style = style; self.title = title; self.icon = icon; self.isFront = isFront; self.lights = lights
         self.deadZoneWidth = deadZoneWidth; self.zoomed = zoomed
+        if style != .fireLights { fireballs.values.forEach { $0.removeFromSuperlayer() }; fireballs.removeAll() }
         needsDisplay = true
     }
 
@@ -1664,7 +1667,7 @@ final class TitleBarOverlayView: NSView {
             let pill = AquaChrome.pillRect(in: bar, flipped: true)
             tracker.add(.collapse, pill.insetBy(dx: -3, dy: -4), interactive: true)
             buttonRects.append((.collapse, pill))
-        case .snowLights:
+        case .snowLights, .fireLights:
             for kind in [ChromeButtonKind.close, .minimize, .zoom] {
                 guard let r = lights[kind] else { continue }
                 tracker.add(kind, r, interactive: true)
@@ -1790,6 +1793,7 @@ final class TitleBarOverlayView: NSView {
         case .aero:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .aero)).addClip(); drawAero(b)
         case .aqua:       drawAqua(b)
         case .snowLights: drawLights()
+        case .fireLights: placeFireballs()
         }
     }
 
@@ -2180,6 +2184,31 @@ final class TitleBarOverlayView: NSView {
 
     /// The three orbs, and nothing else: the panel is clear around them. 10.6 shows the ×, −
     /// and + on all three as soon as the pointer is over any of them.
+    // MARK: Fireballs (Halloween)
+
+    /// The three balls are layers of their own, so they can glow and flicker without the panel
+    /// drawing again; a draw only puts them where the lights are and shows their glyphs.
+    private var fireballs: [ChromeButtonKind: Fireball] = [:]
+
+    private func placeFireballs() {
+        wantsLayer = true
+        guard let host = layer else { return }
+        let hovering = (tracker.hovered != nil || tracker.pressed != nil) && isFront
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (kind, r) in buttonRects {
+            let ball = fireballs[kind] ?? {
+                let b = Fireball(kind: kind)
+                host.addSublayer(b)
+                fireballs[kind] = b
+                return b
+            }()
+            ball.frame = r
+            ball.show(glyph: hovering, pressed: tracker.state(for: kind) == .pressed, active: isFront)
+        }
+        CATransaction.commit()
+    }
+
     private func drawLights() {
         let hovering = tracker.hovered != nil || tracker.pressed != nil
         for (kind, r) in buttonRects {
@@ -2344,4 +2373,93 @@ final class LightsPatchView: NSView {
         onDrag?(NSPoint(x: now.x - start.x, y: now.y - start.y))
     }
     override func mouseUp(with event: NSEvent) { if dragStart != nil { dragStart = nil; onDragEnd?() } }
+}
+
+/// One of Halloween's fireballs in place of a traffic light: a hot core going red to the edge,
+/// a flickering glow round it, and ×, − or + over it while the pointer is near. Three reds tell
+/// them apart: fire red to close, orange red to minimise, blood red to zoom. The glow moves by
+/// opacity only, at about 15 frames a second, and not at all under Reduce Motion.
+final class Fireball: CALayer {
+    private let core = CAGradientLayer()
+    private let glow = CALayer()
+    private let glyph = CAShapeLayer()
+    private let kind: ChromeButtonKind
+
+    init(kind: ChromeButtonKind) {
+        self.kind = kind
+        super.init()
+        let (hot, edge): (NSColor, NSColor) = switch kind {
+        case .close:    (NSColor(srgbRed: 1.0, green: 0.78, blue: 0.45, alpha: 1), NSColor(srgbRed: 0.88, green: 0.10, blue: 0.06, alpha: 1))
+        case .minimize: (NSColor(srgbRed: 1.0, green: 0.88, blue: 0.50, alpha: 1), NSColor(srgbRed: 0.92, green: 0.34, blue: 0.06, alpha: 1))
+        default:        (NSColor(srgbRed: 0.98, green: 0.55, blue: 0.40, alpha: 1), NSColor(srgbRed: 0.52, green: 0.02, blue: 0.10, alpha: 1))
+        }
+        glow.backgroundColor = edge.withAlphaComponent(0.55).cgColor
+        glow.shadowColor = edge.cgColor
+        glow.shadowOffset = .zero
+        glow.shadowRadius = 4
+        glow.shadowOpacity = 1
+        addSublayer(glow)
+        core.type = .radial
+        core.colors = [hot.cgColor, edge.cgColor, edge.blended(withFraction: 0.45, of: .black)!.cgColor]
+        core.locations = [0, 0.62, 1]
+        core.startPoint = CGPoint(x: 0.42, y: 0.38)   // the light comes from above, a little left
+        core.endPoint = CGPoint(x: 1.05, y: 1.05)
+        addSublayer(core)
+        glyph.fillColor = nil
+        glyph.strokeColor = NSColor.black.withAlphaComponent(0.6).cgColor
+        glyph.lineCap = .round
+        glyph.isHidden = true
+        addSublayer(glyph)
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        let slow = CAFrameRateRange(minimum: 10, maximum: 20, preferred: 15)
+        let beat: [ChromeButtonKind: CFTimeInterval] = [.close: 1.3, .minimize: 1.7, .zoom: 2.1]
+        let flicker = CAKeyframeAnimation(keyPath: "opacity")
+        flicker.values = [0.55, 1, 0.7, 0.95, 0.6, 0.85, 0.55]
+        flicker.duration = beat[kind] ?? 1.5
+        flicker.repeatCount = .infinity
+        flicker.calculationMode = .cubic
+        flicker.preferredFrameRateRange = slow
+        glow.add(flicker, forKey: "flicker")
+        let pulse = CAKeyframeAnimation(keyPath: "transform.scale")
+        pulse.values = [0.95, 1.03, 0.97, 1.02, 0.95]
+        pulse.duration = (beat[kind] ?? 1.5) * 1.6
+        pulse.repeatCount = .infinity
+        pulse.calculationMode = .cubic
+        pulse.preferredFrameRateRange = slow
+        core.add(pulse, forKey: "pulse")
+    }
+
+    override init(layer: Any) {
+        kind = (layer as? Fireball)?.kind ?? .close
+        super.init(layer: layer)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func layoutSublayers() {
+        super.layoutSublayers()
+        let b = bounds
+        for l in [core, glow] as [CALayer] { l.frame = b; l.cornerRadius = b.width / 2 }
+        core.masksToBounds = true
+        glow.shadowPath = CGPath(ellipseIn: b, transform: nil)
+        glyph.frame = b
+        let i = b.width * 0.3, p = CGMutablePath()
+        switch kind {
+        case .close:
+            p.move(to: CGPoint(x: i, y: i)); p.addLine(to: CGPoint(x: b.width - i, y: b.height - i))
+            p.move(to: CGPoint(x: b.width - i, y: i)); p.addLine(to: CGPoint(x: i, y: b.height - i))
+        case .minimize:
+            p.move(to: CGPoint(x: i, y: b.midY)); p.addLine(to: CGPoint(x: b.width - i, y: b.midY))
+        default:
+            p.move(to: CGPoint(x: i, y: b.midY)); p.addLine(to: CGPoint(x: b.width - i, y: b.midY))
+            p.move(to: CGPoint(x: b.midX, y: i)); p.addLine(to: CGPoint(x: b.midX, y: b.height - i))
+        }
+        glyph.path = p
+        glyph.lineWidth = max(1, b.width * 0.1)
+    }
+
+    func show(glyph visible: Bool, pressed: Bool, active: Bool) {
+        glyph.isHidden = !visible
+        core.opacity = pressed ? 0.7 : 1
+        opacity = active ? 1 : 0.5
+    }
 }

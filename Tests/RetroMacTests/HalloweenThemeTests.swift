@@ -15,6 +15,11 @@ final class HalloweenThemeTests: XCTestCase {
         XCTAssertEqual(c.dock.dirtyGlass, true)
         XCTAssertEqual(c.menuBarAppleStyleDefault, 7)
         XCTAssertEqual(c.appearance, "dark")
+        XCTAssertEqual(c.wallpaper, "wallpaper-flames.jpg")
+        for wp in c.wallpapers ?? [] {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: try theme().url.appendingPathComponent(wp.file).path), wp.file)
+        }
+        XCTAssertEqual(c.wallpapers?.count, 3)
         // A desktop of RetroMac's own, so a right-click reaches its wallpaper menu; the user's
         // Desktop folder stays one double-click away while the Finder's icons are hidden.
         XCTAssertEqual(c.desktopIcons?.map(\.path), ["/", "~/Desktop"])
@@ -35,6 +40,26 @@ final class HalloweenThemeTests: XCTestCase {
         XCTAssertEqual(manifest?.keys.sorted(), ["arrow"])
         XCTAssertEqual(manifest?["arrow"]?["hotspot"] as? [Double], [5, 2.5])
         XCTAssertEqual(NSImage(contentsOf: dir.appendingPathComponent("arrow.png"))?.representations.first?.pixelsWide, 64)
+    }
+
+    /// The fireballs in place of the lights; with RETROMAC_SNAPSHOT_DIR set drawn to halloween-lights.png.
+    func testTheFireballs() throws {
+        XCTAssertEqual(TitleBarOverlayController.style(for: "halloween"), .fireLights)
+        XCTAssertFalse(TitleBarOverlayController.Style.fireLights.isBar)
+        guard let dir = ProcessInfo.processInfo.environment["RETROMAC_SNAPSHOT_DIR"] else { return }
+        let host = CALayer(); host.frame = CGRect(x: 0, y: 0, width: 90, height: 30)
+        host.backgroundColor = NSColor(white: 0.16, alpha: 1).cgColor
+        for (i, k) in [ChromeButtonKind.close, .minimize, .zoom].enumerated() {
+            let b = Fireball(kind: k); b.frame = CGRect(x: 14 + CGFloat(i) * 22, y: 8, width: 14, height: 14)
+            b.show(glyph: i == 0, pressed: false, active: true); host.addSublayer(b); b.layoutSublayers()
+        }
+        let scale: CGFloat = 6
+        let ctx = CGContext(data: nil, width: Int(90 * scale), height: Int(30 * scale), bitsPerComponent: 8, bytesPerRow: 0,
+                            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctx.scaleBy(x: scale, y: scale)
+        host.render(in: ctx)
+        try NSBitmapImageRep(cgImage: ctx.makeImage()!).representation(using: .png, properties: [:])?
+            .write(to: URL(fileURLWithPath: dir).appendingPathComponent("halloween-lights.png"))
     }
 
     func testThePumpkinIsTheSystemEmojiTrimmed() {
@@ -67,7 +92,7 @@ final class HalloweenThemeTests: XCTestCase {
         for (i, size) in [(1, 56.0), (2, 68.0), (3, 80.0), (4, 68.0), (5, 56.0)] { icons[i].size = NSSize(width: size, height: size) }
         let shape = DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0.15, tear: 1)
         let view = Backdrop(frame: NSRect(x: 0, y: 0, width: 720, height: 200),
-                            wallpaper: NSImage(contentsOf: t.url.appendingPathComponent("wallpaper.jpg")),
+                            wallpaper: NSImage(contentsOf: t.url.appendingPathComponent("wallpaper-flames.jpg")),
                             path: shape, color: NSColor.fromHex(t.config.dock.backgroundColor))
         let rim = EmberRim()
         view.layoutSubtreeIfNeeded(); view.display()

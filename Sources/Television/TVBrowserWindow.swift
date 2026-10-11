@@ -70,7 +70,7 @@ final class TVBrowserWindow: NSObject {
 
         // Default theme: native right-aligned name. BeOS / Mac OS 9 get a borderless themed
         // frame applied AFTER the content view is set up (see applyBeOSChrome / applyMac9Chrome).
-        if RetroFrameTheme.key() == "default" {
+        if ["default", "halloween"].contains(RetroFrameTheme.key()) {   // native window chrome
             let titleLabel = NSTextField(labelWithString: bookmark.name)
             titleLabel.font = .systemFont(ofSize: 11, weight: .medium)
             titleLabel.textColor = .secondaryLabelColor

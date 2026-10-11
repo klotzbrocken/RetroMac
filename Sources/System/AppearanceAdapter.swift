@@ -62,8 +62,13 @@ enum AppearanceAdapter {
             // The tint IS the accent colour on macOS 26+, read when the style is saved: so the
             // style goes last, once the accent is written, as System Settings does it. Set first,
             // the icons took the old accent (blue) and kept it.
+            // Saved even when it is tinted already: the save is what makes the Dock tint again,
+            // with the accent just written. Skipped because it was "unchanged", the icons kept
+            // the blue of before.
             if let iconsWanted {
-                DispatchQueue.main.async { if iconsWanted != IconStyle.current() { IconStyle.set(iconsWanted) } }
+                DispatchQueue.main.async {
+                    if iconsWanted == IconStyle.tinted || iconsWanted != IconStyle.current() { IconStyle.set(iconsWanted) }
+                }
             }
             print("[Appearance] Matched to theme: accent=\(config.accentColor ?? "-") appearance=\(config.appearance ?? "-")")
         }

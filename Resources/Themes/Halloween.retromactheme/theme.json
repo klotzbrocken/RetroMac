@@ -11,12 +11,17 @@
   },
   "minAppVersion": "3.0",
   "chrome": {
-    "style": "default"
+    "style": "halloween"
   },
   "name": "Halloween",
   "version": "1.0",
   "author": "RetroMac",
-  "wallpaper": "wallpaper.jpg",
+  "wallpaper": "wallpaper-flames.jpg",
+  "wallpapers": [
+    { "name": "Mask in Flames", "file": "wallpaper-flames.jpg" },
+    { "name": "The Mask", "file": "wallpaper-mask.jpg" },
+    { "name": "The Burning House", "file": "wallpaper-house.jpg" }
+  ],
   "menuBarApple": "pumpkin",
   "appearance": "dark",
   "accentColor": "orange",

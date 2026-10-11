@@ -71,6 +71,7 @@ enum RetroFrameTheme {
         if name.contains("solaris") { return "cde" }   // Solaris 8, the Common Desktop Environment
         if name.contains("qnx") { return "photon" }    // QNX 6.2.1, Photon
         if name.contains("futurama") { return "futurama" }
+        if name.contains("halloween") { return "halloween" }   // fireballs for the lights
         return "default"
     }
 
