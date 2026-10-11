@@ -124,7 +124,9 @@ struct WelcomeFlowView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     feature("rectangle.split.3x1", .indigo, "A theme on your Spaces of choice",
-                            "Keep the theme to one Space, or a few, and plain macOS on the others: Themes \u{25B8} On This Space in the menu-bar menu. The theme slides away with its Space; the others have the Mac\u{2019}s Dock, menu bar and your own wallpaper. Every Space also gets its own wallpaper back when a theme goes off.")
+                            "Keep the theme to one Space, or a few, and plain macOS on the others: Themes \u{25B8} On This Space in the menu-bar menu. The Setup Assistant asks it too. The theme slides away with its Space; the others have the Mac\u{2019}s Dock, menu bar and your own wallpaper. Every Space gets its own wallpaper back when a theme goes off, read from macOS before the theme changed it.")
+                    feature("flame.fill", .orange, "New: Halloween",
+                            "A smouldering fire round a grimy glass dock that arches over the icon under the mouse and tears when it pushes through. Glowing fireballs for the traffic lights, the pumpkin for the Apple, a knife for the pointer, and every app icon tinted orange.")
                     feature("sun.max.fill", .purple, "New: Solaris 8 \u{2014} CDE",
                             "The Unix desktop of 2000: the Front Panel with its live clock and subpanels, mauve title bars with the window menu, the Workspace Menu on a right-click, minimised windows as icons, the Application Manager, and crashes on the Sun console.")
                     feature("cpu", .blue, "New: QNX 6.2.1 \u{2014} Photon",
@@ -144,7 +146,7 @@ struct WelcomeFlowView: View {
                     feature("gauge.with.dots.needle.33percent", .green, "Task Manager, all five pages",
                             "Under Windows XP: Applications, Processes, Performance, Networking and Users. Open it with Ctrl+Option+Delete or from the Start menu.")
                     feature("accessibility", .blue, "VoiceOver and the keyboard",
-                            "RetroMac\u{2019}s drawing no longer shows up as empty windows, and the docks, taskbars, Start menus and panels are named buttons and menus VoiceOver can use. \u{2303}Esc opens the theme\u{2019}s Start or main menu, \u{2303}\u{21E7}Esc walks the dock, and the arrow keys find their way through every theme menu.")
+                            "RetroMac\u{2019}s drawing no longer shows up as empty windows, and the docks, taskbars, Start menus and panels are named buttons and menus VoiceOver can use. \u{2303}Esc opens the theme\u{2019}s Start or main menu, \u{2303}\u{21E7}Esc walks the dock, and the arrow keys find their way through every theme menu. VoiceOver now walks past the second control of a strip, and the onboarding hints read out.")
                     feature("gearshape.2", .gray, "Settings, tidied up",
                             "Themes first, the shader in four clear tabs, Retro Mode is now Favourite, a shorter Setup Assistant with themes by family, and betas on request in About. The flyout keeps the everyday switches; the menu-bar menu has a More menu for Dock Only, the Game Library, the Setup Assistant and Rescue Desktop.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
