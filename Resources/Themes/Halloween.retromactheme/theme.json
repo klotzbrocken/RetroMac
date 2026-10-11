@@ -16,11 +16,13 @@
   "name": "Halloween",
   "version": "1.0",
   "author": "RetroMac",
-  "wallpaper": "wallpaper-flames.jpg",
+  "wallpaper": "wallpaper-mask-flames.jpg",
   "wallpapers": [
-    { "name": "Mask in Flames", "file": "wallpaper-flames.jpg" },
-    { "name": "The Mask", "file": "wallpaper-mask.jpg" },
-    { "name": "The Burning House", "file": "wallpaper-house.jpg" }
+    { "name": "Mask in Flames", "file": "wallpaper-mask-flames.jpg" },
+    { "name": "The House", "file": "wallpaper-mask-house.jpg" },
+    { "name": "Knife and Pumpkin", "file": "wallpaper-knife.jpg" },
+    { "name": "In the Doorway", "file": "wallpaper-doorway.jpg" },
+    { "name": "Title Card", "file": "wallpaper-title.jpg" }
   ],
   "menuBarApple": "pumpkin",
   "appearance": "dark",

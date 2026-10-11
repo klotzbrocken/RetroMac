@@ -15,11 +15,11 @@ final class HalloweenThemeTests: XCTestCase {
         XCTAssertEqual(c.dock.dirtyGlass, true)
         XCTAssertEqual(c.menuBarAppleStyleDefault, 7)
         XCTAssertEqual(c.appearance, "dark")
-        XCTAssertEqual(c.wallpaper, "wallpaper-flames.jpg")
+        XCTAssertEqual(c.wallpaper, "wallpaper-mask-flames.jpg")
         for wp in c.wallpapers ?? [] {
             XCTAssertTrue(FileManager.default.fileExists(atPath: try theme().url.appendingPathComponent(wp.file).path), wp.file)
         }
-        XCTAssertEqual(c.wallpapers?.count, 3)
+        XCTAssertEqual(c.wallpapers?.count, 5)
         // A desktop of RetroMac's own, so a right-click reaches its wallpaper menu; the user's
         // Desktop folder stays one double-click away while the Finder's icons are hidden.
         XCTAssertEqual(c.desktopIcons?.map(\.path), ["/", "~/Desktop"])
@@ -97,7 +97,7 @@ final class HalloweenThemeTests: XCTestCase {
         for (i, size) in [(1, 56.0), (2, 68.0), (3, 80.0), (4, 68.0), (5, 56.0)] { icons[i].size = NSSize(width: size, height: size) }
         let shape = DockView.bulgePath(bar: bar, radius: 20, icons: icons, amount: 0.15, tear: 1)
         let view = Backdrop(frame: NSRect(x: 0, y: 0, width: 720, height: 200),
-                            wallpaper: NSImage(contentsOf: t.url.appendingPathComponent("wallpaper-flames.jpg")),
+                            wallpaper: NSImage(contentsOf: t.url.appendingPathComponent("wallpaper-mask-flames.jpg")),
                             path: shape, color: NSColor.fromHex(t.config.dock.backgroundColor))
         let rim = EmberRim()
         view.layoutSubtreeIfNeeded(); view.display()
