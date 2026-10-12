@@ -165,6 +165,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Settings footer reads "Overlay on, auto fps" instead of an unnamed image. ⌘W and Esc now
   really close Settings: its SwiftUI view used both keys up before the menu saw them (Close
   Window worked from the menu, never from the keys).
+  The menu-bar icon opens its menu again after VoiceOver closed it (a press through
+  accessibility brings no event, and was taken for the click that had just closed it). In More,
+  Dock Only and Rescue Desktop come last: VoiceOver with Quick Nav opened More on Dock Only and
+  set it off, which restarted the Finder.
   TV Tube says which channel is on when it opens and at every Up or Down, and how to work it
   the first time.
   Found with RetroMac's accessibility tree on System 7.1: the "empty system dialogue" VoiceOver

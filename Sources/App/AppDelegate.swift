@@ -1549,7 +1549,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dockOnlyItem.state = settings.dockOnly ? .on : .off
         dockOnlyItem.toolTip = "Restyle the Dock, not the whole system"
         dockOnlyItem.image = sfIcon("dock.rectangle")
-        moreMenu.addItem(dockOnlyItem)
         let gamesItem = NSMenuItem(title: "Game Library\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
         gamesItem.target = self
         gamesItem.image = sfIcon("gamecontroller")
@@ -1560,6 +1559,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         wizardItem.image = sfIcon("checklist")
         moreMenu.addItem(wizardItem)
         moreMenu.addItem(NSMenuItem.separator())
+        // What changes the desktop (and restarts the Finder) at the end, never first: VoiceOver
+        // opened More with Quick Nav on Dock Only and set it off with the first arrow key.
+        moreMenu.addItem(dockOnlyItem)
         let rescueItem = NSMenuItem(title: "Rescue Desktop", action: #selector(rescueDesktop), keyEquivalent: "")
         rescueItem.target = self
         rescueItem.image = sfIcon("lifepreserver")
@@ -4876,7 +4878,12 @@ extension AppDelegate: NSMenuDelegate {
     func menuDidClose(_ menu: NSMenu) {
         guard menu === shownStatusMenu else { return }
         statusItem.menu = nil
-        statusMenuClosedBy = NSApp.currentEvent?.timestamp ?? -1
+        // Only a mouse click can also land on the icon. Closed by a key (Esc) or through
+        // accessibility, the event on record is an older one — and the next VoiceOver press on
+        // the icon, which brings no event of its own, read as "the same click" and never opened.
+        let ev = NSApp.currentEvent
+        let mouse: Set<NSEvent.EventType> = [.leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp]
+        statusMenuClosedBy = ev.map { mouse.contains($0.type) ? $0.timestamp : -1 } ?? -1
         if AppSettings.shared.debugLogging { print("[Menu] close by \(NSApp.currentEvent?.type.rawValue ?? 0) at \(statusMenuClosedBy)") }
     }
 }
