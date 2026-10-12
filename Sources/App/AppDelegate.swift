@@ -444,9 +444,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if AppSettings.shared.dockModeEnabled {
             LauncherController.shared.toggleWindow()
-        } else if !flag {
+        } else if !NSApp.windows.contains(where: { $0.isVisible && $0.styleMask.contains(.titled) }) {
             // Opened again from Applications or Spotlight: the way in when the menu-bar icon
-            // cannot be seen (a full menu bar, the notch, or hidden in System Settings).
+            // cannot be seen (a full menu bar, the notch, or hidden in System Settings). Not
+            // `flag`: the theme's dock and desktop are windows too, so macOS always says yes.
             openSettings()
         }
         return true

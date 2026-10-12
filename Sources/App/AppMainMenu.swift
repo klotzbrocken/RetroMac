@@ -9,9 +9,21 @@ enum AppMainMenu {
     /// second click on the icon no longer closed it), as Settings' Edit menu once taught.
     private static var observers: [NSObjectProtocol] = []
     private static var menu: NSMenu?
+    private static var keyMonitor: Any?
 
     static func install() {
         guard observers.isEmpty else { return }
+        // ⌘W and Esc are taken here, before the window sees them: in a SwiftUI window (Settings)
+        // the hosting view used them up, so the menu's key equivalents never fired — Close
+        // Window worked from the menu, never from the keys. Found with a blind tester.
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
+            let cmdW = mods == .command && event.charactersIgnoringModifiers?.lowercased() == "w"
+            let esc = mods.isEmpty && event.keyCode == 53
+            guard cmdW || esc, let w = Closer.shared.closableByKey(escape: esc), w === event.window ?? w else { return event }
+            Closer.shared.close(w)
+            return nil
+        }
         let nc = NotificationCenter.default
         for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification, NSWindow.willCloseNotification,
                      NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification] {
@@ -88,9 +100,15 @@ enum AppMainMenu {
         @objc func closeKeyWindow(_ sender: Any?) { close(closable) }
         @objc func escapeKeyWindow(_ sender: Any?) { close(closable) }
 
+        /// The window a key closes: as the menu items decide, Esc not while text is typed.
+        func closableByKey(escape: Bool) -> NSWindow? {
+            guard let w = closable else { return nil }
+            return escape && w.firstResponder is NSText ? nil : w
+        }
+
         /// Through the close button when the window shows one (so its delegate is asked), else
         /// straight away: the readme and the setup windows hide theirs and draw their own.
-        private func close(_ w: NSWindow?) {
+        func close(_ w: NSWindow?) {
             guard let w else { return }
             if let button = w.standardWindowButton(.closeButton), !button.isHidden { w.performClose(nil) } else { w.close() }
         }

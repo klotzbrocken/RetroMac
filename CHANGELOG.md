@@ -132,7 +132,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **RetroMac can always be reached.** When macOS does not show its menu-bar icon (a full menu
   bar, the notch, or switched off under System Settings ▸ Menu Bar), RetroMac says so a few
   seconds after launch and offers a Dock icon; and opening RetroMac again from Applications
-  opens Settings. It used to look as if it had not started at all.
+  opens Settings, also while a theme's dock and desktop are on screen. It used to look as if it had not started at all.
 - **Dashboard dims every display again with the theme on chosen Spaces.** RetroMac moved its
   windows to the main display's Space, the second display's dimming too, which then sat as a
   dark patch in the main display's corner while the main display stayed bright.
@@ -159,7 +159,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Strip's scroll arrows say which modules came into view. Shader, Live Wallpaper, Virtual Camera,
   Retro Viewport and TV Tube in the menu read as switches with their state. ⌘W and Esc reach
   Settings and the readme while another of RetroMac's windows holds the keyboard, and the
-  Settings footer reads "Overlay on, auto fps" instead of an unnamed image.
+  Settings footer reads "Overlay on, auto fps" instead of an unnamed image. ⌘W and Esc now
+  really close Settings: its SwiftUI view used both keys up before the menu saw them (Close
+  Window worked from the menu, never from the keys).
   TV Tube says which channel is on when it opens and at every Up or Down, and how to work it
   the first time.
   Found with RetroMac's accessibility tree on System 7.1: the "empty system dialogue" VoiceOver
