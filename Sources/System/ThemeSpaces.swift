@@ -117,6 +117,7 @@ final class ThemeSpaces {
     private func bindNewWindows() {
         guard boundTo != 0 else { return }
         let launcher = FloatingLauncherButton.shared.buttonWindow
+        let main = NSScreen.primaryDisplay ?? NSScreen.screens.first
         for w in NSApp.windows where w.collectionBehavior.contains(.canJoinAllSpaces) && !bound.contains(w) {
             guard w !== launcher, !Self.ownControls.contains(String(describing: type(of: w))) else { continue }
             // Not the shader's windows (nor anything else the mouse goes through): the shader
@@ -124,6 +125,10 @@ final class ThemeSpaces {
             // Space through the window server undid their stacking — Live Wallpaper's picture,
             // which sits behind the app windows, came up over the dock and cut it off.
             guard !w.ignoresMouseEvents else { continue }
+            // Only windows on the main display: the Space tracked is that display's, and moved
+            // there a window of another display (Dashboard's dimming for the MacBook beside the
+            // monitor) landed on the main display, a MacBook-sized dark patch in its corner.
+            guard w.screen == main else { continue }
             w.collectionBehavior.remove(.canJoinAllSpaces)
             bound.add(w)
             _ = skb_move_window_to_space(UInt32(w.windowNumber), boundTo)

@@ -126,6 +126,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **A tidier flyout and menu.** The flyout keeps the everyday switches; Only on this Space, Dock only
   and TV Tube left it (Spaces and TV Tube stay in the menu-bar menu). The menu-bar menu has a
   More submenu for Dock Only, the Game Library, the Setup Assistant and Rescue Desktop.
+- **Dashboard dims every display again with the theme on chosen Spaces.** RetroMac moved its
+  windows to the main display's Space, the second display's dimming too, which then sat as a
+  dark patch in the main display's corner while the main display stayed bright.
 - **Quitting puts the Mac back as Rescue Desktop does.** Windows the title bars moved down or
   rolled up go back where they were, and the menu bar, the desktop icons and the Mac's Dock come
   back from their backups, not only the wallpaper, the look and the Dock.
