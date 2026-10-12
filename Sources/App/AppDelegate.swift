@@ -4792,10 +4792,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         disableAll()
         ScreensaverController.shared.endIdleWatch()
+        // As Rescue Desktop does it: the title bars and borders let go, which puts every window
+        // they moved down or rolled up back where it was (synchronously) — quitting left them.
+        // dockEnabled is reset at every launch, so nothing the user chose is lost.
+        AppSettings.shared.dockEnabled = false
+        WindowBorderController.shared.update()
         DockController.shared.stop(synchronous: true)   // must finish before the process exits
         SystemTweaksAdapter.restore(sync: true)         // ditto — revert Classic Finder tweaks before exit
         ThemeManager.shared.restoreWallpapers()
         restoreRetroModeSystemUI()
+        // The rest of the system look, each from the backup RetroMac took when it changed it.
+        _ = rescueShowMenuBar()
+        SystemUIHelper.restoreIfNeeded()
+        SystemUIHelper.restoreDesktopIconsIfNeeded()
+        DockController.shared.restoreSystemDockIfNeeded()
     }
 
     // MARK: - Surprise Preset

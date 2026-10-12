@@ -209,15 +209,17 @@ final class DockItemView: NSView {
 
         let color = NSColor.fromHex(theme.indicator.color)
         if theme.indicator.style == "lightbar", !theme.isVertical {
-            // Mountain Lion: a short bright light set into the shelf's front edge, glowing.
-            let light = CALayer()
-            light.backgroundColor = color.cgColor
-            light.cornerRadius = 1.25
-            light.shadowColor = NSColor(srgbRed: 0.55, green: 0.80, blue: 1, alpha: 1).cgColor
-            light.shadowOpacity = 1
-            light.shadowRadius = 3
-            light.shadowOffset = .zero
-            indicatorW = sz; indicatorH = 2.5
+            // Mountain Lion: a bright blue-white dot on the glass just behind the lit front edge,
+            // with a soft halo, flattened a little by the shelf's perspective.
+            let light = CAGradientLayer()
+            light.type = .radial
+            light.colors = [NSColor.white.cgColor, color.cgColor,
+                            NSColor(srgbRed: 0.55, green: 0.82, blue: 1, alpha: 0.55).cgColor,
+                            NSColor(srgbRed: 0.55, green: 0.82, blue: 1, alpha: 0).cgColor]
+            light.locations = [0, 0.22, 0.5, 1]
+            light.startPoint = CGPoint(x: 0.5, y: 0.5)
+            light.endPoint = CGPoint(x: 1, y: 1)
+            indicatorW = 14; indicatorH = 8
             lightOnShelf = true
             layer?.addSublayer(light)
             indicatorLayer = light
@@ -290,9 +292,11 @@ final class DockItemView: NSView {
 
     /// The light sits on the dock's front edge, wherever the item stands above it.
     private var lightOnShelf = false
+    /// The running light's middle above the shelf's bottom: on the glass, just behind the lit edge.
+    static let shelfLightMidY = DockView.frostedFrontHeight + 3.5
     private func layoutLightOnShelf() {
         guard lightOnShelf, let light = indicatorLayer, let dock = superview as? DockView else { return }
-        let y = dock.shelfBottomY + DockView.frostedFrontHeight / 2 - frame.minY - indicatorH / 2
+        let y = dock.shelfBottomY + Self.shelfLightMidY - frame.minY - indicatorH / 2
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         light.frame = CGRect(x: (bounds.width - indicatorW) / 2, y: y, width: indicatorW, height: indicatorH)

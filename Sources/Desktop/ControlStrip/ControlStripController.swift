@@ -187,10 +187,12 @@ final class ControlStripController {
         view.needsDisplay = true
     }
 
-    /// The strip's bottom edge: `offset` above the screen's bottom, kept on the visible screen.
+    /// The strip's bottom edge: `offset` above the screen's bottom, kept below the menu bar.
+    /// Not above the Mac's Dock: that is hidden while a theme is on, but on a switch it was often
+    /// still showing when the strip was placed, and the strip stayed a Dock's height up in the
+    /// air until the theme was chosen again.
     static func clampedY(offset: CGFloat, screen: NSScreen) -> CGFloat {
-        let vf = screen.visibleFrame
-        return min(max(screen.frame.minY + offset, vf.minY), vf.maxY - ControlStripView.height)
+        min(max(screen.frame.minY + offset, screen.frame.minY), screen.visibleFrame.maxY - ControlStripView.height)
     }
 
     // MARK: Interaction (from the view)

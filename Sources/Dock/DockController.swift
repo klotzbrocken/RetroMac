@@ -524,7 +524,9 @@ final class DockController {
         // system Dock on the left/right pushes our dock inward and leaves a gap.
         case "left":  x = screen.frame.minX + offset
         case "right": x = screen.frame.maxX - width - offset
-        default:      x = visible.midX - width / 2
+        // The middle of the screen too: the Mac's Dock on a side is hidden under a theme, but
+        // was often still there at the moment of a switch and pushed the dock off-centre.
+        default:      x = screen.frame.midX - width / 2
         }
         return NSRect(x: x, y: y, width: width, height: height)
     }

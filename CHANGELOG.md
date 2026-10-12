@@ -126,6 +126,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **A tidier flyout and menu.** The flyout keeps the everyday switches; Only on this Space, Dock only
   and TV Tube left it (Spaces and TV Tube stay in the menu-bar menu). The menu-bar menu has a
   More submenu for Dock Only, the Game Library, the Setup Assistant and Rescue Desktop.
+- **Quitting puts the Mac back as Rescue Desktop does.** Windows the title bars moved down or
+  rolled up go back where they were, and the menu bar, the desktop icons and the Mac's Dock come
+  back from their backups, not only the wallpaper, the look and the Dock.
+- **The Control Strip and the dock sit in place after a theme switch.** Placed while the Mac's
+  Dock was still on its way out, the System 7.1 and Mac OS 9 strip stayed a Dock's height up
+  (and a dock off-centre) until the theme was chosen again.
+- **Mountain Lion's dock is closer to the original.** The shelf is grey glass, it mirrors the
+  icons more, the running lights are blue-white dots on the glass behind the lit edge, and the
+  Trash is there.
 - **VoiceOver, from the blind tester's third round.** Switching themes no longer leaves the
   arrows, Return and Esc held for the whole Mac — with a drawn menu or the Start menu open at the
   switch they stayed RetroMac's, and VoiceOver's own menu bar and menus stopped answering until

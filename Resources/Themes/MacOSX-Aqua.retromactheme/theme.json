@@ -29,6 +29,7 @@
   "author": "RetroMac",
   "dock": {
     "runningAppsSeparator": false,
+    "showTrash": true,
     "launchBounce": true,
     "height": 78,
     "iconSize": 52,
@@ -52,7 +53,7 @@
   "icon": {
     "renderStyle": "smooth",
     "reflectionEnabled": true,
-    "reflectionOpacity": 0.25,
+    "reflectionOpacity": 0.45,
     "hoverScale": 1.2,
     "hoverAnimationDuration": 0.15
   },

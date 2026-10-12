@@ -525,8 +525,9 @@ final class DockView: NSView {
         let top = r.minY + frostedFrontHeight
         NSGraphicsContext.saveGraphicsState()
         path.addClip()
-        NSGradient(colors: [NSColor(srgbRed: 0.80, green: 0.81, blue: 0.84, alpha: 0.86 * alpha),
-                            NSColor(srgbRed: 0.93, green: 0.93, blue: 0.95, alpha: 0.74 * alpha)])?
+        // Grey glass, measured off a Lion desktop: about 0.68 at the lit front, 0.52 at the back.
+        NSGradient(colors: [NSColor(srgbRed: 0.66, green: 0.68, blue: 0.72, alpha: 0.88 * alpha),
+                            NSColor(srgbRed: 0.52, green: 0.54, blue: 0.58, alpha: 0.80 * alpha)])?
             .draw(in: NSRect(x: r.minX, y: top, width: r.width, height: r.maxY - top), angle: 90)
         NSGradient(colors: [NSColor(srgbRed: 0.42, green: 0.43, blue: 0.47, alpha: 0.92 * alpha),
                             NSColor(srgbRed: 0.62, green: 0.63, blue: 0.67, alpha: 0.92 * alpha)])?

@@ -186,7 +186,9 @@ final class ControlStripTests: XCTestCase {
     func testVerticalPositionStaysOnScreen() throws {
         let screen = try XCTUnwrap(NSScreen.screens.first)
         let vf = screen.visibleFrame
-        XCTAssertEqual(ControlStripController.clampedY(offset: -500, screen: screen), vf.minY)
+        // The bottom is the screen's own, whether the Mac's Dock is showing or not.
+        XCTAssertEqual(ControlStripController.clampedY(offset: -500, screen: screen), screen.frame.minY)
+        XCTAssertEqual(ControlStripController.clampedY(offset: 0, screen: screen), screen.frame.minY)
         XCTAssertEqual(ControlStripController.clampedY(offset: 99999, screen: screen), vf.maxY - ControlStripView.height)
     }
 
