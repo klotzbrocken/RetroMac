@@ -430,6 +430,19 @@ private final class PlatinumMenuView: NSView {
         needsDisplay = true
     }
 
+    /// VoiceOver's scroll arrows: a row further, and the row that came into view said out loud,
+    /// as the Control Strip's arrows do — they turned the menu in silence.
+    private func scrollAndSay(_ delta: Int) {
+        let before = firstRow
+        scroll(by: delta)
+        NSAccessibility.post(element: self, notification: .layoutChanged)
+        guard firstRow != before else {
+            return MenuKeyboard.announce(delta < 0 ? "Top of the menu" : "End of the menu")
+        }
+        let shown = items.indices.filter { !isSeparator(items[$0]) && rowBand.contains(NSPoint(x: 1, y: rowRect($0).midY)) }
+        if let i = delta < 0 ? shown.first : shown.last { MenuKeyboard.announce(items[i].title) }
+    }
+
     private func armScroll(_ delta: Int) {
         guard scrollTimer == nil else { return }
         scroll(by: delta)
@@ -515,8 +528,8 @@ private final class PlatinumMenuView: NSView {
             parts.append(item)
         }
         if scrolls {
-            parts.insert(AccessibleHotspot.make(in: self, label: "Scroll up", rect: upArrowRect) { [weak self] in self?.scroll(by: -1) }, at: 0)
-            parts.append(AccessibleHotspot.make(in: self, label: "Scroll down", rect: downArrowRect) { [weak self] in self?.scroll(by: 1) })
+            parts.insert(AccessibleHotspot.make(in: self, label: "Scroll up", rect: upArrowRect) { [weak self] in self?.scrollAndSay(-1) }, at: 0)
+            parts.append(AccessibleHotspot.make(in: self, label: "Scroll down", rect: downArrowRect) { [weak self] in self?.scrollAndSay(1) })
         }
         axParts = parts
         return parts
