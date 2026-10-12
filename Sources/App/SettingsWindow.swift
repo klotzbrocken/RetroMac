@@ -311,6 +311,7 @@ struct SidebarStatusFooter: View {
                         .fill(overlayIsOn ? Color.rmAccent : Color.rmTextTertiary)
                         .frame(width: 8, height: 8)
                 }
+                .accessibilityHidden(true)   // the words beside it say the same; VoiceOver read "image"
 
                 HStack(spacing: 4) {
                     Text("Overlay")
@@ -332,6 +333,7 @@ struct SidebarStatusFooter: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
+            .accessibilityElement(children: .combine)
         }
     }
 }

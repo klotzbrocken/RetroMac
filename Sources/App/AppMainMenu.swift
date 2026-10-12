@@ -13,15 +13,25 @@ enum AppMainMenu {
     static func install() {
         guard observers.isEmpty else { return }
         let nc = NotificationCenter.default
-        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification, NSWindow.willCloseNotification] {
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification, NSWindow.willCloseNotification,
+                     NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification] {
             observers.append(nc.addObserver(forName: name, object: nil, queue: .main) { _ in
                 DispatchQueue.main.async { sync() }   // after the key window has settled
             })
         }
     }
 
+    /// The titled window ⌘W and Esc are for: the key one, else the frontmost titled one. Under
+    /// VoiceOver the key window could be one of RetroMac's untitled ones (a desktop, a bar) while
+    /// Settings was the window being read, and the keys then reached no menu at all.
+    static var target: NSWindow? {
+        func ok(_ w: NSWindow?) -> Bool { w.map { $0.styleMask.contains(.titled) && $0.isVisible } ?? false }
+        if ok(NSApp.keyWindow) { return NSApp.keyWindow }
+        return NSApp.orderedWindows.first { ok($0) && $0.styleMask.contains(.closable) }
+    }
+
     private static func sync() {
-        let wanted = NSApp.keyWindow.map { $0.styleMask.contains(.titled) && $0.isVisible } ?? false
+        let wanted = NSApp.isActive && target != nil
         if wanted, NSApp.mainMenu == nil {
             NSApp.mainMenu = menu ?? build()
         } else if !wanted, let m = menu, NSApp.mainMenu === m {
@@ -64,7 +74,7 @@ enum AppMainMenu {
 
         /// A RetroMac window a person opened and can close: titled and closable, no sheet on it.
         private var closable: NSWindow? {
-            guard let w = NSApp.keyWindow, w.styleMask.contains(.titled), w.styleMask.contains(.closable),
+            guard let w = AppMainMenu.target, w.styleMask.contains(.titled), w.styleMask.contains(.closable),
                   w.attachedSheet == nil, w.sheetParent == nil else { return nil }
             return w
         }
