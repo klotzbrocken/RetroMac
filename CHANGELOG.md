@@ -126,6 +126,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **A tidier flyout and menu.** The flyout keeps the everyday switches; Only on this Space, Dock only
   and TV Tube left it (Spaces and TV Tube stay in the menu-bar menu). The menu-bar menu has a
   More submenu for Dock Only, the Game Library, the Setup Assistant and Rescue Desktop.
+- **Started from the disk image or Downloads, RetroMac offers to move itself to Applications**
+  (an older copy goes to the Trash, and the new one takes over). Run from the mounted DMG it had
+  no menu-bar icon its user could find, and vanished from Finder's search once the DMG was gone.
 - **Keep my wallpaper.** Settings ▸ Desktop ▸ Wallpaper, per theme: the theme leaves your
   desktop picture alone, so a live-wallpaper app or macOS's own dynamic one stays. Without it,
   almost any setting, a display or a Space change put the theme's picture back over yours.
