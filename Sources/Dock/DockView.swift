@@ -1415,6 +1415,8 @@ final class DockView: NSView {
             itemView.updateIcon(icon)
             itemView.updateTheme(theme)
             itemView.onLeftClick = { [weak self] bid in
+                // Launchpad is RetroMac's own, over the desktop, as Lion and Mountain Lion had it.
+                if bid == theme.launchpadBundleID { LaunchpadController.shared.toggle(); return }
                 // Mac OS X bounced the icon of an application that was starting.
                 // Not Launchpad: it opened over the desktop at once and never hopped (today's
                 // Apps app reports no finished launch, so it hopped the full 20 seconds).

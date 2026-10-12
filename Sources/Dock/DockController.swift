@@ -15,6 +15,8 @@ final class DockController {
     }
 
     private var window: DockWindow?
+    /// Back on top of a full-screen panel at the dock's own level (Launchpad).
+    func raiseWindow() { window?.orderFrontRegardless() }
     private var dockView: DockView?
     func taskButtonScreenRect(for window: AXUIElement) -> NSRect? { dockView?.taskButtonScreenRect(for: window) }
     func itemScreenRect(bundleID: String) -> NSRect? { dockView?.itemScreenRect(bundleID: bundleID) }

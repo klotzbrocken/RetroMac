@@ -136,7 +136,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   shelf, rounded at the back corners too, mirroring the icons more; the running lights are
   blue-white glows on the lit front edge; Mountain Lion's own Trash, empty and full; and
   Launchpad straight after Finder, with its rocket the size of Safari's compass, opening the
-  Apps app on today's macOS — without hopping, as Launchpad never did.
+  Launchpad's own screen — without hopping, as Launchpad never did.
+- **Launchpad, Mountain Lion's.** A click on its tile fades the desktop picture in blurred over
+  the whole screen, with a search field at the top (Return opens the first match), your apps as
+  large icons eight across and five down, page dots under them (click them, swipe, scroll or use
+  the arrow keys), the dock still on top. Escape, a click beside the icons or the tile again
+  closes it, and the app you were in comes back.
 - **VoiceOver, from the blind tester's third round.** Switching themes no longer leaves the
   arrows, Return and Esc held for the whole Mac — with a drawn menu or the Start menu open at the
   switch they stayed RetroMac's, and VoiceOver's own menu bar and menus stopped answering until

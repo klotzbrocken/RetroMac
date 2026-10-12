@@ -276,6 +276,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // The menu was built while everything was still off, and said "Themes: Off" with
                 // the theme on screen — to VoiceOver, no theme at all.
                 self.rebuildMenu()
+                if ProcessInfo.processInfo.environment["RETROMAC_OPEN_CALENDAR"] != nil {
+                    DispatchQueue.main.async { MLController.shared.show() }
+                }
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_APPS"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         CPUMonitorController.shared.show()
