@@ -1333,6 +1333,17 @@ final class DockController {
     /// Crash recovery: if a previous session left the system dock hidden (force-quit /
     /// crash before restore), put it back. Safe to call at launch — the theme dock
     /// always starts disabled, so the system dock should be in its original state.
+    /// Until the Mac's Dock runs again (at most two seconds), and a moment for it to settle:
+    /// a desktop picture set while it restarts is lost.
+    /// ponytail: a fixed settle time; ask the Dock if it ever turns out too short.
+    static func waitUntilRunning() {
+        let deadline = Date().addingTimeInterval(2)
+        while NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").isEmpty, Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        Thread.sleep(forTimeInterval: 0.4)
+    }
+
     func restoreSystemDockIfNeeded() {
         let d = UserDefaults.standard
         let persisted = d.bool(forKey: "sysDockHidden")

@@ -51,6 +51,10 @@ final class DesktopRescue {
         if CrashDirector.shared.isStaging { CrashDirector.shared.abort(.themeStopped) }
         if SplashController.shared.isPresenting { SplashController.shared.dismiss() }
 
+        // The Mac's Dock and Finder first, and waited for: the wallpaper below goes through
+        // the Dock and was lost when it restarted afterwards.
+        AppDelegate.shared?.rescueRestoreSystemFirst()
+
         // Theme, shader, Retro Mode and the desktop effects off. This also stops the title bars,
         // whose stop puts every rolled-up window back and restores the wallpaper, the cursor,
         // the appearance and the Finder tweaks from their snapshots.
@@ -62,10 +66,6 @@ final class DesktopRescue {
             stillRolledUp == 0 ? "Rolled-up windows are back in place."
                                : "\(stillRolledUp) rolled-up window(s) would not move. They stay on record for the next try.")
 
-        // The rest of the system look, each from the backup RetroMac took when it changed it.
-        SystemUIHelper.restoreIfNeeded()
-        SystemUIHelper.restoreDesktopIconsIfNeeded()
-        DockController.shared.restoreSystemDockIfNeeded()
         // The menu bar is checked, not assumed: a theme or the shortcut may have hidden it, and
         // macOS may not take the change (no Automation permission for System Events).
         switch AppDelegate.shared?.rescueShowMenuBar() {

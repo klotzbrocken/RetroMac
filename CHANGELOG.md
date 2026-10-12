@@ -142,8 +142,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **The second display keeps its own picture with the theme on chosen Spaces.** With separate
   Spaces per display, the theme's picture went onto the second display's Space as well (it
   followed the main display), and that Space then got macOS's default back, not its own.
-- **Quitting puts your wallpaper back for sure.** It was set while the Mac's Dock restarted, and
-  just before RetroMac exited, and was lost; the screen kept the theme's picture.
+- **Quitting and Rescue Desktop put your wallpaper back for sure.** It was set while the Mac's
+  Dock restarted (and, on quitting, just before RetroMac exited) and was lost; the screen kept
+  the theme's picture. Now the Dock and the Finder come back first, and the picture after.
 - **Quitting puts the Mac back as Rescue Desktop does.** Windows the title bars moved down or
   rolled up go back where they were, and the menu bar, the desktop icons and the Mac's Dock come
   back from their backups, not only the wallpaper, the look and the Dock.

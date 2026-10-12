@@ -3073,6 +3073,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if isActive { disableAll() }
     }
 
+    /// Rescue Desktop's first step: everything that restarts the Mac's Dock or the Finder, done
+    /// and waited for, before any picture is put back. Desktop pictures go through the Dock, and
+    /// one set while it restarted was lost — the rescue then reported a RetroMac picture still
+    /// showing, and the backup it had used up was gone.
+    func rescueRestoreSystemFirst() {
+        if retroModeActive { toggleRetroMode() }
+        DockController.shared.stop(synchronous: true)
+        SystemTweaksAdapter.restore(sync: true)
+        SystemUIHelper.restoreIfNeeded()
+        SystemUIHelper.restoreDesktopIconsIfNeeded()
+        DockController.shared.restoreSystemDockIfNeeded()
+        DockController.waitUntilRunning()
+    }
+
     @objc private func themeOnAllSpaces() {
         AppSettings.shared.themeOnChosenSpaces = false
     }
@@ -4848,22 +4862,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // The picture last, once the Mac's Dock is back: desktop pictures go through the Dock
         // process, and one set while it restarted — every step above may restart it — was lost.
         // The screen kept the theme's picture after quitting.
-        Self.waitForDock()
+        DockController.waitUntilRunning()
         ThemeManager.shared.restoreWallpapers()
         // And a moment before the process goes: the Dock takes the picture after the call
         // returns, and a RetroMac already gone left the theme's on screen.
         Thread.sleep(forTimeInterval: 0.8)
     }
 
-    /// Until the Mac's Dock runs again (at most two seconds), and a moment for it to settle.
-    /// ponytail: a fixed settle time; ask the Dock if it ever turns out too short.
-    private static func waitForDock() {
-        let deadline = Date().addingTimeInterval(2)
-        while NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").isEmpty, Date() < deadline {
-            Thread.sleep(forTimeInterval: 0.1)
-        }
-        Thread.sleep(forTimeInterval: 0.4)
-    }
 
     // MARK: - Surprise Preset
 
