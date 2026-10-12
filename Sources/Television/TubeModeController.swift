@@ -91,7 +91,7 @@ final class TubeModeController: NSObject, MTKViewDelegate {
             alert.runModal()
             return
         }
-        startChannel(resolveStartIndex())
+        startChannel(resolveStartIndex(), opening: true)
 
         // On an EXTERNAL display a TV is meant to fill the screen — present fullscreen
         // straight away (windowed only makes sense on the main desktop). Double-click /
@@ -278,13 +278,19 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         return 0
     }
 
+    static func channelAnnouncement(number: Int, of count: Int, name: String, opening: Bool) -> String {
+        let channel = "Channel \(number) of \(count), \(name)"
+        return opening ? "TV Tube, \(channel). Up and Down arrows change the channel, Escape closes." : channel
+    }
+
     private func switchChannel(by delta: Int) {
         let count = AppSettings.shared.tvBookmarks.count
         guard count > 0 else { return }
         startChannel((channelIndex + delta + count) % count)
     }
 
-    private func startChannel(_ index: Int) {
+    /// `opening`: the Tube has just come up, so VoiceOver also hears how to work it.
+    private func startChannel(_ index: Int, opening: Bool = false) {
         let books = AppSettings.shared.tvBookmarks
         guard !books.isEmpty else {
             contentView?.showHint("No TV streams — add some in Settings ▸ Television")
@@ -306,6 +312,9 @@ final class TubeModeController: NSObject, MTKViewDelegate {
         AppSettings.shared.tvLastBookmarkURL = bookmark.url
         contentView?.showHint(nil)
         print("[Tube] CH \(channelIndex + 1): \(bookmark.name)")
+        // The picture changes in silence otherwise; a VoiceOver listener asked what was on.
+        MenuKeyboard.announce(Self.channelAnnouncement(number: channelIndex + 1, of: books.count,
+                                                       name: bookmark.name, opening: opening))
     }
 
     // MARK: - Context menu (right-click on the tube)

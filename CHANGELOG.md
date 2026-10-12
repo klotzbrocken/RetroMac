@@ -134,6 +134,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Retro Viewport and TV Tube in the menu read as switches with their state. ⌘W and Esc reach
   Settings and the readme while another of RetroMac's windows holds the keyboard, and the
   Settings footer reads "Overlay on, auto fps" instead of an unnamed image.
+  TV Tube says which channel is on when it opens and at every Up or Down, and how to work it
+  the first time.
 - **"Turn the shader on when RetroMac launches" works with "Activate theme on launch".** The
   theme coming on at launch marked the shader as running without starting it, so the launch
   switch skipped it and every shader switch read on while the screen was plain; under VoiceOver
