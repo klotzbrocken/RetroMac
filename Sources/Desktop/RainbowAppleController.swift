@@ -172,6 +172,7 @@ final class RainbowAppleController {
         win.isOpaque = false
         win.backgroundColor = .clear
         win.hasShadow = false
+        win.title = "Apple menu"   // what VoiceOver calls the window, when it is one
         // A theme with its own Apple menu (Mac OS 9 (authentic)) takes the click; every
         // other theme lets it fall through to the real Apple menu underneath.
         win.ignoresMouseEvents = !(ThemeManager.shared.activeTheme?.config.hasAppleMenu ?? false)
@@ -385,8 +386,16 @@ final class RainbowAppleController {
 /// result NSImageView's default minification produced.
 private final class RainbowAppleView: NSView {
     var image: NSImage? { didSet { needsDisplay = true } }
-    var takesClicks = false
+    /// With a theme's own Apple menu it is a button VoiceOver can press; otherwise only a
+    /// picture over the real Apple, and its window no window at all — VoiceOver read it as an
+    /// empty system dialogue and landed in it after an app was picked from a menu.
+    var takesClicks = false { didSet { window?.setAccessibilityElement(takesClicks) } }
     var onClick: (() -> Void)?
+    override func viewDidMoveToWindow() { window?.setAccessibilityElement(takesClicks) }
+    override func isAccessibilityElement() -> Bool { takesClicks }
+    override func accessibilityRole() -> NSAccessibility.Role? { .menuButton }
+    override func accessibilityLabel() -> String? { "Apple menu" }
+    override func accessibilityPerformPress() -> Bool { onClick?(); return takesClicks }
     override func hitTest(_ point: NSPoint) -> NSView? { takesClicks ? super.hitTest(point) : nil }   // only a theme's own Apple menu intercepts
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { takesClicks }   // the first click counts, whoever is in front
     override func mouseDown(with event: NSEvent) { if takesClicks { onClick?() } }

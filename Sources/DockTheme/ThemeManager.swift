@@ -200,7 +200,9 @@ final class ThemeManager {
         // Only on a real change. The setter talks to System Events over AppleScript, so writing
         // an unchanged value cost a round trip on every theme switch and could re-trigger a
         // screen-parameter change, which is what schedules the delayed second wallpaper pass.
-        let wanted = activeTheme?.config.hideMenuBarDefault ?? false
+        // Not under VoiceOver: with the menu bar hidden, RetroMac's own item was not in reach
+        // of VoiceOver's menu-bar keys, and nothing else turns the theme off again.
+        let wanted = (activeTheme?.config.hideMenuBarDefault ?? false) && !NSWorkspace.shared.isVoiceOverEnabled
         guard AppSettings.shared.hideMenuBar != wanted else { return }
         AppSettings.shared.hideMenuBar = wanted
     }

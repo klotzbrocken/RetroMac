@@ -136,6 +136,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Settings footer reads "Overlay on, auto fps" instead of an unnamed image.
   TV Tube says which channel is on when it opens and at every Up or Down, and how to work it
   the first time.
+  Found with RetroMac's accessibility tree on System 7.1: the "empty system dialogue" VoiceOver
+  kept landing in was the window of the menu bar's Apple — now the Apple menu button where the
+  theme has one, and no window at all where it does not; the Application menu and Balloon Help
+  in the menu bar have names. After a boot screen the app that was in front gets the keyboard
+  back — RetroMac stayed in front with no window to type into, and the keys went nowhere.
+  While VoiceOver runs, a theme leaves the menu bar shown, so RetroMac's own item stays in reach.
+  The menu says which theme is on after a launch that turned it on (it said "Off").
 - **"Turn the shader on when RetroMac launches" works with "Activate theme on launch".** The
   theme coming on at launch marked the shader as running without starting it, so the launch
   switch skipped it and every shader switch read on while the screen was plain; under VoiceOver

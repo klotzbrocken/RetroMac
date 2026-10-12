@@ -76,6 +76,9 @@ final class SplashController {
     /// The switch waiting behind a cover that is still being raised.
     private var pendingWork: (() -> Void)?
 
+    /// The app in front before the boot screen took the keyboard.
+    private var cameFrom: NSRunningApplication?
+
     /// When a boot screen last failed to become ready in time.
     private var lastCoverFailure: CFAbsoluteTime = 0
 
@@ -173,6 +176,7 @@ final class SplashController {
     /// Show the main window key + first-responder so it also receives key events.
     private func present(_ win: NSWindow, dismissView: BootDismissView) {
         windows.append(win)
+        if !NSApp.isActive { cameFrom = NSWorkspace.shared.frontmostApplication }
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
         win.makeFirstResponder(dismissView)
@@ -368,6 +372,13 @@ final class SplashController {
         player?.pause(); player = nil
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
+        // The app that was in front gets the keyboard back. Left with RetroMac in front and no
+        // window of its own to type into, the keys — VoiceOver's among them — went nowhere.
+        if let back = cameFrom {
+            cameFrom = nil
+            let ownTitled = NSApp.windows.contains { $0.isVisible && $0.styleMask.contains(.titled) }
+            if NSApp.isActive, !ownTitled, !back.isTerminated { back.activate() }
+        }
         // Nil first, then call: exactly once, and safe if the callback dismisses us again.
         let finished = onFinish
         onFinish = nil

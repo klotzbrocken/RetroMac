@@ -64,6 +64,7 @@ final class ApplicationMenuController: NSObject {
         let i = NSStatusBar.system.statusItem(withLength: 26)
         i.button?.image = Self.balloonImage()
         i.button?.toolTip = "Balloon Help"
+        i.button?.setAccessibilityLabel("Balloon Help")   // a picture only: VoiceOver read nothing
         i.button?.target = self
         i.button?.action = #selector(openBalloonHelp)
         balloon = i
@@ -115,6 +116,7 @@ final class ApplicationMenuController: NSObject {
         // System 7.1 showed the icon alone; 8.5 put the name beside it.
         let iconOnly = ThemeManager.shared.activeTheme?.config.applicationMenuIsIconOnly == true
         button.title = iconOnly ? "" : (front?.localizedName ?? "")
+        button.setAccessibilityLabel("Application menu, \(front?.localizedName ?? "")")   // icon-only in 7.1: VoiceOver read nothing
         button.font = RetroFonts.chicago(16)
     }
 

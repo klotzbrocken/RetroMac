@@ -273,6 +273,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // here with nothing running, which blocked that switch and made every shader
                 // switch read "on" while the screen was plain.
                 if !SplashController.shared.isPresenting { self.applyThemePresetIfNeeded() }
+                // The menu was built while everything was still off, and said "Themes: Off" with
+                // the theme on screen — to VoiceOver, no theme at all.
+                self.rebuildMenu()
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_APPS"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         CPUMonitorController.shared.show()
@@ -2897,7 +2900,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Hide system UI — but only what isn't ALREADY hidden by the user's own prefs.
         // Otherwise the exit/crash restore would force menu bar / Dock / desktop icons
         // visible and overwrite a deliberate autohide / hidden-icons choice.
-        retroHidMenuBar = s.retroModeHideMenuBar && !SystemUIHelper.isMenuBarAutoHidden()
+        retroHidMenuBar = s.retroModeHideMenuBar && !SystemUIHelper.isMenuBarAutoHidden() && !NSWorkspace.shared.isVoiceOverEnabled
         retroHidDock = s.retroModeHideDock && !SystemUIHelper.isDockAutoHidden()
         retroHidDesktop = s.retroModeHideDesktopIcons && !SystemUIHelper.areDesktopIconsHidden()
         if retroHidMenuBar { SystemUIHelper.setMenuBarAutoHide(true) }
