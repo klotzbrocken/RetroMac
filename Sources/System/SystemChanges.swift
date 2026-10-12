@@ -104,6 +104,7 @@ enum ThemeSystemChanges {
     struct Switches {
         var hideMenuBar = false, appearance = false, cursor = false, terminal = false
         var finderTweaks = false, titleBarCorners = false, systemIcons = false
+        var ownWallpaper: Bool? = nil   // set per theme by the caller: "Keep my wallpaper"
         static var current: Switches {
             let s = AppSettings.shared
             return Switches(hideMenuBar: s.hideMenuBar, appearance: s.themeAdaptAppearance, cursor: s.themeAdaptCursor,
@@ -123,7 +124,9 @@ enum ThemeSystemChanges {
         if config.hideMenuBarDefault ?? switches.hideMenuBar {
             out.append(Change(what: "Menu bar", before: "Shown", after: "Hidden"))
         }
-        out.append(Change(what: "Wallpaper", before: "Your picture", after: "The theme's picture"))
+        if switches.ownWallpaper != true {
+            out.append(Change(what: "Wallpaper", before: "Your picture", after: "The theme's picture"))
+        }
         if switches.appearance {
             if let look = config.appearance {
                 let now = (before("-g", "AppleInterfaceStyle") as? String)?.lowercased() == "dark" ? "Dark" : "Light"

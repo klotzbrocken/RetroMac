@@ -32,6 +32,14 @@ final class SystemChangesTests: XCTestCase {
         XCTAssertEqual(list.map(\.what), ["Mac Dock", "Wallpaper"])
     }
 
+    /// "Keep my wallpaper": the theme's page does not promise to change the picture.
+    func testKeepingMyWallpaperLeavesItOffTheList() throws {
+        var sw = ThemeSystemChanges.Switches(); sw.ownWallpaper = true
+        let list = ThemeSystemChanges.list(for: try macOS9().config, isBuiltIn: true, switches: sw,
+                                           hasCursors: true, terminalProfile: nil, current: { _, _ in nil })
+        XCTAssertEqual(list.map(\.what), ["Mac Dock"])
+    }
+
     func testAnImportedThemeChangesNoFinderSettings() throws {
         var on = ThemeSystemChanges.Switches(); on.finderTweaks = true
         let list = ThemeSystemChanges.list(for: try macOS9().config, isBuiltIn: false, switches: on,

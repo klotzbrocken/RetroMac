@@ -697,6 +697,11 @@ struct DockSettingsTab: View {
     private var changesCard: some View {
         if let config = selectedThemeConfig {
             let changes = ThemeSystemChanges.list(for: config, isBuiltIn: selectedThemeBundle?.isBuiltIn ?? true,
+                                                  switches: {
+                                                      var sw = ThemeSystemChanges.Switches.current
+                                                      sw.ownWallpaper = selectedThemeBundle.map { settings.themeWallpaperOverrides[$0.stableID] == ThemeManager.ownWallpaper }
+                                                      return sw
+                                                  }(),
                                                   hasCursors: ThemeSystemChanges.hasCursors(config.name),
                                                   terminalProfile: TerminalThemer.profileName(forThemeNamed: config.name))
             RMCard(title: "What \(themeDisplayName) changes on your Mac",

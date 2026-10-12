@@ -634,6 +634,20 @@ final class ThemeManager {
         // change that showing the Mac's Dock and menu bar there sets off.
         let here = ThemeSpaces.shared.showsThemeHere
         if !here { restorePendingSpaces() }
+        func applyLook() {
+            AppearanceAdapter.apply(for: theme.config)
+            if here { CursorThemeManager.shared.apply(for: theme.config) }
+            TerminalThemer.apply(forThemeNamed: theme.config.name)
+            SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)   // "Classic Finder" defaults tweaks (opt-in, built-in themes only)
+        }
+        // "Keep my wallpaper": the theme leaves the desktop picture alone — a live-wallpaper app
+        // or macOS's own dynamic one stays — and one of ours still showing goes. Every other
+        // pass (a setting, a display, a Space) used to put the theme's picture back over it.
+        if AppSettings.shared.themeWallpaperOverrides[theme.stableID] == Self.ownWallpaper {
+            restorePendingSpaces()
+            if !spaceChange { applyLook() }
+            return
+        }
         // Highest priority: a custom wallpaper picked via "Browse…" (absolute path)
         let wpURL: URL
         if let customPath = AppSettings.shared.themeCustomWallpaper[theme.stableID],
@@ -739,11 +753,11 @@ final class ThemeManager {
         if spaceChange { return }
         print("[Theme] Wallpaper set on \(changed) of \(NSScreen.screens.count) screen(s): \(wpURL.lastPathComponent) — menu-bar tint — \(tintNotes.joined(separator: "; "))")
         Self.lastMenuBarTintNote = tintNotes.joined(separator: ", ")
-        AppearanceAdapter.apply(for: theme.config)
-        if here { CursorThemeManager.shared.apply(for: theme.config) }
-        TerminalThemer.apply(forThemeNamed: theme.config.name)
-        SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)   // "Classic Finder" defaults tweaks (opt-in, built-in themes only)
+        applyLook()
     }
+
+    /// `themeWallpaperOverrides` value for "keep my own wallpaper".
+    static let ownWallpaper = "__own__"
 
     /// Renders a small pattern tile edge-to-edge at the screen's pixel size (1 tile pixel
     /// = 1 point, crisp nearest-neighbour) and caches the PNG in Application Support.

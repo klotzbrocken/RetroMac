@@ -62,6 +62,18 @@ struct DesktopSettingsTab: View {
     private var wallpaperCard: some View {
         RMCard(title: "Wallpaper", subtitle: "Applies to \(themeName).", bodyPadding: 0) {
             VStack(spacing: 0) {
+                RMRow(label: "Keep my wallpaper",
+                      hint: "The theme leaves your desktop picture alone: a live-wallpaper app or macOS\u{2019}s own stays.") {
+                    Toggle("", isOn: Binding(
+                        get: { keepsOwnWallpaper },
+                        set: { on in
+                            settings.themeCustomWallpaper[themeKey] = nil
+                            settings.themeWallpaperOverrides[themeKey] = on ? ThemeManager.ownWallpaper : nil
+                            ThemeManager.shared.applyWallpaper()
+                        }))
+                        .toggleStyle(.switch).tint(.rmAccent)
+                }
+                if !keepsOwnWallpaper {
                 if let options = themeConfig?.wallpapers, !options.isEmpty {
                     RMRow(label: "Bundled wallpaper",
                           hint: options.contains { $0.tiled == true } ? "Patterns are tiled edge to edge." : nil) {
@@ -102,9 +114,12 @@ struct DesktopSettingsTab: View {
                     }
                     .buttonStyle(RMGhostButtonStyle())
                 }
+                }
             }
         }
     }
+
+    private var keepsOwnWallpaper: Bool { settings.themeWallpaperOverrides[themeKey] == ThemeManager.ownWallpaper }
 
     // MARK: - Menu bar
 
