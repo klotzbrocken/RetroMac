@@ -1416,7 +1416,9 @@ final class DockView: NSView {
             itemView.updateTheme(theme)
             itemView.onLeftClick = { [weak self] bid in
                 // Mac OS X bounced the icon of an application that was starting.
-                if theme.dock.launchBounce == true,
+                // Not Launchpad: it opened over the desktop at once and never hopped (today's
+                // Apps app reports no finished launch, so it hopped the full 20 seconds).
+                if theme.dock.launchBounce == true, bid != theme.launchpadBundleID,
                    NSRunningApplication.runningApplications(withBundleIdentifier: bid).isEmpty {
                     self?.bounceWhileLaunching(bid)
                 }
