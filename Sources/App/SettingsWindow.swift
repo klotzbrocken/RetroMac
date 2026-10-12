@@ -194,16 +194,15 @@ struct SettingsSidebar: View {
                 }
                 .padding(.horizontal, 8)
                 .padding(.top, 4)
-                // VoiceOver: one choice among the tabs, as a radio group (it reads like the
-                // Themes/Screensaver switch), not a column of unrelated buttons.
-                .accessibilityRepresentation {
-                    // No name of its own: VoiceOver read "Settings" before every tab, in a
-                    // window that says Settings already.
-                    Picker("", selection: $selectedTab) {
-                        ForEach(mainTabs + surfacesTabs + systemTabs, id: \.self) { Text($0.label).tag($0) }
-                    }
-                    .pickerStyle(.radioGroup)
+            }
+            // VoiceOver: one pop-up for the whole list, scroll area and all, which says where
+            // you are. As radio buttons VoiceOver entered on the first one ("Themes") whichever
+            // tab was open; the blind tester who asked chose this over the faster radios.
+            .accessibilityRepresentation {
+                Picker("Section", selection: $selectedTab) {
+                    ForEach(mainTabs + surfacesTabs + systemTabs, id: \.self) { Text($0.label).tag($0) }
                 }
+                .pickerStyle(.menu)
             }
 
             Spacer()

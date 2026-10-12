@@ -143,6 +143,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   back — RetroMac stayed in front with no window to type into, and the keys went nowhere.
   While VoiceOver runs, a theme leaves the menu bar shown, so RetroMac's own item stays in reach.
   The menu says which theme is on after a launch that turned it on (it said "Off").
+  Settings' sections are one "Section" pop-up to VoiceOver, saying which one is open; as radio
+  buttons VoiceOver always entered on the first.
 - **"Turn the shader on when RetroMac launches" works with "Activate theme on launch".** The
   theme coming on at launch marked the shader as running without starting it, so the launch
   switch skipped it and every shader switch read on while the screen was plain; under VoiceOver
