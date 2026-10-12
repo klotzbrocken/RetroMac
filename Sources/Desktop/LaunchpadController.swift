@@ -5,7 +5,8 @@ import CoreImage
 /// desktop picture fades in blurred over the whole screen, a search field at the top, the apps
 /// in a grid of large icons, pages with dots under them, the dock left on top. Measured off a
 /// Mountain Lion screenshot: 8 columns of 11.6 % of the width, 5 rows of 15 % of the height,
-/// icons 5.6 % of the width.
+/// icons 5.4 % of the width (Safari's compass, 88 % of its icon, measured 4.7 %) or 8.7 % of the
+/// height, whichever is smaller — on a 16:9 screen the width alone made them too big.
 /// ponytail: top-level apps only (no Utilities folder, no folders of your own, no drag to
 /// rearrange); add them if anyone misses them.
 final class LaunchpadController: NSObject, NSSearchFieldDelegate {
@@ -219,7 +220,7 @@ final class LaunchpadView: NSView {
     func show(_ apps: [LaunchpadController.App], page: Int, of pages: Int) {
         grid.subviews.forEach { $0.removeFromSuperview() }
         let w = bounds.width, h = bounds.height
-        let pitchX = w * 0.116, pitchY = h * 0.15, icon = (w * 0.056).rounded()
+        let pitchX = w * 0.116, pitchY = h * 0.15, icon = min(w * 0.054, h * 0.087).rounded()
         let label = max(11, (h * 0.0135).rounded())
         for (i, app) in apps.enumerated() {
             let col = i % LaunchpadController.columns, row = i / LaunchpadController.columns

@@ -85,8 +85,8 @@ final class MLMainView: MLView {
         let pad: CGFloat = 8
 
         let timeMode = ctl.mode == .week || ctl.mode == .day
-        let left: CGFloat = ctl.mode == .week ? 36 : pad          // week: hour labels live to the left of the frame
-        mlText(ctl.title, NSRect(x: left, y: 2, width: areaW - 110 - left, height: 28), mlFont(ctl.mode == .day ? 17 : 19.5), .black)
+        let left: CGFloat = timeMode ? 36 : pad                   // week/day: hour labels live to the left of the frame
+        mlText(ctl.title, NSRect(x: left, y: 2, width: areaW - 110 - left, height: 28), mlFont(19.5), .black)
         drawNav(areaW)
 
         let g = NSRect(x: timeMode ? left : pad, y: 31, width: areaW - (timeMode ? left : pad) - 9, height: bounds.height - 31 - 11)
@@ -258,10 +258,9 @@ final class MLMainView: MLView {
     // MARK: week / day time grid
 
     private func drawDay(_ g: NSRect) {
-        let infoW: CGFloat = min(190, g.width * 0.32)
-        let info = NSRect(x: g.minX, y: g.minY, width: infoW, height: g.height)
-        drawDayInfo(info)
-        drawTime(NSRect(x: g.minX + infoW + 8 + 36, y: g.minY, width: g.width - infoW - 8 - 36, height: g.height), days: [ctl.date], header: false)
+        let infoW: CGFloat = min(200, g.width * 0.27)
+        drawTime(NSRect(x: g.minX, y: g.minY, width: g.width - infoW - 8, height: g.height), days: [ctl.date], header: true)
+        drawDayInfo(NSRect(x: g.maxX - infoW, y: g.minY, width: infoW, height: g.height))
     }
 
     /// Day information column: date, the day's events, mini overview.
@@ -442,8 +441,10 @@ final class MLMainView: MLView {
             let first = cal.date(from: DateComponents(year: year, month: m + 1, day: 1))!
             let box = NSRect(x: g.minX + CGFloat(m % cols) * cw, y: g.minY + CGFloat(m / cols) * ch, width: cw, height: ch).insetBy(dx: 8, dy: 4)
             let cellW = box.width / 7, headH: CGFloat = 16, wdH: CGFloat = 12
+            if m % cols != cols - 1 { mlLine(NSRect(x: box.maxX + 7, y: box.minY - 3, width: 1, height: box.height + 6), mlRGB(222, 222, 222)) }
+            if m / cols != rows - 1 { mlLine(NSRect(x: box.minX - 8, y: box.maxY + 3, width: box.width + 16, height: 1), mlRGB(222, 222, 222)) }
             let cellH = min(15, (box.height - headH - wdH) / 6)
-            mlText(MLPrefs.fmt(first, "MMMM"), NSRect(x: box.minX, y: box.minY, width: box.width, height: headH), mlFont(11, bold: true), mlRGB(70, 70, 70))
+            mlText(MLPrefs.fmt(first, "MMMM"), NSRect(x: box.minX + 2, y: box.minY, width: box.width, height: headH), mlFont(11, bold: true), mlRGB(110, 110, 112))
             for i in 0..<7 {
                 let wd = (cal.firstWeekday - 1 + i) % 7
                 mlText(String(cal.shortStandaloneWeekdaySymbols[wd].prefix(2)), NSRect(x: box.minX + CGFloat(i) * cellW, y: box.minY + headH, width: cellW, height: wdH), mlFont(8), mlRGB(130, 130, 130), align: .center)

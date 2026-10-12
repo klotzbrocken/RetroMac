@@ -145,10 +145,10 @@ final class MLEditorVC: NSViewController, NSTextFieldDelegate {
         title_.font = mlPF(14, bold: true); title_.textColor = mlRGB(18, 38, 120)
         add(title_); y += 38
 
-        func row(_ name: String, _ h: CGFloat = 22, _ build: (NSRect) -> Void) {
+        func row(_ name: String, _ h: CGFloat = 22, gap: CGFloat = 6, _ build: (NSRect) -> Void) {
             add(lbl(name, NSRect(x: lx, y: y + (min(h, 22) - 15) / 2 + 1, width: lw, height: 15)))
             build(NSRect(x: fx, y: y, width: fw, height: h))
-            y += h + 6
+            y += h + gap
         }
         row(L("Ort", "location")) { plainField(self.location, $0, e.location, accessibility: L("Ort", "Location")); add(self.location) }
         row(L("ganztägig", "all-day")) { r in
@@ -158,7 +158,7 @@ final class MLEditorVC: NSViewController, NSTextFieldDelegate {
         }
         let loc = Locale(identifier: MLPrefs.hour24 ? (MLPrefs.isDE ? "de_DE" : "en_GB") : "en_US")
         for (p, name, lab) in [(from, L("von", "from"), L("Beginn", "Starts")), (to, L("bis", "to"), L("Ende", "Ends"))] {
-            row(name, 22) { r in
+            row(name, 21, gap: 1) { r in
                 p.frame = NSRect(x: r.minX, y: r.minY, width: 186, height: 22)
                 p.datePickerStyle = .textField
                 p.isBezeled = false; p.isBordered = false; p.drawsBackground = false
@@ -205,11 +205,11 @@ final class MLEditorVC: NSViewController, NSTextFieldDelegate {
         v.setAccessibilityLabel(L("Termin bearbeiten", "Edit event"))
 
         doneBtn = MLButton(L("Fertig", "Done")) { [weak self] in self?.finish() }
-        doneBtn.frame = NSRect(x: W - 11 - 78 - 8, y: H - Self.footerH + 9, width: 78, height: 24)
+        doneBtn.frame = NSRect(x: W - 11 - 64 - 12, y: H - Self.footerH + 11, width: 64, height: 20)
         let del = MLButton(L("Löschen", "Delete")) { [weak self] in
             guard let s = self else { return }; s.done = true; s.ctl.popover?.close(); s.ctl.delete(s.occ)
         }
-        del.frame = NSRect(x: 8, y: H - Self.footerH + 9, width: 78, height: 24)
+        del.frame = NSRect(x: 12, y: H - Self.footerH + 11, width: 64, height: 20)
         v.addSubview(doneBtn); v.addSubview(del)
         del.isHidden = readOnly
 

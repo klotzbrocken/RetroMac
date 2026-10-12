@@ -67,7 +67,7 @@ enum MLAsset {
 
 enum MLLeather {
     /// Grain taken from the reference crop (high-pass of the user-supplied leather sample, mirrored for seamless tiling).
-    static let tile: NSImage = MLAsset.image(MLAssets.leatherGrain, unitsPerPixel: 0.5)
+    static let tile: NSImage = MLAsset.image(MLAssets.leatherGrain, unitsPerPixel: 0.36)
 
     static func fill(_ r: NSRect) {
         // base shading measured from the 2012 reference: lit at the top edge, shading down to a darker lower edge
@@ -80,37 +80,40 @@ enum MLLeather {
         NSGraphicsContext.restoreGraphicsState()
     }
 
-    static let barImage = MLAsset.image(MLAssets.bar, unitsPerPixel: 0.42)
-    static let barHeight: CGFloat = 9 * 0.42
+    static let barHeight: CGFloat = 4.3
 
-    /// The periwinkle rule where the leather ends (the user-supplied strip, tiled across).
+    /// The periwinkle rule where the leather ends. Row colours are sampled from the user-supplied strip (smooth, so it
+    /// stays sharp at any scale instead of showing the strip's own pixels or tile seams).
     static func bar(width: CGFloat, y: CGFloat) {
-        let img = barImage
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current?.imageInterpolation = .none
-        var x: CGFloat = 0
-        while x < width { img.draw(in: NSRect(x: x, y: y, width: img.size.width, height: barHeight), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil); x += img.size.width }
-        NSGraphicsContext.restoreGraphicsState()
+        mlLine(NSRect(x: 0, y: y, width: width, height: 0.7), mlRGB(112, 80, 44))
+        mlGradient(NSRect(x: 0, y: y + 0.7, width: width, height: 2.9), [(0, mlRGB(136, 146, 188)), (0.45, mlRGB(114, 124, 162)), (1, mlRGB(98, 107, 142))])
+        mlLine(NSRect(x: 0, y: y + 3.6, width: width, height: 0.7), mlRGB(34, 37, 50))
     }
 
+    // Sizes measured on the 1500 px reference: a bump is 40-70 units wide and ~3 deep; bumps are sparse (one per 100-270 units).
     private static let fringes: [NSImage] = [
-        MLAsset.image(MLAssets.paperA, unitsPerPixel: 0.667), MLAsset.image(MLAssets.paperC, unitsPerPixel: 0.75),
-        MLAsset.image(MLAssets.paperB, unitsPerPixel: 0.75), MLAsset.image(MLAssets.paperA, unitsPerPixel: 0.667),
-        MLAsset.image(MLAssets.paperB, unitsPerPixel: 0.75), MLAsset.image(MLAssets.paperC, unitsPerPixel: 0.75),
+        MLAsset.image(MLAssets.paperA, unitsPerPixel: 0.46), MLAsset.image(MLAssets.paperC, unitsPerPixel: 0.7),
+        MLAsset.image(MLAssets.paperB, unitsPerPixel: 0.7), MLAsset.image(MLAssets.paperC, unitsPerPixel: 0.62),
+        MLAsset.image(MLAssets.paperA, unitsPerPixel: 0.4), MLAsset.image(MLAssets.paperB, unitsPerPixel: 0.8),
     ]
 
     /// Torn paper below the rule: the three user-supplied fringe samples placed one after another with small gaps.
     static func wisps(width: CGFloat, y: CGFloat) {
+        // the paper edge is continuous right under the rule; the torn patches hang from it
+        mlGradient(NSRect(x: 0, y: y, width: width, height: 1.6), [(0, mlRGB(86, 86, 88, 0.9)), (1, mlRGB(160, 160, 162, 0.05))])
         var seed: UInt32 = 5
         func rnd() -> CGFloat { seed = seed &* 1664525 &+ 1013904223; return CGFloat(seed >> 8 & 0xFFFF) / 65535 }
-        var x: CGFloat = -30
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        var x: CGFloat = 20 + rnd() * 40
         var i = 0
         while x < width {
             let img = fringes[i % fringes.count]
             img.draw(in: NSRect(x: x, y: y, width: img.size.width, height: img.size.height), from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
-            x += img.size.width - 3 + rnd() * 24
+            x += img.size.width + 25 + rnd() * 120
             i += 1
         }
+        NSGraphicsContext.restoreGraphicsState()
     }
 }
 

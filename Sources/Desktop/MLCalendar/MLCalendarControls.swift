@@ -81,7 +81,7 @@ final class MLPopover: NSObject {
         content.frame.origin = NSPoint(x: onRight ? aw : 0, y: 0)
         bubble.addSubview(content)
 
-        let p = MLPopoverPanel(contentRect: NSRect(origin: origin, size: size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let p = MLPopoverPanel(contentRect: NSRect(origin: origin, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
         p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
         p.appearance = NSAppearance(named: .aqua)
         p.contentView = bubble
@@ -93,6 +93,8 @@ final class MLPopover: NSObject {
 
         let outside: (NSEvent) -> Void = { [weak self] e in
             guard let self, let w = self.panel, e.window !== w else { return }
+            // pop-up menus (repeat / calendar choices) are separate windows above the panel: clicks there are not "outside"
+            if let ew = e.window, ew.level.rawValue >= NSWindow.Level.popUpMenu.rawValue || ew.parent === w || w.childWindows?.contains(ew) == true { return }
             self.close()
         }
         if let m = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { e in outside(e); return e }) { monitors.append(m) }
@@ -139,7 +141,7 @@ final class MLButton: MLControl {
     var isDefault = false
     init(_ title: String, _ f: @escaping () -> Void) {
         self.title = title
-        super.init(frame: NSRect(x: 0, y: 0, width: 72, height: 24))
+        super.init(frame: NSRect(x: 0, y: 0, width: 64, height: 20))
         let c = MLClosure(f); closure = c; target = c; action = #selector(MLClosure.run)
         setAccessibilityRole(.button); setAccessibilityLabel(title)
     }
@@ -157,7 +159,7 @@ final class MLButton: MLControl {
             mlGradient(bounds, [(0, mlMix(.white, .black, k)), (1, mlMix(mlRGB(222, 222, 222), .black, k))], radius: 4.5)
         }
         (isDefault && isEnabled ? mlRGB(52, 96, 170) : mlRGB(128, 128, 128)).setStroke(); p.lineWidth = 1; p.stroke()
-        mlText(title, bounds, mlPF(11), isEnabled ? .black : mlRGB(150, 150, 150), align: .center)
+        mlText(title, bounds, mlPF(10.5), isEnabled ? .black : mlRGB(150, 150, 150), align: .center)
     }
     override func mouseDown(with e: NSEvent) {
         guard isEnabled else { return }

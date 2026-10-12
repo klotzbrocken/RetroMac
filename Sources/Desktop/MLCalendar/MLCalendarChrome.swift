@@ -101,7 +101,7 @@ final class MLHeaderView: MLView {
         let w = bounds.width
         MLLeather.fill(NSRect(x: 0, y: 0, width: w, height: 35))
         MLLeather.bar(width: w, y: 35)
-        MLLeather.wisps(width: w, y: 35 + MLLeather.barHeight)
+        MLLeather.wisps(width: w, y: 35 + MLLeather.barHeight - 0.7)
         drawResizeGlyph(w)
 
         // title
@@ -153,7 +153,7 @@ final class MLHeaderView: MLView {
         for i in 0..<4 {
             let r = NSRect(x: g.minX + CGFloat(i) * segW, y: g.minY, width: segW, height: g.height)
             let on = ctl.mode.rawValue == i
-            mlText(names[i], r, mlFont(10, bold: on), on ? .white : mlRGB(40, 24, 8), align: .center, shadow: on ? mlRGB(0, 0, 0, 0.55) : mlRGB(255, 232, 186, 0.4))
+            mlText(names[i], r, mlFont(9.5, bold: on), on ? .white : mlRGB(40, 24, 8), align: .center, shadow: on ? mlRGB(0, 0, 0, 0.55) : mlRGB(255, 232, 186, 0.4))
             hots.append(MLHot(rect: r, label: names[i], role: .radioButton) { [weak self] in self?.ctl.setMode(MLMode(rawValue: i)!) })
         }
     }
@@ -167,19 +167,24 @@ final class MLHeaderView: MLView {
 
     /// Full-screen / resize glyph in the top-right corner (two small corner arrows).
     private var resizeRect: NSRect { NSRect(x: bounds.width - 15, y: 3, width: 10, height: 10) }
+    /// Two small solid corner-arrows pointing apart (reference: blocky, dark brown, one NE and one SW).
     private func drawResizeGlyph(_ w: CGFloat) {
         let r = resizeRect
-        mlRGB(70, 52, 24, 0.85).setStroke()
-        let p = NSBezierPath(); p.lineWidth = 1.1
-        // arrow to top-right
-        p.move(to: NSPoint(x: r.midX + 0.5, y: r.minY + 4)); p.line(to: NSPoint(x: r.maxX - 0.5, y: r.minY + 0.5)); p.move(to: NSPoint(x: r.maxX - 4, y: r.minY + 0.5)); p.line(to: NSPoint(x: r.maxX - 0.5, y: r.minY + 0.5)); p.line(to: NSPoint(x: r.maxX - 0.5, y: r.minY + 4))
-        // arrow to bottom-left
-        p.move(to: NSPoint(x: r.midX - 0.5, y: r.maxY - 4)); p.line(to: NSPoint(x: r.minX + 0.5, y: r.maxY - 0.5)); p.move(to: NSPoint(x: r.minX + 4, y: r.maxY - 0.5)); p.line(to: NSPoint(x: r.minX + 0.5, y: r.maxY - 0.5)); p.line(to: NSPoint(x: r.minX + 0.5, y: r.maxY - 4))
-        p.stroke()
+        func arrow(corner: NSPoint, dx: CGFloat, dy: CGFloat) {
+            // dx/dy = direction (+1/-1) the arrow points; head is a right triangle in the corner, shaft runs back diagonally
+            let head = NSBezierPath()
+            head.move(to: corner); head.line(to: NSPoint(x: corner.x - dx * 3.8, y: corner.y)); head.line(to: NSPoint(x: corner.x, y: corner.y - dy * 3.8)); head.close()
+            let shaft = NSBezierPath(); shaft.lineWidth = 1.5
+            shaft.move(to: NSPoint(x: corner.x - dx * 1.4, y: corner.y - dy * 1.4)); shaft.line(to: NSPoint(x: corner.x - dx * 3.3, y: corner.y - dy * 3.3))
+            mlRGB(255, 232, 186, 0.45).setFill(); head.transform(using: AffineTransform(translationByX: 0, byY: 0.6)); head.fill(); head.transform(using: AffineTransform(translationByX: 0, byY: -0.6))
+            mlRGB(98, 70, 30).setFill(); head.fill(); mlRGB(98, 70, 30).setStroke(); shaft.stroke()
+        }
+        arrow(corner: NSPoint(x: r.maxX, y: r.minY), dx: 1, dy: -1)          // top-right
+        arrow(corner: NSPoint(x: r.minX + 1, y: r.maxY), dx: -1, dy: 1)      // bottom-left
         hots.append(MLHot(rect: r.insetBy(dx: -3, dy: -3), label: L("Vollbild", "Full screen")) { [weak self] in self?.window?.toggleFullScreen(nil) })
     }
 
-    private func button(_ r: NSRect, _ t: String, on: Bool, key: String, font: NSFont = mlFont(10)) {
+    private func button(_ r: NSRect, _ t: String, on: Bool, key: String, font: NSFont = mlFont(9.5)) {
         let path = NSBezierPath(roundedRect: r.insetBy(dx: 0.5, dy: 0.5), xRadius: 3, yRadius: 3)
         NSGraphicsContext.saveGraphicsState(); path.addClip()
         Self.recessFill(r, pressed: pressed == key)

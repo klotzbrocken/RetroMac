@@ -213,7 +213,7 @@ final class MLController: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         switch mode {
         case .year: return MLPrefs.fmt(date, "y")
         case .month: return MLPrefs.fmt(date, "yMMMM")
-        case .day: return MLPrefs.fmt(date, "yMMMMEEEEd")
+        case .day: return MLPrefs.fmt(date, "yMMMMd")
         case .week:
             let a = weekStart(of: date), b = cal.date(byAdding: .day, value: 6, to: a)!
             if cal.component(.month, from: a) == cal.component(.month, from: b) {
