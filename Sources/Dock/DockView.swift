@@ -184,6 +184,7 @@ final class DockView: NSView {
                            transientsApart: ThemeManager.shared.activeTheme?.config.dock.runningAppsSeparator != false,
                            stacksOnRight: hasTrash && !isControlStrip,
                            hasDashboard: hasDashboard,
+                           launchpad: ThemeManager.shared.activeTheme?.config.launchpadBundleID,
                            hasShowDesktop: hasShowDesktop,
                            hasUrlLauncher: hasUrlLauncher && !isControlStrip,
                            hasTrash: hasTrash && !isControlStrip,
@@ -509,8 +510,9 @@ final class DockView: NSView {
         p.line(to: NSPoint(x: r.maxX - 2, y: r.minY))
         p.appendArc(from: NSPoint(x: r.maxX, y: r.minY), to: NSPoint(x: r.maxX, y: r.minY + 2), radius: 2)
         p.line(to: NSPoint(x: r.maxX, y: top))
-        p.line(to: NSPoint(x: r.maxX - lean, y: r.maxY))
-        p.line(to: NSPoint(x: r.minX + lean, y: r.maxY))
+        // The back corners are rounded too, as on Mountain Lion's shelf.
+        p.appendArc(from: NSPoint(x: r.maxX - lean, y: r.maxY), to: NSPoint(x: r.minX + lean, y: r.maxY), radius: 4)
+        p.appendArc(from: NSPoint(x: r.minX + lean, y: r.maxY), to: NSPoint(x: r.minX, y: top), radius: 4)
         p.line(to: NSPoint(x: r.minX, y: top))
         p.line(to: NSPoint(x: r.minX, y: r.minY + 2))
         p.appendArc(from: NSPoint(x: r.minX, y: r.minY), to: NSPoint(x: r.minX + 2, y: r.minY), radius: 2)
@@ -525,12 +527,13 @@ final class DockView: NSView {
         let top = r.minY + frostedFrontHeight
         NSGraphicsContext.saveGraphicsState()
         path.addClip()
-        // Grey glass, measured off a Lion desktop: about 0.68 at the lit front, 0.52 at the back.
-        NSGradient(colors: [NSColor(srgbRed: 0.66, green: 0.68, blue: 0.72, alpha: 0.88 * alpha),
-                            NSColor(srgbRed: 0.52, green: 0.54, blue: 0.58, alpha: 0.80 * alpha)])?
+        // Silver-grey glass, measured off a Mountain Lion dock: about 0.86 at the lit front,
+        // 0.55 at the back, a touch of blue in it.
+        NSGradient(colors: [NSColor(srgbRed: 0.84, green: 0.87, blue: 0.88, alpha: 0.92 * alpha),
+                            NSColor(srgbRed: 0.52, green: 0.58, blue: 0.63, alpha: 0.85 * alpha)])?
             .draw(in: NSRect(x: r.minX, y: top, width: r.width, height: r.maxY - top), angle: 90)
-        NSGradient(colors: [NSColor(srgbRed: 0.42, green: 0.43, blue: 0.47, alpha: 0.92 * alpha),
-                            NSColor(srgbRed: 0.62, green: 0.63, blue: 0.67, alpha: 0.92 * alpha)])?
+        NSGradient(colors: [NSColor(srgbRed: 0.56, green: 0.58, blue: 0.62, alpha: 0.92 * alpha),
+                            NSColor(srgbRed: 0.68, green: 0.70, blue: 0.73, alpha: 0.92 * alpha)])?
             .draw(in: NSRect(x: r.minX, y: r.minY, width: r.width, height: frostedFrontHeight), angle: 90)
         NSColor.white.withAlphaComponent(0.85 * alpha).setFill()
         NSRect(x: r.minX, y: top - 0.5, width: r.width, height: 1).fill()            // the lit front edge
@@ -1905,7 +1908,8 @@ final class DockView: NSView {
     }
 
     private func runningAppsNotInDock() -> [String] {
-        let pinnedIDs = Set(AppManager.shared.apps.map { $0.bundleID })
+        var pinnedIDs = Set(AppManager.shared.apps.map { $0.bundleID })
+        if let lp = ThemeManager.shared.activeTheme?.config.launchpadBundleID { pinnedIDs.insert(lp) }   // the theme's own tile
         let ownBundleID = Bundle.main.bundleIdentifier ?? ""
 
         // Apps that currently have minimized windows MUST get a tile regardless of the

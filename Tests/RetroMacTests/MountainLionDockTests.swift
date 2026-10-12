@@ -33,8 +33,7 @@ final class MountainLionDockTests: XCTestCase {
                 item.setRunningIndicator(visible: true, theme: theme.config)
                 let light = try XCTUnwrap(item.layer?.sublayers?.last)
                 let midY = item.frame.minY + light.frame.midY
-                XCTAssertEqual(midY, DockItemView.shelfLightMidY, accuracy: 0.5)   // on the glass behind the lit edge
-                XCTAssertGreaterThan(midY, DockView.frostedFrontHeight)
+                XCTAssertEqual(midY, DockView.frostedFrontHeight, accuracy: 0.5)   // on the lit front edge
                 lights.append(light)
             }
             // The reflection ends on the glass, above the front face.

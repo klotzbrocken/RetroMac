@@ -132,9 +132,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **The Control Strip and the dock sit in place after a theme switch.** Placed while the Mac's
   Dock was still on its way out, the System 7.1 and Mac OS 9 strip stayed a Dock's height up
   (and a dock off-centre) until the theme was chosen again.
-- **Mountain Lion's dock is closer to the original.** The shelf is grey glass, it mirrors the
-  icons more, the running lights are blue-white dots on the glass behind the lit edge, and the
-  Trash is there.
+- **Mountain Lion's dock is closer to the original.** Silver-grey glass measured off the real
+  shelf, rounded at the back corners too, mirroring the icons more; the running lights are
+  blue-white glows on the lit front edge; Mountain Lion's own Trash, empty and full; and
+  Launchpad straight after Finder, with its rocket, opening the Apps app on today's macOS.
 - **VoiceOver, from the blind tester's third round.** Switching themes no longer leaves the
   arrows, Return and Esc held for the whole Mac — with a drawn menu or the Start menu open at the
   switch they stayed RetroMac's, and VoiceOver's own menu bar and menus stopped answering until

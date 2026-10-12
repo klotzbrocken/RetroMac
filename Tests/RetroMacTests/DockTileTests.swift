@@ -155,6 +155,18 @@ final class DockTileTests: XCTestCase {
         XCTAssertEqual(row.filter { $0.separator != nil }.map(\.gapBefore), [30, 30])
     }
 
+    /// Lion and Mountain Lion: Launchpad straight after Finder, once, even when it is pinned too.
+    func testLaunchpadFollowsFinder() {
+        func row(_ apps: [DockApp]) -> [String] {
+            DockView.iconDockTiles(taskbar: false, showQuickLaunch: false, apps: apps, transients: [],
+                                   stacksOnRight: true, hasDashboard: false, launchpad: "lp",
+                                   hasShowDesktop: false, hasUrlLauncher: false, hasTrash: true,
+                                   hasDoomLauncher: false, iconSize: icon, spacing: gap, doomWidth: doom).map(\.id)
+        }
+        XCTAssertEqual(row([app("finder"), app("mail")]), ["finder", "lp", "mail", "__trash__"])
+        XCTAssertEqual(row([app("finder"), app("lp")]), ["finder", "lp", "__trash__"])
+    }
+
     // MARK: - Windows taskbars
 
     func testTaskbarRowIsQuickLaunchOnly() {

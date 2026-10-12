@@ -45,6 +45,7 @@ extension DockView {
                               transientsApart: Bool = true,
                               stacksOnRight: Bool,
                               hasDashboard: Bool,
+                              launchpad: String? = nil,
                               hasShowDesktop: Bool,
                               hasUrlLauncher: Bool,
                               hasTrash: Bool,
@@ -77,8 +78,11 @@ extension DockView {
 
         for (i, app) in inline.enumerated() {
             tile(.app(bundleID: app.bundleID, transient: false), app.bundleID)
-            // Mac OS X put Dashboard in the Dock directly after Finder.
+            // Mac OS X put Dashboard in the Dock directly after Finder, Lion put Launchpad there.
             if i == 0 && hasDashboard { tile(.dashboard, "__dashboard__") }
+            if i == 0, let lp = launchpad, !inline.contains(where: { $0.bundleID == lp }) {
+                tile(.app(bundleID: lp, transient: false), lp)
+            }
         }
         // A dock with no pinned apps still gets its Dashboard tile.
         if inline.isEmpty && hasDashboard { tile(.dashboard, "__dashboard__") }

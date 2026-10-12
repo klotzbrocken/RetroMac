@@ -30,6 +30,7 @@
   "dock": {
     "runningAppsSeparator": false,
     "showTrash": true,
+    "launchpad": true,
     "launchBounce": true,
     "height": 78,
     "iconSize": 52,
@@ -126,6 +127,7 @@
     "com.apple.MigrationUtility": "migration.png",
     "com.apple.backup.launcher": "timemachine.png",
     "com.apple.launchpad.launcher": "launchpad.png",
+    "com.apple.apps.launcher": "launchpad.png",
     "com.apple.exposelauncher": "missioncontrol.png",
     "com.apple.DVDPlayer": "dvdplayer.png",
     "com.apple.GameCenter": "gamecenter.png",

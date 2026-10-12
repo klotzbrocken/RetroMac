@@ -209,8 +209,8 @@ final class DockItemView: NSView {
 
         let color = NSColor.fromHex(theme.indicator.color)
         if theme.indicator.style == "lightbar", !theme.isVertical {
-            // Mountain Lion: a bright blue-white dot on the glass just behind the lit front edge,
-            // with a soft halo, flattened a little by the shelf's perspective.
+            // Mountain Lion: a bright blue-white light on the shelf's front edge, its halo
+            // spilling up onto the glass.
             let light = CAGradientLayer()
             light.type = .radial
             light.colors = [NSColor.white.cgColor, color.cgColor,
@@ -219,7 +219,7 @@ final class DockItemView: NSView {
             light.locations = [0, 0.22, 0.5, 1]
             light.startPoint = CGPoint(x: 0.5, y: 0.5)
             light.endPoint = CGPoint(x: 1, y: 1)
-            indicatorW = 14; indicatorH = 8
+            indicatorW = 16; indicatorH = 10
             lightOnShelf = true
             layer?.addSublayer(light)
             indicatorLayer = light
@@ -292,8 +292,9 @@ final class DockItemView: NSView {
 
     /// The light sits on the dock's front edge, wherever the item stands above it.
     private var lightOnShelf = false
-    /// The running light's middle above the shelf's bottom: on the glass, just behind the lit edge.
-    static let shelfLightMidY = DockView.frostedFrontHeight + 3.5
+    /// The running light's middle above the shelf's bottom: on the lit front edge, as on
+    /// Mountain Lion, where the light sat on the lip and glowed up into the glass.
+    static let shelfLightMidY = DockView.frostedFrontHeight
     private func layoutLightOnShelf() {
         guard lightOnShelf, let light = indicatorLayer, let dock = superview as? DockView else { return }
         let y = dock.shelfBottomY + Self.shelfLightMidY - frame.minY - indicatorH / 2

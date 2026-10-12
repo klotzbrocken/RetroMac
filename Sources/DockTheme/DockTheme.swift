@@ -242,6 +242,7 @@ struct DockThemeConfig: Codable {
         var aboveLiveWallpaper: Bool?   // Live Wallpaper leaves the dock out: it stays on top, unfiltered (Halloween)
         var bulge: Bool?         // magnifying stretches the bar up round the icons like a rubber band (Halloween)
         var showTrash: Bool?     // show trash icon at end of dock
+        var launchpad: Bool?     // Launchpad right after Finder, as Lion and Mountain Lion had it (the Apps app today)
         var showUrlLauncher: Bool?   // editable URL-launcher tile, placed left of the trash
         var pinstripe: Bool?         // fine horizontal Aqua pinstripe texture over the dock bg
         var showLabels: Bool?        // show the app name above the magnified icon (Aqua dock)
@@ -376,6 +377,13 @@ extension DockThemeConfig {
     var dockAlignment: String { dock.alignment ?? "center" }
     var dockEdgeOffset: CGFloat { dock.edgeOffset ?? 8 }
     var hasTrash: Bool { dock.showTrash == true }
+    /// Launchpad's bundle id on this Mac when the theme wants it in the dock: macOS 26 renamed it
+    /// Apps (com.apple.apps.launcher); before that it was com.apple.launchpad.launcher.
+    var launchpadBundleID: String? {
+        guard dock.launchpad == true else { return nil }
+        return ["com.apple.apps.launcher", "com.apple.launchpad.launcher"]
+            .first { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil }
+    }
     var hasUrlLauncher: Bool { dock.showUrlLauncher == true }
     var hasGrip: Bool { dock.showGrip == true }
     var startMenuStyle: String { dock.startMenuStyle ?? "classic" }
