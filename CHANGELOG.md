@@ -126,6 +126,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **A tidier flyout and menu.** The flyout keeps the everyday switches; Only on this Space, Dock only
   and TV Tube left it (Spaces and TV Tube stay in the menu-bar menu). The menu-bar menu has a
   More submenu for Dock Only, the Game Library, the Setup Assistant and Rescue Desktop.
+- **RetroMac can always be reached.** When macOS does not show its menu-bar icon (a full menu
+  bar, the notch, or switched off under System Settings ▸ Menu Bar), RetroMac says so a few
+  seconds after launch and offers a Dock icon; and opening RetroMac again from Applications
+  opens Settings. It used to look as if it had not started at all.
 - **Dashboard dims every display again with the theme on chosen Spaces.** RetroMac moved its
   windows to the main display's Space, the second display's dimming too, which then sat as a
   dark patch in the main display's corner while the main display stayed bright.

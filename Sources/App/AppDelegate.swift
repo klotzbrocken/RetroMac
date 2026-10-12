@@ -276,9 +276,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // The menu was built while everything was still off, and said "Themes: Off" with
                 // the theme on screen — to VoiceOver, no theme at all.
                 self.rebuildMenu()
-                if ProcessInfo.processInfo.environment["RETROMAC_OPEN_CALENDAR"] != nil {
-                    DispatchQueue.main.async { MLController.shared.show() }
-                }
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_APPS"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         CPUMonitorController.shared.show()
@@ -349,6 +346,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // First run: the Setup Assistant is the primary onboarding (incl. permissions).
         // After it finishes, fall through to the welcome flow for What's New / Coffee.
         // On subsequent launches the wizard is skipped and only the welcome flow runs.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.checkStatusItemShows() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             if !AppSettings.shared.setupWizardComplete {
                 self.setupWizard.onFinishExtra = { [weak self] in
@@ -446,8 +444,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if AppSettings.shared.dockModeEnabled {
             LauncherController.shared.toggleWindow()
+        } else if !flag {
+            // Opened again from Applications or Spotlight: the way in when the menu-bar icon
+            // cannot be seen (a full menu bar, the notch, or hidden in System Settings).
+            openSettings()
         }
         return true
+    }
+
+    /// The menu-bar icon is RetroMac's only door. macOS may not show it — a full menu bar, the
+    /// notch, or the app switched off under System Settings ▸ Menu Bar — and then RetroMac
+    /// seemed not to start at all. Once per launch it says so and offers a Dock icon instead.
+    /// ponytail: "on screen" is the item's window being visible to the window server; an
+    /// item drawn under the notch would still count.
+    private func checkStatusItemShows() {
+        // Not while the menu bar hides itself (a theme's, or the user's own): then the icon is
+        // there, only out of sight until the pointer goes up.
+        let barHides = AppSettings.shared.hideMenuBar || (OriginalSettings.read("-g", "_HIHideMenuBar") as? Bool) == true
+        guard !AppSettings.shared.dockModeEnabled, !barHides,
+              let window = statusItem?.button?.window else { return }
+        let onScreen = window.occlusionState.contains(.visible)
+            && NSScreen.screens.contains { $0.frame.intersects(window.frame) }
+        guard !onScreen else { return }
+        let alert = NSAlert()
+        alert.messageText = "RetroMac is running"
+        alert.informativeText = "macOS is not showing its icon in the menu bar — the menu bar may be full, or RetroMac is switched off under System Settings ▸ Menu Bar. Open RetroMac again from Applications to reach Settings, or give it a Dock icon."
+        alert.addButton(withTitle: "Show in Dock")
+        alert.addButton(withTitle: "Menu Bar Settings")
+        alert.addButton(withTitle: "OK")
+        NSApp.activate(ignoringOtherApps: true)
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: AppSettings.shared.dockModeEnabled = true
+        case .alertSecondButtonReturn:
+            if let url = URL(string: "x-apple.systempreferences:com.apple.ControlCenter-Settings.extension") {
+                NSWorkspace.shared.open(url)
+            }
+        default: break
+        }
     }
 
     /// Right-click on the Dock icon → a compact native menu (theme / shader / webcam / settings).
