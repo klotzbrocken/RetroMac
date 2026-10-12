@@ -83,10 +83,6 @@ enum DesktopLauncher {
         case "notepad":
             NotepadController.shared.show()
 
-        case "calendar":
-            // Mountain Lion Calendar: a local, skeuomorphic calendar window (never the installed Apple Calendar).
-            MLController.shared.show()
-
         case "calculator":
             CalculatorController.shared.show()
 
