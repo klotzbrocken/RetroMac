@@ -4839,13 +4839,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WindowBorderController.shared.update()
         DockController.shared.stop(synchronous: true)   // must finish before the process exits
         SystemTweaksAdapter.restore(sync: true)         // ditto — revert Classic Finder tweaks before exit
-        ThemeManager.shared.restoreWallpapers()
         restoreRetroModeSystemUI()
         // The rest of the system look, each from the backup RetroMac took when it changed it.
         _ = rescueShowMenuBar()
         SystemUIHelper.restoreIfNeeded()
         SystemUIHelper.restoreDesktopIconsIfNeeded()
         DockController.shared.restoreSystemDockIfNeeded()
+        // The picture last, once the Mac's Dock is back: desktop pictures go through the Dock
+        // process, and one set while it restarted — every step above may restart it — was lost.
+        // The screen kept the theme's picture after quitting.
+        Self.waitForDock()
+        ThemeManager.shared.restoreWallpapers()
+        // And a moment before the process goes: the Dock takes the picture after the call
+        // returns, and a RetroMac already gone left the theme's on screen.
+        Thread.sleep(forTimeInterval: 0.8)
+    }
+
+    /// Until the Mac's Dock runs again (at most two seconds), and a moment for it to settle.
+    /// ponytail: a fixed settle time; ask the Dock if it ever turns out too short.
+    private static func waitForDock() {
+        let deadline = Date().addingTimeInterval(2)
+        while NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.dock").isEmpty, Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        Thread.sleep(forTimeInterval: 0.4)
     }
 
     // MARK: - Surprise Preset

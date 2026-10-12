@@ -675,7 +675,17 @@ final class ThemeManager {
         // answerable before: every step that could swallow it failed silently.
         var tintNotes: [String] = []
         var changed = 0
-        for screen in NSScreen.screens where here && !showsFullscreenSpace(screen) {
+        // Each display by its own Space: with "Displays have separate Spaces", the second
+        // display shows a Space of its own, and when the theme is on chosen Spaces only it must
+        // not get the theme's picture there. It did — following the main display — and, its own
+        // picture being a colour and no file, got macOS's default back when the theme went off.
+        let settings = AppSettings.shared
+        func themedHere(_ screen: NSScreen) -> Bool {
+            guard settings.themeOnChosenSpaces, screen != (NSScreen.primaryDisplay ?? NSScreen.screens.first) else { return here }
+            let space = screen.displayUUID.flatMap { skb_copy_current_space_uuid($0 as CFString) as String? }
+            return ThemeSpaces.showsTheme(chosenOnly: true, chosen: settings.themeSpaces, current: space) || (here && space == ThemeSpaces.currentSpace)
+        }
+        for screen in NSScreen.screens where themedHere(screen) && !showsFullscreenSpace(screen) {
             // Pattern-tile wallpapers (e.g. System 6 8×8): setDesktopImageURL has no tiling
             // mode, so pre-render the tile to this screen's exact pixel size. Only for
             // theme-bundled files — a custom "Browse…" wallpaper is never tiled.
