@@ -1488,6 +1488,13 @@ final class DockView: NSView {
     }
 
     private func folderIcon(path: String, size: CGFloat) -> NSImage {
+        // Mountain Lion and its forebears: the newest files piled up, live.
+        if ThemeManager.shared.activeTheme?.config.hasStackPreview == true {
+            if StackPreview.shared.onChange == nil {
+                StackPreview.shared.onChange = { [weak self] folder in self?.refreshFolderTile(folder) }
+            }
+            if let pile = StackPreview.shared.icon(for: path, size: size) { return pile }
+        }
         // The picture the user chose for this folder (Settings ▸ the item's icon) comes first,
         // as it does for an app; folders ignored it.
         if let custom = ThemeManager.shared.customIconPath(for: "__folder__" + path),
@@ -1519,6 +1526,13 @@ final class DockView: NSView {
         let img = NSWorkspace.shared.icon(forFile: path)
         img.size = NSSize(width: size, height: size)
         return img
+    }
+
+    /// A folder's pile again, after a file arrived or a preview came in.
+    private func refreshFolderTile(_ folder: String) {
+        guard let item = itemViews.first(where: { $0.bundleID == "__folder__" + folder }) else { return }
+        let size = (ThemeManager.shared.activeTheme?.config.dock.iconSize ?? 48) * CGFloat(AppSettings.shared.dockIconScale)
+        item.updateIcon(folderIcon(path: folder, size: size))
     }
 
     private func addTrashItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {

@@ -69,7 +69,8 @@ struct PlatinumMenuItem {
 }
 
 /// How the menus are drawn: Mac OS 8/9's Platinum (and System 7), or Mac OS X 10.0's Aqua.
-enum RetroMenuLook { case platinum, aqua }
+/// `lion`: Mountain Lion's white menu with a blue gradient highlight and thin rules between groups.
+enum RetroMenuLook { case platinum, aqua, lion }
 
 final class PlatinumMenuController {
     static let shared = PlatinumMenuController()
@@ -130,7 +131,7 @@ final class PlatinumMenuController {
         var x = parent.frame.maxX - 1
         if x + size.width > vf.maxX { x = parent.frame.minX - size.width + 1 }
         // The first row level with the parent row (Aqua has 4 px above its first row).
-        var y = rowRectInScreen.maxY - size.height + (look == .aqua ? 4 : 1)
+        var y = rowRectInScreen.maxY - size.height + (look != .platinum ? 4 : 1)
         y = max(vf.minY, min(y, vf.maxY - size.height))
         panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.orderFrontRegardless()
@@ -171,7 +172,7 @@ final class PlatinumMenuController {
         panel.level = .popUpMenu
         panel.title = "Menu"   // what VoiceOver calls it; a submenu is renamed after its row
         panel.isOpaque = false; panel.backgroundColor = .clear
-        panel.hasShadow = look == .aqua   // Platinum's drawn 1 px shadow is its shadow; Aqua's is soft
+        panel.hasShadow = look != .platinum   // Platinum's drawn 1 px shadow is its shadow; Aqua's is soft
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         panel.hidesOnDeactivate = false
         view.frame = NSRect(origin: .zero, size: view.intrinsicSize)
@@ -215,7 +216,8 @@ private final class PlatinumMenuView: NSView {
     private var fullHeight: CGFloat { padTop + padBottom + items.reduce(0) { $0 + (isSeparator($1) ? sepH : rowH) } }
     private var scrolls: Bool { fullHeight > maxHeight }
 
-    private lazy var aqua = controller?.look == .aqua
+    private lazy var aqua = controller?.look != .platinum && controller?.look != nil
+    private lazy var lion = controller?.look == .lion
     private var rowH: CGFloat { aqua ? PlatinumMenuController.aquaRowHeight : PlatinumMenuController.rowHeight }
     private var sepH: CGFloat { aqua ? PlatinumMenuController.aquaSeparatorHeight : PlatinumMenuController.separatorHeight }
     private var menuFont: NSFont { aqua ? PlatinumMenuController.aquaFont : PlatinumMenuController.font }
@@ -367,11 +369,17 @@ private final class PlatinumMenuView: NSView {
     /// arrows grey; key equivalents right-aligned.
     private func drawAqua() {
         let b = bounds
-        let ground: [CGFloat] = [0xF4, 0xEF, 0xE4, 0xEF].map { $0 / 255 }
-        for y in stride(from: 0, to: Int(b.height), by: 1) {
-            let v = ground[y % 4]
-            NSColor(srgbRed: v, green: v + 0.008, blue: min(1, v + 0.02), alpha: 0.96).setFill()
-            NSRect(x: 0, y: CGFloat(y), width: b.width, height: 1).fill()
+        if lion {
+            // Mountain Lion: near-white, a little see-through, rounded at the bottom.
+            let shape = NSBezierPath(roundedRect: b, xRadius: 5, yRadius: 5)
+            NSColor(white: 0.97, alpha: 0.96).setFill(); shape.fill()
+        } else {
+            let ground: [CGFloat] = [0xF4, 0xEF, 0xE4, 0xEF].map { $0 / 255 }
+            for y in stride(from: 0, to: Int(b.height), by: 1) {
+                let v = ground[y % 4]
+                NSColor(srgbRed: v, green: v + 0.008, blue: min(1, v + 0.02), alpha: 0.96).setFill()
+                NSRect(x: 0, y: CGFloat(y), width: b.width, height: 1).fill()
+            }
         }
         let font = menuFont
         let blue: [NSColor] = [0x4282CA, 0x4788CC, 0x4282CA, 0x3877C6].map {
@@ -381,9 +389,16 @@ private final class PlatinumMenuView: NSView {
         for (i, it) in items.enumerated() {
             let r = rowRect(i)
             if scrolls, r.maxY <= rowBand.minY || r.minY >= rowBand.maxY { continue }
-            if isSeparator(it) { continue }   // 10.0 set groups apart with space alone
+            if isSeparator(it) {
+                // 10.0 set groups apart with space alone; Mountain Lion drew a thin rule.
+                if lion { NSColor(white: 0.86, alpha: 1).setFill(); NSRect(x: r.minX + 1, y: r.midY.rounded(), width: r.width - 2, height: 1).fill() }
+                continue
+            }
             let selected = i == hovered && !it.dimmed
-            if selected {
+            if selected, lion {
+                NSGradient(colors: [NSColor(srgbRed: 0.38, green: 0.56, blue: 0.97, alpha: 1),
+                                    NSColor(srgbRed: 0.16, green: 0.37, blue: 0.91, alpha: 1)])?.draw(in: r, angle: 90)
+            } else if selected {
                 for k in 0..<Int(r.height) {
                     blue[k % 4].setFill()
                     NSRect(x: r.minX, y: r.minY + CGFloat(k), width: r.width, height: 1).fill()

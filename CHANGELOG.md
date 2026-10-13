@@ -156,6 +156,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   blue-white glows on the lit front edge; Mountain Lion's own Trash, empty and full; and
   Launchpad straight after Finder, with its rocket the size of Safari's compass, opening the
   Launchpad's own screen — without hopping, as Launchpad never did.
+- **Mountain Lion's Apple menu and About This Mac.** The black Apple opens 10.8's menu row for
+  row (About This Mac, Software Update, App Store, System Preferences, Dock, Recent Items, Force
+  Quit, Sleep, Restart, Shut Down, Log Out with your name), drawn white with the blue highlight.
+  About This Mac is 10.8's window with this Mac's own version, processor, memory and startup disk.
+- **Mountain Lion magnifies** like Snow Leopard, switched under Settings ▸ Dock ▸ Magnification on
+  hover or the Apple menu's Dock submenu, and has the Downloads stack: the newest files piled up
+  on the dock icon, changing as downloads arrive, and the grid of them on a click.
 - **Launchpad, Mountain Lion's.** A click on its tile fades the desktop picture in blurred over
   the whole screen, with a search field at the top (Return opens the first match), your apps as
   large icons eight across and five down, page dots under them (click them, swipe, scroll or use

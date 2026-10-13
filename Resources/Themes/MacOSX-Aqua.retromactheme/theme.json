@@ -24,13 +24,21 @@
     { "domain": "com.apple.finder", "key": "ShowStatusBar", "type": "bool", "value": "true", "refresh": "Finder" },
     { "domain": "com.apple.dock", "key": "mineffect", "type": "string", "value": "genie", "refresh": "Dock" }
   ],
-  "menuBarApple": "aqua-classic",
+  "menuBarApple": "black",
+  "menuBar": {
+    "appleMenu": true,
+    "appleMenuStyle": "mountainlion"
+  },
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
     "runningAppsSeparator": false,
     "showTrash": true,
     "launchpad": true,
+    "magnification": true,
+    "magnificationScale": 1.8,
+    "folderStacks": true,
+    "stackPreview": true,
     "launchBounce": true,
     "height": 78,
     "iconSize": 52,

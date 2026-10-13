@@ -12,8 +12,13 @@ final class AppleMenuController {
     func popUp(below rect: NSRect, in window: NSWindow) {
         if PlatinumMenuController.shared.isOpen { PlatinumMenuController.shared.dismissAll(); return }
         PlatinumMenuController.shared.ignoreClickWindow = window
-        let aqua = ThemeManager.shared.activeTheme?.config.hasMacOSXAppleMenu == true
-        PlatinumMenuController.shared.show(items(), below: rect, look: aqua ? .aqua : .platinum)
+        PlatinumMenuController.shared.show(items(), below: rect, look: Self.look)
+    }
+
+    private static var look: RetroMenuLook {
+        let cfg = ThemeManager.shared.activeTheme?.config
+        if cfg?.hasMountainLionAppleMenu == true { return .lion }
+        return cfg?.hasMacOSXAppleMenu == true ? .aqua : .platinum
     }
 
     /// The launcher shortcut on a theme with its own Apple menu: the menu, below the Apple in the
@@ -25,7 +30,7 @@ final class AppleMenuController {
         } else {
             let bar = screen.frame.maxY - screen.visibleFrame.maxY
             PlatinumMenuController.shared.show(items(), below: NSRect(x: screen.frame.minX + 8, y: screen.frame.maxY - bar, width: 30, height: bar),
-                                               look: ThemeManager.shared.activeTheme?.config.hasMacOSXAppleMenu == true ? .aqua : .platinum)
+                                               look: Self.look)
         }
         return true
     }
@@ -34,6 +39,7 @@ final class AppleMenuController {
     func items() -> [PlatinumMenuItem] {
         if ThemeManager.shared.activeTheme?.config.hasSystem7AppleMenu == true { return system7Items() }
         if ThemeManager.shared.activeTheme?.config.hasMacOSXAppleMenu == true { return macOSXItems() }
+        if ThemeManager.shared.activeTheme?.config.hasMountainLionAppleMenu == true { return mountainLionItems() }
         return [open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
          .separator(),
          submenu("Applications", icon: themeIcon("folder.png")) { Self.entries(Self.applications()) },
@@ -113,6 +119,30 @@ final class AppleMenuController {
             .separator(),
             .action("Log Out\u{2026}", shortcut: "\u{21E7}\u{2318}Q") { Self.askLoginWindow("rlgo") },
         ]
+    }
+
+    /// OS X 10.8's Apple menu, row for row: its own About This Mac, Software Update and the App
+    /// Store, the Dock submenu, Recent Items, Force Quit, Sleep/Restart/Shut Down and Log Out with
+    /// the user's full name.
+    func mountainLionItems() -> [PlatinumMenuItem] {
+        var rows = macOSXItems()
+        rows.removeAll { $0.title == "Get Mac OS X Software\u{2026}" || $0.title == "Location" }
+        if let i = rows.firstIndex(where: { $0.title == "About This Mac" }) {
+            rows[i] = .action("About This Mac") { MountainLionAboutWindow.shared.show() }
+            rows.insert(.action("Software Update\u{2026}") { Self.openTarget("x-apple.systempreferences:com.apple.Software-Update-Settings.extension") }, at: i + 1)
+            rows.insert(.action("App Store\u{2026}") { Self.openTarget("/System/Applications/App Store.app") }, at: i + 2)
+        }
+        for (i, row) in rows.enumerated() {
+            switch row.title {
+            case "Force Quit\u{2026}": rows[i] = .action("Force Quit\u{2026}", shortcut: "\u{2325}\u{2318}\u{238B}") { Self.forceQuitWindow() }
+            case "Restart": rows[i] = .action("Restart\u{2026}") { Self.askLoginWindow("rrst") }
+            case "Shut Down": rows[i] = .action("Shut Down\u{2026}") { Self.askLoginWindow("rsdn") }
+            case "Log Out\u{2026}": rows[i] = .action("Log Out \(NSFullUserName())\u{2026}", shortcut: "\u{21E7}\u{2318}Q") { Self.askLoginWindow("rlgo") }
+            default: break
+            }
+        }
+        // 10.8 had no rule between About and the update rows: the first separator follows App Store.
+        return rows
     }
 
     /// Restart ("rrst"), Shut Down ("rsdn") or Log Out ("rlgo") the way the Apple menu does it:

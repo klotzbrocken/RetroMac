@@ -261,6 +261,7 @@ struct DockThemeConfig: Codable {
                                        // "controlStripModules" (Mac OS 9 Control Strip of system modules, no dock)
         var windowPreview: Bool?       // hover a running app's icon ~2s → show a (pixel) window preview
         var folderStacks: Bool?        // click a folder dock item → fan out its recent files
+        var stackPreview: Bool?        // a folder in the dock shows its newest files piled up, live (10.5 – 10.8 "Display as Stack")
         var appIcon: String?           // icons/<file>: app's Dock icon in Dock Mode (theme-aware)
         /// The Control Strip modules this theme shows, by id and in its own order
         /// (`["appletalk", "battery", …]`). Absent: every module RetroMac has.
@@ -408,9 +409,11 @@ extension DockThemeConfig {
     var hasSystem7ControlStrip: Bool { dock.controlStripStyle?.lowercased() == "system7" }
     var hasSystem7AppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "system7" }
     var hasMacOSXAppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "macosx" }
+    var hasMountainLionAppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "mountainlion" }
     /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.
     var hasWindowPreview: Bool { dock.windowPreview == true }
     var hasFolderStacks: Bool { dock.folderStacks == true }
+    var hasStackPreview: Bool { dock.stackPreview == true }
     /// BeOS Classic Deskbar — a vertical panel (Be menu + status + app list) replacing the dock.
     var isDeskbar: Bool { dock.dockStyle == "deskbar" }
     /// When true, no dock/taskbar bar is shown (e.g. Windows 3.1 Program Manager desktop,
