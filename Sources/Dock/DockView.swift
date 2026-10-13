@@ -1388,6 +1388,7 @@ final class DockView: NSView {
         if let app = AppManager.shared.apps.first(where: { $0.bundleID == bundleID }), app.isFolder,
            let folderPath = app.folderPath {
             let icon = folderIcon(path: folderPath, size: iconSize)
+            folderTileSizes[folderPath] = iconSize
             itemView.updateIcon(icon)
             itemView.updateTheme(theme)
             itemView.onLeftClick = { [weak itemView] _ in
@@ -1530,10 +1531,12 @@ final class DockView: NSView {
 
     /// A folder's pile again, after a file arrived or a preview came in.
     private func refreshFolderTile(_ folder: String) {
-        guard let item = itemViews.first(where: { $0.bundleID == "__folder__" + folder }) else { return }
-        let size = (ThemeManager.shared.activeTheme?.config.dock.iconSize ?? 48) * CGFloat(AppSettings.shared.dockIconScale)
+        guard let item = itemViews.first(where: { $0.bundleID == "__folder__" + folder }),
+              let size = folderTileSizes[folder] else { return }
         item.updateIcon(folderIcon(path: folder, size: size))
     }
+    /// The size each folder tile was drawn at, so a refreshed pile matches the icons beside it.
+    private var folderTileSizes: [String: CGFloat] = [:]
 
     private func addTrashItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
         let item = DockItemView(bundleID: "__trash__", frame: frame)

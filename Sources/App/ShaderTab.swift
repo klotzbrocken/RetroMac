@@ -233,6 +233,12 @@ private struct ScopeSection: View {
             .padding(.horizontal, RMSpacing.card)
         }
         .buttonStyle(.plain)
+        // One radio button to VoiceOver, named and selected or not: the drawn circle beside the
+        // name was read as an unnamed image.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityHint(hint)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 }
 

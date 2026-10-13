@@ -159,10 +159,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Mountain Lion's Apple menu and About This Mac.** The black Apple opens 10.8's menu row for
   row (About This Mac, Software Update, App Store, System Preferences, Dock, Recent Items, Force
   Quit, Sleep, Restart, Shut Down, Log Out with your name), drawn white with the blue highlight.
-  About This Mac is 10.8's window with this Mac's own version, processor, memory and startup disk.
+  About This Mac is 10.8's window — its grey title bar, its buttons, the silver apple — with this
+  Mac's own version, processor, memory and startup disk.
 - **Mountain Lion magnifies** like Snow Leopard, switched under Settings ▸ Dock ▸ Magnification on
   hover or the Apple menu's Dock submenu, and has the Downloads stack: the newest files piled up
-  on the dock icon, changing as downloads arrive, and the grid of them on a click.
+  on the dock icon as large as the icons beside it, changing as downloads arrive, and the grid of
+  them on a click with Open in Finder as its last tile. No Applications folder, as in 10.8.
 - **Launchpad, Mountain Lion's.** A click on its tile fades the desktop picture in blurred over
   the whole screen, with a search field at the top (Return opens the first match), your apps as
   large icons eight across and five down, page dots under them (click them, swipe, scroll or use
@@ -173,7 +175,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   switch they stayed RetroMac's, and VoiceOver's own menu bar and menus stopped answering until
   RetroMac was force-quit. The shader shortcut says "Shader on" or "Shader off". The Control
   Strip's scroll arrows say which modules came into view. Shader, Live Wallpaper, Virtual Camera,
-  Retro Viewport and TV Tube in the menu read as switches with their state. ⌘W and Esc reach
+  Retro Viewport and TV Tube in the menu read as switches with their state, and the Shader /
+  Live Wallpaper choice as radio buttons (an unnamed image before). ⌘W and Esc reach
   Settings and the readme while another of RetroMac's windows holds the keyboard, and the
   Settings footer reads "Overlay on, auto fps" instead of an unnamed image. ⌘W and Esc now
   really close Settings: its SwiftUI view used both keys up before the menu saw them (Close

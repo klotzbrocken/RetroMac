@@ -46,7 +46,7 @@ final class StackPreview {
             guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
             for i in pictures.indices.reversed() {
                 let (img, framed) = pictures[i]
-                let box = rect.insetBy(dx: rect.width * 0.12, dy: rect.height * 0.12)
+                let box = rect.insetBy(dx: rect.width * 0.04, dy: rect.height * 0.06)   // as full as the icons beside it
                 let s = min(box.width / max(img.size.width, 1), box.height / max(img.size.height, 1))
                 let w = img.size.width * s, h = img.size.height * s
                 ctx.saveGState()

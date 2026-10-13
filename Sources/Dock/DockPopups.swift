@@ -171,15 +171,17 @@ final class DockStackController {
         // 10.6's grid runs noticeably larger than a dock icon. The old 44...64 window made the
         // tiles read as a shrunken copy of the dock rather than a browser of their own.
         let iconSize = min(max(cfg?.dock.iconSize ?? 56, 56), 72)
+        // 10.8 put Open in Finder into the grid as a tile of its own, the arrow in a circle.
+        let openTile = cfg?.hasStackPreview == true
         let gap: CGFloat = 8, labelH: CGFloat = 14, headerH: CGFloat = 24
-        let footerH: CGFloat = 24, pad: CGFloat = 12
+        let footerH: CGFloat = openTile ? 0 : 24, pad: CGFloat = 12
         let cellW = iconSize + 42, cellH = iconSize + labelH + 6
         // 10.6 hung the grid off a callout nose pointing back at the dock icon. Only this theme
         // draws one; everything else keeps its own window chrome.
         let noseH: CGFloat = RetroFrameTheme.key() == "snowleopard" ? 13 : 0
 
         let all = isApplications ? applications() : recentFiles(in: url, limit: 40)
-        let n = max(all.count, 1)
+        let n = max(all.count + (openTile ? 1 : 0), 1)
         // Squarish, capped at the 7 columns the 10.6 grid uses.
         let cols = min(7, max(4, Int(ceil((Double(n) * 1.4).squareRoot()))))
 
@@ -188,9 +190,9 @@ final class DockStackController {
         let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchorScreenRect) }) ?? NSScreen.main
         let room = (screen?.visibleFrame.height ?? 900) - anchorScreenRect.height - 40 - noseH
         let maxRows = max(1, Int((room - headerH - footerH - pad * 2 + gap) / (cellH + gap)))
-        let files = Array(all.prefix(cols * maxRows))
+        let files = Array(all.prefix(cols * maxRows - (openTile ? 1 : 0)))
 
-        let rows = max(1, Int(ceil(Double(max(files.count, 1)) / Double(cols))))
+        let rows = max(1, Int(ceil(Double(max(files.count + (openTile ? 1 : 0), 1)) / Double(cols))))
         let width = pad * 2 + CGFloat(cols) * cellW + CGFloat(cols - 1) * gap
         let height = headerH + pad + CGFloat(rows) * cellH + CGFloat(rows - 1) * gap + footerH + pad + noseH
         // The nose fills most of the old gap, so the tip ends up where the panel edge used to be.
@@ -208,6 +210,7 @@ final class DockStackController {
         // would be relative to the fetch limit rather than the folder anyway.
         view.truncatedCount = isApplications ? all.count - files.count : 0
         view.iconSize = iconSize
+        view.openTile = openTile
         view.cols = cols; view.gap = gap; view.labelH = labelH
         view.headerH = headerH; view.footerH = footerH; view.pad = pad
         view.cellW = cellW; view.cellH = cellH
@@ -291,6 +294,8 @@ private final class DockStackView: NSView, NSDraggingSource {
     var cellH: CGFloat = 80
     var onPick: ((URL) -> Void)?
     var onOpenFolder: (() -> Void)?
+    /// Open in Finder as the grid's last tile instead of a footer line (10.8).
+    var openTile = false
 
     private var hovered = -1
     private var trackingArea: NSTrackingArea?
@@ -329,6 +334,9 @@ private final class DockStackView: NSView, NSDraggingSource {
         axParts = files.indices.map { i in
             let url = files[i]
             return AccessibleHotspot.make(in: self, label: FileManager.default.displayName(atPath: url.path), rect: cellRect(i)) { [weak self] in self?.onPick?(url) }
+        }
+        if openTile {
+            axParts.append(AccessibleHotspot.make(in: self, label: "Open in Finder", rect: cellRect(files.count)) { [weak self] in self?.onOpenFolder?() })
         }
         return axParts
     }
@@ -509,6 +517,20 @@ private final class DockStackView: NSView, NSDraggingSource {
             label.draw(at: NSPoint(x: c.midX - ls.width / 2, y: c.minY + iconSize + 2), withAttributes: lAttrs)
         }
 
+        if openTile {
+            let i = files.count, c = cellRect(i)
+            if i == hovered { NSColor(calibratedWhite: 1, alpha: 0.20).setFill()
+                NSBezierPath(roundedRect: c.insetBy(dx: 1, dy: 1), xRadius: 4, yRadius: 4).fill() }
+            if let arrow = NSImage(systemSymbolName: "arrowshape.turn.up.right.circle", accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: iconSize * 0.62, weight: .regular).applying(.init(paletteColors: [.white]))) {
+                let r = iconRect(i)
+                arrow.draw(in: iconDrawRect(arrow, in: r.insetBy(dx: iconSize * 0.12, dy: iconSize * 0.12)), from: .zero, operation: .sourceOver,
+                           fraction: 1, respectFlipped: true, hints: nil)
+            }
+            let label = "Open in Finder", ls = label.size(withAttributes: lAttrs)
+            label.draw(at: NSPoint(x: c.midX - ls.width / 2, y: c.minY + iconSize + 2), withAttributes: lAttrs)
+            return
+        }
         let f = footerRect
         if snowLeopard {
             NSColor(calibratedWhite: 1, alpha: 0.06).setFill(); f.fill()
@@ -539,6 +561,7 @@ private final class DockStackView: NSView, NSDraggingSource {
         let old = hovered
         hovered = -1
         for i in files.indices where cellRect(i).contains(p) { hovered = i }
+        if openTile, cellRect(files.count).contains(p) { hovered = files.count }
         if old != hovered { needsDisplay = true }
     }
     override func mouseExited(with event: NSEvent) { if hovered != -1 { hovered = -1; needsDisplay = true } }
@@ -547,7 +570,7 @@ private final class DockStackView: NSView, NSDraggingSource {
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         didDrag = false; pressIndex = -1
-        if footerRect.contains(p) { onOpenFolder?(); return }
+        if openTile ? cellRect(files.count).contains(p) : footerRect.contains(p) { onOpenFolder?(); return }
         for i in files.indices where cellRect(i).contains(p) { pressIndex = i; pressPoint = p; return }
     }
     override func mouseDragged(with event: NSEvent) {

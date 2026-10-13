@@ -39,6 +39,7 @@
     "magnificationScale": 1.8,
     "folderStacks": true,
     "stackPreview": true,
+    "applicationsStack": false,
     "launchBounce": true,
     "height": 78,
     "iconSize": 52,

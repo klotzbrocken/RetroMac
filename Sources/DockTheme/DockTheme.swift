@@ -262,6 +262,7 @@ struct DockThemeConfig: Codable {
         var windowPreview: Bool?       // hover a running app's icon ~2s → show a (pixel) window preview
         var folderStacks: Bool?        // click a folder dock item → fan out its recent files
         var stackPreview: Bool?        // a folder in the dock shows its newest files piled up, live (10.5 – 10.8 "Display as Stack")
+        var applicationsStack: Bool?   // false: folder stacks bring Downloads only, no Applications folder (Mountain Lion)
         var appIcon: String?           // icons/<file>: app's Dock icon in Dock Mode (theme-aware)
         /// The Control Strip modules this theme shows, by id and in its own order
         /// (`["appletalk", "battery", …]`). Absent: every module RetroMac has.
@@ -414,6 +415,8 @@ extension DockThemeConfig {
     var hasWindowPreview: Bool { dock.windowPreview == true }
     var hasFolderStacks: Bool { dock.folderStacks == true }
     var hasStackPreview: Bool { dock.stackPreview == true }
+    /// Folder stacks with the Applications folder too (all but a theme that says no).
+    var hasApplicationsStack: Bool { hasFolderStacks && dock.applicationsStack != false }
     /// BeOS Classic Deskbar — a vertical panel (Be menu + status + app list) replacing the dock.
     var isDeskbar: Bool { dock.dockStyle == "deskbar" }
     /// When true, no dock/taskbar bar is shown (e.g. Windows 3.1 Program Manager desktop,
