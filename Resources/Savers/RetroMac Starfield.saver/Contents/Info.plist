@@ -9,6 +9,6 @@
   <key>CFBundlePackageType</key><string>BNDL</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>CFBundleVersion</key><string>1</string>
-  <key>LSMinimumSystemVersion</key><string>13.0</string>
-  <key>NSPrincipalClass</key><string>RetroMacSaverView</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>NSPrincipalClass</key><string>RetroStarfieldSaverView</string>
 </dict></plist>

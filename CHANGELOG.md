@@ -159,6 +159,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   blue-white glows on the lit front edge; Mountain Lion's own Trash, empty and full; and
   Launchpad straight after Finder, with its rocket the size of Safari's compass, opening the
   Launchpad's own screen — without hopping, as Launchpad never did.
+- **Two new screensavers, and the Windows ones native.** 3D Maze (the brick maze with its rats and
+  the smiley) and 3D Text (your words or the time, in chrome, marble or wood) join the list, and
+  3D Pipes, 3D FlowerBox and Starfield Simulation now run natively instead of in a browser engine
+  — lighter on the battery, at most 30 fps on battery. All five are retro-screensavers by Adrian
+  Herskind (MIT), as RetroMac's own screensaver and as .saver modules for System Settings.
 - **Mountain Lion's Apple menu and About This Mac.** The black Apple opens 10.8's menu row for
   row (About This Mac, Software Update, App Store, System Preferences, Dock, Recent Items, Force
   Quit, Sleep, Restart, Shut Down, Log Out with your name), drawn white with the blue highlight.

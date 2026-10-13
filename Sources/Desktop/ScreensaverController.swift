@@ -1,4 +1,5 @@
 import AppKit
+import ScreenSaver
 import WebKit
 
 /// Per-theme screensaver. After `screensaverIdleMinutes` of no input it covers every screen
@@ -58,6 +59,9 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
     /// the desktop "Screen Saver" icon.
     func start() {
         let id = resolvedSaverID()
+        // The Windows 3D savers are native .saver modules (vendor/retro-screensavers), hosted
+        // here as System Settings hosts them; the rest are web pages.
+        if let saverClass = Self.nativeSaver(id) { return startNative(saverClass) }
         guard id != "none", let url = saverURL(id) else { NSSound.beep(); return }
         // Always rebuild fresh (self-heals a stale active flag / prior invisible windows).
         windows.forEach { $0.orderOut(nil) }
@@ -101,10 +105,49 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
         if timer == nil { beginIdleWatch() }   // ensure the dismiss poll runs even for manual starts
     }
 
+    /// One ScreenSaverView per screen, animating until any input.
+    private func startNative(_ saverClass: ScreenSaverView.Type) {
+        windows.forEach { $0.orderOut(nil) }
+        windows.removeAll()
+        active = true
+        shownAt = Date()
+        for screen in NSScreen.screens {
+            let win = NSWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+            win.level = .screenSaver
+            win.isOpaque = true
+            win.backgroundColor = .black
+            win.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+            win.ignoresMouseEvents = true
+            guard let view = saverClass.init(frame: NSRect(origin: .zero, size: screen.frame.size), isPreview: false) else { continue }
+            view.autoresizingMask = [.width, .height]
+            win.contentView = view
+            win.orderFrontRegardless()
+            view.startAnimation()
+            windows.append(win)
+        }
+        NSCursor.hide()
+        if timer == nil { beginIdleWatch() }
+    }
+
+    /// The bundled native saver for `id`, loaded once.
+    static func nativeSaver(_ id: String) -> ScreenSaverView.Type? {
+        guard let name = nativeBundles[id],
+              let url = Bundle.main.resourceURL?.appendingPathComponent("Savers/\(name).saver"),
+              let bundle = Bundle(url: url), bundle.load() else { return nil }
+        return bundle.principalClass as? ScreenSaverView.Type
+    }
+
+    /// Saver id → the native .saver bundle that draws it.
+    static let nativeBundles: [String: String] = [
+        "pipes": "RetroMac Pipes", "flowerbox": "RetroMac FlowerBox", "starfield": "RetroMac Starfield",
+        "maze": "RetroMac 3D Maze", "text3d": "RetroMac 3D Text",
+    ]
+
     func dismiss() {
         guard active else { return }
         active = false
         shownAt = nil
+        windows.forEach { ($0.contentView as? ScreenSaverView)?.stopAnimation() }
         NSCursor.unhide()
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
@@ -160,5 +203,7 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
         ("flying-toasters", "Flying Toasters"),
         ("flurry", "Flurry"),
         ("starfield", "Starfield Simulation"),
+        ("maze", "3D Maze"),
+        ("text3d", "3D Text"),
     ]
 }

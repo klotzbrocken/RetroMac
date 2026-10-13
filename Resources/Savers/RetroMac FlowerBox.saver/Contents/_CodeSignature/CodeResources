@@ -4,73 +4,40 @@
 <dict>
 	<key>files</key>
 	<dict>
-		<key>Resources/saver/Common/MV.js</key>
+		<key>Resources/LICENSE-retro-screensavers.txt</key>
 		<data>
-		FIxSdhwxHoJzSe8C/bDCd/qsv7A=
+		koRwEbsdADaBEy2eoPGo+mTPCBQ=
 		</data>
-		<key>Resources/saver/Common/initShaders.js</key>
+		<key>Resources/thumbnail.png</key>
 		<data>
-		c/6ETdt2Y08EI1pwHIbU6np/avQ=
+		XZiJzpytJoCmb66bzwZrgf0aDqs=
 		</data>
-		<key>Resources/saver/Common/webgl-utils.js</key>
+		<key>Resources/thumbnail@2x.png</key>
 		<data>
-		mT1QXnPORD4IxwDppkuVpBKKIfI=
-		</data>
-		<key>Resources/saver/FlowerBox.js</key>
-		<data>
-		vJUf+WJGkIHXylg4OvI4SNua3l4=
-		</data>
-		<key>Resources/saver/geometry.js</key>
-		<data>
-		DWaXoyWguSrfG+tIvPrDTVHCzOQ=
-		</data>
-		<key>Resources/saver/index.html</key>
-		<data>
-		c538IkUZHjK39N9hWfHVqHkqgUA=
+		PfBxDlDSdJKR7/WXxYHzbWAJvGo=
 		</data>
 	</dict>
 	<key>files2</key>
 	<dict>
-		<key>Resources/saver/Common/MV.js</key>
+		<key>Resources/LICENSE-retro-screensavers.txt</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			cZPm2SOQ+4zSHV7xUmN41cwWjC7OKnf4Cjmh7c7Mh7o=
+			tndv0JNd1iU2/aMtS2FMybTkSxKGwQA3xgfOEGQQmkc=
 			</data>
 		</dict>
-		<key>Resources/saver/Common/initShaders.js</key>
+		<key>Resources/thumbnail.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			LsgXIBNLCybK8VcB8M3bKvACSpkZGKWut7tbpxRyfGc=
+			UG3d3Zuh9nF2/ZZOjwuW5yuTUlTebVqm23mAdMEW8FQ=
 			</data>
 		</dict>
-		<key>Resources/saver/Common/webgl-utils.js</key>
+		<key>Resources/thumbnail@2x.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			opVPuAM1ioGcckSN4Ifqt9TpNlCn043Oip5yCKQzW/8=
-			</data>
-		</dict>
-		<key>Resources/saver/FlowerBox.js</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			jVIsBgMnT18F1OfogRjGxGu0owtDIl10h+RYfnQJ6S4=
-			</data>
-		</dict>
-		<key>Resources/saver/geometry.js</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			5O0mczaWV3nHsnPKH779yr8lxQZE4lKLdbLOH2VnkzQ=
-			</data>
-		</dict>
-		<key>Resources/saver/index.html</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			CSi5g7BqYWKQenTDOcLdfI6tpzE2HywFm3B729CJ4gE=
+			XHfzavL1XTf32B9pz+bAsNhmBdaq86Y9AdYKHS1SmAg=
 			</data>
 		</dict>
 	</dict>

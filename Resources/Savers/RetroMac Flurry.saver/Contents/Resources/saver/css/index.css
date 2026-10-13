@@ -1,0 +1,46 @@
+body, html
+{
+    background: #000;
+
+    width:    100%;
+    height:   100%;
+    margin:   0;
+    padding:  0;
+    overflow: hidden;
+}
+
+canvas
+{
+    width:  100%;
+    height: 100%;
+    cursor: none;
+}
+
+canvas.uiVisible
+{
+    cursor: pointer;
+}
+
+.error
+{
+    background:  url('../res/original.png') no-repeat;
+    padding:     130px 300px;
+    color:       white;
+    font-family: sans-serif;
+    font-size:   xx-large;
+}
+
+.error a
+{
+    color: #DDDDFF;
+}
+
+.error sup
+{
+    color: #DDDDDD;
+}
+
+/* https://code.google.com/p/dat-gui/issues/detail?id=17 */
+.dg.a.has-save ul .folder ul {
+    margin-top: 0;
+}

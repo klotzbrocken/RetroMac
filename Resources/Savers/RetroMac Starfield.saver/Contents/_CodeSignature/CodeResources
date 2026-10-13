@@ -4,18 +4,40 @@
 <dict>
 	<key>files</key>
 	<dict>
-		<key>Resources/saver/index.html</key>
+		<key>Resources/LICENSE-retro-screensavers.txt</key>
 		<data>
-		R6dZVZqlsWfmsKXHGPjGzKP8Oi8=
+		koRwEbsdADaBEy2eoPGo+mTPCBQ=
+		</data>
+		<key>Resources/thumbnail.png</key>
+		<data>
+		IBiiIoAldeRr0OeyrJ/OH6E0CpU=
+		</data>
+		<key>Resources/thumbnail@2x.png</key>
+		<data>
+		BaddAoXf6RBdFGKEcH6Q4ItOXiQ=
 		</data>
 	</dict>
 	<key>files2</key>
 	<dict>
-		<key>Resources/saver/index.html</key>
+		<key>Resources/LICENSE-retro-screensavers.txt</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Emd2r1vPocohgYXHnsYzON5WmEYntOseAr7kfsGBhM4=
+			tndv0JNd1iU2/aMtS2FMybTkSxKGwQA3xgfOEGQQmkc=
+			</data>
+		</dict>
+		<key>Resources/thumbnail.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			7lXI4dIonyfRvAo94TgJWI7lZJKMOTZsy3+VJCrDFvs=
+			</data>
+		</dict>
+		<key>Resources/thumbnail@2x.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			V0VGRWMa0pMsquRYS3HVNNCrTWxqs/75WMsZnnlFp0A=
 			</data>
 		</dict>
 	</dict>

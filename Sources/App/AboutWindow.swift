@@ -256,6 +256,12 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("Screensaver Credits") {
+                    Text("3D Pipes, 3D FlowerBox, Starfield Simulation, 3D Maze and 3D Text are retro-screensavers by Adrian Herskind (github.com/AdrianJHerskind/retro-screensavers), MIT License, Copyright \u{00A9} 2026 Adrian Herskind. The licence travels inside each .saver.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Halloween Theme Credits") {
                     Text("The Halloween theme\u{2019}s wallpapers were generated with Google Gemini. The knife pointer is Maik\u{2019}s own; the pumpkin in the menu bar is macOS\u{2019}s emoji. The Halloween films and their characters belong to their respective owners; the theme is an unofficial fan-made tribute, and RetroMac is not affiliated with, sponsored by, or endorsed by them.")
                         .font(.caption)
