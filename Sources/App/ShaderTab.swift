@@ -315,6 +315,12 @@ private struct WhenSection: View {
             ?? settings.defaultPreset
     }
 
+    /// The themes whose shader is switched off, by name.
+    private var themesWithShaderOff: [String] {
+        settings.themeShaderDisabled.filter(\.value).keys
+            .map { ThemeManager.shared.theme(for: $0)?.name ?? $0 }.sorted()
+    }
+
     var body: some View {
         VStack(spacing: RMSpacing.section) {
                 RMCard(title: "Running", bodyPadding: 0) {
@@ -325,9 +331,20 @@ private struct WhenSection: View {
                                                      set: { _ in AppDelegate.shared?.launcherToggleShader() }))
                                 .toggleStyle(.switch).tint(.rmAccent)
                         }
-                        RMRow(label: "Turn the shader on when RetroMac launches", isLast: true) {
+                        RMRow(label: "Turn the shader on when RetroMac launches", isLast: themesWithShaderOff.isEmpty) {
                             Toggle("", isOn: $settings.enableOnLaunch)
                                 .toggleStyle(.switch).tint(.rmAccent)
+                        }
+                        // Said where the launch switch is: a theme the shader was switched off
+                        // in keeps it off at launch too, and nothing showed it — the switch
+                        // looked broken (a VoiceOver tester, with the theme on every launch).
+                        if !themesWithShaderOff.isEmpty {
+                            RMRow(label: "Off for \(ListFormatter.localizedString(byJoining: themesWithShaderOff))",
+                                  hint: "You switched the shader off while \(themesWithShaderOff.count == 1 ? "this theme was" : "these themes were") on. That outranks the launch switch.",
+                                  isLast: true) {
+                                Button("Turn On Again") { settings.themeShaderDisabled = [:] }
+                                    .buttonStyle(RMGhostButtonStyle())
+                            }
                         }
                     }
                 }

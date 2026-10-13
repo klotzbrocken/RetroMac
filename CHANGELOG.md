@@ -129,6 +129,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Started from the disk image or Downloads, RetroMac offers to move itself to Applications**
   (an older copy goes to the Trash, and the new one takes over). Run from the mounted DMG it had
   no menu-bar icon its user could find, and vanished from Finder's search once the DMG was gone.
+- **Settings ▸ Shader ▸ On & Off says which themes keep the shader off.** Switching the shader off
+  while a theme is on is remembered for that theme and outranks "Turn the shader on when RetroMac
+  launches" — which then looked broken. Listed under the switch now, with Turn On Again.
 - **Keep my wallpaper.** Settings ▸ Desktop ▸ Wallpaper, per theme: the theme leaves your
   desktop picture alone, so a live-wallpaper app or macOS's own dynamic one stays. Without it,
   almost any setting, a display or a Space change put the theme's picture back over yours.
