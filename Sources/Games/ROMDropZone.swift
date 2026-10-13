@@ -261,6 +261,7 @@ struct ROMLibrarySection: View {
                 Text("⚡ LCD Broken Lite").tag("lcd-broken-lite")
                 Text("⚡ B&W Lite").tag("bw-lite")
                 Text("⚡ Amber Lite").tag("amber-lite")
+                Text("⚡ Green Lite").tag("green-lite")
                 Text("⚡ Scanlines Lite").tag("scanlines-lite")
                 Text("⚡ VHS Lite").tag("vhs-lite")
                 Text("⚡ Film Scratches Lite").tag("grain-lite")

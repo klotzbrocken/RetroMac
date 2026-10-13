@@ -19,6 +19,7 @@ final class LicenseManager: ObservableObject {
         "lcd-broken-lite",   // LCD Broken Lite — damaged LCD panel
         "bw-lite",           // B&W Lite — grayscale + film grain overlay
         "amber-lite",        // Amber Lite — amber phosphor monitor overlay
+        "green-lite",        // Green Lite — green phosphor terminal overlay
         "vhs-lite",          // VHS Lite — transparent overlay, no screen recording
         "scanlines-lite",    // Scanlines Lite — transparent overlay, no screen recording
         "grain-lite",        // Film Scratches Lite — scratches, dust, flicker

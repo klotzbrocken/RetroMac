@@ -13,6 +13,7 @@ struct LiteShaderPicker: View {
         ("LCD Broken Lite", "lcd-broken-lite"),
         ("B&W Lite", "bw-lite"),
         ("Amber Lite", "amber-lite"),
+        ("Green Lite", "green-lite"),
         ("VHS Lite", "vhs-lite"),
         ("Scanlines Lite", "scanlines-lite"),
         ("Film Scratches Lite", "grain-lite"),

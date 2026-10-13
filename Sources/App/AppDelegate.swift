@@ -1978,7 +1978,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Whether the given preset is a "Lite" overlay (no screen recording needed)
     private static let litePresetIDs: Set<String> = [
         "crt-lite", "lcd-lite", "lcd-retro-lite", "lcd-sharp-lite", "lcd-broken-lite",
-        "bw-lite", "amber-lite", "vhs-lite", "scanlines-lite", "grain-lite"
+        "bw-lite", "amber-lite", "green-lite", "vhs-lite", "scanlines-lite", "grain-lite"
     ]
 
     static func isLitePreset(_ presetID: String?) -> Bool {
@@ -1992,9 +1992,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let liteToFullPreset: [String: String] = [
         "crt-lite": "zfast-crt", "lcd-lite": "lcd-grid", "lcd-retro-lite": "zfast-lcd",
         "lcd-sharp-lite": "lcd3x", "lcd-broken-lite": "zfast-lcd", "bw-lite": "bw-film",
-        "amber-lite": "amber-monitor", "vhs-lite": "vhs", "scanlines-lite": "zfast-crt",
+        "amber-lite": "amber-monitor", "green-lite": "green-phosphor", "vhs-lite": "vhs", "scanlines-lite": "zfast-crt",
         "grain-lite": "cinema-film"
     ]
+
+    /// The Lite look closest to a full preset, for when Screen Recording is missing.
+    static func litePreset(for presetID: String) -> String {
+        if isLitePreset(presetID) { return presetID }
+        return liteToFullPreset.filter { $0.value == presetID }.keys.sorted().first ?? "crt-lite"
+    }
 
     private static func fullPreset(for presetID: String) -> String {
         isLitePreset(presetID) ? (liteToFullPreset[presetID] ?? "zfast-crt") : presetID
@@ -2236,6 +2242,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // After Sparkle updates the binary is re-signed and macOS revokes
         // the old grant, so this catches the common post-update case.
         if !CGPreflightScreenCaptureAccess() {
+            // Not nothing in the meantime: the Lite look of the same preset needs no permission
+            // (a lesson from mac-crt, which falls back the same way).
+            var fellBack = false
+            switch effectiveMode {
+            case .fullScreen, .singleDisplay:
+                startCRTLite(mode: .fullScreen, presetName: Self.litePreset(for: presetName))
+                fellBack = true
+            default: break
+            }
             let alert = NSAlert()
             alert.messageText = "Screen Recording Permission"
             alert.informativeText = """
@@ -2244,7 +2259,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 1. Remove RetroMac with the minus (\u{2212}) button
                 2. Re-add RetroMac with the plus (+) button
 
-                The shader will start automatically once granted.
+                The shader will start automatically once granted.\(fellBack ? " Until then you see its Lite version, which needs no permission." : "")
                 """
             alert.addButton(withTitle: "Open System Settings")
             alert.addButton(withTitle: "Cancel")
@@ -2262,6 +2277,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if CGPreflightScreenCaptureAccess() {
                     timer.invalidate()
                     self?.permissionPollTimer = nil
+                    self?.crtLiteOverlay?.stop(); self?.crtLiteOverlay = nil   // the stand-in goes
                     self?.startOverlay(mode: captureMode, presetOverride: capturePreset, parentWindow: captureParent)
                     return
                 }

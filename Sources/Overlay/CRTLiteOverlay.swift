@@ -191,6 +191,9 @@ final class CRTLiteOverlay: NSObject, MTKViewDelegate {
         case "amber-lite":
             // Warm amber/orange hue ≈ 30° on color wheel → 30/360 ≈ 0.083
             DisplayFilterHelper.enableColorTint(hue: 0.08, intensity: 1.0)
+        case "green-lite":
+            // P1 phosphor green ≈ 120° → 0.33
+            DisplayFilterHelper.enableColorTint(hue: 0.33, intensity: 1.0)
         default:
             break
         }

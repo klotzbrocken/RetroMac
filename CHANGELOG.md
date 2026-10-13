@@ -159,6 +159,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   blue-white glows on the lit front edge; Mountain Lion's own Trash, empty and full; and
   Launchpad straight after Finder, with its rocket the size of Safari's compass, opening the
   Launchpad's own screen — without hopping, as Launchpad never did.
+- **Green Lite, and no blank screen without Screen Recording.** A green phosphor terminal joins
+  Amber Lite and B&W Lite, all three through macOS's colour filters, so no permission. And when a
+  full shader is switched on without Screen Recording, its Lite version shows meanwhile instead
+  of nothing, until the permission is granted (an idea from mac-crt).
 - **Two new screensavers, and the Windows ones native.** 3D Maze (the brick maze with its rats and
   the smiley) and 3D Text (your words or the time, in chrome, marble or wood) join the list, and
   3D Pipes, 3D FlowerBox and Starfield Simulation now run natively instead of in a browser engine

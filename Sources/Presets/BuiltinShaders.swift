@@ -151,6 +151,7 @@ enum BuiltinShaders {
         "lcd-broken-lite": lcdBrokenLiteShader,
         "bw-lite": bwLiteShader,
         "amber-lite": amberLiteShader,
+        "green-lite": amberLiteShader,   // the same tube; macOS's colour filter makes it green
         "vhs-lite": vhsLiteShader,
         "scanlines-lite": scanlinesLiteShader,
         "grain-lite": grainLiteShader,

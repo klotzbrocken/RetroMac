@@ -39,6 +39,7 @@ enum PresetRegistry {
             PresetInfo(id: "lcd-broken-lite", displayName: "LCD Broken Lite", description: "Damaged LCD — dead pixels, stuck lines, pressure marks"),
             PresetInfo(id: "bw-lite", displayName: "B&W Lite", description: "Grayscale + film grain — uses macOS Accessibility"),
             PresetInfo(id: "amber-lite", displayName: "Amber Lite", description: "Amber phosphor monitor — uses macOS Accessibility"),
+            PresetInfo(id: "green-lite", displayName: "Green Lite", description: "Green phosphor terminal — uses macOS Accessibility"),
             PresetInfo(id: "vhs-lite", displayName: "VHS Lite", description: "VHS tracking lines + noise overlay"),
             PresetInfo(id: "scanlines-lite", displayName: "Scanlines Lite", description: "Pure scanlines overlay — no screen recording"),
             PresetInfo(id: "grain-lite", displayName: "Film Scratches Lite", description: "Vertical scratches, dust specks + projector flicker"),

@@ -20,3 +20,15 @@ final class NativeSaverTests: XCTestCase {
         }
     }
 }
+
+/// Green Lite and the Lite stand-in for a full preset when Screen Recording is missing.
+final class LiteFallbackTests: XCTestCase {
+    func testEveryFullPresetHasALiteStandIn() {
+        XCTAssertTrue(AppDelegate.isLitePreset("green-lite"))
+        XCTAssertEqual(AppDelegate.litePreset(for: "green-phosphor"), "green-lite")
+        XCTAssertEqual(AppDelegate.litePreset(for: "amber-monitor"), "amber-lite")
+        XCTAssertEqual(AppDelegate.litePreset(for: "zfast-crt"), "crt-lite")
+        XCTAssertEqual(AppDelegate.litePreset(for: "vhs-lite"), "vhs-lite")
+        XCTAssertEqual(AppDelegate.litePreset(for: "some-unknown-shader"), "crt-lite")
+    }
+}
