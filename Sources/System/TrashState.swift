@@ -77,9 +77,33 @@ enum TrashState {
         return !names.contains { !$0.hasPrefix(".") }
     }
 
+    /// Whether macOS's "control Finder" prompt has been put up this launch.
+    private static var askedFinder = false
+
+    /// Finder automation, asked without a prompt: noErr, -1743 refused, -1744 not asked yet.
+    private static func finderPermission(ask: Bool) -> OSStatus {
+        guard let desc = NSAppleEventDescriptor(bundleIdentifier: "com.apple.finder").aeDesc else { return OSStatus(procNotFound) }
+        return AEDeterminePermissionToAutomateTarget(desc, typeWildCard, typeWildCard, ask)
+    }
+
     /// MAIN THREAD ONLY — see the note above. `nil` means Finder did not answer.
     private static func viaFinder() -> Bool? {
         dispatchPrecondition(condition: .onQueue(.main))
+        // Not undecided through the script: its 3 s timeout took macOS's prompt down again and
+        // every poll put it back up — a tester saw it every half minute. Undecided, it is asked
+        // once, off-main and without a timeout; refused, Finder is left alone.
+        let status = finderPermission(ask: false)
+        if status == OSStatus(errAEEventWouldRequireUserConsent) {
+            if !askedFinder {
+                askedFinder = true
+                DispatchQueue.global(qos: .utility).async {
+                    guard finderPermission(ask: true) == noErr else { return }
+                    DispatchQueue.main.async { invalidate() }
+                }
+            }
+            return nil
+        }
+        guard status == noErr else { return nil }
         if script == nil {
             script = NSAppleScript(source: SystemUIHelper.withTimeout("tell application \"Finder\" to return (count of items of trash)", seconds: 3))
         }

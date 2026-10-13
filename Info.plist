@@ -45,7 +45,7 @@
 		<true/>
 	</dict>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>RetroMac uses System Events to hide the Dock and menu bar while the overlay is active.</string>
+	<string>RetroMac asks System Events to hide the Dock and menu bar while a theme or the overlay is active, and Finder whether the Trash is full, so the trash icon matches.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>RetroMac needs camera access to apply retro shader effects to your webcam for video calls.</string>
 	<key>NSScreenCaptureUsageDescription</key>
