@@ -34,6 +34,10 @@ final class MountainLionAboutWindow: NSObject, NSWindowDelegate {
         w.appearance = NSAppearance(named: .aqua)
         // 10.8's title bar is ours: light grey to mid grey, a darker line under it.
         w.titlebarAppearsTransparent = true
+        // The content runs under the title bar now, so the window grows by the bar's height and
+        // everything below keeps its 420 pt — the apple sat in the bar before.
+        let barH = w.frame.height - w.contentLayoutRect.height
+        w.setContentSize(NSSize(width: 342, height: 420 + barH))
         let v = LionWindowBackground(frame: NSRect(origin: .zero, size: w.frame.size))
         w.contentView = v
 
