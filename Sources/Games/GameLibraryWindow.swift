@@ -14,6 +14,10 @@ import AppKit
 struct GameLibraryView: View {
 
     @StateObject private var model = GameLibraryModel()
+    @StateObject private var apps = AppLibraryModel()
+    enum Tab: String, CaseIterable { case apps = "Apps", games = "Games" }
+    /// Games first, as before: every way in but the menu comes from a games page.
+    @State private var tab: Tab = .games
     /// Wide enough for the longest button row a card can show — "Install Yamagi Quake II" plus
     /// the menu button — so the row never has to overflow in the first place.
     private let columns = [GridItem(.adaptive(minimum: 200), spacing: 16)]
@@ -24,21 +28,34 @@ struct GameLibraryView: View {
             Divider()
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(InternetArchive.catalogue) { card($0) }
+                    if tab == .games {
+                        ForEach(InternetArchive.catalogue) { card($0) }
+                    } else {
+                        ForEach(AppCatalog.catalogue) { appCard($0) }
+                    }
                 }
                 .padding(16)
             }
             Divider()
-            footer
+            if tab == .games { footer } else { appsFooter }
         }
         .frame(minWidth: 560, minHeight: 520)
-        .onAppear { model.refresh() }
+        .onAppear { model.refresh(); apps.refresh() }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Game Library").font(.title2.bold())
-            Text("RetroMac installs the engine each game needs, downloads the free and shareware episodes, and finds the game data you already have. Full commercial games come from your own copy.")
+            HStack {
+                Text("Game & Apps Library").font(.title2.bold())
+                Spacer()
+                Picker("Show", selection: $tab) {
+                    ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented).labelsHidden().fixedSize()
+            }
+            Text(tab == .games
+                 ? "RetroMac installs the engine each game needs, downloads the free and shareware episodes, and finds the game data you already have. Full commercial games come from your own copy."
+                 : "Real Mac apps in a classic look. RetroMac downloads them from their makers, checks the signature and puts them in Applications. Theme title bars stay off them, since they draw their own.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -239,6 +256,70 @@ struct GameLibraryView: View {
         // cover, so it stops taking them at all.
         .allowsHitTesting(false)
         .onAppear { model.loadCover(t) }
+    }
+
+    private func appCard(_ a: AppCatalog.App) -> some View {
+        let installed = apps.installed.contains(a.id)
+        return VStack(alignment: .leading, spacing: 6) {
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 5).fill(Color.black.opacity(0.15))
+                    if let img = apps.shots[a.id] {
+                        Image(nsImage: img).resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Image(systemName: "macwindow").font(.system(size: 26)).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(height: 110).clipShape(RoundedRectangle(cornerRadius: 5))
+                if installed {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 20))
+                        .symbolRenderingMode(.palette).foregroundStyle(.white, .green).padding(6)
+                }
+            }
+            .allowsHitTesting(false)   // as with the covers: a filled image overhangs its frame
+            .accessibilityHidden(true)
+            .onAppear { apps.loadShot(a) }
+            Text(a.name).font(.headline).lineLimit(1)
+            Text(a.author).font(.caption).foregroundStyle(.secondary)
+            Text(a.blurb).font(.caption2).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let note = AppCatalog.archNote(a) ?? a.caveat {
+                Text(note).font(.caption2).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let e = apps.errors[a.id] {
+                Text(e).font(.caption2).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 6) {
+                if apps.activeID == a.id {
+                    ProgressView().controlSize(.small)
+                } else if installed {
+                    Button("Open") { apps.open(a) }
+                } else if case .appStore(let url) = a.source {
+                    Button("App Store") { NSWorkspace.shared.open(url) }
+                } else if AppCatalog.canInstall(a) {
+                    Button("Install") { apps.install(a) }.disabled(apps.activeID != nil)
+                }
+                Spacer(minLength: 0)
+                Button("Website") { NSWorkspace.shared.open(a.page) }
+                    .buttonStyle(.link).font(.caption)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(a.name)\(installed ? ", installed" : "")")
+    }
+
+    private var appsFooter: some View {
+        Text("Each app belongs to its maker and is fetched from them: GitHub releases, the maker's own site, or the Mac App Store. RetroMac installs only what is signed by its developer, notarised by Apple and carries the expected bundle identifier, unless you allow an exception.")
+            .font(.caption2).foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
     }
 
     private var footer: some View {
@@ -591,6 +672,49 @@ final class GameLibraryModel: ObservableObject {
     }
 }
 
+/// The Apps tab's state: what is installed, which install runs, and the screenshots.
+final class AppLibraryModel: ObservableObject {
+    @Published var installed: Set<String> = []
+    @Published var shots: [String: NSImage] = [:]
+    @Published var errors: [String: String] = [:]
+    @Published var activeID: String?
+
+    func refresh() {
+        installed = Set(AppCatalog.catalogue.filter(AppCatalog.isInstalled).map(\.id))
+        AppCatalog.excludeInstalledFromTitleBars()
+    }
+
+    func install(_ a: AppCatalog.App) {
+        guard activeID == nil else { return }
+        errors[a.id] = nil
+        activeID = a.id
+        AppCatalog.install(a) { [weak self] error in
+            self?.activeID = nil
+            self?.errors[a.id] = error
+            self?.refresh()
+        }
+    }
+
+    func open(_ a: AppCatalog.App) {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: a.bundleID) else { refresh(); return }
+        NSWorkspace.shared.openApplication(at: url, configuration: .init())
+    }
+
+    /// Cached next to the game covers, under the app's id, for the same reasons.
+    func loadShot(_ a: AppCatalog.App) {
+        guard shots[a.id] == nil else { return }
+        let dir = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support/RetroMac/Covers")
+        let file = dir.appendingPathComponent("app-\(a.id).\(a.screenshot.pathExtension.isEmpty ? "img" : a.screenshot.pathExtension)")
+        if let img = NSImage(contentsOf: file) { shots[a.id] = img; return }
+        URLSession.shared.dataTask(with: a.screenshot) { [weak self] data, _, _ in
+            guard let data, let img = NSImage(data: data) else { return }
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try? data.write(to: file)
+            DispatchQueue.main.async { self?.shots[a.id] = img }
+        }.resume()
+    }
+}
+
 // MARK: - Controller
 
 final class GameLibraryWindowController: NSObject, NSWindowDelegate {
@@ -607,7 +731,7 @@ final class GameLibraryWindowController: NSObject, NSWindowDelegate {
         let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 640),
                            styleMask: [.titled, .closable, .resizable],
                            backing: .buffered, defer: false)
-        win.title = "Game Library"
+        win.title = "Game & Apps Library"
         win.contentView = NSHostingView(rootView: GameLibraryView())
         win.center()
         win.isReleasedWhenClosed = false

@@ -334,7 +334,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // QA hook: open the Game Library, same reason as the Settings hook above.
+        // The library's retro apps draw their own windows: off the theme's title bars once installed.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { AppCatalog.startWatching() }
+
+        // QA hook: open the Game & Apps Library, same reason as the Settings hook above.
         if ProcessInfo.processInfo.environment["RETROMAC_OPEN_GAME_LIBRARY"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { self.openGameLibrary() }
         }
@@ -1549,7 +1552,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dockOnlyItem.state = settings.dockOnly ? .on : .off
         dockOnlyItem.toolTip = "Restyle the Dock, not the whole system"
         dockOnlyItem.image = sfIcon("dock.rectangle")
-        let gamesItem = NSMenuItem(title: "Game Library\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
+        let gamesItem = NSMenuItem(title: "Game & Apps Library\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
         gamesItem.target = self
         gamesItem.image = sfIcon("gamecontroller")
         moreMenu.addItem(gamesItem)

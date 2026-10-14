@@ -75,6 +75,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   by any column and ends a process after XP's warning; Networking draws a graph per adapter with
   its link speed; Users lists who is logged in. "Task Manager" is in the XP Start menu now too.
 
+- **Game & Apps Library.** The Game Library has a second tab, Apps: retro-looking Mac apps that
+  are real apps — Reframe, RetroFind, RetroContacts, RetroReminder, RetroCal, RetroNotes, Classic
+  Mac Finder and QuickTune install with one press, from their makers, checked for signature,
+  notarisation and bundle ID; Mojave Paint opens in the Mac App Store. Each card shows the app's
+  own screenshot. Installed, an app is taken off the theme title bars once (it draws its own),
+  also when it came from somewhere else and is first started.
 - **Betas on request.** About ▸ Software Updates ▸ "Include beta versions" brings test builds
   through the regular updater; off, a Mac stays on the released versions.
 
@@ -115,6 +121,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **No more "control Finder" prompt every half minute, from a beta tester.** The trash icon asks
+  Finder whether the Trash is full; macOS's question about that came back with every poll until it
+  was answered. Now it is asked once per launch, and a "Don't Allow" leaves Finder alone.
 - **Spaces, from a beta tester.** The Setup Assistant asks whether the theme goes on every Space or
   only the one you are on. Each Space's own wallpaper is read from macOS's wallpaper store before
   the theme sets one, so a Space RetroMac finds already wearing a theme picture gets its own back
