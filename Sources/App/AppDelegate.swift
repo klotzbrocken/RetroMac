@@ -1090,6 +1090,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// without it "On This Space" kept its old tick, and a second try took the Space out again).
     func refreshStatusMenu() { rebuildMenu() }
 
+    @objc private func toggleGlassClickThrough() {
+        DesktopGlassController.shared.clickThrough.toggle()
+        rebuildMenu()
+    }
+
+    /// For what lives outside this file and changes what the menu shows.
+    func refreshMenu() { rebuildMenu() }
+
     private func rebuildMenu() {
         // Overlay/preset state has settled by the time the menu is rebuilt (incl. the
         // async full-overlay completion). Notify the flyout so its shader toggle and
@@ -1201,6 +1209,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let tubeToggleItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         tubeToggleItem.view = tubeRow
         menu.addItem(tubeToggleItem)
+
+        // ── Desktop Glass: a window that shows what is under it through the shader ──
+        let glass = DesktopGlassController.shared
+        let glassRow = MenuToggleRowView(icon: "rectangle.dashed", label: "Desktop Glass", hotkeyHint: nil,
+                                         pill: PillToggleView(isOn: glass.isOn)) {
+            DesktopGlassController.shared.toggle()
+        }
+        let glassItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        glassItem.view = glassRow
+        menu.addItem(glassItem)
+        // Only while the glass is up: with Click Through on, the window takes no clicks, so this
+        // is the way back.
+        if glass.isOn {
+            let through = NSMenuItem(title: "Glass: Click Through", action: #selector(toggleGlassClickThrough), keyEquivalent: "")
+            through.target = self
+            through.state = glass.clickThrough ? .on : .off
+            through.indentationLevel = 1
+            menu.addItem(through)
+        }
 
         // Window borders live in Settings > Themes and nowhere else. A switch that exists in
         // two places is a switch that eventually disagrees with itself.
@@ -2019,7 +2046,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return liteToFullPreset.filter { $0.value == presetID }.keys.sorted().first ?? "crt-lite"
     }
 
-    private static func fullPreset(for presetID: String) -> String {
+    static func fullPreset(for presetID: String) -> String {
         isLitePreset(presetID) ? (liteToFullPreset[presetID] ?? "zfast-crt") : presetID
     }
 

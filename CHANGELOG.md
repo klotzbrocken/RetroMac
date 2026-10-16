@@ -81,6 +81,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   notarisation and bundle ID; Mojave Paint opens in the Mac App Store. Each card shows the app's
   own screenshot. Installed, an app is taken off the theme title bars once (it draws its own),
   also when it came from somewhere else and is first started.
+- **Desktop Glass.** A window you place over anything — a video, an emulator, a web page —
+  that shows what lies under it through the current shader (ShaderGlass's idea on Windows). It
+  runs with the shader on or off, follows the preset in the menu, remembers where it was, and
+  with Click Through on, the pointer reaches what is under it. Menu-bar menu or Settings ▸
+  Shader ▸ Screen & Apps.
 - **Betas on request.** About ▸ Software Updates ▸ "Include beta versions" brings test builds
   through the regular updater; off, a Mac stays on the released versions.
 

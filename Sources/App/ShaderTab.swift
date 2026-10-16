@@ -192,6 +192,24 @@ private struct ScopeSection: View {
                     }
                 }
 
+                RMCard(title: "Desktop Glass",
+                       subtitle: "A window you place over a video, a game or a page: it shows what lies under it through the current shader. Also in the menu-bar menu.",
+                       bodyPadding: 0) {
+                    VStack(spacing: 0) {
+                        RMRow(label: "Open Desktop Glass") {
+                            Button("Open") { DesktopGlassController.shared.open() }
+                        }
+                        RMRow(label: "Click through",
+                              hint: "The pointer reaches what is under the glass. The menu-bar menu turns it off again.",
+                              isLast: true) {
+                            Toggle("", isOn: Binding(get: { DesktopGlassController.shared.clickThrough },
+                                                     set: { DesktopGlassController.shared.clickThrough = $0
+                                                            AppDelegate.shared?.refreshMenu() }))
+                                .toggleStyle(.switch).tint(.rmAccent)
+                        }
+                    }
+                }
+
                 RMCard(title: "While the shader is on", bodyPadding: 0) {
                     VStack(spacing: 0) {
                         RMRow(label: "Hide the system menu bar") {
