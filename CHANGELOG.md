@@ -121,6 +121,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **VoiceOver, from the blind tester's fourth round.** Under VoiceOver the More entries stand in
+  the menu-bar menu itself (in the submenu an arrow key read one entry and closed the menu). The
+  "menu-bar icon not shown" warning no longer comes up under VoiceOver, whose Screen Curtain made
+  the icon look hidden. In Settings the sidebar comes first, then the page; each page's parts are
+  a pop-up with its own name (Themes section, Shader section, Camera section) instead of radio
+  buttons called "Section"; the status line is one "Overlay on/off" without an unlabelled image;
+  and "Show dock now" says what it did.
 - **No more "control Finder" prompt every half minute, from a beta tester.** The trash icon asks
   Finder whether the Trash is full; macOS's question about that came back with every poll until it
   was answered. Now it is asked once per launch, and a "Don't Allow" leaves Finder alone.

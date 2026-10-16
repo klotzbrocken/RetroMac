@@ -59,6 +59,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var moreSleepObservers: [NSObjectProtocol] = []
     private var overlayStartTask: Task<Void, Never>?
     private var permissionPollTimer: Timer?
+    /// The menu is laid out for VoiceOver or not (see More), so it is rebuilt when VoiceOver
+    /// goes on or off.
+    private var voiceOverObservation: NSKeyValueObservation?
 
     // Retro Viewport (movable shader window)
     private(set) var retroViewport = RetroViewport()
@@ -336,6 +339,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // The library's retro apps draw their own windows: off the theme's title bars once installed.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { AppCatalog.startWatching() }
+        voiceOverObservation = NSWorkspace.shared.observe(\.isVoiceOverEnabled) { [weak self] _, _ in
+            DispatchQueue.main.async { self?.rebuildMenu() }
+        }
 
         // QA hook: open the Game & Apps Library, same reason as the Settings hook above.
         if ProcessInfo.processInfo.environment["RETROMAC_OPEN_GAME_LIBRARY"] != nil {
@@ -466,7 +472,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Not while the menu bar hides itself (a theme's, or the user's own): then the icon is
         // there, only out of sight until the pointer goes up.
         let barHides = AppSettings.shared.hideMenuBar || (OriginalSettings.read("-g", "_HIHideMenuBar") as? Bool) == true
-        guard !AppSettings.shared.dockModeEnabled, !barHides,
+        // Not under VoiceOver: its Screen Curtain leaves every window occluded, so the icon read
+        // as missing while the blind tester was using it.
+        guard !AppSettings.shared.dockModeEnabled, !barHides, !NSWorkspace.shared.isVoiceOverEnabled,
               let window = statusItem?.button?.window else { return }
         let onScreen = window.occlusionState.contains(.visible)
             && NSScreen.screens.contains { $0.frame.intersects(window.frame) }
@@ -1569,8 +1577,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rescueItem.target = self
         rescueItem.image = sfIcon("lifepreserver")
         moreMenu.addItem(rescueItem)
-        moreItem.submenu = moreMenu
-        menu.addItem(moreItem)
+        // Under VoiceOver the four entries stand in the menu itself: in the submenu an arrow
+        // key read one entry and closed the menu, so More could not be used at all.
+        if NSWorkspace.shared.isVoiceOverEnabled {
+            for item in moreMenu.items { moreMenu.removeItem(item); menu.addItem(item) }
+        } else {
+            moreItem.submenu = moreMenu
+            menu.addItem(moreItem)
+        }
 
         // Quit moved to a power symbol in the header; Reset Permissions moved to Settings.
         menu.delegate = self

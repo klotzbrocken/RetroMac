@@ -116,6 +116,7 @@ struct SettingsView: View {
             // Sidebar
             SettingsSidebar(selectedTab: $selectedTab)
                 .frame(width: 200)
+                .accessibilitySortPriority(2)
 
             // Vertical divider
             Rectangle()
@@ -125,7 +126,11 @@ struct SettingsView: View {
             // Detail pane
             SettingsDetailPane(selectedTab: $selectedTab, updater: updater)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilitySortPriority(1)
         }
+        // VoiceOver: the sidebar, then the page from its title down. Left to SwiftUI, a page's
+        // section switch came out between the sidebar's pop-up and its status line.
+        .accessibilityElement(children: .contain)
         .frame(width: 700, height: 640)
         .background(ZStack { Color.rmBg; RMScanline() })
         .onChange(of: selectedTab) { newTab in
@@ -310,7 +315,6 @@ struct SidebarStatusFooter: View {
                         .fill(overlayIsOn ? Color.rmAccent : Color.rmTextTertiary)
                         .frame(width: 8, height: 8)
                 }
-                .accessibilityHidden(true)   // the words beside it say the same; VoiceOver read "image"
 
                 HStack(spacing: 4) {
                     Text("Overlay")
@@ -332,7 +336,11 @@ struct SidebarStatusFooter: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .accessibilityElement(children: .combine)
+            // One line for VoiceOver. Combined, the dot still came out as an unlabelled image,
+            // hidden or not.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Overlay \(overlayIsOn ? "on" : "off")")
+            .accessibilityAddTraits(.isStaticText)
         }
     }
 }
@@ -427,9 +435,16 @@ struct DetailTitleBar: View {
         switch tab {
         case .dock:
             // Theme import lives in-context as "Add custom…" in the Themes section.
+            // Says what it did: with the theme already on it changed nothing, and a VoiceOver
+            // user heard nothing at all.
             Button("Show dock now") {
-                AppSettings.shared.dockEnabled = true
-                DockController.shared.start()
+                if AppSettings.shared.dockEnabled {
+                    DockController.shared.raiseWindow()
+                    MenuKeyboard.announce("The theme is already on")
+                } else {
+                    AppSettings.shared.dockEnabled = true
+                    MenuKeyboard.announce("Theme on")
+                }
             }
             .buttonStyle(RMPrimaryButtonStyle())
         default:

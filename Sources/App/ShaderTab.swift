@@ -41,12 +41,13 @@ struct ShaderTab: View {
             }
             .padding(2)
             .background(RoundedRectangle(cornerRadius: 8).fill(Color.rmTextPrimary.opacity(0.06)))
-            // VoiceOver: the tabs as tabs, the way the native segmented switch reads.
+            // VoiceOver: a pop-up like the sidebar's, which the blind tester knew from 2.8 and
+            // went looking for; as radio buttons he could not find the four parts.
             .accessibilityRepresentation {
-                Picker("Shader", selection: $section) {
+                Picker("Shader section", selection: $section) {
                     ForEach(ShaderSection.allCases) { Text($0.rawValue).tag($0) }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 24)

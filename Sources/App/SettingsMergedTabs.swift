@@ -14,6 +14,14 @@ struct CameraStreamingTab: View {
                 ForEach(Sec.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented).labelsHidden()
+            // VoiceOver: a pop-up with its own name, like the sidebar's. As a radio group called
+            // "Section" it was taken for the sidebar's and could not be found.
+            .accessibilityRepresentation {
+                Picker("Camera section", selection: $section) {
+                    ForEach(Sec.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.menu)
+            }
             .padding(.horizontal, 24).padding(.vertical, 12)
             Rectangle().fill(Color.rmDivider).frame(height: 1)
             Group {
@@ -41,6 +49,14 @@ struct DockThemesTab: View {
                 ForEach(Sec.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented).labelsHidden()
+            // VoiceOver: a pop-up with its own name, like the sidebar's. As a radio group called
+            // "Section" it was taken for the sidebar's and could not be found.
+            .accessibilityRepresentation {
+                Picker("Themes section", selection: $section) {
+                    ForEach(Sec.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.menu)
+            }
             .padding(.horizontal, 24).padding(.vertical, 12)
             Rectangle().fill(Color.rmDivider).frame(height: 1)
             Group {
