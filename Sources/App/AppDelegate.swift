@@ -1095,6 +1095,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
+    /// A theme opened from the Finder (double-click, or dropped on the app). Without this the
+    /// declared document type only got macOS's "cannot open files in this format".
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.isFileURL && ["retromactheme", "zip"].contains(url.pathExtension.lowercased()) {
+            importThemeFile(url)
+        }
+    }
+
+    /// Install a theme file, select it and show it in Settings ▸ Themes; say so when it fails.
+    func importThemeFile(_ url: URL) {
+        do {
+            if let id = try ThemeManager.shared.importTheme(from: url) { AppSettings.shared.dockTheme = id }
+            AppSettings.shared.lastSettingsTab = SettingsTab.dock.rawValue
+            settingsWindow.show()
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "\(url.deletingPathExtension().lastPathComponent) could not be imported"
+            alert.informativeText = error.localizedDescription
+            NSApp.activate(ignoringOtherApps: true)
+            alert.runModal()
+        }
+    }
+
     /// For what lives outside this file and changes what the menu shows.
     func refreshMenu() { rebuildMenu() }
 

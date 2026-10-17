@@ -3,6 +3,15 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 3.0.1
+
+### Fixes
+
+- **A .retromactheme opens in RetroMac.** A double-click in the Finder installs the theme,
+  selects it and shows it in Settings ▸ Themes; macOS used to say RetroMac cannot open files in
+  that format. "Add custom…" accepts a theme or a .zip with one (the panel only took folders,
+  so a theme could not be chosen), and a failed import says why.
+
 ## 3.0
 
 ### New

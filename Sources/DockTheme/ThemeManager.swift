@@ -1364,7 +1364,9 @@ final class ThemeManager {
         print("[Theme] Saved new theme: \(name) [\(newID)]")
     }
 
-    func importTheme(from sourceURL: URL) throws {
+    /// Returns the imported theme's id (what `dockTheme` holds), so a caller can select it.
+    @discardableResult
+    func importTheme(from sourceURL: URL) throws -> String? {
         let fm = FileManager.default
         try fm.createDirectory(at: userThemesDir, withIntermediateDirectories: true)
 
@@ -1386,21 +1388,25 @@ final class ThemeManager {
             guard let bundle = Self.findThemeBundle(in: tmp) else {
                 throw NSError(domain: "RetroMac", code: 2, userInfo: [NSLocalizedDescriptionKey: "No .retromactheme bundle found inside the .zip."])
             }
-            try installThemeBundle(bundle)
-        } else {
-            try installThemeBundle(sourceURL)
+            let id = try installThemeBundle(bundle)
+            reload()
+            return id
         }
+        let id = try installThemeBundle(sourceURL)
         reload()
         print("[Theme] Imported theme from \(sourceURL.lastPathComponent)")
+        return id
     }
 
-    private func installThemeBundle(_ src: URL) throws {
+    @discardableResult
+    private func installThemeBundle(_ src: URL) throws -> String? {
         // Replace the bundle that carries the same theme id, not merely the same file name:
         // a renamed .retromactheme must still update the theme it *is*, and an unrelated theme
         // that happens to share a file name must not be clobbered.
         let incomingID = try? ThemeBundle(url: src).stableID
         let existing = availableThemes.first { !$0.isBuiltIn && $0.stableID == incomingID }
         try Self.install(bundleAt: src, into: userThemesDir, replacing: existing?.url)
+        return incomingID
     }
 
     /// Copy-then-swap install. Staging lives inside `themesDir` so it is on the same volume and

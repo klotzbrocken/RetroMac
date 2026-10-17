@@ -1118,19 +1118,16 @@ struct DockSettingsTab: View {
     private func importTheme() {
         NSApp.activate(ignoringOtherApps: true)
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [UTType.folder]
-        panel.message = "Select a .retromactheme bundle"
+        // A .retromactheme is a package, which the panel shows as a file: with only folders
+        // allowed it could not be chosen at all, and the button seemed to do nothing.
+        panel.allowedContentTypes = [UTType(exportedAs: "de.klotzbrocken.retromac.theme"), .zip]
+        panel.message = "Select a .retromactheme theme or a .zip containing one"
         panel.prompt = "Import"
         panel.level = .floating
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        guard url.pathExtension == "retromactheme" else { return }
-        do {
-            try ThemeManager.shared.importTheme(from: url)
-            themes = ThemeManager.shared.availableThemes
-        } catch {
-            print("[Dock] Import failed: \(error)")
-        }
+        AppDelegate.shared?.importThemeFile(url)
+        themes = ThemeManager.shared.availableThemes
     }
 }
 
