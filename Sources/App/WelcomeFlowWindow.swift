@@ -117,7 +117,7 @@ struct WelcomeFlowView: View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
-                Text("What's New in RetroMac \(whatsNewVersion) Beta").font(.title2.bold())   // drop "Beta" for the release
+                Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
                 Text("Spaces, new themes, historic icons \u{2014} and a lot of fixes")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
