@@ -106,8 +106,11 @@ final class ProgramManagerController {
         // Running-apps row along the bottom of the desktop (Win 3.1 minimized-program icons),
         // since this theme hides the macOS Dock. Click to bring an app to the front.
         tasksView?.removeFromSuperview()
-        let tasks = Win31TaskIconsView(frame: NSRect(x: 8, y: 6, width: screenFrame.width - 16, height: 62))
-        content.addSubview(tasks)
+        // The whole desktop, so an icon can be dragged anywhere; below the Program Manager, as
+        // Win 3.1's icons lay under its windows.
+        let tasks = Win31TaskIconsView(frame: content.bounds)
+        tasks.autoresizingMask = [.width, .height]
+        content.addSubview(tasks, positioned: .below, relativeTo: view)
         tasks.reload()
         self.tasksView = tasks
 
