@@ -46,15 +46,10 @@ final class DockBadges {
     private(set) var counts: [String: String] = [:]
     /// The Dock forgets every badge when it restarts (a theme turning on restarts it), and most
     /// apps set theirs again only when the number changes. What was showing is carried over
-    /// until the Dock reports that app again or the app quits; Mail's own count stands in for
-    /// Mail's once the Dock has shown that Mail badges at all (the user may have turned them off).
+    /// until the Dock reports that app again or the app quits. (Mail's own count cannot stand in:
+    /// Mail is sandboxed, and its preferences read empty from outside.)
     private var carried: [String: String] = [:]
     private var lastDockPID: pid_t?
-    /// Kept across launches: RetroMac starting a theme restarts the Dock before it sees a badge.
-    private var dockShowedMail: Bool {
-        get { UserDefaults.standard.bool(forKey: "dockBadgesMailSeen") }
-        set { if newValue != dockShowedMail { UserDefaults.standard.set(newValue, forKey: "dockBadgesMailSeen") } }
-    }
     private var timer: Timer?
     private var urlToID: [URL: String] = [:]
     private let queue = DispatchQueue(label: "retromac.dockbadges", qos: .utility)
@@ -84,22 +79,10 @@ final class DockBadges {
 
     private func withCarried(_ fromDock: [String: String]) -> [String: String] {
         var result = fromDock
-        if fromDock["com.apple.mail"] != nil { dockShowedMail = true }
         let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         carried = carried.filter { fromDock[$0.key] == nil && running.contains($0.key) }
         for (id, label) in carried { result[id] = label }
-        if dockShowedMail, fromDock["com.apple.mail"] == nil, running.contains("com.apple.mail") {
-            result["com.apple.mail"] = Self.mailOwnCount()
-        }
         return result
-    }
-
-    /// The number Mail keeps for its Dock icon, nil at none.
-    private static func mailOwnCount() -> String? {
-        CFPreferencesAppSynchronize("com.apple.mail" as CFString)
-        let v = CFPreferencesCopyAppValue("MailDockBadgeCurrentCount" as CFString, "com.apple.mail" as CFString) as? [String: Any]
-        guard let n = (v?["count"] as? NSNumber)?.intValue, n > 0 else { return nil }
-        return String(n)
     }
 
     private func publish(_ new: [String: String]) {

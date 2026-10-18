@@ -20,7 +20,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Badges survive a theme switch.** Turning a theme on or switching between Snow Leopard and
   Mountain Lion restarted the Mac's Dock, which forgets every badge, and Mail sends its count
   again only when it changes. Global tweaks like scroll bars no longer restart the Dock, and
-  after a restart the last badges stay (Mail's from its own count) until the Dock has them again.
+  after a restart the badges RetroMac had seen stay until the Dock has them again.
 - **Desktop Glass is gone again.** It was an experiment and should not have shipped in 3.0.
 - **Windows 3.x: the icons of running programs can be dragged** anywhere on the desktop, as in
   Windows 3.1, and stay where they were put (per app). A click without moving still brings the
