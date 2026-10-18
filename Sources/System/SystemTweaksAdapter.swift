@@ -198,7 +198,7 @@ enum SystemTweaksAdapter {
                 else { restored = false }
             }
             if !restored { remaining.append(e); continue }   // retry later — do NOT drop the original
-            kill.formUnion(refreshTargets(domain: domain, refresh: e["refresh"]))
+            kill.formUnion(refreshTargets(domain: domain, refresh: e["refresh"], key: key))
         }
         stored = remaining
         let storedIDs = Set(stored.compactMap { e -> String? in
@@ -229,7 +229,7 @@ enum SystemTweaksAdapter {
         //    change, and on every Space switch with the theme on chosen Spaces.
         for t in target where !Self.holds(sb.readDefault(t.domain, t.key), type: t.type, value: t.value) {
             sb.runDefaults(["write", t.domain, t.key, flag(t.type), literal(t.type, t.value)])
-            kill.formUnion(refreshTargets(domain: t.domain, refresh: t.refresh))
+            kill.formUnion(refreshTargets(domain: t.domain, refresh: t.refresh, key: t.key))
         }
         persistSnapshot(stored)   // re-persist (keeps the empty-after-revert case in sync)
 
@@ -294,9 +294,12 @@ enum SystemTweaksAdapter {
     }
 
     /// Which app(s) to `killall` so a change becomes visible. Explicit `refresh` wins; otherwise
-    /// derive from the domain. `-g`/NSGlobalDomain chrome shows after refreshing Finder + Dock
-    /// (other apps pick it up on their next launch).
-    static func refreshTargets(domain: String, refresh: String?) -> Set<String> {
+    /// derive from the domain. A global key shows after refreshing the Finder (other apps pick it
+    /// up on their next launch); the Dock only for the one that changes the Dock's own look.
+    /// Restarting the Dock for scroll bars or window animations cost every app its badge — Mail
+    /// sends its count again only when it changes — and switching Snow Leopard to Mountain Lion
+    /// did exactly that.
+    static func refreshTargets(domain: String, refresh: String?, key: String = "") -> Set<String> {
         // Clamp an explicit refresh to Finder/Dock only — a theme must never be able to `killall`
         // an arbitrary process (e.g. loginwindow, WindowServer). Anything else falls back to the
         // domain-derived default.
@@ -305,6 +308,7 @@ enum SystemTweaksAdapter {
         case "com.apple.finder":         return ["Finder"]
         case "com.apple.dock":           return ["Dock"]
         case "com.apple.universalaccess": return ["Dock"]
+        case "-g", "NSGlobalDomain":      return key == "AppleReduceDesktopTinting" ? ["Finder", "Dock"] : ["Finder"]
         default:                          return ["Finder", "Dock"]
         }
     }

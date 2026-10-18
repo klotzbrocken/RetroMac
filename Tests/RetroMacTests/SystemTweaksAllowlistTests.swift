@@ -41,8 +41,11 @@ final class SystemTweaksAllowlistTests: XCTestCase {
         // "loginwindow" would log the user out; it must be dropped and the domain default used.
         XCTAssertEqual(SystemTweaksAdapter.refreshTargets(domain: "com.apple.finder", refresh: "loginwindow"), ["Finder"])
         XCTAssertEqual(SystemTweaksAdapter.refreshTargets(domain: "com.apple.dock", refresh: "WindowServer"), ["Dock"])
-        // Global domain with a bogus refresh falls back to refreshing Finder + Dock.
-        XCTAssertEqual(SystemTweaksAdapter.refreshTargets(domain: "-g", refresh: "kernel_task"), ["Finder", "Dock"])
+        // Global domain with a bogus refresh falls back to the Finder; the Dock only for the key
+        // that changes the Dock's look. A needless Dock restart costs every app its badge.
+        XCTAssertEqual(SystemTweaksAdapter.refreshTargets(domain: "-g", refresh: "kernel_task"), ["Finder"])
+        XCTAssertEqual(SystemTweaksAdapter.refreshTargets(domain: "-g", refresh: nil, key: "AppleShowScrollBars"), ["Finder"])
+        XCTAssertEqual(SystemTweaksAdapter.refreshTargets(domain: "-g", refresh: nil, key: "AppleReduceDesktopTinting"), ["Finder", "Dock"])
     }
 
     /// The corner key the title-bar overlay writes is allowlisted, and it is the only one it

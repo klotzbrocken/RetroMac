@@ -17,6 +17,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Badges survive a theme switch.** Turning a theme on or switching between Snow Leopard and
+  Mountain Lion restarted the Mac's Dock, which forgets every badge, and Mail sends its count
+  again only when it changes. Global tweaks like scroll bars no longer restart the Dock, and
+  after a restart the last badges stay (Mail's from its own count) until the Dock has them again.
+- **Desktop Glass is gone again.** It was an experiment and should not have shipped in 3.0.
 - **Windows 3.x: the icons of running programs can be dragged** anywhere on the desktop, as in
   Windows 3.1, and stay where they were put (per app). A click without moving still brings the
   program forward; the icons lie under the Program Manager, as Win 3.1's lay under its windows.
@@ -103,11 +108,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   notarisation and bundle ID; Mojave Paint opens in the Mac App Store. Each card shows the app's
   own screenshot. Installed, an app is taken off the theme title bars once (it draws its own),
   also when it came from somewhere else and is first started.
-- **Desktop Glass.** A window you place over anything — a video, an emulator, a web page —
-  that shows what lies under it through the current shader (ShaderGlass's idea on Windows). It
-  runs with the shader on or off, follows the preset in the menu, remembers where it was, and
-  with Click Through on, the pointer reaches what is under it. Menu-bar menu or Settings ▸
-  Shader ▸ Screen & Apps.
+
 - **Betas on request.** About ▸ Software Updates ▸ "Include beta versions" brings test builds
   through the regular updater; off, a Mac stays on the released versions.
 
