@@ -25,10 +25,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Windows 3.x: the icons of running programs can be dragged** anywhere on the desktop, as in
   Windows 3.1, and stay where they were put (per app). A click without moving still brings the
   program forward; the icons lie under the Program Manager, as Win 3.1's lay under its windows.
+- **Themes can be deleted.** Settings ▸ Themes ▸ Delete… moves your own or an imported theme
+  to the Trash, after asking; the built-in themes stay. If it was the selected theme, Maik's
+  Favourite takes its place.
 - **A .retromactheme opens in RetroMac.** A double-click in the Finder installs the theme,
   selects it and shows it in Settings ▸ Themes; macOS used to say RetroMac cannot open files in
   that format. "Add custom…" accepts a theme or a .zip with one (the panel only took folders,
-  so a theme could not be chosen), and a failed import says why.
+  so a theme could not be chosen), and a failed import says why. A folder that only has the
+  extension is refused instead of being installed as a broken theme.
 
 ## 3.0
 

@@ -1093,6 +1093,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// A theme opened from the Finder (double-click, or dropped on the app). Without this the
     /// declared document type only got macOS's "cannot open files in this format".
     func application(_ application: NSApplication, open urls: [URL]) {
+        print("[Theme] Asked to open: \(urls.map(\.lastPathComponent))")
         for url in urls where url.isFileURL && ["retromactheme", "zip"].contains(url.pathExtension.lowercased()) {
             importThemeFile(url)
         }

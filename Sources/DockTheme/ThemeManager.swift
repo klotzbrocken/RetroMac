@@ -1398,12 +1398,31 @@ final class ThemeManager {
         return id
     }
 
+    /// Put a user theme in the Trash (recoverable). Built-in themes cannot be deleted. When it is
+    /// the selected theme, the selection moves to Maik's Favourite (or the first built-in) first,
+    /// so nothing is left pointing at a theme that is gone.
+    func deleteTheme(stableID: String) throws {
+        guard let theme = availableThemes.first(where: { $0.stableID == stableID }), !theme.isBuiltIn else { return }
+        if ThemeManager.resolve(AppSettings.shared.dockTheme, in: availableThemes)?.stableID == stableID,
+           let fallback = availableThemes.first(where: { $0.stableID == "com.retromac.personal.maiks-favourite" })
+                ?? availableThemes.first(where: \.isBuiltIn) {
+            AppSettings.shared.dockTheme = fallback.stableID
+        }
+        try FileManager.default.trashItem(at: theme.url, resultingItemURL: nil)
+        reload()
+        print("[Theme] Moved \(theme.name) to the Trash")
+    }
+
     @discardableResult
     private func installThemeBundle(_ src: URL) throws -> String? {
         // Replace the bundle that carries the same theme id, not merely the same file name:
         // a renamed .retromactheme must still update the theme it *is*, and an unrelated theme
         // that happens to share a file name must not be clobbered.
-        let incomingID = try? ThemeBundle(url: src).stableID
+        // Not a theme, not installed: a folder that merely has the extension would otherwise be
+        // copied in and sit in the list as a broken entry.
+        let incomingID: String
+        do { incomingID = try ThemeBundle(url: src).stableID }
+        catch { throw NSError(domain: "RetroMac", code: 3, userInfo: [NSLocalizedDescriptionKey: "This is not a valid RetroMac theme (\(error.localizedDescription))."]) }
         let existing = availableThemes.first { !$0.isBuiltIn && $0.stableID == incomingID }
         try Self.install(bundleAt: src, into: userThemesDir, replacing: existing?.url)
         return incomingID

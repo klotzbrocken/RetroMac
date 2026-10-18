@@ -98,6 +98,11 @@ struct DockSettingsTab: View {
 
                 Spacer()
 
+                // Only your own and imported themes; the built-in ones stay.
+                if let theme = selectedThemeBundle, !theme.isBuiltIn {
+                    Button("Delete\u{2026}") { deleteTheme(theme) }
+                        .buttonStyle(RMGhostButtonStyle())
+                }
                 Button("Add custom\u{2026}") { importTheme() }
                     .buttonStyle(RMGhostButtonStyle())
             }
@@ -1119,6 +1124,26 @@ struct DockSettingsTab: View {
 
         AppManager.shared.addApp(bundleID: bundleID)
         refreshApps()
+    }
+
+    private func deleteTheme(_ theme: ThemeBundle) {
+        let alert = NSAlert()
+        alert.messageText = "Delete \u{201C}\(theme.name)\u{201D}?"
+        alert.informativeText = "The theme goes to the Trash, so you can still put it back from there."
+        alert.addButton(withTitle: "Move to Trash")
+        alert.addButton(withTitle: "Cancel")
+        alert.alertStyle = .warning
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        do {
+            try ThemeManager.shared.deleteTheme(stableID: theme.stableID)
+        } catch {
+            let fail = NSAlert()
+            fail.messageText = "\(theme.name) could not be deleted"
+            fail.informativeText = error.localizedDescription
+            fail.runModal()
+        }
+        themes = ThemeManager.shared.availableThemes
     }
 
     private func importTheme() {
