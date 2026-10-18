@@ -373,38 +373,6 @@ final class ScreenCaptureManager: NSObject, SCStreamOutput, SCStreamDelegate {
         }
     }
 
-    /// Capture one rectangle of a display, without the given windows: Desktop Glass films what
-    /// lies under its own window. `rect` is in the display's points, origin top left, as
-    /// `sourceRect` wants it; `width`/`height` are the output pixels.
-    func startDisplayRegion(_ displayID: CGDirectDisplayID, rect: CGRect, width: Int, height: Int,
-                            excludingWindowIDs: [CGWindowID]) async throws {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
-            throw CaptureError.noDisplay
-        }
-        let filter = try buildExclusionFilter(display: display, content: content, excludingWindowIDs: excludingWindowIDs)
-        try await startStream(filter: filter, config: regionConfig(rect: rect, width: width, height: height))
-    }
-
-    /// The window moved or was resized: same stream, new rectangle.
-    func updateRegion(rect: CGRect, width: Int, height: Int) {
-        stream?.updateConfiguration(regionConfig(rect: rect, width: width, height: height)) { error in
-            if let error { print("[Capture] Region update failed: \(error.localizedDescription)") }
-        }
-    }
-
-    private func regionConfig(rect: CGRect, width: Int, height: Int) -> SCStreamConfiguration {
-        let config = SCStreamConfiguration()
-        config.sourceRect = rect
-        config.width = max(width, 2)
-        config.height = max(height, 2)
-        config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(targetFPS))
-        config.queueDepth = targetFPS > 30 ? 5 : 3
-        config.pixelFormat = kCVPixelFormatType_32BGRA
-        config.showsCursor = false   // the real pointer is on top already
-        return config
-    }
-
     func updateStreamSize(width: Int, height: Int) {
         guard let stream = stream else { return }
         let config = SCStreamConfiguration()
