@@ -75,6 +75,7 @@ final class DockView: NSView {
     private var pacmanTimer: Timer?
     private var pacmanPhase: CGFloat = 0
     private var pacmanObserver: NSObjectProtocol?
+    private var badgesObserver: NSObjectProtocol?
     private var occlusionObserver: NSObjectProtocol?
     private var minimizedObserver: NSObjectProtocol?
     private var pelletLayer: CAShapeLayer?
@@ -649,6 +650,11 @@ final class DockView: NSView {
         minimizedObserver = nc2.addObserver(forName: .minimizedWindowsChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuildItems()
             self?.onRunningAppsChanged?()   // resize the dock window to fit the new minimized-tile count
+        }
+        // Unread counts from the Mac's Dock: onto the icons and taskbar buttons that are there.
+        DockBadges.shared.start()
+        badgesObserver = nc2.addObserver(forName: .dockBadgesChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.applyBadges()
         }
         pacmanObserver = nc2.addObserver(forName: .pacmanAnimationChanged, object: nil, queue: .main) { [weak self] _ in
             self?.needsDisplay = true   // re-configure layers (draw() → updatePacmanBorder)
@@ -1380,6 +1386,12 @@ final class DockView: NSView {
         needsDisplay = true
     }
 
+    private func applyBadges() {
+        let badges = DockBadges.shared
+        for v in itemViews { v.setBadge(badges.badge(for: v.bundleID), style: badges.style) }
+        for b in taskButtonViews { b.badge = badges.badge(for: b.bundleID) }
+    }
+
     private func addItem(bundleID: String, frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat, isTransient: Bool = false) {
         let itemView = DockItemView(bundleID: bundleID, frame: frame)
         itemView.magnificationEnabled = theme.hasMagnification && AppSettings.shared.dockMagnification
@@ -1452,6 +1464,7 @@ final class DockView: NSView {
         }
         addSubview(itemView)
         itemViews.append(itemView)
+        itemView.setBadge(DockBadges.shared.badge(for: bundleID), style: DockBadges.shared.style)
     }
 
     // MARK: - Launch bounce
@@ -1603,6 +1616,8 @@ final class DockView: NSView {
                                      maxIconSize: max(0, iconSize - 4),
                                      enlargeIcon: m.system)
             btn.axWindow = m.window
+            btn.bundleID = m.bundleID
+            btn.badge = DockBadges.shared.badge(for: m.bundleID)
             if limited {
                 btn.toolTip = "\(m.label) — the program, not a window. Grant Accessibility for one button per window."
             }
@@ -1642,7 +1657,7 @@ final class DockView: NSView {
         return models
     }
 
-    private typealias TaskModel = (label: String, icon: NSImage?, active: Bool, system: Bool, window: AXUIElement?, action: () -> Void)
+    private typealias TaskModel = (label: String, icon: NSImage?, active: Bool, system: Bool, window: AXUIElement?, bundleID: String, action: () -> Void)
 
     /// Where an app's icon is on screen, for a window minimising into it (Halloween).
     func itemScreenRect(bundleID: String) -> NSRect? {
@@ -1666,7 +1681,7 @@ final class DockView: NSView {
         // tabs. Flag those so the tab can enlarge them to match.
         let mapped = ThemeManager.shared.hasThemedIcon(for: w.bundleID)
         // Active (focused, non-minimized) → minimize; minimized or background → restore + raise.
-        return (w.title, icon, w.isFocused && !w.isMinimized, !mapped, w.isAppLevel ? nil : w.window, {
+        return (w.title, icon, w.isFocused && !w.isMinimized, !mapped, w.isAppLevel ? nil : w.window, w.bundleID, {
             if !w.isMinimized && w.isFocused {
                 // Through the title bar's minimise when there is one, so it flies into this button.
                 if w.isAppLevel || !TitleBarOverlayController.shared.minimizeThroughBar(w.window) {

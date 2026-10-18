@@ -5,6 +5,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## 3.0.1
 
+### New
+
+- **Badges on dock icons, where the system had them.** Mail's unread count and every other
+  app's number show on the retro dock in the themes whose system drew them, the way it drew
+  them: Mac OS X 10.0 only on Mail (Mail painted its own red circle; other apps could not until
+  10.5), Snow Leopard and Mountain Lion on every app as the glossy red pill, Windows 7 as an
+  overlay on the taskbar button's icon. No other theme shows any. The numbers come from the
+  Mac's own Dock through Accessibility; Settings ▸ Themes ▸ Badges on icons turns them off.
+  From a user's request.
+
 ### Fixes
 
 - **Windows 3.x: the icons of running programs can be dragged** anywhere on the desktop, as in

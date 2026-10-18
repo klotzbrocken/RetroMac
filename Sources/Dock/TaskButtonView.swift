@@ -19,6 +19,9 @@ final class TaskButtonView: NSView {
     /// edge-to-edge themed tabs.
     private let enlargeIcon: Bool
     var onClick: (() -> Void)?
+    /// The app this button belongs to, and the Windows 7 overlay count on its icon (DockBadges).
+    var bundleID = ""
+    var badge: String? { didSet { if badge != oldValue { needsDisplay = true } } }
     /// The window this button stands for (nil for a program without Accessibility).
     var axWindow: AXUIElement?
 
@@ -185,8 +188,9 @@ final class TaskButtonView: NSView {
         let iconY = (b.height - iconSz) / 2 - off
         var textX = iconX
         if let icon = icon {
-            icon.draw(in: NSRect(x: iconX, y: iconY, width: iconSz, height: iconSz),
-                      from: .zero, operation: .sourceOver, fraction: 1.0)
+            let iconRect = NSRect(x: iconX, y: iconY, width: iconSz, height: iconSz)
+            icon.draw(in: iconRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+            if style == .win7, let badge { DockBadgeArt.drawWin7Overlay(badge, over: iconRect) }
             textX = iconX + iconSz + 5
         }
         let isWin98 = (style == .win98)

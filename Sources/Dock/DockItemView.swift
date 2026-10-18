@@ -12,6 +12,8 @@ final class DockItemView: NSView {
     private var trackingArea: NSTrackingArea?
     private var isHovered = false
     private var indicatorLayer: CALayer?
+    private var badgeLayer: CALayer?
+    private var badge: (text: String, style: DockBadges.Style)?
     // Indicator layout params, kept so the dot can be re-centred whenever the item is
     // resized (magnification grows the frame; a one-shot position drifts off-centre).
     private var indicatorSize: CGFloat = 0
@@ -70,6 +72,33 @@ final class DockItemView: NSView {
         iconImageView.imageScaling = .scaleProportionallyUpOrDown
         iconImageView.autoresizingMask = [.width, .height]
         addSubview(iconImageView)
+    }
+
+    /// The Mac OS X badge at the icon's top right, overhanging it a little as the Dock's did.
+    /// Nil takes it away.
+    func setBadge(_ text: String?, style: DockBadges.Style?) {
+        badgeLayer?.removeFromSuperlayer(); badgeLayer = nil; badge = nil
+        guard let text, let style, style != .win7 else { return }
+        badge = (text, style)
+        let h = max(12, iconImageView.frame.height * 0.36)
+        let img = DockBadgeArt.macBadge(text, style: style, height: h)
+        let l = CALayer()
+        l.contents = img
+        l.contentsScale = window?.backingScaleFactor ?? 2
+        l.zPosition = 5
+        layer?.addSublayer(l)
+        badgeLayer = l
+        layoutBadge()
+    }
+
+    private func layoutBadge() {
+        guard let l = badgeLayer, let img = l.contents as? NSImage else { return }
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        let icon = iconImageView.frame
+        l.frame = CGRect(x: icon.maxX - img.size.width + img.size.height * 0.2,
+                         y: icon.maxY - img.size.height + img.size.height * 0.15,
+                         width: img.size.width, height: img.size.height)
+        CATransaction.commit()
     }
 
     func updateIcon(_ image: NSImage) {
@@ -309,6 +338,8 @@ final class DockItemView: NSView {
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         layoutReflection()
+        // Redrawn at the new size (the horizontal dock resizes frames), not stretched.
+        if let b = badge { setBadge(b.text, style: b.style) }
         if lightOnShelf { layoutLightOnShelf(); return }
         guard let ind = indicatorLayer, indicatorW > 0 else { return }
         CATransaction.begin()

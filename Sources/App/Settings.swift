@@ -669,6 +669,14 @@ final class AppSettings: ObservableObject {
     @Published var dockShowApplications: Bool {
         didSet { defaults.set(dockShowApplications, forKey: "dockShowApplications") }
     }
+    /// Unread counts on dock icons, in the themes whose system had them (see DockBadges).
+    @Published var dockBadges: Bool {
+        didSet {
+            defaults.set(dockBadges, forKey: "dockBadges")
+            DockBadges.shared.poll()
+            NotificationCenter.default.post(name: .dockBadgesChanged, object: nil)
+        }
+    }
     @Published var dockShowDownloads: Bool {
         didSet {
             defaults.set(dockShowDownloads, forKey: "dockShowDownloads")
@@ -1314,6 +1322,7 @@ final class AppSettings: ObservableObject {
         dockShowRunningApps = defaults.object(forKey: "dockShowRunningApps") as? Bool ?? true
         deskbarCorner = defaults.string(forKey: "deskbarCorner") ?? "bottomLeft"
         dockShowDownloads = defaults.object(forKey: "dockShowDownloads") as? Bool ?? true
+        dockBadges = defaults.object(forKey: "dockBadges") as? Bool ?? true
         dockShowApplications = defaults.object(forKey: "dockShowApplications") as? Bool ?? true
         deskbarShortcuts = defaults.stringArray(forKey: "deskbarShortcuts")
             ?? ["com.apple.finder", "com.apple.Safari", "com.apple.mail", "com.apple.MobileSMS", "com.apple.iCal", "com.apple.reminders", "com.apple.Notes"]

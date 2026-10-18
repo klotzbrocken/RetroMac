@@ -365,6 +365,12 @@ struct DockSettingsTab: View {
                         }
                     }
                 }
+                if DockBadges.style(forThemeID: selectedThemeConfig?.id) != nil {
+                    RMRow(label: "Badges on icons",
+                          hint: "Unread counts and other numbers, as this system showed them: Mac OS X 10.0 only on Mail, 10.5 and later on every app, Windows 7 as an overlay on the taskbar button. Needs Accessibility.") {
+                        toggle($settings.dockBadges)
+                    }
+                }
                 if selectedThemeConfig?.hasFolderStacks == true {
                     RMRow(label: "Show Downloads folder",
                           hint: "Pinned to the dock; click it to fan out the most recent files.") {
