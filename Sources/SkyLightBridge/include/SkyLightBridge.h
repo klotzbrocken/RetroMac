@@ -24,6 +24,9 @@ CGContextRef skb_create(float w, float h, bool hidpi, uint32_t *out_wid) __attri
 void skb_set_frame(uint32_t wid, float x, float y, float w, float h);
 // Fast reposition only (no reshape) — for smooth dragging.
 void skb_move(uint32_t wid, float x, float y);
+// Move several of our windows in one transaction, so they reach the screen in the same frame.
+// `pts` are top-left global (WindowServer) coords. Works on AppKit windows too (window numbers).
+void skb_move_many(const uint32_t *wids, const CGPoint *pts, int n);
 // Move the border window onto the same space as its target (a fresh window is on no space).
 // Returns the space id used (0 if the target's space could not be resolved).
 uint64_t skb_send_to_space(uint32_t wid, uint32_t target);

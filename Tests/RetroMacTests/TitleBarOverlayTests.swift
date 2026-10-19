@@ -6,6 +6,16 @@ import AppKit
 /// zoom bookkeeping, the plain/unified title bar threshold, and the lights geometry.
 final class TitleBarOverlayTests: XCTestCase {
 
+    func testOnlyTheOutlineErasDragAnOutline() {
+        typealias C = TitleBarOverlayController
+        XCTAssertTrue(C.dragsOutline(.platinum, themeID: nil))
+        XCTAssertTrue(C.dragsOutline(.win31, themeID: nil))
+        XCTAssertTrue(C.dragsOutline(.win98, themeID: "com.retromac.microsoft.windows95"))
+        XCTAssertFalse(C.dragsOutline(.win98, themeID: "com.retromac.microsoft.windows98"))
+        XCTAssertFalse(C.dragsOutline(.aqua, themeID: nil))
+        XCTAssertFalse(C.dragsOutline(.luna, themeID: nil))
+    }
+
     func testPlatinumPlaqueNeverExceedsItsRoom() {
         let font = ChromeStyleFactory.macClassic().titleFont
         let long = "Bildschirmfoto 2026-09-15 um 13.39.42 — Kopie der Kopie der Kopie.png"

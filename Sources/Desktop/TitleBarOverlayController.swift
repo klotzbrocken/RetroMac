@@ -542,7 +542,7 @@ final class TitleBarOverlayController {
         }
         view.onActivate = { [weak self] in self?.activate(info.id, pid: info.pid) }
         view.onDrag = { [weak self] delta in self?.drag(info.id, pid: info.pid, by: delta) }
-        view.onDragEnd = { [weak self] in self?.endDrag() }
+        view.onDragEnd = { [weak self] in self?.finishDrag() }
         view.onPress = { [weak self] in self?.press(info.id, pid: info.pid) }
         panel.contentView = content
         let o = Overlay(panel: panel, view: view, bounds: info.bounds, level: level, pid: info.pid)
@@ -782,6 +782,46 @@ final class TitleBarOverlayController {
         }
     }
 
+    // MARK: Moving the bars with their windows
+
+    /// Bars moved through SkyLight while their window moves, and where to: AppKit's idea of
+    /// their frame lags until the move comes to rest (`appKitBefore` is what it held then).
+    private var movedBehindAppKit: [ObjectIdentifier: (panel: NSPanel, origin: NSPoint, appKitBefore: NSPoint)] = [:]
+    private var appKitCatchUp: Timer?
+
+    private func origin(of panel: NSPanel) -> NSPoint {
+        movedBehindAppKit[ObjectIdentifier(panel)]?.origin ?? panel.frame.origin
+    }
+
+    /// Move a bar and its light patch with their window. Through one SkyLight transaction,
+    /// so they reach the screen in the same frame and skip AppKit's bookkeeping on each event
+    /// of a drag; AppKit is told where they are once the window has come to rest.
+    private func move(_ moves: [(NSPanel, NSPoint)]) {
+        guard !moves.isEmpty else { return }
+        guard UserDefaults.standard.object(forKey: "titleBarSkyLightMove") as? Bool ?? true else {
+            for (panel, origin) in moves { panel.setFrameOrigin(origin) }
+            return
+        }
+        let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
+        var wids: [UInt32] = [], points: [CGPoint] = []
+        for (panel, origin) in moves {
+            wids.append(UInt32(panel.windowNumber))
+            points.append(CGPoint(x: origin.x, y: primaryTop - origin.y - panel.frame.height))
+            let key = ObjectIdentifier(panel)
+            movedBehindAppKit[key] = (panel, origin, movedBehindAppKit[key]?.appKitBefore ?? panel.frame.origin)
+        }
+        skb_move_many(wids, points, Int32(wids.count))
+        appKitCatchUp?.invalidate()
+        appKitCatchUp = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            // A bar AppKit has placed since (a resize, a sync) is already where AppKit put it.
+            for m in self.movedBehindAppKit.values where m.panel.frame.origin == m.appKitBefore {
+                m.panel.setFrameOrigin(m.origin)
+            }
+            self.movedBehindAppKit.removeAll()
+        }
+    }
+
     func handleServerEvent(event: UInt32, wid: CGWindowID) {
         guard running else { return }
         count("event\(event)")
@@ -792,15 +832,19 @@ final class TitleBarOverlayController {
             guard shaded[wid] == nil else { return }
             guard let o = overlays[wid], let style else { return }
             guard let g = PrivateWindowAPI.bounds(of: wid) else { forget(wid); return }
+            let started = CACurrentMediaTime()
+            defer { count("barMove", seconds: CACurrentMediaTime() - started) }
             let previous = o.bounds
             o.bounds = g
             var f: NSRect
+            var moves: [(NSPanel, NSPoint)] = []
             if o.view.isBarPanel {
                 f = Self.barFrame(for: g, style: style)
                 if style == .beos { f.size.width = Self.beosTabWidth(o.view.currentTitle, max: f.width) }
                 if let patch = o.patch {
                     let d = CGPoint(x: g.minX - previous.minX, y: g.minY - previous.minY)
-                    if d != .zero { patch.setFrameOrigin(NSPoint(x: patch.frame.minX + d.x, y: patch.frame.minY - d.y)) }
+                    let at = origin(of: patch)
+                    if d != .zero { moves.append((patch, NSPoint(x: at.x + d.x, y: at.y - d.y))) }
                     // The bar behind the lights may look different where the window now sits
                     // (another display, a different backdrop through a translucent bar): take
                     // the photograph again once the window has come to rest.
@@ -825,10 +869,15 @@ final class TitleBarOverlayController {
                 }
             }
             if f.size == o.panel.frame.size {
-                if f.origin != o.panel.frame.origin { o.panel.setFrameOrigin(f.origin) }   // a move: no redraw
-            } else if o.panel.frame != f {
-                o.panel.setFrame(f, display: false)
-                o.view.needsDisplay = true
+                if f.origin != origin(of: o.panel) { moves.append((o.panel, f.origin)) }   // a move: no redraw
+                move(moves)
+            } else {
+                move(moves)
+                if o.panel.frame != f {
+                    movedBehindAppKit.removeValue(forKey: ObjectIdentifier(o.panel))
+                    o.panel.setFrame(f, display: false)
+                    o.view.needsDisplay = true
+                }
             }
         case PrivateWindowAPI.EVENT_WINDOW_MINIMIZE, PrivateWindowAPI.EVENT_WINDOW_DESTROY:
             forget(wid)
@@ -932,6 +981,8 @@ final class TitleBarOverlayController {
     /// Keyed to its window: a position set on the queue for one drag never lands on another.
     private var dragTarget: (wid: CGWindowID, point: CGPoint)?
     private var dragSetting = false
+    /// Where an outline drag will put its window on release.
+    private var outlineDrop: (wid: CGWindowID, point: CGPoint)?
 
     static let lightDiameter: CGFloat = 15   // a hair over the real 14, so nothing of them shows
 
@@ -1154,6 +1205,8 @@ final class TitleBarOverlayController {
         if let wid = dragWindow, shaded[wid] != nil { saveShadeRecovery() }   // a rolled-up bar moved: its way back moved with it
         dragOrigin = nil
         dragWindow = nil
+        outlineDrop = nil
+        DragOutline.shared.hide()
     }
 
     // MARK: - WindowShade
@@ -1536,8 +1589,39 @@ final class TitleBarOverlayController {
             }
             return
         }
-        dragTarget = (wid, CGPoint(x: origin.x + delta.x, y: origin.y - delta.y))   // AX is y-down
+        count("dragInput")
+        let point = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)   // AX is y-down
+        if let style, Self.dragsOutline(style, themeID: ThemeManager.shared.activeTheme?.config.id),
+           let o = overlays[wid] {
+            // Only the outline moves; the window follows once, on release.
+            let h = Self.stripHeight(style), over = Self.platinumOverhang(for: style)
+            let quartz = CGRect(x: point.x - over, y: point.y - h, width: o.bounds.width + 2 * over, height: o.bounds.height + h)
+            DragOutline.shared.show(Self.appKitFrame(topLeft: quartz, height: quartz.height), windows: style.isWindows)
+            outlineDrop = (wid, point)
+            return
+        }
+        dragTarget = (wid, point)
         applyDrag()   // waits for the element if it is still being fetched
+    }
+
+    /// Whether the era dragged only an outline of the window. Classic Mac OS did, as did
+    /// Windows 3.x, Windows 95 (live dragging came with Plus! and was on by default from 98)
+    /// and CDE's dtwm (moveOpaque off by default).
+    static func dragsOutline(_ style: Style, themeID: String?) -> Bool {
+        switch style {
+        case .system6, .system7, .platinum, .win31, .cde: return true
+        case .win98: return themeID == "com.retromac.microsoft.windows95"
+        default: return false
+        }
+    }
+
+    /// The release of an outline drag: the window moves there now, once.
+    private func finishDrag() {
+        if let drop = outlineDrop {
+            dragTarget = drop
+            applyDrag()
+        }
+        endDrag()
     }
 
     /// Set the newest target on the Accessibility queue — for the window it belongs to, looked
@@ -1549,10 +1633,13 @@ final class TitleBarOverlayController {
         dragSetting = true
         var point = target.point
         Self.axQueue.async {
+            let started = CACurrentMediaTime()
             if let v = AXValueCreate(.cgPoint, &point) {
                 AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v)
             }
+            let took = CACurrentMediaTime() - started
             DispatchQueue.main.async { [weak self] in
+                self?.count("dragAXSet", seconds: took)
                 self?.dragSetting = false
                 self?.applyDrag()
             }

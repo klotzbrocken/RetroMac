@@ -147,6 +147,15 @@ void skb_move(uint32_t wid, float x, float y) {
     CFRelease(t);
 }
 
+void skb_move_many(const uint32_t *wids, const CGPoint *pts, int n) {
+    if (n <= 0) return;
+    CFTypeRef t = SLSTransactionCreate(SLSMainConnectionID());
+    if (!t) return;
+    for (int i = 0; i < n; i++) if (wids[i]) SLSTransactionMoveWindowWithGroup(t, wids[i], pts[i]);
+    SLSTransactionCommit(t, 0);
+    CFRelease(t);
+}
+
 uint64_t skb_send_to_space(uint32_t wid, uint32_t target) {
     if (wid == 0 || target == 0) return 0;
     int cid = SLSMainConnectionID();
