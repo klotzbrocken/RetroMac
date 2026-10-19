@@ -15,7 +15,8 @@ struct GameLibraryView: View {
 
     @StateObject private var model = GameLibraryModel()
     @StateObject private var apps = AppLibraryModel()
-    enum Tab: String, CaseIterable { case apps = "Apps", games = "Games" }
+    @StateObject private var themes = ThemeLibraryModel()
+    enum Tab: String, CaseIterable { case apps = "Apps", games = "Games", themes = "Themes" }
     /// Games first, as before: every way in but the menu comes from a games page.
     @State private var tab: Tab = .games
     /// Wide enough for the longest button row a card can show — "Install Yamagi Quake II" plus
@@ -28,25 +29,33 @@ struct GameLibraryView: View {
             Divider()
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    if tab == .games {
-                        ForEach(InternetArchive.catalogue) { card($0) }
-                    } else {
-                        ForEach(AppCatalog.catalogue) { appCard($0) }
+                    switch tab {
+                    case .games:  ForEach(InternetArchive.catalogue) { card($0) }
+                    case .apps:   ForEach(AppCatalog.catalogue) { appCard($0) }
+                    case .themes: ForEach(themes.entries) { themeCard($0) }
                     }
                 }
                 .padding(16)
+                if tab == .themes, let note = themes.note {
+                    Text(note).font(.callout).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center).padding(32)
+                }
             }
             Divider()
-            if tab == .games { footer } else { appsFooter }
+            switch tab {
+            case .games:  footer
+            case .apps:   appsFooter
+            case .themes: themesFooter
+            }
         }
         .frame(minWidth: 560, minHeight: 520)
-        .onAppear { model.refresh(); apps.refresh() }
+        .onAppear { model.refresh(); apps.refresh(); themes.load() }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Game & Apps Library").font(.title2.bold())
+                Text("RetroHub").font(.title2.bold())
                 Spacer()
                 Picker("Show", selection: $tab) {
                     ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -55,7 +64,9 @@ struct GameLibraryView: View {
             }
             Text(tab == .games
                  ? "RetroMac installs the engine each game needs, downloads the free and shareware episodes, and finds the game data you already have. Full commercial games come from your own copy."
-                 : "Real Mac apps in a classic look. RetroMac downloads them from their makers, checks the signature and puts them in Applications. Theme title bars stay off them, since they draw their own.")
+                 : tab == .apps
+                 ? "Real Mac apps in a classic look. RetroMac downloads them from their makers, checks the signature and puts them in Applications. Theme title bars stay off them, since they draw their own."
+                 : "Themes that are not built into RetroMac. One press downloads and installs one; it then sits in Settings ▸ Themes like the others.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -312,6 +323,64 @@ struct GameLibraryView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(a.name)\(installed ? ", installed" : "")")
+    }
+
+    private func themeCard(_ e: ThemeCatalog.Entry) -> some View {
+        let installed = themes.installed.contains(e.id)
+        let newer = ThemeCatalog.needsNewerApp(e)
+        return VStack(alignment: .leading, spacing: 6) {
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 5).fill(Color.black.opacity(0.15))
+                    if let img = themes.previews[e.id] {
+                        Image(nsImage: img).resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        Image(systemName: "paintpalette").font(.system(size: 26)).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(height: 110).clipShape(RoundedRectangle(cornerRadius: 5))
+                if installed {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 20))
+                        .symbolRenderingMode(.palette).foregroundStyle(.white, .green).padding(6)
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .onAppear { themes.loadPreview(e) }
+            Text(e.name).font(.headline).lineLimit(1)
+            Text([e.era, e.author].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
+            Text(e.summary).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if let newer {
+                Text("Needs RetroMac \(newer) or later.").font(.caption2).foregroundStyle(.secondary)
+            }
+            if let err = themes.errors[e.id] {
+                Text(err).font(.caption2).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 6) {
+                if themes.activeID == e.id {
+                    ProgressView().controlSize(.small)
+                } else if installed {
+                    Button("Use") { AppSettings.shared.dockTheme = e.id }
+                } else {
+                    Button("Install") { themes.install(e) }.disabled(themes.activeID != nil || newer != nil)
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(e.name)\(installed ? ", installed" : "")")
+    }
+
+    private var themesFooter: some View {
+        Text("Each theme is checked against the catalogue's checksum before it is installed, and it can only change what a theme may change. Delete one in Settings ▸ Themes.")
+            .font(.caption2).foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
     }
 
     private var appsFooter: some View {
@@ -715,6 +784,52 @@ final class AppLibraryModel: ObservableObject {
     }
 }
 
+/// The Themes tab's state: the catalogue, what is installed, which install runs, previews.
+final class ThemeLibraryModel: ObservableObject {
+    @Published var entries: [ThemeCatalog.Entry] = []
+    @Published var installed: Set<String> = []
+    @Published var previews: [String: NSImage] = [:]
+    @Published var errors: [String: String] = [:]
+    @Published var activeID: String?
+    /// What stands in the empty tab: loading, no themes yet, or that the list could not be read.
+    @Published var note: String? = "Loading the theme list\u{2026}"
+
+    func load() {
+        ThemeCatalog.load { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(let list):
+                self.entries = list
+                self.note = list.isEmpty ? "No themes to download yet. New ones will appear here." : nil
+            case .failure:
+                self.note = "The theme list could not be loaded. Check the connection and open RetroHub again."
+            }
+            self.refresh()
+        }
+    }
+
+    func refresh() { installed = Set(entries.filter(ThemeCatalog.isInstalled).map(\.id)) }
+
+    func install(_ e: ThemeCatalog.Entry) {
+        guard activeID == nil else { return }
+        errors[e.id] = nil
+        activeID = e.id
+        ThemeCatalog.install(e) { [weak self] error in
+            self?.activeID = nil
+            self?.errors[e.id] = error
+            self?.refresh()
+        }
+    }
+
+    func loadPreview(_ e: ThemeCatalog.Entry) {
+        guard previews[e.id] == nil, let url = e.preview, url.scheme == "https" else { return }
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+            guard let data, let img = NSImage(data: data) else { return }
+            DispatchQueue.main.async { self?.previews[e.id] = img }
+        }.resume()
+    }
+}
+
 // MARK: - Controller
 
 final class GameLibraryWindowController: NSObject, NSWindowDelegate {
@@ -731,7 +846,7 @@ final class GameLibraryWindowController: NSObject, NSWindowDelegate {
         let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 640),
                            styleMask: [.titled, .closable, .resizable],
                            backing: .buffered, defer: false)
-        win.title = "Game & Apps Library"
+        win.title = "RetroHub"
         win.contentView = NSHostingView(rootView: GameLibraryView())
         win.center()
         win.isReleasedWhenClosed = false

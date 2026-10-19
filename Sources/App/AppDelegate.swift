@@ -343,7 +343,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async { self?.rebuildMenu() }
         }
 
-        // QA hook: open the Game & Apps Library, same reason as the Settings hook above.
+        // QA hook: open RetroHub, same reason as the Settings hook above.
         if ProcessInfo.processInfo.environment["RETROMAC_OPEN_GAME_LIBRARY"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { self.openGameLibrary() }
         }
@@ -1491,7 +1491,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Themes submenu with value chip
         let themesItem = NSMenuItem(title: "Themes", action: nil, keyEquivalent: "")
-        themesItem.image = sfIcon("paintpalette")
+        themesItem.image = MenuPixelIcons.themes
         themesItem.attributedTitle = menuTitle("Themes", value: themeValueString())
         let themesMenu = NSMenu()
         let dockOn = AppSettings.shared.dockEnabled
@@ -1584,9 +1584,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dockOnlyItem.state = settings.dockOnly ? .on : .off
         dockOnlyItem.toolTip = "Restyle the Dock, not the whole system"
         dockOnlyItem.image = sfIcon("dock.rectangle")
-        let gamesItem = NSMenuItem(title: "Game & Apps Library\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
+        let gamesItem = NSMenuItem(title: "RetroHub\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
         gamesItem.target = self
-        gamesItem.image = sfIcon("gamecontroller")
+        gamesItem.image = MenuPixelIcons.retroHub
         moreMenu.addItem(gamesItem)
         let wizardItem = NSMenuItem(title: "Setup Assistant\u{2026}", action: #selector(openSetupWizard), keyEquivalent: "")
         wizardItem.target = self

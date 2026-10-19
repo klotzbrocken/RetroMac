@@ -1,6 +1,6 @@
 import AppKit
 
-/// The Apps half of the Game & Apps Library: retro-looking Mac apps that are real apps, not
+/// The Apps tab of RetroHub: retro-looking Mac apps that are real apps, not
 /// themes. Same idea as the games — RetroMac fetches what may be fetched and installs it through
 /// `TrustedDownloadInstaller` (signature, notarization and bundle ID checked), and what only an
 /// app store may hand out gets a link to that store instead.

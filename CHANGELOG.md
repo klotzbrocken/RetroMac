@@ -7,6 +7,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **RetroHub.** The Game & Apps Library is now RetroHub, with a third tab: Themes, for themes
+  that are not built in. The list comes from the RetroMac repository, so a new theme needs no
+  app update; each download is checked against the list's SHA-256 and installed like a theme
+  opened from the Finder. RetroHub and Themes have their own pixel icons in the menu.
+
 - **Badges on dock icons, where the system had them.** Mail's unread count and every other
   app's number show on the retro dock in the themes whose system drew them, the way it drew
   them: Mac OS X 10.0 only on Mail (Mail painted its own red circle; other apps could not until

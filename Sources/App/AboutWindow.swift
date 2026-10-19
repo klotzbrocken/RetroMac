@@ -524,7 +524,7 @@ struct AboutTab: View {
                 }
 
                 Section("Shareware Episodes") {
-                    Text("The Game & Apps Library can fetch the free episodes their publishers released for copying: Doom (Knee-Deep in the Dead) and Heretic (The City of the Damned) from id Software and Raven, Duke Nukem 3D (L.A. Meltdown) and Shadow Warrior from 3D Realms and Apogee, Quake (Dimension of the Doomed) from id Software, and the official Quake II 3.14 demo. Each is distributed under the shareware licence that ships beside it, which permits copying without charge; the trademarks remain their owners\u{2019}. RetroMac does not distribute the full commercial versions of these games and is not affiliated with, sponsored by, or endorsed by their publishers.")
+                    Text("RetroHub can fetch the free episodes their publishers released for copying: Doom (Knee-Deep in the Dead) and Heretic (The City of the Damned) from id Software and Raven, Duke Nukem 3D (L.A. Meltdown) and Shadow Warrior from 3D Realms and Apogee, Quake (Dimension of the Doomed) from id Software, and the official Quake II 3.14 demo. Each is distributed under the shareware licence that ships beside it, which permits copying without charge; the trademarks remain their owners\u{2019}. RetroMac does not distribute the full commercial versions of these games and is not affiliated with, sponsored by, or endorsed by their publishers.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Link("id Software file archive (Quake II demo)",

@@ -35,8 +35,8 @@ struct GamesSettingsTab: View {
     // MARK: - The Library
 
     private var libraryCard: some View {
-        RMCard(title: "Game & Apps Library",
-               subtitle: "Every game RetroMac can run — what is installed, what still has to be downloaded, its engine, where to point it at your own files — and classic-looking Mac apps to install.",
+        RMCard(title: "RetroHub",
+               subtitle: "Every game RetroMac can run — what is installed, what still has to be downloaded, its engine, where to point it at your own files — classic-looking Mac apps to install, and themes to download.",
                headerAction: AnyView(
                 Button("Open\u{2026}") { GameLibraryWindowController.shared.show() }
                     .buttonStyle(RMPrimaryButtonStyle())),
@@ -92,7 +92,7 @@ struct GamesSettingsTab: View {
     /// business, but "where does RetroMac put a download" belongs in settings.
     private var dataFoldersCard: some View {
         RMCard(title: "Game data folders",
-               subtitle: "Point a game at files you already have with \u{201C}Use My Own Files\u{2026}\u{201D} in the Game & Apps Library.",
+               subtitle: "Point a game at files you already have with \u{201C}Use My Own Files\u{2026}\u{201D} in RetroHub.",
                bodyPadding: 0) {
             VStack(spacing: 0) {
                 folderRow(title: "Doom WADs", path: settings.doomWadFolder,
