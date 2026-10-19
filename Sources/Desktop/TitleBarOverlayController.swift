@@ -798,10 +798,6 @@ final class TitleBarOverlayController {
     /// of a drag; AppKit is told where they are once the window has come to rest.
     private func move(_ moves: [(NSPanel, NSPoint)]) {
         guard !moves.isEmpty else { return }
-        guard UserDefaults.standard.object(forKey: "titleBarSkyLightMove") as? Bool ?? true else {
-            for (panel, origin) in moves { panel.setFrameOrigin(origin) }
-            return
-        }
         let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
         var wids: [UInt32] = [], points: [CGPoint] = []
         for (panel, origin) in moves {
@@ -1632,17 +1628,40 @@ final class TitleBarOverlayController {
         dragTarget = nil
         dragSetting = true
         var point = target.point
+        let riders = riders(of: target.wid)
         Self.axQueue.async {
             let started = CACurrentMediaTime()
             if let v = AXValueCreate(.cgPoint, &point) {
                 AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v)
             }
             let took = CACurrentMediaTime() - started
+            // The window is where the app put it the moment the set returns: the bar and the
+            // patch over the real lights go there now, not a WindowServer event and a main
+            // thread later — a frame behind, the real lights show at the patch's leading edge.
+            // Where the app put it, read back: it may have refused or clamped the point.
+            var ref: CFTypeRef?
+            var at = CGPoint.zero
+            if !riders.isEmpty, AXUIElementCopyAttributeValue(w, kAXPositionAttribute as CFString, &ref) == .success,
+               let ref, AXValueGetValue(ref as! AXValue, .cgPoint, &at) {
+                let points = riders.map { CGPoint(x: at.x + $0.offset.x, y: at.y + $0.offset.y) }
+                skb_move_many(riders.map(\.wid), points, Int32(riders.count))
+            }
             DispatchQueue.main.async { [weak self] in
                 self?.count("dragAXSet", seconds: took)
                 self?.dragSetting = false
                 self?.applyDrag()
             }
+        }
+    }
+
+    /// The bar and the light patch of a window, each with its top-left corner relative to the
+    /// window's (WindowServer coordinates): what moves with the window, and by how much.
+    private func riders(of wid: CGWindowID) -> [(wid: UInt32, offset: CGPoint)] {
+        guard let o = overlays[wid] else { return [] }
+        let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
+        return [o.panel, o.patch].compactMap { $0 }.map { panel in
+            let at = origin(of: panel)
+            return (UInt32(panel.windowNumber), CGPoint(x: at.x - o.bounds.minX, y: primaryTop - at.y - panel.frame.height - o.bounds.minY))
         }
     }
 
