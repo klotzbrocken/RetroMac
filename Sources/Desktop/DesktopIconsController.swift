@@ -75,6 +75,13 @@ final class DesktopIconsController {
         // Dock-only changes nothing but the dock — no themed desktop icons.
         if AppSettings.shared.dockOnly { hide(); return }
         var entries = ThemeManager.shared.activeTheme?.config.desktopIcons ?? []
+        // Johnny Castaway, once installed from RetroHub, on the desktops of the Windows he ran on.
+        if !entries.isEmpty, let e = JohnnyCastaway.desktopEntry(themeID: ThemeManager.shared.activeTheme?.config.id) {
+            var e = e
+            e.gridX = 0
+            e.gridY = (entries.compactMap { ($0.gridX ?? 0) == 0 ? ($0.gridY ?? 0) : nil }.max() ?? -1) + 1
+            entries.append(e)
+        }
         // Add a "Read Me" shortcut that opens the theme's About readme, for any theme that both
         // ships a readme.html AND shows a themed desktop (skips NeXT, whose desktop has no icons).
         if !entries.isEmpty, let theme = ThemeManager.shared.activeTheme, ThemeReadmeController.activeThemeHasReadme() {
@@ -403,6 +410,7 @@ final class DesktopIconsController {
         if entry.type == "sheep", let img = NSImage(contentsOf: DesktopPetController.sheepIconCacheURL) {
             return img
         }
+        if entry.type == "johnnycastaway", let img = JohnnyCastaway.icon { return img }
         if let theme = theme, let iconURL = theme.iconResource(entry.icon) {
             if let img = NSImage(contentsOf: iconURL) {
                 return img

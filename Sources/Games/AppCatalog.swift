@@ -16,6 +16,8 @@ enum AppCatalog {
         case direct(URL)
         /// Only the store hands it out.
         case appStore(URL)
+        /// A bare program, not an app, with data the user brings: Johnny Castaway's, see there.
+        case castaway
     }
 
     struct App: Identifiable {
@@ -102,10 +104,39 @@ enum AppCatalog {
             page: URL(string: "https://marioaguzman.github.io/quicktune/")!,
             screenshot: URL(string: "https://marioaguzman.github.io/quicktune/images/qt_web_preview_card.png")!,
             caveat: nil),
+        App(id: "retrolux", name: "Retrolux", author: "konzertblock",
+            blurb: "Photo library and editing in the style of the pro photo software of the Snow Leopard years: browser, adjustments, places, full screen.",
+            bundleID: "io.github.konzertblock.retrolux", appName: "Retrolux",
+            source: .github(repo: "konzertblock/retrolux", asset: dmg("retrolux")),
+            page: repoPage("konzertblock/retrolux"),
+            screenshot: URL(string: "https://raw.githubusercontent.com/konzertblock/retrolux/main/docs/screenshots/browser.png")!,
+            caveat: "Not signed with a Developer ID; RetroMac asks before installing it.", onlyArch: "arm64"),
+        App(id: "retroncommander", name: "Retron Commander", author: "konzertblock",
+            blurb: "A two-panel file manager in the style of the Norton Commander: blue panels, function-key bar, keyboard first.",
+            bundleID: "com.konzertblock.RetronCommander", appName: "Retron Commander",
+            source: .github(repo: "konzertblock/retron-commander", asset: dmg("retron-commander")),
+            page: repoPage("konzertblock/retron-commander"),
+            screenshot: URL(string: "https://raw.githubusercontent.com/konzertblock/retron-commander/main/Screenshots/RetronCommander-norton-commander.png")!,
+            caveat: "Not signed with a Developer ID; RetroMac asks before installing it."),
+        App(id: "arose", name: "ARose", author: "CooLajz",
+            blurb: "The ARose screen saver of the Amiga's BlitzBlank, revived with its original authors' blessing: rotating, mirrored dots in ECS and AGA palettes, or a glowing modern mode.",
+            bundleID: "cz.coolajz.ARose.Preview", appName: "ARose",
+            source: .github(repo: "CooLajz/ARose-ScreenSaver", asset: { $0.hasSuffix("macos-universal.dmg") }),
+            page: repoPage("CooLajz/ARose-ScreenSaver"),
+            screenshot: URL(string: "https://raw.githubusercontent.com/CooLajz/ARose-ScreenSaver/main/Resources/thumbnail@2x.png")!,
+            caveat: "Turn it on in System Settings \u{25B8} Screen Saver."),
+        App(id: "johnnycastaway", name: "Johnny Castaway", author: "Open Scrantic (glauberlima)",
+            blurb: "The 1992 Sierra screen saver, his island and his story day by day, on a reimplementation of the original engine. On the Windows 3.x and 9x desktops once installed.",
+            bundleID: "", appName: "open-scrantic",
+            source: .castaway,
+            page: repoPage(JohnnyCastaway.repo),
+            screenshot: URL(string: "https://raw.githubusercontent.com/glauberlima/open-scrantic/main/docs/images/open-scrantic-logo.png")!,
+            caveat: "Needs your own copy of the original files (SCRANTIC.SCR, RESOURCE.MAP, RESOURCE.001); RetroMac asks for them the first time."),
     ]
 
     static func isInstalled(_ a: App) -> Bool {
-        NSWorkspace.shared.urlForApplication(withBundleIdentifier: a.bundleID) != nil
+        if case .castaway = a.source { return JohnnyCastaway.isInstalled }
+        return NSWorkspace.shared.urlForApplication(withBundleIdentifier: a.bundleID) != nil
     }
 
     /// What stands between this Mac and the app, or nil. An Intel-only app runs under Rosetta,
@@ -131,7 +162,7 @@ enum AppCatalog {
     static func excludeInstalledFromTitleBars(defaults: UserDefaults = .standard) {
         var list = AppSettings.shared.themeTitleBarsExcludedApps
         var changed = false
-        for a in catalogue where isInstalled(a) {
+        for a in catalogue where !a.bundleID.isEmpty && isInstalled(a) {
             // Reframe's flag predates this list; the same one, so a removal made then still counts.
             let flag = a.bundleID == AppSettings.reframeBundleID ? "reframeTitleBarExcluded" : "titleBarExcluded.\(a.bundleID)"
             guard !defaults.bool(forKey: flag) else { continue }
@@ -145,7 +176,7 @@ enum AppCatalog {
     /// or by hand is caught the first time it runs, before a title bar is put over it.
     static func startWatching() {
         excludeInstalledFromTitleBars()
-        let ids = Set(catalogue.map(\.bundleID))
+        let ids = Set(catalogue.map(\.bundleID).filter { !$0.isEmpty })
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) { note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
@@ -169,6 +200,13 @@ enum AppCatalog {
         switch a.source {
         case .appStore: finish("\(a.name) comes from the App Store.")
         case .direct(let url): DispatchQueue.global(qos: .userInitiated).async { finish(fetch(a, url, win)) }
+        case .castaway:
+            TrustedDownloadInstaller.latestReleaseAsset(repo: JohnnyCastaway.repo, matches: { $0 == JohnnyCastaway.asset }) { result in
+                guard case .success(let r) = result else { finish("No download of \(a.name) was found on GitHub."); return }
+                let error = JohnnyCastaway.install(from: r.url)
+                if error == nil { DispatchQueue.main.async { JohnnyCastaway.didInstall() } }
+                finish(error.map { "\(a.name) could not be installed (\($0))." })
+            }
         case .github(let repo, let asset):
             TrustedDownloadInstaller.latestReleaseAsset(repo: repo, matches: asset) { result in
                 switch result {

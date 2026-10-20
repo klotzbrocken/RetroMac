@@ -61,7 +61,9 @@ final class ProgramGroupView: NSView {
     private func effectiveEntries() -> [DockThemeConfig.DesktopIconEntry] {
         let base = group.items.filter { !custom.deleted.contains($0.name) }
         let added = custom.added.filter { !custom.deleted.contains($0.name) }
-        return base + added
+        let castaway = group.name == "Games"
+            ? JohnnyCastaway.desktopEntry(themeID: ThemeManager.shared.activeTheme?.config.id).map { [$0] } ?? [] : []
+        return base + added + castaway
     }
 
     private func rebuildItems() {
@@ -91,6 +93,7 @@ final class ProgramGroupView: NSView {
 
     private static func loadIcon(_ entry: DockThemeConfig.DesktopIconEntry?, themeBundle: ThemeBundle?) -> NSImage? {
         guard let entry = entry else { return nil }
+        if entry.type == "johnnycastaway" { return JohnnyCastaway.icon }
         if let bundle = themeBundle {
             let url = bundle.iconsDirectory.appendingPathComponent(entry.icon)
             if let img = NSImage(contentsOf: url) { return img }

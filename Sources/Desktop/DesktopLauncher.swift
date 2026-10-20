@@ -129,6 +129,7 @@ enum DesktopLauncher {
         case "heretic":    (NSApp.delegate as? AppDelegate)?.perform(Selector(("launchHeretic")))
         case "warcraft2":  WarcraftGame.launch(.warcraft2)
         case "warcraft1":  WarcraftGame.launch(.warcraft1)
+        case "johnnycastaway": JohnnyCastaway.launch()
 
         default:
             break

@@ -765,6 +765,7 @@ final class AppLibraryModel: ObservableObject {
     }
 
     func open(_ a: AppCatalog.App) {
+        if case .castaway = a.source { JohnnyCastaway.launch(); return }
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: a.bundleID) else { refresh(); return }
         NSWorkspace.shared.openApplication(at: url, configuration: .init())
     }

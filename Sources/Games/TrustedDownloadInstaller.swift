@@ -197,7 +197,7 @@ enum TrustedDownloadInstaller {
 
     // MARK: - Helpers
 
-    private static func sha256Hex(of url: URL) -> String? {
+    static func sha256Hex(of url: URL) -> String? {
         guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }

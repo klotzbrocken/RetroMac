@@ -20,6 +20,18 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Mac's own Dock through Accessibility; Settings ▸ Themes ▸ Badges on icons turns them off.
   From a user's request.
 
+- **Four more in RetroHub ▸ Apps.** Retrolux (photo library and editing in the style of the
+  Snow Leopard years' pro photo software), Retron Commander (a Norton Commander for the Mac),
+  ARose (the Amiga's BlitzBlank screen saver, revived with its authors' blessing) and Johnny
+  Castaway (Sierra's 1992 screen saver, on Open Scrantic's reimplementation of its engine).
+  Johnny Castaway needs your own copy of the three original files, asked for and checked the
+  first time; once installed he is in Program Manager's Games group on Windows 3.x and on the
+  desktop of Windows 95, 98 and Me.
+
+- **Dragging a window the way its era did.** Mac OS 6 to 9, Windows 3.x, Windows 95 and CDE
+  drag an outline and move the window once, on release; the others move the bar and the patch
+  over the real traffic lights with the window, without the lag that let the lights show.
+
 ### Fixes
 
 - **Badges survive a theme switch.** Turning a theme on or switching between Snow Leopard and
