@@ -20,7 +20,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Mac's own Dock through Accessibility; Settings ▸ Themes ▸ Badges on icons turns them off.
   From a user's request.
 
-- **Five more in RetroHub ▸ Apps.** Retrolux (photo library and editing in the style of the
+- **Six more in RetroHub ▸ Apps.** ICQuel (a late-90s instant messenger), Retrolux (photo library and editing in the style of the
   Snow Leopard years' pro photo software), Retron Commander (a Norton Commander for the Mac),
   Macsplorer (the Windows 2000 Explorer as a file browser),
   ARose (the Amiga's BlitzBlank screen saver, revived with its authors' blessing) and Johnny

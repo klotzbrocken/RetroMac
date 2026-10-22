@@ -7,7 +7,7 @@ final class AppCatalogTests: XCTestCase {
 
     func testEntriesAreUnique() {
         let c = AppCatalog.catalogue
-        XCTAssertEqual(c.count, 14)
+        XCTAssertEqual(c.count, 15)
         XCTAssertEqual(Set(c.map(\.id)).count, c.count)
         XCTAssertEqual(Set(c.map(\.bundleID)).count, c.count)
     }
@@ -29,6 +29,7 @@ final class AppCatalogTests: XCTestCase {
             "retrolux": ["retrolux-0.8.dmg", "retrolux-0.8.zip", "appcast.xml"],
             "retroncommander": ["retron-commander-1.0-macos-universal.dmg", "retron-commander-1.0-macos-universal.zip"],
             "macsplorer": ["macsplorer-macos.zip", "macsplorer-macos.zip.sha256", "macsplorer-linux-x86_64.tar.gz"],
+            "icquel": ["icquel-1.0.dmg", "appcast.xml"],
             "arose": ["arose-screensaver-v1.0.3-macos-universal.dmg", "arose-screensaver-v1.0.3-macos-universal.dmg.sha256",
                       "arose-screensaver-v1.0.3-macos-update.zip", "arose-screensaver-v1.0.3-windows-x64.scr"],
         ]
