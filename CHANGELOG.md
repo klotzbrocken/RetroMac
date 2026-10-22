@@ -35,6 +35,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **The taskbar without Accessibility.** A program whose last window was closed no longer keeps
+  its button, and clicking a program's button opens it again the way the Dock does, so its
+  window comes back. From a tester.
+
+- **The disk image opens as a proper install window.** RetroMac on the left, Applications on the
+  right, an arrow between, on Platinum grey: drag it across. Before, the window took whatever
+  view the Finder was set to.
+
 - **Badges survive a theme switch.** Turning a theme on or switching between Snow Leopard and
   Mountain Lion restarted the Mac's Dock, which forgets every badge, and Mail sends its count
   again only when it changes. Global tweaks like scroll bars no longer restart the Dock, and

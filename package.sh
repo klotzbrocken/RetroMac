@@ -73,6 +73,12 @@ rm -rf "$DMG_DIR" "$DMG_NAME"
 mkdir -p "$DMG_DIR"
 cp -R "$APP_BUNDLE" "$DMG_DIR/"
 ln -s /Applications "$DMG_DIR/Applications"
+# The window the DMG opens in: icon view, RetroMac left, Applications right, an arrow between.
+# The layout is Finder's own .DS_Store, made once with Scripts/dmg/make-layout.sh; it finds its
+# background by the volume name, which is why that stays "$APP_NAME" for betas too.
+mkdir -p "$DMG_DIR/.background"
+cp Scripts/dmg/background.tiff "$DMG_DIR/.background/background.tiff"
+cp Scripts/dmg/DS_Store "$DMG_DIR/.DS_Store"
 
 hdiutil create -volname "$APP_NAME" \
     -srcfolder "$DMG_DIR" \
