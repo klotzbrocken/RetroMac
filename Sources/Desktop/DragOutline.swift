@@ -14,11 +14,7 @@ final class DragOutline {
     func show(_ frame: NSRect, windows: Bool) {
         let panel = self.panel ?? make()
         if view.thickness != (windows ? 4 : 1) { view.thickness = windows ? 4 : 1; view.needsDisplay = true }
-        if panel.frame.size != frame.size {
-            panel.setFrame(frame, display: true)
-        } else {
-            panel.setFrameOrigin(frame.origin)
-        }
+        panel.setFrame(frame, display: true)
         if !panel.isVisible { panel.orderFrontRegardless() }
     }
 

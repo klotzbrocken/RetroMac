@@ -176,7 +176,7 @@ enum AppCatalog {
     /// or by hand is caught the first time it runs, before a title bar is put over it.
     static func startWatching() {
         excludeInstalledFromTitleBars()
-        let ids = Set(catalogue.map(\.bundleID).filter { !$0.isEmpty })
+        let ids = Set(catalogue.map(\.bundleID))
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) { note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
@@ -204,7 +204,8 @@ enum AppCatalog {
             TrustedDownloadInstaller.latestReleaseAsset(repo: JohnnyCastaway.repo, matches: { $0 == JohnnyCastaway.asset }) { result in
                 guard case .success(let r) = result else { finish("No download of \(a.name) was found on GitHub."); return }
                 let error = JohnnyCastaway.install(from: r.url)
-                if error == nil { DispatchQueue.main.async { JohnnyCastaway.didInstall() } }
+                // The desktop and Program Manager take him in now, not at the next theme switch.
+                if error == nil { DispatchQueue.main.async { DesktopIconsController.shared.update(); ProgramManagerController.shared.update() } }
                 finish(error.map { "\(a.name) could not be installed (\($0))." })
             }
         case .github(let repo, let asset):

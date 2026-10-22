@@ -712,8 +712,7 @@ final class TitleBarOverlayController {
 
     /// Quartz top-left global bounds → AppKit bottom-left frame of the strip along the top edge.
     static func appKitFrame(topLeft b: CGRect, height: CGFloat) -> NSRect {
-        let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
-        return NSRect(x: b.minX, y: primaryTop - b.minY - height, width: b.width, height: height)
+        NSRect(x: b.minX, y: primaryTop() - b.minY - height, width: b.width, height: height)
     }
 
     /// The lights panel: the union of the three orbs plus a little air, and each orb's rect
@@ -798,11 +797,11 @@ final class TitleBarOverlayController {
     /// of a drag; AppKit is told where they are once the window has come to rest.
     private func move(_ moves: [(NSPanel, NSPoint)]) {
         guard !moves.isEmpty else { return }
-        let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
+        let top = Self.primaryTop()
         var wids: [UInt32] = [], points: [CGPoint] = []
         for (panel, origin) in moves {
             wids.append(UInt32(panel.windowNumber))
-            points.append(CGPoint(x: origin.x, y: primaryTop - origin.y - panel.frame.height))
+            points.append(CGPoint(x: origin.x, y: top - origin.y - panel.frame.height))
             let key = ObjectIdentifier(panel)
             movedBehindAppKit[key] = (panel, origin, movedBehindAppKit[key]?.appKitBefore ?? panel.frame.origin)
         }
@@ -828,8 +827,6 @@ final class TitleBarOverlayController {
             guard shaded[wid] == nil else { return }
             guard let o = overlays[wid], let style else { return }
             guard let g = PrivateWindowAPI.bounds(of: wid) else { forget(wid); return }
-            let started = CACurrentMediaTime()
-            defer { count("barMove", seconds: CACurrentMediaTime() - started) }
             let previous = o.bounds
             o.bounds = g
             var f: NSRect
@@ -1585,7 +1582,6 @@ final class TitleBarOverlayController {
             }
             return
         }
-        count("dragInput")
         let point = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)   // AX is y-down
         if let style, Self.dragsOutline(style, themeID: ThemeManager.shared.activeTheme?.config.id),
            let o = overlays[wid] {
@@ -1658,10 +1654,10 @@ final class TitleBarOverlayController {
     /// window's (WindowServer coordinates): what moves with the window, and by how much.
     private func riders(of wid: CGWindowID) -> [(wid: UInt32, offset: CGPoint)] {
         guard let o = overlays[wid] else { return [] }
-        let primaryTop = (NSScreen.screens.first(where: { $0.frame.origin == .zero }) ?? NSScreen.main)?.frame.maxY ?? 0
+        let top = Self.primaryTop()
         return [o.panel, o.patch].compactMap { $0 }.map { panel in
             let at = origin(of: panel)
-            return (UInt32(panel.windowNumber), CGPoint(x: at.x - o.bounds.minX, y: primaryTop - at.y - panel.frame.height - o.bounds.minY))
+            return (UInt32(panel.windowNumber), CGPoint(x: at.x - o.bounds.minX, y: top - at.y - panel.frame.height - o.bounds.minY))
         }
     }
 

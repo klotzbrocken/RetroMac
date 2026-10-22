@@ -76,8 +76,7 @@ final class DesktopIconsController {
         if AppSettings.shared.dockOnly { hide(); return }
         var entries = ThemeManager.shared.activeTheme?.config.desktopIcons ?? []
         // Johnny Castaway, once installed from RetroHub, on the desktops of the Windows he ran on.
-        if !entries.isEmpty, let e = JohnnyCastaway.desktopEntry(themeID: ThemeManager.shared.activeTheme?.config.id) {
-            var e = e
+        if !entries.isEmpty, var e = JohnnyCastaway.desktopEntry(themeID: ThemeManager.shared.activeTheme?.config.id) {
             e.gridX = 0
             e.gridY = (entries.compactMap { ($0.gridX ?? 0) == 0 ? ($0.gridY ?? 0) : nil }.max() ?? -1) + 1
             entries.append(e)

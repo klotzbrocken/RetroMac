@@ -30,9 +30,7 @@ enum JohnnyCastaway {
     /// The desktop gets him only in the systems he ran on: Windows 3.x, and the 9x line, where
     /// the Windows 3.1 saver still ran.
     static func belongs(onThemeID id: String?) -> Bool {
-        guard let id else { return false }
-        return ["windows31", "windows95", "windows98", "windowsme"].contains { id.hasSuffix(".\($0)") }
-            || id.hasPrefix("com.retromac.microsoft.windows98")
+        id.map { i in ["windows31", "windows95", "windows98", "windowsme"].contains { i.hasPrefix("com.retromac.microsoft.\($0)") } } ?? false
     }
 
     // MARK: - On the desktop
@@ -49,12 +47,6 @@ enum JohnnyCastaway {
     static func desktopEntry(themeID: String?) -> DockThemeConfig.DesktopIconEntry? {
         guard isInstalled, belongs(onThemeID: themeID) else { return nil }
         return DockThemeConfig.DesktopIconEntry(name: "Johnny Castaway", icon: "", type: "johnnycastaway")
-    }
-
-    /// Just installed: the desktop and Program Manager take him in now, not at the next theme switch.
-    static func didInstall() {
-        DesktopIconsController.shared.update()
-        ProgramManagerController.shared.update()
     }
 
     // MARK: - Install
@@ -123,7 +115,6 @@ enum JohnnyCastaway {
     }
 
     /// Ask for the folder of the original screen saver; copy its three files in, checked.
-    @discardableResult
     static func askForOriginals() -> Bool {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
