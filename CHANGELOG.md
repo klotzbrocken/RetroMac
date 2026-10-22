@@ -20,8 +20,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Mac's own Dock through Accessibility; Settings ▸ Themes ▸ Badges on icons turns them off.
   From a user's request.
 
-- **Four more in RetroHub ▸ Apps.** Retrolux (photo library and editing in the style of the
+- **Five more in RetroHub ▸ Apps.** Retrolux (photo library and editing in the style of the
   Snow Leopard years' pro photo software), Retron Commander (a Norton Commander for the Mac),
+  Macsplorer (the Windows 2000 Explorer as a file browser),
   ARose (the Amiga's BlitzBlank screen saver, revived with its authors' blessing) and Johnny
   Castaway (Sierra's 1992 screen saver, on Open Scrantic's reimplementation of its engine).
   Johnny Castaway needs your own copy of the three original files, asked for and checked the
