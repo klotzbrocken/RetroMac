@@ -86,6 +86,9 @@ final class MinimizedWindowTracker {
         let app = NSRunningApplication(processIdentifier: e.pid)
         if e.isAppLevel {
             app?.unhide()
+            // Opened the way the Dock does: a program whose last window was closed answers
+            // with a new one (the reopen event); activating it alone shows nothing.
+            if let url = app?.bundleURL { NSWorkspace.shared.openApplication(at: url, configuration: .init()) }
         } else {
             AXUIElementSetAttributeValue(e.window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
             AXUIElementSetAttributeValue(e.window, kAXMainAttribute as CFString, kCFBooleanTrue)
@@ -173,14 +176,29 @@ final class MinimizedWindowTracker {
         }
     }
 
+    /// The programs with a document window: layer 0 and larger than a toolbar sliver.
+    static func pidsWithWindows(_ info: [[String: Any]]) -> Set<pid_t> {
+        Set(info.compactMap { w -> pid_t? in
+            guard (w[kCGWindowLayer as String] as? Int) == 0,
+                  let d = w[kCGWindowBounds as String] as? NSDictionary,
+                  let b = CGRect(dictionaryRepresentation: d), b.width >= 50, b.height >= 50 else { return nil }
+            return w[kCGWindowOwnerPID as String] as? pid_t
+        })
+    }
+
     /// The no-permission scan: every regular app as one entry, on main, no Accessibility call.
     /// A hidden app is published as "minimized" so the dock's restore path and the taskbar's
     /// inactive button both do the right thing with it.
     private func pollAppLevel() {
         let ownBundleID = Bundle.main.bundleIdentifier ?? ""
         let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? -1
+        // A Mac program keeps running after its last window closes; a taskbar button for it would
+        // stand there for good. The window list tells which programs have a window (minimised and
+        // on other Spaces included) without Accessibility. A hidden program keeps its button.
+        let info = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        let withWindows = Self.pidsWithWindows(info)
         let all: [Entry] = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular }
+            .filter { $0.activationPolicy == .regular && ($0.isHidden || withWindows.contains($0.processIdentifier)) }
             .compactMap { app in
                 guard let bid = app.bundleIdentifier, bid != ownBundleID else { return nil }
                 let hidden = app.isHidden
