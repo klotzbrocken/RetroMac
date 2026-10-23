@@ -35,6 +35,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Phosphor Glow fades like the real tube.** On the monochrome presets the afterglow now
+  follows the monitor's own phosphor, with RCA's measured times: Amber Monitor's P3 is down to
+  a tenth in 13 ms, Terminal Green's P1 in 24.5 ms, and Green Phosphor's P39, the IBM MDA's,
+  in 150 ms before its long 1/t tail, the famous MDA smear. 100 % is the real tube. On colour
+  presets it stays an effect: a colour tube's phosphor is dark within a millisecond. The glow
+  also no longer leaves a faint residue that never fades. Data via BURNIN (GPL-3).
+
+- **The MS-DOS Prompt is grey again.** The Windows themes' Terminal profile was green on black;
+  the real prompt was light grey on black.
+
 - **The taskbar without Accessibility.** A program whose last window was closed no longer keeps
   its button, and clicking a program's button opens it again the way the Dock does, so its
   window comes back. From a tester.

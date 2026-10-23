@@ -20,11 +20,14 @@ import AppKit
 /// `max` (rather than an average) is what produces a trailing glow instead of a muddy blur:
 /// a bright pixel lights the phosphor instantly, then fades on its own.
 ///
-/// Decay is per-channel because P22 phosphors do not fade evenly — green (ZnS:Cu,Au,Al) lingers
-/// longest, red sits in the middle, blue (ZnS:Ag) dies fastest. That imbalance is why CRT trails
-/// drift green, and reproducing it is most of what sells the effect.
+/// A monochrome monitor fades the way its phosphor did, in linear light, with the times RCA
+/// measured (*Phosphors*, TPM-1508A, 1961) and the decay laws from Dyall (MIT RLE TR-56, 1948),
+/// as tabulated by BURNIN (github.com/SnortingPixels/BURNIN, GPL-3): amber P3 and green P1 fade
+/// exponentially, the IBM MDA's P39 drops to a tenth in 150 ms and then trails off as 1/t.
+/// A colour tube's P22 is dark within a millisecond, so nothing real would show there: on colour
+/// presets the afterglow is an effect, a plain half-life set by the slider.
 ///
-/// Decay is also derived from the real frame delta, so the trail lasts the same wall-clock time
+/// Decay is derived from the real frame delta, so the trail lasts the same wall-clock time
 /// at 24, 30 or 120 fps instead of getting shorter as the frame rate climbs.
 final class PhosphorPersistence {
 
@@ -42,8 +45,30 @@ final class PhosphorPersistence {
     private var lastHeight = 0
     private var lastFrameTime: CFTimeInterval = 0
 
-    /// 0 = off, 1 = maximum afterglow. Maps to a phosphor half-life, not a raw per-frame factor.
+    /// 0 = off, 1 = maximum afterglow. With a `phosphor`, 1 is the real tube and less is shorter;
+    /// without one, a half-life of 8 to 110 ms.
     var persistence: Float = 0
+
+    /// The phosphor of a monochrome preset: `tau` in seconds, and whether it fades exponentially
+    /// or with the trap-limited 1/(1 + t/τ) tail.
+    struct Phosphor: Equatable { let tau: Double; let hyperbolic: Bool }
+    static let p1 = Phosphor(tau: 0.0106, hyperbolic: false)   // green, 10 % after 24.5 ms
+    static let p3 = Phosphor(tau: 0.0056, hyperbolic: false)   // amber, 10 % after 13 ms
+    static let p39 = Phosphor(tau: 0.0167, hyperbolic: true)   // IBM MDA green, 10 % after 150 ms, then 1/t
+
+    /// Which phosphor a preset shows: its monitor's, or nil for a colour tube or a flat panel.
+    static func phosphor(forPreset name: String) -> Phosphor? {
+        switch name {
+        case "amber-monitor": return p3
+        case "green-phosphor": return p39   // the PC's green monochrome monitor: the MDA's smear
+        case "terminal-green": return p1    // a green terminal (VT220 and kin)
+        default: return nil
+        }
+    }
+
+    var phosphor: Phosphor?
+
+    private struct Params { var decay: SIMD3<Float>; var mode: Int32; var step: Float }
 
     init(device: MTLDevice) throws {
         self.device = device
@@ -69,7 +94,7 @@ final class PhosphorPersistence {
             return source
         }
         guard source.pixelFormat == .bgra8Unorm else { return source }
-        ensureTextures(width: source.width, height: source.height, format: source.pixelFormat)
+        ensureTextures(width: source.width, height: source.height)
         guard let pipeline, let history = accum[writeIndex ^ 1], let target = accum[writeIndex] else { return source }
 
         // Frame-rate independent decay: convert the persistence slider into a half-life and work
@@ -77,11 +102,18 @@ final class PhosphorPersistence {
         let now = CACurrentMediaTime()
         let dt = (lastFrameTime > 0) ? min(max(now - lastFrameTime, 1.0 / 240.0), 0.25) : 1.0 / 60.0
         lastFrameTime = now
-        // 8 ms (barely a smear) up to ~110 ms (long 1950s-television trail).
-        let halfLife = Double(0.008 + 0.102 * min(max(persistence, 0), 1))
-        let base = Float(pow(0.5, dt / halfLife))
-        // Per-channel: green lingers, blue fades first.
-        var decay = SIMD3<Float>(base * 0.97, base, base * 0.90)
+        let amount = Double(min(max(persistence, 0), 1))
+        var params: Params
+        if let p = phosphor {
+            let tau = p.tau * amount
+            params = p.hyperbolic
+                ? Params(decay: .one, mode: 2, step: Float(dt / tau))
+                : Params(decay: SIMD3(repeating: Float(exp(-dt / tau))), mode: 1, step: 0)
+        } else {
+            // 8 ms (barely a smear) up to ~110 ms (long 1950s-television trail).
+            let base = Float(pow(0.5, dt / (0.008 + 0.102 * amount)))
+            params = Params(decay: SIMD3(repeating: base), mode: 0, step: 0)
+        }
 
         let desc = MTLRenderPassDescriptor()
         desc.colorAttachments[0].texture = target
@@ -93,7 +125,7 @@ final class PhosphorPersistence {
         encoder.setFragmentTexture(source, index: 0)    // this frame's signal
         encoder.setFragmentTexture(history, index: 1)   // what the phosphor still holds
         encoder.setFragmentSamplerState(sampler, index: 0)
-        encoder.setFragmentBytes(&decay, length: MemoryLayout<SIMD3<Float>>.size, index: 0)
+        encoder.setFragmentBytes(&params, length: MemoryLayout<Params>.stride, index: 0)
         encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
         encoder.endEncoding()
 
@@ -103,9 +135,11 @@ final class PhosphorPersistence {
 
     // MARK: - Setup
 
-    private func ensureTextures(width: Int, height: Int, format: MTLPixelFormat) {
+    /// Half floats, not the signal's 8 bits: a dim glow decays by less than one 8-bit step per
+    /// frame, rounds back up and would hang there for good.
+    private func ensureTextures(width: Int, height: Int) {
         guard width != lastWidth || height != lastHeight || accum[0] == nil else { return }
-        let desc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format, width: width,
+        let desc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba16Float, width: width,
                                                             height: height, mipmapped: false)
         desc.usage = [.renderTarget, .shaderRead]
         desc.storageMode = .private
@@ -130,13 +164,24 @@ final class PhosphorPersistence {
             return out;
         }
 
+        struct Params { float3 decay; int mode; float step; };
+
         fragment float4 phosphor_fragment(PhosVertex in [[stage_in]],
                                           texture2d<float> current [[texture(0)]],
                                           texture2d<float> history [[texture(1)]],
                                           sampler s [[sampler(0)]],
-                                          constant float3& decay [[buffer(0)]]) {
+                                          constant Params& p [[buffer(0)]]) {
             float4 cur = current.sample(s, in.texCoord);
-            float3 old = history.sample(s, in.texCoord).rgb * decay;
+            float3 old = history.sample(s, in.texCoord).rgb;
+            if (p.mode == 0) {
+                old *= p.decay;                       // the effect: a half-life on the signal
+            } else {
+                float3 lin = pow(max(old, 0.0), 2.2); // a phosphor fades in light, not in signal
+                // ponytail: the 1/t law treats a dim pixel as an old bright one; exact per-pixel
+                // age would need a second texture.
+                lin = p.mode == 1 ? lin * p.decay : lin / (1.0 + lin * p.step);
+                old = pow(lin, 1.0 / 2.2);
+            }
             // The beam re-lights a pixel instantly; otherwise the old glow just fades.
             return float4(max(cur.rgb, old), cur.a);
         }
@@ -149,7 +194,7 @@ final class PhosphorPersistence {
         let desc = MTLRenderPipelineDescriptor()
         desc.vertexFunction = vfn
         desc.fragmentFunction = ffn
-        desc.colorAttachments[0].pixelFormat = .bgra8Unorm
+        desc.colorAttachments[0].pixelFormat = .rgba16Float
         pipeline = try device.makeRenderPipelineState(descriptor: desc)
     }
 

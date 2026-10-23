@@ -78,6 +78,7 @@ final class RetroRenderer {
         if phosphorPersistence > 0.001 {
             fresh.phosphor = try? PhosphorPersistence(device: device)
             fresh.phosphor?.persistence = phosphorPersistence
+            fresh.phosphor?.phosphor = phosphorKind
         }
         outputs[key] = fresh
         return fresh
@@ -91,10 +92,16 @@ final class RetroRenderer {
             for out in outputs.values {
                 if phosphorPersistence > 0.001, out.phosphor == nil {
                     out.phosphor = try? PhosphorPersistence(device: device)
+                    out.phosphor?.phosphor = phosphorKind
                 }
                 out.phosphor?.persistence = phosphorPersistence
             }
         }
+    }
+
+    /// The loaded preset's phosphor, so its afterglow fades like that tube's.
+    private var phosphorKind: PhosphorPersistence.Phosphor? {
+        didSet { for out in outputs.values { out.phosphor?.phosphor = phosphorKind } }
     }
 
 
@@ -116,6 +123,7 @@ final class RetroRenderer {
         // once someone has cycled through the picker, is every switch. Every output, because each
         // screen carries its own history.
         for out in outputs.values { out.phosphor?.reset() }
+        phosphorKind = PhosphorPersistence.phosphor(forPreset: name)
 
         if let cached = pipelineCache[name] {
             currentPipeline = cached

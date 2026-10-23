@@ -30,8 +30,9 @@ enum TerminalThemer {
     private static func profile(forThemeNamed name: String) -> Profile? {
         let n = name.lowercased()
         if n.contains("windows") || n.contains("dos") {
+            // The MS-DOS Prompt's light grey on black (VGA colour 7, #AAAAAA), not a green screen.
             return Profile(name: "RetroMac DOS", bg: .black,
-                           fg: NSColor(red: 0.31, green: 0.92, blue: 0.31, alpha: 1),
+                           fg: NSColor(srgbRed: 0.667, green: 0.667, blue: 0.667, alpha: 1),
                            fontName: "Menlo-Regular", fontSize: 13)
         }
         if n.contains("beos") {
