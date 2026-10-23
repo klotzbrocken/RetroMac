@@ -33,6 +33,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   drag an outline and move the window once, on release; the others move the bar and the patch
   over the real traffic lights with the window, without the lag that let the lights show.
 
+- **Two new monitors, two truer ones.** Orange Plasma is the gas-plasma screen of the laptops
+  around 1990 (IBM P70, #ff6a1a on near-black), White Phosphor the DEC VT100's cool P4 white.
+  Amber Monitor now has the Hercules monitor's P3 amber, and Game Boy SameBoy's measured DMG
+  shades and the slow STN panel, so with Phosphor Glow on a moving picture smears both ways like
+  the real one. All of them turn the picture into its own brightness, so text stays sharp enough
+  to work in. Colours from BURNIN's sources.
+
 ### Fixes
 
 - **Phosphor Glow fades like the real tube.** On the monochrome presets the afterglow now

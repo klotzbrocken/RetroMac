@@ -116,6 +116,10 @@ enum BuiltinShaders {
         "lcd3x": lcd3xShader,
         "zfast-lcd": zfastLcdShader,
         "gameboy": gameboyShader,
+        // Single-colour screens from documented colours (BURNIN's sources): a picture made of its
+        // own brightness, so text stays as sharp as it was.
+        "orange-plasma": monoScreen(fg: (1.0, 0.416, 0.102), bg: (0.078, 0.020, 0.0), scanlines: false),   // IBM P70 #ff6a1a on #140500
+        "white-phosphor": monoScreen(fg: (0.706, 0.847, 1.0), bg: (0.020, 0.027, 0.039), scanlines: true),  // DEC VT100 P4 #b4d8ff on #05070a
         "amber-monitor": amberMonitorShader,
         "green-phosphor": greenPhosphorShader,
         "crt-aperture": crtApertureShader,
@@ -533,6 +537,32 @@ enum BuiltinShaders {
     /// text included. Brightness is taken off the top end only, where a tube really did run out
     /// of beam current, and the midtones that carry the antialiasing of small type are left
     /// exactly where they were.
+    /// A single-colour screen: the picture's own brightness from `bg` to `fg`, a soft glow on what
+    /// is brightest, and on a CRT a light raster. No blur and no mask, so it is as readable as
+    /// the original picture. A plasma panel has no scan lines.
+    private static func monoScreen(fg: (Double, Double, Double), bg: (Double, Double, Double), scanlines: Bool) -> String {
+        """
+        fragment float4 fragment_main(
+            VertexOut in [[stage_in]],
+            constant Uniforms& uniforms [[buffer(0)]],
+            texture2d<float> source [[texture(0)]],
+            sampler s [[sampler(0)]]
+        ) {
+            float2 uv = in.texCoord;
+            float intensity = uniforms.intensity;
+            float3 original = source.sample(s, uv).rgb;
+            float luma = dot(original, float3(0.299, 0.587, 0.114));
+            float3 fg = float3(\(fg.0), \(fg.1), \(fg.2));
+            float3 color = mix(float3(\(bg.0), \(bg.1), \(bg.2)), fg, luma);
+            color += fg * smoothstep(0.5, 1.0, luma) * 0.10;
+            \(scanlines ? "color *= 1.0 - 0.15 * intensity + 0.15 * intensity * sin(uv.y * uniforms.sourceSize.y * M_PI_F);" : "")
+            color = mix(original, clamp(color, 0.0, 1.0), intensity);
+            color = applyVignette(color, uv, uniforms.vignetteIntensity);
+            return float4(color, sampleSourceAlpha(source, s, in.texCoord));
+        }
+        """
+    }
+
     private static func crtReadable(_ pitch: Int, _ scanDepth: Double = 0.30) -> String {
         return """
         fragment float4 fragment_main(
@@ -702,11 +732,11 @@ enum BuiltinShaders {
         float3 original = source.sample(s, uv).rgb;
         float luma = dot(original, float3(0.299, 0.587, 0.114));
 
-        // Authentic DMG palette (olive/yellow-green LCD, not pure green)
-        float3 c0 = float3(0.06, 0.09, 0.06);   // darkest
-        float3 c1 = float3(0.19, 0.28, 0.14);   // dark
-        float3 c2 = float3(0.52, 0.57, 0.20);   // light
-        float3 c3 = float3(0.61, 0.65, 0.32);   // lightest
+        // The DMG's four shades as SameBoy measured them (#081810 #396139 #84a563 #c6de8c)
+        float3 c0 = float3(0.031, 0.094, 0.063);   // darkest
+        float3 c1 = float3(0.224, 0.380, 0.224);   // dark
+        float3 c2 = float3(0.518, 0.647, 0.388);   // light
+        float3 c3 = float3(0.776, 0.871, 0.549);   // lightest
 
         // Quantize to 4 shades with hard steps
         float3 result;
@@ -1200,8 +1230,8 @@ enum BuiltinShaders {
         float3 original = source.sample(s, uv).rgb;
         float luma = dot(original, float3(0.299, 0.587, 0.114));
 
-        // Amber phosphor color
-        float3 amber = float3(1.0, 0.69, 0.0) * luma;
+        // P3 amber as on the Hercules monitor (#ffa700), its black a warm #0a0600
+        float3 amber = mix(float3(0.039, 0.024, 0.0), float3(1.0, 0.655, 0.0), luma);
 
         // Phosphor glow — brighter areas bloom slightly
         float glow = smoothstep(0.4, 1.0, luma) * 0.15;
@@ -1218,7 +1248,7 @@ enum BuiltinShaders {
         // CRT phosphor persistence — slight vertical blur
         float3 above = source.sample(s, uv + float2(0, 0.5 / texSize.y)).rgb;
         float lumaAbove = dot(above, float3(0.299, 0.587, 0.114));
-        amber += float3(1.0, 0.69, 0.0) * lumaAbove * 0.08 * intensity;
+        amber += float3(1.0, 0.655, 0.0) * lumaAbove * 0.08 * intensity;
 
         amber = mix(original, clamp(amber, 0.0, 1.0), intensity);
         amber = applyVignette(amber, uv, uniforms.vignetteIntensity);

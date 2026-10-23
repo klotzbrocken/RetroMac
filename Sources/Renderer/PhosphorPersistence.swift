@@ -49,12 +49,17 @@ final class PhosphorPersistence {
     /// without one, a half-life of 8 to 110 ms.
     var persistence: Float = 0
 
-    /// The phosphor of a monochrome preset: `tau` in seconds, and whether it fades exponentially
-    /// or with the trap-limited 1/(1 + t/τ) tail.
-    struct Phosphor: Equatable { let tau: Double; let hyperbolic: Bool }
-    static let p1 = Phosphor(tau: 0.0106, hyperbolic: false)   // green, 10 % after 24.5 ms
-    static let p3 = Phosphor(tau: 0.0056, hyperbolic: false)   // amber, 10 % after 13 ms
-    static let p39 = Phosphor(tau: 0.0167, hyperbolic: true)   // IBM MDA green, 10 % after 150 ms, then 1/t
+    /// How a preset's screen lets go of a picture: `tau` in seconds, and the law. A phosphor fades
+    /// exponentially or with the trap-limited 1/(1 + t/τ) tail; an STN LCD is slow both ways, so
+    /// dark trails light as much as light trails dark.
+    struct Phosphor: Equatable {
+        enum Law { case exponential, hyperbolic, lcd }
+        let tau: Double; let law: Law
+    }
+    static let p1 = Phosphor(tau: 0.0106, law: .exponential)   // green, 10 % after 24.5 ms
+    static let p3 = Phosphor(tau: 0.0056, law: .exponential)   // amber, 10 % after 13 ms
+    static let p39 = Phosphor(tau: 0.0167, law: .hyperbolic)   // IBM MDA green, 10 % after 150 ms, then 1/t
+    static let dmgLCD = Phosphor(tau: 0.04, law: .lcd)         // the Game Boy's STN panel (estimate)
 
     /// Which phosphor a preset shows: its monitor's, or nil for a colour tube or a flat panel.
     static func phosphor(forPreset name: String) -> Phosphor? {
@@ -62,6 +67,8 @@ final class PhosphorPersistence {
         case "amber-monitor": return p3
         case "green-phosphor": return p39   // the PC's green monochrome monitor: the MDA's smear
         case "terminal-green": return p1    // a green terminal (VT220 and kin)
+        case "gameboy": return dmgLCD
+        // White Phosphor's P4 and Orange Plasma's neon are dark within a millisecond: nothing to show.
         default: return nil
         }
     }
@@ -106,9 +113,11 @@ final class PhosphorPersistence {
         var params: Params
         if let p = phosphor {
             let tau = p.tau * amount
-            params = p.hyperbolic
-                ? Params(decay: .one, mode: 2, step: Float(dt / tau))
-                : Params(decay: SIMD3(repeating: Float(exp(-dt / tau))), mode: 1, step: 0)
+            switch p.law {
+            case .exponential: params = Params(decay: SIMD3(repeating: Float(exp(-dt / tau))), mode: 1, step: 0)
+            case .hyperbolic: params = Params(decay: .one, mode: 2, step: Float(dt / tau))
+            case .lcd: params = Params(decay: SIMD3(repeating: Float(exp(-dt / tau))), mode: 3, step: 0)
+            }
         } else {
             // 8 ms (barely a smear) up to ~110 ms (long 1950s-television trail).
             let base = Float(pow(0.5, dt / (0.008 + 0.102 * amount)))
@@ -173,6 +182,8 @@ final class PhosphorPersistence {
                                           constant Params& p [[buffer(0)]]) {
             float4 cur = current.sample(s, in.texCoord);
             float3 old = history.sample(s, in.texCoord).rgb;
+            // An LCD's crystals turn slowly towards whatever the picture is now, light or dark.
+            if (p.mode == 3) return float4(mix(cur.rgb, old, p.decay), cur.a);
             if (p.mode == 0) {
                 old *= p.decay;                       // the effect: a half-life on the signal
             } else {
