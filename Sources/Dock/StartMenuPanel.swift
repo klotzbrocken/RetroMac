@@ -128,7 +128,7 @@ final class StartMenuPanel: NSPanel {
         // the middle of the screen, so any window covering that area hid it and swallowed the
         // click. An unshaded menu is a cosmetic seam; an unclickable one is a broken menu, and
         // the whole point of this mode is that the desktop stays workable.
-        level = NSWindow.Level(rawValue: 27)
+        level = .themeMenu
         collectionBehavior = [.canJoinAllSpaces, .stationary]
         // VoiceOver names the window by this; flyouts rename themselves after their row.
         title = "Start"
@@ -1952,4 +1952,11 @@ extension Win7StartMenuContentView: KeyMenuLevel {
         // All Programs swaps the list in place: the keyboard carries on at its first entry.
         if h == .allPrograms, data.allProgramsItems?.isEmpty == false, !programs.isEmpty { hovered = .left(0); needsDisplay = true }
     }
+}
+
+extension NSWindow.Level {
+    /// A theme's own menus and pop-ups: above every app window, the theme's menu bar (25) and its
+    /// panels, and just under the shader overlay (28), so the shader covers them like everything
+    /// else. At the system's popUpMenu level (101) they sat on top of the shader, unfiltered.
+    static let themeMenu = NSWindow.Level(rawValue: 27)
 }

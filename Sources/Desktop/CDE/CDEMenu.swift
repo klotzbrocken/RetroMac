@@ -37,7 +37,7 @@ enum CDEMenu {
         CDESubpanel.closeAll()
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(topLeft) }) ?? NSScreen.main else { return }
         let p = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .popUpMenu
+        p.level = .themeMenu
         p.isOpaque = false
         p.backgroundColor = .clear
         p.hasShadow = false

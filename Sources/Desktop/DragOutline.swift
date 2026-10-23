@@ -26,7 +26,7 @@ final class DragOutline {
         p.backgroundColor = .clear
         p.hasShadow = false
         p.ignoresMouseEvents = true
-        p.level = .popUpMenu
+        p.level = .themeMenu
         p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
         p.contentView = view
         panel = p

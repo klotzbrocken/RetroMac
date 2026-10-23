@@ -169,7 +169,7 @@ final class PlatinumMenuController {
         view.maxHeight = (NSScreen.main?.visibleFrame.height ?? 800) - 8
         let panel = PlatinumMenuPanel(contentRect: NSRect(origin: .zero, size: view.intrinsicSize),
                                       styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.level = .popUpMenu
+        panel.level = .themeMenu
         panel.title = "Menu"   // what VoiceOver calls it; a submenu is renamed after its row
         panel.isOpaque = false; panel.backgroundColor = .clear
         panel.hasShadow = look != .platinum   // Platinum's drawn 1 px shadow is its shadow; Aqua's is soft

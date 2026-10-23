@@ -27,7 +27,7 @@ final class PlatinumVolumeSlider {
         }
         let p = NSPanel(contentRect: NSRect(origin: origin, size: size), styleMask: [.borderless, .nonactivatingPanel],
                         backing: .buffered, defer: false)
-        p.level = .popUpMenu
+        p.level = .themeMenu
         p.isOpaque = false
         p.backgroundColor = .clear
         p.hasShadow = false

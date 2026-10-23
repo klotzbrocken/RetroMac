@@ -42,6 +42,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Theme menus under the shader.** The Apple menu and menu bar menus of the Mac OS themes, CDE's
+  menus and the Control Strip's volume slider opened above the shader, unfiltered, in the middle
+  of a filtered screen. They now lie just under it, like the Start menu.
+
 - **Phosphor Glow fades like the real tube.** On the monochrome presets the afterglow now
   follows the monitor's own phosphor, with RCA's measured times: Amber Monitor's P3 is down to
   a tenth in 13 ms, Terminal Green's P1 in 24.5 ms, and Green Phosphor's P39, the IBM MDA's,
