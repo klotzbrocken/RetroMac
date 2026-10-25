@@ -45,6 +45,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   marchmountain's Windows XP High Resolution Icon Pack (CC0): sharp on a Retina screen instead
   of soft at 32 to 64 pixels.
 
+- **RetroHub's apps in the Setup Assistant.** A new Apps page lists every app RetroHub offers,
+  with its picture and an Install button, after the Games page. The lone Reframe row on the
+  System page went into it. In the menu, RetroHub now sits on the first level and opens on Apps;
+  Display moved into More.
+
 ### Fixes
 
 - **Theme menus under the shader.** The Apple menu and menu bar menus of the Mac OS themes, CDE's

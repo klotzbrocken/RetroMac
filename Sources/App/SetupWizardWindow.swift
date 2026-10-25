@@ -17,6 +17,7 @@ private enum WizardPage: Int, CaseIterable {
     case theme
     case desktop
     case games
+    case apps
     case system
     case permissions
     case getMore
@@ -38,7 +39,7 @@ struct SetupWizardView: View {
     @State private var page: WizardPage = .intro
     @State private var screenRecordingGranted = false
     @State private var accessibilityGranted = false
-    @State private var reframeInstalled = SetupWizardView.isReframeInstalled()
+    @StateObject private var apps = AppLibraryModel()
 
     // Games page
     @State private var gamesSetup = false
@@ -56,7 +57,6 @@ struct SetupWizardView: View {
     /// Called when the user finishes or skips the wizard.
     let onFinish: () -> Void
 
-    private static let reframeURL = "https://myretromac.app/reframe"
     static let windowHeight: CGFloat = 580
 
     var body: some View {
@@ -87,6 +87,7 @@ struct SetupWizardView: View {
         case .appearance:  appearancePage
         case .desktop:     desktopPage
         case .games:       gamesPage
+        case .apps:        appsPage
         case .system:      systemPage
         case .permissions: permissionsPage
         case .getMore:     GetMoreView()
@@ -108,7 +109,8 @@ struct SetupWizardView: View {
             VStack(alignment: .leading, spacing: 8) {
                 introBullet("paintbrush", "Appearance — desktop, shader, menu bar, widgets")
                 introBullet("gamecontroller", "Games — Doom, Quake, Duke Nukem & Warcraft")
-                introBullet("gearshape.2", "System — Dock Mode, start at login, Reframe")
+                introBullet("square.grid.2x2", "Apps — Reframe, the Retro Family and more from RetroHub")
+                introBullet("gearshape.2", "System — Dock Mode, start at login")
                 introBullet("lock.shield", "Permissions — screen recording & accessibility")
                 introBullet("paintbrush.pointed", "Theme — pick the look to start with")
             }
@@ -327,6 +329,55 @@ struct SetupWizardView: View {
                     .buttonStyle(.link).font(.caption)
             }
         }
+    }
+
+    /// RetroHub's Apps tab in short: the same catalogue, the same installer.
+    private var appsPage: some View {
+        pageScaffold(icon: "square.grid.2x2.fill", tint: .blue, title: "Apps",
+                     subtitle: "Real Mac apps in the look of their era. Installed into Applications.") {
+            ForEach(Array(AppCatalog.catalogue.enumerated()), id: \.element.id) { i, a in
+                if i > 0 { Divider() }
+                appRow(a)
+            }
+            Button("Open RetroHub…") { GameLibraryWindowController.shared.show(tab: .apps) }
+                .buttonStyle(.link).font(.caption)
+        }
+        .onAppear { apps.refresh() }
+    }
+
+    private func appRow(_ a: AppCatalog.App) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Group {
+                if let img = apps.shots[a.id] {
+                    Image(nsImage: img).resizable().aspectRatio(contentMode: .fill)
+                } else {
+                    Image(systemName: "macwindow").foregroundStyle(.secondary)
+                }
+            }
+            .frame(width: 64, height: 40).clipShape(RoundedRectangle(cornerRadius: 4))
+            .onAppear { apps.loadShot(a) }
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(a.name).font(.headline)
+                Text(a.blurb).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                if let note = AppCatalog.archNote(a) ?? a.caveat {
+                    Text(note).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+                }
+                if let e = apps.errors[a.id] { Text(e).font(.caption2).foregroundStyle(.orange) }
+            }
+            Spacer(minLength: 8)
+            if apps.activeID == a.id {
+                ProgressView().controlSize(.small)
+            } else if apps.installed.contains(a.id) {
+                Label("Installed", systemImage: "checkmark.circle.fill")
+                    .labelStyle(.titleAndIcon).font(.caption).foregroundStyle(.green)
+            } else if case .appStore(let url) = a.source {
+                Button("App Store") { NSWorkspace.shared.open(url) }
+            } else if AppCatalog.canInstall(a) {
+                Button("Install") { apps.install(a) }.disabled(apps.activeID != nil)
+            }
+        }
+        .accessibilityElement(children: .contain)
     }
 
     private func gameRow(_ g: WizardGame) -> some View {
@@ -550,26 +601,6 @@ struct SetupWizardView: View {
                 .pickerStyle(.segmented).labelsHidden().frame(width: 190)
                 .accessibilityLabel("Theme on")
             }
-            Divider()
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "globe").font(.system(size: 18)).foregroundStyle(.indigo).frame(width: 26)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Reframe browser").font(.headline)
-                    Text("RetroMac’s companion retro web browser.")
-                        .font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-                if reframeInstalled {
-                    Label("Installed", systemImage: "checkmark.circle.fill")
-                        .labelStyle(.titleAndIcon).font(.caption).foregroundStyle(.green)
-                } else {
-                    Button("Install…") {
-                        if let u = URL(string: Self.reframeURL) { NSWorkspace.shared.open(u) }
-                        reframeInstalled = Self.isReframeInstalled()
-                    }
-                }
-            }
         }
     }
 
@@ -716,11 +747,6 @@ struct SetupWizardView: View {
         }
     }
 
-    private static func isReframeInstalled() -> Bool {
-        let candidates = ["/Applications/Reframe.app",
-                          NSHomeDirectory() + "/Applications/Reframe.app"]
-        return candidates.contains { FileManager.default.fileExists(atPath: $0) }
-    }
 }
 
 // MARK: - Controller
