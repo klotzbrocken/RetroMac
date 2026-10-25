@@ -323,7 +323,7 @@ struct SetupWizardView: View {
                 }
                 Text("RetroMac only ships the open-source engines / game logic — the games themselves must come from your own copy. Doom and Duke Nukem also need GZDoom / Raze installed (Settings ▸ Games).")
                     .font(.caption2).foregroundStyle(.secondary)
-                Button("Browse RetroHub…") { GameLibraryWindowController.shared.show() }
+                Button("Browse RetroHub…") { GameLibraryWindowController.shared.show(tab: .games) }
                     .buttonStyle(.link).font(.caption)
             }
         }

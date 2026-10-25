@@ -38,7 +38,7 @@ struct GamesSettingsTab: View {
         RMCard(title: "RetroHub",
                subtitle: "Every game RetroMac can run — what is installed, what still has to be downloaded, its engine, where to point it at your own files — classic-looking Mac apps to install, and themes to download.",
                headerAction: AnyView(
-                Button("Open\u{2026}") { GameLibraryWindowController.shared.show() }
+                Button("Open\u{2026}") { GameLibraryWindowController.shared.show(tab: .games) }
                     .buttonStyle(RMPrimaryButtonStyle())),
                bodyPadding: 0) {
             Color.clear.frame(height: 0)

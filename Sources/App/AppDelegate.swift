@@ -1461,29 +1461,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         phosItem.submenu = phosMenu
         shaderOptionsMenu.addItem(phosItem)
 
-        // Display submenu with value chip
-        let displayItem = NSMenuItem(title: "Display", action: nil, keyEquivalent: "")
-        displayItem.image = sfIcon("display")
-        displayItem.attributedTitle = menuTitle("Display", value: currentDisplayName())
-        let displayMenu = NSMenu()
-        let allDisplays = NSMenuItem(title: "All Displays", action: #selector(selectDisplay(_:)), keyEquivalent: "")
-        allDisplays.target = self
-        allDisplays.tag = 0
-        if settings.targetDisplayID == 0 { allDisplays.state = .on }
-        displayMenu.addItem(allDisplays)
-        displayMenu.addItem(NSMenuItem.separator())
-        for screen in NSScreen.screens {
-            let displayID = screen.displayID
-            let name = screen.localizedName
-            let item = NSMenuItem(title: name, action: #selector(selectDisplay(_:)), keyEquivalent: "")
-            item.target = self
-            item.tag = Int(displayID)
-            if displayID == settings.targetDisplayID { item.state = .on }
-            displayMenu.addItem(item)
-        }
-        displayItem.submenu = displayMenu
-        menu.addItem(displayItem)
-
         menu.addItem(NSMenuItem.separator())
 
         // ── RETROMAC section ──
@@ -1572,7 +1549,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(retroItem)
         }
 
+        let hubItem = NSMenuItem(title: "RetroHub\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
+        hubItem.target = self
+        hubItem.image = MenuPixelIcons.retroHub
+        menu.addItem(hubItem)
+
         menu.addItem(NSMenuItem.separator())
+
+        // Display submenu with value chip
+        let displayItem = NSMenuItem(title: "Display", action: nil, keyEquivalent: "")
+        displayItem.image = sfIcon("display")
+        displayItem.attributedTitle = menuTitle("Display", value: currentDisplayName())
+        let displayMenu = NSMenu()
+        let allDisplays = NSMenuItem(title: "All Displays", action: #selector(selectDisplay(_:)), keyEquivalent: "")
+        allDisplays.target = self
+        allDisplays.tag = 0
+        if settings.targetDisplayID == 0 { allDisplays.state = .on }
+        displayMenu.addItem(allDisplays)
+        displayMenu.addItem(NSMenuItem.separator())
+        for screen in NSScreen.screens {
+            let displayID = screen.displayID
+            let name = screen.localizedName
+            let item = NSMenuItem(title: name, action: #selector(selectDisplay(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = Int(displayID)
+            if displayID == settings.targetDisplayID { item.state = .on }
+            displayMenu.addItem(item)
+        }
+        displayItem.submenu = displayMenu
 
         // More: what is used now and then, out of the way of the everyday switches.
         let moreItem = NSMenuItem(title: "More", action: nil, keyEquivalent: "")
@@ -1584,10 +1588,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dockOnlyItem.state = settings.dockOnly ? .on : .off
         dockOnlyItem.toolTip = "Restyle the Dock, not the whole system"
         dockOnlyItem.image = sfIcon("dock.rectangle")
-        let gamesItem = NSMenuItem(title: "RetroHub\u{2026}", action: #selector(openGameLibrary), keyEquivalent: "")
-        gamesItem.target = self
-        gamesItem.image = MenuPixelIcons.retroHub
-        moreMenu.addItem(gamesItem)
+        moreMenu.addItem(displayItem)
         let wizardItem = NSMenuItem(title: "Setup Assistant\u{2026}", action: #selector(openSetupWizard), keyEquivalent: "")
         wizardItem.target = self
         // Not the wand: that is Retro Mode / favourite, up in the header.
@@ -1601,7 +1602,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rescueItem.target = self
         rescueItem.image = sfIcon("lifepreserver")
         moreMenu.addItem(rescueItem)
-        // Under VoiceOver the four entries stand in the menu itself: in the submenu an arrow
+        // Under VoiceOver the entries stand in the menu itself: in the submenu an arrow
         // key read one entry and closed the menu, so More could not be used at all.
         if NSWorkspace.shared.isVoiceOverEnabled {
             for item in moreMenu.items { moreMenu.removeItem(item); menu.addItem(item) }

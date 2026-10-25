@@ -17,8 +17,9 @@ struct GameLibraryView: View {
     @StateObject private var apps = AppLibraryModel()
     @StateObject private var themes = ThemeLibraryModel()
     enum Tab: String, CaseIterable { case apps = "Apps", games = "Games", themes = "Themes" }
-    /// Games first, as before: every way in but the menu comes from a games page.
-    @State private var tab: Tab = .games
+    /// Apps from the menu; the games pages (Settings ▸ Games, the Setup Assistant) open on Games.
+    @State private var tab: Tab
+    init(tab: Tab = .apps) { _tab = State(initialValue: tab) }
     /// Wide enough for the longest button row a card can show — "Install Yamagi Quake II" plus
     /// the menu button — so the row never has to overflow in the first place.
     private let columns = [GridItem(.adaptive(minimum: 200), spacing: 16)]
@@ -838,7 +839,7 @@ final class GameLibraryWindowController: NSObject, NSWindowDelegate {
     static let shared = GameLibraryWindowController()
     private var window: NSWindow?
 
-    func show() {
+    func show(tab: GameLibraryView.Tab = .apps) {
         if let window {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -848,7 +849,7 @@ final class GameLibraryWindowController: NSObject, NSWindowDelegate {
                            styleMask: [.titled, .closable, .resizable],
                            backing: .buffered, defer: false)
         win.title = "RetroHub"
-        win.contentView = NSHostingView(rootView: GameLibraryView())
+        win.contentView = NSHostingView(rootView: GameLibraryView(tab: tab))
         win.center()
         win.isReleasedWhenClosed = false
         win.delegate = self
