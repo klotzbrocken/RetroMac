@@ -1,0 +1,7 @@
+Copland title bar boxes: Apple's Mac OS 8 developer release D11E4 (June 1996), the
+StandardTheme code fragment's 'pixs' resources, decoded with its 'clut' 128.
+  close.png / close-active.png         pixs 3100 / 3101 (normal / pressed)
+  zoom.png / zoom-active.png           pixs 3105 / 3106
+  collapse.png / collapse-active.png   pixs 3120 / 3121
+13 x 13 px including the box's 1 px shadow; @2x files are an exact nearest-neighbour double.
+RetroMac is not affiliated with Apple.

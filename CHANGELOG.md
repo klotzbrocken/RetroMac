@@ -12,6 +12,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   and menus in their first form, drives top right and the Trash bottom right, no dock and no
   Control Strip. Its pattern, icons and nine more desktop patterns are D11E4's own, decoded from
   the resource forks of its files.
+  Its title bars wear D11E4's own close, zoom and collapse boxes (the system's 'pixs'
+  pictures, with their pressed state), and an inactive window loses its stripes and boxes as it
+  did there; a click on one only brings it forward.
 
 - **RetroHub.** The Game & Apps Library is now RetroHub, with a third tab: Themes, for themes
   that are not built in. The list comes from the RetroMac repository, so a new theme needs no

@@ -2357,11 +2357,29 @@ final class TitleBarOverlayView: NSView {
     /// The proxy icon before the title is the theme's icon for the app, as the widget shows a
     /// folder before "Applications".
     private func drawPlatinum(_ b: NSRect) {
+        if PlatinumBar.isCopland { drawCopland(b); return }
         PlatinumBar.drawBar(b, active: isFront)
         for (k, r) in buttonRects {
             PlatinumBar.drawBox(r, active: isFront, state: tracker.state(for: k))
             if k == .zoom { PlatinumBar.zoomGlyph(in: r, active: isFront) }
             if k == .collapse { PlatinumBar.collapseGlyph(in: r, active: isFront) }
+        }
+        let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 8
+        let right = (buttonRects.first { $0.0 == .zoom }?.1.minX ?? b.width) - 8
+        PlatinumBar.drawTitle(title, icon: icon, in: b, active: isFront, minX: left, maxX: right)
+    }
+
+    /// Copland D11E4: Platinum's bar with the system's own boxes (StandardTheme `pixs` 3100 –
+    /// 3121). Its inactive windows lost the stripes and the boxes, leaving the grey title.
+    private func drawCopland(_ b: NSRect) {
+        PlatinumBar.drawBar(b, active: isFront, stripes: isFront)
+        if isFront {
+            for (k, r) in buttonRects {
+                let base = k == .close ? "close" : k == .zoom ? "zoom" : "collapse"
+                let img = ChromeAssets.image(dir: "copland", base: base, state: tracker.state(for: k) == .pressed ? .pressed : .normal)
+                img?.draw(in: r.insetBy(dx: -1, dy: -1), from: .zero, operation: .sourceOver, fraction: 1,
+                          respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
+            }
         }
         let left = (buttonRects.first { $0.0 == .close }?.1.maxX ?? 0) + 8
         let right = (buttonRects.first { $0.0 == .zoom }?.1.minX ?? b.width) - 8
@@ -2415,7 +2433,9 @@ final class TitleBarOverlayView: NSView {
         onPress?()
         // A click on a window that is not in front brings it there first, as the real bar would.
         if !isFront { onActivate?() }
-        if tracker.mouseDown(at: p) { needsDisplay = true; return }
+        // Copland shows no boxes on an inactive window: the click only brings it forward.
+        let boxesHidden = !isFront && style == .platinum && PlatinumBar.isCopland
+        if !boxesHidden, tracker.mouseDown(at: p) { needsDisplay = true; return }
         if deadZone.contains(p) {
             if event.clickCount == 2 { if let action = style.doubleClickAction { onAction?(action) }; return }
             dragStart = NSEvent.mouseLocation

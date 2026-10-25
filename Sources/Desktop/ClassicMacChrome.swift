@@ -127,8 +127,11 @@ enum PlatinumBar {
         return (close, zoom, collapse)
     }
 
+    /// The Copland theme: the same bar, with D11E4's own boxes (`Resources/Chrome/copland`).
+    static var isCopland: Bool { ThemeManager.shared.activeTheme?.config.id == "com.retromac.apple.copland" }
+
     /// The bar's own picture: fill, frame, bevel, stripes. Boxes and title go on top.
-    static func drawBar(_ b: NSRect, active: Bool) {
+    static func drawBar(_ b: NSRect, active: Bool, stripes: Bool = true) {
         fill(b, bar)
         // Frame: top and both sides (the bottom joins the window), and the bevel inside it.
         let line = active ? frame : frameBlur
@@ -139,7 +142,7 @@ enum PlatinumBar {
         fill(NSRect(x: b.minX + 1, y: b.minY + 1, width: 1, height: b.height - 1), bevelHi)
         fill(NSRect(x: b.maxX - 2, y: b.minY + 1, width: 1, height: b.height - 1), bevelLo)
         // The pinstripe band: 12 rows from 5 px down, white and grey by turns.
-        for row in 0..<12 {
+        for row in 0..<12 where stripes {
             fill(NSRect(x: b.minX + 2, y: b.minY + 5 + CGFloat(row), width: b.width - 4, height: 1), row % 2 == 0 ? stripeLt : stripeDk)
         }
     }
