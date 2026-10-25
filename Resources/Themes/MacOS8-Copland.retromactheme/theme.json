@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "com.retromac.apple.copland",
-  "minAppVersion": "3.0.1",
+  "minAppVersion": "3.0",
   "family": {
     "id": "apple",
     "name": "Apple Macintosh",

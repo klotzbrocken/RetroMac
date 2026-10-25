@@ -202,6 +202,23 @@ final class ThemeIdentityTests: XCTestCase {
                                      "Mac OS X", "Snow Leopard", "Mountain Lion"])
     }
 
+    /// A built-in theme ships with the app it runs in, so it must never ask for a newer one:
+    /// Copland asked for 3.0.1 in a 3.0 build and was silently skipped, missing from the list.
+    func testBuiltInThemesRunOnTheAppTheyShipWith() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let plist = try XCTUnwrap(NSDictionary(contentsOf: root.appendingPathComponent("Info.plist")))
+        let version = try XCTUnwrap(plist["CFBundleShortVersionString"] as? String)
+        let bundles = try FileManager.default.contentsOfDirectory(at: root.appendingPathComponent("Resources/Themes"),
+                                                                  includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "retromactheme" }
+        for url in bundles {
+            let cfg = try ThemeBundle(url: url, isBuiltIn: true).config
+            XCTAssertTrue(ThemeBundle.satisfies(minAppVersion: cfg.minAppVersion, appVersion: version),
+                          "\(cfg.name) needs \(cfg.minAppVersion ?? "?"), the app is \(version)")
+        }
+    }
+
     func testMinAppVersionIsComparedNumerically() {
         XCTAssertTrue(ThemeBundle.satisfies(minAppVersion: nil, appVersion: "2.8.4"))
         XCTAssertTrue(ThemeBundle.satisfies(minAppVersion: "", appVersion: "2.8.4"))
