@@ -52,7 +52,7 @@ enum RetroFrameTheme {
     static func legacyKeyFromName(_ displayName: String) -> String {
         let name = displayName.lowercased()
         if name.contains("beos") { return "beos" }
-        if name.contains("mac os 9") { return "macos9" }
+        if name.contains("mac os 9") || name.contains("copland") { return "macos9" }
         if name.contains("mac os 6") { return "macos6" }     // authentic 1-bit System 6 chrome (System6Chrome)
         if name.contains("system 7") { return "system7" }    // System 7.1 (System7Chrome)
         // The Aqua family splits in two. "macosx" is Cheetah-era Aqua: pinstripes, gel controls,

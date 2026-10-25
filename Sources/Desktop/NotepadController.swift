@@ -203,7 +203,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
     private func editorAppFlavor() -> String {
         guard AppSettings.shared.dockEnabled else { return "" }
         let n = (ThemeManager.shared.activeTheme?.config.name ?? "").lowercased()
-        if n.contains("mac os 9") { return "simpletext" }
+        if n.contains("mac os 9") || n.contains("copland") { return "simpletext" }
         if n.contains("mac os 6") { return "teachtext" }
         return ""
     }

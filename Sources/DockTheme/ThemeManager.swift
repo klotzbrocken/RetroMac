@@ -858,6 +858,10 @@ final class ThemeManager {
         case "Mac OS 9 (authentic)":
             // Platinum, flat #DDDDDD.
             return MenuBarStyle(bottom: c(0.867), top: c(0.867), rule: c(0.333))
+        case "Mac OS 8 (Copland)":
+            // Copland D11E4, measured off its screenshots: flat #E2E2E2. The rule below is lost
+            // in the JPEGs; Platinum's is assumed.
+            return MenuBarStyle(bottom: c(0.886), top: c(0.886), rule: c(0.333))
         case "Mac OS X":
             // Aqua 10.0 to 10.4: near-white, finely pinstriped.
             return MenuBarStyle(bottom: c(0.937), top: c(0.976), rule: c(0.588),

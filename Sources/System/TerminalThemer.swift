@@ -39,7 +39,7 @@ enum TerminalThemer {
             return Profile(name: "RetroMac BeOS", bg: NSColor(white: 1.0, alpha: 1),
                            fg: .black, fontName: "Menlo-Regular", fontSize: 12)
         }
-        if n.contains("mac os 6") || n.contains("mac os 9") {
+        if n.contains("mac os 6") || n.contains("mac os 9") || n.contains("copland") {
             return Profile(name: "RetroMac Classic Mac", bg: .white, fg: .black,
                            fontName: "Monaco", fontSize: 11)
         }

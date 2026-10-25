@@ -7,6 +7,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **New theme: Mac OS 8 (Copland).** The Mac OS that never shipped, as Apple's June 1996
+  developer release D11E4 showed it: the purple grid desktop, lavender folders, Platinum windows
+  and menus in their first form, drives top right and the Trash bottom right, no dock and no
+  Control Strip. Its pattern, icons and nine more desktop patterns are D11E4's own, decoded from
+  the resource forks of its files.
+
 - **RetroHub.** The Game & Apps Library is now RetroHub, with a third tab: Themes, for themes
   that are not built in. The list comes from the RetroMac repository, so a new theme needs no
   app update; each download is checked against the list's SHA-256 and installed like a theme

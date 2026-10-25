@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.copland",
+  "minAppVersion": "3.0.1",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "Copland D11E4",
+    "year": 1996
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "macos9"
+  },
+  "name": "Mac OS 8 (Copland)",
+  "systemTweaks": [
+    {
+      "domain": "-g",
+      "key": "NSConvolutionOverride1",
+      "type": "float",
+      "value": "4",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "-g",
+      "key": "NSSplitViewItemGlassMinimumCornerRadius",
+      "type": "float",
+      "value": "4",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.universalaccess",
+      "key": "reduceTransparency",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Dock"
+    },
+    {
+      "domain": "-g",
+      "key": "AppleReduceDesktopTinting",
+      "type": "bool",
+      "value": "true"
+    },
+    {
+      "domain": "-g",
+      "key": "NSSplitViewItemSidebarDefaultsToFloatingAppearance",
+      "type": "bool",
+      "value": "false"
+    },
+    {
+      "domain": "-g",
+      "key": "AppleShowScrollBars",
+      "type": "string",
+      "value": "Always"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "FXPreferredViewStyle",
+      "type": "string",
+      "value": "Nlsv",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "ShowStatusBar",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "ShowPathbar",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "_FXShowPosixPathInTitle",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "-g",
+      "key": "AppleShowAllExtensions",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "DisableAllAnimations",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "-g",
+      "key": "NSAutomaticWindowAnimationsEnabled",
+      "type": "bool",
+      "value": "false"
+    },
+    {
+      "domain": "-g",
+      "key": "NSUseAnimatedFocusRing",
+      "type": "bool",
+      "value": "false"
+    },
+    {
+      "domain": "-g",
+      "key": "NSTableViewDefaultSizeMode",
+      "type": "int",
+      "value": "1",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.dock",
+      "key": "mineffect",
+      "type": "string",
+      "value": "scale",
+      "refresh": "Dock"
+    },
+    {
+      "domain": "com.apple.dock",
+      "key": "launchanim",
+      "type": "bool",
+      "value": "false",
+      "refresh": "Dock"
+    }
+  ],
+  "menuBarApple": "rainbow",
+  "menuBar": {
+    "appleMenu": true
+  },
+  "version": "1.0",
+  "author": "RetroMac",
+  "dock": {
+    "height": 26,
+    "iconSize": 16,
+    "padding": 0,
+    "spacing": 0,
+    "cornerRadius": 0,
+    "backgroundColor": "#BBBBBBFF",
+    "borderColor": "#262626FF",
+    "borderWidth": 0,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "alignment": "left",
+    "fullWidth": false,
+    "dockStyle": "none",
+    "showClock": false,
+    "showDiskFree": false,
+    "showTrash": false,
+    "showGrip": false,
+    "magnification": false,
+    "edgeOffset": 0,
+    "backgroundImageMode": "tile",
+    "bevelTopColor": "#FFFFFFFF",
+    "bevelBottomColor": "#808080FF",
+    "bevelWidth": 1
+  },
+  "icon": {
+    "renderStyle": "pixelated",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.05
+  },
+  "indicator": {
+    "style": "none",
+    "color": "#000000",
+    "size": 0,
+    "offset": 0
+  },
+  "wallpaper": "tile-copland.png",
+  "wallpapers": [
+    {
+      "name": "Copland",
+      "file": "tile-copland.png",
+      "tiled": true
+    },
+    {
+      "name": "Lavender Wiggle",
+      "file": "tile-lavender-wiggle.png",
+      "tiled": true
+    },
+    {
+      "name": "Purple Powder",
+      "file": "tile-purple-powder.png",
+      "tiled": true
+    },
+    {
+      "name": "Ivory Lace",
+      "file": "tile-ivory-lace.png",
+      "tiled": true
+    },
+    {
+      "name": "Ivory Fiber",
+      "file": "tile-ivory-fiber.png",
+      "tiled": true
+    },
+    {
+      "name": "Obsidian",
+      "file": "tile-obsidian.png",
+      "tiled": true
+    },
+    {
+      "name": "Ash Fiber",
+      "file": "tile-ash-fiber.png",
+      "tiled": true
+    },
+    {
+      "name": "Shale",
+      "file": "tile-shale.png",
+      "tiled": true
+    },
+    {
+      "name": "Rose Mash",
+      "file": "tile-rose-mash.png",
+      "tiled": true
+    },
+    {
+      "name": "Terra Cotta Brown",
+      "file": "tile-terra-cotta.png",
+      "tiled": true
+    }
+  ],
+  "wallpaperTiled": true,
+  "desktopIconsSide": "right",
+  "desktopIcons": [
+    {
+      "name": "Macintosh HD",
+      "icon": "harddrive.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Trash",
+      "icon": "trash_empty.png",
+      "iconFull": "trash_full.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": -1
+    }
+  ],
+  "fallbackIcon": "generic.png",
+  "iconMappings": {},
+  "defaultPreset": "crt-readable",
+  "screensaver": "none",
+  "appearance": "light",
+  "accentColor": "graphite",
+  "desktopIconSize": 32,
+  "desktopLabel": {
+    "font": "PixelOperator",
+    "size": 16,
+    "color": "#000000",
+    "background": "#FFFFFF"
+  }
+}

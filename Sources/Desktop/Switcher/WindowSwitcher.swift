@@ -64,6 +64,7 @@ struct SwitcherCapability: Equatable {
         "com.retromac.apple.system7-authentic": none("System 7 keeps its application menu."),
         "com.retromac.apple.macos9": none("Mac OS 9 keeps its application menu."),
         "com.retromac.apple.macos9-authentic": none("Mac OS 9 keeps its application menu."),
+        "com.retromac.apple.copland": none("Copland D11E4 shows no window switcher in any of its screenshots."),
         "com.retromac.microsoft.windows31": none("Windows 3.1 keeps the Task List of its Program Manager."),
         "com.retromac.be.beos5": none("BeOS keeps its Deskbar."),
         "com.retromac.next.nextstep": none("NeXTSTEP keeps its dock."),

@@ -1,0 +1,19 @@
+Mac OS 8 (Copland) - RetroMac theme
+
+Everything in this theme comes from Apple's Mac OS 8 developer release D11E4 (June 1996),
+decoded from the resource forks of its own files. RetroMac is not affiliated with Apple.
+
+  tile-copland.png        'ppat' 269, Appearance control panel (the desktop of the D11E4 screenshots)
+  tile-*.png              the named 'ppat' patterns of the Appearance control panel (256-287)
+  icons/folder.png        NuSystem 'icl8'/'ICN#' -3999
+  icons/document.png      NuSystem -4000
+  icons/generic.png       NuSystem -3996
+  icons/trash_empty.png   NuSystem -3993
+  icons/trash_full.png    NuSystem -3984
+  icons/computer.png      NuSystem 3
+  icons/harddrive.png     Finder 8 -3995
+  appIcon.png             Appearance control panel 128 (shown at 8x, nearest neighbour)
+  preview.jpg             a D11E4 screenshot, 640x480
+
+Icons are decoded at their native 32 pixels with the Mac's standard 256-colour table and
+their 1-bit mask; patterns with the colour table inside each 'ppat'.
