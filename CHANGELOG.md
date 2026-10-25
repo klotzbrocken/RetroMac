@@ -40,6 +40,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   the real one. All of them turn the picture into its own brightness, so text stays sharp enough
   to work in. Colours from BURNIN's sources.
 
+- **Windows XP in high resolution.** 30 of the XP theme's icons, from My Computer and the
+  Recycle Bin to the Start menu's Run, Search and Turn Off, are now the hand-redrawn versions of
+  marchmountain's Windows XP High Resolution Icon Pack (CC0): sharp on a Retina screen instead
+  of soft at 32 to 64 pixels.
+
 ### Fixes
 
 - **Theme menus under the shader.** The Apple menu and menu bar menus of the Mac OS themes, CDE's

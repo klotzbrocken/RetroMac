@@ -26,6 +26,7 @@ to support the project; it does not change the licence of anything in this repos
 | Pixel Operator (desktop icon labels of Mac OS 9 (authentic)) | `Resources/Fonts/PixelOperator.ttf` | CC0 1.0, Jayvee Enaguas, [fontlibrary.org](https://fontlibrary.org/en/font/pixel-operator) — full text in `PixelOperator-LICENSE.txt` |
 | Retrosmart cursor set (Windows 3.1, 95, Me pointers) | `Resources/Cursors/Retrosmart`, `Resources/Cursors/Windows95` | GPL v3 |
 | XP.css caption buttons | `Resources/Chrome/winxp/` | MIT, © 2020 Adam Hammad, Jordan Scales |
+| Windows XP High Resolution Icon Pack (30 of the Windows XP theme's icons, redrawn at high resolution) | `Resources/Themes/WindowsXP.retromactheme/icons/` | CC0 1.0, marchmountain, [github.com/marchmountain/-Windows-XP-High-Resolution-Icon-Pack](https://github.com/marchmountain/-Windows-XP-High-Resolution-Icon-Pack). The designs are Microsoft's, as listed below |
 | 7.css colours and gradients | `Sources/Desktop/` (drawn natively) | MIT, © 2021 Khang Nguyen Duy |
 | three.js (Pipes screensaver, Hover) | `Resources/Widgets/Screensavers/Pipes/lib`, `Resources/Widgets/Hover/scripts` | MIT |
 | Flurry-WebGL (Flurry screensaver) | `Resources/Widgets/Screensavers/Flurry` | MIT, © 2014 Roy Adrian Curtis, derived with permission from Calum Robinson's Flurry |
