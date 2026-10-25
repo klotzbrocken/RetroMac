@@ -15,6 +15,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Its title bars wear D11E4's own close, zoom and collapse boxes (the system's 'pixs'
   pictures, with their pressed state), and an inactive window loses its stripes and boxes as it
   did there; a click on one only brings it forward.
+  It starts with D11E4's own start-up, the Mac OS face built square by square, has an
+  Applications folder on the desktop in its look, and a window minimised with ⌘M zooms away
+  the Mac OS 8 way instead of shrinking towards a hidden Dock. RetroMac's own windows
+  (Applications, Calculator, Notepad, Clock, CPU) wear D11E4's boxes, scroll arrows and the
+  lavender thumb, one arrow at each end, flat when inactive.
 
 - **RetroHub.** The Game & Apps Library is now RetroHub, with a third tab: Themes, for themes
   that are not built in. The list comes from the RetroMac repository, so a new theme needs no

@@ -5,3 +5,5 @@ StandardTheme code fragment's 'pixs' resources, decoded with its 'clut' 128.
   collapse.png / collapse-active.png   pixs 3120 / 3121
 13 x 13 px including the box's 1 px shadow; @2x files are an exact nearest-neighbour double.
 RetroMac is not affiliated with Apple.
+  sb-up/down/left/right(-active).png   pixs 1346/1350/1354/1358 (+1 pressed), 16 x 16
+  sb-thumb-v.png / sb-thumb-h.png      pixs 1362 / 1365, the lavender scroll thumbs

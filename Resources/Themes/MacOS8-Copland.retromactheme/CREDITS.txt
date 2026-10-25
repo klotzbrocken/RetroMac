@@ -14,6 +14,8 @@ decoded from the resource forks of its own files. RetroMac is not affiliated wit
   icons/harddrive.png     Finder 8 -3995
   appIcon.png             Appearance control panel 128 (shown at 8x, nearest neighbour)
   preview.jpg             a D11E4 screenshot, 640x480
+  boot.mp4, splash.png    D11E4's start-up as recorded in "Apple Copland, l'ex-futur Mac OS 8"
+                          (Le Journal Du Lapin): its first 11 seconds, sped up to 5, without sound
 
 Icons are decoded at their native 32 pixels with the Mac's standard 256-colour table and
 their 1-bit mask; patterns with the colour table inside each 'ppat'.

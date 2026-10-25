@@ -138,6 +138,7 @@
   },
   "version": "1.0",
   "author": "RetroMac",
+  "splashScreen": "splash.png",
   "dock": {
     "height": 26,
     "iconSize": 16,
@@ -244,6 +245,13 @@
       "gridY": 0
     },
     {
+      "name": "Applications",
+      "icon": "folder.png",
+      "type": "appfolder",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
       "name": "Trash",
       "icon": "trash_empty.png",
       "iconFull": "trash_full.png",
@@ -264,5 +272,7 @@
     "size": 16,
     "color": "#000000",
     "background": "#FFFFFF"
-  }
+  },
+  "splashVideo": "boot.mp4",
+  "splashFullscreen": true
 }

@@ -17,11 +17,12 @@ final class MinimizeZoom {
     static let shared = MinimizeZoom()
     private init() {}
 
-    /// Under the theme without a dock, Mac OS 9 (authentic), and under a Windows taskbar, where a
-    /// window goes into its button.
+    /// Under the Platinum themes without a dock, Mac OS 9 (authentic) and Copland, and under a
+    /// Windows taskbar, where a window goes into its button.
     static var wanted: Bool {
         guard let config = ThemeManager.shared.activeTheme?.config else { return false }
-        return config.isControlStripModules || config.hasTaskButtons || intoDockIcon
+        let platinumWithoutDock = config.chrome?.style == "macos9" && config.dock.dockStyle == "none"
+        return config.isControlStripModules || platinumWithoutDock || config.hasTaskButtons || intoDockIcon
     }
 
     /// Halloween: its fireballs stand in for the lights, so the Mac's own minimise would show the

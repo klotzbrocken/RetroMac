@@ -144,6 +144,7 @@ struct Win98Scheme {
         let remove = "(function(){var e=document.getElementById('w98scheme'); if(e) e.remove();})();"
         if RetroFrameTheme.key() == "cde" { return CDEWidgetChrome.js }   // Solaris: dtwm over the Win98 furniture
         if RetroFrameTheme.key() == "photon" { return PhotonWidgetChrome.js }   // QNX: Photon over the Win98 furniture
+        if RetroFrameTheme.key() == "macos9" && PlatinumBar.isCopland { return CoplandWidgetChrome.js }   // D11E4's parts over Platinum
         guard RetroFrameTheme.key() == "win98" else { return remove }
         // Win98 Plus! scheme (Windows 98 only), else the active theme's own palette (e.g. Windows Me).
         let c: DockThemeConfig.ChromeColors?
