@@ -118,11 +118,28 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Spaces, new themes, historic icons \u{2014} and a lot of fixes")
+                Text("Copland, RetroHub\u{2019}s apps and screens closer to the real ones")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("apple.logo", .purple, "New: Mac OS 8 (Copland)",
+                            "The Mac OS that never shipped, as Apple\u{2019}s June 1996 developer release D11E4 showed it: the purple grid desktop, lavender folders and Platinum in its first form, rebuilt from D11E4\u{2019}s own files. Its start-up, its title bar boxes, an Applications folder in its look, nine of its desktop patterns, and RetroMac\u{2019}s own windows wear its scroll arrows and lavender thumbs.")
+                    feature("shippingbox.fill", .pink, "RetroHub: Themes, and more apps",
+                            "RetroHub has a Themes tab for themes to download as they come, and opens on Apps. New there: ICQuel, Retrolux, Retron Commander, Macsplorer, ARose and Johnny Castaway, the 1992 Sierra screen saver, on your own copy of its files and on the Windows 3.x and 9x desktops once installed. The Setup Assistant has an Apps page too.")
+                    feature("app.badge.fill", .red, "Badges, where the system had them",
+                            "Mail\u{2019}s unread count and every other app\u{2019}s number on the retro dock, drawn as each era drew them: Mac OS X 10.0 on Mail only, Snow Leopard and Mountain Lion as the red pill, Windows 7 as an overlay on the taskbar button.")
+                    feature("rectangle.dashed", .orange, "Dragging a window the way its era did",
+                            "Mac OS 6 to 9, Windows 3.x and 95 and CDE drag an outline and move the window once, on release. The other themes keep their title bars on the window while it moves.")
+                    feature("tv.fill", .green, "Monitors, closer to the real ones",
+                            "Orange Plasma, the gas-plasma screen of the laptops around 1990, and White Phosphor, the DEC VT100\u{2019}s, are new. Amber has the Hercules monitor\u{2019}s colour, Game Boy SameBoy\u{2019}s measured shades and its slow screen, and Phosphor Glow fades as each tube\u{2019}s phosphor did. All of them leave text sharp enough to work in.")
+                    feature("photo.on.rectangle.angled", .blue, "Windows XP in high resolution",
+                            "30 of the XP theme\u{2019}s icons are the hand-redrawn high-resolution versions: sharp on a Retina screen.")
+                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
+                            "Theme menus no longer open above the shader. A .retromactheme opens in RetroMac with a double-click, and your own themes can be deleted. The disk image opens as a proper install window. Without Accessibility, the taskbar drops programs with no window and brings a window back on a click. Windows 3.x\u{2019}s running programs can be dragged across the desktop. The MS-DOS Prompt is grey again, and Desktop Glass is gone. RetroHub and Themes have their icons in the menu-bar menu again.")
+
+                    sectionHeader("Also in 3.0")
+
                     feature("rectangle.split.3x1", .indigo, "A theme on your Spaces of choice",
                             "Keep the theme to one Space, or a few, and plain macOS on the others: Themes \u{25B8} On This Space in the menu-bar menu. The Setup Assistant asks it too. The theme slides away with its Space; the others have the Mac\u{2019}s Dock, menu bar and your own wallpaper. Every Space gets its own wallpaper back when a theme goes off, read from macOS before the theme changed it.")
                     feature("flame.fill", .orange, "New: Halloween",
@@ -157,16 +174,6 @@ struct WelcomeFlowView: View {
                             "Themes first, the shader in four clear tabs, Retro Mode is now Favourite, a shorter Setup Assistant with themes by family, and betas on request in About. The flyout keeps the everyday switches; the menu-bar menu has a More menu for Dock Only, RetroHub, the Setup Assistant and Rescue Desktop.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
                             "Theme switches no longer restart the Dock and Finder for nothing. Pac-Man starts again. The shader is off behind the lock screen. No more log file on the Desktop. A rolled-up window keeps its way back, even across a crash. Mission Control no longer shows the title bars as little windows. The menu-bar icon closes its menu on a second click, the dock answers the mouse coming down from the menu bar, Rescue Desktop gives every Space its wallpaper back, the shader\u{2019}s scanline and glass overlays draw again, and Futurama\u{2019}s windows close. The Control Strip and the dock sit in place after a theme switch, Dashboard dims every display, and when macOS hides RetroMac\u{2019}s menu-bar icon, RetroMac says so and offers a Dock icon. Started from the disk image, it offers to move itself to Applications. A second display keeps its own wallpaper, and Shader \u{25B8} On & Off says which themes keep the shader off. macOS no longer asks every half minute whether RetroMac may control Finder.")
-
-                    sectionHeader("Also in 2.8.8")
-
-                    feature("macwindow", .cyan, "Mac OS X, closer to 10.0",
-                            "White pinstriped title bars with glossy Aqua lights, and the pill that rolls a window up into its bar like a garage door. The Dock on the screen\u{2019}s edge with bouncing icons and outlined names, 10.0\u{2019}s Apple menu, a proper boot screen and dozens of original Mac OS X icons.")
-                    feature("dock.rectangle", .blue, "Rearrange the dock",
-                            "Drag an icon along the dock and it stays where you let go; an app or a folder dragged in from the Finder lands where it is dropped. A folder takes the icon you choose for it.")
-                    feature("rectangle.compress.vertical", .purple, "WindowShade",
-                            "Under the Mac OS 8/9 title bars the collapse box and a double-click roll a window up to its bar and down again; under System 7.1 a double-click does it, as System 7.5\u{2019}s WindowShade did.")
-
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }

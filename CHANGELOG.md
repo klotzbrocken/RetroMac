@@ -66,6 +66,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **RetroHub and Themes show their icons in the menu-bar menu.** Their pixel icons were drawn
+  by a handler and came out blank in the menu; they are bitmaps now.
+
 - **Theme menus under the shader.** The Apple menu and menu bar menus of the Mac OS themes, CDE's
   menus and the Control Strip's volume slider opened above the shader, unfiltered, in the middle
   of a filtered screen. They now lie just under it, like the Start menu.
