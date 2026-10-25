@@ -90,6 +90,13 @@ enum AppCatalog {
             page: repoPage("klotzbrocken/ICQuel"),
             screenshot: URL(string: "https://raw.githubusercontent.com/klotzbrocken/ICQuel/main/screenshots/windows-classic-main.png")!,
             caveat: nil),
+        App(id: "desktopgames", name: "Desktop Games", author: "Miroslav N\u{011B}me\u{010D}ek \u{00B7} port by ucodia",
+            blurb: "The Gemtree stress reducer of 2000: it takes a picture of your screen and lets you wreck it with a hammer, chain-saw, machine gun, flame-thrower, termites and more, then wash it clean. On the Windows 9x and XP desktops as stress.exe once installed.",
+            bundleID: AppCatalog.desktopGamesBundleID, appName: "Desktop Games",
+            source: .github(repo: "ucodia/desktop-games-nostalgia", asset: { $0.hasPrefix("desktop-games") && $0.hasSuffix(".dmg") }),
+            page: repoPage("ucodia/desktop-games-nostalgia"),
+            screenshot: URL(string: "https://raw.githubusercontent.com/ucodia/desktop-games-nostalgia/main/docs/demo.gif")!,
+            caveat: "Plays on a picture of your real screen, which needs Screen Recording; without it, on your wallpaper."),
         App(id: "mojavepaint", name: "Mojave Paint", author: "Skull Rock Software",
             blurb: "An image editor with modern GPU internals and the clean look of the best 1990s paint programs: layers, masks, blend modes.",
             bundleID: "com.skullrocksoftware.mojavepaint", appName: "Mojave Paint",
@@ -147,6 +154,18 @@ enum AppCatalog {
             screenshot: URL(string: "https://raw.githubusercontent.com/glauberlima/open-scrantic/main/docs/images/open-scrantic-logo.png")!,
             caveat: "Needs your own copy of the original files (SCRANTIC.SCR, RESOURCE.MAP, RESOURCE.001); RetroMac asks for them the first time."),
     ]
+
+    static let desktopGamesBundleID = "io.github.ucodia.desktopgames"
+
+    /// Desktop Games as stress.exe, the name it had, on the desktops of the Windows it ran on
+    /// (95 and later); nil when it is not installed or the theme is another system.
+    static func stressExeEntry(themeID: String?) -> DockThemeConfig.DesktopIconEntry? {
+        guard let id = themeID, ["windows95", "windows98", "windowsme", "windowsxp"].contains(where: { id.hasPrefix("com.retromac.microsoft.\($0)") }),
+              NSWorkspace.shared.urlForApplication(withBundleIdentifier: desktopGamesBundleID) != nil else { return nil }
+        var e = DockThemeConfig.DesktopIconEntry(name: "stress.exe", icon: "", type: "app")
+        e.bundleID = desktopGamesBundleID
+        return e
+    }
 
     static func isInstalled(_ a: App) -> Bool {
         if case .castaway = a.source { return JohnnyCastaway.isInstalled }
@@ -207,7 +226,10 @@ enum AppCatalog {
         func finish(_ error: String?) {
             DispatchQueue.main.async {
                 win.close()
-                if error == nil { excludeInstalledFromTitleBars() }
+                if error == nil {
+                    excludeInstalledFromTitleBars()
+                    DesktopIconsController.shared.update()   // an app with a desktop icon of its own shows it now
+                }
                 completion(error)
             }
         }

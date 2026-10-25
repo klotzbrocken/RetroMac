@@ -81,6 +81,12 @@ final class DesktopIconsController {
             e.gridY = (entries.compactMap { ($0.gridX ?? 0) == 0 ? ($0.gridY ?? 0) : nil }.max() ?? -1) + 1
             entries.append(e)
         }
+        // Desktop Games, once installed from RetroHub, as stress.exe on the Windows 9x and XP desktops.
+        if !entries.isEmpty, var e = AppCatalog.stressExeEntry(themeID: ThemeManager.shared.activeTheme?.config.id) {
+            e.gridX = 0
+            e.gridY = (entries.compactMap { ($0.gridX ?? 0) == 0 ? ($0.gridY ?? 0) : nil }.max() ?? -1) + 1
+            entries.append(e)
+        }
         // Add a "Read Me" shortcut that opens the theme's About readme, for any theme that both
         // ships a readme.html AND shows a themed desktop (skips NeXT, whose desktop has no icons).
         if !entries.isEmpty, let theme = ThemeManager.shared.activeTheme, ThemeReadmeController.activeThemeHasReadme() {

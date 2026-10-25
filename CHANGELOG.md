@@ -3,6 +3,15 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 3.0.2
+
+### New
+
+- **Desktop Games in RetroHub ▸ Apps.** The Gemtree stress reducer of 2000, ported to the Mac by
+  ucodia: it takes a picture of your screen and lets you wreck it with a hammer, chain-saw,
+  machine gun, flame-thrower, termites and more, then wash it clean. Once installed it sits on
+  the Windows 95, 98, Me and XP desktops as stress.exe, the name it had.
+
 ## 3.0.1
 
 ### New
