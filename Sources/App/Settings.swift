@@ -1021,6 +1021,13 @@ final class AppSettings: ObservableObject {
     @Published var crashSoundEnabled: Bool {
         didSet { defaults.set(crashSoundEnabled, forKey: "crashSoundEnabled") }
     }
+
+    /// Settings ▸ Sounds: keyboard, drive and fan.
+    @Published var sounds: SoundPrefs {
+        didSet {
+            if let data = try? JSONEncoder().encode(sounds) { defaults.set(data, forKey: "sounds") }
+        }
+    }
     /// The red "simulated crash" badge. On by default and deliberately hard to argue with:
     /// somebody walking past the desk should not think the machine has died.
     @Published var crashShowBadge: Bool {
@@ -1441,6 +1448,7 @@ final class AppSettings: ObservableObject {
         crashCountdown = defaults.object(forKey: "crashCountdown") as? Int ?? 3
         crashPictureRatio = defaults.string(forKey: "crashPictureRatio") ?? "fill"
         crashSoundEnabled = defaults.object(forKey: "crashSoundEnabled") as? Bool ?? true
+        sounds = defaults.data(forKey: "sounds").flatMap { try? JSONDecoder().decode(SoundPrefs.self, from: $0) } ?? SoundPrefs()
         crashShowBadge = defaults.object(forKey: "crashShowBadge") as? Bool ?? true
         crashFullSequence = defaults.object(forKey: "crashFullSequence") as? Bool ?? true
         crashGlitches = defaults.object(forKey: "crashGlitches") as? Bool ?? true

@@ -13,14 +13,22 @@ let package = Package(
             path: "Sources/SkyLightBridge",
             publicHeadersPath: "include"
         ),
+        // Platter's drive sound engine (MIT, hurtz/platter), unchanged.
+        .target(
+            name: "DriveSynth",
+            path: "Sources/DriveSynth",
+            exclude: ["LICENSE"],
+            publicHeadersPath: "include"
+        ),
         .executableTarget(
             name: "RetroMac",
             dependencies: [
                 .product(name: "Sparkle", package: "Sparkle"),
                 "SkyLightBridge",
+                "DriveSynth",
             ],
             path: "Sources",
-            exclude: ["CameraExtension", "SkyLightBridge"],
+            exclude: ["CameraExtension", "SkyLightBridge", "DriveSynth"],
             resources: [
                 .copy("../Resources/Themes"),
                 .copy("../Resources/TV"),

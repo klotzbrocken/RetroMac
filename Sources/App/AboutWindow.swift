@@ -320,6 +320,13 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Link("hurtz/platter on GitHub",
+                         destination: URL(string: "https://github.com/hurtz/platter")!)
+                        .font(.caption)
+                    Text("Sounds: the virtual drive is Platter's DriveSynth by Jason O'Connell (MIT).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("marchmountain/Windows-XP-Icon-Pack on GitHub",
                          destination: URL(string: "https://github.com/marchmountain/-Windows-XP-High-Resolution-Icon-Pack")!)
                         .font(.caption)

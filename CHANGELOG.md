@@ -7,6 +7,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **Sounds.** A new place in Settings for a Mac that makes no sound of its own: keys that click
+  (subtle, clicky or a typewriter, with the bell on Return), a hard drive that spins up, seeks
+  when the disk is really busy and parks when you turn it off (six drives from a 1986 stepper to
+  a 15K server, synthesized by Platter's DriveSynth), and a fan that rises with the CPU load and
+  runs on after it. One master switch and volume, everything off until you turn it on. It
+  pauses while a microphone records, the screen is shared, the Mac is muted or asleep, and
+  follows the output device. The drive counts disk activity and nothing else; the keyboard
+  learns only which kind of key went down, never what was typed, and needs Accessibility.
+
 - **Desktop Games in RetroHub ▸ Apps.** The Gemtree stress reducer of 2000, ported to the Mac by
   ucodia: it takes a picture of your screen and lets you wreck it with a hammer, chain-saw,
   machine gun, flame-thrower, termites and more, then wash it clean. Once installed it sits on

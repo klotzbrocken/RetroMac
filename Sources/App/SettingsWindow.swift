@@ -24,6 +24,7 @@ enum SettingsTab: String, CaseIterable {
     case dock = "dock"
     case desktop = "desktop"
     case retroMode = "retroMode"
+    case sounds = "sounds"
     case camera = "camera"
     case games = "games"
     case crashes = "crashes"
@@ -43,6 +44,7 @@ enum SettingsTab: String, CaseIterable {
         case .dock: return "Themes"
         case .desktop: return "Desktop"
         case .retroMode: return "Favourite"
+        case .sounds: return "Sounds"
         case .camera: return LicenseManager.shared.label("Camera & Streaming")
         case .games: return "Games"
         case .crashes: return LicenseManager.shared.label("Crashes")
@@ -59,6 +61,7 @@ enum SettingsTab: String, CaseIterable {
         case .dock: return "paintpalette"
         case .desktop: return "menubar.dock.rectangle"
         case .retroMode: return "wand.and.stars"
+        case .sounds: return "speaker.wave.2"
         case .camera: return "camera.fill"
         case .games: return "gamecontroller"
         case .crashes: return "exclamationmark.triangle"
@@ -74,7 +77,7 @@ enum SettingsTab: String, CaseIterable {
     var section: String? {
         switch self {
         // The shader leads: it is the product, and it had no home of its own until now.
-        case .shader, .dock, .desktop, .retroMode: return nil
+        case .shader, .dock, .desktop, .sounds, .retroMode: return nil
         case .camera, .games, .crashes: return "Surfaces"
         case .shortcuts, .general, .health, .about: return "System"
         }
@@ -90,6 +93,7 @@ enum SettingsTab: String, CaseIterable {
         case .general: return "Setup, startup and the permissions RetroMac needs."
         case .crashes: return "Simulated failures in period. Nothing ever really crashes."
         case .retroMode: return "One click to a favourite look, and back."
+        case .sounds: return "Keys, a spinning drive and a fan, for a Mac that makes no sound."
         case .camera: return "A shader on your webcam, and television bookmarks."
         case .games: return "CRT for the games, and where their files live."
         case .health: return "What this Mac can do, and what RetroMac is doing right now."
@@ -146,7 +150,7 @@ struct SettingsSidebar: View {
     @ObservedObject private var settings = AppSettings.shared
 
     // Group tabs by section in order
-    private var mainTabs: [SettingsTab] { [.dock, .shader, .desktop, .retroMode] }
+    private var mainTabs: [SettingsTab] { [.dock, .shader, .desktop, .sounds, .retroMode] }
     private var surfacesTabs: [SettingsTab] { [.camera, .games, .crashes] }
     private var systemTabs: [SettingsTab] { [.general, .shortcuts, .health, .about] }
 
@@ -369,6 +373,8 @@ struct SettingsDetailPane: View {
                         .id(ThemeManager.shared.activeTheme?.config.settingsKey ?? "")
                 case .retroMode:
                     RetroModeTab()
+                case .sounds:
+                    SoundsTab()
                 case .camera:
                     CameraStreamingTab()
                 case .games:
