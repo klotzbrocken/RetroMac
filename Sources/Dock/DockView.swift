@@ -4057,7 +4057,9 @@ final class DockView: NSView {
     private func setupMagnificationTracking() {
         if let ta = magnificationTrackingArea { removeTrackingArea(ta) }
         magnificationTrackingArea = nil
-        guard hasMagnification || needsStartButtonTracking else { return }
+        // Windows 7's Show Desktop strip needs the pointer too (Aero Peek).
+        let peekStrip = RetroFrameTheme.key() == "win7" && !isVertical
+        guard hasMagnification || needsStartButtonTracking || peekStrip else { return }
         let ta = NSTrackingArea(
             rect: bounds,
             options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways],

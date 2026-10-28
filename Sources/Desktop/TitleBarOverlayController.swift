@@ -1583,6 +1583,7 @@ final class TitleBarOverlayController {
             return
         }
         let point = CGPoint(x: origin.x + delta.x, y: origin.y - delta.y)   // AX is y-down
+        if let o = overlays[wid] { AeroSnap.shared.barDragged(wid: wid, pid: pid, frame: CGRect(origin: point, size: o.bounds.size)) }
         if let style, Self.dragsOutline(style, themeID: ThemeManager.shared.activeTheme?.config.id),
            let o = overlays[wid] {
             // Only the outline moves; the window follows once, on release.
@@ -1609,6 +1610,11 @@ final class TitleBarOverlayController {
 
     /// The release of an outline drag: the window moves there now, once.
     private func finishDrag() {
+        // Aero Snap takes the window: the drag's last position must not land after it.
+        if AeroSnap.shared.barDragEnded() {
+            dragTarget = nil
+            outlineDrop = nil
+        }
         if let drop = outlineDrop {
             dragTarget = drop
             applyDrag()

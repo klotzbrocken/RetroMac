@@ -7,7 +7,8 @@ import ApplicationServices
 /// resized, created) and looked at 150 ms after its last change, never while a mouse button is
 /// down. It never fights an app or the user: a frame it moved a window from is left alone if the
 /// window comes back to it, and no window is moved more than twice in ten seconds. Full-screen
-/// windows, sheets, panels and RetroMac's own are never touched.
+/// windows, sheets, panels and RetroMac's own are never touched. Every Accessibility call runs on
+/// the title bars' Accessibility queue, never on the main thread (PERF-05).
 ///
 /// After macOS 7 Ultimate SP1's WorkAreaKeeper (github.com/kaganisildak/macOS-7-Ultimate-SP1, GPL-3.0).
 final class WorkAreaKeeper {
@@ -60,7 +61,7 @@ final class WorkAreaKeeper {
         observers = [:]
         pending.values.forEach { $0.cancel() }
         pending = [:]
-        memory = [:]
+        Self.queue.async { self.memory = [:] }
         print("[WorkArea] Stopped")
     }
 
@@ -76,12 +77,28 @@ final class WorkAreaKeeper {
     private func observe(_ pid: pid_t, attempt: Int, now: Bool = false) {
         DispatchQueue.main.asyncAfter(deadline: .now() + (now ? 0 : Self.retryDelays[attempt])) { [weak self] in
             guard let self, self.isActive, self.observers[pid] == nil else { return }
-            if self.attach(pid) { self.lookAtWindows(of: pid) }
-            else if attempt + 1 < Self.retryDelays.count { self.observe(pid, attempt: attempt + 1) }
+            Self.queue.async {
+                let obs = self.attach(pid)
+                let windows = obs == nil ? [] : Self.windows(of: pid)
+                DispatchQueue.main.async {
+                    guard let obs else {
+                        if attempt + 1 < Self.retryDelays.count { self.observe(pid, attempt: attempt + 1) }
+                        return
+                    }
+                    guard self.isActive, self.observers[pid] == nil else {
+                        return CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), .defaultMode)
+                    }
+                    self.observers[pid] = obs
+                    windows.forEach { self.schedule($0, pid: pid) }
+                }
+            }
         }
     }
 
-    private func attach(_ pid: pid_t) -> Bool {
+    private static let queue = TitleBarOverlayController.axQueue
+
+    /// On the queue: the observer, its source already on the main run loop.
+    private func attach(_ pid: pid_t) -> AXObserver? {
         var made: AXObserver?
         let callback: AXObserverCallback = { _, element, _, refcon in
             guard let refcon else { return }
@@ -89,23 +106,22 @@ final class WorkAreaKeeper {
             AXUIElementGetPid(element, &pid)
             Unmanaged<WorkAreaKeeper>.fromOpaque(refcon).takeUnretainedValue().schedule(element, pid: pid)
         }
-        guard AXObserverCreate(pid, callback, &made) == .success, let obs = made else { return false }
+        guard AXObserverCreate(pid, callback, &made) == .success, let obs = made else { return nil }
         let app = AXUIElementCreateApplication(pid), me = Unmanaged.passUnretained(self).toOpaque()
         var any = false
         for n in [kAXWindowCreatedNotification, kAXWindowMovedNotification, kAXWindowResizedNotification] {
             if AXObserverAddNotification(obs, app, n as CFString, me) == .success { any = true }
         }
-        guard any else { return false }
+        guard any else { return nil }
         CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(obs), .defaultMode)
-        observers[pid] = obs
-        return true
+        return obs
     }
 
-    private func lookAtWindows(of pid: pid_t) {
+    private static func windows(of pid: pid_t) -> [AXUIElement] {
         var value: AnyObject?
-        guard AXUIElementCopyAttributeValue(AXUIElementCreateApplication(pid), kAXWindowsAttribute as CFString, &value) == .success,
-              let windows = value as? [AXUIElement] else { return }
-        windows.forEach { schedule($0, pid: pid) }
+        guard AXUIElementCopyAttributeValue(AXUIElementCreateApplication(pid), kAXWindowsAttribute as CFString, &value) == .success
+        else { return [] }
+        return value as? [AXUIElement] ?? []
     }
 
     /// No Accessibility call here: a change only re-arms the window's settle timer.
@@ -113,33 +129,31 @@ final class WorkAreaKeeper {
         guard isActive else { return }
         let key = Key(element: window)
         pending[key]?.cancel()
-        let item = DispatchWorkItem { [weak self] in self?.settle(window, key: key) }
+        let item = DispatchWorkItem { [weak self] in
+            guard let self, self.isActive else { return }
+            self.pending[key] = nil
+            // A drag or a resize in progress: look again once the button is up.
+            if NSEvent.pressedMouseButtons != 0 { return self.schedule(window, pid: pid) }
+            guard let bar = DockController.shared.currentDockFrame(), let geometry = Self.geometry(barAppKit: bar) else { return }
+            Self.queue.async { self.settle(window, key: key, geometry: geometry) }
+        }
         pending[key] = item
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: item)
     }
 
     // MARK: - Settling
 
-    private func settle(_ window: AXUIElement, key: Key) {
-        pending[key] = nil
-        guard isActive else { return }
-        // A drag or a resize in progress: look again once the button is up.
-        if NSEvent.pressedMouseButtons != 0 {
-            var pid: pid_t = 0
-            AXUIElementGetPid(window, &pid)
-            return schedule(window, pid: pid)
-        }
+    /// On the queue, which alone touches `memory`.
+    private func settle(_ window: AXUIElement, key: Key, geometry: (visible: CGRect, bar: CGRect)) {
         guard Self.string(window, kAXSubroleAttribute) == (kAXStandardWindowSubrole as String),
               Self.bool(window, "AXFullScreen") != true, Self.bool(window, kAXMinimizedAttribute) != true,
-              let frame = Self.frame(of: window),
-              let barAppKit = DockController.shared.currentDockFrame() else { return }
+              let frame = Self.frame(of: window) else { return }
         var mem = memory[key] ?? Memory()
         defer { memory[key] = mem }
         // Each frame is looked at once; one it was moved from is the user's or the app's choice.
         guard frame != mem.looked, !mem.movedFrom.contains(frame) else { return }
         mem.looked = frame
-        guard let (visible, bar) = Self.geometry(barAppKit: barAppKit),
-              let target = WorkArea.adjusted(frame: frame, visible: visible, bar: bar) else { return }
+        guard let target = WorkArea.adjusted(frame: frame, visible: geometry.visible, bar: geometry.bar) else { return }
         let now = ProcessInfo.processInfo.systemUptime
         mem.moves = mem.moves.filter { now - $0 < 10 }
         guard mem.moves.count < 2 else { return }
@@ -152,7 +166,7 @@ final class WorkAreaKeeper {
     }
 
     /// The bar's screen's visible frame and the bar, in Accessibility coordinates (top-left origin).
-    private static func geometry(barAppKit: NSRect) -> (CGRect, CGRect)? {
+    private static func geometry(barAppKit: NSRect) -> (visible: CGRect, bar: CGRect)? {
         guard let primary = NSScreen.screens.first else { return nil }
         let screen = NSScreen.screens.first { $0.frame.intersects(barAppKit) } ?? primary
         let h = primary.frame.height

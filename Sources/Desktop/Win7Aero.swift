@@ -12,7 +12,9 @@ import Carbon.HIToolbox
 /// - **Shake.** Shake a window by its title bar and every other app hides; shake it again and they
 ///   come back.
 ///
-/// Both need Accessibility. After macOS 7 Ultimate SP1's SnapController and ShakeDetector
+/// Both need Accessibility. A window under one of RetroMac's own title bars is dragged by that bar,
+/// which reports to `barDragged`/`barDragEnded`; any other by its own, seen by a global mouse
+/// monitor. Moves and sizes go through the title bars' Accessibility queue. After macOS 7 Ultimate SP1's SnapController and ShakeDetector
 /// (github.com/kaganisildak/macOS-7-Ultimate-SP1, GPL-3.0).
 final class AeroSnap {
     static let shared = AeroSnap()
@@ -20,7 +22,7 @@ final class AeroSnap {
     private static let signature: OSType = 0x534E4150   // 'SNAP'
 
     private struct Drag {
-        let window: AXUIElement
+        let window: AXUIElement?
         var start: CGRect
         var moving = false
         var lastRead = 0.0
@@ -152,11 +154,11 @@ final class AeroSnap {
         }
         guard var d = drag else { return }
         defer { drag = d }
-        if shakeOn, d.shake.add(x: p.x, time: time) { shake(except: d.window) }
+        if shakeOn, d.shake.add(x: p.x, time: time), let w = d.window { shake(exceptPID: Self.pid(of: w)) }
         guard snapOn, time - d.lastRead >= 0.05 else { return }
         d.lastRead = time
         if !d.moving {
-            guard let f = WorkAreaKeeper.frame(of: d.window) else { return }
+            guard let w = d.window, let f = WorkAreaKeeper.frame(of: w) else { return }
             // Moving, not resizing and not selecting text in the title bar's band.
             d.moving = f.origin != d.start.origin && f.size == d.start.size
             if !d.moving { return }
@@ -167,17 +169,76 @@ final class AeroSnap {
 
     private func finishDrag() {
         defer { drag = nil; preview.hide() }
-        guard let d = drag, d.moving, let target = d.target else { return }
-        snap(d.window, to: target, original: d.start)
+        guard let d = drag, d.moving, let target = d.target, let w = d.window else { return }
+        snap(w, to: target, original: d.start)
     }
 
-    private func snap(_ window: AXUIElement, to target: CGRect, original: CGRect) {
+    // MARK: - Dragged by RetroMac's own title bar
+
+    private var barDrag: (wid: CGWindowID, pid: pid_t)?
+
+    /// The title bar of window `wid` is being dragged; `frame` is where the window is going.
+    func barDragged(wid: CGWindowID, pid: pid_t, frame: CGRect) {
+        guard snapOn || shakeOn else { return }
+        let p = Self.cursor, time = ProcessInfo.processInfo.systemUptime
+        if barDrag?.wid != wid {
+            barDrag = (wid, pid)
+            drag = Drag(window: nil, start: frame, moving: true, shake: ShakeDetector(startX: p.x))
+            if let s = snapped[wid], frame.size == s.applied.size {
+                // Pulled off its snap: back to its old size.
+                snapped[wid] = nil
+                let size = s.original.size
+                TitleBarOverlayController.axQueue.async {
+                    if let w = TitleBarOverlayController.findAXWindow(wid, pid: pid) { WorkAreaKeeper.set(w, size: size) }
+                }
+            } else {
+                snapped[wid] = nil
+            }
+            return
+        }
+        guard var d = drag else { return }
+        defer { drag = d }
+        if shakeOn, d.shake.add(x: p.x, time: time) { shake(exceptPID: pid) }
+        guard snapOn else { return }
+        d.target = Self.target(cursor: p)
+        if let t = d.target { preview.show(axFrame: t) } else { preview.hide() }
+    }
+
+    /// The bar was let go. True when the window snaps: the drag's last position must not follow.
+    @discardableResult
+    func barDragEnded() -> Bool {
+        defer { drag = nil; barDrag = nil; preview.hide() }
+        guard let (wid, pid) = barDrag, let d = drag, let target = d.target else { return false }
+        let original = d.start
+        TitleBarOverlayController.axQueue.async { [weak self] in
+            guard let w = TitleBarOverlayController.findAXWindow(wid, pid: pid) else { return }
+            let applied = Self.apply(target, to: w)
+            DispatchQueue.main.async { self?.snapped[wid] = (original, applied) }
+        }
+        return true
+    }
+
+    /// On the Accessibility queue. Position, size and the position again: an app may refuse a
+    /// size that does not fit where the window still is.
+    private static func apply(_ target: CGRect, to window: AXUIElement) -> CGRect {
         WorkAreaKeeper.set(window, origin: target.origin)
         WorkAreaKeeper.set(window, size: target.size)
         WorkAreaKeeper.set(window, origin: target.origin)
-        if let id = Self.id(of: window) {
-            snapped[id] = (original, WorkAreaKeeper.frame(of: window) ?? target)
+        return WorkAreaKeeper.frame(of: window) ?? target
+    }
+
+    private func snap(_ window: AXUIElement, to target: CGRect, original: CGRect) {
+        TitleBarOverlayController.axQueue.async { [weak self] in
+            let applied = Self.apply(target, to: window)
+            guard let id = Self.id(of: window) else { return }
+            DispatchQueue.main.async { self?.snapped[id] = (original, applied) }
         }
+    }
+
+    private static func pid(of window: AXUIElement) -> pid_t {
+        var pid: pid_t = 0
+        AXUIElementGetPid(window, &pid)
+        return pid
     }
 
     // MARK: - Keyboard
@@ -193,22 +254,19 @@ final class AeroSnap {
         case 1: snap(w, to: SnapGeometry.half(area, left: false), original: original)
         case 2: snap(w, to: area, original: original)
         default:
-            if let id, let s = snapped[id] {
-                WorkAreaKeeper.set(w, size: s.original.size)
-                WorkAreaKeeper.set(w, origin: s.original.origin)
-                snapped[id] = nil
-            } else {
-                AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+            let back = id.flatMap { snapped[$0]?.original }
+            if let id { snapped[id] = nil }
+            TitleBarOverlayController.axQueue.async {
+                if let back { _ = Self.apply(back, to: w) }
+                else { AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
             }
         }
     }
 
     // MARK: - Shake
 
-    private func shake(except window: AXUIElement) {
+    private func shake(exceptPID pid: pid_t) {
         if !shakeHidden.isEmpty { return restoreShaken() }
-        var pid: pid_t = 0
-        AXUIElementGetPid(window, &pid)
         for app in NSWorkspace.shared.runningApplications
         where app.activationPolicy == .regular && app.processIdentifier != pid && app.processIdentifier != getpid()
             && !app.isHidden && app.hide() {
