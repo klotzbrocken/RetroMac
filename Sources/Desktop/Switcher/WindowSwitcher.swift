@@ -1,4 +1,5 @@
 import AppKit
+import SkyLightBridge
 import Carbon.HIToolbox
 
 /// What each theme's era could do to change windows (Lastenheft 3.0, SW-01): one explicit entry
@@ -208,7 +209,8 @@ final class WindowSwitcher {
     private func focus(_ t: Target) -> Bool {
         guard let app = NSRunningApplication(processIdentifier: t.pid), !app.isTerminated,
               let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, t.wid) as? [[String: Any]], !info.isEmpty else { return false }
-        app.activate(options: [.activateIgnoringOtherApps])
+        // The window server, not activate(): since macOS 14 an inactive app's request is ignored.
+        if !skb_focus_window(t.pid, t.wid) { app.activate(options: [.activateIgnoringOtherApps]) }
         TitleBarOverlayController.axQueue.async {
             guard let w = TitleBarOverlayController.findAXWindow(t.wid, pid: t.pid) else { return }
             AXUIElementSetAttributeValue(w, kAXMainAttribute as CFString, kCFBooleanTrue)

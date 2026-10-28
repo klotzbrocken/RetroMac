@@ -53,4 +53,10 @@ CFArrayRef skb_copy_space_uuids(void) CF_RETURNS_RETAINED;
 uint64_t skb_space_id_for_uuid(CFStringRef uuid);
 bool skb_move_window_to_space(uint32_t wid, uint64_t sid);
 
+// Bring another app's window to the front and make it key, as a click on it would: the process
+// to the front with this window (user generated), then the window made key. Works from an app
+// that is not active itself, where NSRunningApplication.activate is ignored since macOS 14.
+// Returns false when the process cannot be found.
+bool skb_focus_window(pid_t pid, uint32_t wid);
+
 #endif

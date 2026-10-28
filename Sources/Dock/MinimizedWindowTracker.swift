@@ -1,4 +1,5 @@
 import AppKit
+import SkyLightBridge
 import ApplicationServices
 
 extension Notification.Name {
@@ -93,6 +94,14 @@ final class MinimizedWindowTracker {
             AXUIElementSetAttributeValue(e.window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
             AXUIElementSetAttributeValue(e.window, kAXMainAttribute as CFString, kCFBooleanTrue)
             AXUIElementPerformAction(e.window, kAXRaiseAction as CFString)
+            // Since macOS 14 an app that is not active itself (a click on the taskbar does not
+            // activate RetroMac) has its activate requests ignored: the window came up inside its
+            // app, behind the front app's. The window server brings it to the front instead.
+            var wid: CGWindowID = 0
+            if axUIElementGetWindow?(e.window, &wid) == .success, wid != 0, skb_focus_window(e.pid, wid) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.poll() }
+                return
+            }
         }
         app?.activate(options: [.activateIgnoringOtherApps])
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.poll() }
