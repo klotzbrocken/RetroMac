@@ -182,6 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AeroSnap.shared.update()
             SidebarController.shared.update()
             NextRunningAppsController.shared.update()
+            NextMiniwindowsController.shared.update()
             WindowBorderController.shared.update()   // recolour theme window borders on theme change
             TaskManagerController.shared.update()    // Ctrl+Option+Delete under Windows XP
             // The active theme drives the menu-bar Apple logo (Mac OS 9 → rainbow, Mac OS X →
@@ -2917,6 +2918,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AeroSnap.shared.update()
         SidebarController.shared.update()
         NextRunningAppsController.shared.update()
+        NextMiniwindowsController.shared.update()
         WindowBorderController.shared.update()
         RainbowAppleController.shared.update()
         applyThemeWidgets(for: AppSettings.shared.dockTheme)
@@ -3060,6 +3062,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             WindowSwitcher.shared.stop()
             SidebarController.shared.hide()
             NextRunningAppsController.shared.hide()
+            NextMiniwindowsController.shared.hide()
             TaskManagerController.shared.stop()
             ThemeManager.shared.clearActiveTheme()
             ThemeManager.shared.restoreWallpapers()
@@ -3182,6 +3185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WindowSwitcher.shared.stop()
         SidebarController.shared.hide()
         NextRunningAppsController.shared.hide()
+        NextMiniwindowsController.shared.hide()
         TaskManagerController.shared.stop()
         ThemeManager.shared.clearActiveTheme()
         ThemeManager.shared.restoreWallpapers()

@@ -43,6 +43,7 @@ final class TitleBarOverlayController {
         case cde                               // Solaris 8's CDE (dtwm): menu box left, minimise and maximise right
         case photon                            // QNX 6.2.1's Photon: menu box left, minimise, maximise, then close right
         case beos                              // BeOS R5: the yellow tab, only as wide as its title, close box left, zoom box right
+        case nextstep                          // NeXTSTEP: miniaturize left, close right, the bar black on the key window
         case snowLights                        // the three lights only (Snow Leopard, Mountain Lion)
         case fireLights                        // three glowing fireballs in place of the lights (Halloween)
         var isBar: Bool { self != .snowLights && self != .fireLights }
@@ -54,7 +55,7 @@ final class TitleBarOverlayController {
         var doubleClickAction: ChromeButtonKind? {
             switch self {
             case .platinum, .system7: return .collapse
-            case .system6: return nil
+            case .system6, .nextstep: return nil
             case .win31, .win98, .luna, .aero, .cde, .photon: return .zoom
             case .aqua, .snowLights, .fireLights, .beos: return .minimize   // BeOS: a double-click on the tab hid the window
             }
@@ -136,6 +137,7 @@ final class TitleBarOverlayController {
         case "cde":         return .cde        // Solaris 8
         case "photon":      return .photon     // QNX 6.2.1
         case "beos":        return .beos
+        case "nextstep":    return .nextstep
         case "win98":       return .win98      // Windows 95, 98 and Me
         case "winxp":       return .luna
         case "win7":        return .aero
@@ -717,6 +719,7 @@ final class TitleBarOverlayController {
         case .cde:      return 20   // measured off Solaris 8: a 1 pt edge and a 19 pt bar
         case .photon:   return 21   // measured off QNX 6.2.1: black and #3F3F3F, then a 19 pt bar
         case .beos:     return 22
+        case .nextstep: return 22
         case .win98:    return 24
         case .luna:     return 30
         case .aero:     return 30
@@ -1487,6 +1490,7 @@ final class TitleBarOverlayController {
             if let button { AXUIElementPerformAction(button, kAXPressAction as CFString) }
             else { AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
             if zoomed { DispatchQueue.main.async { MinimizeZoom.shared.end() } }
+            if attr == kAXMinimizeButtonAttribute { DispatchQueue.main.async { MinimizedWindowTracker.shared.refreshSoon() } }
         }
     }
 
@@ -1813,6 +1817,15 @@ final class TitleBarOverlayView: NSView {
                 tracker.add(k, r.insetBy(dx: -3, dy: -3), interactive: true)
                 buttonRects.append((k, r))
             }
+        case .nextstep:
+            // NeXTSTEP: the miniaturize button at the left end of the bar, close at the right,
+            // both 16 pt tiles 3 pt in.
+            let s: CGFloat = 16, y = ((h - s) / 2).rounded()
+            for (k, r) in [(ChromeButtonKind.minimize, NSRect(x: 3, y: y, width: s, height: s)),
+                           (.close, NSRect(x: w - 3 - s, y: y, width: s, height: s))] {
+                tracker.add(k, r.insetBy(dx: -2, dy: -2), interactive: true)
+                buttonRects.append((k, r))
+            }
         case .system6:
             // System 6: the close box on the left, the zoom box on the right, both 15 pt.
             let s = System6Chrome.boxSize
@@ -1922,6 +1935,7 @@ final class TitleBarOverlayView: NSView {
         case .cde:        drawCDE(b)
         case .photon:     drawPhoton(b)
         case .beos:       drawBeOS(b)
+        case .nextstep:   drawNextstep(b)
         case .win98:      drawWin98(b)
         case .luna:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .luna)).addClip(); drawLuna(b)
         case .aero:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .aero)).addClip(); drawAero(b)
@@ -2126,6 +2140,17 @@ final class TitleBarOverlayView: NSView {
         let r = NSRect(x: left, y: ((b.height - s.height) / 2).rounded(), width: max(0, right - left), height: s.height)
         let para = NSMutableParagraphStyle(); para.lineBreakMode = .byTruncatingTail
         (title as NSString).draw(in: r, withAttributes: attrs.merging([.paragraphStyle: para]) { $1 })
+    }
+
+    /// NeXTSTEP: black under the key window, #AAA with a black title under the others, and the
+    /// two raised tiles (`NeXTChrome`, as RetroMac's own NeXT windows draw them).
+    private func drawNextstep(_ b: NSRect) {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        NeXTChrome.titleBar(b, title: title, state: isFront ? .key : .inactive, in: ctx)
+        for (k, r) in buttonRects {
+            NeXTChrome.button(r, kind: k == .minimize ? .miniaturize : .close,
+                              pressed: tracker.state(for: k) == .pressed, flipped: true, in: ctx)
+        }
     }
 
     private func drawCDE(_ b: NSRect) {

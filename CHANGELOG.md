@@ -16,6 +16,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   follows the output device. The drive counts disk activity and nothing else; the keyboard
   learns only which kind of key went down, never what was typed, and needs Accessibility.
 
+- **NeXTSTEP title bars and miniwindows.** With the theme's title bars on, every window under the
+  NeXTSTEP theme wears the NeXT bar: black on the key window, grey on the others, the miniaturize
+  button at the left end and close at the right. A miniaturized window leaves a miniwindow on the
+  workspace, as NeXTSTEP did: a tile with the app's icon under a black strip with the window's
+  title, along the bottom of the screen from the Dock leftwards; double-click it to put the window
+  back.
+
 - **Square corners everywhere at once.** A theme with its own title bars makes windows square,
   but an app only takes that on when it starts. Picking such a theme now offers to restart the
   open apps: they are listed to leave some out, each is asked to quit the normal way (so it can

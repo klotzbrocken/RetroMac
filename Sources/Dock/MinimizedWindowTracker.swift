@@ -227,6 +227,12 @@ final class MinimizedWindowTracker {
         if changed { notify() }
     }
 
+    /// A window was just minimised or restored somewhere: look again shortly rather than at the
+    /// next poll (the NeXT miniwindows show up with it).
+    func refreshSoon() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.poll() }
+    }
+
     private func notify() {
         NotificationCenter.default.post(name: .minimizedWindowsChanged, object: nil)
         NotificationCenter.default.post(name: .windowsChanged, object: nil)

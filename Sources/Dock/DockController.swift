@@ -100,6 +100,7 @@ final class DockController {
             WindowSwitcher.shared.update()
             AeroSnap.shared.update()
             NextRunningAppsController.shared.update()
+            NextMiniwindowsController.shared.update()
             WindowBorderController.shared.update()
             RainbowAppleController.shared.update()
             if AppSettings.shared.hideMenuBar {
@@ -186,6 +187,7 @@ final class DockController {
         PhotonDesktopController.shared.hide()
         WindowSwitcher.shared.stop()
         NextRunningAppsController.shared.hide()
+        NextMiniwindowsController.shared.hide()
         WindowBorderController.shared.update()   // dock off → borders off (gated on dockEnabled)
         RainbowAppleController.shared.hide()
 
@@ -323,6 +325,7 @@ final class DockController {
             WindowSwitcher.shared.update()
             AeroSnap.shared.update()
             NextRunningAppsController.shared.update()
+            NextMiniwindowsController.shared.update()
             // These themes replace the dock entirely (Win 3.1 Program Manager, BeOS Deskbar,
             // SGI desktop) — hide the system Dock too, otherwise every running app + minimized
             // window stays piled at the bottom of the screen.
@@ -344,6 +347,7 @@ final class DockController {
         WindowSwitcher.shared.update()   // a dock theme may have a switcher too (Snow Leopard)
         AeroSnap.shared.update()
         NextRunningAppsController.shared.hide()
+        NextMiniwindowsController.shared.hide()
 
         createWindow()
         // Use orderFront(nil) instead of show()'s orderFrontRegardless()
