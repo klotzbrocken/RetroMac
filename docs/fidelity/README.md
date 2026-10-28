@@ -17,7 +17,7 @@ draws nothing, so a broken bar shows up before anyone opens a window.
 ## References
 
 Screenshots of the real system are a visual reference only: they stay outside the repository
-(for example in `docs/copland-theme-reference/`, which is never committed), are never shipped,
+(for example in `~/RetroMac-Referenz/`, outside the repository), are never shipped,
 and no pixels are copied from them. Name the source of each one in the findings table.
 
 Read reference colours by decoding the PNG into an sRGB bitmap. `NSBitmapImageRep.colorAt` with
