@@ -3,8 +3,9 @@ import Foundation
 /// RetroMac's own windows (Applications, Calculator, Notepad, Clock, CPU) under the Copland
 /// theme. Their pages draw Mac OS 9's Platinum; this lays Copland D11E4's own pieces over it —
 /// the title bar boxes, the scroll arrows and the lavender thumbs from the StandardTheme `pixs`
-/// (`Resources/Chrome/copland`) — and makes an inactive window flat and box-less, as D11E4 drew
-/// it. Injected like a Windows 98 scheme, as the page's `#w98scheme` style.
+/// (`Resources/Chrome/copland`). An inactive window is already flat and box-less from the pages'
+/// own Platinum rules, as D11E4 drew it too. Injected like a Windows 98 scheme, as the page's
+/// `#w98scheme` style.
 enum CoplandWidgetChrome {
 
     static var js: String {
@@ -19,8 +20,6 @@ enum CoplandWidgetChrome {
         body.theme-macos9 .m9-collapse:active{background-image:\(url("collapse-active"))!important;}
         body.theme-macos9 .m9-zoom::before,body.theme-macos9 .m9-zoom::after,
         body.theme-macos9 .m9-collapse::before,body.theme-macos9 .m9-collapse::after{content:none!important;}
-        body.theme-macos9.rm-blur .m9-close,body.theme-macos9.rm-blur .m9-zoom,body.theme-macos9.rm-blur .m9-collapse{visibility:hidden!important;}
-        body.theme-macos9.rm-blur .m9-title{background:#dadada!important;}
         body.theme-macos9 .sb-btn{border:none!important;box-shadow:none!important;image-rendering:pixelated;
           background-size:100% 100%!important;background-repeat:no-repeat!important;}
         body.theme-macos9 .sb-btn[data-v="-1"]{background-image:\(url("sb-up"))!important;}

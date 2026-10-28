@@ -372,10 +372,10 @@
   body.theme-macos9 .m9-collapse::before{content:""!important;position:absolute;left:1px!important;right:1px!important;top:4px!important;height:1px!important;border-top:1px solid #202020!important;border-bottom:1px solid #202020!important;background:none!important;box-shadow:none!important;}
   body.theme-macos9 .m9-collapse::after{content:none!important;}
   body.theme-macos9 .body{margin:0 4px 4px 4px!important;border:1px solid #000!important;box-shadow:-1px -1px #9c9c9c,1px 1px #fff,inset 1px 1px #fff,inset -1px -1px #acacac!important;}
-  /* Inactive window (os9.ca .window.blur): grey shadow/borders, 50% title, flat boxes */
+  /* Inactive window: grey shadow and borders, 50% title, and as Mac OS 8 and 9 drew it no stripes and no boxes */
   body.theme-macos9.rm-blur #win,body.theme-macos9.rm-blur .window,body.theme-macos9.rm-blur .be-win{box-shadow:1px 1px #525252!important;border-color:#525252!important;}
-  body.theme-macos9.rm-blur .m9-close,body.theme-macos9.rm-blur .m9-collapse,body.theme-macos9.rm-blur .m9-zoom{border-color:#525252!important;box-shadow:none!important;}
-  body.theme-macos9.rm-blur .m9-zoom::before,body.theme-macos9.rm-blur .m9-zoom::after,body.theme-macos9.rm-blur .m9-collapse::before{border-color:#525252!important;background:#525252!important;}
+  body.theme-macos9.rm-blur .m9-close,body.theme-macos9.rm-blur .m9-collapse,body.theme-macos9.rm-blur .m9-zoom{visibility:hidden!important;}
+  body.theme-macos9.rm-blur .m9-title{background:#dadada!important;}
   body.theme-macos9.rm-blur .m9-plaque{opacity:.5;}
 
   /* ===== NeXTSTEP (theme-nextstep) — black title bar, close on the RIGHT, chiseled grey frame ===== */

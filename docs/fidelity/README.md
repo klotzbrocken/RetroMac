@@ -30,3 +30,5 @@ One row per property that was compared. "Status" is changed, matches, or gap (wi
 
 | Theme | Component | Property | Before | After / target | Source | Status |
 |---|---|---|---|---|---|---|
+| Mac OS 8/9 (Platinum) | title bar, inactive | stripes and boxes | pinstripes and close, zoom and collapse boxes | flat #DADADA bar, grey title, no boxes; a click only brings the window forward (native bars and RetroMac's own windows) | Mac OS 8/9 Appearance Manager, inactive window | changed |
+| Windows XP (Luna) | caption buttons in the gallery | — | none drawn | the buttons follow the real lights' positions, which an offscreen render has none of | — | gap (gallery only) |
