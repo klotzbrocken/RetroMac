@@ -140,6 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startAppLaunchObserver()
         startSleepObserver()
         SoundEngine.shared.start()
+        StartKeyTap.shared.update()
 
         // Listen for Start menu TV bookmark requests from DockView
         tvBookmarkObserver = NotificationCenter.default.addObserver(forName: .init("openTVBookmark"), object: nil, queue: .main) { [weak self] note in

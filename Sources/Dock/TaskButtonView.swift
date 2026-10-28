@@ -76,6 +76,12 @@ final class TaskButtonView: NSView {
         if bounds.contains(convert(event.locationInWindow, from: nil)) { onClick?() }
     }
 
+    /// The right-click menu (`TaskButtonMenu`), as each Windows had it.
+    override func rightMouseDown(with event: NSEvent) {
+        TaskButtonMenu.make(style: style, window: axWindow, bundleID: bundleID).popUp(
+            positioning: nil, at: convert(event.locationInWindow, from: nil), in: self)
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let sunken = isActive || pressed
@@ -211,4 +217,81 @@ final class TaskButtonView: NSView {
                               width: max(0, b.width - textX - 5 - off), height: th + 2)
         (title as NSString).draw(in: textRect, withAttributes: attrs)
     }
+}
+
+/// The right-click menu of a taskbar button, as each Windows had it. 95 to XP: the window's own
+/// system menu (Restore, Minimize, Maximize, Close). Windows 7: the jump list's foot, the program
+/// to open, pin or unpin and the window to close. Every window command goes through
+/// Accessibility, off the main thread.
+enum TaskButtonMenu {
+    static func make(style: TaskButtonView.Style, window: AXUIElement?, bundleID: String) -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first
+        let name = app?.localizedName ?? bundleID
+        func item(_ title: String, enabled: Bool = true, bold: Bool = false, _ run: @escaping () -> Void) {
+            let i = ClosureMenuItem(title: title, run: run)
+            i.isEnabled = enabled
+            if bold { i.attributedTitle = NSAttributedString(string: title, attributes: [.font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)]) }
+            menu.addItem(i)
+        }
+        guard let window else {
+            // A program without Accessibility: only what can be done to the program.
+            item("Quit \(name)") { app?.terminate() }
+            return menu
+        }
+        let minimized = bool(window, kAXMinimizedAttribute)
+        switch style {
+        case .win7:
+            item(name) { AppLauncher.launchOrActivate(bundleID: bundleID) }
+            let pinned = AppManager.shared.apps.contains { $0.bundleID == bundleID }
+            item(pinned ? "Unpin this program from taskbar" : "Pin this program to taskbar") {
+                if pinned { AppManager.shared.removeApp(bundleID: bundleID) } else { AppManager.shared.addApp(bundleID: bundleID) }
+            }
+            menu.addItem(.separator())
+            item("Close window") { press(window, kAXCloseButtonAttribute) }
+        case .win98, .winxp:
+            item("Restore", enabled: minimized) {
+                TitleBarOverlayController.axQueue.async {
+                    AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+                }
+            }
+            item("Minimize", enabled: !minimized) {
+                TitleBarOverlayController.axQueue.async {
+                    AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+                }
+            }
+            item("Maximize") { press(window, kAXZoomButtonAttribute) }
+            menu.addItem(.separator())
+            item("Close", bold: true) { press(window, kAXCloseButtonAttribute) }
+        }
+        return menu
+    }
+
+    private static func press(_ window: AXUIElement, _ button: String) {
+        TitleBarOverlayController.axQueue.async {
+            var ref: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(window, button as CFString, &ref) == .success, let ref else { return }
+            AXUIElementPerformAction(ref as! AXUIElement, kAXPressAction as CFString)
+        }
+    }
+
+    /// Read on the click, so with a short timeout: a hung app must not hold the taskbar.
+    private static func bool(_ e: AXUIElement, _ attr: String) -> Bool {
+        AXUIElementSetMessagingTimeout(e, 0.3)
+        var v: CFTypeRef?
+        return AXUIElementCopyAttributeValue(e, attr as CFString, &v) == .success && (v as? Bool) == true
+    }
+}
+
+/// A menu item that runs a closure.
+final class ClosureMenuItem: NSMenuItem {
+    private let run: () -> Void
+    init(title: String, run: @escaping () -> Void) {
+        self.run = run
+        super.init(title: title, action: #selector(fire), keyEquivalent: "")
+        target = self
+    }
+    @available(*, unavailable) required init(coder: NSCoder) { fatalError() }
+    @objc private func fire() { run() }
 }

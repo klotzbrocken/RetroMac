@@ -166,6 +166,10 @@ final class StartMenuPanel: NSPanel {
     func showWin7(data: XPMenuData, at point: NSPoint, in parentView: NSView, startButtonRect: NSRect = .zero) {
         let content = Win7StartMenuContentView(data: data)
         content.onDismiss = { [weak self] in self?.dismiss() }
+        // Typing goes into the search box while the menu is open, as on Vista and 7.
+        StartMenuTyping.shared.attach(onText: { [weak content] in content?.type($0) },
+                                      onDelete: { [weak content] in content?.deleteBackward() })
+        typingAttached = true
         self.menuContentView = content
 
         let size = content.fittingSize
@@ -251,7 +255,10 @@ final class StartMenuPanel: NSPanel {
     /// Told when the menu goes away, however it was closed, so the Start button can pop back up.
     var onClose: (() -> Void)?
 
+    private var typingAttached = false
+
     func dismiss() {
+        if typingAttached { StartMenuTyping.shared.detach(); typingAttached = false }
         (menuContentView as? StartMenuPanel.SubmenuHost)?.dismissSubmenu()
         orderOut(nil)
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor); globalMonitor = nil }
@@ -993,7 +1000,23 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
     /// spawn a second menu. (Windows XP was the one with the cascading third column.)
     private var showingAllPrograms = false
 
+    /// What has been typed into the search box; the left pane shows what matches it.
+    private(set) var query = ""
+    private var results: [StartMenuPanel.MenuItem] = []
+
+    func type(_ text: String) { setQuery(query + text) }
+    func deleteBackward() { if !query.isEmpty { setQuery(String(query.dropLast())) } }
+
+    private func setQuery(_ q: String) {
+        query = q
+        results = q.trimmingCharacters(in: .whitespaces).isEmpty ? [] : StartMenuSearch.results(for: q, limit: maxProgramRows)
+        // Return opens the first match, as on Windows 7.
+        hovered = results.first?.action == nil ? nil : .left(0)
+        needsDisplay = true
+    }
+
     private var programs: [StartMenuPanel.MenuItem] {
+        if !query.trimmingCharacters(in: .whitespaces).isEmpty { return results }
         let source = showingAllPrograms ? (data.allProgramsItems ?? []) : data.leftItems
         let list = source.filter { !$0.isSeparator }
         // The real pane scrolls; this one cannot, so it shows what fits and offers the rest
@@ -1110,7 +1133,8 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
         for (i, r) in L.programs.enumerated() { add(programs[i].title, r, .left(i)) }
         for (i, r) in L.places.enumerated() { add(places[i].title, r, .right(i)) }
         add(showingAllPrograms ? "Back" : "All Programs", L.allPrograms, .allPrograms)
-        add(RetroFrameTheme.isVista ? "Start Search" : "Search programs and files", L.search, .search)
+        add(query.isEmpty ? (RetroFrameTheme.isVista ? "Start Search" : "Search programs and files") : "Search: \(query), clear",
+            L.search, .search)
         add("Shut down", L.shutDown, .shutDown)
         axParts = parts
         return parts
@@ -1118,7 +1142,9 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
 
     private func choose(_ h: Hover) {
         switch h {
-        case .left(let i): programs[i].action?(); onDismiss?()
+        case .left(let i):
+            guard let action = programs[i].action else { return }   // "No items match your search."
+            action(); onDismiss?()
         case .right(let i): places[i].action?(); onDismiss?()
         case .allPrograms:
             // Navigate in place; never dismiss — Back has to stay reachable.
@@ -1130,8 +1156,8 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
                 data.allProgramsAction?()
             }
         case .search:
-            if let f = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder") { NSWorkspace.shared.open(f) }
-            onDismiss?()
+            // The box's × clears it; the empty box takes what is typed, so a click only says so.
+            if !query.isEmpty { setQuery("") }
         case .shutDown: data.shutDownAction?(); onDismiss?()
         }
     }
@@ -1208,9 +1234,23 @@ private final class Win7StartMenuContentView: NSView, StartMenuPanel.SubmenuHost
         let sp = rr(L.search, 3)
         NSColor.white.setFill(); sp.fill()
         NSColor(white: 0.55, alpha: 1).setStroke(); sp.lineWidth = 1; sp.stroke()
-        text(RetroFrameTheme.isVista ? "Start Search" : "Search programs and files", NSPoint(x: L.search.minX + 8, y: L.search.midY - 7), font(11, false), NSColor(white: 0.5, alpha: 1))
-        NSColor(srgbRed: 0.20, green: 0.45, blue: 0.75, alpha: 1).setStroke()
-        let mp = NSBezierPath(ovalIn: NSRect(x: L.search.maxX - 19, y: L.search.midY - 5, width: 9, height: 9)); mp.lineWidth = 1.5; mp.stroke()
+        if query.isEmpty {
+            text(RetroFrameTheme.isVista ? "Start Search" : "Search programs and files", NSPoint(x: L.search.minX + 8, y: L.search.midY - 7), font(11, false), NSColor(white: 0.5, alpha: 1))
+            NSColor(srgbRed: 0.20, green: 0.45, blue: 0.75, alpha: 1).setStroke()
+            let mp = NSBezierPath(ovalIn: NSRect(x: L.search.maxX - 19, y: L.search.midY - 5, width: 9, height: 9)); mp.lineWidth = 1.5; mp.stroke()
+        } else {
+            // The typed text with a caret, and the × that clears it in place of the magnifier.
+            let f = font(11, false)
+            let shown = (query as NSString).size(withAttributes: [.font: f]).width > L.search.width - 34
+                ? "…" + String(query.suffix(28)) : query
+            text(shown, NSPoint(x: L.search.minX + 8, y: L.search.midY - 7), f, darkText)
+            let cx = L.search.minX + 8 + (shown as NSString).size(withAttributes: [.font: f]).width + 1
+            darkText.setFill(); NSRect(x: cx, y: L.search.midY - 7, width: 1, height: 14).fill()
+            let x = NSBezierPath(); x.lineWidth = 1.5
+            x.move(to: NSPoint(x: L.search.maxX - 18, y: L.search.midY - 4)); x.line(to: NSPoint(x: L.search.maxX - 10, y: L.search.midY + 4))
+            x.move(to: NSPoint(x: L.search.maxX - 18, y: L.search.midY + 4)); x.line(to: NSPoint(x: L.search.maxX - 10, y: L.search.midY - 4))
+            NSColor(white: 0.35, alpha: 1).setStroke(); x.stroke()
+        }
 
         // Right: user name + places (text only, white; hover = translucent white pill)
         let nm = data.userName

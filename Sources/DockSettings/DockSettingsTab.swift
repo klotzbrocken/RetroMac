@@ -387,6 +387,12 @@ struct DockSettingsTab: View {
                     }
                 }
                 RMRow(label: "Show indicators for running apps") { toggle($settings.dockShowRunningApps) }
+                if selectedThemeConfig?.hasStartButton == true {
+                    RMRow(label: "Open Start with a tap of Left \u{2318}",
+                          hint: "As the Windows key did: press and let go of the left Command key on its own. Command shortcuts work as before. Needs Accessibility.") {
+                        toggle($settings.startMenuCommandTap)
+                    }
+                }
                 RMRow(label: "Keep windows clear of the dock",
                       hint: "As the real systems did: a window that comes to rest under the dock or taskbar moves out from under it. Needs Accessibility.") {
                     toggle($settings.dockFix)

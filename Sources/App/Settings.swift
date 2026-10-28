@@ -1022,6 +1022,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(crashSoundEnabled, forKey: "crashSoundEnabled") }
     }
 
+    /// A tap of the left Command key opens the Start menu (`StartKeyTap`).
+    @Published var startMenuCommandTap: Bool {
+        didSet { defaults.set(startMenuCommandTap, forKey: "startMenuCommandTap"); StartKeyTap.shared.update() }
+    }
+
     /// Windows 7: Aero Snap, Aero Shake and Aero Peek (`Win7Aero.swift`).
     @Published var win7Snap: Bool { didSet { defaults.set(win7Snap, forKey: "win7Snap"); AeroSnap.shared.update() } }
     @Published var win7Shake: Bool { didSet { defaults.set(win7Shake, forKey: "win7Shake"); AeroSnap.shared.update() } }
@@ -1453,6 +1458,7 @@ final class AppSettings: ObservableObject {
         crashCountdown = defaults.object(forKey: "crashCountdown") as? Int ?? 3
         crashPictureRatio = defaults.string(forKey: "crashPictureRatio") ?? "fill"
         crashSoundEnabled = defaults.object(forKey: "crashSoundEnabled") as? Bool ?? true
+        startMenuCommandTap = defaults.bool(forKey: "startMenuCommandTap")
         win7Snap = defaults.object(forKey: "win7Snap") as? Bool ?? true
         win7Shake = defaults.object(forKey: "win7Shake") as? Bool ?? true
         win7Peek = defaults.object(forKey: "win7Peek") as? Bool ?? true

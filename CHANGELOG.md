@@ -16,6 +16,20 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   follows the output device. The drive counts disk activity and nothing else; the keyboard
   learns only which kind of key went down, never what was typed, and needs Accessibility.
 
+- **Start menu search in Windows 7 and Vista.** Type while the Start menu is open and the search
+  box takes it, as on the real thing: the left pane shows the installed programs that match,
+  a sum worked out (`12*3`, Return copies the answer) and a web address to open (`github.com`).
+  Return opens the first match, the box's × clears it. The keys are held only while the menu is
+  open and read through your keyboard layout. After Startish.
+
+- **Start with a tap of Left ⌘.** As the Windows key did: press and let go of the left Command
+  key on its own and the Start menu opens; Command shortcuts work as before. Off by default,
+  under Settings ▸ Themes ▸ Dock on themes with a Start button.
+
+- **Right-click on a taskbar button.** Windows 95 to XP show the window's system menu (Restore,
+  Minimize, Maximize, Close); Windows 7 the foot of its jump list: the program, pin or unpin it,
+  close the window.
+
 - **NeXTSTEP title bars and miniwindows.** With the theme's title bars on, every window under the
   NeXTSTEP theme wears the NeXT bar: black on the key window, grey on the others, the miniaturize
   button at the left end and close at the right. A miniaturized window leaves a miniwindow on the
