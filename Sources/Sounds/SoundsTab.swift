@@ -93,6 +93,23 @@ struct SoundsTab: View {
             }
         }
 
+        RMCard(title: "Interface sounds", bodyPadding: 0) {
+            VStack(spacing: 0) {
+                RMRow(label: "Device chime",
+                      hint: DeviceSounds.uiSoundsOn
+                      ? "Windows XP, Vista and 7: a chime when a USB device is plugged in or pulled out."
+                      : "Quiet while macOS's \u{201C}Play user interface sound effects\u{201D} is off (System Settings ▸ Sound).",
+                      isLast: true) {
+                    HStack(spacing: 10) {
+                        Button("Preview") { engine.playPreview(DeviceSounds.chime(connect: true)) }
+                            .buttonStyle(RMGhostButtonStyle())
+                            .accessibilityLabel("Preview device chime")
+                        toggle($settings.sounds.deviceSounds)
+                    }
+                }
+            }
+        }
+
         HStack {
             Spacer()
             Button("Reset all sounds") { settings.sounds = SoundPrefs() }

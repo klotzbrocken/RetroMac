@@ -96,3 +96,41 @@ final class SoundsTests: XCTestCase {
         }
     }
 }
+
+final class DeviceSoundTests: XCTestCase {
+
+    func testOneChimePerBurstAndNoneRightAfterWaking() {
+        var gate = DeviceSoundGate()
+        XCTAssertTrue(gate.shouldPlay(connect: true, at: 10))
+        // A hub and its interfaces arrive together: one chime.
+        XCTAssertFalse(gate.shouldPlay(connect: true, at: 10.2))
+        XCTAssertTrue(gate.shouldPlay(connect: false, at: 10.3))
+        XCTAssertTrue(gate.shouldPlay(connect: true, at: 12))
+        gate.willSleep()
+        XCTAssertFalse(gate.shouldPlay(connect: false, at: 20))
+        gate.didWake(at: 100)
+        XCTAssertFalse(gate.shouldPlay(connect: true, at: 103))
+        XCTAssertTrue(gate.shouldPlay(connect: true, at: 106))
+    }
+
+    func testChimesAreAudibleAndDoNotClip() {
+        for connect in [true, false] {
+            let b = DeviceSounds.chime(connect: connect)
+            let peak = (0..<Int(b.frameLength)).reduce(Float(0)) { max($0, abs(b.floatChannelData![0][$1])) }
+            XCTAssertGreaterThan(peak, 0.05)
+            XCTAssertLessThan(peak, 1)
+        }
+    }
+
+    func testSettingsSavedBeforeAFieldExistedKeepTheirValues() throws {
+        // A record from before deviceSounds and with a changed drive.
+        let old = #"{"enabled":true,"volume":0.8,"drive":{"enabled":true,"profile":5}}"#
+        let p = try XCTUnwrap(SoundPrefs.load(Data(old.utf8)))
+        XCTAssertTrue(p.enabled)
+        XCTAssertEqual(p.volume, 0.8)
+        XCTAssertTrue(p.drive.enabled)
+        XCTAssertEqual(p.drive.profile, 5)
+        XCTAssertEqual(p.drive.minDuration, 0.2)
+        XCTAssertTrue(p.deviceSounds)
+    }
+}

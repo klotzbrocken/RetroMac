@@ -1448,7 +1448,7 @@ final class AppSettings: ObservableObject {
         crashCountdown = defaults.object(forKey: "crashCountdown") as? Int ?? 3
         crashPictureRatio = defaults.string(forKey: "crashPictureRatio") ?? "fill"
         crashSoundEnabled = defaults.object(forKey: "crashSoundEnabled") as? Bool ?? true
-        sounds = defaults.data(forKey: "sounds").flatMap { try? JSONDecoder().decode(SoundPrefs.self, from: $0) } ?? SoundPrefs()
+        sounds = defaults.data(forKey: "sounds").flatMap(SoundPrefs.load) ?? SoundPrefs()
         crashShowBadge = defaults.object(forKey: "crashShowBadge") as? Bool ?? true
         crashFullSequence = defaults.object(forKey: "crashFullSequence") as? Bool ?? true
         crashGlitches = defaults.object(forKey: "crashGlitches") as? Bool ?? true

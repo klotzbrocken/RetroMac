@@ -21,6 +21,8 @@ enum TerminalThemer {
         let fg: NSColor
         let fontName: String
         let fontSize: CGFloat
+        /// Starts zsh with the Command Prompt prompt (`CmdPrompt`).
+        var cmdPrompt = false
     }
 
     /// Theme name (lowercased `contains` match) → profile.
@@ -33,7 +35,7 @@ enum TerminalThemer {
             // The MS-DOS Prompt's light grey on black (VGA colour 7, #AAAAAA), not a green screen.
             return Profile(name: "RetroMac DOS", bg: .black,
                            fg: NSColor(srgbRed: 0.667, green: 0.667, blue: 0.667, alpha: 1),
-                           fontName: "Menlo-Regular", fontSize: 13)
+                           fontName: "Menlo-Regular", fontSize: 13, cmdPrompt: true)
         }
         if n.contains("beos") {
             return Profile(name: "RetroMac BeOS", bg: NSColor(white: 1.0, alpha: 1),
@@ -142,6 +144,9 @@ enum TerminalThemer {
         if let font = NSFont(name: p.fontName, size: p.fontSize) ?? NSFont(name: "Menlo-Regular", size: p.fontSize),
            let f = archived(font) {
             dict["Font"] = f
+        }
+        if p.cmdPrompt, let keys = CmdPrompt.profileKeys() {
+            dict.merge(keys) { _, new in new }
         }
         return dict
     }

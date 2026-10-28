@@ -21,6 +21,7 @@ to support the project; it does not change the licence of anything in this repos
 | What | Where | Licence |
 |---|---|---|
 | Sparkle (updates) | `Package.swift` | MIT, © Sparkle Project |
+| Command Prompt prompt for zsh and the USB device-sound gate, after macOS 7 Ultimate SP1's cmd-zsh and DeviceSoundMonitor | `Sources/System/CmdPrompt.swift`, `Sources/Sounds/DeviceSounds.swift` | GPL-3.0, Kağan Işıldak, [github.com/kaganisildak/macOS-7-Ultimate-SP1](https://github.com/kaganisildak/macOS-7-Ultimate-SP1) |
 | DriveSynth from Platter (the virtual drive's sound engine) | `Sources/DriveSynth/` | MIT, © 2026 Jason O'Connell, [github.com/hurtz/platter](https://github.com/hurtz/platter) — full text in `Sources/DriveSynth/LICENSE` |
 | Px437 IBM VGA 9x16 (text-mode crash screens) | `Resources/Fonts/` | CC BY-SA 4.0, VileR, [int10h.org](https://int10h.org/oldschool-pc-fonts/) |
 | ChiKareGo2 (Chicago 12 as a bitmap face: the Platinum menus and the Application menu of Mac OS 9 (authentic), the Applications widget's list) | `Resources/Fonts/ChiKareGo2.ttf`, `Resources/Widgets/AppFolder/ChiKareGo2.woff2` | CC BY, Giles Booth, [BitFontMaker2 gallery #3780](https://www.pentacom.jp/pentacom/bitfontmaker2/gallery/?id=3780) |

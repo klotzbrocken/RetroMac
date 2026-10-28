@@ -6,11 +6,11 @@ import DriveSynth
 
 /// Settings ▸ Sounds, saved as one record. Everything starts off: no spin-up and no click
 /// after an install until someone turns a module on.
-// ponytail: one Codable record; a field added later without a decodeIfPresent init resets
-// the user's sound settings once. Add the init when the record grows (Part 2).
 struct SoundPrefs: Codable, Equatable {
     var enabled = false
     var volume = 0.5
+    /// The XP, Vista and 7 chime when a USB device comes or goes (`DeviceSounds`).
+    var deviceSounds = true
     var startAtLaunch = true
     var pauseOnScreenSharing = true
     var pauseOnRecording = true
@@ -65,6 +65,20 @@ struct SoundPrefs: Codable, Equatable {
     }
 
     enum Response: String, Codable, CaseIterable { case slow, medium, fast }
+
+    /// Saved settings laid over the defaults, so a field added in a later version takes its
+    /// default instead of throwing the whole record away.
+    static func load(_ data: Data) -> SoundPrefs? {
+        func merge(_ base: Any, _ over: Any) -> Any {
+            guard var b = base as? [String: Any], let o = over as? [String: Any] else { return over }
+            for (k, v) in o { b[k] = b[k].map { merge($0, v) } ?? v }
+            return b
+        }
+        guard let defaults = try? JSONSerialization.jsonObject(with: JSONEncoder().encode(SoundPrefs())),
+              let saved = try? JSONSerialization.jsonObject(with: data),
+              let merged = try? JSONSerialization.data(withJSONObject: merge(defaults, saved)) else { return nil }
+        return try? JSONDecoder().decode(SoundPrefs.self, from: merged)
+    }
 }
 
 /// The one audio engine behind the keyboard, the drive and the fan. It runs only while
@@ -102,6 +116,7 @@ final class SoundEngine: ObservableObject {
     /// Called once at launch. Builds no audio graph until a sound is wanted.
     func start() {
         guard subs.isEmpty else { return }
+        DeviceSounds.shared.start()
         if prefs.enabled && !prefs.startAtLaunch { held = true }
         AppSettings.shared.$sounds.dropFirst().removeDuplicates()
             .sink { [weak self] p in self?.update(p) }.store(in: &subs)
@@ -228,6 +243,16 @@ final class SoundEngine: ObservableObject {
             }
             DispatchQueue.main.async { self?.play(buffer, volume: Float(volume * p.volume)) }
         }
+    }
+
+    /// A ready-made sound at the master volume, on or off: a Preview button.
+    func playPreview(_ buffer: AVAudioPCMBuffer) { play(buffer, volume: Float(prefs.volume)) }
+
+    /// An interface sound (a device chime): heard only while the sounds are on and not paused.
+    func playEvent(_ buffer: AVAudioPCMBuffer) {
+        let p = prefs
+        guard p.enabled, !held, pauseReason == nil else { return }
+        play(buffer, volume: Float(p.volume))
     }
 
     private func play(_ buffer: AVAudioPCMBuffer, volume: Float) {

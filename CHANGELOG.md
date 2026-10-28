@@ -16,6 +16,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   follows the output device. The drive counts disk activity and nothing else; the keyboard
   learns only which kind of key went down, never what was typed, and needs Accessibility.
 
+- **The Command Prompt in Terminal.** Under the Windows themes Terminal's prompt reads
+  `C:\Users\you>` instead of `you@Mac ~ %`. zsh still runs your own startup files, unchanged; RetroMac
+  only sets the prompt after them and edits nothing in your home folder. Only when your login shell
+  is zsh; after macOS 7 Ultimate SP1's cmd-zsh.
+
+- **Device chime.** Under Windows XP, Vista and 7 a chime sounds when a USB device is plugged in or
+  pulled out (one per device, none for the devices that drop and return when the Mac wakes). Only
+  while RetroMac's sounds are on and macOS's "Play user interface sound effects" is too; Settings ▸
+  Sounds ▸ Interface sounds.
+
 - **Desktop Games in RetroHub ▸ Apps.** The Gemtree stress reducer of 2000, ported to the Mac by
   ucodia: it takes a picture of your screen and lets you wreck it with a hammer, chain-saw,
   machine gun, flame-thrower, termites and more, then wash it clean. Once installed it sits on
