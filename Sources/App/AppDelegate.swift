@@ -179,6 +179,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             CDEFrontPanelController.shared.update()
             PhotonDesktopController.shared.update()
             WindowSwitcher.shared.update()
+            AeroSnap.shared.update()
             SidebarController.shared.update()
             NextRunningAppsController.shared.update()
             WindowBorderController.shared.update()   // recolour theme window borders on theme change
@@ -2913,6 +2914,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CDEFrontPanelController.shared.update()
         PhotonDesktopController.shared.update()
         WindowSwitcher.shared.update()
+        AeroSnap.shared.update()
         SidebarController.shared.update()
         NextRunningAppsController.shared.update()
         WindowBorderController.shared.update()

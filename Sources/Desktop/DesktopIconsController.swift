@@ -195,6 +195,13 @@ final class DesktopIconsController {
         return area
     }
 
+    /// Aero Peek: the icons over the peek's picture of the desktop, then back behind the apps.
+    func raiseForPeek(_ up: Bool) {
+        guard let window else { return }
+        window.level = NSWindow.Level(rawValue: up ? DockWindow.defaultLevel - 1 : Int(CGWindowLevelForKey(.normalWindow)) - 4)
+        if up { window.orderFrontRegardless() }
+    }
+
     private func show(entries: [DockThemeConfig.DesktopIconEntry]) {
         guard let screen = NSScreen.main else { return }
         let visibleFrame = Self.iconArea(of: screen, bar: DockController.shared.barScreenFrame)

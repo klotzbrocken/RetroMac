@@ -19,3 +19,6 @@ DerivedData/
 
 # Local scratch/experiment files (contains build products)
 scratch/
+
+# Scripts/render-gallery.sh output
+build/fidelity/

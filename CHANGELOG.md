@@ -16,6 +16,20 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   follows the output device. The drive counts disk activity and nothing else; the keyboard
   learns only which kind of key went down, never what was typed, and needs Accessibility.
 
+- **Aero Snap, Shake and Peek in Windows 7.** Drag a window by its title bar to the left or right
+  edge and it fills that half of the screen, to the top and it fills the screen, with Windows 7's
+  glass preview while you hold it there; drag it away and it has its old size back.
+  Ctrl+Option+arrows do the same from the keyboard. Shake a window and every other app hides;
+  shake it again and they return. The taskbar has its Show Desktop strip at the right end again:
+  rest the pointer on it and the windows turn to glass outlines over the desktop, click it and the
+  desktop shows. Each has its switch under Settings ▸ Themes ▸ Windows 7 extras; Snap and Shake
+  need Accessibility.
+
+- **Windows stay clear of the dock.** As on the real systems, a window that comes to rest under
+  the retro dock or taskbar moves out from under it, or gets shorter when it does not fit. It
+  looks once a window has settled, never during a drag, and gives up on a window that keeps going
+  back, so it never fights you or an app. On by default; Settings ▸ Themes ▸ Dock.
+
 - **The Command Prompt in Terminal.** Under the Windows themes Terminal's prompt reads
   `C:\Users\you>` instead of `you@Mac ~ %`. zsh still runs your own startup files, unchanged; RetroMac
   only sets the prompt after them and edits nothing in your home folder. Only when your login shell

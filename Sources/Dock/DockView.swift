@@ -28,6 +28,9 @@ final class DockView: NSView {
     private var trashSeparatorX: CGFloat?
     private var startButtonFrame: NSRect = .zero
     private var clockFrame: NSRect = .zero
+    /// Windows 7's Show Desktop strip at the right end of the taskbar (Aero Peek).
+    private var peekFrame: NSRect = .zero
+    private var peekHovered = false
     private var clockTimer: Timer?
     private var clockString: String = ""
     private var startButtonIcon: NSImage?
@@ -900,6 +903,12 @@ final class DockView: NSView {
 
             // Right-side trays: clock + tray icon + disk free, positioned from right edge
             var rightEdge = barRect.maxX
+            if RetroFrameTheme.key() == "win7" && !isVertical {
+                peekFrame = NSRect(x: rightEdge - 15, y: barRect.minY, width: 15, height: barRect.height)
+                rightEdge -= 15
+            } else {
+                peekFrame = .zero
+            }
 
             // Pre-calculate tray icon size for Win98/XP (needed to widen systray clockFrame)
             let hasTrayIcon: Bool
@@ -1243,6 +1252,12 @@ final class DockView: NSView {
 
             // Right-side trays: clock + tray icon + disk free, positioned from right edge
             var rightEdge = barRect.maxX
+            if RetroFrameTheme.key() == "win7" && !isVertical {
+                peekFrame = NSRect(x: rightEdge - 15, y: barRect.minY, width: 15, height: barRect.height)
+                rightEdge -= 15
+            } else {
+                peekFrame = .zero
+            }
 
             // Pre-calculate tray icon size for Win98/XP (needed to widen systray clockFrame)
             let hasTrayIcon: Bool
@@ -3239,6 +3254,7 @@ final class DockView: NSView {
 
             if isWin7Tray {
                 drawWin7Systray(clockFrame: clockFrame, scale: scale, theme: theme)
+                drawWin7PeekStrip()
             } else if isXPClock {
                 // XP Luna system tray: lighter blue gradient background
                 let trayGradTop = NSColor(red: 0.16, green: 0.48, blue: 0.87, alpha: 1.0)
@@ -3848,6 +3864,11 @@ final class DockView: NSView {
     override func mouseDown(with event: NSEvent) {
         let local = convert(event.locationInWindow, from: nil)
 
+        if !peekFrame.isEmpty, peekFrame.contains(local) {
+            AeroPeek.shared.click()
+            return
+        }
+
         // Control Strip: left cap click → collapse/expand
         if handleControlStripCollapseClick(at: local) { return }
 
@@ -4096,6 +4117,13 @@ final class DockView: NSView {
     private func mouseMovedBody(with event: NSEvent) {
         let local = convert(event.locationInWindow, from: nil)
 
+        let overPeek = !peekFrame.isEmpty && peekFrame.contains(local)
+        if overPeek != peekHovered {
+            peekHovered = overPeek
+            AeroPeek.shared.hover(overPeek)
+            setNeedsDisplay(peekFrame)
+        }
+
         // Track start button hover state
         if needsStartButtonTracking {
             let hovered = startButtonFrame.contains(local)
@@ -4141,6 +4169,11 @@ final class DockView: NSView {
     }
 
     override func mouseExited(with event: NSEvent) {
+        if peekHovered {
+            peekHovered = false
+            AeroPeek.shared.hover(false)
+            setNeedsDisplay(peekFrame)
+        }
         if AppSettings.shared.debugLogging {
             let p = convert(event.locationInWindow, from: nil)
             let under = NSWindow.windowNumber(at: NSEvent.mouseLocation, belowWindowWithWindowNumber: 0)
@@ -4585,6 +4618,21 @@ final class DockView: NSView {
 
     /// Windows 7 Aero notification area: flat glass tray with a "show hidden icons" up-chevron,
     /// small network + volume glyphs, and a two-line time/date clock in dark ink.
+    /// The Show Desktop strip: a groove on its left, glass that lights up under the pointer.
+    private func drawWin7PeekStrip() {
+        guard !peekFrame.isEmpty else { return }
+        let r = peekFrame
+        NSColor(white: 0, alpha: 0.35).setFill()
+        NSRect(x: r.minX, y: r.minY, width: 1, height: r.height).fill()
+        NSColor(white: 1, alpha: 0.35).setFill()
+        NSRect(x: r.minX + 1, y: r.minY, width: 1, height: r.height).fill()
+        let glass = NSGradient(starting: NSColor(white: 1, alpha: peekHovered ? 0.45 : 0.18),
+                               ending: NSColor(white: 1, alpha: peekHovered ? 0.15 : 0.04))
+        glass?.draw(in: NSRect(x: r.minX + 2, y: r.minY + 1, width: r.width - 3, height: r.height - 2), angle: 90)
+        NSColor(white: 1, alpha: peekHovered ? 0.7 : 0.3).setStroke()
+        NSBezierPath(rect: NSRect(x: r.minX + 2.5, y: r.minY + 1.5, width: r.width - 4, height: r.height - 3)).stroke()
+    }
+
     private func drawWin7Systray(clockFrame: NSRect, scale: CGFloat, theme: DockThemeConfig) {
         let vista = RetroFrameTheme.isVista   // black glass: white ink, the time on one line
         let ink = vista ? NSColor.white : NSColor(white: 0.16, alpha: 1)

@@ -1022,6 +1022,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(crashSoundEnabled, forKey: "crashSoundEnabled") }
     }
 
+    /// Windows 7: Aero Snap, Aero Shake and Aero Peek (`Win7Aero.swift`).
+    @Published var win7Snap: Bool { didSet { defaults.set(win7Snap, forKey: "win7Snap"); AeroSnap.shared.update() } }
+    @Published var win7Shake: Bool { didSet { defaults.set(win7Shake, forKey: "win7Shake"); AeroSnap.shared.update() } }
+    @Published var win7Peek: Bool { didSet { defaults.set(win7Peek, forKey: "win7Peek") } }
+
     /// Settings ▸ Sounds: keyboard, drive and fan.
     @Published var sounds: SoundPrefs {
         didSet {
@@ -1354,7 +1359,7 @@ final class AppSettings: ObservableObject {
         }
         dockMagnification = defaults.object(forKey: "dockMagnification") as? Bool ?? true
         dockAutoHide = defaults.bool(forKey: "dockAutoHide")
-        dockFix = defaults.bool(forKey: "dockFix")
+        dockFix = defaults.object(forKey: "dockFix") as? Bool ?? true   // keep windows clear of the bar
         applySystemIcons = defaults.bool(forKey: "applySystemIcons")
 
         // Virtual Camera — capture source
@@ -1448,6 +1453,9 @@ final class AppSettings: ObservableObject {
         crashCountdown = defaults.object(forKey: "crashCountdown") as? Int ?? 3
         crashPictureRatio = defaults.string(forKey: "crashPictureRatio") ?? "fill"
         crashSoundEnabled = defaults.object(forKey: "crashSoundEnabled") as? Bool ?? true
+        win7Snap = defaults.object(forKey: "win7Snap") as? Bool ?? true
+        win7Shake = defaults.object(forKey: "win7Shake") as? Bool ?? true
+        win7Peek = defaults.object(forKey: "win7Peek") as? Bool ?? true
         sounds = defaults.data(forKey: "sounds").flatMap(SoundPrefs.load) ?? SoundPrefs()
         crashShowBadge = defaults.object(forKey: "crashShowBadge") as? Bool ?? true
         crashFullSequence = defaults.object(forKey: "crashFullSequence") as? Bool ?? true

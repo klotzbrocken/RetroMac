@@ -387,6 +387,10 @@ struct DockSettingsTab: View {
                     }
                 }
                 RMRow(label: "Show indicators for running apps") { toggle($settings.dockShowRunningApps) }
+                RMRow(label: "Keep windows clear of the dock",
+                      hint: "As the real systems did: a window that comes to rest under the dock or taskbar moves out from under it. Needs Accessibility.") {
+                    toggle($settings.dockFix)
+                }
                 RMRow(label: "24-hour clock",
                       hint: "For the clock in the dock, taskbar or Deskbar.", isLast: true) {
                     toggle($settings.clockUse24Hour)
@@ -403,9 +407,24 @@ struct DockSettingsTab: View {
         let hasSlayer = cfg?.dock.borderStyle == "doomslayer"
         let hasScheme = cfg?.name == "Windows 98"
         let hasMessenger = ["Windows 95", "Windows 98", "Windows Me"].contains(cfg?.name ?? "")
-        if hasPacman || hasSlayer || hasScheme || hasMessenger || isWin98OrXP {
+        let isWin7 = cfg?.id == AeroSnap.themeID
+        if hasPacman || hasSlayer || hasScheme || hasMessenger || isWin98OrXP || isWin7 {
             RMCard(title: "\(themeDisplayName) extras", bodyPadding: 0) {
                 VStack(spacing: 0) {
+                    if isWin7 {
+                        RMRow(label: "Aero Snap",
+                              hint: "Drag a window by its title bar to the left or right edge for half the screen, to the top for all of it. Ctrl+Option+arrows do the same from the keyboard. Needs Accessibility.") {
+                            toggle($settings.win7Snap)
+                        }
+                        RMRow(label: "Aero Shake",
+                              hint: "Shake a window by its title bar to hide every other app; shake it again to bring them back.") {
+                            toggle($settings.win7Shake)
+                        }
+                        RMRow(label: "Aero Peek",
+                              hint: "Rest the pointer on the strip at the right end of the taskbar to see the desktop through the windows; click it to show the desktop.") {
+                            toggle($settings.win7Peek)
+                        }
+                    }
                     if hasScheme {
                         RMRow(label: "Scheme",
                               hint: "A Windows 98 Plus! desktop theme: colours, wallpaper, icons and cursors.") {

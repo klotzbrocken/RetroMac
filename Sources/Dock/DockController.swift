@@ -98,6 +98,7 @@ final class DockController {
             CDEFrontPanelController.shared.update()
             PhotonDesktopController.shared.update()
             WindowSwitcher.shared.update()
+            AeroSnap.shared.update()
             NextRunningAppsController.shared.update()
             WindowBorderController.shared.update()
             RainbowAppleController.shared.update()
@@ -147,7 +148,7 @@ final class DockController {
         }
 
         if AppSettings.shared.dockFix {
-            DockFix.shared.start()
+            WorkAreaKeeper.shared.start()
         }
     }
 
@@ -158,7 +159,7 @@ final class DockController {
         CrashScheduler.shared.stop()
         CrashDirector.shared.teardown(.themeStopped)
         removeAutoHideMonitors()
-        DockFix.shared.stop()
+        WorkAreaKeeper.shared.stop()
         MinimizedWindowTracker.shared.stop()
         // (Screensaver idle-watch keeps running while the app lives; it is not tied to the dock.)
         // Un-hide any apps the Win98 "Show Desktop" tile hid — the tile is gone now.
@@ -320,6 +321,7 @@ final class DockController {
             CDEFrontPanelController.shared.update()
             PhotonDesktopController.shared.update()
             WindowSwitcher.shared.update()
+            AeroSnap.shared.update()
             NextRunningAppsController.shared.update()
             // These themes replace the dock entirely (Win 3.1 Program Manager, BeOS Deskbar,
             // SGI desktop) — hide the system Dock too, otherwise every running app + minimized
@@ -340,6 +342,7 @@ final class DockController {
         CDEFrontPanelController.shared.hide()
         PhotonDesktopController.shared.hide()
         WindowSwitcher.shared.update()   // a dock theme may have a switcher too (Snow Leopard)
+        AeroSnap.shared.update()
         NextRunningAppsController.shared.hide()
 
         createWindow()
@@ -1029,7 +1032,7 @@ final class DockController {
         }.store(in: &settingsObservers)
 
         s.$dockFix.dropFirst().sink { enabled in
-            if enabled { DockFix.shared.start() } else { DockFix.shared.stop() }
+            if enabled { WorkAreaKeeper.shared.start() } else { WorkAreaKeeper.shared.stop() }
         }.store(in: &settingsObservers)
 
         s.$dockAutoHide.dropFirst().sink { [weak self] enabled in
