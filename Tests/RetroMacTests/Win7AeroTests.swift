@@ -46,6 +46,11 @@ final class Win7AeroTests: XCTestCase {
         var slow = ShakeDetector(startX: 500)
         XCTAssertFalse(xs.enumerated().contains { slow.add(x: $1, time: Double($0) * 0.5) })
 
+        // A hand's shake: wider and slower, legs of 150 points every 0.15 s.
+        var hand = ShakeDetector(startX: 500)
+        let wide: [CGFloat] = [500, 650, 400, 650, 400, 650]
+        XCTAssertTrue(wide.enumerated().contains { hand.add(x: $1, time: Double($0) * 0.15) })
+
         // A drag across the screen is never a shake.
         var drag = ShakeDetector(startX: 500)
         XCTAssertFalse([560, 620, 700, 650, 600].contains { drag.add(x: $0, time: 0.1) })

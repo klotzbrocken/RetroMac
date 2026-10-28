@@ -265,18 +265,27 @@ final class TitleBarOverlayController {
     /// Write (or withdraw) the corner key through the adapter that handles the theme's own
     /// "Classic Finder" tweaks, so it is snapshotted and put back with them. Only while a theme
     /// is on: when the theme is going off, ThemeManager's restore has the last word.
+    private static let squareSinceKey = "squareCornersSince"
+
     private func squareTheRealCorners() {
         let wanted = squaresCorners
         guard AppSettings.shared.dockEnabled, let theme = ThemeManager.shared.activeTheme else { return }
-        // The radius the apps were last told, before this theme writes its own: from one square
-        // theme to the next the open apps are square already.
+        // When the apps were first told this radius: an app started before then still has the
+        // corners it started with. From one square theme to the next the time stays.
         CFPreferencesAppSynchronize(kCFPreferencesAnyApplication)
         let before = (CFPreferencesCopyAppValue("NSConvolutionOverride1" as CFString, kCFPreferencesAnyApplication) as? NSNumber)?.doubleValue
+        let d = UserDefaults.standard
+        if wanted, before != desiredCornerRadius.map(Double.init) || d.object(forKey: Self.squareSinceKey) == nil {
+            d.set(Date(), forKey: Self.squareSinceKey)
+        }
         SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)
-        // Only right after the user picked a theme: not at every launch, and not while a theme
-        // that was already on goes through its steps again.
-        if wanted, before != desiredCornerRadius.map(Double.init), ThemeManager.shared.consumeUserPick() {
-            SystemTweaksAdapter.offerAppRestartIfNeeded(for: theme.config, squareCorners: true) { [weak self] in self?.squaresCorners == true }
+        // Only right after the user picked a theme, not at every launch: the apps started before
+        // the corners were square are offered a restart.
+        if wanted, ThemeManager.shared.consumeUserPick() {
+            SystemTweaksAdapter.offerAppRestartIfNeeded(for: theme.config, squareCorners: true,
+                                                        launchedBefore: d.object(forKey: Self.squareSinceKey) as? Date) { [weak self] in
+                self?.squaresCorners == true
+            }
         }
     }
 

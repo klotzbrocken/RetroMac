@@ -95,7 +95,9 @@ enum SystemTweaksAdapter {
     /// reopened. When the user picks a theme that changes them, RetroMac offers to reopen the
     /// open apps now (each asked to quit normally, so it can ask about unsaved work first), with
     /// the apps listed to leave some out, and a "Don't ask again".
+    /// `launchedBefore`: only the apps started before then still have the old corners.
     static func offerAppRestartIfNeeded(for config: DockThemeConfig, squareCorners: Bool = false,
+                                        launchedBefore: Date? = nil,
                                         stillWanted: @escaping () -> Bool = { true }) {
         guard !d.bool(forKey: restartOfferKey) else { return }
         let hasCorner = squareCorners || (config.systemTweaks ?? []).contains {
@@ -110,7 +112,7 @@ enum SystemTweaksAdapter {
             guard stillWanted() else { t.invalidate(); offerTimer = nil; return }
             guard NSApp.isRunning, !SplashController.shared.isPresenting else { return }
             t.invalidate(); offerTimer = nil
-            let apps = restartableApps()
+            let apps = restartableApps(launchedBefore: launchedBefore ?? .distantFuture)
             guard !apps.isEmpty, !d.bool(forKey: restartOfferKey) else { return }
             askToRestart(apps)
         }
@@ -119,12 +121,13 @@ enum SystemTweaksAdapter {
     private static let restartOfferKey = "appRestartOfferSuppressed"
     private static var offerTimer: Timer?
 
-    /// The open apps a relaunch would change: regular ones, not RetroMac and not the Finder
-    /// (relaunched with the corners already).
-    private static func restartableApps() -> [NSRunningApplication] {
+    /// The open apps a relaunch would change: regular ones started before the corners changed,
+    /// not RetroMac and not the Finder (relaunched with the corners already).
+    private static func restartableApps(launchedBefore: Date) -> [NSRunningApplication] {
         NSWorkspace.shared.runningApplications.filter {
             $0.activationPolicy == .regular && !$0.isTerminated && $0.bundleURL != nil
                 && $0.processIdentifier != getpid() && $0.bundleIdentifier != "com.apple.finder"
+                && ($0.launchDate ?? .distantPast) < launchedBefore
         }
         .sorted { ($0.localizedName ?? "").localizedCaseInsensitiveCompare($1.localizedName ?? "") == .orderedAscending }
     }

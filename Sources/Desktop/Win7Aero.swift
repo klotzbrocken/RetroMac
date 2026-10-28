@@ -266,6 +266,7 @@ final class AeroSnap {
     // MARK: - Shake
 
     private func shake(exceptPID pid: pid_t) {
+        print("[Aero] Shake: \(shakeHidden.isEmpty ? "hiding the other apps" : "bringing them back")")
         if !shakeHidden.isEmpty { return restoreShaken() }
         for app in NSWorkspace.shared.runningApplications
         where app.activationPolicy == .regular && app.processIdentifier != pid && app.processIdentifier != getpid()
@@ -298,13 +299,14 @@ enum SnapGeometry {
 }
 
 /// Fed the cursor's x during one title-bar drag, it fires once when the window has been shaken:
-/// at least three turns, every leg at least 40 points, the turns within 0.6 seconds, and the drag
-/// never more than 120 points from where it began.
+/// at least three turns, every leg at least 30 points, the three turns within 1.2 seconds, and
+/// the drag never more than 300 points from where it began. (A tighter 40 pt / 0.6 s / 120 pt
+/// let no real shake through: a hand shakes wider and slower than that.)
 struct ShakeDetector {
     static let reversals = 3
-    static let minLeg: CGFloat = 40
-    static let window: TimeInterval = 0.6
-    static let maxDrift: CGFloat = 120
+    static let minLeg: CGFloat = 30
+    static let window: TimeInterval = 1.2
+    static let maxDrift: CGFloat = 300
 
     private let startX: CGFloat
     private var direction: CGFloat = 0
