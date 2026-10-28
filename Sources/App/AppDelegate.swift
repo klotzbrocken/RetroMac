@@ -271,7 +271,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             || ProcessInfo.processInfo.environment["RETROMAC_AUTOACTIVATE_THEME"] != nil)
         if autoActivateTheme {
             DispatchQueue.main.async {
-                ThemeManager.shared.setActiveTheme(name: settings.dockTheme)
+                ThemeManager.shared.setActiveTheme(name: settings.dockTheme, userPicked: false)
                 if !settings.dockEnabled { settings.dockEnabled = true; DockController.shared.start() }
                 // No boot screen (VoiceOver, or switched off): the theme came on right away, while
                 // the dock was still off, so its shader preset was skipped; take it now. The shader

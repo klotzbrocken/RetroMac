@@ -211,7 +211,9 @@ final class ThemeManager {
     ///
     /// Asynchronous in the covered case. No caller reads state back from this — they all set a
     /// theme and let the notifications carry the rest.
-    func setActiveTheme(name: String, applyWallpaper applyWP: Bool = true) {
+    /// `userPicked` false for the theme RetroMac brings back at launch.
+    func setActiveTheme(name: String, applyWallpaper applyWP: Bool = true, userPicked: Bool = true) {
+        if userPicked { userPickedAt = ProcessInfo.processInfo.systemUptime }
         let bundle = theme(for: name)
         let apply: () -> Void = { [weak self] in
             self?.activate(name: name, bundle: bundle, applyWallpaper: applyWP)
@@ -221,6 +223,16 @@ final class ThemeManager {
         } else {
             apply()
         }
+    }
+
+    private var userPickedAt: TimeInterval?
+
+    /// Whether the user picked a theme in the last half minute (the boot screen included), once
+    /// per pick: what the offer to restart the open apps waits for.
+    func consumeUserPick() -> Bool {
+        guard let at = userPickedAt, ProcessInfo.processInfo.systemUptime - at < 30 else { return false }
+        userPickedAt = nil
+        return true
     }
 
     private func activate(name: String, bundle: ThemeBundle?, applyWallpaper applyWP: Bool) {

@@ -697,7 +697,7 @@ struct DockSettingsTab: View {
                                 let cfg = theme.config
                                 if on {
                                     SystemTweaksAdapter.apply(for: cfg, isBuiltIn: theme.isBuiltIn)
-                                    SystemTweaksAdapter.showCornerHintIfNeeded(for: cfg)
+                                    SystemTweaksAdapter.offerAppRestartIfNeeded(for: cfg)
                                 } else {
                                     SystemTweaksAdapter.restore()
                                 }

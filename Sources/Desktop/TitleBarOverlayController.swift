@@ -268,9 +268,15 @@ final class TitleBarOverlayController {
     private func squareTheRealCorners() {
         let wanted = squaresCorners
         guard AppSettings.shared.dockEnabled, let theme = ThemeManager.shared.activeTheme else { return }
+        // The radius the apps were last told, before this theme writes its own: from one square
+        // theme to the next the open apps are square already.
+        CFPreferencesAppSynchronize(kCFPreferencesAnyApplication)
+        let before = (CFPreferencesCopyAppValue("NSConvolutionOverride1" as CFString, kCFPreferencesAnyApplication) as? NSNumber)?.doubleValue
         SystemTweaksAdapter.apply(for: theme.config, isBuiltIn: theme.isBuiltIn)
-        if wanted {
-            SystemTweaksAdapter.showCornerHintIfNeeded(for: theme.config, squareCorners: true) { [weak self] in self?.squaresCorners == true }
+        // Only right after the user picked a theme: not at every launch, and not while a theme
+        // that was already on goes through its steps again.
+        if wanted, before != desiredCornerRadius.map(Double.init), ThemeManager.shared.consumeUserPick() {
+            SystemTweaksAdapter.offerAppRestartIfNeeded(for: theme.config, squareCorners: true) { [weak self] in self?.squaresCorners == true }
         }
     }
 

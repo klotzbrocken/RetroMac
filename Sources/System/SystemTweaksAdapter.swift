@@ -90,41 +90,104 @@ enum SystemTweaksAdapter {
         else { queue.async { reconcile(to: []) } }
     }
 
-    /// One-time heads-up (shown when the user first enables "Classic Finder" on a theme that
-    /// declares window-corner tweaks): the corner radius is a global default each AppKit app reads
-    /// only at launch, so it applies to the Finder immediately but to other apps only when they
-    /// relaunch — for everything at once the user must log out. Honest, no forced logout.
-    static func showCornerHintIfNeeded(for config: DockThemeConfig, squareCorners: Bool = false,
-                                       stillWanted: @escaping () -> Bool = { true }) {
-        guard !d.bool(forKey: cornerHintKey) else { return }
+    /// The corner radius is a global default each AppKit app reads only when it launches: the
+    /// Finder is relaunched with it, every other open app keeps its old corners until it is
+    /// reopened. When the user picks a theme that changes them, RetroMac offers to reopen the
+    /// open apps now (each asked to quit normally, so it can ask about unsaved work first), with
+    /// the apps listed to leave some out, and a "Don't ask again".
+    static func offerAppRestartIfNeeded(for config: DockThemeConfig, squareCorners: Bool = false,
+                                        stillWanted: @escaping () -> Bool = { true }) {
+        guard !d.bool(forKey: restartOfferKey) else { return }
         let hasCorner = squareCorners || (config.systemTweaks ?? []).contains {
             $0.key == "NSConvolutionOverride1" || $0.key == "NSSplitViewItemGlassMinimumCornerRadius"
         }
         guard hasCorner else { return }
-        // Not now: a switch is several steps, and a launch turns the title bars on, off and on
-        // again while it recovers. The hint waits until the switch has settled, the boot screen
-        // is down, and the corners are still wanted. It used to run modal right here: the alert
-        // sat under the boot cover where nobody could see it, and its modal run loop starved the
-        // timer that takes the cover down, so the Windows Me and Mac OS 9 boot animations
-        // looped until the unseen OK was found and clicked.
-        cornerHintTimer?.invalidate()
-        cornerHintTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { t in
-            guard stillWanted() else { t.invalidate(); cornerHintTimer = nil; return }
-            guard NSApp.isRunning, !SplashController.shared.isPresenting, !d.bool(forKey: cornerHintKey) else { return }
-            t.invalidate(); cornerHintTimer = nil
-            d.set(true, forKey: cornerHintKey)
-            let alert = NSAlert()
-            alert.messageText = "Classic window corners"
-            alert.informativeText = "The Finder now uses this era's squarer window corners. Other apps pick them up the next time you open them — to apply the corners everywhere at once, log out and back in. Everything goes back to normal when the theme goes off."
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: "OK")
-            NSApp.activate(ignoringOtherApps: true)
-            alert.runModal()
+        // Not now: a switch is several steps, and the boot screen is still up. The offer waits
+        // until the switch has settled and the corners are still wanted. Run modal under the boot
+        // cover, an alert once starved the timer that takes the cover down.
+        offerTimer?.invalidate()
+        offerTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { t in
+            guard stillWanted() else { t.invalidate(); offerTimer = nil; return }
+            guard NSApp.isRunning, !SplashController.shared.isPresenting else { return }
+            t.invalidate(); offerTimer = nil
+            let apps = restartableApps()
+            guard !apps.isEmpty, !d.bool(forKey: restartOfferKey) else { return }
+            askToRestart(apps)
         }
     }
 
-    private static let cornerHintKey = "classicCornerHintShown"
-    private static var cornerHintTimer: Timer?
+    private static let restartOfferKey = "appRestartOfferSuppressed"
+    private static var offerTimer: Timer?
+
+    /// The open apps a relaunch would change: regular ones, not RetroMac and not the Finder
+    /// (relaunched with the corners already).
+    private static func restartableApps() -> [NSRunningApplication] {
+        NSWorkspace.shared.runningApplications.filter {
+            $0.activationPolicy == .regular && !$0.isTerminated && $0.bundleURL != nil
+                && $0.processIdentifier != getpid() && $0.bundleIdentifier != "com.apple.finder"
+        }
+        .sorted { ($0.localizedName ?? "").localizedCaseInsensitiveCompare($1.localizedName ?? "") == .orderedAscending }
+    }
+
+    private static func askToRestart(_ apps: [NSRunningApplication]) {
+        let alert = NSAlert()
+        alert.messageText = "Restart the open apps for the theme's window corners?"
+        alert.informativeText = "An app takes on this era's window corners when it starts, so the windows already open keep their rounded ones. RetroMac can quit the apps ticked below and open them again now. Each is asked to quit the normal way, so it can ask about unsaved work first. The Finder has the new corners already."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Restart Apps")
+        alert.addButton(withTitle: "Not Now")
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = "Don't ask again"
+
+        let boxes = apps.map { app -> NSButton in
+            let b = NSButton(checkboxWithTitle: app.localizedName ?? app.bundleIdentifier ?? "App", target: nil, action: nil)
+            b.state = .on
+            return b
+        }
+        let stack = NSStackView(views: boxes)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 4
+        let height = min(CGFloat(boxes.count) * 22, 220)
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 300, height: height))
+        scroll.hasVerticalScroller = boxes.count * 22 > 220
+        scroll.drawsBackground = false
+        stack.frame = NSRect(x: 0, y: 0, width: 300, height: CGFloat(boxes.count) * 22)
+        let doc = FlippedView(frame: stack.frame)
+        doc.addSubview(stack)
+        scroll.documentView = doc
+        alert.accessoryView = scroll
+
+        NSApp.activate(ignoringOtherApps: true)
+        let answer = alert.runModal()
+        if alert.suppressionButton?.state == .on { d.set(true, forKey: restartOfferKey) }
+        guard answer == .alertFirstButtonReturn else { return }
+        restart(zip(apps, boxes).filter { $0.1.state == .on }.map(\.0))
+    }
+
+    private final class FlippedView: NSView { override var isFlipped: Bool { true } }
+
+    /// Quit each app the normal way and open it again once it is gone. An app that does not quit
+    /// (its user cancelled, or it hangs) is left running after half a minute.
+    static func restart(_ apps: [NSRunningApplication]) {
+        for app in apps {
+            guard let url = app.bundleURL else { continue }
+            guard app.terminate() else { continue }
+            var waited = 0.0
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { t in
+                waited += 0.5
+                if app.isTerminated {
+                    t.invalidate()
+                    let config = NSWorkspace.OpenConfiguration()
+                    config.activates = false
+                    NSWorkspace.shared.openApplication(at: url, configuration: config)
+                    print("[Corners] Reopened \(app.localizedName ?? url.lastPathComponent)")
+                } else if waited >= 30 {
+                    t.invalidate()
+                }
+            }
+        }
+    }
 
     /// Crash / force-quit recovery: a leftover snapshot at launch means the previous session
     /// never restored — undo unconditionally. If the theme is still active + the switch on,

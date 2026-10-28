@@ -16,6 +16,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   follows the output device. The drive counts disk activity and nothing else; the keyboard
   learns only which kind of key went down, never what was typed, and needs Accessibility.
 
+- **Square corners everywhere at once.** A theme with its own title bars makes windows square,
+  but an app only takes that on when it starts. Picking such a theme now offers to restart the
+  open apps: they are listed to leave some out, each is asked to quit the normal way (so it can
+  ask about unsaved work), and opened again. With "Don't ask again". Not asked at launch, nor when
+  the corners stay as they were.
+
 - **Aero Snap, Shake and Peek in Windows 7.** Drag a window by its title bar to the left or right
   edge and it fills that half of the screen, to the top and it fills the screen, with Windows 7's
   glass preview while you hold it there; drag it away and it has its old size back.
