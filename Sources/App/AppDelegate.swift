@@ -428,16 +428,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private weak var shownStatusMenu: NSMenu?
 
     @objc private func statusItemClicked() {
-        guard let button = statusItem.button, let menu = statusMenu else { return }
+        guard let button = statusItem?.button, let menu = statusMenu else { return }
         let click = NSApp.currentEvent?.timestamp ?? 0
         if AppSettings.shared.debugLogging { print("[Menu] icon click \(click) closedBy=\(statusMenuClosedBy)") }
         guard click != statusMenuClosedBy else { return }
         shownStatusMenu = menu
         // Hung on the icon just for this click, so macOS places it as its own (a pop-up placed
         // by hand opened scrolled under a notched menu bar), and taken off again when it closes.
-        statusItem.menu = menu
+        statusItem?.menu = menu
         button.performClick(nil)
-        statusItem.menu = nil
+        statusItem?.menu = nil
     }
 
     // MARK: - Dock Mode + Launcher
@@ -612,7 +612,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateMenuBarIcon() {
-        guard let button = statusItem.button else { return }
+        guard let button = statusItem?.button else { return }
         let icon = makeMenuBarIcon(size: NSSize(width: 18, height: 18), active: isActive)
         icon.isTemplate = true
         button.image = icon
@@ -4985,7 +4985,7 @@ extension NSScreen {
 extension AppDelegate: NSMenuDelegate {
     func menuDidClose(_ menu: NSMenu) {
         guard menu === shownStatusMenu else { return }
-        statusItem.menu = nil
+        statusItem?.menu = nil
         // Only a mouse click can also land on the icon. Closed by a key (Esc) or through
         // accessibility, the event on record is an older one — and the next VoiceOver press on
         // the icon, which brings no event of its own, read as "the same click" and never opened.

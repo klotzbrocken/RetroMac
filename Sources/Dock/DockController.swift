@@ -1225,6 +1225,9 @@ final class DockController {
         // Side-by-side multi-display keeps it on the primary, so ONLY the below-primary case falls
         // back to "left"; every other bottom/top theme minimizes straight DOWN into the themed dock,
         // single- or multi-display.
+        // The single edition hides the Mac's Dock the plain way, so it shows on a hover: never
+        // on the edge of the theme's own dock, where it would come up over it.
+        if Edition.isSingle { return themeEdge == "left" ? "right" : "left" }
         switch themeEdge {
         case "left":  return "left"
         case "right": return "right"

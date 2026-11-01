@@ -72,6 +72,7 @@ final class SingleWelcome {
         w.collectionBehavior = [.canJoinAllSpaces, .ignoresCycle]
         w.title = "Welcome"
         w.contentView = NSHostingView(rootView: LightboxView(model: model, close: { [weak self] in self?.close() }))
+        w.appearance = NSAppearance(named: .aqua)   // Snow Leopard's era was light
         window = w
         return w
     }

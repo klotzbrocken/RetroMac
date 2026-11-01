@@ -104,7 +104,8 @@ final class ThemeManager {
             themes += loadThemes(from: builtinURL, builtIn: true)
         }
 
-        themes += loadThemes(from: userThemesDir, builtIn: false)
+        // The single edition knows its own theme only, not the ones installed for the full app.
+        if !Edition.isSingle { themes += loadThemes(from: userThemesDir, builtIn: false) }
 
         availableThemes = themes
         print("[Theme] Found \(themes.count) themes: \(themes.map { $0.name }.joined(separator: ", "))")

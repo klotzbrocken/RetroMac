@@ -75,6 +75,8 @@ final class DesktopIconsController {
         // Dock-only changes nothing but the dock — no themed desktop icons.
         if AppSettings.shared.dockOnly { hide(); return }
         var entries = ThemeManager.shared.activeTheme?.config.desktopIcons ?? []
+        // The single edition ships without Tube Mode's TV catalogue.
+        if Edition.isSingle { entries.removeAll { $0.type == "tvfolder" } }
         // Johnny Castaway, once installed from RetroHub, on the desktops of the Windows he ran on.
         if !entries.isEmpty, var e = JohnnyCastaway.desktopEntry(themeID: ThemeManager.shared.activeTheme?.config.id) {
             e.gridX = 0
