@@ -72,6 +72,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   machine gun, flame-thrower, termites and more, then wash it clean. Once installed it sits on
   the Windows 95, 98, Me and XP desktops as stress.exe, the name it had.
 
+### Fixes
+
+- **Switching apps from the taskbar.** A click on another app's button brought its window up only
+  inside that app, behind the one in front: since macOS 14 an app in the background may no longer
+  bring another to the front. The window server does it now, for the window switcher too.
+
+- **Mac OS 8 and 9: inactive title bars are flat**, without pinstripes and boxes, as the real ones
+  were, and a click there only brings the window forward; RetroMac's own windows too.
+
 ## 3.0.1
 
 ### New

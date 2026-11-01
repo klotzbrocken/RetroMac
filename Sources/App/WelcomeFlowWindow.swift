@@ -118,11 +118,28 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Copland, RetroHub\u{2019}s apps and screens closer to the real ones")
+                Text("Sounds, Windows 7 as it worked, and NeXTSTEP\u{2019}s windows")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("speaker.wave.2.fill", .orange, "Sounds",
+                            "Settings \u{25B8} Sounds, for a Mac that makes no sound of its own: keys that click (subtle, clicky or a typewriter with its bell), a hard drive that spins up and seeks when the disk is really busy, from a 1986 stepper to a 15K server, and a fan that rises with the CPU. All off until you turn them on, quiet while a microphone records, and the drive counts disk activity and nothing else. Under XP, Vista and 7 a chime greets a USB device.")
+                    feature("macwindow.on.rectangle", .blue, "Windows 7, as it worked",
+                            "Aero Snap: drag a window to an edge for half the screen, to the top for all of it. Aero Shake hides the other apps, Aero Peek shows the desktop through the windows from the strip at the end of the taskbar. Type in the Start menu to find a program, work out a sum or open a web address, and right-click a taskbar button for its menu. A tap of Left \u{2318} can open Start.")
+                    feature("rectangle.bottomthird.inset.filled", .teal, "Windows stay clear of the taskbar",
+                            "A window that comes to rest under the dock or taskbar moves out from under it, as on the real systems; it never fights you or an app.")
+                    feature("cube.fill", .gray, "NeXTSTEP\u{2019}s windows",
+                            "Every window wears the NeXT title bar, black when it is the key window, miniaturize left and close right, and a miniaturized window leaves its miniwindow on the workspace.")
+                    feature("terminal.fill", .green, "The Command Prompt",
+                            "Under the Windows themes Terminal\u{2019}s prompt reads C:\\Users\\you>, with your own shell settings untouched.")
+                    feature("gamecontroller.fill", .red, "Desktop Games",
+                            "The stress reducer of 2000 in RetroHub \u{25B8} Apps: wreck a picture of your screen with a hammer, a chainsaw and termites. Once installed it sits on the Windows 95 to XP desktops as stress.exe.")
+                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
+                            "A click on another app\u{2019}s taskbar button brings its window to the front again, not behind the one in front. Mac OS 8 and 9 draw inactive title bars flat, as they did. Picking a theme with square corners offers to restart the apps that were open, so they take them too.")
+
+                    sectionHeader("Also in 3.0.1")
+
                     feature("apple.logo", .purple, "New: Mac OS 8 (Copland)",
                             "The Mac OS that never shipped, as Apple\u{2019}s June 1996 developer release D11E4 showed it: the purple grid desktop, lavender folders and Platinum in its first form, rebuilt from D11E4\u{2019}s own files. Its start-up, its title bar boxes, an Applications folder in its look, nine of its desktop patterns, and RetroMac\u{2019}s own windows wear its scroll arrows and lavender thumbs.")
                     feature("shippingbox.fill", .pink, "RetroHub: Themes, and more apps",
@@ -137,43 +154,6 @@ struct WelcomeFlowView: View {
                             "30 of the XP theme\u{2019}s icons are the hand-redrawn high-resolution versions: sharp on a Retina screen.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
                             "Theme menus no longer open above the shader. A .retromactheme opens in RetroMac with a double-click, and your own themes can be deleted. The disk image opens as a proper install window. Without Accessibility, the taskbar drops programs with no window and brings a window back on a click. Windows 3.x\u{2019}s running programs can be dragged across the desktop. The MS-DOS Prompt is grey again, and Desktop Glass is gone. RetroHub and Themes have their icons in the menu-bar menu again.")
-
-                    sectionHeader("Also in 3.0")
-
-                    feature("rectangle.split.3x1", .indigo, "A theme on your Spaces of choice",
-                            "Keep the theme to one Space, or a few, and plain macOS on the others: Themes \u{25B8} On This Space in the menu-bar menu. The Setup Assistant asks it too. The theme slides away with its Space; the others have the Mac\u{2019}s Dock, menu bar and your own wallpaper. Every Space gets its own wallpaper back when a theme goes off, read from macOS before the theme changed it.")
-                    feature("flame.fill", .orange, "New: Halloween",
-                            "A smouldering fire round a grimy glass dock that arches over the icon under the mouse and tears when it pushes through. Glowing fireballs for the traffic lights, the pumpkin for the Apple, a knife for the pointer, and every app icon tinted orange.")
-                    feature("square.grid.3x3.fill", .gray, "Mountain Lion, in full",
-                            "The rocket opens Launchpad as it was: your desktop picture fades in blurred, a search field, your apps as large icons on pages you swipe through. The black Apple opens 10.8\u{2019}s Apple menu, and About This Mac is 10.8\u{2019}s window with your Mac\u{2019}s own processor, memory and disk. The Downloads stack piles up your newest files on the dock icon, live, and the dock magnifies if you like.")
-                    feature("shippingbox.fill", .pink, "RetroHub",
-                            "The Game Library is now RetroHub, with three tabs. Games as before. Apps: Reframe, RetroFind, RetroContacts, RetroReminder, RetroCal and RetroNotes \u{2014} OS X 10.8\u{2019}s Finder, Address Book, Reminders, Calendar and Notes rebuilt as real apps \u{2014} plus Classic Mac Finder, QuickTune and Mojave Paint, each installed from its maker, checked and notarised, with the theme\u{2019}s title bars kept off it. Themes: new themes to download as they come.")
-                    feature("sparkles.tv", .green, "Screensavers and Green Lite",
-                            "3D Maze and 3D Text are new, and Pipes, FlowerBox and Starfield now run as the real Windows savers instead of web pages. Green Lite gives a green phosphor look without Screen Recording, and while that permission is missing, a full shader shows its Lite version instead of nothing.")
-                    feature("sun.max.fill", .purple, "New: Solaris 8 \u{2014} CDE",
-                            "The Unix desktop of 2000: the Front Panel with its live clock and subpanels, mauve title bars with the window menu, the Workspace Menu on a right-click, minimised windows as icons, the Application Manager, and crashes on the Sun console.")
-                    feature("cpu", .blue, "New: QNX 6.2.1 \u{2014} Photon",
-                            "The realtime OS\u{2019}s desktop from its 2003 CD: the shelf with groups you fold open and shut and a live system monitor, the taskbar with Launch and one entry per window, and Photon\u{2019}s blue title bars.")
-                    feature("macwindow.on.rectangle", .cyan, "New: Windows Vista and its Sidebar",
-                            "Aero glass windows on a black glass taskbar with the round Start orb, eight Vista wallpapers, Vista\u{2019}s own icons, and the Sidebar with a clock, a calendar and a CPU meter.")
-                    feature("paintbrush.pointed.fill", .yellow, "Themes, closer to the originals",
-                            "Mountain Lion gets its own dock: silver glass on the screen\u{2019}s edge that mirrors the icons, rounded at the back, blue-white lights for running apps, its own Trash and Launchpad. BeOS gets its yellow window tabs. Snow Leopard\u{2019}s reflections grow with the icon, folders included. Under Windows a minimised window flies into its taskbar button. Boot screens fill wide displays, and Windows 95 and Me boot in 16:9. Amiga Workbench and SGI IRIX have the top of the screen to themselves.")
-                    feature("photo.on.rectangle.angled", .teal, "Historic icons for modern apps",
-                            "Over 200 new icons: Office, Teams, Slack, Zoom, Figma, VS Code, Firefox, Spotify and many more, drawn in the style of Mac OS 9, System 7, Mac OS X, BeOS, Windows 3.1 to 7. Claude, Chrome and ChatGPT now wear the theme in Mac OS 9.2, Mountain Lion and Windows XP too. Import your own icon packages in Settings \u{25B8} Dock \u{25B8} Historic icons.")
-                    feature("lifepreserver", .red, "Rescue Desktop",
-                            "One action turns the theme and every effect off, brings back windows you cannot reach and the menu bar a theme hid. Your settings stay. \u{2303}\u{2325}\u{2318}R, the flyout or the menu-bar menu\u{2019}s More.")
-                    feature("arrow.uturn.backward.circle", .mint, "Your Mac, as you had it",
-                            "Each theme\u{2019}s page lists what it changes on your Mac before you turn it on, yours against the theme\u{2019}s. RetroMac remembers every macOS setting it touches, and Restore my settings in Settings \u{25B8} General puts them back as you had them. Quitting RetroMac now puts everything back as Rescue Desktop does, windows and wallpaper included. Keep my wallpaper, per theme in Desktop \u{25B8} Wallpaper, leaves your own picture alone \u{2014} a live wallpaper or a solid colour.")
-                    feature("rectangle.stack", .orange, "The window switcher of each era",
-                            "\u{2303}\u{2325}Tab does what the theme\u{2019}s era did: Solaris moves the focus window by window, Snow Leopard opens Expos\u{00E9}, Mountain Lion Mission Control.")
-                    feature("gauge.with.dots.needle.33percent", .green, "Task Manager, all five pages",
-                            "Under Windows XP: Applications, Processes, Performance, Networking and Users. Open it with Ctrl+Option+Delete or from the Start menu.")
-                    feature("accessibility", .blue, "VoiceOver and the keyboard",
-                            "RetroMac\u{2019}s drawing no longer shows up as empty windows, and the docks, taskbars, Start menus and panels are named buttons and menus VoiceOver can use. \u{2303}Esc opens the theme\u{2019}s Start or main menu, \u{2303}\u{21E7}Esc walks the dock, and the arrow keys find their way through every theme menu. VoiceOver now walks past the second control of a strip, and the onboarding hints read out. A theme switch no longer leaves VoiceOver\u{2019}s keys dead or the focus in an empty window, the menu bar stays in reach, the shader shortcut and the Control Strip\u{2019}s arrows speak, and Settings\u{2019} sections are one pop-up that says where you are. \u{2318}W and Esc close Settings, the menu-bar icon opens its menu every time, and Quick Nav no longer sets off Dock Only.")
-                    feature("gearshape.2", .gray, "Settings, tidied up",
-                            "Themes first, the shader in four clear tabs, Retro Mode is now Favourite, a shorter Setup Assistant with themes by family, and betas on request in About. The flyout keeps the everyday switches; the menu-bar menu has a More menu for Dock Only, RetroHub, the Setup Assistant and Rescue Desktop.")
-                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "Theme switches no longer restart the Dock and Finder for nothing. Pac-Man starts again. The shader is off behind the lock screen. No more log file on the Desktop. A rolled-up window keeps its way back, even across a crash. Mission Control no longer shows the title bars as little windows. The menu-bar icon closes its menu on a second click, the dock answers the mouse coming down from the menu bar, Rescue Desktop gives every Space its wallpaper back, the shader\u{2019}s scanline and glass overlays draw again, and Futurama\u{2019}s windows close. The Control Strip and the dock sit in place after a theme switch, Dashboard dims every display, and when macOS hides RetroMac\u{2019}s menu-bar icon, RetroMac says so and offers a Dock icon. Started from the disk image, it offers to move itself to Applications. A second display keeps its own wallpaper, and Shader \u{25B8} On & Off says which themes keep the shader off. macOS no longer asks every half minute whether RetroMac may control Finder.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
