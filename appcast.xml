@@ -15,6 +15,21 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 3.0.2</title>
+      <pubDate>Sun, 01 Nov 2026 05:57:38 +0000</pubDate>
+      <sparkle:version>3.0.8</sparkle:version>
+      <sparkle:shortVersionString>3.0.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 3.0.2</h2><h3>New</h3><ul><li><b>Sounds.</b> A new place in Settings for a Mac that makes no sound of its own: keys that click (subtle, clicky or a typewriter, with the bell on Return), a hard drive that spins up, seeks when the disk is really busy and parks when you turn it off (six drives from a 1986 stepper to a 15K server, synthesized by Platter's DriveSynth), and a fan that rises with the CPU load and runs on after it. One master switch and volume, everything off until you turn it on. It pauses while a microphone records, the screen is shared, the Mac is muted or asleep, and follows the output device. The drive counts disk activity and nothing else; the keyboard learns only which kind of key went down, never what was typed, and needs Accessibility.</li><li><b>Start menu search in Windows 7 and Vista.</b> Type while the Start menu is open and the search box takes it, as on the real thing: the left pane shows the installed programs that match, a sum worked out (<code>12*3</code>, Return copies the answer) and a web address to open (<code>github.com</code>). Return opens the first match, the box's × clears it. The keys are held only while the menu is open and read through your keyboard layout. After Startish.</li><li><b>Start with a tap of Left ⌘.</b> As the Windows key did: press and let go of the left Command key on its own and the Start menu opens; Command shortcuts work as before. Off by default, under Settings ▸ Themes ▸ Dock on themes with a Start button.</li><li><b>Right-click on a taskbar button.</b> Windows 95 to XP show the window's system menu (Restore, Minimize, Maximize, Close); Windows 7 the foot of its jump list: the program, pin or unpin it, close the window.</li><li><b>NeXTSTEP title bars and miniwindows.</b> With the theme's title bars on, every window under the NeXTSTEP theme wears the NeXT bar: black on the key window, grey on the others, the miniaturize button at the left end and close at the right. A miniaturized window leaves a miniwindow on the workspace, as NeXTSTEP did: a tile with the app's icon under a black strip with the window's title, along the bottom of the screen from the Dock leftwards; double-click it to put the window back.</li><li><b>Square corners everywhere at once.</b> A theme with its own title bars makes windows square, but an app only takes that on when it starts. Picking such a theme now offers to restart the open apps: they are listed to leave some out, each is asked to quit the normal way (so it can ask about unsaved work), and opened again. With "Don't ask again". Not asked at launch, nor when the corners stay as they were.</li><li><b>Aero Snap, Shake and Peek in Windows 7.</b> Drag a window by its title bar to the left or right edge and it fills that half of the screen, to the top and it fills the screen, with Windows 7's glass preview while you hold it there; drag it away and it has its old size back. Ctrl+Option+arrows do the same from the keyboard. Shake a window and every other app hides; shake it again and they return. The taskbar has its Show Desktop strip at the right end again: rest the pointer on it and the windows turn to glass outlines over the desktop, click it and the desktop shows. Each has its switch under Settings ▸ Themes ▸ Windows 7 extras; Snap and Shake need Accessibility.</li><li><b>Windows stay clear of the dock.</b> As on the real systems, a window that comes to rest under the retro dock or taskbar moves out from under it, or gets shorter when it does not fit. It looks once a window has settled, never during a drag, and gives up on a window that keeps going back, so it never fights you or an app. On by default; Settings ▸ Themes ▸ Dock.</li><li><b>The Command Prompt in Terminal.</b> Under the Windows themes Terminal's prompt reads <code>C:\Users\you&gt;</code> instead of <code>you@Mac ~ %</code>. zsh still runs your own startup files, unchanged; RetroMac only sets the prompt after them and edits nothing in your home folder. Only when your login shell is zsh; after macOS 7 Ultimate SP1's cmd-zsh.</li><li><b>Device chime.</b> Under Windows XP, Vista and 7 a chime sounds when a USB device is plugged in or pulled out (one per device, none for the devices that drop and return when the Mac wakes). Only while RetroMac's sounds are on and macOS's "Play user interface sound effects" is too; Settings ▸ Sounds ▸ Interface sounds.</li><li><b>Desktop Games in RetroHub ▸ Apps.</b> The Gemtree stress reducer of 2000, ported to the Mac by ucodia: it takes a picture of your screen and lets you wreck it with a hammer, chain-saw, machine gun, flame-thrower, termites and more, then wash it clean. Once installed it sits on the Windows 95, 98, Me and XP desktops as stress.exe, the name it had.</li></ul><h3>Fixes</h3><ul><li><b>Switching apps from the taskbar.</b> A click on another app's button brought its window up only inside that app, behind the one in front: since macOS 14 an app in the background may no longer bring another to the front. The window server does it now, for the window switcher too.</li><li><b>Mac OS 8 and 9: inactive title bars are flat</b>, without pinstripes and boxes, as the real ones were, and a click there only brings the window forward; RetroMac's own windows too.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v3.0.2/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="4bgP2OLXewxCFCLknmENMbdmo54j1YKwwBi4clc1c6zxXF44SdyjaSS/p7psvN4KpVrIkTQ5CrqHUorkQclTAw==" length="135321151"
+      />
+    </item>
+    <item>
       <title>Version 3.0.1</title>
       <pubDate>Sun, 25 Oct 2026 08:20:11 +0000</pubDate>
       <sparkle:version>3.0.7</sparkle:version>
@@ -82,29 +97,6 @@
         type="application/octet-stream"
         sparkle:edSignature="LrAzZ5nQPD3oaWoxdf+Kqy4y7oW84dMFisQh/MUe0uQkh6nfGekyGCBCtTOk3K3+bhVo6nNdD47sUOf9A8I6Cg=="
         length="101858304"
-      />
-    </item>
-    <item>
-      <title>Version 2.8.7</title>
-      <pubDate>Thu, 24 Sep 2026 00:10:54 +0000</pubDate>
-      <sparkle:version>2.8.7</sparkle:version>
-      <sparkle:shortVersionString>2.8.7</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>RetroMac 2.8.7</h2>
-        <ul>
-          <li><b>New theme: System 7.1 (authentic).</b> System 7.1 as a colour Mac showed it at 256 colours: every icon on the desktop, in the Apple menu, the Application menu and the Applications window snapped to the Mac&rsquo;s standard colour table, the rainbow apple, and windows in System 7&rsquo;s lavender-grey &mdash; striped title bar, sunken close and zoom boxes, the scroll bars of the day, measured pixel for pixel from the real thing. The Control Strip is System 7.5&rsquo;s, taken pixel for pixel from the original: AppleTalk, File Sharing, colour depth, resolution and sound. No dock; the Application menu at the right of the menu bar and Balloon Help beside it.</li>
-          <li><b>Starfield Simulation.</b> The Windows 2000 screen saver, for every theme.</li>
-          <li><b>Settings &#9656; General &#9656; macOS defaults.</b> The emergency exit: turns the theme and the shader off and puts back everything RetroMac can have changed about the system.</li>
-          <li><b>A folder in the dock from Settings.</b> &ldquo;Add app or folder&hellip;&rdquo; takes a folder too &mdash; a Downloads folder on an external disk, say &mdash; and puts it in the dock as a stack.</li>
-          <li><b>Fixes:</b> switching the Dock&rsquo;s auto-hide off in System Settings no longer brings the macOS Dock back over the Snow Leopard or Mountain Lion dock; a click on a background window&rsquo;s themed title bar brings that very window forward at once, and dragging by the bar no longer loses track; the menu names the theme chosen in Settings; desktop names that wrap get a plate that fits; the Apple cover takes the first click; nothing piles up in memory over a long session.</li>
-        </ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/klotzbrocken/RetroMac/releases/download/v2.8.7/RetroMac.dmg"
-        type="application/octet-stream"
-        sparkle:edSignature="o8irlg+y0zccn1whd/W45ISmWC1IRF0HGdwTovyd8YJsYuBdg59y7BGxRE7C60JEShlQvnPT6IG0xnCpFlS3CQ=="
-        length="93532505"
       />
     </item>
     <item>
