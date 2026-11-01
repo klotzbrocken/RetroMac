@@ -4,6 +4,18 @@ cd "$(dirname "$0")"
 
 MODE="${1:-debug}"
 
+# A single-click edition, `EDITION=snowleopard ./build.sh release`: one theme, an app of its own
+# (its own id, name and install path), no games, no camera extension, no update feed.
+EDITION="${EDITION:-}"
+if [ -n "$EDITION" ]; then
+    case "$EDITION" in
+        snowleopard) ED_NAME="RetroMac Snow Leopard"; ED_THEME="MacOSX-SnowLeopard.retromactheme" ;;
+        *) echo "❌ Unknown edition: $EDITION"; exit 1 ;;
+    esac
+    ED_ID="com.retromac.app.$EDITION"
+    [ "$MODE" != "release" ] && { ED_ID="$ED_ID.dev"; ED_NAME="$ED_NAME Dev"; }
+fi
+
 # Use Developer ID for release builds (distributable), Apple Development for debug
 if [ "$MODE" = "release" ]; then
     SIGN_ID="Developer ID Application: Maik Klotz (FTJLR8JRNS)"
@@ -32,6 +44,8 @@ else
         fi
     fi
 fi
+# An edition has no camera extension and no app group, so it needs no provisioning profile.
+[ -n "$EDITION" ] && APP_ENTITLEMENTS="RetroMac-debug.entitlements"
 # Release builds are Universal (Intel + Apple Silicon) for distribution.
 # Debug/dev builds stay native (host arch only) for fast iteration.
 if [ "$MODE" = "release" ]; then
@@ -48,9 +62,11 @@ echo "Building RetroMac ($MODE, signing: $(echo "$SIGN_ID" | cut -d: -f1)${ARCH_
 swift build --build-system native -c "$MODE" $ARCH_FLAGS --product RetroMac 2>&1 | tee /tmp/retromac_build.log | tail -3
 if [ "${PIPESTATUS[0]}" -ne 0 ]; then echo "❌ RetroMac build FAILED:"; cat /tmp/retromac_build.log; exit 1; fi
 
+if [ -z "$EDITION" ]; then
 echo "Building Camera Extension..."
 swift build --build-system native -c "$MODE" $ARCH_FLAGS --product RetroMacCameraExtension 2>&1 | tee /tmp/retromac_ext_build.log | tail -3
 if [ "${PIPESTATUS[0]}" -ne 0 ]; then echo "❌ Camera Extension build FAILED:"; cat /tmp/retromac_ext_build.log; exit 1; fi
+fi
 
 # Resolve the products dir (differs for universal builds → use --show-bin-path)
 BIN_PATH=$(swift build --build-system native -c "$MODE" $ARCH_FLAGS --show-bin-path 2>/dev/null | tail -1)
@@ -58,6 +74,7 @@ echo "  Products: $BIN_PATH"
 
 # --- Camera Extension .systemextension bundle ---
 EXT_BUNDLE=".build/com.retromac.app.camera.systemextension"
+if [ -z "$EDITION" ]; then
 EXT_CONTENTS="$EXT_BUNDLE/Contents"
 mkdir -p "$EXT_CONTENTS/MacOS"
 
@@ -72,9 +89,10 @@ codesign --force --sign "$SIGN_ID" \
     "$EXT_BUNDLE"
 
 echo "  ✓ Camera Extension built"
+fi
 
 # --- Main App Bundle ---
-APP_BUNDLE=".build/RetroMac.app"
+APP_BUNDLE=".build/RetroMac${EDITION:+-$EDITION}.app"
 CONTENTS="$APP_BUNDLE/Contents"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources" "$CONTENTS/Library/SystemExtensions"
 # Strip stale orphan helper from earlier builds — grayscale now runs in-process
@@ -100,6 +118,16 @@ if [ "$MODE" != "release" ]; then
     /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.retromac.app.dev" "$CONTENTS/Info.plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleName 'RetroMac Dev'" "$CONTENTS/Info.plist"
 fi
+# The edition: its own id and name, its key for the app (Edition.swift), no update feed, and an
+# ordinary app with a Dock icon, so ⌘Q, ⌘Tab and Force Quit find it.
+if [ -n "$EDITION" ]; then
+    PB=/usr/libexec/PlistBuddy
+    $PB -c "Set :CFBundleIdentifier $ED_ID" -c "Set :CFBundleName '$ED_NAME'" "$CONTENTS/Info.plist"
+    $PB -c "Delete :CFBundleDisplayName" "$CONTENTS/Info.plist" 2>/dev/null || true
+    $PB -c "Add :CFBundleDisplayName string '$ED_NAME'" -c "Add :RetroMacEdition string $EDITION" \
+        -c "Set :LSUIElement false" "$CONTENTS/Info.plist"
+    $PB -c "Delete :SUFeedURL" "$CONTENTS/Info.plist" 2>/dev/null || true
+fi
 cp Resources/AppIcon.icns "$CONTENTS/Resources/AppIcon.icns"
 cp Resources/menubar_icon.png "$CONTENTS/Resources/menubar_icon.png"
 cp Resources/menubar_icon@2x.png "$CONTENTS/Resources/menubar_icon@2x.png"
@@ -114,7 +142,20 @@ if [ -d "Resources/Themes" ]; then
     mkdir -p "$CONTENTS/Resources/Themes"
     # 'icons-library/' holds source/staging art (e.g. the extracted System 6 icon set) that is
     # kept in the repo but must never ship in the bundle.
-    rsync -a --delete --delete-excluded --exclude 'icons-library' --exclude '*.md' Resources/Themes/ "$CONTENTS/Resources/Themes/"
+    if [ -n "$EDITION" ]; then
+        # Its one theme, and pictures of others for the welcome lightbox's "more in RetroMac".
+        rm -rf "$CONTENTS/Resources/Themes" "$CONTENTS/Resources/Previews"
+        mkdir -p "$CONTENTS/Resources/Themes" "$CONTENTS/Resources/Previews"
+        rsync -a --exclude 'icons-library' --exclude '*.md' "Resources/Themes/$ED_THEME" "$CONTENTS/Resources/Themes/"
+        n=1
+        for t in MacOS9-Authentic Windows98 WindowsXP MacOS8-Copland BeOSClassic Windows7; do
+            for f in Resources/Themes/$t.retromactheme/preview.*; do
+                [ -f "$f" ] && cp "$f" "$CONTENTS/Resources/Previews/$n-$t.${f##*.}" && n=$((n + 1))
+            done
+        done
+    else
+        rsync -a --delete --delete-excluded --exclude 'icons-library' --exclude '*.md' Resources/Themes/ "$CONTENTS/Resources/Themes/"
+    fi
 fi
 
 # Copy sounds
@@ -126,22 +167,22 @@ fi
 # Copy desktop widgets (e.g. BeOS CPU Monitor HTML widget)
 if [ -d "Resources/Widgets" ]; then
     mkdir -p "$CONTENTS/Resources/Widgets"
-    rsync -a --delete Resources/Widgets/ "$CONTENTS/Resources/Widgets/"
+    rsync -a --delete --delete-excluded ${EDITION:+--exclude Hover} Resources/Widgets/ "$CONTENTS/Resources/Widgets/"
 fi
 
 # Tube Mode bezel catalog
-if [ -d "Resources/TV" ]; then
+if [ -z "$EDITION" ] && [ -d "Resources/TV" ]; then
     mkdir -p "$CONTENTS/Resources/TV"
     rsync -a --delete Resources/TV/ "$CONTENTS/Resources/TV/"
 fi
 
-if [ -d "Resources/Cursors" ]; then
+if [ -z "$EDITION" ] && [ -d "Resources/Cursors" ]; then
     mkdir -p "$CONTENTS/Resources/Cursors"
     rsync -a --delete Resources/Cursors/ "$CONTENTS/Resources/Cursors/"
 fi
 
 # Per-game icons for the Setup Assistant's desktop shortcuts (Doom/Duke/Quake/Warcraft…)
-if [ -d "Resources/GameIcons" ]; then
+if [ -z "$EDITION" ] && [ -d "Resources/GameIcons" ]; then
     mkdir -p "$CONTENTS/Resources/GameIcons"
     rsync -a --delete Resources/GameIcons/ "$CONTENTS/Resources/GameIcons/"
 fi
@@ -159,13 +200,13 @@ if [ -d "Resources/Fonts" ]; then
 fi
 
 # Retro Crashes artwork (the Macintosh bomb).
-if [ -d "Resources/Crashes" ]; then
+if [ -z "$EDITION" ] && [ -d "Resources/Crashes" ]; then
     mkdir -p "$CONTENTS/Resources/Crashes"
     rsync -a --delete Resources/Crashes/ "$CONTENTS/Resources/Crashes/"
 fi
 
 # Real .saver screensaver modules (built by scripts/build-savers.sh)
-if [ -d "Resources/Savers" ]; then
+if [ -z "$EDITION" ] && [ -d "Resources/Savers" ]; then
     mkdir -p "$CONTENTS/Resources/Savers"
     rsync -a --delete Resources/Savers/ "$CONTENTS/Resources/Savers/"
     # The .saver bundles ship ad-hoc signed (from build-savers.sh); re-sign their
@@ -178,18 +219,22 @@ if [ -d "Resources/Savers" ]; then
 fi
 
 # Copy Doom CRT shader PK3
-if [ -f "Resources/RetroMac-CRT.pk3" ]; then
+if [ -z "$EDITION" ] && [ -f "Resources/RetroMac-CRT.pk3" ]; then
     cp Resources/RetroMac-CRT.pk3 "$CONTENTS/Resources/RetroMac-CRT.pk3"
 fi
 
 # Copy Duke Nukem 3D shareware GRP (if bundled)
-if [ -f "Resources/DUKE3D.GRP" ]; then
+if [ -z "$EDITION" ] && [ -f "Resources/DUKE3D.GRP" ]; then
     cp Resources/DUKE3D.GRP "$CONTENTS/Resources/DUKE3D.GRP"
     echo "  ✓ Duke Nukem 3D shareware bundled"
 fi
 
 # Embed Camera Extension in app bundle
-rsync -a --delete "$EXT_BUNDLE/" "$CONTENTS/Library/SystemExtensions/com.retromac.app.camera.systemextension/"
+if [ -z "$EDITION" ]; then
+    rsync -a --delete "$EXT_BUNDLE/" "$CONTENTS/Library/SystemExtensions/com.retromac.app.camera.systemextension/"
+else
+    rm -rf "$CONTENTS/Library/SystemExtensions"
+fi
 
 # Embed Sparkle.framework
 SPARKLE_FW=".build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
@@ -217,7 +262,7 @@ if [ -d "$SPARKLE_FW" ]; then
 fi
 
 # --- BeOS Pac-Man demo (built from vendored GPLv2 source in vendor/pacman) ---
-if [ -d "vendor/pacman/src" ] && [ -d "/opt/homebrew/include/SDL2" ]; then
+if [ -z "$EDITION" ] && [ -d "vendor/pacman/src" ] && [ -d "/opt/homebrew/include/SDL2" ]; then
     PAC_APP="$CONTENTS/Resources/Games/Pacman.app"
     PAC_C="$PAC_APP/Contents"
     rm -rf "$PAC_APP"; mkdir -p "$PAC_C/MacOS" "$PAC_C/Resources" "$PAC_C/Frameworks"
@@ -265,8 +310,8 @@ PLIST
         [ "$MODE" = "release" ] && { echo "❌ A release must not ship without Pac-Man."; exit 1; }
     fi
 else
-    echo "  ⚠ SDL2/vendor sources missing — Pac-Man demo not bundled"
-    [ "$MODE" = "release" ] && { echo "❌ A release must not ship without Pac-Man."; exit 1; }
+    [ -z "$EDITION" ] && echo "  ⚠ SDL2/vendor sources missing — Pac-Man demo not bundled"
+    [ "$MODE" = "release" ] && [ -z "$EDITION" ] && { echo "❌ A release must not ship without Pac-Man."; exit 1; }
 fi
 
 # --- Warcraft I + II via Stratagus (GPL-2 engine, vendored as submodules) ---
@@ -275,7 +320,7 @@ fi
 # downloads them. Unlike Pac-Man, the result needs no Homebrew at all: SDL and friends
 # are statically linked from the engine's own third-party tree.
 WC_BUILD="vendor/peonpad/build/macos"
-if [ ! -x "$WC_BUILD/stratagus" ] && command -v cmake >/dev/null 2>&1; then
+if [ -z "$EDITION" ] && [ ! -x "$WC_BUILD/stratagus" ] && command -v cmake >/dev/null 2>&1; then
     if [ ! -f "vendor/peonpad/CMakeLists.txt" ]; then
         echo "  ⏳ Fetching Warcraft engine submodules (one-time)…"
         git submodule update --init --depth 1 vendor/peonpad vendor/war1gus >/dev/null 2>&1 || true
@@ -300,7 +345,7 @@ if [ ! -x "$WC_BUILD/stratagus" ] && command -v cmake >/dev/null 2>&1; then
     fi
 fi
 
-if [ -x "$WC_BUILD/stratagus" ]; then
+if [ -z "$EDITION" ] && [ -x "$WC_BUILD/stratagus" ]; then
     WC_DIR="$CONTENTS/Resources/Games/Warcraft"
     rm -rf "$WC_DIR"; mkdir -p "$WC_DIR"
     cp "$WC_BUILD/stratagus" "$WC_DIR/stratagus"
@@ -352,7 +397,7 @@ if [ -x "$WC_BUILD/stratagus" ]; then
     [ -f "$WC_DIR/war1tool" ] && codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$WC_DIR/war1tool"
     echo "  ✓ Warcraft engine (Stratagus) + WC1/WC2 game logic embedded"
 else
-    echo "  ⚠ Stratagus not built — Warcraft I/II not bundled (needs: brew install cmake pkg-config)"
+    [ -z "$EDITION" ] && echo "  ⚠ Stratagus not built — Warcraft I/II not bundled (needs: brew install cmake pkg-config)"
 fi
 
 cat > "$CONTENTS/PkgInfo" <<'PKG'
@@ -363,7 +408,7 @@ PKG
 # Debug uses reduced entitlements without that entitlement, so it needs NO profile — remove any
 # stale one so AMFI doesn't try to validate it against the Apple Development signing cert and
 # SIGKILL the app (exit 137).
-if [ "$MODE" = "release" ]; then
+if [ "$MODE" = "release" ] && [ -z "$EDITION" ]; then
     PROFILE="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/RetroMac_Developer_ID.provisionprofile"
     if [ -f "$PROFILE" ]; then
         # HARD FAIL: the profile must list the certificate we sign with. A Developer ID
@@ -409,6 +454,7 @@ if [ "$MODE" = "release" ]; then
 else
     APP_IDENTIFIER="com.retromac.app.dev"
 fi
+[ -n "$EDITION" ] && APP_IDENTIFIER="$ED_ID"
 codesign --force --sign "$SIGN_ID" \
     --entitlements "$APP_ENTITLEMENTS" \
     --identifier "$APP_IDENTIFIER" \
@@ -443,6 +489,7 @@ if [ "$MODE" = "release" ]; then
 else
     INSTALL_NAME="RetroMac Dev.app"
 fi
+[ -n "$EDITION" ] && INSTALL_NAME="$ED_NAME.app"
 rm -rf "/Applications/$INSTALL_NAME"
 ditto "$APP_BUNDLE" "/Applications/$INSTALL_NAME"
 # Re-sign at install path (bundle name changed for dev builds)

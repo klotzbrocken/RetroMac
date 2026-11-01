@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Sparkle only runs in the notarized Developer-ID build. Debug ("…​.dev") bundles are
     // signed with Apple Development and aren't notarized, so Gatekeeper rejects Sparkle's
     // installer helpers ("An error occurred while launching the installer"). Don't start it.
-    private static let sparkleEnabled = !(Bundle.main.bundleIdentifier ?? "").hasSuffix(".dev")
+    private static let sparkleEnabled = !(Bundle.main.bundleIdentifier ?? "").hasSuffix(".dev") && !Edition.isSingle
     /// Sparkle holds its delegate weakly; the channels live as long as the app.
     private static let updateChannels = UpdateChannels()
     private let updaterController = SPUStandardUpdaterController(startingUpdater: AppDelegate.sparkleEnabled, updaterDelegate: AppDelegate.updateChannels, userDriverDelegate: nil)
@@ -97,6 +97,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DiagnosticsLog.shared.start()   // capture console output for the About → Diagnostics view
         AppMover.offerIfNeeded()        // from the DMG or Downloads: offer Applications first
         AppDelegate.shared = self
+        // The single edition and the full RetroMac must not both drive the Dock and the desktop.
+        if Edition.isSingle, SingleEdition.otherRetroMacRunning() { SingleEdition.refuseAndQuit(); return }
         settingsWindow.updater = updaterController.updater
         let settings = AppSettings.shared
         currentPresetName = settings.defaultPreset
@@ -125,7 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ScreensaverController.shared.beginIdleWatch()   // works regardless of the themed dock
 
         applyDockMode()   // .accessory (menu-bar only) or .regular (Dock icon) per setting
-        if AppSettings.shared.floatingLauncherEnabled { FloatingLauncherButton.shared.show() }
+        if AppSettings.shared.floatingLauncherEnabled || Edition.isSingle { FloatingLauncherButton.shared.show() }
 
         // Re-apply the last webcam scene so the look persists across launches (the camera's
         // shader/intensity aren't otherwise persisted).
@@ -134,8 +136,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             scene.apply()
         }
         // Floating scene switcher — observes the camera state; only shows while it's running.
-        QuickSwitchController.shared.refreshVisibility()
-        setupMenuBar()
+        if Edition.isSingle {
+            SingleEdition.installMainMenu()   // About, Get the full RetroMac, Return to macOS, Quit
+        } else {
+            QuickSwitchController.shared.refreshVisibility()
+            setupMenuBar()
+        }
         registerHotkey()
         startAppLaunchObserver()
         startSleepObserver()
@@ -269,7 +275,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if rescueAtLaunch {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { DesktopRescue.shared.run() }
         }
-        let autoActivateTheme = !rescueAtLaunch && (settings.activateThemeOnLaunch
+        // The single edition: its theme, at once, with no boot screen, and the welcome lightbox.
+        if Edition.isSingle, !rescueAtLaunch {
+            DispatchQueue.main.async { SingleEdition.startTheme(); SingleWelcome.shared.show(countdown: true) }
+        }
+        let autoActivateTheme = !Edition.isSingle && !rescueAtLaunch && (settings.activateThemeOnLaunch
             || ProcessInfo.processInfo.environment["RETROMAC_AUTOACTIVATE_THEME"] != nil)
         if autoActivateTheme {
             DispatchQueue.main.async {
@@ -360,6 +370,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // First run: the Setup Assistant is the primary onboarding (incl. permissions).
         // After it finishes, fall through to the welcome flow for What's New / Coffee.
         // On subsequent launches the wizard is skipped and only the welcome flow runs.
+        guard !Edition.isSingle else { return }   // no Setup Assistant, What's New or launch shader
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.checkStatusItemShows() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             if !AppSettings.shared.setupWizardComplete {
@@ -433,6 +444,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Toggle the app between menu-bar-only (.accessory) and showing a Dock icon (.regular).
     func applyDockMode() {
+        // The single edition is an ordinary app: ⌘Q, ⌘Tab and Force Quit find it.
+        if Edition.isSingle { NSApp.setActivationPolicy(.regular); return }
         if AppSettings.shared.dockModeEnabled {
             NSApp.setActivationPolicy(.regular)
             updateDockIcon()
@@ -456,6 +469,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Left-click on the Dock icon (no windows) → toggle the launcher window (movable).
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if Edition.isSingle { SingleWelcome.shared.show(countdown: false); return false }
         if AppSettings.shared.dockModeEnabled {
             LauncherController.shared.toggleWindow()
         } else if !NSApp.windows.contains(where: { $0.isVisible && $0.styleMask.contains(.titled) }) {
@@ -1119,6 +1133,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func rebuildMenu() {
+        guard statusItem != nil else {   // the single edition has none
+            NotificationCenter.default.post(name: .overlayStateChanged, object: nil)
+            return
+        }
         // Overlay/preset state has settled by the time the menu is rebuilt (incl. the
         // async full-overlay completion). Notify the flyout so its shader toggle and
         // preset dropdown reflect the real state even after async activation.
@@ -1673,7 +1691,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let settings = AppSettings.shared
 
         // 1. Toggle overlay hotkey (id: 1) — require at least one system modifier
-        if settings.hotkeyModifiers != 0 {
+        if !Edition.isSingle, settings.hotkeyModifiers != 0 {
             var ref: EventHotKeyRef?
             let hkID = EventHotKeyID(signature: hotkeySignature, id: 1)
             if RegisterEventHotKey(settings.hotkeyCode, settings.hotkeyModifiers,
@@ -1683,7 +1701,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 2. Screenshot with shader hotkey (id: 6) — require at least one system modifier
-        if settings.screenshotHotkeyModifiers != 0 {
+        if !Edition.isSingle, settings.screenshotHotkeyModifiers != 0 {
             var ref: EventHotKeyRef?
             let hkID = EventHotKeyID(signature: hotkeySignature, id: 6)
             if RegisterEventHotKey(settings.screenshotHotkeyCode, settings.screenshotHotkeyModifiers,
@@ -1693,7 +1711,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 3. Toggle system menu bar hotkey (id: 7) — require at least one system modifier
-        if settings.menuBarToggleHotkeyModifiers != 0 {
+        if !Edition.isSingle, settings.menuBarToggleHotkeyModifiers != 0 {
             var ref: EventHotKeyRef?
             let hkID = EventHotKeyID(signature: hotkeySignature, id: 7)
             if RegisterEventHotKey(settings.menuBarToggleHotkeyCode, settings.menuBarToggleHotkeyModifiers,
@@ -1703,7 +1721,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 4. Dashboard layer (id: 8) — require at least one system modifier
-        if settings.dashboardHotkeyModifiers != 0 {
+        if !Edition.isSingle, settings.dashboardHotkeyModifiers != 0 {
             var ref: EventHotKeyRef?
             let hkID = EventHotKeyID(signature: hotkeySignature, id: 8)
             if RegisterEventHotKey(settings.dashboardHotkeyCode, settings.dashboardHotkeyModifiers,
@@ -1713,7 +1731,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 5. Exposé, all windows (id: 9) and the frontmost app's windows (id: 10)
-        if settings.exposeHotkeyModifiers != 0 {
+        if !Edition.isSingle, settings.exposeHotkeyModifiers != 0 {
             var ref: EventHotKeyRef?
             let hkID = EventHotKeyID(signature: hotkeySignature, id: 9)
             if RegisterEventHotKey(settings.exposeHotkeyCode, settings.exposeHotkeyModifiers,
@@ -1721,7 +1739,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 exposeHotKeyRef = ref
             }
         }
-        if settings.exposeAppHotkeyModifiers != 0 {
+        if !Edition.isSingle, settings.exposeAppHotkeyModifiers != 0 {
             var ref: EventHotKeyRef?
             let hkID = EventHotKeyID(signature: hotkeySignature, id: 10)
             if RegisterEventHotKey(settings.exposeAppHotkeyCode, settings.exposeAppHotkeyModifiers,
@@ -1745,7 +1763,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // 7. Keyboard access: the theme's main menu (id: 12) and the dock focus (id: 13).
-        if settings.launcherHotkeyModifiers != 0 {
+        if !Edition.isSingle, settings.launcherHotkeyModifiers != 0 {
             var ref: EventHotKeyRef?
             let hkID = EventHotKeyID(signature: hotkeySignature, id: 12)
             if RegisterEventHotKey(settings.launcherHotkeyCode, settings.launcherHotkeyModifiers,
@@ -1753,7 +1771,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 launcherHotKeyRef = ref
             }
         }
-        if settings.dockFocusHotkeyModifiers != 0 {
+        if !Edition.isSingle, settings.dockFocusHotkeyModifiers != 0 {
             var ref: EventHotKeyRef?
             let hkID = EventHotKeyID(signature: hotkeySignature, id: 13)
             if RegisterEventHotKey(settings.dockFocusHotkeyCode, settings.dockFocusHotkeyModifiers,
@@ -2586,6 +2604,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
+        // The single edition has no Settings: every way in opens its welcome lightbox.
+        if Edition.isSingle { SingleWelcome.shared.show(countdown: false); return }
         settingsWindow.show()
     }
 

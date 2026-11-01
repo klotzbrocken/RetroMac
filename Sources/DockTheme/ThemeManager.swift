@@ -647,6 +647,8 @@ final class ThemeManager {
         let here = ThemeSpaces.shared.showsThemeHere
         if !here { restorePendingSpaces() }
         func applyLook() {
+            // The single edition changes nothing about macOS that could stay behind after a crash.
+            guard !Edition.isSingle else { return }
             AppearanceAdapter.apply(for: theme.config)
             if here { CursorThemeManager.shared.apply(for: theme.config) }
             TerminalThemer.apply(forThemeNamed: theme.config.name)

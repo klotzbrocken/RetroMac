@@ -12,6 +12,7 @@
 #   ./package.sh              # build, package, notarize  -> RetroMac.dmg
 #   ./package.sh --skip-build # package existing build
 #   ./package.sh --beta       # same, but named RetroMac-<version>-beta.dmg
+#   EDITION=snowleopard ./package.sh   # the single-click edition -> RetroMac-Snow-Leopard.dmg
 #
 # Then upload the DMG to the GitHub release and run ./appcast.sh (--beta, --phased): it checks
 # the DMG and the upload, signs, and writes the appcast item from CHANGELOG.md.
@@ -33,11 +34,23 @@ done
 
 APP_NAME="RetroMac"
 APP_BUNDLE=".build/${APP_NAME}.app"
+APP_ID="com.retromac.app"
+APP_IN_DMG="RetroMac.app"
+EDITION="${EDITION:-}"
+if [ -n "$EDITION" ]; then
+    case "$EDITION" in
+        snowleopard) APP_NAME="RetroMac Snow Leopard" ;;
+        *) echo "❌ Unknown edition: $EDITION"; exit 1 ;;
+    esac
+    APP_BUNDLE=".build/RetroMac-${EDITION}.app"
+    APP_ID="com.retromac.app.${EDITION}"
+    APP_IN_DMG="${APP_NAME}.app"
+fi
 APP_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist 2>/dev/null || echo unknown)"
 if [ "$BETA" = true ]; then
     DMG_NAME="${APP_NAME}-${APP_VERSION}-beta.dmg"
 else
-    DMG_NAME="${APP_NAME}.dmg"
+    DMG_NAME="${APP_NAME// /-}.dmg"
 fi
 DMG_DIR=".build/dmg-staging"
 KEYCHAIN_PROFILE="Retromac"   # the profile actually stored on this machine, case included
@@ -45,7 +58,7 @@ KEYCHAIN_PROFILE="Retromac"   # the profile actually stored on this machine, cas
 # --- Step 1: Release build ---
 if [ "$SKIP_BUILD" = false ]; then
     echo "=== Building release ==="
-    ./build.sh release
+    EDITION="$EDITION" ./build.sh release
 else
     echo "=== Skipping build (using existing app) ==="
 fi
@@ -61,17 +74,17 @@ echo ""
 echo "=== Verifying release identity (TCC stability) ==="
 DR=$(codesign -d -r- "$APP_BUNDLE" 2>&1)
 echo "$DR"
-echo "$DR" | grep -q 'identifier "com.retromac.app"' || { echo "❌ Bundle ID mismatch!"; exit 1; }
+echo "$DR" | grep -q "identifier \"$APP_ID\"" || { echo "❌ Bundle ID mismatch!"; exit 1; }
 echo "$DR" | grep -q 'FTJLR8JRNS' || { echo "❌ Team ID mismatch!"; exit 1; }
 spctl -a -vvv -t exec "$APP_BUNDLE" 2>&1 | tail -3
-echo "  ✓ Identity stable (com.retromac.app / FTJLR8JRNS)"
+echo "  ✓ Identity stable ($APP_ID / FTJLR8JRNS)"
 
 # --- Step 2: Create DMG ---
 echo ""
 echo "=== Creating DMG ==="
 rm -rf "$DMG_DIR" "$DMG_NAME"
 mkdir -p "$DMG_DIR"
-cp -R "$APP_BUNDLE" "$DMG_DIR/"
+cp -R "$APP_BUNDLE" "$DMG_DIR/$APP_IN_DMG"
 ln -s /Applications "$DMG_DIR/Applications"
 # The window the DMG opens in: icon view, RetroMac left, Applications right, an arrow between.
 # The layout is Finder's own .DS_Store, made once with Scripts/dmg/make-layout.sh; it finds its

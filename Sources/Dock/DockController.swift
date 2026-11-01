@@ -78,7 +78,7 @@ final class DockController {
         let build = { [weak self] in
             guard let self = self else { return }
             // Simulated crashes belong to the themed desktop, so they live and die with it.
-            CrashScheduler.shared.start()
+            if !Edition.isSingle { CrashScheduler.shared.start() }
             let hidesDock = ThemeManager.shared.activeTheme?.config.hidesDock ?? false
             if !hidesDock {
                 self.createWindow()
@@ -1114,10 +1114,13 @@ final class DockController {
             DockController.dockPrefsQueue.async { [weak self] in
                 let ok = self?.setSystemDockPrefs(autohide: true, position: hidePosition,
                                                   minimizeToApp: true, minEffect: "scale",
-                                                  autohideDelay: "1000000") ?? false
+                                                  // The single edition hides the Dock the plain
+                                                  // way: should it die, the Dock still comes up at
+                                                  // the edge.
+                                                  autohideDelay: Edition.isSingle ? nil : "1000000") ?? false
                 DispatchQueue.main.async {
                     guard let self = self, gen == self.dockOpGeneration else { return }  // superseded
-                    if ok { self.watchSystemDock() }
+                    if ok && !Edition.isSingle { self.watchSystemDock() }
                     // On a Space without the theme the Mac's Dock stays: ThemeSpaces may have
                     // decided that before this hide (it does at launch), and the restart just put
                     // the Dock away again. Once the restarted Dock is up, show it here.

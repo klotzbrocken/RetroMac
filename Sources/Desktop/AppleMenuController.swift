@@ -118,7 +118,7 @@ final class AppleMenuController {
             .action("Shut Down") { Self.askLoginWindow("rsdn") },
             .separator(),
             .action("Log Out\u{2026}", shortcut: "\u{21E7}\u{2318}Q") { Self.askLoginWindow("rlgo") },
-        ]
+        ] + (Edition.isSingle ? [.separator(), .action("Return to macOS\u{2026}") { SingleEdition.returnToDesktop() }] : [])
     }
 
     /// OS X 10.8's Apple menu, row for row: its own About This Mac, Software Update and the App

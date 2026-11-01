@@ -30,7 +30,11 @@ final class FloatingLauncherButton {
 
     private func build() {
         let view = FloatingButtonView(frame: NSRect(x: 0, y: 0, width: side, height: side))
-        view.onClick = { [weak self] in LauncherController.shared.toggle(anchorRect: self?.window?.frame) }
+        view.onClick = { [weak self] in
+            // The single edition has no flyout: a small menu of what it can do.
+            if Edition.isSingle, let v = self?.window?.contentView { SingleEdition.showButtonMenu(in: v); return }
+            LauncherController.shared.toggle(anchorRect: self?.window?.frame)
+        }
         view.onMoved = { [weak self] origin in self?.saveOrigin(origin) }
 
         let win = NSWindow(contentRect: NSRect(x: 0, y: 0, width: side, height: side),

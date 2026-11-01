@@ -557,6 +557,10 @@ final class DesktopIconsController {
         menu.addItem(.separator())
         let clean = menu.addItem(withTitle: "Clean Up Icons (snap to grid)", action: #selector(menuSnapGrid), keyEquivalent: "")
         clean.target = self
+        if Edition.isSingle {
+            menu.addItem(.separator())
+            menu.addItem(ClosureMenuItem(title: "Return to macOS", run: { SingleEdition.returnToDesktop() }))
+        }
 
         NSMenu.popUpContextMenu(menu, with: event, for: view)
     }
