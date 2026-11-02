@@ -91,7 +91,10 @@ ln -s /Applications "$DMG_DIR/Applications"
 # background by the volume name, which is why that stays "$APP_NAME" for betas too.
 mkdir -p "$DMG_DIR/.background"
 cp Scripts/dmg/background.tiff "$DMG_DIR/.background/background.tiff"
-cp Scripts/dmg/DS_Store "$DMG_DIR/.DS_Store"
+# An edition's window has its own layout (its own volume and app name, make-layout.sh).
+LAYOUT="Scripts/dmg/DS_Store${EDITION:+-$EDITION}"
+[ -f "$LAYOUT" ] || LAYOUT="Scripts/dmg/DS_Store"
+cp "$LAYOUT" "$DMG_DIR/.DS_Store"
 
 hdiutil create -volname "$APP_NAME" \
     -srcfolder "$DMG_DIR" \
