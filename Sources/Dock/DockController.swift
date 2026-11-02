@@ -1114,10 +1114,12 @@ final class DockController {
             DockController.dockPrefsQueue.async { [weak self] in
                 let ok = self?.setSystemDockPrefs(autohide: true, position: hidePosition,
                                                   minimizeToApp: true, minEffect: "scale",
-                                                  // The single edition hides the Dock the plain
-                                                  // way: should it die, the Dock still comes up at
-                                                  // the edge.
-                                                  autohideDelay: Edition.isSingle ? nil : "1000000") ?? false
+                                                  // The single edition: a delay of three seconds,
+                                                  // not "never". Windows still minimise down to
+                                                  // the edge of the theme's dock, a pass over the
+                                                  // dock brings nothing up, and should the app die
+                                                  // the Mac's Dock still comes after a rest there.
+                                                  autohideDelay: Edition.isSingle ? "3" : "1000000") ?? false
                 DispatchQueue.main.async {
                     guard let self = self, gen == self.dockOpGeneration else { return }  // superseded
                     if ok && !Edition.isSingle { self.watchSystemDock() }
@@ -1225,9 +1227,6 @@ final class DockController {
         // Side-by-side multi-display keeps it on the primary, so ONLY the below-primary case falls
         // back to "left"; every other bottom/top theme minimizes straight DOWN into the themed dock,
         // single- or multi-display.
-        // The single edition hides the Mac's Dock the plain way, so it shows on a hover: never
-        // on the edge of the theme's own dock, where it would come up over it.
-        if Edition.isSingle { return themeEdge == "left" ? "right" : "left" }
         switch themeEdge {
         case "left":  return "left"
         case "right": return "right"
