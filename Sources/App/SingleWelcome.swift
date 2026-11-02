@@ -21,6 +21,8 @@ final class SingleWelcome {
         @Published var remaining = 0
         @Published var goodbye = false
         @Published var shaderOn = false
+        /// Opened at launch: its button starts the theme ("Start"); opened later it only closes.
+        @Published var atLaunch = false
         var onGoodbyeDone: (() -> Void)?
     }
 
@@ -30,6 +32,7 @@ final class SingleWelcome {
         present()
         timer?.invalidate()
         model.remaining = countdown ? Self.lockSeconds : 0
+        model.atLaunch = countdown
         guard countdown else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] t in
             guard let self else { return t.invalidate() }
@@ -46,7 +49,7 @@ final class SingleWelcome {
         window?.orderOut(nil)
     }
 
-    /// The visitor is leaving (Return to macOS, Exit): once per session the card that points to
+    /// The visitor is leaving (Return to macOS, Quit RetroMac): once per session the card that points to
     /// the full RetroMac, then `then`. No countdown, no second time.
     func showGoodbyeIfNeeded(then: @escaping () -> Void) {
         guard !saidGoodbye else { return then() }
@@ -126,8 +129,8 @@ final class SingleWelcome {
                         .keyboardShortcut(.defaultAction)
                     Spacer()
                     Button("Return to macOS") { SingleEdition.returnToDesktop() }
-                    Button("Exit") { SingleEdition.exit() }
-                    Button(model.remaining > 0 ? "Close (\(model.remaining))" : "Close") { close() }
+                    Button("Quit RetroMac") { SingleEdition.exit() }
+                    Button(model.atLaunch ? (model.remaining > 0 ? "Start (\(model.remaining))" : "Start") : "Close") { close() }
                         .disabled(model.remaining > 0)
                         .keyboardShortcut(.cancelAction)
                 }

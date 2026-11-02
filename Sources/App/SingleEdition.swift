@@ -98,7 +98,7 @@ enum SingleEdition {
         menu.addItem(ClosureMenuItem(title: "Welcome\u{2026}", run: { SingleWelcome.shared.show(countdown: false) }))
         menu.addItem(ClosureMenuItem(title: "Get the full RetroMac\u{2026}", run: openFullApp))
         menu.addItem(.separator())
-        menu.addItem(ClosureMenuItem(title: "Exit", run: exit))
+        menu.addItem(ClosureMenuItem(title: "Quit RetroMac", run: exit))
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: view.bounds.height + 4), in: view)
     }
 
