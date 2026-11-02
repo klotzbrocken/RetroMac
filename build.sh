@@ -46,9 +46,11 @@ else
 fi
 # An edition has no camera extension and no app group, so it needs no provisioning profile.
 [ -n "$EDITION" ] && APP_ENTITLEMENTS="RetroMac-debug.entitlements"
-# Release builds are Universal (Intel + Apple Silicon) for distribution.
-# Debug/dev builds stay native (host arch only) for fast iteration.
-if [ "$MODE" = "release" ]; then
+# Release builds are Universal (Intel + Apple Silicon) for distribution; an edition is Apple
+# Silicon only. Debug/dev builds stay native (host arch only) for fast iteration.
+if [ "$MODE" = "release" ] && [ -n "$EDITION" ]; then
+    ARCH_FLAGS="--arch arm64"
+elif [ "$MODE" = "release" ]; then
     ARCH_FLAGS="--arch arm64 --arch x86_64"
 else
     ARCH_FLAGS=""
@@ -147,6 +149,19 @@ if [ -d "Resources/Themes" ]; then
         rm -rf "$CONTENTS/Resources/Themes" "$CONTENTS/Resources/Previews"
         mkdir -p "$CONTENTS/Resources/Themes" "$CONTENTS/Resources/Previews"
         rsync -a --exclude 'icons-library' --exclude '*.md' "Resources/Themes/$ED_THEME" "$CONTENTS/Resources/Themes/"
+        # Five of the theme's wallpapers, the rest left out of the bundle and its list.
+        python3 - "$CONTENTS/Resources/Themes/$ED_THEME" <<'PY'
+import json, os, sys
+d = sys.argv[1]
+keep = ["wallpaper.jpg", "wallpaper-aurora.jpg", "wallpaper-earth.jpg", "wallpaper-horizon.jpg", "wallpaper-zebra.jpg"]
+p = os.path.join(d, "theme.json")
+cfg = json.load(open(p))
+for w in cfg.get("wallpapers", []):
+    if w.get("file") not in keep and os.path.exists(os.path.join(d, w["file"])):
+        os.remove(os.path.join(d, w["file"]))
+cfg["wallpapers"] = [w for w in cfg.get("wallpapers", []) if w.get("file") in keep]
+json.dump(cfg, open(p, "w"), indent=2, ensure_ascii=False)
+PY
         n=1
         for t in MacOS9-Authentic Windows98 WindowsXP MacOS8-Copland BeOSClassic Windows7; do
             for f in Resources/Themes/$t.retromactheme/preview.*; do
@@ -245,7 +260,14 @@ if [ -d "$SPARKLE_FW" ]; then
     mkdir -p "$CONTENTS/Frameworks"
     rsync -a --delete "$SPARKLE_FW/" "$CONTENTS/Frameworks/Sparkle.framework/"
     SPK_B="$CONTENTS/Frameworks/Sparkle.framework/Versions/B"
-    if [ "$MODE" = "release" ]; then
+    if [ -n "$EDITION" ]; then
+        # The edition never updates: nothing that could install one, and the library alone,
+        # thinned to Apple Silicon (the app links it; nothing calls it).
+        rm -rf "$SPK_B/XPCServices" "$SPK_B/Updater.app" "$SPK_B/Autoupdate" "$CONTENTS/Frameworks/Sparkle.framework/Autoupdate" \
+               "$CONTENTS/Frameworks/Sparkle.framework/Updater.app" "$CONTENTS/Frameworks/Sparkle.framework/XPCServices"
+        lipo -thin arm64 "$SPK_B/Sparkle" -output "$SPK_B/Sparkle.arm64" && mv "$SPK_B/Sparkle.arm64" "$SPK_B/Sparkle"
+        find "$SPK_B/Resources" -name "*.lproj" ! -name "en.lproj" ! -name "Base.lproj" -exec rm -rf {} + 2>/dev/null || true
+    elif [ "$MODE" = "release" ]; then
         # Deep-sign Sparkle: inner bundles first, then outer framework
         codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$SPK_B/XPCServices/Downloader.xpc"
         codesign --force --sign "$SIGN_ID" $SIGN_FLAGS "$SPK_B/XPCServices/Installer.xpc"

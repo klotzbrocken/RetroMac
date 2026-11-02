@@ -11,14 +11,6 @@ final class SingleEditionTests: XCTestCase {
         XCTAssertFalse(Edition.isSingle)
     }
 
-    func testTheCountdownRunsDownToZeroAndStays() {
-        var r = SingleWelcome.lockSeconds
-        var steps = 0
-        while r > 0 { r = SingleWelcome.tick(r); steps += 1 }
-        XCTAssertEqual(steps, 6)
-        XCTAssertEqual(SingleWelcome.tick(0), 0)
-    }
-
     func testTheFullAppLinkSaysWhereTheVisitComesFrom() {
         XCTAssertEqual(URL(string: "https://myretromac.app/?ref=snowleopard")?.query, "ref=snowleopard")
         XCTAssertTrue(Edition.fullAppURL.absoluteString.hasPrefix("https://myretromac.app/?ref="))

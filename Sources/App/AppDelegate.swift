@@ -277,7 +277,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // The single edition: its theme, at once, with no boot screen, and the welcome lightbox.
         if Edition.isSingle, !rescueAtLaunch {
-            DispatchQueue.main.async { SingleEdition.startTheme(); SingleWelcome.shared.show(countdown: true) }
+            DispatchQueue.main.async { SingleEdition.startTheme(); SingleWelcome.shared.show(atLaunch: true) }
         }
         let autoActivateTheme = !Edition.isSingle && !rescueAtLaunch && (settings.activateThemeOnLaunch
             || ProcessInfo.processInfo.environment["RETROMAC_AUTOACTIVATE_THEME"] != nil)
@@ -469,7 +469,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Left-click on the Dock icon (no windows) → toggle the launcher window (movable).
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if Edition.isSingle { SingleWelcome.shared.show(countdown: false); return false }
+        if Edition.isSingle { SingleWelcome.shared.show(atLaunch: false); return false }
         if AppSettings.shared.dockModeEnabled {
             LauncherController.shared.toggleWindow()
         } else if !NSApp.windows.contains(where: { $0.isVisible && $0.styleMask.contains(.titled) }) {
@@ -2605,7 +2605,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         // The single edition has no Settings: every way in opens its welcome lightbox.
-        if Edition.isSingle { SingleWelcome.shared.show(countdown: false); return }
+        if Edition.isSingle { SingleWelcome.shared.show(atLaunch: false); return }
         settingsWindow.show()
     }
 

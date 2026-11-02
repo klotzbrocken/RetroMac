@@ -32,6 +32,13 @@ enum SingleEdition {
 
     static func openFullApp() { NSWorkspace.shared.open(Edition.fullAppURL) }
 
+    /// The one shader: CRT Lite, scanlines and a vignette that need no Screen Recording, and
+    /// clearly visible (the theme's own LCD Sharp Lite is too fine to tell it is on).
+    static func toggleShader() {
+        if AppDelegate.shared?.isActive != true { AppDelegate.shared?.currentPresetName = "crt-lite" }
+        AppDelegate.shared?.launcherToggleShader()
+    }
+
     // MARK: - The full RetroMac
 
     /// Another RetroMac (the full app or its dev build) running: the two must not both drive
@@ -64,7 +71,7 @@ enum SingleEdition {
             NSApp.orderFrontStandardAboutPanel(nil)
         }))
         menu.addItem(.separator())
-        menu.addItem(ClosureMenuItem(title: "Welcome\u{2026}", run: { SingleWelcome.shared.show(countdown: false) }))
+        menu.addItem(ClosureMenuItem(title: "Welcome\u{2026}", run: { SingleWelcome.shared.show(atLaunch: false) }))
         menu.addItem(ClosureMenuItem(title: "Get the full RetroMac\u{2026}", run: openFullApp))
         menu.addItem(.separator())
         let quit = ClosureMenuItem(title: "Quit RetroMac", run: exit)
@@ -79,12 +86,12 @@ enum SingleEdition {
     static func showButtonMenu(in view: NSView) {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        let shader = ClosureMenuItem(title: "CRT Shader", run: { AppDelegate.shared?.launcherToggleShader() })
+        let shader = ClosureMenuItem(title: "CRT Shader", run: toggleShader)
         shader.state = AppDelegate.shared?.isActive == true ? .on : .off
         shader.isEnabled = themeIsOn
         menu.addItem(shader)
         menu.addItem(.separator())
-        menu.addItem(ClosureMenuItem(title: "Welcome\u{2026}", run: { SingleWelcome.shared.show(countdown: false) }))
+        menu.addItem(ClosureMenuItem(title: "Welcome\u{2026}", run: { SingleWelcome.shared.show(atLaunch: false) }))
         menu.addItem(ClosureMenuItem(title: "Get the full RetroMac\u{2026}", run: openFullApp))
         menu.addItem(.separator())
         menu.addItem(ClosureMenuItem(title: "Quit RetroMac", run: exit))

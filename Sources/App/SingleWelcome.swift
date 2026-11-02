@@ -1,24 +1,20 @@
 import AppKit
 import SwiftUI
 
-/// The single edition's lightbox. At every launch it covers the screen for six seconds before it
-/// can be closed: what this is, how to get out again, the one shader switch, and what the full
-/// RetroMac has besides. Opened again later (the floating button, the app's menu, every way
-/// into Settings) it closes at once. On the way out it asks once per session whether the visitor
-/// wants the rest.
+/// The single edition's lightbox, at every launch: what this is, how to get out again, the one
+/// shader switch, and what the full RetroMac has besides. Opened again later (the floating
+/// button, the app's menu, every way into Settings) it only closes. On the way out it asks once
+/// per session whether the visitor wants the rest.
 final class SingleWelcome {
     static let shared = SingleWelcome()
-    static let lockSeconds = 6
     /// The other eras in the full RetroMac, for the advertising line.
     static let moreEras = 26
 
     private var window: NSWindow?
-    private var timer: Timer?
     private let model = Model()
     private var saidGoodbye = false
 
     final class Model: ObservableObject {
-        @Published var remaining = 0
         @Published var goodbye = false
         @Published var shaderOn = false
         /// Opened at launch: its button starts the theme ("Start"); opened later it only closes.
@@ -26,28 +22,15 @@ final class SingleWelcome {
         var onGoodbyeDone: (() -> Void)?
     }
 
-    func show(countdown: Bool) {
+    /// `atLaunch`: its button starts the theme ("Start"); opened later it only closes.
+    func show(atLaunch: Bool) {
         model.goodbye = false
         model.shaderOn = AppDelegate.shared?.isActive == true
+        model.atLaunch = atLaunch
         present()
-        timer?.invalidate()
-        model.remaining = countdown ? Self.lockSeconds : 0
-        model.atLaunch = countdown
-        guard countdown else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] t in
-            guard let self else { return t.invalidate() }
-            self.model.remaining = Self.tick(self.model.remaining)
-            if self.model.remaining == 0 { t.invalidate() }
-        }
     }
 
-    /// One second of the countdown, never below zero.
-    static func tick(_ remaining: Int) -> Int { max(0, remaining - 1) }
-
-    func close() {
-        timer?.invalidate()
-        window?.orderOut(nil)
-    }
+    func close() { window?.orderOut(nil) }
 
     /// The visitor is leaving (Quit RetroMac, from wherever): once per session the card that points to
     /// the full RetroMac, then `then`. No countdown, no second time.
@@ -109,7 +92,7 @@ final class SingleWelcome {
                 }
 
                 Toggle("CRT shader", isOn: Binding(get: { model.shaderOn }, set: { on in
-                    if on != (AppDelegate.shared?.isActive == true) { AppDelegate.shared?.launcherToggleShader() }
+                    if on != (AppDelegate.shared?.isActive == true) { SingleEdition.toggleShader() }
                     model.shaderOn = on
                 })).toggleStyle(.switch)
 
@@ -128,9 +111,8 @@ final class SingleWelcome {
                     Button("Get RetroMac \u{2013} it\u{2019}s free") { SingleEdition.openFullApp() }
                     Spacer()
                     Button("Quit RetroMac") { SingleEdition.exit() }
-                    Button(model.atLaunch ? (model.remaining > 0 ? "Start (\(model.remaining))" : "Start") : "Close") { close() }
+                    Button(model.atLaunch ? "Start" : "Close") { close() }
                         .buttonStyle(.borderedProminent).tint(.green)
-                        .disabled(model.remaining > 0)
                         .keyboardShortcut(.defaultAction)
                 }
             }
