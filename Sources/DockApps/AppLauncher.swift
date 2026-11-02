@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import SkyLightBridge
 
 enum AppLauncher {
 
@@ -16,6 +17,14 @@ enum AppLauncher {
             // app's windows forward (this is why the Win98/XP taskbar, which uses AX,
             // worked while plain Dock tiles didn't). Then activate, ignoring others.
             raiseFrontWindow(pid: running.processIdentifier)
+            if running.isHidden { running.unhide() }
+            // Since macOS 14 a background app's activate() is ignored, and the window came up only
+            // behind the one in front. The window server brings the app's front window forward
+            // instead, found in its window list, which needs no permission.
+            if let wid = frontWindowID(pid: running.processIdentifier), skb_focus_window(running.processIdentifier, wid) {
+                print("[Dock] Activated \(bundleID) (window server)")
+                return
+            }
             running.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
             if !hasVisibleWindows(pid: running.processIdentifier) {
                 let config = NSWorkspace.OpenConfiguration()
@@ -59,6 +68,16 @@ enum AppLauncher {
         guard let window = target else { return }
         AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
         AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+    }
+
+    /// The app's frontmost ordinary window on screen, from the window server's list (front to
+    /// back); nil when all of its windows are minimised or hidden.
+    private static func frontWindowID(pid: pid_t) -> CGWindowID? {
+        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        return list.first { info in
+            (info[kCGWindowOwnerPID as String] as? pid_t) == pid && (info[kCGWindowLayer as String] as? Int) == 0
+                && ((info[kCGWindowBounds as String] as? [String: CGFloat])?["Width"] ?? 0) > 1
+        }.flatMap { $0[kCGWindowNumber as String] as? CGWindowID }
     }
 
     private static func hasVisibleWindows(pid: pid_t) -> Bool {
