@@ -127,7 +127,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ScreensaverController.shared.beginIdleWatch()   // works regardless of the themed dock
 
         applyDockMode()   // .accessory (menu-bar only) or .regular (Dock icon) per setting
-        if AppSettings.shared.floatingLauncherEnabled || Edition.isSingle { FloatingLauncherButton.shared.show() }
+        // The single edition has its own tile in the theme's Dock instead.
+        if AppSettings.shared.floatingLauncherEnabled && !Edition.isSingle { FloatingLauncherButton.shared.show() }
 
         // Re-apply the last webcam scene so the look persists across launches (the camera's
         // shader/intensity aren't otherwise persisted).

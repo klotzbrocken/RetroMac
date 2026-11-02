@@ -86,7 +86,7 @@ final class SingleWelcome {
                 GroupBox {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("To leave").font(.headline)
-                        Text("Quit RetroMac: \u{2318}Q, the Apple menu \u{25B8} Return to macOS, a right-click on the desktop, or the round button on the screen. Your Dock and desktop picture come straight back.")
+                        Text("Quit RetroMac: \u{2318}Q, the RetroMac icon in the Dock, the Apple menu \u{25B8} Return to macOS, or a right-click on the desktop. Your Dock and desktop picture come straight back.")
                             .fixedSize(horizontal: false, vertical: true)
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(4)
                 }

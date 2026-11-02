@@ -146,6 +146,18 @@ final class DockTileTests: XCTestCase {
         XCTAssertEqual(row.filter { $0.id.hasPrefix("t") }.map(\.gapBefore), [0, 0])
     }
 
+    /// The single edition's tile sits in the right-hand group, just before the trash, and opens
+    /// that group when it is the only thing there.
+    func testTheEditionTileComesBeforeTheTrash() {
+        let row = DockView.iconDockTiles(taskbar: false, showQuickLaunch: false, apps: [app("a")],
+                                         transients: [], stacksOnRight: true, hasDashboard: false,
+                                         hasShowDesktop: false, hasUrlLauncher: false, hasTrash: true,
+                                         hasDoomLauncher: false, hasEditionTile: true,
+                                         iconSize: icon, spacing: gap, doomWidth: doom)
+        XCTAssertEqual(row.suffix(2).map(\.id), ["__edition__", "__trash__"])
+        XCTAssertEqual(row.first { $0.id == "__edition__" }?.separator, .rightGroup)
+    }
+
     /// A theme's own divider gap (Mac OS X 10.0's wide one) goes before each group.
     func testAThemeCanWidenTheGapAtTheDividers() {
         let row = DockView.iconDockTiles(taskbar: false, showQuickLaunch: false, apps: [app("a")],

@@ -193,6 +193,7 @@ final class DockView: NSView {
                            hasUrlLauncher: hasUrlLauncher && !isControlStrip,
                            hasTrash: hasTrash && !isControlStrip,
                            hasDoomLauncher: hasDoomLauncher && !isControlStrip,
+                           hasEditionTile: Edition.isSingle && !isControlStrip,
                            iconSize: iconSize,
                            spacing: spacing,
                            groupGap: ThemeManager.shared.activeTheme.flatMap { t in t.config.dock.separatorGap.map { $0 * iconSize / max(1, t.config.dock.iconSize) } },
@@ -1584,6 +1585,25 @@ final class DockView: NSView {
         itemViews.append(item)
     }
 
+    /// The single edition's tile: RetroMac's own icon. A click opens its welcome, a right-click
+    /// its menu with the way out.
+    private func addEditionItem(frame: NSRect, theme: DockThemeConfig) {
+        let item = DockItemView(bundleID: "__edition__", frame: frame)
+        item.magnificationEnabled = theme.hasMagnification && AppSettings.shared.dockMagnification
+        if let icon = NSApp.applicationIconImage?.copy() as? NSImage {
+            icon.size = frame.size
+            item.updateIcon(icon)
+        }
+        item.updateTheme(theme)
+        item.onLeftClick = { _ in SingleWelcome.shared.show(atLaunch: false) }
+        item.onRightClick = { [weak item] _, _ in
+            guard let item else { return }
+            SingleEdition.showButtonMenu(in: item)
+        }
+        addSubview(item)
+        itemViews.append(item)
+    }
+
     static let urlLauncherDefault = "https://myretromac.app"
     static var urlLauncherURL: String {
         UserDefaults.standard.string(forKey: "urlLauncherURL") ?? urlLauncherDefault
@@ -1816,6 +1836,7 @@ final class DockView: NSView {
         case .urlLauncher:  addURLLauncherItem(frame: frame, theme: theme, iconSize: iconSize)
         case .trash:        addTrashItem(frame: frame, theme: theme, iconSize: iconSize)
         case .doomLauncher: addDoomLauncherItem(frame: frame, theme: theme, iconSize: iconSize)
+        case .edition:      addEditionItem(frame: frame, theme: theme)
         }
     }
 
@@ -4433,6 +4454,7 @@ final class DockView: NSView {
         let name: String
         if bundleID == "__trash__" { name = "Trash" }
         else if bundleID == "__urllauncher__" { name = "Link" }
+        else if bundleID == "__edition__" { name = "RetroMac" }
         else if bundleID == "__dashboard__" { name = "Dashboard" }
         else if bundleID == "__showdesktop__" { name = "Show Desktop" }
         else if let app = AppManager.shared.apps.first(where: { $0.bundleID == bundleID }) { name = app.displayName }

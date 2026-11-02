@@ -19,6 +19,8 @@ struct DockTile {
         case urlLauncher
         case trash
         case doomLauncher
+        /// The single edition's own tile, before the trash: its welcome, its menu, its way out.
+        case edition
     }
     /// Which separator, if any, belongs in this tile's leading gap.
     enum Separator: Equatable { case transients, rightGroup }
@@ -50,6 +52,7 @@ extension DockView {
                               hasUrlLauncher: Bool,
                               hasTrash: Bool,
                               hasDoomLauncher: Bool,
+                              hasEditionTile: Bool = false,
                               iconSize: CGFloat,
                               spacing: CGFloat,
                               groupGap: CGFloat? = nil,
@@ -97,7 +100,7 @@ extension DockView {
                  gap: first ? (groupGap ?? spacing) : 0, sep: first ? .transients : nil)
         }
 
-        if hasUrlLauncher || hasTrash || hasDoomLauncher {
+        if hasUrlLauncher || hasTrash || hasDoomLauncher || hasEditionTile {
             var first = true
             func rightTile(_ kind: DockTile.Kind, _ id: String, width: CGFloat = iconSize) {
                 tile(kind, id, width: width,
@@ -106,6 +109,7 @@ extension DockView {
             }
             for app in stacks { rightTile(.app(bundleID: app.bundleID, transient: false), app.bundleID) }
             if hasUrlLauncher { rightTile(.urlLauncher, "__urllauncher__") }
+            if hasEditionTile { rightTile(.edition, "__edition__") }
             if hasTrash { rightTile(.trash, "__trash__") }
             if hasDoomLauncher { rightTile(.doomLauncher, "__doomlauncher__", width: doomWidth) }
         }

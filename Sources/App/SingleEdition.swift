@@ -2,7 +2,7 @@ import AppKit
 
 /// What the single edition does besides what the full RetroMac does: start its one theme, and
 /// the ways out a newcomer finds without being told (⌘Q, the app's menu, the Apple menu, a
-/// right-click on the desktop, the floating button). Every one of them is the same: quit, which
+/// right-click on the desktop, its tile in the Dock). Every one of them is the same: quit, which
 /// puts the Mac back as it was.
 enum SingleEdition {
     private static var edition: Edition.Single { Edition.single ?? Edition.snowLeopard }
@@ -82,7 +82,7 @@ enum SingleEdition {
         NSApp.mainMenu = main
     }
 
-    /// The floating button's menu: the shader, the lightbox, the full app, out.
+    /// The menu of the edition's Dock tile: the shader, the lightbox, the full app, out.
     static func showButtonMenu(in view: NSView) {
         let menu = NSMenu()
         menu.autoenablesItems = false
