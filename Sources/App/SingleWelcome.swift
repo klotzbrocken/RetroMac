@@ -49,7 +49,7 @@ final class SingleWelcome {
         window?.orderOut(nil)
     }
 
-    /// The visitor is leaving (Return to macOS, Quit RetroMac): once per session the card that points to
+    /// The visitor is leaving (Quit RetroMac, from wherever): once per session the card that points to
     /// the full RetroMac, then `then`. No countdown, no second time.
     func showGoodbyeIfNeeded(then: @escaping () -> Void) {
         guard !saidGoodbye else { return then() }
@@ -103,7 +103,7 @@ final class SingleWelcome {
                 GroupBox {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("To leave").font(.headline)
-                        Text("\u{2318}Q, or the Apple menu \u{25B8} Return to macOS, or a right-click on the desktop, or the round button on the screen. Your Dock and desktop picture come straight back.")
+                        Text("Quit RetroMac: \u{2318}Q, the Apple menu \u{25B8} Return to macOS, a right-click on the desktop, or the round button on the screen. Your Dock and desktop picture come straight back.")
                             .fixedSize(horizontal: false, vertical: true)
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(4)
                 }
@@ -126,13 +126,12 @@ final class SingleWelcome {
 
                 HStack {
                     Button("Get RetroMac \u{2013} it\u{2019}s free") { SingleEdition.openFullApp() }
-                        .keyboardShortcut(.defaultAction)
                     Spacer()
-                    Button("Return to macOS") { SingleEdition.returnToDesktop() }
                     Button("Quit RetroMac") { SingleEdition.exit() }
                     Button(model.atLaunch ? (model.remaining > 0 ? "Start (\(model.remaining))" : "Start") : "Close") { close() }
+                        .buttonStyle(.borderedProminent).tint(.green)
                         .disabled(model.remaining > 0)
-                        .keyboardShortcut(.cancelAction)
+                        .keyboardShortcut(.defaultAction)
                 }
             }
             .padding(28)

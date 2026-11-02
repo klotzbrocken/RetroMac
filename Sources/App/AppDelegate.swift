@@ -4898,7 +4898,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// wallpaper, they keep it, since only a running RetroMac gives it back when each is shown:
     /// said once, before it happens.
     @objc func quitApp() {
-        guard confirmQuitWithThemedSpaces() else { return }
+        // The single edition quits without the Spaces question: one click out, as promised.
+        guard Edition.isSingle || confirmQuitWithThemedSpaces() else { return }
         NSApp.terminate(nil)
     }
 

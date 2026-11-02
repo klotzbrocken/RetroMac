@@ -21,9 +21,18 @@ enum AppLauncher {
             // Since macOS 14 a background app's activate() is ignored, and the window came up only
             // behind the one in front. The window server brings the app's front window forward
             // instead, found in its window list, which needs no permission.
-            if let wid = frontWindowID(pid: running.processIdentifier), skb_focus_window(running.processIdentifier, wid) {
+            if AXIsProcessTrusted(), let wid = frontWindowID(pid: running.processIdentifier),
+               skb_focus_window(running.processIdentifier, wid) {
                 print("[Dock] Activated \(bundleID) (window server)")
                 return
+            }
+            // Without Accessibility the window server takes no such request. The way macOS 14
+            // leaves for it: the click makes RetroMac active for a moment, and it hands that
+            // activation on to the app.
+            if !AXIsProcessTrusted() {
+                NSApp.activate()
+                NSApp.yieldActivation(to: running)
+                running.activate(from: .current, options: [.activateAllWindows])
             }
             running.activate(options: [.activateIgnoringOtherApps, .activateAllWindows])
             if !hasVisibleWindows(pid: running.processIdentifier) {

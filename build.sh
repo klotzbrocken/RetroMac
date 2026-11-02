@@ -167,7 +167,10 @@ fi
 # Copy desktop widgets (e.g. BeOS CPU Monitor HTML widget)
 if [ -d "Resources/Widgets" ]; then
     mkdir -p "$CONTENTS/Resources/Widgets"
-    rsync -a --delete --delete-excluded ${EDITION:+--exclude Hover} Resources/Widgets/ "$CONTENTS/Resources/Widgets/"
+    # The edition: no Hover game, and of the screen savers only the theme's own (Flurry).
+    ED_WIDGET_EXCLUDES=""
+    [ -n "$EDITION" ] && ED_WIDGET_EXCLUDES="--exclude Hover --exclude Screensavers/Pipes --exclude Screensavers/FlowerBox --exclude Screensavers/FlyingToasters --exclude Screensavers/Starfield"
+    rsync -a --delete --delete-excluded $ED_WIDGET_EXCLUDES Resources/Widgets/ "$CONTENTS/Resources/Widgets/"
 fi
 
 # Tube Mode bezel catalog

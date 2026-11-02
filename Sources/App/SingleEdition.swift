@@ -1,8 +1,9 @@
 import AppKit
 
-/// What the single edition does besides what the full RetroMac does: start its one theme, give
-/// it up and take it back, and the ways out a newcomer finds without being told (⌘Q, the app's
-/// menu, the Apple menu, a right-click on the desktop, the floating button).
+/// What the single edition does besides what the full RetroMac does: start its one theme, and
+/// the ways out a newcomer finds without being told (⌘Q, the app's menu, the Apple menu, a
+/// right-click on the desktop, the floating button). Every one of them is the same: quit, which
+/// puts the Mac back as it was.
 enum SingleEdition {
     private static var edition: Edition.Single { Edition.single ?? Edition.snowLeopard }
 
@@ -17,14 +18,9 @@ enum SingleEdition {
         AppDelegate.shared?.launcherActivateTheme(edition.themeID)
     }
 
-    /// Plain macOS back, the app still running: the floating button turns the theme on again.
-    static func returnToDesktop() {
-        guard themeIsOn else { return }
-        SingleWelcome.shared.close()
-        SingleWelcome.shared.showGoodbyeIfNeeded {
-            AppDelegate.shared?.launcherDisableTheme()
-        }
-    }
+    /// "Return to macOS" where a newcomer looks for it (the Apple menu, the desktop): the same as
+    /// quitting.
+    static func returnToDesktop() { exit() }
 
     /// Everything put back, and gone.
     static func exit() {
@@ -71,25 +67,18 @@ enum SingleEdition {
         menu.addItem(ClosureMenuItem(title: "Welcome\u{2026}", run: { SingleWelcome.shared.show(countdown: false) }))
         menu.addItem(ClosureMenuItem(title: "Get the full RetroMac\u{2026}", run: openFullApp))
         menu.addItem(.separator())
-        let toggle = ToggleThemeItem()
-        menu.addItem(toggle)
-        menu.addItem(.separator())
-        let quit = ClosureMenuItem(title: "Quit \(edition.appName)", run: exit)
+        let quit = ClosureMenuItem(title: "Quit RetroMac", run: exit)
         quit.keyEquivalent = "q"
         menu.addItem(quit)
-        menu.delegate = toggle
         appItem.submenu = menu
         main.addItem(appItem)
         NSApp.mainMenu = main
     }
 
-    /// The floating button's menu: the theme on or off, the shader, the lightbox, the full app, out.
+    /// The floating button's menu: the shader, the lightbox, the full app, out.
     static func showButtonMenu(in view: NSView) {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        menu.addItem(themeIsOn
-            ? ClosureMenuItem(title: "Return to macOS", run: returnToDesktop)
-            : ClosureMenuItem(title: "Start \(edition.themeName)", run: startTheme))
         let shader = ClosureMenuItem(title: "CRT Shader", run: { AppDelegate.shared?.launcherToggleShader() })
         shader.state = AppDelegate.shared?.isActive == true ? .on : .off
         shader.isEnabled = themeIsOn
@@ -100,20 +89,5 @@ enum SingleEdition {
         menu.addItem(.separator())
         menu.addItem(ClosureMenuItem(title: "Quit RetroMac", run: exit))
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: view.bounds.height + 4), in: view)
-    }
-
-    /// "Return to macOS" or "Start Snow Leopard", whichever fits when the menu opens.
-    private final class ToggleThemeItem: NSMenuItem, NSMenuDelegate {
-        init() {
-            super.init(title: "Return to macOS", action: #selector(fire), keyEquivalent: "")
-            target = self
-        }
-        @available(*, unavailable) required init(coder: NSCoder) { fatalError() }
-        func menuNeedsUpdate(_ menu: NSMenu) {
-            title = SingleEdition.themeIsOn ? "Return to macOS" : "Start \(SingleEdition.edition.themeName)"
-        }
-        @objc private func fire() {
-            if SingleEdition.themeIsOn { SingleEdition.returnToDesktop() } else { SingleEdition.startTheme() }
-        }
     }
 }
