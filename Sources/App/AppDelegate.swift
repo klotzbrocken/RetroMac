@@ -1618,6 +1618,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Quit moved to a power symbol in the header; Reset Permissions moved to Settings.
         menu.delegate = self
         statusMenu = menu
+        // Under VoiceOver the menu hangs on the icon for good, as before 3.0: popped up from the
+        // icon's action, VoiceOver saw a plain button, the menu never reached it and the focus
+        // fell to RetroMac's Apple menu or desktop. The 18 ms reopen is a mouse matter only.
+        if NSWorkspace.shared.isVoiceOverEnabled {
+            statusItem.menu = menu
+        } else if shownStatusMenu == nil {
+            statusItem.menu = nil
+        }
     }
 
     /// Reset this app's Screen Recording + Camera TCC grants, then point the user at the
