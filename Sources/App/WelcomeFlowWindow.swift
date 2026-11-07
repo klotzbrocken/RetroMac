@@ -118,11 +118,18 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Sounds, Windows 7 as it worked, and NeXTSTEP\u{2019}s windows")
+                Text("Snow Leopard\u{2019}s Apple menu, and the dock put right")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("apple.logo", .blue, "Snow Leopard\u{2019}s Apple menu",
+                            "The Apple in the menu bar opens the menu of Mac OS X 10.6, row for row: Software Update, Mac OS X Software, Dock, Location, Recent Items, Force Quit with the front app\u{2019}s name, and Log Out with yours.")
+                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
+                            "A click on a running app\u{2019}s tile in the dock brings its window forward again. VoiceOver reaches the menu-bar menu again. Turning dock magnification on no longer cuts the icons off. On Mountain Lion, Applications is a folder in the dock again and folders in the Downloads pile look their age.")
+
+                    sectionHeader("Also in 3.0.2")
+
                     feature("speaker.wave.2.fill", .orange, "Sounds",
                             "Settings \u{25B8} Sounds, for a Mac that makes no sound of its own: keys that click (subtle, clicky or a typewriter with its bell), a hard drive that spins up and seeks when the disk is really busy, from a 1986 stepper to a 15K server, and a fan that rises with the CPU. All off until you turn them on, quiet while a microphone records, and the drive counts disk activity and nothing else. Under XP, Vista and 7 a chime greets a USB device.")
                     feature("macwindow.on.rectangle", .blue, "Windows 7, as it worked",
@@ -137,23 +144,6 @@ struct WelcomeFlowView: View {
                             "The stress reducer of 2000 in RetroHub \u{25B8} Apps: wreck a picture of your screen with a hammer, a chainsaw and termites. Once installed it sits on the Windows 95 to XP desktops as stress.exe.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
                             "A click on another app\u{2019}s taskbar button brings its window to the front again, not behind the one in front. Mac OS 8 and 9 draw inactive title bars flat, as they did. Picking a theme with square corners offers to restart the apps that were open, so they take them too.")
-
-                    sectionHeader("Also in 3.0.1")
-
-                    feature("apple.logo", .purple, "New: Mac OS 8 (Copland)",
-                            "The Mac OS that never shipped, as Apple\u{2019}s June 1996 developer release D11E4 showed it: the purple grid desktop, lavender folders and Platinum in its first form, rebuilt from D11E4\u{2019}s own files. Its start-up, its title bar boxes, an Applications folder in its look, nine of its desktop patterns, and RetroMac\u{2019}s own windows wear its scroll arrows and lavender thumbs.")
-                    feature("shippingbox.fill", .pink, "RetroHub: Themes, and more apps",
-                            "RetroHub has a Themes tab for themes to download as they come, and opens on Apps. New there: ICQuel, Retrolux, Retron Commander, Macsplorer, ARose and Johnny Castaway, the 1992 Sierra screen saver, on your own copy of its files and on the Windows 3.x and 9x desktops once installed. The Setup Assistant has an Apps page too.")
-                    feature("app.badge.fill", .red, "Badges, where the system had them",
-                            "Mail\u{2019}s unread count and every other app\u{2019}s number on the retro dock, drawn as each era drew them: Mac OS X 10.0 on Mail only, Snow Leopard and Mountain Lion as the red pill, Windows 7 as an overlay on the taskbar button.")
-                    feature("rectangle.dashed", .orange, "Dragging a window the way its era did",
-                            "Mac OS 6 to 9, Windows 3.x and 95 and CDE drag an outline and move the window once, on release. The other themes keep their title bars on the window while it moves.")
-                    feature("tv.fill", .green, "Monitors, closer to the real ones",
-                            "Orange Plasma, the gas-plasma screen of the laptops around 1990, and White Phosphor, the DEC VT100\u{2019}s, are new. Amber has the Hercules monitor\u{2019}s colour, Game Boy SameBoy\u{2019}s measured shades and its slow screen, and Phosphor Glow fades as each tube\u{2019}s phosphor did. All of them leave text sharp enough to work in.")
-                    feature("photo.on.rectangle.angled", .blue, "Windows XP in high resolution",
-                            "30 of the XP theme\u{2019}s icons are the hand-redrawn high-resolution versions: sharp on a Retina screen.")
-                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "Theme menus no longer open above the shader. A .retromactheme opens in RetroMac with a double-click, and your own themes can be deleted. The disk image opens as a proper install window. Without Accessibility, the taskbar drops programs with no window and brings a window back on a click. Windows 3.x\u{2019}s running programs can be dragged across the desktop. The MS-DOS Prompt is grey again, and Desktop Glass is gone. RetroHub and Themes have their icons in the menu-bar menu again.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }

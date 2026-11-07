@@ -3,6 +3,33 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## 3.0.3
+
+### New
+
+- **Snow Leopard's Apple menu.** The Apple in the menu bar opens the menu of Mac OS X 10.6, row for
+  row, instead of today's system menu: About This Mac, Software Update, Mac OS X Software, System
+  Preferences, Dock, Location, Recent Items, Force Quit with the name of the front app, Sleep,
+  Restart, Shut Down and Log Out with your full name. Force Quit opens the Force Quit window and
+  ends nothing on its own.
+
+### Fixes
+
+- **Switching apps from the dock.** A click on a running app's tile did nothing while another app
+  was in front: since macOS 14 an app in the background may no longer bring another to the front.
+  The window server does it now, and it needs no permission.
+
+- **VoiceOver and the menu-bar menu.** Since 3.0 VoiceOver saw RetroMac's icon as a plain button,
+  the menu never opened and the focus fell to the Apple menu or the desktop. While VoiceOver runs
+  the menu hangs on the icon again, as it did before 3.0.
+
+- **Dock magnification cut the icons off.** Turned on while the dock was up, the icons grew but the
+  dock's window kept its old height, and they ended at its top edge.
+
+- **Mountain Lion's folders in the dock.** Applications is a folder again rather than a pile of the
+  apps last installed, and a folder in the Downloads pile is a folder of its time, not today's flat
+  blue one.
+
 ## 3.0.2
 
 ### New
