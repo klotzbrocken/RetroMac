@@ -1518,7 +1518,8 @@ final class DockView: NSView {
 
     private func folderIcon(path: String, size: CGFloat) -> NSImage {
         // Mountain Lion and its forebears: the newest files piled up, live.
-        if ThemeManager.shared.activeTheme?.config.hasStackPreview == true {
+        // Not Applications: its pile was the apps last installed, and the tile looked like one of them.
+        if ThemeManager.shared.activeTheme?.config.hasStackPreview == true, path != "/Applications" {
             if StackPreview.shared.onChange == nil {
                 StackPreview.shared.onChange = { [weak self] folder in self?.refreshFolderTile(folder) }
             }

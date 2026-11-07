@@ -21,6 +21,14 @@ final class MountainLionMenuTests: XCTestCase {
         XCTAssertFalse(titles.contains("Location"))
     }
 
+    func testSnowLeopardsMenuIsTenSixsRowForRow() {
+        let titles = AppleMenuController.shared.snowLeopardItems().map(\.title)
+        XCTAssertEqual(Array(titles.prefix(8)), ["About This Mac", "Software Update\u{2026}", "Mac OS X Software\u{2026}", "",
+                                                 "System Preferences\u{2026}", "Dock", "Location", ""])
+        XCTAssertTrue(titles.contains { $0.hasPrefix("Force Quit") })
+        XCTAssertEqual(Array(titles.suffix(5)), ["Sleep", "Restart\u{2026}", "Shut Down\u{2026}", "", "Log Out \(NSFullUserName())\u{2026}"])
+    }
+
     @MainActor
     func testSnapshots() throws {
         guard let dir = ProcessInfo.processInfo.environment["RETROMAC_SNAPSHOT_DIR"] else { return }

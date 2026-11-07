@@ -17,7 +17,7 @@ final class AppleMenuController {
 
     private static var look: RetroMenuLook {
         let cfg = ThemeManager.shared.activeTheme?.config
-        if cfg?.hasMountainLionAppleMenu == true { return .lion }
+        if cfg?.hasMountainLionAppleMenu == true || cfg?.hasSnowLeopardAppleMenu == true { return .lion }
         return cfg?.hasMacOSXAppleMenu == true ? .aqua : .platinum
     }
 
@@ -40,6 +40,7 @@ final class AppleMenuController {
         if ThemeManager.shared.activeTheme?.config.hasSystem7AppleMenu == true { return system7Items() }
         if ThemeManager.shared.activeTheme?.config.hasMacOSXAppleMenu == true { return macOSXItems() }
         if ThemeManager.shared.activeTheme?.config.hasMountainLionAppleMenu == true { return mountainLionItems() }
+        if ThemeManager.shared.activeTheme?.config.hasSnowLeopardAppleMenu == true { return snowLeopardItems() }
         return [open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
          .separator(),
          submenu("Applications", icon: themeIcon("folder.png")) { Self.entries(Self.applications()) },
@@ -129,20 +130,58 @@ final class AppleMenuController {
         rows.removeAll { $0.title == "Get Mac OS X Software\u{2026}" || $0.title == "Location" }
         if let i = rows.firstIndex(where: { $0.title == "About This Mac" }) {
             rows[i] = .action("About This Mac") { MountainLionAboutWindow.shared.show() }
-            rows.insert(.action("Software Update\u{2026}") { Self.openTarget("x-apple.systempreferences:com.apple.Software-Update-Settings.extension") }, at: i + 1)
+            rows.insert(softwareUpdate, at: i + 1)
             rows.insert(.action("App Store\u{2026}") { Self.openTarget("/System/Applications/App Store.app") }, at: i + 2)
         }
         for (i, row) in rows.enumerated() {
             switch row.title {
             case "Force Quit\u{2026}": rows[i] = .action("Force Quit\u{2026}", shortcut: "\u{2325}\u{2318}\u{238B}") { Self.forceQuitWindow() }
-            case "Restart": rows[i] = .action("Restart\u{2026}") { Self.askLoginWindow("rrst") }
-            case "Shut Down": rows[i] = .action("Shut Down\u{2026}") { Self.askLoginWindow("rsdn") }
-            case "Log Out\u{2026}": rows[i] = .action("Log Out \(NSFullUserName())\u{2026}", shortcut: "\u{21E7}\u{2318}Q") { Self.askLoginWindow("rlgo") }
-            default: break
+            default: rows[i] = lateRow(row)
             }
         }
         // 10.8 had no rule between About and the update rows: the first separator follows App Store.
         return rows
+    }
+
+    /// Mac OS X 10.6's Apple menu, row for row: Software Update and Mac OS X Software, Location,
+    /// Force Quit naming the front app (it asks in the Force Quit window, kills nothing itself),
+    /// and Log Out with the user's full name.
+    func snowLeopardItems() -> [PlatinumMenuItem] {
+        let front = NSWorkspace.shared.frontmostApplication
+        let frontName = front?.bundleIdentifier?.hasPrefix("com.retromac.") == true ? nil : front?.localizedName
+        var rows = macOSXItems()
+        if let i = rows.firstIndex(where: { $0.title == "Get Mac OS X Software\u{2026}" }) {
+            rows[i] = .action("Mac OS X Software\u{2026}") { Self.openTarget("/System/Applications/App Store.app") }
+            rows.insert(softwareUpdate, at: i)
+        }
+        for (i, row) in rows.enumerated() {
+            switch row.title {
+            case "Force Quit\u{2026}":
+                rows[i] = .action(frontName.map { "Force Quit \($0)" } ?? row.title, shortcut: "\u{2325}\u{21E7}\u{2318}\u{238B}") { Self.forceQuitWindow() }
+            case "Sleep":
+                rows[i] = .action("Sleep", shortcut: "\u{2325}\u{2318}\u{23CF}") {
+                    let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset"); p.arguments = ["sleepnow"]
+                    try? p.run()
+                }
+            default: rows[i] = lateRow(row)
+            }
+        }
+        return rows
+    }
+
+    private var softwareUpdate: PlatinumMenuItem {
+        .action("Software Update\u{2026}") { Self.openTarget("x-apple.systempreferences:com.apple.Software-Update-Settings.extension") }
+    }
+
+    /// The rows the later systems wrote differently from 10.0: Restart and Shut Down with their
+    /// dots, Log Out with the user's full name.
+    private func lateRow(_ row: PlatinumMenuItem) -> PlatinumMenuItem {
+        switch row.title {
+        case "Restart": return .action("Restart\u{2026}") { Self.askLoginWindow("rrst") }
+        case "Shut Down": return .action("Shut Down\u{2026}") { Self.askLoginWindow("rsdn") }
+        case "Log Out\u{2026}": return .action("Log Out \(NSFullUserName())\u{2026}", shortcut: "\u{21E7}\u{2318}Q") { Self.askLoginWindow("rlgo") }
+        default: return row
+        }
     }
 
     /// Restart ("rrst"), Shut Down ("rsdn") or Log Out ("rlgo") the way the Apple menu does it:

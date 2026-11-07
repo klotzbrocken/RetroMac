@@ -103,6 +103,8 @@
     "com.apple.Safari": "safari.png",
     "com.apple.mail": "mail.png",
     "com.apple.Photos": "photos.png",
+    "__folder__~/Downloads": "downloads.png",
+    "__folder__/Applications": "applications.png",
     "com.apple.MobileSMS": "messages.png",
     "com.apple.Notes": "notes.png",
     "com.apple.iCal": "calendar.png",

@@ -1027,8 +1027,10 @@ final class DockController {
             self?.recreateWindow()
         }.store(in: &settingsObservers)
 
+        // @Published tells before the value changes: built at once, the window kept the old
+        // setting's height while the icons followed the new one, and were cut off at its top.
         s.$dockMagnification.dropFirst().sink { [weak self] _ in
-            self?.recreateWindow()
+            DispatchQueue.main.async { self?.recreateWindow() }
         }.store(in: &settingsObservers)
 
         s.$themeOrientationOverrides.dropFirst().sink { [weak self] _ in

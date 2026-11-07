@@ -27,6 +27,10 @@
     { "domain": "com.apple.dock", "key": "mineffect", "type": "string", "value": "genie", "refresh": "Dock" }
   ],
   "menuBarApple": "aqua-classic",
+  "menuBar": {
+    "appleMenu": true,
+    "appleMenuStyle": "snowleopard"
+  },
   "version": "1.0",
   "author": "RetroMac",
   "dock": {

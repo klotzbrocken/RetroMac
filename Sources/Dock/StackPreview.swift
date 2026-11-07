@@ -72,6 +72,11 @@ final class StackPreview {
     /// A file's Quick Look preview when there is one (asked for once, in the background), its
     /// icon meanwhile and otherwise.
     private func picture(for url: URL, folder: String, size: CGFloat) -> (image: NSImage, framed: Bool) {
+        // A folder is the theme's folder: the system's is today's flat blue, and fell out of the pile.
+        if let v = try? url.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey]), v.isDirectory == true, v.isPackage != true,
+           let art = ThemeManager.shared.activeTheme?.iconResource("folder.png").flatMap({ NSImage(contentsOf: $0) }) {
+            return (art, false)
+        }
         let mtime = (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)?.timeIntervalSince1970 ?? 0
         let key = "\(url.path)|\(mtime)" as NSString
         if let t = thumbs.object(forKey: key) { return (t, true) }
