@@ -24,9 +24,24 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   at the end. Apps in a folder of Applications, such as Utilities, are in the grid now too, and
   the arrow keys move through it, Return opens.
 
+- **Location in the Apple menu** lists the Mac's own network locations with the one in use
+  ticked, and picking another switches to it (Mac OS X 10.0 and Snow Leopard).
+
+### Changed
+
+- **Mac OS X 10.0 keeps to 2001.** Dashboard, which came with Tiger, is off its desktop, and the
+  later wallpapers say which version they are from: Jaguar (10.2), Panther (10.3), Tiger (10.4).
+  Sherlock on its desktop opens RetroSherlock once that is installed, and the web search until
+  then.
+- **Widget windows only show the buttons they have.** Minimise and zoom did nothing on RetroMac's
+  own widget windows but were drawn in colour. In Aqua they are grey now, on Snow Leopard and
+  Mountain Lion grey without a glyph, and Platinum and NeXTSTEP leave them out, as those
+  systems did for a window that could not use them.
+
 ### Fixes
 
 - **Snow Leopard's desktop says Exposé**, with its accent.
+- **Location no longer claims "Automatic"** on every Mac; the tick sat there whatever was set.
 
 ## 3.0.3
 

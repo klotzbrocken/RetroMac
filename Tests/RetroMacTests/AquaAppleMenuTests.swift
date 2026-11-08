@@ -14,6 +14,23 @@ final class AquaAppleMenuTests: XCTestCase {
         XCTAssertEqual(AppleMenuController.shared.macOSXItems().last?.shortcut, "\u{21E7}\u{2318}Q")
     }
 
+    /// Location lists this Mac's own network locations (by the names macOS shows, "Automatisch"
+    /// on a German Mac) with the one in use ticked, as many as scselect knows, and ends in
+    /// Network Preferences. No more "Automatic" ticked on every Mac.
+    func testLocationIsTheMacsOwn() throws {
+        let rows = AppleMenuController.locationRows()
+        XCTAssertEqual(rows.last?.title, "Network Preferences\u{2026}")
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/sbin/scselect")
+        let pipe = Pipe(); p.standardOutput = pipe; p.standardError = pipe
+        try p.run(); p.waitUntilExit()
+        let out = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        let sets = out.split(separator: "\n").filter { $0.contains("\t(") }
+        let named = rows.filter { !$0.title.isEmpty && $0.title != "Network Preferences\u{2026}" }
+        XCTAssertEqual(named.count, sets.count)
+        XCTAssertEqual(named.filter(\.ticked).count, sets.contains { $0.hasPrefix(" *") } ? 1 : 0)
+    }
+
     func testTheAquaMenuHasTenPointZerosRowsAndGaps() throws {
         let items = AppleMenuController.shared.macOSXItems()
         let rep = try XCTUnwrap(PlatinumMenuController.shared.snapshot(items, look: .aqua, hovered: 4))

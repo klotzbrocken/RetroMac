@@ -585,14 +585,13 @@ final class WebAppChromeView: NSView {
         let lights = AquaChrome.lightRects(in: bar, flipped: true)
         tracker.reset()
         tracker.add(.close, lights[0].insetBy(dx: -2, dy: -2), interactive: true)
-        tracker.add(.collapse, lights[1].insetBy(dx: -2, dy: -2), interactive: false)
-        tracker.add(.zoom, lights[2].insetBy(dx: -2, dy: -2), interactive: false)
-        let hovering = [ChromeButtonKind.close, .collapse, .zoom].contains { tracker.state(for: $0) == .hovered }
+        // A widget neither minimises nor zooms: those two wear the grey of a button that is not
+        // there for this window, as Aqua drew them, rather than promising something in colour.
         let kinds: [SnowLeopardChrome.Light] = [.close, .minimize, .zoom]
         for (k, r) in zip(kinds, lights) {
-            AquaGem.draw(r, k, active: active, pressed: k == .close && tracker.state(for: .close) == .pressed, flipped: true)
-            if active && hovering { SnowLeopardChrome.drawGlyph(k, in: r) }
+            AquaGem.draw(r, k, active: active && k == .close, pressed: k == .close && tracker.state(for: .close) == .pressed, flipped: true)
         }
+        if active && tracker.state(for: .close) == .hovered { SnowLeopardChrome.drawGlyph(.close, in: lights[0]) }
         AquaChrome.title(title, bar: bar, active: active, flipped: true, minX: lights[2].maxX, maxX: b.width - lights[2].maxX)
         // The grey edge down the sides and along the bottom.
         AquaChrome.edge.setStroke()
@@ -631,18 +630,14 @@ final class WebAppChromeView: NSView {
         let zoomR     = NSRect(x: xs[2], y: ly, width: d, height: d)
         tracker.reset()
         tracker.add(.close, closeR.insetBy(dx: -2, dy: -2), interactive: true)
-        tracker.add(.collapse, collapseR.insetBy(dx: -2, dy: -2), interactive: false)
-        tracker.add(.zoom, zoomR.insetBy(dx: -2, dy: -2), interactive: false)
-        // 10.6 reveals all three glyphs as soon as the pointer is over any of them.
-        let hovering = [ChromeButtonKind.close, .collapse, .zoom].contains { tracker.state(for: $0) == .hovered }
 
+        // Minimise and zoom do nothing on a widget, so they stay grey and show no glyph — the
+        // look 10.6 gave a button a window does not offer.
         SnowLeopardChrome.drawLight(closeR, .close, active: active, flipped: true)
-        SnowLeopardChrome.drawLight(collapseR, .minimize, active: active, flipped: true)
-        SnowLeopardChrome.drawLight(zoomR, .zoom, active: active, flipped: true)
-        if active && hovering {
+        SnowLeopardChrome.drawLight(collapseR, .minimize, active: false, flipped: true)
+        SnowLeopardChrome.drawLight(zoomR, .zoom, active: false, flipped: true)
+        if active && tracker.state(for: .close) == .hovered {
             SnowLeopardChrome.drawGlyph(.close, in: closeR)
-            SnowLeopardChrome.drawGlyph(.minimize, in: collapseR)
-            SnowLeopardChrome.drawGlyph(.zoom, in: zoomR)
         }
 
         let inset = zoomR.maxX + 8
@@ -719,15 +714,13 @@ final class WebAppChromeView: NSView {
         let bar = NSRect(x: 2, y: 2, width: b.width - 4, height: titleH)
         NeXTChrome.titleBar(bar, title: title, state: .key, in: ctx)
 
-        // Buttons: miniaturize top-LEFT (decorative on a web/widget window), close top-RIGHT.
+        // Close top-RIGHT. No miniaturize button: a widget does not miniaturize, and a NeXT
+        // window that could not left the button out, as panels did.
         let s: CGFloat = 16
         let by = bar.midY - s/2
-        let miniR  = NSRect(x: bar.minX + 3, y: by, width: s, height: s)
         let closeR = NSRect(x: bar.maxX - 3 - s, y: by, width: s, height: s)
         tracker.reset()
-        tracker.add(.minimize, miniR.insetBy(dx: -3, dy: -3), interactive: false)
         tracker.add(.close, closeR.insetBy(dx: -3, dy: -3), interactive: true)
-        NeXTChrome.button(miniR, kind: .miniaturize, flipped: true, in: ctx)
         NeXTChrome.button(closeR, kind: .close, pressed: tracker.state(for: .close) == .pressed, flipped: true, in: ctx)
     }
 
@@ -781,15 +774,11 @@ final class WebAppChromeView: NSView {
         let boxes = PlatinumBar.boxRects(width: b.width)
         tracker.reset()
         tracker.add(.close, boxes.close.insetBy(dx: -4, dy: -4), interactive: true)
-        tracker.add(.collapse, boxes.collapse, interactive: false)
-        tracker.add(.zoom, boxes.zoom, interactive: false)
+        // Only the close box: Platinum left out the zoom and collapse boxes of a window that
+        // could not do either, and a widget does neither.
         PlatinumBar.drawBox(boxes.close, active: true, state: tracker.state(for: .close))
-        PlatinumBar.drawBox(boxes.collapse, active: true)
-        PlatinumBar.drawBox(boxes.zoom, active: true)
-        PlatinumBar.zoomGlyph(in: boxes.zoom, active: true)
-        PlatinumBar.collapseGlyph(in: boxes.collapse, active: true)
         let proxy = iconImage.map { img -> NSImage in let c = img.copy() as! NSImage; c.size = NSSize(width: 16, height: 16); return c }
-        PlatinumBar.drawTitle(title, icon: proxy, in: bar, active: true, minX: boxes.close.maxX + 8, maxX: boxes.zoom.minX - 8)
+        PlatinumBar.drawTitle(title, icon: proxy, in: bar, active: true, minX: boxes.close.maxX + 8, maxX: b.width - boxes.close.maxX - 8)
     }
 
     // ---- Windows 98 (SPEC: #C4C4C4 surface, 4-step bevel, #00007B→#1085D2 caption) ----

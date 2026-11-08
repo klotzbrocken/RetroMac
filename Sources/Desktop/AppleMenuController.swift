@@ -1,4 +1,5 @@
 import AppKit
+import SystemConfiguration
 
 /// Mac OS 9's Apple menu, opened from the Apple cover in the menu bar (`RainbowAppleController`
 /// hands the click over when the theme declares `menuBar.appleMenu`). The items are the ones a
@@ -96,11 +97,7 @@ final class AppleMenuController {
                 .separator(),
                 .action("Dock Preferences\u{2026}") { NSApp.sendAction(Selector(("openSettings")), to: nil, from: nil) },
             ]),
-            .submenu("Location", [
-                .action("Automatic", ticked: true) {},
-                .separator(),
-                .action("Network Preferences\u{2026}") { Self.openTarget("x-apple.systempreferences:com.apple.Network-Settings.extension") },
-            ]),
+            .submenu("Location", rows: { Self.locationRows() }),
             .separator(),
             .submenu("Recent Items", rows: {
                 let apps = Self.entries(Self.sharedList("RecentApplications"))
@@ -229,6 +226,37 @@ final class AppleMenuController {
     }
 
     /// A Settings pane URL, an application, or a file or folder.
+    /// The Mac's own network locations, the one in use ticked, as 10.0 to 10.6 listed them.
+    /// Picking another switches through scselect; refused, Network settings open instead.
+    static func locationRows() -> [PlatinumMenuItem] {
+        let network = "x-apple.systempreferences:com.apple.Network-Settings.extension"
+        var rows: [PlatinumMenuItem] = []
+        if let prefs = SCPreferencesCreate(nil, "RetroMac" as CFString, nil),
+           let sets = SCNetworkSetCopyAll(prefs) as? [SCNetworkSet] {
+            let current = SCNetworkSetCopyCurrent(prefs).flatMap { SCNetworkSetGetSetID($0) as String? }
+            let named = sets.compactMap { set -> (String, String)? in
+                guard let id = SCNetworkSetGetSetID(set) as String? else { return nil }
+                return (SCNetworkSetGetName(set) as String? ?? id, id)
+            }.sorted { $0.0.localizedStandardCompare($1.0) == .orderedAscending }
+            for (name, id) in named {
+                rows.append(.action(name, ticked: id == current) {
+                    guard id != current else { return }
+                    DispatchQueue.global().async {
+                        let p = Process()
+                        p.executableURL = URL(fileURLWithPath: "/usr/sbin/scselect")
+                        p.arguments = [id]
+                        p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
+                        let ok = (try? p.run()) != nil && { p.waitUntilExit(); return p.terminationStatus == 0 }()
+                        if !ok { DispatchQueue.main.async { openTarget(network) } }
+                    }
+                })
+            }
+        }
+        if !rows.isEmpty { rows.append(.separator()) }
+        rows.append(.action("Network Preferences\u{2026}") { openTarget(network) })
+        return rows
+    }
+
     static func openTarget(_ target: String) {
         if target.hasPrefix("x-apple"), let u = URL(string: target) { NSWorkspace.shared.open(u); return }
         let url = URL(fileURLWithPath: target)

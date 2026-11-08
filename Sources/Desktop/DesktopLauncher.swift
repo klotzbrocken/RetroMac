@@ -47,7 +47,11 @@ enum DesktopLauncher {
             NSWorkspace.shared.open(URL(fileURLWithPath: "/Volumes"))
 
         case "url":
-            if let urlString = entry.url, let url = URL(string: urlString) {
+            // An app named alongside the link takes over once it is installed: Cheetah's Sherlock
+            // opens RetroSherlock then, and the web search until then.
+            if let bid = entry.bundleID, let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
+                NSWorkspace.shared.openApplication(at: app, configuration: NSWorkspace.OpenConfiguration())
+            } else if let urlString = entry.url, let url = URL(string: urlString) {
                 NSWorkspace.shared.open(url)
             }
 

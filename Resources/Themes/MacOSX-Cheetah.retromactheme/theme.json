@@ -10,7 +10,7 @@
     "label": "Mac OS X 10.0 Cheetah",
     "year": 2001
   },
-  "experienceLevel": "full",
+  "experienceLevel": "partial",
   "chrome": {
     "style": "macosx"
   },
@@ -91,15 +91,15 @@
       "file": "wallpaper.jpg"
     },
     {
-      "name": "Jaguar",
+      "name": "Jaguar (10.2)",
       "file": "wallpaper-jaguar.jpg"
     },
     {
-      "name": "Panther",
+      "name": "Panther (10.3)",
       "file": "wallpaper-panther.jpg"
     },
     {
-      "name": "Tiger",
+      "name": "Tiger (10.4)",
       "file": "wallpaper-tiger.jpg"
     }
   ],
@@ -146,6 +146,7 @@
       "name": "Sherlock",
       "icon": "sherlock.png",
       "type": "url",
+      "bundleID": "com.retromac.retrosherlock",
       "url": "https://www.google.com",
       "gridX": 0,
       "gridY": 5
@@ -163,13 +164,6 @@
       "type": "tvfolder",
       "gridX": 1,
       "gridY": 0
-    },
-    {
-      "name": "Dashboard",
-      "icon": "dashboard.png",
-      "type": "dashboard",
-      "gridX": 0,
-      "gridY": 7
     }
   ],
   "iconMappings": {
