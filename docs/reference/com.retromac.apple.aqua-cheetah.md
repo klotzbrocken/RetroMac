@@ -37,7 +37,10 @@ Belegt sind bisher 19 der 78 gemappten Dateien, alle als KI-Stiladaption der Art
 - Widget-Fenster: nur der Schließknopf ist farbig. Minimieren und Zoomen sind grau, weil ein Widget beides nicht kann.
 - Apple-Menü ▸ Location: die echten Netzwerkumgebungen dieses Macs; eine andere wählen schaltet per `scselect` um.
 
+## About This Mac
+
+Nach dem 10.0.4-Screenshot von Maik (8. November 2026) vermessen: Fenster 267 × 314, X bei (84, 38) 99 × 124, „Mac OS X“ bei (64, 170) 139 breit, Versalhöhe 28, Versionszeile Lucida Grande 10, Memory und Processor Lucida Grande 13 mit Doppelpunkt bei x 131 und Wert ab x 141, Copyright Lucida Grande 10. Hintergrund in vier Zeilen Nadelstreifen (234, 241, 255, 241). Minimieren und Zoomen grau wie im Original. Das X und die Wortmarke sind aus Baskerville gezeichnet, nicht aus dem Screenshot kopiert: Form und Farben stimmen nahe, die Buchstaben sind nicht Apple Garamond. Die Werte sind die dieses Macs.
+
 ## Offen
 
-- About This Mac im 10.0-Look (wartet auf einen Referenz-Screenshot von 10.0.4).
 - Herkunft der übrigen 59 Icons, des Startvideos `boot.mp4`, des Hintergrunds „Aqua Blue“ und des Bildschirmschoners Flurry gegen 10.0.4 belegen.

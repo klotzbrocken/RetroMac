@@ -24,6 +24,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   at the end. Apps in a folder of Applications, such as Utilities, are in the grid now too, and
   the arrow keys move through it, Return opens.
 
+- **About This Mac of Mac OS X 10.0 and About This Computer of Mac OS 9.** Their Apple menus open
+  the windows of their day, filled with this Mac: the blue X over "Mac OS X" with version, build,
+  memory and processor; the Mac OS face over "Mac OS 9" with version, memory, virtual memory, the
+  largest unused block, and the open apps with a bar for the memory each holds. Laid out off
+  10.0.4 and 9.0; the logos are redrawn, not copied.
 - **Location in the Apple menu** lists the Mac's own network locations with the one in use
   ticked, and picking another switches to it (Mac OS X 10.0 and Snow Leopard).
 

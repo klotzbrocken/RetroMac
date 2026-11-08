@@ -42,7 +42,11 @@ final class AppleMenuController {
         if ThemeManager.shared.activeTheme?.config.hasMacOSXAppleMenu == true { return macOSXItems() }
         if ThemeManager.shared.activeTheme?.config.hasMountainLionAppleMenu == true { return mountainLionItems() }
         if ThemeManager.shared.activeTheme?.config.hasSnowLeopardAppleMenu == true { return snowLeopardItems() }
-        return [open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png"),
+        // Mac OS 9's own About This Computer; Copland's developer release keeps today's pane.
+        let about: PlatinumMenuItem = PlatinumBar.isCopland
+            ? open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png")
+            : .action("About This Computer…", icon: themeIcon("computer.png")) { ClassicAbout.show(.macOS9) }
+        return [about,
          .separator(),
          submenu("Applications", icon: themeIcon("folder.png")) { Self.entries(Self.applications()) },
          app("Apple System Profiler", "/System/Applications/Utilities/System Information.app", icon: "profiler.png"),
@@ -85,7 +89,7 @@ final class AppleMenuController {
         let magnifying = AppSettings.shared.dockMagnification
         let hiding = AppSettings.shared.themeDockAutoHide[name] ?? false
         return [
-            .action("About This Mac") { Self.openTarget("x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension") },
+            .action("About This Mac") { ClassicAbout.show(.macOSX) },
             .action("Get Mac OS X Software\u{2026}") { Self.openTarget("/System/Applications/App Store.app") },
             .separator(),
             .action("System Preferences\u{2026}") { Self.openTarget("/System/Applications/System Settings.app") },
@@ -153,6 +157,9 @@ final class AppleMenuController {
         }
         for (i, row) in rows.enumerated() {
             switch row.title {
+            // 10.0's window is Cheetah's; 10.6 keeps today's About pane.
+            case "About This Mac":
+                rows[i] = .action("About This Mac") { Self.openTarget("x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension") }
             case "Force Quit\u{2026}":
                 rows[i] = .action(frontName.map { "Force Quit \($0)" } ?? row.title, shortcut: "\u{2325}\u{21E7}\u{2318}\u{238B}") { Self.forceQuitWindow() }
             case "Sleep":
