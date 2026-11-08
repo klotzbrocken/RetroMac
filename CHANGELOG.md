@@ -19,6 +19,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   between windows and Return brings one forward. Held on a dock icon, Exposé lists the app's
   minimised windows in a row of their own along the bottom (needs Accessibility). On close the
   windows fly back to where they are.
+- **Launchpad keeps your order.** Drag an icon to move it, the others make room; hold it at the
+  left or right edge to take it to the next page. The order stays, and apps installed later join
+  at the end. Apps in a folder of Applications, such as Utilities, are in the grid now too, and
+  the arrow keys move through it, Return opens.
 
 ### Fixes
 

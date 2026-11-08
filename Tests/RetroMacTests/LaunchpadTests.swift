@@ -1,7 +1,8 @@
 import XCTest
 @testable import RetroMac
 
-/// Mountain Lion's Launchpad: forty apps a page in eight columns, the rest on further pages.
+/// Mountain Lion's Launchpad: forty apps a page in eight columns, the rest on further pages;
+/// apps one folder down (Utilities) are found, the saved order holds and new apps go to the end.
 /// With RETROMAC_SNAPSHOT_DIR set it is drawn to launchpad.png over the Lion wallpaper.
 final class LaunchpadTests: XCTestCase {
     @MainActor
@@ -22,5 +23,29 @@ final class LaunchpadTests: XCTestCase {
         let rep = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
         view.cacheDisplay(in: view.bounds, to: rep)
         try rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("launchpad.png"))
+    }
+
+    private func app(_ name: String) -> LaunchpadController.App {
+        .init(name: name, url: URL(fileURLWithPath: "/Applications/\(name).app"), bundleID: "test.\(name)")
+    }
+
+    func testSavedOrderFirstNewAppsLast() {
+        let apps = ["Calculator", "Chess", "Mail", "Safari"].map(app)
+        let order = ["test.Safari", "test.Gone", "test.Calculator"]
+        XCTAssertEqual(LaunchpadController.arranged(apps, order: order).map(\.name),
+                       ["Safari", "Calculator", "Chess", "Mail"])
+        XCTAssertEqual(LaunchpadController.arranged(apps, order: []).map(\.name),
+                       ["Calculator", "Chess", "Mail", "Safari"])
+    }
+
+    func testFindsAppsOneFolderDown() throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent("lp-\(UUID().uuidString)")
+        defer { try? fm.removeItem(at: root) }
+        for path in ["Top.app", "Utilities/Terminal.app", "Utilities/Deep/Hidden.app", "Vendor/Tool.app"] {
+            try fm.createDirectory(at: root.appendingPathComponent(path), withIntermediateDirectories: true)
+        }
+        let names = LaunchpadController.installedApps(in: [root.path]).map(\.name)
+        XCTAssertEqual(names, ["Terminal", "Tool", "Top"])
     }
 }

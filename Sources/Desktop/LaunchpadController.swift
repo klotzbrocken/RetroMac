@@ -7,12 +7,17 @@ import CoreImage
 /// Mountain Lion screenshot: 8 columns of 11.6 % of the width, 5 rows of 15 % of the height,
 /// icons 5.4 % of the width (Safari's compass, 88 % of its icon, measured 4.7 %) or 8.7 % of the
 /// height, whichever is smaller — on a 16:9 screen the width alone made them too big.
-/// ponytail: top-level apps only (no Utilities folder, no folders of your own, no drag to
-/// rearrange); add them if anyone misses them.
+/// Apps in a folder of the Applications folders (Utilities) are in the grid like the others;
+/// Launchpad's own folders, which held them on Lion, are not built yet. Drag an icon to move it,
+/// to a screen edge to take it to the next page; the order is kept, new apps go to the end.
 final class LaunchpadController: NSObject, NSSearchFieldDelegate {
     static let shared = LaunchpadController()
 
-    struct App { let name: String; let url: URL; let bundleID: String? }
+    struct App {
+        let name: String; let url: URL; let bundleID: String?
+        /// What the saved order remembers it by.
+        var key: String { bundleID ?? url.path }
+    }
 
     static let columns = 8, rows = 5
     static var perPage: Int { columns * rows }
@@ -23,15 +28,19 @@ final class LaunchpadController: NSObject, NSSearchFieldDelegate {
     private var apps: [App] = []
     private var shown: [App] = []
     private var page = 0
+    /// The icon the arrow keys are on, counted on the page shown.
+    private var selected: Int?
+    var isSearching: Bool { !(view?.search.stringValue.trimmingCharacters(in: .whitespaces).isEmpty ?? true) }
 
     var isOpen: Bool { panel != nil }
     func toggle() { isOpen ? close() : open() }
 
     func open() {
         guard panel == nil, let screen = NSScreen.main else { return }
-        apps = Self.installedApps()
+        apps = Self.arranged(Self.installedApps(), order: UserDefaults.standard.stringArray(forKey: Self.orderKey) ?? [])
         shown = apps
         page = 0
+        selected = nil
         if !NSApp.isActive { cameFrom = NSWorkspace.shared.frontmostApplication }
 
         let p = LaunchpadPanel(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -90,23 +99,58 @@ final class LaunchpadController: NSObject, NSSearchFieldDelegate {
         let q = view?.search.stringValue.trimmingCharacters(in: .whitespaces) ?? ""
         shown = q.isEmpty ? apps : apps.filter { $0.name.localizedCaseInsensitiveContains(q) }
         page = 0
+        // Typing marks the first match, which Return then opens.
+        selected = q.isEmpty || shown.isEmpty ? nil : 0
         reload()
     }
 
     func control(_ control: NSControl, textView: NSTextView, doCommandBy sel: Selector) -> Bool {
         switch sel {
         case #selector(NSResponder.insertNewline(_:)):
-            if let first = shown.first { launch(first) }
+            if let s = selected, shown.indices.contains(page * Self.perPage + s) { launch(shown[page * Self.perPage + s]) }
             return true
         case #selector(NSResponder.cancelOperation(_:)):
             if textView.string.isEmpty { close(); return true }
             return false   // the field clears itself first
+        // Left and right move the cursor while there is text to move it in.
         case #selector(NSResponder.moveLeft(_:)) where textView.string.isEmpty:
-            turn(by: -1); return true
+            step(-1); return true
         case #selector(NSResponder.moveRight(_:)) where textView.string.isEmpty:
-            turn(by: 1); return true
+            step(1); return true
+        case #selector(NSResponder.moveUp(_:)):
+            step(-Self.columns); return true
+        case #selector(NSResponder.moveDown(_:)):
+            step(Self.columns); return true
         default:
             return false
+        }
+    }
+
+    private var onPage: Int { max(0, min(Self.perPage, shown.count - page * Self.perPage)) }
+
+    /// The arrows: the first press marks the first icon; left and right run on over the page
+    /// edge to the next page, up and down stop at the top and bottom row.
+    private func step(_ delta: Int) {
+        guard onPage > 0 else { return }
+        guard let s = selected else { select(0); return }
+        let next = s + delta
+        if abs(delta) == 1, next < 0 || next >= onPage {
+            let target = page + delta
+            guard target >= 0, target < pageCount else { return }
+            page = target
+            reload()
+            select(delta > 0 ? 0 : onPage - 1)
+            return
+        }
+        guard next >= 0, next < onPage else { return }
+        select(next)
+    }
+
+    private func select(_ i: Int?) {
+        selected = i
+        view?.highlight(i)
+        if let i, shown.indices.contains(page * Self.perPage + i) {
+            MenuKeyboard.announce(shown[page * Self.perPage + i].name)
         }
     }
 
@@ -118,6 +162,7 @@ final class LaunchpadController: NSObject, NSSearchFieldDelegate {
         let target = min(max(p, 0), pageCount - 1)
         guard target != page else { return }
         page = target
+        selected = nil
         reload()
         MenuKeyboard.announce("Page \(page + 1) of \(pageCount)")
     }
@@ -125,21 +170,72 @@ final class LaunchpadController: NSObject, NSSearchFieldDelegate {
     private func reload() {
         let start = page * Self.perPage
         view?.show(Array(shown.dropFirst(start).prefix(Self.perPage)), page: page, of: pageCount)
+        view?.highlight(selected)
+    }
+
+    // MARK: Arranging
+
+    static let orderKey = "launchpadOrder"
+
+    /// The saved order first; anything installed since goes to the end, by name.
+    static func arranged(_ apps: [App], order: [String]) -> [App] {
+        let byKey = Dictionary(apps.map { ($0.key, $0) }, uniquingKeysWith: { a, _ in a })
+        let placed = Set(order)
+        return order.compactMap { byKey[$0] } + apps.filter { !placed.contains($0.key) }
+    }
+
+    /// Moves `app` to `index` of the whole list (not the page) and keeps the order.
+    func move(_ app: App, to index: Int) {
+        guard !isSearching, let from = apps.firstIndex(where: { $0.key == app.key }) else { return }
+        let a = apps.remove(at: from)
+        apps.insert(a, at: min(max(index, 0), apps.count))
+        shown = apps
+        UserDefaults.standard.set(apps.map(\.key), forKey: Self.orderKey)
+    }
+
+    /// Dropped on slot `slot` of the page shown.
+    func drop(_ app: App, at slot: Int) {
+        move(app, to: page * Self.perPage + slot)
+        selected = nil
+        reload()
+    }
+
+    /// Held at a screen edge while dragged: the app goes to the first slot of the next page or the
+    /// last of the one before, and that page comes up. False when there is no page that way.
+    func carry(_ app: App, by delta: Int) -> Bool {
+        let target = page + delta
+        guard target >= 0, target < pageCount else { return false }
+        move(app, to: delta > 0 ? target * Self.perPage : page * Self.perPage - 1)
+        page = target
+        selected = nil
+        reload()
+        MenuKeyboard.announce("Page \(page + 1) of \(pageCount)")
+        return true
     }
 
     // MARK: Apps and picture
 
-    static func installedApps() -> [App] {
-        let dirs = ["/Applications", "/System/Applications", NSHomeDirectory() + "/Applications"]
+    static func installedApps(in dirs: [String] = ["/Applications", "/System/Applications",
+                                                   NSHomeDirectory() + "/Applications"]) -> [App] {
         let fm = FileManager.default
         var seen = Set<String>(), out: [App] = []
+        func add(_ url: URL) {
+            let id = Bundle(url: url)?.bundleIdentifier
+            guard seen.insert(id ?? url.path).inserted, id != "com.apple.apps.launcher" else { return }   // not itself
+            out.append(App(name: fm.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: ""),
+                           url: url, bundleID: id))
+        }
         for dir in dirs {
-            for item in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] where item.hasSuffix(".app") {
-                let url = URL(fileURLWithPath: dir).appendingPathComponent(item)
-                let id = Bundle(url: url)?.bundleIdentifier
-                guard seen.insert(id ?? url.path).inserted, id != "com.apple.apps.launcher" else { continue }   // not itself
-                out.append(App(name: fm.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: ""),
-                               url: url, bundleID: id))
+            let base = URL(fileURLWithPath: dir)
+            for item in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] where !item.hasPrefix(".") {
+                let url = base.appendingPathComponent(item)
+                if item.hasSuffix(".app") { add(url); continue }
+                // One folder down, where Utilities and many vendors' apps live; no deeper, where
+                // installers keep helpers nobody opens from Launchpad.
+                guard StackOptions.isFolder(url) else { continue }
+                for sub in (try? fm.contentsOfDirectory(atPath: url.path)) ?? [] where sub.hasSuffix(".app") {
+                    add(url.appendingPathComponent(sub))
+                }
             }
         }
         return out.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -217,16 +313,25 @@ final class LaunchpadView: NSView {
         background.backgroundColor = NSColor(srgbRed: 0.1, green: 0.15, blue: 0.25, alpha: 1).cgColor
     }
 
+    private var iconSize: CGFloat { min(bounds.width * 0.054, bounds.height * 0.087).rounded() }
+    private var labelSize: CGFloat { max(11, (bounds.height * 0.0135).rounded()) }
+
+    /// Slot `i` of a page, in the grid's flipped coordinates.
+    private func cellFrame(_ i: Int) -> NSRect {
+        let w = bounds.width, h = bounds.height
+        let pitchX = w * 0.116, pitchY = h * 0.15
+        let col = i % LaunchpadController.columns, row = i / LaunchpadController.columns
+        let cx = w / 2 + (CGFloat(col) - CGFloat(LaunchpadController.columns - 1) / 2) * pitchX
+        let cy = h * 0.135 + CGFloat(row) * pitchY
+        return NSRect(x: cx - pitchX / 2, y: cy - iconSize / 2 - 4, width: pitchX, height: iconSize + labelSize + 14)
+    }
+
     func show(_ apps: [LaunchpadController.App], page: Int, of pages: Int) {
         grid.subviews.forEach { $0.removeFromSuperview() }
-        let w = bounds.width, h = bounds.height
-        let pitchX = w * 0.116, pitchY = h * 0.15, icon = min(w * 0.054, h * 0.087).rounded()
-        let label = max(11, (h * 0.0135).rounded())
+        let icon = iconSize, label = labelSize
         for (i, app) in apps.enumerated() {
-            let col = i % LaunchpadController.columns, row = i / LaunchpadController.columns
-            let cx = w / 2 + (CGFloat(col) - CGFloat(LaunchpadController.columns - 1) / 2) * pitchX
-            let cy = h * 0.135 + CGFloat(row) * pitchY
-            let b = NSButton(frame: NSRect(x: cx - pitchX / 2, y: cy - icon / 2 - 4, width: pitchX, height: icon + label + 14))
+            let b = LaunchpadIcon(frame: cellFrame(i))
+            b.onPress = { [weak self, weak b] event in if let self, let b { self.track(b, event) } }
             b.isBordered = false
             b.imagePosition = .imageAbove
             b.image = LaunchpadController.icon(for: app, size: icon)
@@ -252,6 +357,75 @@ final class LaunchpadView: NSView {
         controller?.launch(current[sender.tag])
     }
 
+    /// The arrow keys' mark: a soft light plate behind the icon.
+    func highlight(_ index: Int?) {
+        for case let b as LaunchpadIcon in grid.subviews {
+            b.wantsLayer = true
+            b.layer?.cornerRadius = 10
+            b.layer?.backgroundColor = b.tag == index ? NSColor.white.withAlphaComponent(0.22).cgColor : nil
+        }
+    }
+
+    /// A click opens the app; pressed and moved, the icon follows the pointer, the others make
+    /// room, and it lands where it is let go. Held at the left or right edge it changes page.
+    func track(_ icon: LaunchpadIcon, _ down: NSEvent) {
+        guard let win = window, current.indices.contains(icon.tag) else { return }
+        let app = current[icon.tag]
+        let start = grid.convert(down.locationInWindow, from: nil)
+        var dragged = icon, offset = NSPoint.zero, lifted = false, slot = icon.tag
+        var edgeSince: Date?
+        NSEvent.startPeriodicEvents(afterDelay: 0.1, withPeriod: 0.1)
+        defer { NSEvent.stopPeriodicEvents() }
+
+        func lift(_ b: LaunchpadIcon, at p: NSPoint) {
+            dragged = b
+            offset = NSPoint(x: p.x - b.frame.midX, y: p.y - b.frame.midY)
+            grid.addSubview(b, positioned: .above, relativeTo: nil)
+            b.alphaValue = 0.85
+        }
+        var last = start
+        while let e = win.nextEvent(matching: [.leftMouseDragged, .leftMouseUp, .periodic]) {
+            if e.type != .periodic { last = grid.convert(e.locationInWindow, from: nil) }
+            if e.type == .leftMouseUp { break }
+            if !lifted {
+                guard hypot(last.x - start.x, last.y - start.y) > 6, controller?.isSearching == false else { continue }
+                lifted = true
+                lift(icon, at: start)
+            }
+            dragged.setFrameOrigin(NSPoint(x: last.x - offset.x - dragged.frame.width / 2,
+                                           y: last.y - offset.y - dragged.frame.height / 2))
+            // Make room: the others close up around the slot under the pointer.
+            let target = (0..<current.count).min { a, b in
+                let fa = cellFrame(a), fb = cellFrame(b)
+                return hypot(fa.midX - last.x, fa.midY - last.y) < hypot(fb.midX - last.x, fb.midY - last.y)
+            } ?? slot
+            if target != slot {
+                slot = target
+                var order = current.indices.filter { $0 != dragged.tag }
+                order.insert(dragged.tag, at: min(slot, order.count))
+                NSAnimationContext.runAnimationGroup { ctx in
+                    ctx.duration = 0.18
+                    for case let b as LaunchpadIcon in grid.subviews where b !== dragged {
+                        if let pos = order.firstIndex(of: b.tag) { b.animator().frame = cellFrame(pos) }
+                    }
+                }
+            }
+            // At an edge for a moment: over to the next page, still carrying it.
+            let edge = last.x < bounds.width * 0.03 ? -1 : last.x > bounds.width * 0.97 ? 1 : 0
+            if edge == 0 { edgeSince = nil; continue }
+            if edgeSince == nil { edgeSince = Date(); continue }
+            guard Date().timeIntervalSince(edgeSince!) > 0.6 else { continue }
+            edgeSince = nil
+            guard controller?.carry(app, by: edge) == true,
+                  let i = current.firstIndex(where: { $0.key == app.key }),
+                  let b = grid.subviews.compactMap({ $0 as? LaunchpadIcon }).first(where: { $0.tag == i }) else { continue }
+            slot = i
+            offset = .zero
+            lift(b, at: NSPoint(x: b.frame.midX, y: b.frame.midY))
+        }
+        if lifted { controller?.drop(app, at: slot) } else { pick(icon) }
+    }
+
     /// A click on the picture, not on an app, closes it, as on the real thing.
     override func mouseDown(with event: NSEvent) { controller?.close() }
 
@@ -265,6 +439,13 @@ final class LaunchpadView: NSView {
             scrolled = 0
         }
     }
+}
+
+/// One app in the grid. A press goes to the view, which tells a click from a drag; VoiceOver's
+/// press still goes through the button's action.
+final class LaunchpadIcon: NSButton {
+    var onPress: ((NSEvent) -> Void)?
+    override func mouseDown(with event: NSEvent) { onPress?(event) }
 }
 
 /// The grid counts its rows from the top, as the picture does.
