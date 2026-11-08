@@ -3,6 +3,27 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+### New
+
+- **Stacks show everything.** A dock folder's stack no longer stops at 40 entries: the grid
+  scrolls, and a folder in it opens inside the stack, with a back arrow at the top left. The arrow
+  keys move through it, Return opens, Esc closes.
+- **Fan, Grid and List.** A folder's right-click has 10.6's Sort by (Name, Date Added, Date
+  Modified, Date Created, Kind), Display as (Folder or Stack) and View content as (Fan, Grid, List,
+  Automatic). Automatic fans out while everything fits above the dock and shows the grid beyond
+  that, as Snow Leopard did. The fan is there on Snow Leopard and Mountain Lion with the dock at
+  the bottom.
+- **Exposé, as in 10.6.** Space shows the highlighted window at full size, the arrow keys move
+  between windows and Return brings one forward. Held on a dock icon, Exposé lists the app's
+  minimised windows in a row of their own along the bottom (needs Accessibility). On close the
+  windows fly back to where they are.
+
+### Fixes
+
+- **Snow Leopard's desktop says Exposé**, with its accent.
+
 ## 3.0.3
 
 ### New

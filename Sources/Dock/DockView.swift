@@ -1519,7 +1519,10 @@ final class DockView: NSView {
     private func folderIcon(path: String, size: CGFloat) -> NSImage {
         // Mountain Lion and its forebears: the newest files piled up, live.
         // Not Applications: its pile was the apps last installed, and the tile looked like one of them.
-        if ThemeManager.shared.activeTheme?.config.hasStackPreview == true, path != "/Applications" {
+        // Display as Folder or Stack on the tile's right-click overrides the theme either way.
+        let pile = StackOptions.load(path).display.map { $0 == .stack }
+            ?? (ThemeManager.shared.activeTheme?.config.hasStackPreview == true && path != "/Applications")
+        if pile {
             if StackPreview.shared.onChange == nil {
                 StackPreview.shared.onChange = { [weak self] folder in self?.refreshFolderTile(folder) }
             }
@@ -1559,7 +1562,7 @@ final class DockView: NSView {
     }
 
     /// A folder's pile again, after a file arrived or a preview came in.
-    private func refreshFolderTile(_ folder: String) {
+    func refreshFolderTile(_ folder: String) {
         guard let item = itemViews.first(where: { $0.bundleID == "__folder__" + folder }),
               let size = folderTileSizes[folder] else { return }
         item.updateIcon(folderIcon(path: folder, size: size))

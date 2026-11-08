@@ -33,10 +33,20 @@ final class ExposeController {
         let appName: String
         let icon: NSImage?
         let frame: NSRect
+        /// In the Dock, shown in the row along the bottom (10.6's application Exposé).
+        var minimized = false
+        /// The window as Accessibility sees it, when it came from there (the minimised ones).
+        var ax: AXUIElement? = nil
     }
 
     private var windows: [NSWindow] = []
     private var cards: [CGWindowID: ExposeCardView] = [:]
+    /// The card under the pointer or picked with the arrow keys.
+    private weak var selected: ExposeCardView?
+    /// Space blew this card up to life size; Space or Esc puts it back into its slot.
+    private var preview: (card: ExposeCardView, slot: NSRect)?
+    /// What ScreenCaptureKit handed out, for a sharper picture when Space enlarges a card.
+    private var captured: [CGWindowID: SCWindow] = [:]
     private(set) var isOpen = false
     /// Bumped on every show/hide so a capture that lands after the sheet closed is dropped
     /// instead of being pushed into a card that no longer belongs to anything.
@@ -61,14 +71,26 @@ final class ExposeController {
         case .applicationWindows: if let pid = frontPID { items = items.filter { $0.pid == pid } }
         case .application(let pid): items = items.filter { $0.pid == pid }
         }
+        // 10.6 put an application's minimised windows in a row of their own along the bottom.
+        // Only the application views had it; the all-windows view showed the desktop as it was.
+        switch mode {
+        case .allWindows: break
+        case .applicationWindows: if let pid = frontPID { items += minimizedWindows(of: pid) }
+        case .application(let pid): items += minimizedWindows(of: pid)
+        }
 
         isOpen = true
         generation += 1
         let gen = generation
         cards.removeAll()
+        captured.removeAll()
+        preview = nil
 
-        for screen in NSScreen.screens {
-            let mine = items.filter { screen.frame.contains(NSPoint(x: $0.frame.midX, y: $0.frame.midY)) }
+        for (n, screen) in NSScreen.screens.enumerated() {
+            // The minimised row goes on the main display, where the Dock they sit in is.
+            let mine = items.filter {
+                $0.minimized ? n == 0 : screen.frame.contains(NSPoint(x: $0.frame.midX, y: $0.frame.midY))
+            }
 
             // KeyableWindow so Escape reaches us: a borderless NSWindow reports canBecomeKey false.
             let win = KeyableWindow(contentRect: screen.frame, styleMask: [.borderless],
@@ -83,8 +105,11 @@ final class ExposeController {
             win.hasShadow = false
 
             let root = ExposeBackdropView(frame: NSRect(origin: .zero, size: screen.frame.size))
-            root.onBackgroundClick = { [weak self] in self?.hide() }
-            root.onEscape = { [weak self] in self?.hide() }
+            root.onBackgroundClick = { [weak self] in
+                guard let self else { return }
+                if self.preview != nil { self.endPreview() } else { self.hide() }
+            }
+            root.onKey = { [weak self] code in self?.key(code) ?? false }
             // Only when there is nothing anywhere. With a second display attached, the screen
             // that happens to hold no windows used to announce "No windows" while the other one
             // was showing them all.
@@ -113,11 +138,20 @@ final class ExposeController {
         isOpen = false
         generation += 1
         let closing = windows
+        let flying = Array(cards.values)
         windows.removeAll()
         cards.removeAll()
+        captured.removeAll()
+        preview = nil
+        // The way back is the way in: every card returns to where its window is while the sheet
+        // fades, and the minimised ones simply go.
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.16
+            ctx.duration = 0.22
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
             closing.forEach { $0.animator().alphaValue = 0 }
+            for card in flying {
+                if let home = card.home { card.animator().frame = home }
+            }
         }, completionHandler: { closing.forEach { $0.orderOut(nil) } })
     }
 
@@ -126,17 +160,28 @@ final class ExposeController {
     private func place(_ items: [Item], on root: ExposeBackdropView, screen: NSScreen) {
         guard !items.isEmpty else { return }
         // Reading order, so where a card lands still has something to do with where its window is.
-        let sorted = items.sorted {
+        let sorted = items.filter { !$0.minimized }.sorted {
             abs($0.frame.maxY - $1.frame.maxY) > 12 ? $0.frame.maxY > $1.frame.maxY
                                                     : $0.frame.minX < $1.frame.minX
         }
+        let docked = items.filter(\.minimized)
         let inset = bottomInset(on: screen)
-        let area = NSRect(x: 40, y: inset + 40,
+        var area = NSRect(x: 40, y: inset + 40,
                           width: root.bounds.width - 80,
                           height: root.bounds.height - 80 - inset - menuBarInset(on: screen))
-        let slots = layout(sorted, in: area)
+        var rowSlots: [NSRect] = []
+        if !docked.isEmpty {
+            // A strip under a hairline, the open windows above it.
+            let rowH = min(150, area.height * 0.22)
+            let row = NSRect(x: area.minX, y: area.minY, width: area.width, height: rowH)
+            rowSlots = layout(docked, in: row, columns: docked.count)
+            root.separatorY = row.maxY + 14
+            area.origin.y = row.maxY + 28
+            area.size.height -= rowH + 28
+        }
+        let slots = layout(sorted, in: area) + rowSlots
 
-        for (item, slot) in zip(sorted, slots) {
+        for (item, slot) in zip(sorted + docked, slots) {
             let card = ExposeCardView(frame: slot)
             card.item = item
             card.targetSize = card.contentRect.size   // frame is still the slot at this point
@@ -144,16 +189,30 @@ final class ExposeController {
                 self?.hide()
                 self?.raise(item)
             }
+            card.onHover = { [weak self, weak card] inside in
+                guard let self, let card else { return }
+                if inside { self.select(card) } else if self.selected === card { self.select(nil) }
+            }
             root.addSubview(card)
             cards[item.windowID] = card
+            card.wantsLayer = true
 
+            guard !item.minimized else {
+                // Out of the Dock there is no window to fly from; the row fades up instead.
+                card.alphaValue = 0
+                NSAnimationContext.runAnimationGroup { ctx in
+                    ctx.duration = 0.26
+                    card.animator().alphaValue = 1
+                }
+                continue
+            }
             // The move that makes it Exposé: the card starts exactly where the window is and
             // travels to its slot. Everything needed for that is already in `item.frame`.
             let from = NSRect(x: item.frame.minX - screen.frame.minX,
                               y: item.frame.minY - screen.frame.minY,
                               width: item.frame.width, height: item.frame.height)
+            card.home = from
             card.frame = from
-            card.wantsLayer = true
             NSAnimationContext.runAnimationGroup { ctx in
                 ctx.duration = 0.26
                 ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -162,12 +221,95 @@ final class ExposeController {
         }
     }
 
+    // MARK: - Keys
+
+    /// The arrows move to the nearest card that way, Return picks it, Space shows it at life
+    /// size (10.6: "press the Space bar to see a larger preview"), Esc steps back out.
+    private func key(_ code: UInt16) -> Bool {
+        switch code {
+        case 53:                                   // Esc
+            if preview != nil { endPreview() } else { hide() }
+        case 49:                                   // Space
+            if preview != nil { endPreview() } else if let card = selected { beginPreview(card) }
+        case 36, 76:                               // Return, Enter
+            if let card = selected { endPreview(); card.onPick?() }
+        case 123: move(dx: -1, dy: 0)
+        case 124: move(dx: 1, dy: 0)
+        case 125: move(dx: 0, dy: -1)
+        case 126: move(dx: 0, dy: 1)
+        default: return false
+        }
+        return true
+    }
+
+    private func select(_ card: ExposeCardView?) {
+        guard preview == nil else { return }
+        selected = card
+        cards.values.forEach { $0.hot = $0 === card }
+    }
+
+    /// The card whose centre lies most directly in that direction, across displays.
+    private func move(dx: CGFloat, dy: CGFloat) {
+        guard preview == nil else { return }
+        func centre(_ c: ExposeCardView) -> NSPoint {
+            let f = c.window?.convertToScreen(c.frame) ?? c.frame
+            return NSPoint(x: f.midX, y: f.midY)
+        }
+        let all = Array(cards.values)
+        guard let from = selected else {
+            // Nothing picked yet: start top left, where reading starts.
+            select(all.max { let a = centre($0), b = centre($1); return (a.y - a.x) < (b.y - b.x) })
+            return
+        }
+        let o = centre(from)
+        let best = all.filter { $0 !== from }.compactMap { c -> (ExposeCardView, CGFloat)? in
+            let p = centre(c)
+            let along = (p.x - o.x) * dx + (p.y - o.y) * dy
+            guard along > 1 else { return nil }
+            let across = abs((p.x - o.x) * dy) + abs((p.y - o.y) * dx)
+            return (c, along + across * 2)
+        }.min { $0.1 < $1.1 }
+        if let best { select(best.0) }
+    }
+
+    private func beginPreview(_ card: ExposeCardView) {
+        guard let root = card.superview, let item = card.item else { return }
+        let slot = card.frame
+        let room = root.bounds.insetBy(dx: 60, dy: 60)
+        let s = min(room.width / item.frame.width, room.height / item.frame.height, 1)
+        let size = NSSize(width: item.frame.width * s, height: item.frame.height * s)
+        let big = NSRect(x: room.midX - size.width / 2, y: room.midY - size.height / 2,
+                         width: size.width, height: size.height)
+        preview = (card, slot)
+        root.addSubview(card, positioned: .above, relativeTo: nil)
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.2
+            card.animator().frame = big
+        }
+        // The slot-sized capture would be blurry this big; ask for one at the new size.
+        guard let win = captured[item.windowID] else { return }
+        let gen = generation, scale = card.window?.backingScaleFactor ?? 2
+        Task { @MainActor in
+            let img = await ScreenCaptureManager.captureThumbnail(win, points: size, scale: scale)
+            if gen == self.generation, let img { card.image = img }
+        }
+    }
+
+    private func endPreview() {
+        guard let (card, slot) = preview else { return }
+        preview = nil
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.2
+            card.animator().frame = slot
+        }
+    }
+
     /// A grid whose short last row is centred, with every card kept at its window's aspect ratio
     /// and never enlarged past life size — Exposé only ever shrank.
-    private func layout(_ items: [Item], in area: NSRect) -> [NSRect] {
+    private func layout(_ items: [Item], in area: NSRect, columns: Int? = nil) -> [NSRect] {
         let n = items.count
         guard n > 0, area.width > 40, area.height > 40 else { return [] }
-        let cols = Int(ceil(Double(n).squareRoot()))
+        let cols = columns ?? Int(ceil(Double(n).squareRoot()))
         let rows = Int(ceil(Double(n) / Double(cols)))
         let gap: CGFloat = 26
         let cellW = (area.width - gap * CGFloat(cols + 1)) / CGFloat(cols)
@@ -248,15 +390,65 @@ final class ExposeController {
         return out
     }
 
+    /// An app's minimised windows, through Accessibility. Without it they stay out, as before.
+    /// The window server lists them too (off screen), which gives each its id for a thumbnail;
+    /// they are matched by size, since their titles need Screen Recording to read there.
+    private func minimizedWindows(of pid: pid_t) -> [Item] {
+        guard AXIsProcessTrusted(), let primary = NSScreen.screens.first else { return [] }
+        let app = AXUIElementCreateApplication(pid)
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(app, kAXWindowsAttribute as CFString, &value) == .success,
+              let list = value as? [AXUIElement] else { return [] }
+        let offscreen = (CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID)
+                         as? [[String: Any]] ?? []).filter {
+            ($0[kCGWindowOwnerPID as String] as? pid_t) == pid
+                && ($0[kCGWindowLayer as String] as? Int) == 0
+                && ($0[kCGWindowIsOnscreen as String] as? Bool) != true
+        }
+        var used = Set<CGWindowID>()
+        var synthetic = CGWindowID.max
+        let running = NSRunningApplication(processIdentifier: pid)
+        let icon = running?.bundleIdentifier.map { ThemeManager.shared.icon(for: $0, size: 64) } ?? running?.icon
+        var out: [Item] = []
+        for w in list {
+            var m: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(w, kAXMinimizedAttribute as CFString, &m) == .success,
+                  (m as? Bool) == true else { continue }
+            var posRef: CFTypeRef?, sizeRef: CFTypeRef?
+            var origin = CGPoint.zero, size = CGSize(width: 400, height: 300)
+            if AXUIElementCopyAttributeValue(w, kAXPositionAttribute as CFString, &posRef) == .success {
+                AXValueGetValue(posRef as! AXValue, .cgPoint, &origin)
+            }
+            if AXUIElementCopyAttributeValue(w, kAXSizeAttribute as CFString, &sizeRef) == .success {
+                AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
+            }
+            let id = offscreen.first { info in
+                guard let id = info[kCGWindowNumber as String] as? CGWindowID, !used.contains(id),
+                      let b = info[kCGWindowBounds as String] as? [String: CGFloat] else { return false }
+                return abs((b["Width"] ?? 0) - size.width) < 3 && abs((b["Height"] ?? 0) - size.height) < 3
+            }?[kCGWindowNumber as String] as? CGWindowID
+            let windowID = id ?? { synthetic -= 1; return synthetic }()
+            used.insert(windowID)
+            out.append(Item(windowID: windowID, pid: pid, title: title(of: w),
+                            appName: running?.localizedName ?? "", icon: icon,
+                            frame: NSRect(x: origin.x, y: primary.frame.maxY - origin.y - size.height,
+                                          width: size.width, height: size.height),
+                            minimized: true, ax: w))
+        }
+        return out
+    }
+
     // MARK: - Thumbnails
 
     private func fetchThumbnails(for items: [Item], generation gen: Int) {
         let wanted = Set(items.map { $0.windowID })
+        let offscreen = items.contains(where: \.minimized)
         Task { @MainActor in
             guard let content = try? await SCShareableContent.excludingDesktopWindows(
-                    true, onScreenWindowsOnly: true) else { return }
+                    true, onScreenWindowsOnly: !offscreen) else { return }
             guard gen == self.generation else { return }
             let targets = content.windows.filter { wanted.contains($0.windowID) }
+            for w in targets { self.captured[w.windowID] = w }
             // Concurrently: a dozen windows one after another is a visible stagger, and each
             // card can take its own image the moment that one is ready.
             await withTaskGroup(of: (CGWindowID, NSImage?).self) { group in
@@ -285,6 +477,11 @@ final class ExposeController {
         NSRunningApplication(processIdentifier: item.pid)?
             .activate(options: [.activateIgnoringOtherApps])
         guard AXIsProcessTrusted() else { return }
+        if let win = item.ax {
+            AXUIElementSetAttributeValue(win, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+            AXUIElementPerformAction(win, kAXRaiseAction as CFString)
+            return
+        }
 
         let app = AXUIElementCreateApplication(item.pid)
         var value: CFTypeRef?
@@ -327,7 +524,10 @@ final class ExposeController {
 /// The dimmed sheet behind the cards.
 final class ExposeBackdropView: NSView {
     var onBackgroundClick: (() -> Void)?
-    var onEscape: (() -> Void)?
+    /// A key went down; true when it was one of Exposé's.
+    var onKey: ((UInt16) -> Bool)?
+    /// The hairline over the row of minimised windows, when there is one.
+    var separatorY: CGFloat? { didSet { needsDisplay = true } }
     /// Drawn with a note when the desktop has nothing to show, rather than looking like a
     /// dimmed screen that failed to do anything.
     var isEmpty = false
@@ -341,6 +541,10 @@ final class ExposeBackdropView: NSView {
         NSGradient(starting: NSColor(white: 0.22, alpha: 0.88),
                    ending: NSColor(white: 0.09, alpha: 0.92))?
             .draw(in: bounds, angle: -90)
+        if let y = separatorY {
+            NSColor(white: 1, alpha: 0.25).setFill()
+            NSRect(x: 40, y: y, width: bounds.width - 80, height: 1).fill()
+        }
         guard isEmpty else { return }
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont(name: "Lucida Grande", size: 15) ?? .systemFont(ofSize: 15),
@@ -354,7 +558,7 @@ final class ExposeBackdropView: NSView {
     override func mouseDown(with event: NSEvent) { onBackgroundClick?() }
 
     override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 { onEscape?() } else { super.keyDown(with: event) }
+        if onKey?(event.keyCode) != true { super.keyDown(with: event) }
     }
 }
 
@@ -363,6 +567,9 @@ final class ExposeCardView: NSView {
     var item: ExposeController.Item!
     var image: NSImage? { didSet { needsDisplay = true } }
     var onPick: (() -> Void)?
+    var onHover: ((Bool) -> Void)?
+    /// Where its window is, in the sheet's coordinates: the card flies back there on close.
+    var home: NSRect?
     /// How large the thumbnail ends up on screen, so it can be captured at exactly that.
     /// Taken from `contentRect` rather than restated, so it cannot drift from what draw uses.
     var targetSize: NSSize = .zero
@@ -373,7 +580,8 @@ final class ExposeCardView: NSView {
     // needs a second one — which is what a hold-opened Exposé did every single time.
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    private var hot = false { didSet { needsDisplay = true } }
+    /// Highlighted, by the pointer or the arrow keys.
+    var hot = false { didSet { if hot != oldValue { needsDisplay = true } } }
     private var tracker: NSTrackingArea?
 
     override func updateTrackingAreas() {
@@ -450,7 +658,7 @@ final class ExposeCardView: NSView {
                    withAttributes: attrs)
     }
 
-    override func mouseEntered(with event: NSEvent) { hot = true }
-    override func mouseExited(with event: NSEvent) { hot = false }
+    override func mouseEntered(with event: NSEvent) { onHover?(true) }
+    override func mouseExited(with event: NSEvent) { onHover?(false) }
     override func mouseDown(with event: NSEvent) { onPick?() }
 }

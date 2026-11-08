@@ -1551,6 +1551,13 @@ final class DockController {
             return
         }
 
+        // A folder on a dock with stacks: 10.6's Sort by, Display as and View content as first.
+        if ThemeManager.shared.activeTheme?.config.hasFolderStacks == true,
+           let folder = AppManager.shared.apps.first(where: { $0.bundleID == bundleID && $0.isFolder })?.folderPath {
+            appendStackOptions(to: menu, folder: folder)
+            menu.addItem(.separator())
+        }
+
         let isRunning = AppLauncher.isRunning(bundleID: bundleID)
         let isPinned = AppManager.shared.apps.contains(where: { $0.bundleID == bundleID })
 
@@ -1611,6 +1618,35 @@ final class DockController {
             let localPoint = window.convertPoint(fromScreen: point)
             menu.popUp(positioning: nil, at: localPoint, in: window.contentView)
         }
+    }
+
+    private func appendStackOptions(to menu: NSMenu, folder: String) {
+        let opts = StackOptions.load(folder)
+        func group<T: Equatable>(_ title: String, _ values: [T], _ current: T?, _ name: (T) -> String,
+                                 _ set: @escaping (inout StackOptions, T) -> Void) {
+            let sub = NSMenu()
+            for v in values {
+                let item = ClosureMenuItem(title: name(v)) { [weak self] in
+                    var o = StackOptions.load(folder)
+                    set(&o, v)
+                    StackOptions.save(o, for: folder)
+                    self?.dockView?.refreshFolderTile(folder)
+                }
+                item.state = v == current ? .on : .off
+                sub.addItem(item)
+            }
+            let head = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            head.submenu = sub
+            menu.addItem(head)
+        }
+        group("Sort by", StackOptions.Sort.allCases, opts.sort, \.title) { $0.sort = $1 }
+        // Unset means the theme's own choice: Mountain Lion piles, everything else shows the folder.
+        let shown = opts.display ?? ((ThemeManager.shared.activeTheme?.config.hasStackPreview == true
+                                      && folder != "/Applications") ? .stack : .folder)
+        group("Display as", StackOptions.Display.allCases, shown, \.title) { $0.display = $1 }
+        // Fan only where it exists: the Aqua themes, with the dock along the bottom.
+        let views = StackOptions.ViewStyle.allCases.filter { $0 != .fan || DockStackController.shared.fanAllowed }
+        group("View content as", views, opts.view, \.title) { $0.view = $1 }
     }
 
     /// Adds the "Dock Position ▸" submenu (+ Auto-Hide) to any dock context menu.
