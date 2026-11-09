@@ -47,6 +47,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 - **Snow Leopard's desktop says Exposé**, with its accent.
 - **Location no longer claims "Automatic"** on every Mac; the tick sat there whatever was set.
+- **Automation showed as off although it was on.** Settings asked macOS while System Events was
+  not running, and macOS then answers "no such app" whatever the permission. RetroMac starts
+  System Events quietly first (reported on a Mac mini M4).
 
 ## 3.0.3
 

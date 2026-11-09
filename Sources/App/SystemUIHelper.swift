@@ -65,13 +65,33 @@ enum SystemUIHelper {
     /// Whether RetroMac may already send System Events Apple events, asked without putting up
     /// macOS's prompt: at launch the prompt came up unasked, under the welcome window, and
     /// VoiceOver users lost it. False when undecided or refused; `testAutomation` asks.
+    /// Off the main thread: it may wait up to two seconds for System Events to start.
     static func automationAlreadyGranted() -> Bool {
+        let status = systemEventsPermission()
+        // System Events quits when idle, and asked while it is not running macOS answers -600
+        // (no such process) whatever the grant: Settings showed Automation off on a Mac where
+        // System Settings had it on (reported on a Mac mini M4). Start it, quietly, and ask again.
+        guard status == OSStatus(procNotFound) else { return status == noErr }
+        guard let app = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systemevents") else { return false }
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = false; config.hides = true; config.addsToRecentItems = false
+        NSWorkspace.shared.openApplication(at: app, configuration: config)
+        for _ in 0..<20 {
+            Thread.sleep(forTimeInterval: 0.1)
+            let again = systemEventsPermission()
+            if again != OSStatus(procNotFound) { return again == noErr }
+        }
+        return false
+    }
+
+    /// noErr granted, -1743 refused, -1744 not asked yet, -600 System Events not running.
+    static func systemEventsPermission() -> OSStatus {
         var target = AEAddressDesc()
         let id = "com.apple.systemevents"
         let made = id.withCString { AECreateDesc(DescType(typeApplicationBundleID), $0, id.utf8.count, &target) }
-        guard made == noErr else { return false }
+        guard made == noErr else { return OSStatus(made) }
         defer { AEDisposeDesc(&target) }
-        return AEDeterminePermissionToAutomateTarget(&target, AEEventClass(typeWildCard), AEEventID(typeWildCard), false) == noErr
+        return AEDeterminePermissionToAutomateTarget(&target, AEEventClass(typeWildCard), AEEventID(typeWildCard), false)
     }
 
     // MARK: - Menu Bar Auto-Hide
