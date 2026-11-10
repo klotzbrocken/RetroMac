@@ -5,6 +5,7 @@
 // --- Private SkyLight / CoreGraphicsServices prototypes (resolved by linking SkyLight) ---
 extern int SLSMainConnectionID(void);
 extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *outRegion);
+extern CGError CGSNewRegionWithRectList(const CGRect *rects, int count, CFTypeRef *outRegion);
 
 extern CGError SLSNewWindow(int cid, int type, float x, float y, CFTypeRef region, uint32_t *wid);
 extern CGError SLSReleaseWindow(int cid, uint32_t wid);
@@ -125,6 +126,34 @@ CGContextRef skb_create(float w, float h, bool hidpi, uint32_t *out_wid) {
     if (ctx) CGContextSetInterpolationQuality(ctx, kCGInterpolationNone);
     *out_wid = wid;
     return ctx;   // retained (create rule); released by ARC on the Swift side
+}
+
+/// Like skb_set_frame, but the window only covers a ring `edge` wide (and a `corner` square in
+/// each corner, for rounded frames): the inside of the frame is not ours. A full rectangle, even
+/// transparent, sat over the whole framed window, and drag-and-drop took it as the drop target —
+/// files dropped into a framed Finder window went nowhere (reported on 3.0.3).
+void skb_set_ring(uint32_t wid, float x, float y, float w, float h, float edge, float corner) {
+    if (wid == 0) return;
+    int cid = SLSMainConnectionID();
+    if (edge * 2 >= w || edge * 2 >= h) { skb_set_frame(wid, x, y, w, h); return; }
+    float c = corner < edge ? edge : corner;
+    if (c * 2 > w) c = w / 2;
+    if (c * 2 > h) c = h / 2;
+    CGRect rects[8] = {
+        CGRectMake(0, 0, w, edge),              // top
+        CGRectMake(0, h - edge, w, edge),       // bottom
+        CGRectMake(0, 0, edge, h),              // left
+        CGRectMake(w - edge, 0, edge, h),       // right
+        CGRectMake(0, 0, c, c),                 // the four corners
+        CGRectMake(w - c, 0, c, c),
+        CGRectMake(0, h - c, c, c),
+        CGRectMake(w - c, h - c, c, c),
+    };
+    CFTypeRef region = NULL;
+    CGSNewRegionWithRectList(rects, 8, &region);
+    if (!region) { skb_set_frame(wid, x, y, w, h); return; }
+    SLSSetWindowShape(cid, wid, x, y, region);
+    CFRelease(region);
 }
 
 void skb_set_frame(uint32_t wid, float x, float y, float w, float h) {

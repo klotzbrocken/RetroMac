@@ -47,6 +47,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 - **Snow Leopard's desktop says Exposé**, with its accent.
 - **Location no longer claims "Automatic"** on every Mac; the tick sat there whatever was set.
+- **Files dropped into a framed window went nowhere.** The frame RetroMac draws round every
+  window (Windows, NeXTSTEP, CDE, Photon, Mac OS X themes) was a window as large as the one it
+  framed, transparent inside, and drag-and-drop took it as the target: moving or copying by drag
+  into a Finder window did nothing, with no error. The frame's window is now only the ring
+  (reported by a user on Windows 95/98 and NeXTSTEP).
 - **Automation showed as off although it was on.** Settings asked macOS while System Events was
   not running, and macOS then answers "no such app" whatever the permission. RetroMac starts
   System Events quietly first (reported on a Mac mini M4).

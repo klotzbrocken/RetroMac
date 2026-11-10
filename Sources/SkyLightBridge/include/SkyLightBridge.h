@@ -22,6 +22,7 @@ CGContextRef skb_create(float w, float h, bool hidpi, uint32_t *out_wid) __attri
 
 // Resize (and reposition) the border window; `x`,`y` are top-left global (WindowServer) coords.
 void skb_set_frame(uint32_t wid, float x, float y, float w, float h);
+void skb_set_ring(uint32_t wid, float x, float y, float w, float h, float edge, float corner);
 // Fast reposition only (no reshape) — for smooth dragging.
 void skb_move(uint32_t wid, float x, float y);
 // Move several of our windows in one transaction, so they reach the screen in the same frame.

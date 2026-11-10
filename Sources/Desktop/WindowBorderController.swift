@@ -324,7 +324,12 @@ final class WindowBorderController {
         b.barAbove = bar
         b.pid = pid
         b.onSpace = (skb_send_to_space(b.wid, target) != 0)   // a fresh window is on no space → invisible
-        skb_set_frame(b.wid, Float(f.minX), Float(f.minY), Float(f.width), Float(f.height))
+        // Only the ring is ours, not the window inside it: a full-size frame window, transparent or
+        // not, was where drag-and-drop dropped anything let go over the framed window. Two points
+        // more than the frame for antialiasing and the glow, and corners deep enough for a rounded
+        // frame's inner curve.
+        let edge = currentStyle.width + 2
+        skb_set_ring(b.wid, Float(f.minX), Float(f.minY), Float(f.width), Float(f.height), Float(edge), Float(edge + 12))
         b.origin = f.origin
         skb_order(b.wid, level, target)
         b.level = level
