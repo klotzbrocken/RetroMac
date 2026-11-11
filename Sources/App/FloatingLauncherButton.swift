@@ -25,6 +25,12 @@ final class FloatingLauncherButton {
 
     func hide() { window?.orderOut(nil) }
 
+    /// A theme's dock or taskbar came up or moved: a button the user never dragged steps aside.
+    func dockChanged() {
+        guard window?.isVisible == true, UserDefaults.standard.string(forKey: posKey) == nil else { return }
+        positionIfNeeded()
+    }
+
     /// Redraw the icon (e.g. after the shader active-state changes the menu-bar glyph).
     func refreshIcon() { window?.contentView?.needsDisplay = true }
 
@@ -68,9 +74,16 @@ final class FloatingLauncherButton {
                 return
             }
         }
-        // Default: bottom-right corner of the main screen.
-        if let vf = NSScreen.main?.visibleFrame {
-            win.setFrameOrigin(NSPoint(x: vf.maxX - side - 20, y: vf.minY + 20))
+        // Default: bottom-right corner of the main screen, clear of the theme's own dock or
+        // taskbar — NeXTSTEP's dock runs down the right edge, and the button sat on its recycler.
+        if let screen = NSScreen.main {
+            let vf = screen.visibleFrame
+            var origin = NSPoint(x: vf.maxX - side - 20, y: vf.minY + 20)
+            for dock in [DockController.shared.visibleDockFrame(on: screen), NextDockController.shared.visibleFrame].compactMap({ $0 }) {
+                guard NSRect(origin: origin, size: NSSize(width: side, height: side)).intersects(dock) else { continue }
+                if dock.height > dock.width { origin.x = dock.minX - side - 20 } else { origin.y = dock.maxY + 20 }
+            }
+            win.setFrameOrigin(origin)
         }
     }
 

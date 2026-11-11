@@ -52,6 +52,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   framed, transparent inside, and drag-and-drop took it as the target: moving or copying by drag
   into a Finder window did nothing, with no error. The frame's window is now only the ring
   (reported by a user on Windows 95/98 and NeXTSTEP).
+- **The floating button keeps clear of the theme's dock.** Placed bottom right by default, it sat
+  on NeXTSTEP's recycler and over the Windows taskbar; it now steps aside of the dock or taskbar
+  until you drag it somewhere yourself.
 - **Automation showed as off although it was on.** Settings asked macOS while System Events was
   not running, and macOS then answers "no such app" whatever the permission. RetroMac starts
   System Events quietly first (reported on a Mac mini M4).

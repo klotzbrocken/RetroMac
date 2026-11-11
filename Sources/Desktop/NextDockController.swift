@@ -10,6 +10,8 @@ final class NextDockController {
 
     static let shared = NextDockController()
     private var window: NSPanel?
+    /// Where the dock column is on screen, while it is up.
+    var visibleFrame: NSRect? { window?.isVisible == true ? window?.frame : nil }
     private var view: NextDockView?
     private init() {}
 
@@ -58,6 +60,7 @@ final class NextDockController {
         // Full-height strip flush to the right edge.
         window.setFrame(NSRect(x: f.maxX - NextDockView.width, y: f.minY, width: NextDockView.width, height: f.height), display: true)
         view?.frame = NSRect(x: 0, y: 0, width: NextDockView.width, height: f.height)
+        FloatingLauncherButton.shared.dockChanged()
         view?.needsDisplay = true
     }
 }

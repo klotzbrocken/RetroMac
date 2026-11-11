@@ -632,6 +632,7 @@ final class DockController {
         repositionWindow()
         window?.orderFrontRegardless()
         isVisible = true
+        FloatingLauncherButton.shared.dockChanged()
         if AppSettings.shared.dockHideSystemDock && !didHideSystemDock {
             applySystemDockPolicy()
         }
