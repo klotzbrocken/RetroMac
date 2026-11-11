@@ -58,6 +58,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Automation showed as off although it was on.** Settings asked macOS while System Events was
   not running, and macOS then answers "no such app" whatever the permission. RetroMac starts
   System Events quietly first (reported on a Mac mini M4).
+- **RetroMac could crash when switching themes.** The dock closed its watch on the Trash twice;
+  the second close could hit a file another part of RetroMac had just opened, and reading it
+  then ended the app ("Bad file descriptor", reported from the menu bar's theme switch).
 
 ## 3.0.3
 

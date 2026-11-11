@@ -52,7 +52,6 @@ final class DockView: NSView {
     private var magnificationTrackingArea: NSTrackingArea?
     private var startMenuPanel: StartMenuPanel?
     private var trashMonitorSource: DispatchSourceFileSystemObject?
-    private var trashDirectoryFD: Int32 = -1
     private var trashPollTimer: Timer?
     private var trashEmptyCached = true   // updated off-main via refreshTrashState()
     var magnificationOverflow: CGFloat = 0
@@ -605,7 +604,6 @@ final class DockView: NSView {
         emberRim.teardown()
         trashPollTimer?.invalidate()
         trashMonitorSource?.cancel()
-        if trashDirectoryFD >= 0 { close(trashDirectoryFD) }
         let wsNC = NSWorkspace.shared.notificationCenter
         if let obs = wsObserver { wsNC.removeObserver(obs) }
         if let obs = wsTerminateObserver { wsNC.removeObserver(obs) }
@@ -703,7 +701,6 @@ final class DockView: NSView {
         guard let trashURL = try? FileManager.default.url(for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else { return }
         let fd = Darwin.open(trashURL.path, O_EVTONLY)
         guard fd >= 0 else { return }   // fs-monitor is optional; poll already covers us
-        trashDirectoryFD = fd
 
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
