@@ -61,6 +61,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **RetroMac could crash when switching themes.** The dock closed its watch on the Trash twice;
   the second close could hit a file another part of RetroMac had just opened, and reading it
   then ended the app ("Bad file descriptor", reported from the menu bar's theme switch).
+- **One launcher at a time.** With RetroMac in the Dock, its Dock icon and the floating button
+  each opened their own launcher, and both could be on screen at once. Opening one now closes
+  the other.
 
 ## 3.0.3
 

@@ -32,6 +32,7 @@ final class LauncherController {
     /// Open the popover. When `anchorRect` (screen coords, e.g. the floating button's frame)
     /// is given, the popover hangs next to it instead of centring above the Dock.
     func open(anchorRect: NSRect? = nil) {
+        closeWindow()   // one launcher at a time: the Dock icon's window gives way to the popover
         if panel == nil { buildPanel() }
         guard let panel = panel else { return }
         if let rect = anchorRect { position(panel, near: rect) } else { position(panel) }
@@ -48,6 +49,7 @@ final class LauncherController {
     // MARK: - Window mode (Dock Mode: a real, movable, persistent window)
 
     func openWindow() {
+        close()   // ...and the floating button's popover to the Dock icon's window
         if window == nil { buildWindow() }
         guard let window = window else { return }
         window.makeKeyAndOrderFront(nil)
