@@ -118,32 +118,30 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Snow Leopard\u{2019}s Apple menu, and the dock put right")
+                Text("Stacks, Exposé and Launchpad as in Snow Leopard, and Mac OS X 10.0 as in 2001")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("square.stack.3d.up.fill", .blue, "Stacks show everything",
+                            "A dock folder\u{2019}s stack lists the whole folder, scrolls, and opens a folder inside it with a back arrow. Its right-click has Snow Leopard\u{2019}s Sort by, Display as and View content as: Fan, Grid, List or Automatic, which fans out while everything fits.")
+                    feature("rectangle.3.group.fill", .indigo, "Exposé, as in 10.6",
+                            "Space shows the highlighted window at full size, the arrow keys move between windows and Return brings one forward. Held on a dock icon, it lists the app\u{2019}s minimised windows in a row of their own.")
+                    feature("square.grid.3x3.fill", .purple, "Launchpad keeps your order",
+                            "Drag an icon to move it, hold it at an edge for the next page. The order stays, Utilities and the like are in the grid, and the arrow keys and Return work.")
+                    feature("info.circle.fill", .teal, "About This Mac of 2001",
+                            "Mac OS X 10.0 and Mac OS 9 open the About windows of their day from the Apple menu, filled with this Mac: version, memory, processor, and on Mac OS 9 the open apps with a memory bar each.")
+                    feature("clock.arrow.circlepath", .gray, "Mac OS X 10.0 keeps to 2001",
+                            "Dashboard is off its desktop, the later wallpapers say which version they come from, and Location lists your Mac\u{2019}s real network locations and switches between them.")
+                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
+                            "Files dropped into a window with a frame (Windows, NeXTSTEP and others) arrive again. RetroMac no longer crashes now and then when you switch themes. Automation no longer shows as off when it is on. The floating button keeps clear of the theme\u{2019}s dock or taskbar. Widget windows only show the buttons they have.")
+
+                    sectionHeader("Also in 3.0.3")
+
                     feature("apple.logo", .blue, "Snow Leopard\u{2019}s Apple menu",
                             "The Apple in the menu bar opens the menu of Mac OS X 10.6, row for row: Software Update, Mac OS X Software, Dock, Location, Recent Items, Force Quit with the front app\u{2019}s name, and Log Out with yours.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
                             "A click on a running app\u{2019}s tile in the dock brings its window forward again. VoiceOver reaches the menu-bar menu again. Turning dock magnification on no longer cuts the icons off. On Mountain Lion, Applications is a folder in the dock again and folders in the Downloads pile look their age.")
-
-                    sectionHeader("Also in 3.0.2")
-
-                    feature("speaker.wave.2.fill", .orange, "Sounds",
-                            "Settings \u{25B8} Sounds, for a Mac that makes no sound of its own: keys that click (subtle, clicky or a typewriter with its bell), a hard drive that spins up and seeks when the disk is really busy, from a 1986 stepper to a 15K server, and a fan that rises with the CPU. All off until you turn them on, quiet while a microphone records, and the drive counts disk activity and nothing else. Under XP, Vista and 7 a chime greets a USB device.")
-                    feature("macwindow.on.rectangle", .blue, "Windows 7, as it worked",
-                            "Aero Snap: drag a window to an edge for half the screen, to the top for all of it. Aero Shake hides the other apps, Aero Peek shows the desktop through the windows from the strip at the end of the taskbar. Type in the Start menu to find a program, work out a sum or open a web address, and right-click a taskbar button for its menu. A tap of Left \u{2318} can open Start.")
-                    feature("rectangle.bottomthird.inset.filled", .teal, "Windows stay clear of the taskbar",
-                            "A window that comes to rest under the dock or taskbar moves out from under it, as on the real systems; it never fights you or an app.")
-                    feature("cube.fill", .gray, "NeXTSTEP\u{2019}s windows",
-                            "Every window wears the NeXT title bar, black when it is the key window, miniaturize left and close right, and a miniaturized window leaves its miniwindow on the workspace.")
-                    feature("terminal.fill", .green, "The Command Prompt",
-                            "Under the Windows themes Terminal\u{2019}s prompt reads C:\\Users\\you>, with your own shell settings untouched.")
-                    feature("gamecontroller.fill", .red, "Desktop Games",
-                            "The stress reducer of 2000 in RetroHub \u{25B8} Apps: wreck a picture of your screen with a hammer, a chainsaw and termites. Once installed it sits on the Windows 95 to XP desktops as stress.exe.")
-                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "A click on another app\u{2019}s taskbar button brings its window to the front again, not behind the one in front. Mac OS 8 and 9 draw inactive title bars flat, as they did. Picking a theme with square corners offers to restart the apps that were open, so they take them too.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
