@@ -45,8 +45,7 @@ final class DiagnosticsLog {
         dup2(pipe.fileHandleForWriting.fileDescriptor, fd)
         let orig = keep
         pipe.fileHandleForReading.readabilityHandler = { [weak self] h in
-            let data = h.availableData
-            guard !data.isEmpty else { return }
+            guard let data = h.availableBytes() else { h.readabilityHandler = nil; return }
             data.withUnsafeBytes { _ = write(orig, $0.baseAddress, data.count) }   // tee back out
             if let s = String(data: data, encoding: .utf8) { self?.ingest(s) }
         }
@@ -112,5 +111,16 @@ final class DiagnosticsLog {
             s += "  • \(scr.localizedName) id=\(id) \(Int(f.width))x\(Int(f.height)) @\(scr.backingScaleFactor)x\(main)\n"
         }
         return s
+    }
+}
+
+extension FileHandle {
+    /// What `availableData` returns, without its Objective-C exception: that one cannot be
+    /// caught in Swift, and a pipe whose descriptor went bad ("Bad file descriptor") took the
+    /// whole app down on a theme switch. nil at the end of the stream or on an error.
+    func availableBytes() -> Data? {
+        var buf = [UInt8](repeating: 0, count: 65536)
+        let n = Darwin.read(fileDescriptor, &buf, buf.count)
+        return n > 0 ? Data(buf[0..<n]) : nil
     }
 }

@@ -88,6 +88,18 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **RetroMac could crash when switching themes.** The dock closed its watch on the Trash twice;
   the second close could hit a file another part of RetroMac had just opened, and reading it
   then ended the app ("Bad file descriptor", reported from the menu bar's theme switch).
+- **Time Machine restores work again with Classic Finder on.** Its themes also set the Mac's
+  sidebar corner radius (`NSSplitViewItemGlassMinimumCornerRadius`) for every app, and with it a
+  restore showed as done but put nothing back. RetroMac no longer sets it and puts back the
+  user's own value on the next theme switch or launch (reported on macOS 27.2 with Windows 98).
+- **Window frames and title bars no longer flash in Photos.** RetroMac took any element an app
+  removes for a closed window; Photos removes its player's views when a video is selected, and
+  the frame and bar of its window went and came back. A window now counts as gone only when the
+  WindowServer no longer has it (reported with Windows 9x and Mac OS 8 Copland).
+- **A click on the desktop brings the Finder to the front**, as on the Mac. RetroMac's desktop
+  icon layer took the click.
+- **The log keeps a crash's last lines at its end.** Error output started writing at the top of
+  the log file and overwrote its first lines.
 - **One launcher at a time.** With RetroMac in the Dock, its Dock icon and the floating button
   each opened their own launcher, and both could be on screen at once. Opening one now closes
   the other.

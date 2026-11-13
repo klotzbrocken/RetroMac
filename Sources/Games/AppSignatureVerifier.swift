@@ -37,7 +37,7 @@ enum AppSignatureVerifier {
         p.standardOutput = FileHandle.nullDevice
         do { try p.run() } catch { return (nil, nil) }
         // Read BEFORE waitUntilExit so a large output can't deadlock on a full pipe buffer.
-        let data = err.fileHandleForReading.readDataToEndOfFile()
+        let data = (try? err.fileHandleForReading.readToEnd()) ?? Data()
         p.waitUntilExit()
         let text = String(data: data, encoding: .utf8) ?? ""
         var team: String?

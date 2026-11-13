@@ -137,7 +137,7 @@ enum WarcraftGame {
                 }
                 return
             }
-            let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let output = String(data: ((try? pipe.fileHandleForReading.readToEnd()) ?? Data()), encoding: .utf8) ?? ""
             p.waitUntilExit()
 
             DispatchQueue.main.async {
@@ -342,8 +342,7 @@ enum WarcraftGame {
         p.standardOutput = outPipe
         var lineBuffer = ""
         outPipe.fileHandleForReading.readabilityHandler = { fh in
-            let data = fh.availableData
-            if data.isEmpty { fh.readabilityHandler = nil; return }
+            guard let data = fh.availableBytes() else { fh.readabilityHandler = nil; return }
             lineBuffer += String(decoding: data, as: UTF8.self)
             while let nl = lineBuffer.firstIndex(of: "\n") {
                 let line = String(lineBuffer[..<nl])

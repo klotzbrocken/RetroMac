@@ -858,7 +858,7 @@ final class HDSpinDownModule: ControlStripModule {
         p.standardOutput = pipe
         p.standardError = FileHandle.nullDevice
         do { try p.run() } catch { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let data = (try? pipe.fileHandleForReading.readToEnd()) ?? Data()
         p.waitUntilExit()
         guard let text = String(data: data, encoding: .utf8) else { return nil }
         for line in text.split(separator: "\n") {

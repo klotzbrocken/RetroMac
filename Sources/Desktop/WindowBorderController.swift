@@ -616,10 +616,15 @@ private func axWindowNotify(_ observer: AXObserver, _ element: AXUIElement,
     let gotWid = (axUIElementGetWindow?(element, &wid) == .success) && wid != 0
     let name = notification as String
     if ProcessInfo.processInfo.environment["RETROMAC_TITLEBAR_STATS"] != nil { controller.countAXNotification(name) }
-    if name == (kAXWindowMiniaturizedNotification as String) || name == (kAXUIElementDestroyedNotification as String) {
-        if gotWid { controller.dropBorder(for: wid) }   // remove the specific border, before the genie
-        else if name == (kAXWindowMiniaturizedNotification as String) { controller.resync() }
+    if name == (kAXUIElementDestroyedNotification as String) {
+        // Any element of the app, not only a window: Photos drops its video player's views when a
+        // video is selected, and those resolve to the window they were in. Dropping that window's
+        // frame and bar made both flash; only a window the server no longer has is gone.
+        if gotWid { if PrivateWindowAPI.bounds(of: wid) == nil { controller.dropBorder(for: wid) } }
         else { controller.dropGone() }                  // a destroyed element rarely resolves; drop what is off screen
+    } else if name == (kAXWindowMiniaturizedNotification as String) {
+        if gotWid { controller.dropBorder(for: wid) }   // remove the specific border, before the genie
+        else { controller.resync() }
     } else {
         controller.resync()                             // de-miniaturized (restored) → re-add its border
     }

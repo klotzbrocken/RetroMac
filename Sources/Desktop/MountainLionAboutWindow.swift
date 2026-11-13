@@ -103,7 +103,7 @@ final class MountainLionAboutWindow: NSObject, NSWindowDelegate {
         p.arguments = ["SPMemoryDataType", "-json"]
         let pipe = Pipe(); p.standardOutput = pipe; p.standardError = FileHandle.nullDevice
         guard (try? p.run()) != nil else { return nil }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let data = (try? pipe.fileHandleForReading.readToEnd()) ?? Data()
         p.waitUntilExit()
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let first = (json["SPMemoryDataType"] as? [[String: Any]])?.first else { return nil }

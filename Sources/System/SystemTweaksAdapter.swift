@@ -28,10 +28,13 @@ enum SystemTweaksAdapter {
     /// use, across the four Apple UI domains. Anything else in a theme's `systemTweaks` is ignored.
     /// This is defense-in-depth behind the built-in-only gate in `apply` — a theme cannot write to
     /// arbitrary domains/keys even if it somehow reaches `reconcile`.
+    /// NSSplitViewItemGlassMinimumCornerRadius is off the list on purpose: set globally it made
+    /// Time Machine restores fail silently (reported on macOS 27.2). Off the list, a tracked
+    /// value is put back on the next reconcile.
     private static let allowedKeys: Set<String> = [
         "-g\tAppleReduceDesktopTinting", "-g\tAppleShowAllExtensions", "-g\tAppleShowScrollBars",
         "-g\tNSAutomaticWindowAnimationsEnabled", "-g\tNSConvolutionOverride1",
-        "-g\tNSScrollAnimationEnabled", "-g\tNSSplitViewItemGlassMinimumCornerRadius",
+        "-g\tNSScrollAnimationEnabled",
         "-g\tNSSplitViewItemSidebarDefaultsToFloatingAppearance", "-g\tNSTableViewDefaultSizeMode",
         "-g\tNSUseAnimatedFocusRing",
         "com.apple.dock\tlaunchanim", "com.apple.dock\tmineffect",

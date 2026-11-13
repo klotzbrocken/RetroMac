@@ -78,7 +78,7 @@ final class StartMenuPanel: NSPanel {
         p.arguments = [".", "-read", "/Users/\(NSUserName())", key]
         let pipe = Pipe(); p.standardOutput = pipe; p.standardError = Pipe()
         do { try p.run() } catch { return "" }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let data = (try? pipe.fileHandleForReading.readToEnd()) ?? Data()
         p.waitUntilExit()
         return String(data: data, encoding: .utf8) ?? ""
     }

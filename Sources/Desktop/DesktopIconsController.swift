@@ -617,6 +617,9 @@ private final class DesktopIconsContentView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         controller?.deselectAll()
+        // This layer covers the real desktop and takes its click, so the Finder never came to
+        // the front the way a click on the desktop brings it on the Mac.
+        NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first?.activate()
         super.mouseDown(with: event)
     }
 

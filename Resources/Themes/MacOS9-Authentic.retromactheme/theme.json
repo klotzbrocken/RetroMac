@@ -24,13 +24,6 @@
       "refresh": "Finder"
     },
     {
-      "domain": "-g",
-      "key": "NSSplitViewItemGlassMinimumCornerRadius",
-      "type": "float",
-      "value": "4",
-      "refresh": "Finder"
-    },
-    {
       "domain": "com.apple.universalaccess",
       "key": "reduceTransparency",
       "type": "bool",

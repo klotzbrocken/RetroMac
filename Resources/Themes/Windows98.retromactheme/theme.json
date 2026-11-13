@@ -282,13 +282,6 @@
       "type": "float",
       "value": "2",
       "refresh": "Finder"
-    },
-    {
-      "domain": "-g",
-      "key": "NSSplitViewItemGlassMinimumCornerRadius",
-      "type": "float",
-      "value": "2",
-      "refresh": "Finder"
     }
   ]
 }

@@ -107,7 +107,7 @@ final class SystemBridge {
         } catch {
             return .failure(.commandFailed("\(path): \(error.localizedDescription)"))
         }
-        let data = out.fileHandleForReading.readDataToEndOfFile()
+        let data = (try? out.fileHandleForReading.readToEnd()) ?? Data()
         task.waitUntilExit()
         let text = String(data: data, encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""

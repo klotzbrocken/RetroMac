@@ -15,8 +15,10 @@ if FileManager.default.fileExists(atPath: logPath) {
     try? FileManager.default.moveItem(atPath: logPath, toPath: prevPath)
 }
 
-freopen(logPath, "w", stdout)
-freopen(logPath, "w", stderr)
+// Append mode: two separate opens with "w" each wrote from their own offset, so anything on
+// stderr (a crash's last words) overwrote the start of the log instead of landing at its end.
+freopen(logPath, "a", stdout)
+freopen(logPath, "a", stderr)
 setbuf(stdout, nil)
 setbuf(stderr, nil)
 
