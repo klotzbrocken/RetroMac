@@ -225,9 +225,15 @@ function drawAnalysis() {
 /// sweeps left to right while a find is examined (spec 5.7). Nothing is drawn without a candidate.
 function drawGraph(kind, c, box) {
   const [x, y, w, h] = box, n = 64, base = y + h;
-  if (!c) return;
-  const r = mulberry((c.seed | 0) ^ 0x5eed), data = [], gray = [];
+  if (!S.started || S.transfer) return;
+  // Without a candidate the red line is the power at the frequency being examined, and no
+  // fit is drawn over it: a missing result is never dressed up as one (ANI-10).
+  const r = mulberry(((c ? c.seed : S.spectrumSeed + S.pass * 131 + Math.floor(S.stepProgress * 8)) | 0) ^ 0x5eed), data = [], gray = [];
   for (let i = 0; i < n; i++) { data.push(r() * .35 + .1); gray.push(r() * .3 + .1); }
+  const top0 = 1.2;
+  if (!c) { const step0 = (arr, color) => { g.strokeStyle = color; g.lineWidth = 1; g.beginPath();
+      arr.forEach((v, i) => { const X = x + i * w / n, Y = base - v / top0 * h; i ? g.lineTo(X, Y) : g.moveTo(X, Y); g.lineTo(X + w / n, Y); }); g.stroke(); };
+    step0(gray, '#6a6a6a'); step0(data, RED); return; }
   const mu = c.t * n, sigma = n / 12;
   if (kind === 'gaussian') for (let i = 0; i < n; i++) data[i] += Math.exp(-((i - mu) ** 2) / (2 * sigma * sigma)) * Math.min(1, c.power / 4);
   if (kind === 'pulse') { const per = n / 2; for (let i = 0; i < n; i++) if ((i + Math.round(c.t * per)) % Math.round(per) < 2) data[i] += .7; }
@@ -274,10 +280,14 @@ function drawSpectrum() {
   box([[Fx + Dx, Fy + Dy], [Fx, Fy], [Fx + sp.W, Fy]]);
   box([[Fx + Dx + sp.W, Fy + Dy - sp.H], [Fx + Dx + sp.W, Fy + Dy], [Fx + sp.W, Fy]]);
 
-  let shown = 0;
-  if (S.started && !S.transfer && S.pass >= 0) shown = S.step === 'Computing Fast Fourier Transform' ? Math.floor(S.stepProgress * rows) : rows;
-  if (S.step === 'Chirping Data') shown = 0;
-  const a = spectrum(S.spectrumSeed, Math.max(0, S.pass), rows), c = S.current;
+  // Rows build up while an FFT runs; between FFTs (smoothing, chirping, the searches) the last
+  // complete spectrum stays up. Nothing before the data has arrived or while it goes back.
+  let shown = 0, pass = Math.max(0, S.pass);
+  if (S.started && !S.transfer && S.step !== 'Scanning Result Header File') {
+    if (S.step === 'Computing Fast Fourier Transform') shown = Math.floor(S.stepProgress * rows);
+    else { shown = rows; if (S.step === 'Chirping Data' && S.pass > 0) pass = S.pass - 1; }
+  }
+  const a = spectrum(S.spectrumSeed, pass, rows), c = S.current;
   const bw = sp.W / BINS;
   for (let r = rows - 1; r >= rows - shown; r--) {          // back to front, so the front covers the back
     const t = r / (rows - 1);
@@ -313,7 +323,9 @@ function draw() {
 function layout() {
   const mh = menubar.hidden ? 0 : 21, W = P.w, H = P.h + mh;
   cv.width = P.w; cv.height = P.h;
-  const fit = Math.min(innerWidth / W, innerHeight / H), k = fit >= 1 ? Math.floor(fit) : fit;
+  // A window keeps whole multiples where it can (sharp pixels); the screensaver fills the
+  // screen, black only where the proportions differ (spec 3.3).
+  const fit = Math.min(innerWidth / W, innerHeight / H), k = (fit >= 1 && !saver) ? Math.floor(fit) : fit;
   stage.style.width = W + 'px'; stage.style.height = H + 'px';
   stage.style.transform = `scale(${k})`;
   stage.style.left = Math.round((innerWidth - W * k) / 2) + 'px'; stage.style.top = Math.round((innerHeight - H * k) / 2) + 'px';
@@ -322,13 +334,13 @@ function layout() {
 addEventListener('resize', layout);
 
 // ---------- state from RetroMac ----------
-let lastSaid = '', blankTimer = null, shownSince = Date.now();
+let lastSaid = '', shownSince = Date.now(), lastSaver = null;
 window.setiState = function (s, isSaver) {
   const first = !S;
   S = s; saver = isSaver;
   const prof = s.profile in L ? s.profile : 'windows';
-  if (prof !== theme || first) {
-    theme = prof; P = L[prof];
+  if (prof !== theme || first || saver !== lastSaver) {
+    theme = prof; P = L[prof]; lastSaver = saver;
     document.body.className = (saver ? 'saver ' : '') + prof + (s.theme === 'win98' ? ' win98' : '');
     menubar.hidden = saver || prof !== 'windows';
     layout();

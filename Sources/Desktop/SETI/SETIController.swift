@@ -121,7 +121,7 @@ final class SETIController: NSObject, WKScriptMessageHandler {
         windowWanted = true
         let mac = profile != "windows"
         WebAppController.open(name: mac ? "SETI@home Client" : "SETI@Home Client", url: html.path,
-                              width: mac ? 769 : 760, height: mac ? 478 : 491, titleOnly: true, messageHandler: ("seti", self))
+                              width: mac ? 769 : 760, height: mac ? 478 : 491, icon: "seti.png", titleOnly: true, messageHandler: ("seti", self))
     }
 
     /// The screensaver's web view on each screen (ScreensaverController).

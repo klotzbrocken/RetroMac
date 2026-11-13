@@ -20,8 +20,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   is what the client was searching for; it never claims anything was found, and can be switched
   off or set rarer or more often. Historical and demonstration speed (a unit in about four
   minutes). The main view is measured off two contemporary screenshots; the logo, menus and
-  dialogs are reconstructions, listed in `docs/SETI.md`. Nothing is analysed and nothing goes
+  dialogs are reconstructions, listed in `docs/SETI.md`. The graphs stay up through every step
+  of the analysis, and the screensaver fills the screen. Nothing is analysed and nothing goes
   over the network.
+- **SETI@home on the Windows desktops.** Windows 95, 98, Me and XP have a SETI@home icon on the
+  desktop and in the Start menu's Programs, and the window wears it in its title bar.
 - **A screensaver ends on purpose.** A small nudge of the mouse no longer ends it, and the click
   that does stays on the screensaver instead of landing on the window underneath.
 
@@ -62,6 +65,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   systems did for a window that could not use them.
 
 ### Fixes
+
+- **Downloads and Applications left the Windows taskbars.** Pinned by a theme with stacks (Snow
+  Leopard, Mountain Lion), they are taken out again in a theme without them. RetroMac and RetroMac
+  Dev share one dock list but remembered separately which folders they had pinned, so the other
+  one's Downloads and Applications stayed in the quick launch and the Start menu. The mark now
+  sits on the item itself, and either app's note counts.
 
 - **Snow Leopard's desktop says Exposé**, with its accent.
 - **Location no longer claims "Automatic"** on every Mac; the tick sat there whatever was set.

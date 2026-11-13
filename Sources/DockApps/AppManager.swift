@@ -107,10 +107,15 @@ final class AppManager {
     private func syncAutoFolder(path: String, flag: String, active: Bool) {
         let id = "__folder__\(path)"
         let present = apps.contains { $0.bundleID == id }
-        let added = UserDefaults.standard.bool(forKey: flag)
+        // Pinned by a stack theme in this app, or in the other RetroMac (release or dev), which
+        // shares the list but not the flag: the dev build on Windows XP kept the release build's
+        // Downloads and Applications in its quick launch and Start menu.
+        let other = Bundle.main.bundleIdentifier == "com.retromac.app.dev" ? "com.retromac.app" : "com.retromac.app.dev"
+        let added = UserDefaults.standard.bool(forKey: flag) || UserDefaults(suiteName: other)?.bool(forKey: flag) == true
+            || apps.contains { $0.bundleID == id && $0.auto == true }
         if active {
             guard !present, FileManager.default.fileExists(atPath: path) else { return }
-            apps.append(DockApp(bundleID: id, customIconPath: nil, order: apps.count, folderPath: path))
+            apps.append(DockApp(bundleID: id, customIconPath: nil, order: apps.count, folderPath: path, auto: true))
             UserDefaults.standard.set(true, forKey: flag)
             save()
             NotificationCenter.default.post(name: .dockAppsChanged, object: nil)

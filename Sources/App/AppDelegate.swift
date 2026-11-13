@@ -288,6 +288,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_SETI"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { SETIController.shared.showWindow() }
                 }
+                if ProcessInfo.processInfo.environment["RETROMAC_SETI_SAVER"] != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { ScreensaverController.shared.start(saverID: "seti") }
+                }
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_APPS"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         CPUMonitorController.shared.show()

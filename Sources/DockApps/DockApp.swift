@@ -8,6 +8,9 @@ struct DockApp: Codable, Identifiable, Equatable {
     var customIconPath: String?
     var order: Int
     var folderPath: String?  // non-nil = this is a folder item, not an app
+    /// Pinned by a stack theme (Downloads, Applications), not by the user: it goes again in a
+    /// theme without stacks. Kept in the item because RetroMac and RetroMac Dev share this list.
+    var auto: Bool? = nil
 
     var id: String { bundleID }
 

@@ -127,6 +127,13 @@
   "desktopIconsSide": "left",
   "desktopIcons": [
     {
+      "name": "SETI@home",
+      "icon": "seti.png",
+      "type": "seti",
+      "gridX": 1,
+      "gridY": 8
+    },
+    {
       "name": "My Computer",
       "icon": "computer.png",
       "type": "folder",

@@ -4911,7 +4911,7 @@ final class DockView: NSView {
         // SETI@home Classic, where the Windows client ran (95 to XP).
         if ["win98", "winxp"].contains(RetroFrameTheme.key()) {
             programItems.append(MI(separator: true))
-            programItems.append(MI(title: "SETI@home", icon: SETIController.telescopeImage(), action: {
+            programItems.append(MI(title: "SETI@home", icon: startMenuIcon("seti.png") ?? SETIController.telescopeImage(), action: {
                 SETIController.shared.showWindow()
             }))
         }
