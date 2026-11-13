@@ -118,11 +118,13 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Stacks, Exposé and Launchpad as in Snow Leopard, and Mac OS X 10.0 as in 2001")
+                Text("SETI@home Classic, Stacks, Exposé and Launchpad as in Snow Leopard, and Mac OS X 10.0 as in 2001")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("antenna.radiowaves.left.and.right", .green, "SETI@home Classic",
+                            "The search for signals of 1999 to 2005, simulated and offline: a window, a background task and a screensaver share one work unit, with the spectrum, the graphs and the occasional peak worth a second look. In the Windows 95 to XP Start menus and on their desktops, and in the menu bar of System 7.1, Mac OS 8/9 and Mac OS X 10.0.")
                     feature("square.stack.3d.up.fill", .blue, "Stacks show everything",
                             "A dock folder\u{2019}s stack lists the whole folder, scrolls, and opens a folder inside it with a back arrow. Its right-click has Snow Leopard\u{2019}s Sort by, Display as and View content as: Fan, Grid, List or Automatic, which fans out while everything fits.")
                     feature("rectangle.3.group.fill", .indigo, "Exposé, as in 10.6",
@@ -134,7 +136,7 @@ struct WelcomeFlowView: View {
                     feature("clock.arrow.circlepath", .gray, "Mac OS X 10.0 keeps to 2001",
                             "Dashboard is off its desktop, the later wallpapers say which version they come from, and Location lists your Mac\u{2019}s real network locations and switches between them.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "Files dropped into a window with a frame (Windows, NeXTSTEP and others) arrive again. RetroMac no longer crashes now and then when you switch themes. Automation no longer shows as off when it is on. The floating button keeps clear of the theme\u{2019}s dock or taskbar. Widget windows only show the buttons they have.")
+                            "Files dropped into a window with a frame (Windows, NeXTSTEP and others) arrive again. Time Machine restores work with Classic Finder on. Frames and title bars no longer flash in Photos, and a click on the desktop brings the Finder forward. RetroMac no longer crashes now and then when you switch themes. Automation no longer shows as off when it is on. The floating button keeps clear of the theme\u{2019}s dock or taskbar. Widget windows only show the buttons they have.")
 
                     sectionHeader("Also in 3.0.3")
 
