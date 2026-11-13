@@ -100,15 +100,16 @@ const L = {
     frame: { top: 44, bottom: 220, band: 8, vx: 413, vw: 30, div: 136, left: 6, right: 745 },
     da: { title: [209, 67], x: 11, y: 81, pct: 261, bar: [291, 76, 100, 6], graph: [11, 115, 390, 50], ov: [11, 172, 381, 28], ovText: 212, cpuX: 228 },
     di: { title: [594, 67], x: 453, y: 81 }, ui: { title: [594, 159], x: 453, y: 173 },
-    sp: { F: [174, 400], W: 528, D: [-116, -40], H: 120, rows: 40,
+    sp: { F: [174, 400], W: 528, D: [-116, -40], H: 120, rows: 40, amp: .55,
           labels: { tMax: [21, 353], tName: [56, 387], tZero: [143, 419], f0: [186, 433], fName: [421, 433], fMax: [686, 433], power: [713, 413], arrow: [731, 395, 365] } } },
   mac: { w: 765, h: 456, font: '12px Geneva_9, Geneva, sans-serif', bold: 'bold 12px Geneva_9, Geneva, sans-serif', line: 13,
     version: '2.01', head: { x: 5, y: 2 }, f1: false,
     frame: { top: 46, bottom: 196, band: 7, vx: 420, vw: 28, div: 127, left: 12, right: 752 },
     da: { title: [215, 68], x: 17, y: 80, pct: 268, bar: [300, 75, 108, 6], graph: [17, 110, 390, 40], ov: [17, 160, 380, 22], ovText: 197, cpuX: 224 },
     di: { title: [598, 68], x: 460, y: 80 }, ui: { title: [598, 148], x: 460, y: 160 },
-    sp: { F: [65, 427], W: 575, D: [80, -100], H: 110, rows: 40, mac: true,
-          labels: { tMax: [720, 327], tName: [700, 364], tZero: [636, 422], f0: [72, 438], fName: [320, 438], fMax: [575, 438], power: [22, 432], arrow: [35, 418, 392] } } },
+    // Measured off the Macintosh client in full screen (its spectrum box and labels).
+    sp: { F: [62, 432], W: 539, D: [107, -88], H: 119, rows: 40, mac: true, amp: .75,
+          labels: { tMax: [716, 346], tName: [664, 389], tZero: [628, 428], f0: [64, 449], fName: [308, 449], fMax: [548, 449], power: [21, 425], arrow: [35, 412, 376] } } },
 };
 L.macosx = Object.assign({}, L.mac, { version: '3.07' });
 
@@ -118,12 +119,12 @@ const PURPLE = '#AB82FF', RED = '#F62400';
 // ---------- deterministic noise ----------
 function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
   t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-let specKey = '', spec = null; const BINS = 240;
+let specKey = '', spec = null; const BINS = 300;
 function spectrum(seed, pass, rows) {
   const key = seed + ':' + pass + ':' + rows;
   if (key === specKey) return spec;
   const r = mulberry((seed * 31 + pass * 977) | 0), a = new Float32Array(rows * BINS);
-  for (let i = 0; i < a.length; i++) { const u = r(); a[i] = -Math.log(1 - u * 0.999) * 0.22 + (r() < 0.01 ? r() * 0.6 : 0); }
+  for (let i = 0; i < a.length; i++) { const u = r(); a[i] = -Math.log(1 - u * 0.999) * 0.3 + (r() < 0.015 ? r() * 0.7 : 0); }
   specKey = key; spec = a; return a;
 }
 
@@ -265,7 +266,7 @@ function drawInfo() {
   text(`Total computer time: ${hms(S.user.cpu)}`, ui.x, ui.y + 2 * ln);
 }
 
-const STOPS = [[0, [255, 48, 80]], [.45, [154, 55, 255]], [.68, [3, 45, 221]], [1, [0, 211, 229]]];
+const STOPS = [[0, [255, 20, 50]], [.3, [255, 40, 200]], [.5, [150, 40, 255]], [.7, [20, 50, 235]], [1, [0, 220, 230]]];
 function hue(f) { for (let i = 1; i < STOPS.length; i++) if (f <= STOPS[i][0]) { const [a, ca] = STOPS[i - 1], [b, cb] = STOPS[i], t = (f - a) / (b - a);
   return ca.map((v, k) => Math.round(v + (cb[k] - v) * t)); } return STOPS[STOPS.length - 1][1]; }
 
@@ -276,9 +277,13 @@ function drawSpectrum() {
   const sp = P.sp, [Fx, Fy] = sp.F, [Dx, Dy] = sp.D, rows = sp.rows, L2 = sp.labels;
   g.strokeStyle = '#d0d0d0'; g.lineWidth = 1;
   const box = (pts) => { g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(a + .5, b + .5) : g.moveTo(a + .5, b + .5)); g.stroke(); };
-  box([[Fx + Dx, Fy + Dy], [Fx + Dx, Fy + Dy - sp.H], [Fx + Dx + sp.W, Fy + Dy - sp.H], [Fx + sp.W, Fy - sp.H], [Fx + sp.W, Fy]]);
-  box([[Fx + Dx, Fy + Dy], [Fx, Fy], [Fx + sp.W, Fy]]);
-  box([[Fx + Dx + sp.W, Fy + Dy - sp.H], [Fx + Dx + sp.W, Fy + Dy], [Fx + sp.W, Fy]]);
+  if (sp.mac) {
+    // Depth to the back right: the left face, the back's top and right edge, the floor's edge.
+    box([[Fx, Fy], [Fx, Fy - sp.H], [Fx + Dx, Fy + Dy - sp.H], [Fx + Dx + sp.W, Fy + Dy - sp.H], [Fx + Dx + sp.W, Fy + Dy], [Fx + sp.W, Fy], [Fx, Fy]]);
+  } else {
+    box([[Fx + Dx, Fy + Dy], [Fx + Dx, Fy + Dy - sp.H], [Fx + Dx + sp.W, Fy + Dy - sp.H], [Fx + sp.W, Fy - sp.H], [Fx + sp.W, Fy]]);
+    box([[Fx + Dx, Fy + Dy], [Fx, Fy], [Fx + sp.W, Fy]]);
+  }
 
   // Rows build up while an FFT runs; between FFTs (smoothing, chirping, the searches) the last
   // complete spectrum stays up. Nothing before the data has arrived or while it goes back.
@@ -293,17 +298,19 @@ function drawSpectrum() {
     const t = r / (rows - 1);
     for (let b = 0; b < BINS; b++) {
       const f = b / (BINS - 1);
-      let h = Math.min(sp.H, a[r * BINS + b] * sp.H * .55);
+      let h = Math.min(sp.H, a[r * BINS + b] * sp.H * sp.amp);
       // The find: one narrow peak at its frequency and time, rising over 3 s to well above the noise.
       if (c && c.age >= 0 && b === Math.round(c.f * (BINS - 1)) && r === Math.round(c.t * (rows - 1)))
         h = Math.max(h, Math.min(1, c.age / 3) * sp.H * Math.min(1, .55 + c.power / 20));
       if (h < 1) continue;
       const x = Fx + f * sp.W + t * Dx, y = Fy + t * Dy, col = hue(f);
-      const shade = .55 + .45 * (1 - t);
+      // Saturated columns, each with a dark edge on its left: the comb the originals drew.
+      const shade = .85 + .15 * (1 - t);
       g.fillStyle = `rgb(${col[0] * shade | 0},${col[1] * shade | 0},${col[2] * shade | 0})`;
-      g.fillRect(x, y - h, Math.max(1, bw), h);
-      g.fillStyle = `rgb(${Math.min(255, col[0] + 90)},${Math.min(255, col[1] + 90)},${Math.min(255, col[2] + 90)})`;
-      g.fillRect(x, y - h, Math.max(1, bw), 1);
+      g.fillRect(x, y - h, bw + .5, h);
+      g.fillStyle = '#000'; g.fillRect(x, y - h, .6, h);
+      g.fillStyle = `rgb(${Math.min(255, col[0] + 70)},${Math.min(255, col[1] + 70)},${Math.min(255, col[2] + 70)})`;
+      g.fillRect(x, y - h, bw, 1);
     }
   }
   text('107.4', L2.tMax[0], L2.tMax[1]); text('Time (sec)', L2.tName[0], L2.tName[1]); text('0', L2.tZero[0], L2.tZero[1]);
