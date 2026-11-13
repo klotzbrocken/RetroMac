@@ -1038,6 +1038,12 @@ final class AppSettings: ObservableObject {
             if let data = try? JSONEncoder().encode(sounds) { defaults.set(data, forKey: "sounds") }
         }
     }
+    /// The SETI@home Classic simulation (Settings ▸ Themes ▸ Screensaver).
+    @Published var seti: SETIPrefs {
+        didSet {
+            if let data = try? JSONEncoder().encode(seti) { defaults.set(data, forKey: "seti") }
+        }
+    }
     /// The red "simulated crash" badge. On by default and deliberately hard to argue with:
     /// somebody walking past the desk should not think the machine has died.
     @Published var crashShowBadge: Bool {
@@ -1463,6 +1469,7 @@ final class AppSettings: ObservableObject {
         win7Shake = defaults.object(forKey: "win7Shake") as? Bool ?? true
         win7Peek = defaults.object(forKey: "win7Peek") as? Bool ?? true
         sounds = defaults.data(forKey: "sounds").flatMap(SoundPrefs.load) ?? SoundPrefs()
+        seti = defaults.data(forKey: "seti").flatMap { decodeOverDefaults($0, SETIPrefs()) } ?? SETIPrefs()
         crashShowBadge = defaults.object(forKey: "crashShowBadge") as? Bool ?? true
         crashFullSequence = defaults.object(forKey: "crashFullSequence") as? Bool ?? true
         crashGlitches = defaults.object(forKey: "crashGlitches") as? Bool ?? true

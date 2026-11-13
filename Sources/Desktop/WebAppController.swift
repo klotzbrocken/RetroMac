@@ -14,7 +14,9 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 
     private static var openWindows: [String: WebAppController] = [:]
 
-    static func open(name: String, url rawURL: String, width: CGFloat, height: CGFloat, icon: String? = nil, titleOnly: Bool = false) {
+    /// `messageHandler`: a bundled page's own bridge to the app (SETI@home), local pages only.
+    static func open(name: String, url rawURL: String, width: CGFloat, height: CGFloat, icon: String? = nil, titleOnly: Bool = false,
+                     messageHandler: (String, WKScriptMessageHandler)? = nil) {
         let url = rehomed(rawURL)
         if let existing = openWindows[url], existing.panel?.isVisible == true {
             existing.panel?.makeKeyAndOrderFront(nil)
@@ -22,6 +24,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
             return
         }
         let c = WebAppController(name: name, url: url, size: NSSize(width: width, height: height), icon: icon, titleOnly: titleOnly)
+        c.messageHandler = messageHandler
         openWindows[url] = c
         c.show()
     }
@@ -77,6 +80,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     }
     private weak var webView: WKWebView?
     private var bridgeActive = false   // true only for trusted 98.js windows (native Save/Print)
+    private var messageHandler: (String, WKScriptMessageHandler)?
 
     private init(name: String, url: String, size: NSSize, icon: String? = nil, titleOnly: Bool = false) {
         self.appName = name; self.appURL = url; self.size = size; self.appIcon = icon; self.titleOnly = titleOnly
@@ -143,6 +147,9 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
             cfg.userContentController = ucc
         }
 
+        if let (name, handler) = messageHandler, appURL.hasPrefix("/") || appURL.hasPrefix("file://") {
+            cfg.userContentController.add(handler, name: name)
+        }
         let wv = WKWebView(frame: chrome.contentRect(), configuration: cfg)
         wv.autoresizingMask = [.width, .height]
         wv.navigationDelegate = self

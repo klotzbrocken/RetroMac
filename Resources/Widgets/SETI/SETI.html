@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SETI@home</title>
+<!--
+  SETI@home Classic, simulated. Layout measured off two contemporary pictures: the Windows
+  client 3.08 (Wikimedia Commons, 760 x 491) and the Macintosh client 2.01 (February 2000).
+  Logo, dialogs, menus and the Mac OS X client are Retromac reconstructions, not originals
+  (docs/SETI.md). Nothing here analyses anything or touches the network; the state comes from
+  RetroMac (setiState) and every picture is derived from it, so a window and the screensaver
+  show the same moment.
+-->
+<style>
+  @font-face { font-family: Geneva_9; src: url(FindersKeepers.woff2) format("woff2"); }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body.saver { cursor: none; }
+  #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  canvas { display: block; image-rendering: pixelated; }
+  #menubar { height: 20px; display: flex; align-items: center; font: 12px Tahoma, Arial, sans-serif; color: #000;
+             background: #ece9d8; border-bottom: 1px solid #aca899; user-select: none; }
+  #menubar[hidden] { display: none; }
+  body.win98 #menubar { background: #c0c0c0; border-bottom: 1px solid #808080; }
+  #menubar > div { padding: 2px 7px; position: relative; cursor: default; }
+  #menubar > div:hover, #menubar > div.open { background: #316ac5; color: #fff; }
+  body.win98 #menubar > div:hover, body.win98 #menubar > div.open { background: #000080; }
+  .drop { display: none; position: absolute; left: 0; top: 19px; min-width: 190px; background: #fff; color: #000;
+          border: 1px solid #808080; box-shadow: 2px 2px 0 rgba(0,0,0,.35); padding: 2px 0; z-index: 5; }
+  body.win98 .drop { background: #c0c0c0; }
+  #menubar > div.open .drop { display: block; }
+  .drop div { padding: 3px 18px; white-space: nowrap; }
+  .drop div:hover { background: #316ac5; color: #fff; }
+  body.win98 .drop div:hover { background: #000080; }
+  .drop hr { border: 0; border-top: 1px solid #aca899; margin: 3px 1px; }
+  /* Dialogs: reconstructions in the theme's manner, not originals. */
+  .dlg { display: none; position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 9;
+         min-width: 330px; background: #ece9d8; color: #000; font: 12px Tahoma, Arial, sans-serif;
+         border: 1px solid #0a246a; box-shadow: 3px 3px 0 rgba(0,0,0,.4); }
+  body.win98 .dlg { background: #c0c0c0; border: 2px outset #fff; }
+  body.mac .dlg, body.macosx .dlg { background: #dddddd; border: 1px solid #000; font: 12px Geneva_9, Geneva, sans-serif; border-radius: 0; }
+  body.macosx .dlg { background: #f2f2f2; border-radius: 6px; font: 12px "Lucida Grande", Geneva, sans-serif; }
+  .dlg h3 { margin: 0; padding: 4px 8px; font-size: 12px; color: #fff; background: #0a246a; }
+  body.win98 .dlg h3 { background: linear-gradient(90deg, #000080, #1084d0); }
+  body.mac .dlg h3, body.macosx .dlg h3 { color: #000; background: none; text-align: center; border-bottom: 1px solid #888; }
+  .dlg .b { padding: 10px 12px; } .dlg fieldset { margin: 0 0 8px; border: 1px solid #999; }
+  .dlg label { display: block; margin: 3px 0; } .dlg input[type=text] { width: 170px; font: inherit; }
+  .dlg .row { text-align: right; padding: 0 12px 10px; } .dlg button { min-width: 72px; font: inherit; margin-left: 6px; }
+  .dlg .note { color: #444; font-size: 11px; margin-top: 6px; max-width: 330px; }
+  #sr { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="menubar" hidden>
+    <div data-m="file">File<div class="drop">
+      <div data-a="pause">Pause</div><div data-a="connect">Connect</div><hr><div data-a="saver">Screen Saver Preview</div></div></div>
+    <div data-m="settings">Settings<div class="drop">
+      <div data-a="prefs">Preferences&hellip;</div><div data-a="login">Change/Create Login&hellip;</div></div></div>
+    <div data-m="help">Help<div class="drop"><div data-a="about">About SETI@home&hellip;</div></div></div>
+  </div>
+  <canvas id="c"></canvas>
+
+  <div class="dlg" id="d-prefs" role="dialog" aria-label="Preferences"><h3>Preferences</h3><div class="b">
+    <fieldset><legend>Network Connection</legend>
+      <label><input type="radio" name="net" value="auto"> Connect to the network when needed</label>
+      <label><input type="radio" name="net" value="ask"> Ask before connecting</label></fieldset>
+    <fieldset><legend>Proxy Server</legend>
+      <label>Server <input type="text" id="p-host" maxlength="80"></label>
+      <label>Port <input type="text" id="p-port" maxlength="5" style="width:60px"></label></fieldset>
+    <fieldset><legend>Screensaver Options</legend>
+      <label>Blank screen after <input type="text" id="p-blank" maxlength="2" style="width:30px"> minutes (0 = never)</label></fieldset>
+    <div class="note">Simulation: no proxy or network is ever used. The waiting time for the screensaver is set in RetroMac Settings.</div>
+  </div><div class="row"><button data-close>Cancel</button><button id="p-ok">OK</button></div></div>
+
+  <div class="dlg" id="d-login" role="dialog" aria-label="Login"><h3>Change/Create Login</h3><div class="b">
+    <label>Name <input type="text" id="l-name" maxlength="40"></label>
+    <label>Email address <input type="text" id="l-mail" maxlength="80"></label>
+    <div class="note">A local name only. No account is made and the address is not kept or sent anywhere.</div>
+  </div><div class="row"><button data-close>Cancel</button><button id="l-ok">OK</button></div></div>
+
+  <div class="dlg" id="d-about" role="dialog" aria-label="About"><h3>About SETI@home</h3><div class="b">
+    <p style="margin:0 0 6px"><b>SETI@home Classic</b> (1999&ndash;2005), as RetroMac simulates it.</p>
+    <p style="margin:0">Historische SETI@home-Classic-Simulation. Keine echte Datenanalyse und keine Verbindung zum Forschungsprojekt.<br>
+    A historical simulation: no real data analysis and no connection to the research project.</p>
+  </div><div class="row"><button data-close>OK</button></div></div>
+</div>
+<div id="sr" aria-live="polite"></div>
+
+<script>
+"use strict";
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+const stage = document.getElementById('stage'), menubar = document.getElementById('menubar');
+const post = m => { try { webkit.messageHandlers.seti.postMessage(m); } catch (e) {} };
+addEventListener('error', e => post({ cmd: 'error', message: `${e.message} (${e.lineno}:${e.colno})` }));
+
+// Reference geometry, per client, in the picture's own pixels (window chrome excluded).
+const L = {
+  windows: { w: 752, h: 437, font: '11px Arial, Helvetica, sans-serif', bold: 'bold 11px Arial, Helvetica, sans-serif', line: 14,
+    version: '3.08', head: { x: 0, y: 0 }, f1: true,
+    frame: { top: 44, bottom: 220, band: 8, vx: 413, vw: 30, div: 136, left: 6, right: 745 },
+    da: { title: [209, 67], x: 11, y: 81, pct: 261, bar: [291, 76, 100, 6], graph: [11, 115, 390, 50], ov: [11, 172, 381, 28], ovText: 212, cpuX: 228 },
+    di: { title: [594, 67], x: 453, y: 81 }, ui: { title: [594, 159], x: 453, y: 173 },
+    sp: { F: [174, 400], W: 528, D: [-116, -40], H: 120, rows: 40,
+          labels: { tMax: [21, 353], tName: [56, 387], tZero: [143, 419], f0: [186, 433], fName: [421, 433], fMax: [686, 433], power: [713, 413], arrow: [731, 395, 365] } } },
+  mac: { w: 765, h: 456, font: '12px Geneva_9, Geneva, sans-serif', bold: 'bold 12px Geneva_9, Geneva, sans-serif', line: 13,
+    version: '2.01', head: { x: 5, y: 2 }, f1: false,
+    frame: { top: 46, bottom: 196, band: 7, vx: 420, vw: 28, div: 127, left: 12, right: 752 },
+    da: { title: [215, 68], x: 17, y: 80, pct: 268, bar: [300, 75, 108, 6], graph: [17, 110, 390, 40], ov: [17, 160, 380, 22], ovText: 197, cpuX: 224 },
+    di: { title: [598, 68], x: 460, y: 80 }, ui: { title: [598, 148], x: 460, y: 160 },
+    sp: { F: [65, 427], W: 575, D: [80, -100], H: 110, rows: 40, mac: true,
+          labels: { tMax: [720, 327], tName: [700, 364], tZero: [636, 422], f0: [72, 438], fName: [320, 438], fMax: [575, 438], power: [22, 432], arrow: [35, 418, 392] } } },
+};
+L.macosx = Object.assign({}, L.mac, { version: '3.07' });
+
+let S = null, saver = false, P = L.windows, theme = 'windows', dialog = null;
+const PURPLE = '#AB82FF', RED = '#F62400';
+
+// ---------- deterministic noise ----------
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let specKey = '', spec = null; const BINS = 240;
+function spectrum(seed, pass, rows) {
+  const key = seed + ':' + pass + ':' + rows;
+  if (key === specKey) return spec;
+  const r = mulberry((seed * 31 + pass * 977) | 0), a = new Float32Array(rows * BINS);
+  for (let i = 0; i < a.length; i++) { const u = r(); a[i] = -Math.log(1 - u * 0.999) * 0.22 + (r() < 0.01 ? r() * 0.6 : 0); }
+  specKey = key; spec = a; return a;
+}
+
+// ---------- formatting, as the clients wrote it ----------
+const p2 = n => String(n).padStart(2, '0');
+function hms(sec, digits) { const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+  return `${h} hr ${p2(m)} min ${(s < 10 ? '0' : '') + s.toFixed(1)} sec`; }
+function ra(h) { const t = Math.round(h * 3600), H = Math.floor(t / 3600), M = Math.floor(t % 3600 / 60), s = t % 60; return `${H} hr ${M}' ${s}" RA`; }
+function dec(d) { const sg = d < 0 ? '-' : '+', a = Math.abs(d), D = Math.floor(a), M = Math.floor(a * 60 % 60), s = Math.floor(a * 3600 % 60);
+  return `${sg} ${D} deg ${String(M).padStart(2)}' ${s}" Dec`; }
+function recorded(t) { const d = new Date(t * 1000), w = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()],
+  mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+  return `${w} ${mo} ${p2(d.getUTCDate())} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}:${p2(d.getUTCSeconds())} ${d.getUTCFullYear()} GMT`; }
+
+// ---------- drawing ----------
+function text(s, x, y, font, color, align) { g.font = font || P.font; g.fillStyle = color || '#fff'; g.textAlign = align || 'left'; g.fillText(s, x, y); }
+function rrect(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+function drawHeader() {
+  const o = P.head, x = o.x, y = o.y;
+  // Reconstruction of the logo: the globe, the wave, the words, the dish.
+  const gl = g.createRadialGradient(x + 26, y + 16, 3, x + 32, y + 22, 20);
+  gl.addColorStop(0, '#9fd4ff'); gl.addColorStop(.55, '#2a6fdc'); gl.addColorStop(1, '#0c2a6a');
+  g.fillStyle = gl; g.beginPath(); g.arc(x + 32, y + 22, 19, 0, 7); g.fill();
+  g.fillStyle = '#20b090'; g.beginPath(); g.ellipse(x + 26, y + 18, 8, 5, .4, 0, 7); g.ellipse(x + 38, y + 30, 6, 4, -.3, 0, 7); g.fill();
+  g.strokeStyle = '#9f76f2'; g.lineWidth = 3; g.beginPath();
+  for (let i = 0; i <= 70; i++) { const px = x + 54 + i, py = y + 22 + Math.sin(i / 5.5) * (8 - i / 12); i ? g.lineTo(px, py) : g.moveTo(px, py); }
+  g.stroke();
+  text('The Search for', x + 100, y + 17, 'bold 17px Arial, Helvetica, sans-serif');
+  text('Extraterrestrial Intelligence', x + 144, y + 34, 'bold 17px Arial, Helvetica, sans-serif');
+  g.font = 'bold 17px Arial, Helvetica, sans-serif'; const w = g.measureText('Extraterrestrial Intelligence ').width;
+  text('at HOME', x + 144 + w, y + 34, 'bold 17px Arial, Helvetica, sans-serif', '#00DBAC');
+  g.fillStyle = '#68E2C2'; g.beginPath(); g.ellipse(x + 462, y + 20, 11, 6, -.5, 0, 7); g.fill();
+  g.strokeStyle = '#68E2C2'; g.lineWidth = 1; g.beginPath(); g.moveTo(x + 462, y + 22); g.lineTo(x + 458, y + 34); g.stroke();
+  if (P.f1) text('Press F1 for info', 499, 16);
+  text('Version ' + P.version, P.w - 24, 16, P.font, '#fff', 'right');
+  text('http://setiathome.berkeley.edu', 536, 29);
+}
+
+function drawFrame() {
+  const f = P.frame, b = f.band;
+  g.fillStyle = PURPLE;
+  rrect(f.left, f.top, f.right - f.left, b, b / 2); g.fill();
+  rrect(f.left, f.bottom, f.right - f.left, b, b / 2); g.fill();
+  g.fillRect(f.vx, f.top, f.vw, f.bottom - f.top + b);
+  rrect(f.vx, f.div, f.right - f.vx, b, b / 2); g.fill();
+  // The fillets where the bars meet, as the purple shapes curve into each other.
+  const R = 12; g.fillStyle = PURPLE;
+  for (const [cx, cy, sx, sy] of [[f.vx, f.top + b, -1, 1], [f.vx + f.vw, f.top + b, 1, 1], [f.vx, f.bottom, -1, -1], [f.vx + f.vw, f.bottom, 1, -1],
+                                  [f.vx + f.vw, f.div, 1, -1], [f.vx + f.vw, f.div + b, 1, 1]]) {
+    g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + sx * R, cy); g.arc(cx + sx * R, cy + sy * R, R, sy > 0 ? -Math.PI / 2 : Math.PI / 2, sx > 0 ? Math.PI : 0, (sx > 0) === (sy > 0));
+    g.lineTo(cx, cy); g.fill();
+  }
+}
+
+function graphKind() {
+  const c = S.current;
+  if (c && c.age >= 0 && c.kind !== 'spike') return c.kind;
+  if (S.step === 'Searching For Pulses') return 'pulse';
+  if (S.step === 'Searching For Triplets') return 'triplet';
+  return 'gaussian';
+}
+
+function drawAnalysis() {
+  const d = P.da, ln = P.line;
+  text('Data Analysis', d.title[0], d.title[1], P.bold, '#fff', 'center');
+  let status = S.step;
+  if (!S.started) status = 'Ready';
+  else if (S.paused) status = 'Suspended';
+  else if (S.awaiting) status = 'Waiting to connect';
+  text(status, d.x, d.y);
+  const pct = Math.min(100, Math.floor(S.stepProgress * 100));
+  text(pct + '%', d.pct, d.y);
+  g.fillStyle = '#fff'; g.fillRect(d.bar[0], d.bar[1], Math.round(d.bar[2] * S.stepProgress), d.bar[3]);
+  text(`Doppler drift rate: ${S.drift.toFixed(4)} Hz/sec    Resolution: ${S.resolution.toFixed(3)} Hz`, d.x, d.y + ln);
+  const kind = graphKind(), c = (S.current && S.current.kind === kind && S.current.age >= 0) ? S.current : S.best[kind];
+  const label = { gaussian: 'Best Gaussian', pulse: 'Best Pulse', triplet: 'Best Triplet' }[kind];
+  if (c) {
+    const tail = kind === 'gaussian' ? `power ${c.power.toFixed(2).padStart(5)}, fit ${c.score.toFixed(3)}`
+               : `power ${c.power.toFixed(2)}, period ${c.period.toFixed(4)}, score ${c.score.toFixed(3)}`;
+    text(`${label}: ${tail}`, d.x, d.y + 2 * ln);
+  } else text(`${label}: none`, d.x, d.y + 2 * ln);
+  drawGraph(kind, c, d.graph);
+  // The overall bar, in its box.
+  const [ox, oy, ow, oh] = d.ov, k = 8, fill = Math.round(ow * S.overall);
+  g.fillStyle = '#919191'; g.fillRect(ox, oy + k, ow, oh - k);
+  g.fillStyle = RED; g.fillRect(ox, oy + k, fill, oh - k);
+  g.fillStyle = '#ff7a5a'; g.beginPath(); g.moveTo(ox, oy + k); g.lineTo(ox + k, oy); g.lineTo(ox + k + fill, oy); g.lineTo(ox + fill, oy + k); g.fill();
+  g.fillStyle = '#b01800'; g.beginPath(); g.moveTo(ox + fill, oy + k); g.lineTo(ox + fill + k, oy); g.lineTo(ox + fill + k, oy + oh - k); g.lineTo(ox + fill, oy + oh); g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(ox + .5, oy + k + .5, ow, oh - k - 1);
+  g.beginPath(); g.moveTo(ox + .5, oy + k + .5); g.lineTo(ox + k + .5, oy + .5); g.lineTo(ox + ow + k + .5, oy + .5); g.lineTo(ox + ow + .5, oy + k + .5);
+  g.moveTo(ox + ow + k + .5, oy + .5); g.lineTo(ox + ow + k + .5, oy + oh - k + .5); g.lineTo(ox + ow + .5, oy + oh + .5); g.stroke();
+  text(`Overall: ${(S.overall * 100).toFixed(3)}% done`, d.x, d.ovText);
+  text(`CPU time: ${hms(S.unitCPU)}`, d.cpuX, d.ovText);
+}
+
+/// The small curve under the numbers: the red data and, for a Gaussian, the white fit, which
+/// sweeps left to right while a find is examined (spec 5.7). Nothing is drawn without a candidate.
+function drawGraph(kind, c, box) {
+  const [x, y, w, h] = box, n = 64, base = y + h;
+  if (!c) return;
+  const r = mulberry((c.seed | 0) ^ 0x5eed), data = [], gray = [];
+  for (let i = 0; i < n; i++) { data.push(r() * .35 + .1); gray.push(r() * .3 + .1); }
+  const mu = c.t * n, sigma = n / 12;
+  if (kind === 'gaussian') for (let i = 0; i < n; i++) data[i] += Math.exp(-((i - mu) ** 2) / (2 * sigma * sigma)) * Math.min(1, c.power / 4);
+  if (kind === 'pulse') { const per = n / 2; for (let i = 0; i < n; i++) if ((i + Math.round(c.t * per)) % Math.round(per) < 2) data[i] += .7; }
+  const top = Math.max(1.2, ...data);
+  const step = (arr, color) => { g.strokeStyle = color; g.lineWidth = 1; g.beginPath();
+    arr.forEach((v, i) => { const X = x + i * w / n, Y = base - v / top * h; i ? g.lineTo(X, Y) : g.moveTo(X, Y); g.lineTo(X + w / n, Y); }); g.stroke(); };
+  step(gray, '#6a6a6a'); step(data, RED);
+  if (kind === 'gaussian') {
+    let m = mu; if (c.age >= 0 && c.age < 12) m = Math.min(mu, (c.age / 12) * n);   // the fit wandering in
+    g.strokeStyle = '#fff'; g.beginPath();
+    for (let i = 0; i <= w; i++) { const X = x + i, v = .25 + Math.exp(-((i / w * n - m) ** 2) / (2 * sigma * sigma)) * Math.min(1, c.power / 4);
+      const Y = base - v / top * h; i ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+    g.stroke();
+  }
+  if (kind === 'triplet') { g.fillStyle = '#ffff00'; const s0 = c.t * n * .6, gap = n / 5;
+    for (let k = 0; k < 3; k++) { const X = x + (s0 + k * gap) * w / n; g.fillRect(X - 1, y + 2, 3, h - 2); } }
+}
+
+function drawInfo() {
+  const di = P.di, ui = P.ui, ln = P.line, u = S.unit;
+  text('Data Info', di.title[0], di.title[1], P.bold, '#fff', 'center');
+  text(`From: ${ra(u.ra)}, ${dec(u.dec)}`, di.x, di.y);
+  text(`Recorded on: ${recorded(u.recorded)}`, di.x, di.y + ln);
+  text(`Source: ${u.source}`, di.x, di.y + 2 * ln);
+  text(`Base Frequency: ${(u.base / 1e9).toFixed(9)} GHz`, di.x, di.y + 3 * ln);
+  text('User Info', ui.title[0], ui.title[1], P.bold, '#fff', 'center');
+  text(`Name: ${S.user.name}`, ui.x, ui.y);
+  text(`Data units completed: ${S.user.units}`, ui.x, ui.y + ln);
+  text(`Total computer time: ${hms(S.user.cpu)}`, ui.x, ui.y + 2 * ln);
+}
+
+const STOPS = [[0, [255, 48, 80]], [.45, [154, 55, 255]], [.68, [3, 45, 221]], [1, [0, 211, 229]]];
+function hue(f) { for (let i = 1; i < STOPS.length; i++) if (f <= STOPS[i][0]) { const [a, ca] = STOPS[i - 1], [b, cb] = STOPS[i], t = (f - a) / (b - a);
+  return ca.map((v, k) => Math.round(v + (cb[k] - v) * t)); } return STOPS[STOPS.length - 1][1]; }
+
+/// The spectrum: power over frequency and recorded time, from a fixed point of view (no
+/// camera, no stars — that was BOINC). Rows build up while the FFT runs; the same recording
+/// is examined pass after pass, so it never scrolls like a live receiver (spec 5.2).
+function drawSpectrum() {
+  const sp = P.sp, [Fx, Fy] = sp.F, [Dx, Dy] = sp.D, rows = sp.rows, L2 = sp.labels;
+  g.strokeStyle = '#d0d0d0'; g.lineWidth = 1;
+  const box = (pts) => { g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(a + .5, b + .5) : g.moveTo(a + .5, b + .5)); g.stroke(); };
+  box([[Fx + Dx, Fy + Dy], [Fx + Dx, Fy + Dy - sp.H], [Fx + Dx + sp.W, Fy + Dy - sp.H], [Fx + sp.W, Fy - sp.H], [Fx + sp.W, Fy]]);
+  box([[Fx + Dx, Fy + Dy], [Fx, Fy], [Fx + sp.W, Fy]]);
+  box([[Fx + Dx + sp.W, Fy + Dy - sp.H], [Fx + Dx + sp.W, Fy + Dy], [Fx + sp.W, Fy]]);
+
+  let shown = 0;
+  if (S.started && !S.transfer && S.pass >= 0) shown = S.step === 'Computing Fast Fourier Transform' ? Math.floor(S.stepProgress * rows) : rows;
+  if (S.step === 'Chirping Data') shown = 0;
+  const a = spectrum(S.spectrumSeed, Math.max(0, S.pass), rows), c = S.current;
+  const bw = sp.W / BINS;
+  for (let r = rows - 1; r >= rows - shown; r--) {          // back to front, so the front covers the back
+    const t = r / (rows - 1);
+    for (let b = 0; b < BINS; b++) {
+      const f = b / (BINS - 1);
+      let h = Math.min(sp.H, a[r * BINS + b] * sp.H * .55);
+      // The find: one narrow peak at its frequency and time, rising over 3 s to well above the noise.
+      if (c && c.age >= 0 && b === Math.round(c.f * (BINS - 1)) && r === Math.round(c.t * (rows - 1)))
+        h = Math.max(h, Math.min(1, c.age / 3) * sp.H * Math.min(1, .55 + c.power / 20));
+      if (h < 1) continue;
+      const x = Fx + f * sp.W + t * Dx, y = Fy + t * Dy, col = hue(f);
+      const shade = .55 + .45 * (1 - t);
+      g.fillStyle = `rgb(${col[0] * shade | 0},${col[1] * shade | 0},${col[2] * shade | 0})`;
+      g.fillRect(x, y - h, Math.max(1, bw), h);
+      g.fillStyle = `rgb(${Math.min(255, col[0] + 90)},${Math.min(255, col[1] + 90)},${Math.min(255, col[2] + 90)})`;
+      g.fillRect(x, y - h, Math.max(1, bw), 1);
+    }
+  }
+  text('107.4', L2.tMax[0], L2.tMax[1]); text('Time (sec)', L2.tName[0], L2.tName[1]); text('0', L2.tZero[0], L2.tZero[1]);
+  text('0.0', L2.f0[0], L2.f0[1]); text('Frequency (Hz)', L2.fName[0], L2.fName[1]); text('9765.620', L2.fMax[0], L2.fMax[1]);
+  text('Power', L2.power[0], L2.power[1]);
+  g.strokeStyle = '#fff'; g.beginPath(); const ax = L2.arrow[0] + .5; g.moveTo(ax, L2.arrow[1]); g.lineTo(ax, L2.arrow[2]);
+  g.lineTo(ax - 4, L2.arrow[2] + 6); g.moveTo(ax, L2.arrow[2]); g.lineTo(ax + 4, L2.arrow[2] + 6); g.stroke();
+}
+
+function draw() {
+  if (!S) return;
+  g.fillStyle = '#000'; g.fillRect(0, 0, P.w, P.h);
+  drawHeader(); drawFrame(); drawAnalysis(); drawInfo(); drawSpectrum();
+}
+
+// ---------- scale: the reference size, whole multiples where it fits ----------
+function layout() {
+  const mh = menubar.hidden ? 0 : 21, W = P.w, H = P.h + mh;
+  cv.width = P.w; cv.height = P.h;
+  const fit = Math.min(innerWidth / W, innerHeight / H), k = fit >= 1 ? Math.floor(fit) : fit;
+  stage.style.width = W + 'px'; stage.style.height = H + 'px';
+  stage.style.transform = `scale(${k})`;
+  stage.style.left = Math.round((innerWidth - W * k) / 2) + 'px'; stage.style.top = Math.round((innerHeight - H * k) / 2) + 'px';
+  draw();
+}
+addEventListener('resize', layout);
+
+// ---------- state from RetroMac ----------
+let lastSaid = '', blankTimer = null, shownSince = Date.now();
+window.setiState = function (s, isSaver) {
+  const first = !S;
+  S = s; saver = isSaver;
+  const prof = s.profile in L ? s.profile : 'windows';
+  if (prof !== theme || first) {
+    theme = prof; P = L[prof];
+    document.body.className = (saver ? 'saver ' : '') + prof + (s.theme === 'win98' ? ' win98' : '');
+    menubar.hidden = saver || prof !== 'windows';
+    layout();
+  }
+  if (first && prof === 'macosx' && !s.started && !s.prefs.osxSetupDone && !saver) setiDialog('prefs', true);
+  // The Mac clients could blank the screen after a while; the work goes on (SCR-08).
+  if (saver && s.prefs.blank > 0) stage.style.visibility = (Date.now() - shownSince > s.prefs.blank * 60000) ? 'hidden' : 'visible';
+  document.querySelector('[data-a=pause]').textContent = s.paused ? 'Resume' : 'Pause';
+  document.querySelector('[data-a=connect]').style.display = s.awaiting ? '' : 'none';
+  draw();
+  const say = `${s.step}, ${Math.floor(s.stepProgress * 100)} percent. Overall ${(s.overall * 100).toFixed(1)} percent done.`;
+  if (s.step !== lastSaid.split(',')[0]) { document.getElementById('sr').textContent = say; lastSaid = say; }
+};
+
+// ---------- menus and dialogs (reconstructions) ----------
+let setupFlow = false;
+window.setiDialog = function (name, setup) {
+  document.querySelectorAll('.dlg').forEach(d => d.style.display = 'none');
+  if (setup) setupFlow = true;
+  const d = document.getElementById('d-' + name); if (!d || !S) return;
+  if (name === 'prefs') {
+    document.querySelector(`input[name=net][value=${S.prefs.ask ? 'ask' : 'auto'}]`).checked = true;
+    document.getElementById('p-host').value = S.prefs.proxyHost; document.getElementById('p-port').value = S.prefs.proxyPort;
+    document.getElementById('p-blank').value = S.prefs.blank;
+  }
+  if (name === 'login') document.getElementById('l-name').value = S.user.name;
+  d.style.display = 'block'; dialog = name;
+  const first = d.querySelector('input, button'); if (first) first.focus();
+};
+function closeDialog() { document.querySelectorAll('.dlg').forEach(d => d.style.display = 'none'); dialog = null; }
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { closeDialog(); if (setupFlow) setiDialog('login'); });
+document.getElementById('p-ok').onclick = () => {
+  post({ cmd: 'prefs', ask: document.querySelector('input[name=net]:checked').value === 'ask',
+         proxyHost: document.getElementById('p-host').value, proxyPort: document.getElementById('p-port').value,
+         blank: parseInt(document.getElementById('p-blank').value, 10) || 0 });
+  closeDialog(); if (setupFlow) setiDialog('login');   // Mac OS X's first start: Preferences, then Login (OSX-01)
+};
+document.getElementById('l-ok').onclick = () => {
+  post({ cmd: 'login', name: document.getElementById('l-name').value });
+  closeDialog(); if (setupFlow) { setupFlow = false; post({ cmd: 'setupDone' }); }
+};
+addEventListener('keydown', e => { if (e.key === 'Escape' && dialog) closeDialog(); if (e.key === 'F1' && !saver) setiDialog('about'); });
+
+menubar.querySelectorAll(':scope > div').forEach(m => m.addEventListener('mousedown', e => {
+  if (e.target.closest('.drop')) return;
+  const open = m.classList.contains('open'); menubar.querySelectorAll('.open').forEach(o => o.classList.remove('open'));
+  if (!open) m.classList.add('open');
+}));
+menubar.querySelectorAll('[data-a]').forEach(i => i.addEventListener('mouseup', () => {
+  menubar.querySelectorAll('.open').forEach(o => o.classList.remove('open'));
+  const a = i.dataset.a;
+  if (a === 'pause') post({ cmd: S && S.paused ? 'resume' : 'pause' });
+  else if (a === 'connect') post({ cmd: 'connect' });
+  else if (a === 'saver') post({ cmd: 'saver' });
+  else setiDialog(a);
+}));
+document.addEventListener('mousedown', e => { if (!e.target.closest('#menubar')) menubar.querySelectorAll('.open').forEach(o => o.classList.remove('open')); });
+
+post({ cmd: 'hello' });
+</script>
+</body>
+</html>

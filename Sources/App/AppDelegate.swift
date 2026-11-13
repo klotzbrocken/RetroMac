@@ -123,6 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DockController.shared.restoreSystemDockIfNeeded()
         _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98
         ScreensaverController.shared.beginIdleWatch()   // works regardless of the themed dock
+        SETIController.shared.start()
 
         applyDockMode()   // .accessory (menu-bar only) or .regular (Dock icon) per setting
         if AppSettings.shared.floatingLauncherEnabled { FloatingLauncherButton.shared.show() }
@@ -284,6 +285,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // The menu was built while everything was still off, and said "Themes: Off" with
                 // the theme on screen — to VoiceOver, no theme at all.
                 self.rebuildMenu()
+                if ProcessInfo.processInfo.environment["RETROMAC_OPEN_SETI"] != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { SETIController.shared.showWindow() }
+                }
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_APPS"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                         CPUMonitorController.shared.show()

@@ -7,6 +7,24 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **SETI@home Classic, simulated.** The 1999–2005 client as a window and as a screensaver
+  (Settings ▸ Themes ▸ Screensaver ▸ SETI@home, and the saver picker): a work unit is
+  "received", analysed pass after pass — baseline smoothing, FFTs at changing resolution and
+  drift, the search for Gaussians, pulses and triplets — and "sent back", and the counters climb
+  as the client's did. Windows 95 to XP get the Windows client 3.08 (in the Start menu), System
+  7.1 and Mac OS 9 the Macintosh client 2.01 with its green telescope in the menu bar, Mac OS X
+  10.0 a reconstruction of the Mac OS X client with its first start (Preferences, then Login).
+  The window, the background and the saver share one work unit, saved between launches; it runs
+  only while shown, or also in the background if you choose, and never while the Mac sleeps.
+  Now and then a strong peak turns up and is examined, as a Gaussian, pulse or triplet when that
+  is what the client was searching for; it never claims anything was found, and can be switched
+  off or set rarer or more often. Historical and demonstration speed (a unit in about four
+  minutes). The main view is measured off two contemporary screenshots; the logo, menus and
+  dialogs are reconstructions, listed in `docs/SETI.md`. Nothing is analysed and nothing goes
+  over the network.
+- **A screensaver ends on purpose.** A small nudge of the mouse no longer ends it, and the click
+  that does stays on the screensaver instead of landing on the window underneath.
+
 - **Stacks show everything.** A dock folder's stack no longer stops at 40 entries: the grid
   scrolls, and a folder in it opens inside the stack, with a back arrow at the top left. The arrow
   keys move through it, Return opens, Esc closes.

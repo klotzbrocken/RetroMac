@@ -68,17 +68,21 @@ struct SoundPrefs: Codable, Equatable {
 
     /// Saved settings laid over the defaults, so a field added in a later version takes its
     /// default instead of throwing the whole record away.
-    static func load(_ data: Data) -> SoundPrefs? {
-        func merge(_ base: Any, _ over: Any) -> Any {
-            guard var b = base as? [String: Any], let o = over as? [String: Any] else { return over }
-            for (k, v) in o { b[k] = b[k].map { merge($0, v) } ?? v }
-            return b
-        }
-        guard let defaults = try? JSONSerialization.jsonObject(with: JSONEncoder().encode(SoundPrefs())),
-              let saved = try? JSONSerialization.jsonObject(with: data),
-              let merged = try? JSONSerialization.data(withJSONObject: merge(defaults, saved)) else { return nil }
-        return try? JSONDecoder().decode(SoundPrefs.self, from: merged)
+    static func load(_ data: Data) -> SoundPrefs? { decodeOverDefaults(data, SoundPrefs()) }
+}
+
+/// Saved settings laid over `defaults`, so a field added in a later version takes its default
+/// instead of throwing the whole record away.
+func decodeOverDefaults<T: Codable>(_ data: Data, _ defaults: T) -> T? {
+    func merge(_ base: Any, _ over: Any) -> Any {
+        guard var b = base as? [String: Any], let o = over as? [String: Any] else { return over }
+        for (k, v) in o { b[k] = b[k].map { merge($0, v) } ?? v }
+        return b
     }
+    guard let base = try? JSONSerialization.jsonObject(with: JSONEncoder().encode(defaults)),
+          let saved = try? JSONSerialization.jsonObject(with: data),
+          let merged = try? JSONSerialization.data(withJSONObject: merge(base, saved)) else { return nil }
+    return try? JSONDecoder().decode(T.self, from: merged)
 }
 
 /// The one audio engine behind the keyboard, the drive and the fan. It runs only while

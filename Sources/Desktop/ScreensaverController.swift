@@ -17,6 +17,10 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
     /// Read by CrashScheduler: a simulated crash must not interrupt the screensaver.
     private(set) var active = false
     private var shownAt: Date?
+    /// Where the pointer was when the saver came up: a nudge within a few points is a shaky
+    /// hand, not someone coming back (SETI spec 7.4).
+    private var startMouse = NSPoint.zero
+    private var showingSETI = false
 
     private override init() { super.init() }
 
@@ -45,7 +49,8 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
             // Stay up for at least 1s (so the click/keypress that launched a manual preview
             // doesn't instantly dismiss it), then dismiss on the next bit of input.
             if let s = shownAt, Date().timeIntervalSince(s) < 1.0 { return }
-            if idle < 0.8 { dismiss() }
+            let m = NSEvent.mouseLocation
+            if hypot(m.x - startMouse.x, m.y - startMouse.y) > 12 || Self.secondsSinceInput() < 0.8 { dismiss() }
         } else {
             guard AppSettings.shared.screensaverEnabled, resolvedSaverID() != "none" else { return }
             let threshold = Double(max(1, AppSettings.shared.screensaverIdleMinutes)) * 60.0
@@ -57,8 +62,8 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
 
     /// Show the screensaver now — used by the idle trigger, the Settings "Preview" button and
     /// the desktop "Screen Saver" icon.
-    func start() {
-        let id = resolvedSaverID()
+    func start(saverID: String? = nil) {
+        let id = saverID ?? resolvedSaverID()
         // The Windows 3D savers are native .saver modules (vendor/retro-screensavers), hosted
         // here as System Settings hosts them; the rest are web pages.
         if let saverClass = Self.nativeSaver(id) { return startNative(saverClass) }
@@ -66,16 +71,10 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
         // Always rebuild fresh (self-heals a stale active flag / prior invisible windows).
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
-        active = true
-        shownAt = Date()
+        begin()
+        showingSETI = id == "seti"
         for screen in NSScreen.screens {
-            let win = NSWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
-            win.level = .screenSaver
-            win.isOpaque = true
-            win.backgroundColor = .black
-            win.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-            win.ignoresMouseEvents = true
-
+            let win = Self.coverWindow(screen)
             let cfg = WKWebViewConfiguration()
             // Non-persistent: a bundled file: page with no state worth keeping. The default store
             // caches it across launches by URL, and since the path never changes an edited widget
@@ -84,9 +83,16 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
             cfg.websiteDataStore = .nonPersistent()
             // Strip the 98.js program chrome (menu/controls/fullscreen buttons) and make the
             // saver canvas fill the screen — otherwise Pipes shows its on-screen control UI.
-            cfg.userContentController.addUserScript(
-                WKUserScript(source: Self.saverChromeCSS, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+            if showingSETI {
+                // The client draws itself to scale with black around it; the shared state comes
+                // from the one SETIController.
+                cfg.userContentController.add(SETIController.shared, name: "seti")
+            } else {
+                cfg.userContentController.addUserScript(
+                    WKUserScript(source: Self.saverChromeCSS, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+            }
             let wv = WKWebView(frame: NSRect(origin: .zero, size: screen.frame.size), configuration: cfg)
+            if showingSETI { SETIController.shared.attachSaver(wv) }
             wv.navigationDelegate = self
             wv.autoresizingMask = [.width, .height]
             wv.setValue(false, forKey: "drawsBackground")
@@ -109,15 +115,9 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
     private func startNative(_ saverClass: ScreenSaverView.Type) {
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
-        active = true
-        shownAt = Date()
+        begin()
         for screen in NSScreen.screens {
-            let win = NSWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
-            win.level = .screenSaver
-            win.isOpaque = true
-            win.backgroundColor = .black
-            win.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
-            win.ignoresMouseEvents = true
+            let win = Self.coverWindow(screen)
             guard let view = saverClass.init(frame: NSRect(origin: .zero, size: screen.frame.size), isPreview: false) else { continue }
             view.autoresizingMask = [.width, .height]
             win.contentView = view
@@ -127,6 +127,31 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
         }
         NSCursor.hide()
         if timer == nil { beginIdleWatch() }
+    }
+
+    private func begin() {
+        active = true
+        shownAt = Date()
+        startMouse = NSEvent.mouseLocation
+    }
+
+    /// The black cover for one screen. A non-activating panel that takes the mouse: the click
+    /// that ends the saver lands here and not on the window underneath (SETI spec AB-14), and
+    /// the app the user was in stays in front.
+    private static func coverWindow(_ screen: NSScreen) -> NSWindow {
+        let win = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        win.level = .screenSaver
+        win.isOpaque = true
+        win.backgroundColor = .black
+        win.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        win.hidesOnDeactivate = false
+        return win
+    }
+
+    /// Seconds since a key, a click, a scroll or a modifier — anything but moving the mouse.
+    private static func secondsSinceInput() -> Double {
+        let kinds: [CGEventType] = [.keyDown, .flagsChanged, .leftMouseDown, .rightMouseDown, .otherMouseDown, .scrollWheel]
+        return kinds.map { CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: $0) }.min() ?? .infinity
     }
 
     /// The bundled native saver for `id`, loaded once.
@@ -151,6 +176,7 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
         NSCursor.unhide()
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
+        if showingSETI { showingSETI = false; SETIController.shared.saverEnded() }
     }
 
     // MARK: - Saver resolution
@@ -173,6 +199,8 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
             return Bundle.main.resourceURL?.appendingPathComponent("Widgets/Screensavers/Flurry/index.html")
         case "starfield":
             return Bundle.main.resourceURL?.appendingPathComponent("Widgets/Screensavers/Starfield/index.html")
+        case "seti":
+            return Bundle.main.resourceURL?.appendingPathComponent("Widgets/SETI/SETI.html")
         default:
             return nil
         }
@@ -205,5 +233,6 @@ final class ScreensaverController: NSObject, WKNavigationDelegate {
         ("starfield", "Starfield Simulation"),
         ("maze", "3D Maze"),
         ("text3d", "3D Text"),
+        ("seti", "SETI@home"),
     ]
 }

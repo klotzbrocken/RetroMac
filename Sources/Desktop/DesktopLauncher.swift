@@ -87,6 +87,9 @@ enum DesktopLauncher {
         case "notepad":
             NotepadController.shared.show()
 
+        case "seti":
+            SETIController.shared.showWindow()
+
         case "calculator":
             CalculatorController.shared.show()
 

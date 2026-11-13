@@ -4908,6 +4908,14 @@ final class DockView: NSView {
             }
         }
 
+        // SETI@home Classic, where the Windows client ran (95 to XP).
+        if ["win98", "winxp"].contains(RetroFrameTheme.key()) {
+            programItems.append(MI(separator: true))
+            programItems.append(MI(title: "SETI@home", icon: SETIController.telescopeImage(), action: {
+                SETIController.shared.showWindow()
+            }))
+        }
+
         // Re:Amp (Winamp clone) — shown if enabled in theme settings
         if AppSettings.shared.reampEnabled {
             let reampIcon = startMenuIcon("reamp.png")

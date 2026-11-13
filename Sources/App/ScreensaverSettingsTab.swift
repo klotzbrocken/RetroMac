@@ -47,6 +47,61 @@ struct ScreensaverSettingsTab: View {
         )
     }
 
+    /// SETI@home Classic: one simulated client for the window, the background and the saver.
+    private var setiCard: some View {
+        RMCard(title: "SETI@home",
+               subtitle: "A historical SETI@home Classic simulation. No real data analysis and no connection to the research project. The window, the background and the screensaver share one work unit." + (SETIController.shared.recovered ? " The saved state could not be read; a new work unit was started." : ""),
+               bodyPadding: 0) {
+            VStack(spacing: 0) {
+                RMRow(label: "SETI@home", hint: "In the Windows themes' Start menu and under the telescope in the Mac themes' menu bar.") {
+                    HStack(spacing: 8) {
+                        Button("Open") { SETIController.shared.showWindow() }.buttonStyle(RMDefaultButtonStyle())
+                        Button("Preview saver") { ScreensaverController.shared.start(saverID: "seti") }.buttonStyle(RMGhostButtonStyle())
+                    }
+                }
+                RMRow(label: "Name", hint: "Shown under User Info. No account, nothing is sent.") {
+                    TextField("", text: $settings.seti.userName).frame(width: 180)
+                }
+                RMRow(label: "Processing") {
+                    Picker("", selection: $settings.seti.processing) {
+                        Text("Only while shown").tag(SETIPrefs.Processing.whenIdle)
+                        Text("Also in the background").tag(SETIPrefs.Processing.always)
+                    }.labelsHidden().frame(width: 200)
+                }
+                RMRow(label: "Speed", hint: "Demonstration finishes a work unit in about four minutes.") {
+                    Picker("", selection: $settings.seti.speed) {
+                        Text("Historical").tag(SETISimulation.Speed.historical)
+                        Text("Demonstration").tag(SETISimulation.Speed.demo)
+                    }.labelsHidden().frame(width: 200)
+                }
+                RMRow(label: "Random candidates", hint: "Now and then a strong peak to examine. Never a claim that anything was found.") {
+                    HStack(spacing: 8) {
+                        Picker("", selection: $settings.seti.frequency) {
+                            Text("Rare").tag(SETISimulation.Frequency.rare)
+                            Text("Standard").tag(SETISimulation.Frequency.standard)
+                            Text("Often").tag(SETISimulation.Frequency.often)
+                        }.labelsHidden().frame(width: 110).disabled(!settings.seti.candidates)
+                        Toggle("", isOn: $settings.seti.candidates).toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+                    }
+                }
+                RMRow(label: "Client", hint: "Automatic follows the theme: Windows 3.08, Macintosh 2.01, or Mac OS X (reconstructed).") {
+                    Picker("", selection: $settings.seti.profile) {
+                        Text("Automatic").tag("auto")
+                        Text("Windows 3.08").tag("windows")
+                        Text("Macintosh 2.01").tag("mac")
+                        Text("Mac OS X").tag("macosx")
+                    }.labelsHidden().frame(width: 200)
+                }
+                RMRow(label: "Statistics", hint: "Work units completed and computer time.", isLast: true) {
+                    HStack(spacing: 8) {
+                        Button("Test candidate") { SETIController.shared.forceCandidate() }.buttonStyle(RMGhostButtonStyle())
+                        Button("Reset statistics") { SETIController.shared.resetStatistics() }.buttonStyle(RMGhostButtonStyle())
+                    }
+                }
+            }
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: RMSpacing.section) {
@@ -82,6 +137,8 @@ struct ScreensaverSettingsTab: View {
                         }
                     }
                 }
+
+                setiCard
 
                 RMCard(title: "macOS screensavers",
                        subtitle: "Pipes, FlowerBox, Starfield Simulation, 3D Maze, 3D Text, Flying Toasters and Flurry as real .saver modules for System Settings \u{25B8} Screen Saver. The five Windows 3D savers come from retro-screensavers by Adrian Herskind (MIT).",
