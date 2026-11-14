@@ -436,6 +436,20 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Link("xb-16/BIOS-Emulator-Web-Interface on GitHub",
+                         destination: URL(string: "https://github.com/xb-16/BIOS-Emulator-Web-Interface")!)
+                        .font(.caption)
+                    Text("The idea of a BIOS setup you can walk through, for Boot Phases. RetroMac’s BIOS is its own reconstruction; no code from it is used.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Link("ncot.uk: Let’s recreate a 90s PC BIOS boot screen",
+                         destination: URL(string: "https://ncot.uk/projects/dosdev/lets-recreate-a-90s-pc-bios-boot-screen/")!)
+                        .font(.caption)
+                    Text("How the Award POST is laid out in text mode and how its Energy Star mark was drawn.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("Hover! — the Microsoft HTML5 remake",
                          destination: URL(string: "http://hover.ie/")!)
                         .font(.caption)

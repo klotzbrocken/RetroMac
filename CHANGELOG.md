@@ -27,8 +27,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   menu with NT's banner and program groups, whose Administrative Tools open the Mac's own (Disk
   Administrator is Disk Utility, Event Viewer the Console, Performance Monitor the Activity
   Monitor). On *Firmware* it boots through an Award BIOS, the OS Loader V4.0 menu, NTDETECT, the
-  blue kernel screen with this Mac's processors and memory, and "Begin Logon" — which asks for
-  nothing; any key goes on. The wallpaper centres NT's start-up artwork on teal #058182.
+  blue kernel screen with this Mac's processors and memory, then the desktop: no log-on box,
+  nothing asks for a password. The wallpaper centres NT's start-up artwork on teal #058182.
 
 ### Fixes
 

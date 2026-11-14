@@ -4891,13 +4891,12 @@ final class DockView: NSView {
                            app("Event Viewer", "com.apple.Console", "files.png"),
                            app("Performance Monitor", "com.apple.ActivityMonitor", "activitymonitor.png"),
                            app("Windows NT Diagnostics", "com.apple.SystemProfiler", "computer.png")].compactMap { $0 }
-        let group = startMenuIcon("programsfolder.png")
-        return [MI(title: "Accessories", icon: startMenuIcon("menu-accessories.png") ?? group, submenuItems: accessories),
+        let group = startMenuIcon("menu-programs.png")   // NT drew every program group alike
+        return [MI(title: "Accessories", icon: group, submenuItems: accessories),
                 MI(title: "Administrative Tools (Common)", icon: group, submenuItems: admin),
                 MI(title: "Startup", icon: group, submenuItems: [MI(title: "(empty)")]),
                 app("Command Prompt", "com.apple.Terminal", "terminal.png"),
-                app("Windows NT Explorer", "com.apple.finder", "files.png"),
-                MI(separator: true)].compactMap { $0 }
+                app("Windows NT Explorer", "com.apple.finder", "programsfolder.png")].compactMap { $0 }
     }
 
     private func startMenuProgramItems() -> [StartMenuPanel.MenuItem] {
@@ -5029,11 +5028,20 @@ final class DockView: NSView {
         }
         items.append(MI(title: "Documents", icon: win98Icon("menu-documents.png"), submenuItems: docItems))
         items.append(MI(title: "Settings", icon: win98Icon("menu-settings.png"), submenuItems: settingsSubItems))
-        items.append(MI(title: "Find…", icon: win98Icon("menu-find.png"), action: {
+        let openFinder = {
             if let finderURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder") {
                 NSWorkspace.shared.open(finderURL)
             }
-        }))
+        }
+        if profile == "nt4" {   // NT's Find was a submenu; Computer… searched the network
+            items.append(MI(title: "Find", icon: win98Icon("menu-find.png"), submenuItems: [
+                MI(title: "Files or Folders…", icon: win98Icon("menu-find.png"), action: openFinder),
+                MI(title: "Computer…", icon: win98Icon("menu-computer.png"), action: {
+                    DesktopLauncher.launch(DockThemeConfig.DesktopIconEntry(name: "Network", icon: "", type: "network"))
+                })]))
+        } else {
+            items.append(MI(title: "Find…", icon: win98Icon("menu-find.png"), action: openFinder))
+        }
         items.append(MI(title: "Help", icon: win98Icon("menu-help.png"), action: {
             NSApp.sendAction(Selector(("showAbout")), to: nil, from: nil)
         }))

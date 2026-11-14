@@ -1552,9 +1552,15 @@ private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuH
 
         let bannerRect = NSRect(x: bw, y: bw + 1, width: bannerWidth, height: bounds.height - bw * 2 - 2)
         let isMe = bannerText.lowercased().contains("windows me")
-        // Windows NT 4.0 kept 95's grey banner.
-        let isWin95 = bannerText.lowercased().contains("windows 95") || bannerText.lowercased().contains("windows nt")
-        if isWin95 {
+        let isWin95 = bannerText.lowercased().contains("windows 95")
+        let isNT = bannerText.lowercased().replacingOccurrences(of: " ", with: "").contains("windowsnt")
+        if isNT {
+            // NT 4.0: pure blue at the bottom fading to black, the top tenth black. Stops measured
+            // off a Start menu of NT 4.0 Workstation (the original dithers what this draws smooth).
+            func c(_ b: CGFloat) -> NSColor { NSColor(srgbRed: 4 / 255, green: 2 / 255, blue: b / 255, alpha: 1) }
+            NSGradient(colorsAndLocations: (c(252), 0.0), (c(119), 0.45), (c(51), 0.8), (.black, 0.92), (.black, 1.0))?
+                .draw(in: bannerRect, angle: 90)
+        } else if isWin95 {
             // Windows 95 side banner: a grey gradient (darker grey at the bottom → lighter up), NOT
             // the Win98 blue. "Windows 95" is drawn white over it (via the shared text path below).
             NSGradient(starting: NSColor(white: 0.40, alpha: 1), ending: NSColor(white: 0.62, alpha: 1))?

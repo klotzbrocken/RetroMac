@@ -77,7 +77,7 @@
     "showQuickLaunch": false,
     "showClock": true,
     "startMenuProfile": "nt4",
-    "startMenuBanner": "Windows NT|Workstation"
+    "startMenuBanner": "Windows NT| Workstation"
   },
   "icon": {
     "renderStyle": "pixelated",
