@@ -738,6 +738,9 @@ final class TitleBarOverlayController {
     static func lightsFrame(for bounds: CGRect, offsets: [ChromeButtonKind: CGRect]) -> (NSRect, [ChromeButtonKind: NSRect]) {
         let orb = lightDiameter
         let pad: CGFloat = 3
+        // A point above the real buttons' centres: on them the gel orbs, whose highlight sits
+        // high and shadow low, read as hanging a little below the title (seen by Maik).
+        let offsets = offsets.mapValues { $0.offsetBy(dx: 0, dy: -1) }
         let rects = offsets.map { NSRect(x: $0.value.midX - orb / 2, y: $0.value.midY - orb / 2, width: orb, height: orb) }
         let union = rects.reduce(NSRect.null) { $0.union($1) }.insetBy(dx: -pad, dy: -pad)
         let frame = appKitFrame(topLeft: CGRect(x: bounds.minX + union.minX, y: bounds.minY + union.minY,
