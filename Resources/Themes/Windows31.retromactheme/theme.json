@@ -18,6 +18,7 @@
   "version": "1.0",
   "author": "RetroMac",
   "wallpaper": "wallpaper-teal.png",
+  "boot": { "firmware": "ami92" },
   "splashScreen": "splash.png",
   "wallpapers": [
     {

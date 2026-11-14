@@ -3,6 +3,30 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+### New
+
+- **Boot Phases.** The two boot-screen switches are now one slider with three stops
+  (Settings ▸ Dock ▸ Behaviour and the Setup Assistant): *Desktop* switches a theme on
+  straight away, *OS Boot → Desktop* plays its boot as before, *Firmware → OS Boot → Desktop*
+  starts with the machine's firmware. Each theme can keep its own choice. A new install starts
+  on Desktop; an existing one keeps what it had (boot screens on → OS Boot). VoiceOver and
+  Reduce Motion go straight to the desktop.
+- **A BIOS you can enter.** The Windows themes start with their PC's firmware: AMIBIOS of 1992
+  for Windows 3.1, Award Modular BIOS v4.51PG for 95, 98 and Me, Phoenix - AwardBIOS v6.00PG for
+  XP, Vista and 7. The POST counts this Mac's real memory and names its real processor and
+  model, the Energy Star mark included. DEL (or the delete key) opens the CMOS setup: every page
+  can be walked with the arrow keys and changed with PgUp/PgDn or +/-, F10 saves. Two settings
+  do something: *Quick Power On Self Test* shortens the POST, *Boot Up Floppy Seek* makes the
+  floppy drive seek (with the drive sounds on). The rest are kept as set, as CMOS kept them.
+
+### Fixes
+
+- **A boot screen left over from a quick theme switch no longer touches the next one.** The
+  first switch's video deadline could stop the second one's video and run its switch.
+- **A theme's boot video stays inside the theme**, like every other file it names.
+
 ## 3.0.4
 
 ### New

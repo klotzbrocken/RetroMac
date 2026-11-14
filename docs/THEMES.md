@@ -209,6 +209,8 @@ its top.
 | `splashScreen` | Still shown while the theme switches on; `splashFullscreen: true` fills the screen |
 | `splashVideo` | An H.264 `.mp4` played full screen with sound instead of the still |
 | `splashWelcome` | `true` draws the "Welcome to Macintosh" screen (System 6) |
+| `boot.firmware` | The firmware played first when Boot Phases is on "Firmware": `ami92` (AMIBIOS 1992), `award451` (Award Modular BIOS v4.51PG), `award600` (Phoenix - AwardBIOS v6.00PG). A POST with this Mac's real values; DEL enters a setup. PC themes only |
+| `boot.os` | An OS boot drawn in text mode instead of the `splash*` keys (`nt4`) |
 | `screensaver` | `pipes`, `flowerbox`, `flying-toasters`, `flurry` or `none` |
 | `defaultPreset` | The shader preset the theme suggests |
 | `menuBarApple` | What covers the Apple menu: `off`, `rainbow`, `aqua`, `aqua-classic`, `hell`, `futurama`, `mono` (solid black, the 1-bit Mac's) |

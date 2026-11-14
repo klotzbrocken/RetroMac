@@ -113,6 +113,10 @@ struct DockThemeConfig: Codable {
     var splashFullscreen: Bool? = nil // true = fill the whole screen (e.g. Win 98 boot)
     var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present
     var splashWelcome: Bool? = nil    // true = draw the classic "Welcome to Macintosh" boot screen (System 6)
+    /// Boot Phases: the machine's firmware before the OS boot ("ami92", "award451", "award600"),
+    /// and an OS boot drawn in text mode instead of `splash*` ("nt4"). Both optional.
+    var boot: BootDecl? = nil
+    struct BootDecl: Codable, Equatable { var firmware: String? = nil; var os: String? = nil }
     var screensaver: String? = nil    // default screensaver id for this theme (pipes/flowerbox/flying-toasters/flurry/none)
     var systemTweaks: [SystemTweak]? = nil   // optional "Classic Finder" defaults writes (see SystemTweaksAdapter)
     var chromeColors: ChromeColors? = nil    // per-scheme window-chrome palette (Win98 Plus! themes); nil = built-in defaults

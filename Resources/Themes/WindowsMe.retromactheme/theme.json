@@ -36,6 +36,7 @@
   "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",
+  "boot": { "firmware": "award451" },
   "splashScreen": "boot.gif",
   "splashFullscreen": true,
   "wallpaper": "wallpaper.jpg",

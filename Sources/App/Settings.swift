@@ -991,12 +991,13 @@ final class AppSettings: ObservableObject {
     @Published var switcherOffThemes: [String] {
         didSet { defaults.set(switcherOffThemes, forKey: "switcherOffThemes") }
     }
-    @Published var showSplashScreen: Bool {
-        didSet { defaults.set(showSplashScreen, forKey: "showSplashScreen") }
+    /// Boot Phases, for every theme that has no choice of its own.
+    @Published var bootPhaseMode: BootPhaseMode {
+        didSet { defaults.set(bootPhaseMode.rawValue, forKey: "bootPhaseMode") }
     }
-    /// Per-theme boot screen on/off (image or video). Absent = default on for themes that define one.
-    @Published var themeBootscreenEnabled: [String: Bool] {
-        didSet { defaults.set(themeBootscreenEnabled, forKey: "themeBootscreenEnabled") }
+    /// Per-theme Boot Phases (stable id → `BootPhaseMode` raw value). Absent = the global choice.
+    @Published var themeBootPhase: [String: String] {
+        didSet { defaults.set(themeBootPhase, forKey: "themeBootPhase") }
     }
     // MARK: - Retro Crashes
 
@@ -1036,6 +1037,12 @@ final class AppSettings: ObservableObject {
     @Published var sounds: SoundPrefs {
         didSet {
             if let data = try? JSONEncoder().encode(sounds) { defaults.set(data, forKey: "sounds") }
+        }
+    }
+    /// The simulated BIOS setup's settings (Boot Phases ▸ Firmware).
+    @Published var bios: BIOSPrefs {
+        didSet {
+            if let data = try? JSONEncoder().encode(bios) { defaults.set(data, forKey: "bios") }
         }
     }
     /// The SETI@home Classic simulation (Settings ▸ Themes ▸ Screensaver).
@@ -1257,7 +1264,8 @@ final class AppSettings: ObservableObject {
         themeDockAutoHide = defaults.dictionary(forKey: "themeDockAutoHide") as? [String: Bool] ?? [:]
         themeWallpaperOverrides = defaults.dictionary(forKey: "themeWallpaperOverrides") as? [String: String] ?? [:]
         themeCustomWallpaper = defaults.dictionary(forKey: "themeCustomWallpaper") as? [String: String] ?? [:]
-        themeBootscreenEnabled = defaults.dictionary(forKey: "themeBootscreenEnabled") as? [String: Bool] ?? [:]
+        Self.migrateBootPhases(defaults)
+        themeBootPhase = defaults.dictionary(forKey: "themeBootPhase") as? [String: String] ?? [:]
         screensaverEnabled = defaults.bool(forKey: "screensaverEnabled")
         screensaverIdleMinutes = defaults.object(forKey: "screensaverIdleMinutes") as? Int ?? 5
         themeScreensaverOverrides = defaults.dictionary(forKey: "themeScreensaverOverrides") as? [String: String] ?? [:]
@@ -1457,7 +1465,7 @@ final class AppSettings: ObservableObject {
         dockFocusHotkeyCode = defaults.object(forKey: "dockFocusHotkeyCode") as? UInt32 ?? 0x35   // Esc
         dockFocusHotkeyModifiers = defaults.object(forKey: "dockFocusHotkeyModifiers") as? UInt32 ?? 0x1200   // ⌃⇧
         exposeAppHotkeyModifiers = defaults.object(forKey: "exposeAppHotkeyModifiers") as? UInt32 ?? 0x1000
-        showSplashScreen = defaults.object(forKey: "showSplashScreen") as? Bool ?? true   // boot screen on by default (per-theme toggle still applies)
+        bootPhaseMode = BootPhaseMode(rawValue: defaults.string(forKey: "bootPhaseMode") ?? "") ?? .desktop
         crashMode = defaults.string(forKey: "crashMode") ?? "authentic"
         crashIntensity = defaults.string(forKey: "crashIntensity") ?? "off"
         crashDisabledScenarios = defaults.stringArray(forKey: "crashDisabledScenarios") ?? []
@@ -1469,6 +1477,7 @@ final class AppSettings: ObservableObject {
         win7Shake = defaults.object(forKey: "win7Shake") as? Bool ?? true
         win7Peek = defaults.object(forKey: "win7Peek") as? Bool ?? true
         sounds = defaults.data(forKey: "sounds").flatMap(SoundPrefs.load) ?? SoundPrefs()
+        bios = defaults.data(forKey: "bios").flatMap { decodeOverDefaults($0, BIOSPrefs()) } ?? BIOSPrefs()
         seti = defaults.data(forKey: "seti").flatMap { decodeOverDefaults($0, SETIPrefs()) } ?? SETIPrefs()
         crashShowBadge = defaults.object(forKey: "crashShowBadge") as? Bool ?? true
         crashFullSequence = defaults.object(forKey: "crashFullSequence") as? Bool ?? true
@@ -1628,5 +1637,54 @@ final class AppSettings: ObservableObject {
                 print("[Settings] Login item update failed: \(error)")
             }
         }
+    }
+}
+
+/// How much of a start a theme shows when it is switched on: straight to the desktop, the OS
+/// booting, or the machine's firmware first and then the OS.
+enum BootPhaseMode: String, CaseIterable {
+    case desktop, os, full
+
+    var title: String {
+        switch self {
+        case .desktop: return "Desktop"
+        case .os:      return "OS Boot \u{2192} Desktop"
+        case .full:    return "Firmware \u{2192} OS Boot \u{2192} Desktop"
+        }
+    }
+
+    /// What a theme actually plays: the choice cut down to what the theme has. A theme without
+    /// firmware boots its OS only; one without any boot goes straight to the desktop; VoiceOver
+    /// and Reduce Motion skip the show.
+    static func effective(_ chosen: BootPhaseMode, hasOS: Bool, hasFirmware: Bool,
+                          voiceOver: Bool = false, reduceMotion: Bool = false) -> BootPhaseMode {
+        if voiceOver || reduceMotion { return .desktop }
+        switch chosen {
+        case .desktop: return .desktop
+        case .os:      return hasOS ? .os : .desktop
+        case .full:    return hasFirmware ? .full : (hasOS ? .os : .desktop)
+        }
+    }
+}
+
+extension AppSettings {
+    /// One-time move from the two boot-screen switches to Boot Phases. A new install starts on
+    /// the desktop; an existing one keeps what it had: boot screens on → OS boot, off → desktop,
+    /// and a theme switched off on its own stays off.
+    static func migrateBootPhases(_ defaults: UserDefaults) {
+        guard defaults.object(forKey: "bootPhaseMigrated") == nil else { return }
+        defaults.set(true, forKey: "bootPhaseMigrated")
+        let existing = defaults.object(forKey: "dockTheme") != nil || defaults.bool(forKey: "setupWizardComplete")
+        let on = defaults.object(forKey: "showSplashScreen") as? Bool ?? true
+        guard existing else { defaults.set(BootPhaseMode.desktop.rawValue, forKey: "bootPhaseMode"); return }
+        defaults.set((on ? BootPhaseMode.os : .desktop).rawValue, forKey: "bootPhaseMode")
+        guard on, let old = defaults.dictionary(forKey: "themeBootscreenEnabled") as? [String: Bool] else { return }
+        let off = old.filter { !$0.value }.mapValues { _ in BootPhaseMode.desktop.rawValue }
+        if !off.isEmpty { defaults.set(off, forKey: "themeBootPhase") }
+    }
+
+    /// The Boot Phases choice for a theme: its own, else the global one.
+    func bootPhase(for stableID: String) -> BootPhaseMode {
+        themeBootPhase[stableID].flatMap(BootPhaseMode.init(rawValue:)) ?? bootPhaseMode
     }
 }

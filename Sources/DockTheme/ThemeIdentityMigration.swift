@@ -23,7 +23,7 @@ enum ThemeIdentityMigration {
         "themePresetOverrides", "themeShaderDisabled", "themeOrientationOverrides",
         "themeDockPositionOverride",
         "themeDockAutoHide", "themeWallpaperOverrides", "themeCustomWallpaper",
-        "themeBootscreenEnabled", "themeScreensaverOverrides", "dockThemeIconOverrides",
+        "themeBootscreenEnabled", "themeBootPhase", "themeScreensaverOverrides", "dockThemeIconOverrides",
     ]
 
     /// Stores that are NOT dictionaries but one defaults entry per theme, named `<prefix><theme>`:

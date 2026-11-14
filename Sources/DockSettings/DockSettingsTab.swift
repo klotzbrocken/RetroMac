@@ -201,8 +201,17 @@ struct DockSettingsTab: View {
                                            applyWallpaper: !AppSettings.shared.dockOnly)
     }
 
-    private var selectedThemeHasBootScreen: Bool {
-        selectedThemeConfig?.splashVideo != nil || selectedThemeConfig?.splashScreen != nil
+    /// What the selected theme can play: no boot, an OS boot, or firmware and OS.
+    private var selectedThemeBootNote: String? {
+        guard let c = selectedThemeConfig else { return nil }
+        let mode = settings.themeBootPhase[settings.dockTheme].flatMap(BootPhaseMode.init(rawValue:)) ?? settings.bootPhaseMode
+        let effective = BootPhaseMode.effective(mode, hasOS: SplashController.hasOSBoot(c), hasFirmware: c.boot?.firmware != nil)
+        if NSWorkspace.shared.isVoiceOverEnabled || NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            return "Off while VoiceOver or Reduce Motion is on: the theme comes straight up."
+        }
+        guard effective != mode else { return nil }
+        return effective == .os ? "This theme has no firmware phase yet: it plays the OS boot only."
+                                : "This theme has no boot of its own: it comes straight up."
     }
 
     /// What RetroMac does around the theme: how it starts, and what it shows of itself.
@@ -217,18 +226,18 @@ struct DockSettingsTab: View {
                       hint: "Start straight into the last theme instead of the clean desktop.") {
                     toggle($settings.activateThemeOnLaunch)
                 }
-                RMRow(label: "Boot screens",
-                      hint: "A theme's own boot video or picture, once, when it starts.") {
-                    toggle($settings.showSplashScreen)
+                RMRow(label: "Boot Phases", hint: "What a theme plays when it starts.", stacked: true) {
+                    BootPhaseSlider(mode: $settings.bootPhaseMode)
                 }
-                RMRow(label: "Boot screen for \u{201C}\(themeDisplayName)\u{201D}",
-                      hint: selectedThemeHasBootScreen ? nil : "This theme has no boot screen of its own.",
-                      isLast: true) {
-                    Toggle("", isOn: Binding(
-                        get: { settings.themeBootscreenEnabled[settings.dockTheme] ?? selectedThemeHasBootScreen },
-                        set: { settings.themeBootscreenEnabled[settings.dockTheme] = $0 }))
-                        .toggleStyle(.switch).tint(.rmAccent)
-                        .disabled(!settings.showSplashScreen || !selectedThemeHasBootScreen)
+                RMRow(label: "Boot Phases for \u{201C}\(themeDisplayName)\u{201D}",
+                      hint: selectedThemeBootNote, isLast: true) {
+                    Picker("", selection: Binding(
+                        get: { settings.themeBootPhase[settings.dockTheme] ?? "" },
+                        set: { settings.themeBootPhase[settings.dockTheme] = $0.isEmpty ? nil : $0 })) {
+                        Text("As above").tag("")
+                        ForEach(BootPhaseMode.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
+                    }
+                    .labelsHidden().fixedSize()
                 }
             }
         }

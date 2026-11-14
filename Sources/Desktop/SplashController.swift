@@ -1,12 +1,15 @@
 import AppKit
+import WebKit
+import DriveSynth
 import AVKit
 import AVFoundation
 import SkyLightBridge
 
-/// Shows a theme's boot screen on theme activation: a fullscreen video (with sound) if the
-/// theme defines `splashVideo`, otherwise the `splashScreen` image (~3 s). Covers every
-/// display; a mouse click or any key skips straight to the desktop. Per-theme on/off via
-/// AppSettings.themeBootscreenEnabled (default on for themes with a video or image).
+/// Shows a theme's start on theme activation, as Boot Phases says: nothing, the OS boot (a
+/// fullscreen video with sound if the theme defines `splashVideo`, otherwise its `splashScreen`
+/// image or the native Welcome), or the machine's firmware first (`boot.firmware`, a BIOS POST
+/// one can enter with DEL) and then the OS boot. Covers every display; a click or Escape skips
+/// straight to the desktop. Global choice `AppSettings.bootPhaseMode`, per theme `themeBootPhase`.
 final class SplashController {
 
     static let shared = SplashController()
@@ -26,10 +29,17 @@ final class SplashController {
 
     private init() {}
 
-    /// Default boot-screen state when the user hasn't toggled it: ON for any theme that
-    /// defines a boot video or image.
-    private func bootscreenDefaultOn(_ theme: ThemeBundle) -> Bool {
-        theme.config.splashVideo != nil || theme.config.splashScreen != nil || theme.config.splashWelcome == true
+    /// Whether a theme has an OS boot of its own to show.
+    static func hasOSBoot(_ config: DockThemeConfig) -> Bool {
+        config.splashVideo != nil || config.splashScreen != nil || config.splashWelcome == true || config.boot?.os != nil
+    }
+
+    /// The Boot Phases this theme plays now.
+    static func mode(for theme: ThemeBundle) -> BootPhaseMode {
+        BootPhaseMode.effective(AppSettings.shared.bootPhase(for: theme.stableID),
+                                hasOS: hasOSBoot(theme.config), hasFirmware: theme.config.boot?.firmware != nil,
+                                voiceOver: NSWorkspace.shared.isVoiceOverEnabled,
+                                reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }
 
     /// Play the boot screen whatever the settings say, and call back exactly once when it is
@@ -64,13 +74,13 @@ final class SplashController {
         // would sit through the whole deadline again.
         if CFAbsoluteTimeGetCurrent() - lastCoverFailure < 5 { work(); return }
 
-        // Not under VoiceOver: a boot screen is only a picture, and as a full-screen key window
-        // above everything it took the focus and every key for five seconds, a system prompt's too.
-        guard AppSettings.shared.showSplashScreen, !NSWorkspace.shared.isVoiceOverEnabled,
-              AppSettings.shared.themeBootscreenEnabled[theme.stableID] ?? bootscreenDefaultOn(theme)
-        else { work(); return }
+        // Not under VoiceOver or Reduce Motion (`mode`): a boot screen is only a picture, and as a
+        // full-screen key window above everything it took the focus and every key, a system
+        // prompt's too.
+        let mode = Self.mode(for: theme)
+        guard mode != .desktop else { work(); return }
 
-        if !present(theme: theme, completion: nil, onVisible: work) { work() }
+        if !present(theme: theme, completion: nil, onVisible: work, firmware: mode == .full) { work() }
     }
 
     /// The switch waiting behind a cover that is still being raised.
@@ -90,7 +100,17 @@ final class SplashController {
     }
 
     /// True while a boot screen is on screen.
-    var isPresenting: Bool { !windows.isEmpty }
+    var isPresenting: Bool { !windows.isEmpty || !retiring.isEmpty }
+
+    /// One number per presentation. Every callback that arrives later (a video turning ready, its
+    /// deadline, a page message) checks it, so an old boot screen can never touch a newer one:
+    /// two quick theme switches used to let the first one's timeout stop the second one's video
+    /// and run its switch.
+    private var generation = 0
+
+    /// The firmware phase's windows, kept up until the OS phase has its own on screen, so the
+    /// desktop never shows between the two.
+    private var retiring: [NSWindow] = []
 
     /// Builds and starts the boot screen. Returns false when the theme has no boot screen at
     /// all, so a caller can carry on rather than wait for nothing. The settings gates live in
@@ -98,7 +118,7 @@ final class SplashController {
     @discardableResult
     /// `onVisible` is the work that has to wait until the boot screen is actually on screen.
     private func present(theme: ThemeBundle, completion: (() -> Void)?,
-                         onVisible: (() -> Void)? = nil) -> Bool {
+                         onVisible: (() -> Void)? = nil, firmware: Bool = false) -> Bool {
         guard let screen = NSScreen.main else { return false }
         // Clear a boot screen that is still up BEFORE arming the callback. Each display method
         // used to call `dismiss()` as its own first statement, which fired and cleared the
@@ -108,10 +128,26 @@ final class SplashController {
         dismiss()
         onFinish = completion
 
-        // Prefer a boot video (played fullscreen with sound) when present.
+        if firmware, let profile = theme.config.boot?.firmware {
+            pendingWork = onVisible
+            showFirmware(profile, theme: theme, on: screen)
+            return true
+        }
+        return presentOS(theme: theme, on: screen, onVisible: onVisible)
+    }
+
+    /// The OS phase: a text-mode boot (NT), the boot video, the Welcome or the picture.
+    @discardableResult
+    private func presentOS(theme: ThemeBundle, on screen: NSScreen, onVisible: (() -> Void)?) -> Bool {
+        if let os = theme.config.boot?.os {
+            pendingWork = onVisible
+            showPage(["os": os], on: screen)
+            return true
+        }
+        // Prefer a boot video (played fullscreen with sound) when present. Through the same
+        // confinement as every other theme file: a path out of the bundle is no boot video.
         if let videoFile = theme.config.splashVideo {
-            let url = theme.url.appendingPathComponent(videoFile)
-            if FileManager.default.fileExists(atPath: url.path) {
+            if let url = theme.rootResource(videoFile) {
                 // Assigned after the `dismiss()` above, so retiring the previous cover cannot
                 // flush this one's work. A video is the only path that has to wait.
                 pendingWork = onVisible
@@ -127,7 +163,10 @@ final class SplashController {
         }
         // Fall back to the image splash.
         guard let splashURL = theme.rootResource(theme.config.splashScreen),
-              let image = NSImage(contentsOf: splashURL) else { onFinish = nil; return false }
+              let image = NSImage(contentsOf: splashURL) else {
+            if !retiring.isEmpty { dismiss(); return true }   // after a firmware phase: just end
+            onFinish = nil; return false
+        }
         show(image: image, on: screen, fullscreen: theme.config.splashFullscreen == true)
         onVisible?()   // a still is on screen the moment it is ordered in
         return true
@@ -174,12 +213,14 @@ final class SplashController {
     }
 
     /// Show the main window key + first-responder so it also receives key events.
-    private func present(_ win: NSWindow, dismissView: BootDismissView) {
+    private func present(_ win: NSWindow, dismissView: NSView) {
         windows.append(win)
         if !NSApp.isActive { cameFrom = NSWorkspace.shared.frontmostApplication }
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
         win.makeFirstResponder(dismissView)
+        retiring.forEach { $0.orderOut(nil) }
+        retiring.removeAll()
         armWatchdog()
     }
 
@@ -256,9 +297,10 @@ final class SplashController {
         // which is exactly what a blocked main thread produces. An unbuilt window traps nothing.
         player.play()
 
+        let gen = generation
         var settled = false
         let reveal: () -> Void = { [weak self] in
-            guard let self, !settled else { return }
+            guard let self, !settled, gen == self.generation else { return }
             settled = true
             self.readyObservation = nil
             self.addCoverScreens(except: screen)
@@ -276,14 +318,13 @@ final class SplashController {
         // The video never became ready. Drop the boot screen rather than show a black one, and
         // let the switch proceed uncovered — waiting longer would only stall it further.
         let giveUp: () -> Void = { [weak self] in
-            guard let self, !settled else { return }
+            guard let self, !settled, gen == self.generation else { return }
             settled = true
-            self.readyObservation = nil
-            self.player?.pause()
-            self.player = nil
             print("[Splash] Boot video was not ready in time — switching without it")
             self.lastCoverFailure = CFAbsoluteTimeGetCurrent()
-            self.runPendingWork()
+            // Ends this presentation whole: its player, a firmware phase still up, the switch
+            // waiting behind it, and a caller waiting for the end (the crash restart).
+            self.dismiss()
         }
         readyObservation = videoLayer.observe(\.isReadyForDisplay, options: [.initial, .new]) { layer, _ in
             guard layer.isReadyForDisplay else { return }
@@ -347,6 +388,98 @@ final class SplashController {
         }
     }
 
+    // MARK: - Firmware and text-mode OS boot (Resources/Widgets/Boot/Boot.html)
+
+    /// The page on screen now, so `dismiss()` can take its message handler off again.
+    private var page: WKWebView?
+    /// The theme whose OS phase follows the firmware.
+    private var firmwareTheme: ThemeBundle?
+
+    private func showFirmware(_ profile: String, theme: ThemeBundle, on screen: NSScreen) {
+        firmwareTheme = theme
+        showPage(["firmware": profile], on: screen)
+    }
+
+    /// One boot page in a cover window: a BIOS POST (and its setup) or an OS loader in text
+    /// mode. Nothing is ordered in until the page says it has drawn; if it never does, the
+    /// firmware gives way to the OS phase and an OS page to the desktop.
+    private func showPage(_ query: [String: String], on screen: NSScreen) {
+        guard let url = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Boot/Boot.html"),
+              var parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { dismiss(); return }
+        parts.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
+        let frame = screen.frame
+        let gen = generation
+        let isFirmware = query["firmware"] != nil
+        let cfg = WKWebViewConfiguration()
+        cfg.websiteDataStore = .nonPersistent()   // an edited page is never served from a cache
+        var data = BootHostData.current()
+        data["bios"] = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(AppSettings.shared.bios)))
+        if let json = try? JSONSerialization.data(withJSONObject: data), let text = String(data: json, encoding: .utf8) {
+            cfg.userContentController.addUserScript(WKUserScript(source: "window.BOOT = \(text);",
+                                                                 injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
+        var shown = false
+        let handler = BootPageHandler { [weak self] msg in
+            guard let self, gen == self.generation else { return }
+            switch msg["type"] as? String {
+            case "ready":
+                guard !shown, let win = self.pageWindow else { return }
+                shown = true
+                if self.retiring.isEmpty { self.addCoverScreens(except: screen) }
+                self.present(win, dismissView: self.page ?? win.contentView!)
+                self.runPendingWork()
+            case "done":
+                if isFirmware, let theme = self.firmwareTheme { self.nextPhase(theme, on: screen) } else { self.dismiss() }
+            case "skip":
+                self.dismiss()
+            case "save":
+                if let raw = msg["bios"], let json = try? JSONSerialization.data(withJSONObject: raw),
+                   let prefs = try? JSONDecoder().decode(BIOSPrefs.self, from: json) { AppSettings.shared.bios = prefs }
+            case "floppy":
+                var drive = AppSettings.shared.sounds.drive
+                drive.profile = DS_PROFILE_FLOPPY35
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let buffer = DriveModule.previewBuffer(drive)
+                    DispatchQueue.main.async { SoundEngine.shared.playEvent(buffer) }
+                }
+            case "error":
+                print("[Boot] page: \(msg["message"] ?? "")")
+            default: break
+            }
+        }
+        cfg.userContentController.add(handler, name: "boot")
+        let web = BootWebView(frame: NSRect(origin: .zero, size: frame.size), configuration: cfg)
+        web.setValue(false, forKey: "drawsBackground")
+        let win = bootWindow(frame, opaque: true)
+        win.hasShadow = false
+        win.contentView = web
+        page = web
+        pageWindow = win
+        // The page reads ../../Fonts, so the whole Resources folder is readable to it.
+        if let pageURL = parts.url { web.loadFileURL(pageURL, allowingReadAccessTo: Bundle.main.resourceURL ?? url) }
+        // WebKit stuck: the firmware gives way to the OS phase, an OS page to the desktop.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            guard let self, gen == self.generation, !shown else { return }
+            print("[Splash] Boot page did not draw in time")
+            if isFirmware, let theme = self.firmwareTheme { self.nextPhase(theme, on: screen) } else { self.dismiss() }
+        }
+    }
+    private var pageWindow: NSWindow?
+
+    /// From the firmware to the OS boot without uncovering the desktop in between: the
+    /// firmware's windows stay until the OS phase has its own up.
+    private func nextPhase(_ theme: ThemeBundle, on screen: NSScreen) {
+        generation += 1                       // the page's late messages no longer count
+        page?.configuration.userContentController.removeScriptMessageHandler(forName: "boot")
+        page = nil; pageWindow = nil; firmwareTheme = nil
+        retiring += windows
+        windows.removeAll()
+        dismissTimer?.invalidate(); dismissTimer = nil
+        let work = pendingWork; pendingWork = nil
+        work?()                               // normally ran already, when the POST was drawn
+        if !presentOS(theme: theme, on: screen, onVisible: nil) { dismiss() }
+    }
+
     /// Classic Mac boot screen: the "Welcome to Macintosh" dialog box on a grey desktop, drawn
     /// natively (ported from metamage_1's Welcome demo — happy Mac icon + text in a dBoxProc frame).
     private func showWelcome(on screen: NSScreen) {
@@ -362,8 +495,13 @@ final class SplashController {
     }
 
     func dismiss() {
+        generation += 1
         readyObservation = nil
         watchdogGeneration += 1
+        page?.configuration.userContentController.removeScriptMessageHandler(forName: "boot")
+        page = nil; pageWindow = nil; firmwareTheme = nil
+        retiring.forEach { $0.orderOut(nil) }
+        retiring.removeAll()
         // The cover comes down FIRST, whatever ended it. A switch still waiting behind it runs
         // right after, on the next turn of the run loop: it used to run before the windows were
         // ordered out, so a click on the boot screen sat through the whole switch with the

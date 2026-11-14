@@ -65,6 +65,7 @@ files are not offered for any use outside the app. Where a set has a written cre
 | Iomega | The Zip drive in the click-of-death scene (pixel art drawn for RetroMac, of a product whose trade dress is Iomega's) | `Resources/Crashes/zipdrive.png` |
 | id Software, Raven, 3D Realms, Blizzard | Game logos in the Game Library | `Resources/GameIcons/` |
 | Namco | Pac-Man, as the GPL clone above | `vendor/pacman` |
+| Award Software, Phoenix Technologies, American Megatrends | The names and screen layouts of Award Modular BIOS v4.51PG, Phoenix - AwardBIOS v6.00PG and AMIBIOS (1992), reconstructed in text mode from photographs (no firmware, no original files); the Energy Star mark and Award's ribbon man are drawn anew. The values shown are the Mac's own | `Resources/Widgets/Boot` |
 | University of California, Berkeley | The SETI@home name and the Classic client's look, redrawn for RetroMac from two contemporary screenshots (no original files shipped); a simulation, not affiliated with the project | `Resources/Widgets/SETI` |
 | Berkeley Systems | The Flying Toasters are RetroMac's own drawing of an After Dark idea | `Resources/Widgets/Screensavers/FlyingToasters` |
 | 20th Century Studios | The Futurama theme is a fan tribute; its artwork was drawn for RetroMac | `Resources/Themes/Futurama.retromactheme` |

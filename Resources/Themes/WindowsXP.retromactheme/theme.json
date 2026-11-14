@@ -18,6 +18,7 @@
   "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",
+  "boot": { "firmware": "award600" },
   "splashScreen": "splash.png",
   "splashFullscreen": true,
   "wallpaper": "wallpaper.jpg",

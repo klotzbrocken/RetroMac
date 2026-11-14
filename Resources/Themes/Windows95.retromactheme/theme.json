@@ -35,6 +35,7 @@
   "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",
+  "boot": { "firmware": "award451" },
   "splashScreen": "splash.png",
   "splashVideo": "boot.mp4",
   "splashFullscreen": true,

@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Boot</title>
+<!--
+  Boot Phases: a PC's firmware (AMIBIOS 1992, Award Modular BIOS v4.51PG, Phoenix - AwardBIOS
+  v6.00PG) and, later, an OS loader in text mode. 80x25 characters of IBM VGA 9x16 on a
+  720x400 canvas, shown at 4:3. Reconstructions: the layouts follow photographs of the
+  originals, the logos are drawn here, and the machine is this Mac (window.BOOT, read once by
+  RetroMac) — no board, clock speed or drive is made up.
+-->
+<style>
+@font-face { font-family: VGA; src: url('../../Fonts/Px437_IBM_VGA_9x16.ttf'); }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+body { display: grid; place-items: center; }
+canvas { image-rendering: pixelated; display: block; }
+#live { position: absolute; left: -9999px; }
+</style>
+</head>
+<body>
+<canvas id="screen" width="720" height="400" aria-hidden="true"></canvas>
+<div id="live" aria-live="polite"></div>
+<script>
+'use strict';
+const send = m => { try { webkit.messageHandlers.boot.postMessage(m); } catch (e) {} };
+window.addEventListener('error', e => send({ type: 'error', message: e.message + ' @' + e.lineno }));
+
+const B = window.BOOT || { model: 'Mac', cpu: 'Apple M1', cores: 8, memoryKiB: 8388608,
+                           date: '01/01/2026', time: '00:00:00', bios: {} };
+B.bios = Object.assign({ quickPOST: true, floppySeek: true, values: {} }, B.bios || {});
+B.bios.values = B.bios.values || {};
+const Q = new URLSearchParams(location.search);
+const FW = Q.get('firmware');
+
+// ---------------------------------------------------------------- text-mode screen
+const C = document.getElementById('screen'), X = C.getContext('2d');
+const CW = 9, CH = 16, COLS = 80, ROWS = 25;
+const PAL = ['#000000','#0000AA','#00AA00','#00AAAA','#AA0000','#AA00AA','#AA5500','#AAAAAA',
+             '#555555','#5555FF','#55FF55','#55FFFF','#FF5555','#FF55FF','#FFFF55','#FFFFFF'];
+function fit() {
+  let k = Math.min(innerWidth / 720, innerHeight / 540);
+  if (k >= 1) k = Math.floor(k);
+  C.style.width = 720 * k + 'px'; C.style.height = 540 * k + 'px';
+}
+addEventListener('resize', fit); fit();
+function clear(bg = 0) { X.fillStyle = PAL[bg]; X.fillRect(0, 0, 720, 400); }
+function put(col, row, s, fg = 7, bg = null) {
+  s = String(s);
+  if (bg !== null) { X.fillStyle = PAL[bg]; X.fillRect(col * CW, row * CH, s.length * CW, CH); }
+  X.fillStyle = PAL[fg]; X.font = '16px VGA'; X.textBaseline = 'top';
+  for (let i = 0; i < s.length; i++) X.fillText(s[i], (col + i) * CW, row * CH);
+}
+function centre(row, s, fg = 7, bg = null) { put(Math.floor((COLS - s.length) / 2), row, s, fg, bg); }
+function fill(c0, r0, w, h, bg) { X.fillStyle = PAL[bg]; X.fillRect(c0 * CW, r0 * CH, w * CW, h * CH); }
+function box(c0, r0, w, h, fg, bg, dbl = true) {
+  const [tl, tr, bl, br, hz, vt] = dbl ? '╔╗╚╝═║' : '┌┐└┘─│';
+  if (bg !== null) fill(c0, r0, w, h, bg);
+  put(c0, r0, tl + hz.repeat(w - 2) + tr, fg);
+  for (let r = 1; r < h - 1; r++) { put(c0, r0 + r, vt, fg); put(c0 + w - 1, r0 + r, vt, fg); }
+  put(c0, r0 + h - 1, bl + hz.repeat(w - 2) + br, fg);
+}
+const pad = (s, n) => (String(s) + ' '.repeat(n)).slice(0, n);
+const lpad = (s, n) => (' '.repeat(n) + String(s)).slice(-n);
+const say = t => { document.getElementById('live').textContent = t; };
+
+// ---------------------------------------------------------------- drawn logos
+// The Energy Star mark and Award's ribbon man, drawn here and cut to whole pixels the way
+// the BIOS put them on screen with redefined characters. Nothing is copied from a picture.
+function pixelArt(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); draw(g);
+  const d = g.getImageData(0, 0, w, h), p = d.data;
+  for (let i = 0; i < p.length; i += 4) p[i + 3] = p[i + 3] > 110 ? 255 : 0;
+  g.putImageData(d, 0, 0); return c;
+}
+const energy = pixelArt(162, 94, g => {
+  g.strokeStyle = PAL[14]; g.fillStyle = PAL[14]; g.lineWidth = 2;
+  g.beginPath(); g.ellipse(70, 52, 64, 44, 0, Math.PI * 1.02, Math.PI * 1.9); g.stroke();   // the arc
+  const sx = 132, sy = 40, R = 26, r = 10; g.beginPath();                                    // the star
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r : R;
+    g.lineTo(sx + Math.cos(a) * q, sy + Math.sin(a) * q); }
+  g.closePath(); g.stroke();
+  g.font = 'italic bold 34px "Snell Roundhand", "Apple Chancery", cursive';
+  g.lineWidth = 1.4; g.strokeText('energy', 8, 68);
+  g.fillStyle = PAL[10]; g.fillRect(4, 78, 156, 2);                                           // green rule
+  g.font = 'bold 10px Helvetica, Arial, sans-serif'; g.fillText('EPA POLLUTION PREVENTER', 6, 91);
+});
+const ribbon = pixelArt(24, 32, g => {
+  g.fillStyle = PAL[9];
+  g.beginPath(); g.arc(13, 6, 5, 0, Math.PI * 2); g.fill();                                   // head
+  g.beginPath(); g.moveTo(3, 13); g.lineTo(22, 13); g.lineTo(15, 20); g.lineTo(18, 31);
+  g.lineTo(11, 24); g.lineTo(4, 31); g.lineTo(8, 20); g.closePath(); g.fill();               // body
+});
+
+// ---------------------------------------------------------------- the firmware
+const mb = Math.round(B.memoryKiB / 1024);
+const idDate = B.date.slice(0, 6) + B.date.slice(8);    // mm/dd/yy
+const P = {
+  ami92: {
+    name: 'AMIBIOS', fg: 7, epa: false, delKey: 'Hit <DEL> if you want to run SETUP',
+    head: ['AMIBIOS (C)1992 American Megatrends Inc.,', B.model + ' (host data)'],
+    count: (n, done) => lpad(n, 9) + 'KB OK' + (done ? '' : ''),
+    countRow: 3, more: [], id: '(C) American Megatrends Inc., 40-0000-001437-00101111-' + idDate.replace(/\//g, '') + '-HOST-' + B.model,
+  },
+  award451: {
+    name: 'Award', fg: 7, epa: true, delKey: 'Press DEL to enter SETUP',
+    head: ['Award Modular BIOS v4.51PG, An Energy Star Ally', 'Copyright (C) 1984-98, Award Software, Inc.'],
+    lines: [[3, 'Host board/model : ' + B.model], [5, B.cpu + ' Processor / ' + B.cores + ' cores']],
+    count: (n, done) => 'Memory Test : ' + lpad(n, 9) + 'K' + (done ? ' OK' : ''), countRow: 6,
+    more: [[8, 'Award Plug and Play BIOS Extension v1.0A'], [9, 'Initialize Plug and Play Cards...'], [10, 'PNP Init Completed']],
+    id: B.date + '-HOST-<<' + B.model + '>>', configTitle: ['Award Software, Inc.', 'System Configurations'],
+  },
+  award600: {
+    name: 'Award', fg: 7, epa: true, delKey: 'Press DEL to enter SETUP',
+    head: ['Phoenix - AwardBIOS v6.00PG, An Energy Star Ally', 'Copyright (C) 1984-2004, Phoenix Technologies, LTD'],
+    lines: [[3, 'Host board/model : ' + B.model], [5, 'Main Processor : ' + B.cpu + ' (' + B.cores + ' cores)']],
+    count: (n, done) => 'Memory Testing : ' + lpad(n, 9) + 'K' + (done ? ' OK' : ''), countRow: 6,
+    more: [[8, 'Detecting host hardware ...'], [9, 'Host data read, no drives are simulated']],
+    id: B.date + '-HOST-<<' + B.model + '>>', configTitle: ['Phoenix Technologies, LTD', 'System Configurations'],
+  },
+}[FW] || null;
+
+// ---------------------------------------------------------------- POST
+let phase = 'post', t0 = 0, setupFrom = null;
+const quick = () => (FW === 'ami92' ? B.bios.quickPOST : B.bios.quickPOST);
+const T = () => quick() ? { count: 0.7, more: 1.0, end: 1.6, config: 1.0 } : { count: 2.6, more: 3.1, end: 4.0, config: 1.8 };
+function drawPOST(t) {
+  const tm = T(); clear();
+  if (!P) return;
+  P.head.forEach((s, i) => put(FW === 'ami92' ? 0 : 3, i, s, P.fg));
+  if (FW !== 'ami92') X.drawImage(ribbon, 0, 0);
+  const epaOff = (B.bios.values[FW + '/Small Logo(EPA) Show'] || 'Enabled') === 'Disabled';
+  if (P.epa && !epaOff) X.drawImage(energy, 558, 0);
+  if (t > 0.15) (P.lines || []).forEach(([r, s]) => put(0, r, s));
+  if (t > 0.3) {
+    const f = Math.min(1, (t - 0.3) / tm.count);
+    const n = Math.floor(f * B.memoryKiB / 1024) * 1024;
+    put(0, P.countRow, P.count(n, f >= 1));
+  }
+  if (t > tm.more) P.more.forEach(([r, s]) => put(0, r, s));
+  const delOff = FW === 'ami92' && (B.bios.values['ami92/Hit <DEL> Message Display'] || 'Enabled') === 'Disabled';
+  if (!delOff) put(0, FW === 'ami92' ? 5 : 23, P.delKey, 7);
+  if (FW !== 'ami92') put(6, 23, 'DEL', 15);
+  put(0, 24, P.id);
+}
+function drawConfig() {
+  clear();
+  const t = P.configTitle; centre(1, t[0]); centre(2, t[1]);
+  box(1, 3, 78, 9, 7, null);
+  put(40, 3, '╤'); for (let r = 4; r < 11; r++) put(40, r, '│'); put(40, 11, '╧');
+  const ext = Math.max(0, B.memoryKiB - 1024);
+  const L = [['CPU Type', B.cpu.toUpperCase()], ['CPU Cores', String(B.cores)], ['Host Model', B.model],
+             ['Diskette Drive A', 'None'], ['Diskette Drive B', 'None'], ['Pri. Master Disk', 'None'], ['Pri. Slave  Disk', 'None']];
+  const R = [['Display Type', 'EGA/VGA'], ['Base Memory', '640K'], ['Extended Memory', ext + 'K'],
+             ['Serial Port(s)', 'None'], ['Parallel Port(s)', 'None'], ['Sec. Master Disk', 'None'], ['Sec. Slave  Disk', 'None']];
+  L.forEach(([k, v], i) => put(3, 4 + i, pad(k, 17) + ': ' + v.slice(0, 18)));
+  R.forEach(([k, v], i) => put(42, 4 + i, pad(k, 17) + ': ' + v.slice(0, 17)));
+  put(0, 14, 'Historical POST reconstruction, actual host values');
+  put(0, 16, 'Booting Operating System' + (Math.floor(performance.now() / 500) % 2 ? '_' : ' '));
+}
+
+// ---------------------------------------------------------------- SETUP
+const EN = ['Enabled', 'Disabled'], DIS = ['Disabled', 'Enabled'];
+const MIN = ['Disable', '1 Min', '2 Min', '4 Min', '8 Min', '12 Min', '20 Min', '30 Min', '40 Min', '1 Hour'];
+const extKB = Math.max(0, B.memoryKiB - 1024);
+const SETUP = {
+  award451: {
+    style: 451, title: ['ROM PCI/ISA BIOS (HOST-' + B.model.toUpperCase() + ')', 'CMOS SETUP UTILITY', 'AWARD SOFTWARE, INC.'],
+    menu: [
+      ['STANDARD CMOS SETUP', 'std', 'Time, Date, Hard Disk Type...'], ['BIOS FEATURES SETUP', 'bios', 'Virus Warning, Boot Sequence, Quick POST...'],
+      ['CHIPSET FEATURES SETUP', 'chip', 'Cache, DRAM timing...'], ['POWER MANAGEMENT SETUP', 'pm', 'Doze, Standby, Suspend...'],
+      ['PNP/PCI CONFIGURATION', 'pnp', 'Plug and Play, IRQ assignment...'], ['LOAD BIOS DEFAULTS', 'defaults', 'Load BIOS Defaults except Standard CMOS SETUP'],
+      ['LOAD SETUP DEFAULTS', 'defaults', 'Load SETUP Defaults except Standard CMOS SETUP'],
+      ['INTEGRATED PERIPHERALS', 'per', 'On-chip IDE, ports...'], ['SUPERVISOR PASSWORD', 'pw', 'Change/Set/Disable Password'],
+      ['USER PASSWORD', 'pw', 'Change/Set/Disable Password'], ['IDE HDD AUTO DETECTION', 'ide', 'Detect the hard disks'],
+      ['SAVE & EXIT SETUP', 'save', 'Save Data to CMOS & Exit SETUP'], ['EXIT WITHOUT SAVING', 'quit', 'Abandon all Datas & Exit SETUP'],
+    ],
+    pages: {
+      std: { title: 'STANDARD CMOS SETUP', items: [
+        { l: 'Date (mm:dd:yy)', show: () => B.date.slice(0, 6) + B.date.slice(8) },
+        { l: 'Time (hh:mm:ss)', show: () => B.time },
+        { l: 'Drive A', o: ['None', '360K, 5.25 in.', '1.2M, 5.25 in.', '720K, 3.5 in.', '1.44M, 3.5 in.', '2.88M, 3.5 in.'] },
+        { l: 'Drive B', o: ['None', '360K, 5.25 in.', '1.2M, 5.25 in.', '720K, 3.5 in.', '1.44M, 3.5 in.'] },
+        { l: 'Video', o: ['EGA/VGA', 'CGA 40', 'CGA 80', 'MONO'] },
+        { l: 'Halt On', o: ['All Errors', 'No Errors', 'All,But Keyboard', 'All,But Diskette', 'All,But Disk/Key'] },
+        { l: 'Hard Disks', show: () => 'None (no drives are simulated)' },
+        { l: 'Base Memory', show: () => '640K' }, { l: 'Extended Memory', show: () => extKB + 'K' },
+        { l: 'Total Memory', show: () => B.memoryKiB + 'K' } ] },
+      bios: { title: 'BIOS FEATURES SETUP', items: [
+        { l: 'Virus Warning', o: DIS }, { l: 'CPU Internal Cache', o: EN }, { l: 'External Cache', o: EN },
+        { l: 'Quick Power On Self Test', o: EN, real: 'quickPOST' },
+        { l: 'Boot Sequence', o: ['A,C,SCSI', 'C,A,SCSI', 'C,CDROM,A', 'CDROM,C,A', 'D,A,SCSI', 'SCSI,A,C', 'SCSI,C,A', 'C only', 'LS/ZIP,C'] },
+        { l: 'Swap Floppy Drive', o: DIS }, { l: 'Boot Up Floppy Seek', o: EN, real: 'floppySeek' },
+        { l: 'Boot Up NumLock Status', o: ['On', 'Off'] }, { l: 'Boot Up System Speed', o: ['High', 'Low'] },
+        { l: 'Gate A20 Option', o: ['Fast', 'Normal'] }, { l: 'Typematic Rate Setting', o: DIS },
+        { l: 'Typematic Rate (Chars/Sec)', o: ['6', '8', '10', '12', '15', '20', '24', '30'] },
+        { l: 'Typematic Delay (Msec)', o: ['250', '500', '750', '1000'] }, { l: 'Security Option', o: ['Setup', 'System'] },
+        { l: 'PCI/VGA Palette Snoop', o: DIS }, { l: 'OS Select For DRAM > 64MB', o: ['Non-OS2', 'OS2'] },
+        { l: 'Video BIOS Shadow', o: EN } ] },
+      chip: { title: 'CHIPSET FEATURES SETUP', items: [
+        { l: 'Auto Configuration', o: EN }, { l: 'DRAM Timing', o: ['70ns', '60ns'] }, { l: 'SDRAM CAS Latency', o: ['3T', '2T'] },
+        { l: 'System BIOS Cacheable', o: EN }, { l: 'Video BIOS Cacheable', o: EN },
+        { l: 'Memory Hole At 15M-16M', o: DIS }, { l: 'AGP Aperture Size (MB)', o: ['64', '4', '8', '16', '32', '128', '256'] } ] },
+      pm: { title: 'POWER MANAGEMENT SETUP', items: [
+        { l: 'Power Management', o: ['User Define', 'Disable', 'Min Saving', 'Max Saving'] }, { l: 'PM Control by APM', o: ['Yes', 'No'] },
+        { l: 'Video Off Method', o: ['V/H SYNC+Blank', 'DPMS', 'Blank Screen'] }, { l: 'Video Off After', o: ['Standby', 'Doze', 'Suspend', 'N/A'] },
+        { l: 'Doze Mode', o: MIN }, { l: 'Standby Mode', o: MIN }, { l: 'Suspend Mode', o: MIN },
+        { l: 'HDD Power Down', o: ['Disable', '1 Min', '5 Min', '10 Min', '15 Min'] } ] },
+      pnp: { title: 'PNP/PCI CONFIGURATION', items: [
+        { l: 'PNP OS Installed', o: ['No', 'Yes'] }, { l: 'Resources Controlled By', o: ['Manual', 'Auto'] },
+        { l: 'Reset Configuration Data', o: DIS }, { l: 'PCI IRQ Actived By', o: ['Level', 'Edge'] }, { l: 'Assign IRQ For VGA', o: EN } ] },
+      per: { title: 'INTEGRATED PERIPHERALS', items: [
+        { l: 'IDE HDD Block Mode', o: EN }, { l: 'On-Chip Primary PCI IDE', o: EN }, { l: 'On-Chip Secondary PCI IDE', o: EN },
+        { l: 'USB Keyboard Support', o: DIS }, { l: 'Onboard FDC Controller', o: EN },
+        { l: 'Onboard Serial Port 1', o: ['3F8/IRQ4', '2F8/IRQ3', '3E8/IRQ4', '2E8/IRQ3', 'Disabled'] },
+        { l: 'Onboard Serial Port 2', o: ['2F8/IRQ3', '3F8/IRQ4', '3E8/IRQ4', '2E8/IRQ3', 'Disabled'] },
+        { l: 'Onboard Parallel Port', o: ['378/IRQ7', '278/IRQ5', '3BC/IRQ7', 'Disabled'] }, { l: 'Parallel Port Mode', o: ['SPP', 'EPP', 'ECP', 'ECP+EPP'] } ] },
+    },
+  },
+  award600: {
+    style: 600, title: ['Phoenix - AwardBIOS CMOS Setup Utility'],
+    menu: [
+      ['Standard CMOS Features', 'std', 'Time, Date, Hard Disk Type...'], ['Advanced BIOS Features', 'bios', 'Boot order, Quick POST, logo...'],
+      ['Advanced Chipset Features', 'chip', 'DRAM timing, AGP...'], ['Integrated Peripherals', 'per', 'On-chip IDE, USB, audio, ports...'],
+      ['Power Management Setup', 'pm', 'ACPI, suspend, power button...'], ['PnP/PCI Configurations', 'pnp', 'Plug and Play, IRQ assignment...'],
+      ['Frequency/Voltage Control', 'freq', 'Clock and spread spectrum'],
+      ['Load Fail-Safe Defaults', 'defaults', 'Load Fail-Safe Defaults'], ['Load Optimized Defaults', 'defaults', 'Load Optimized Defaults'],
+      ['Set Supervisor Password', 'pw', 'Change/Set/Disable Password'], ['Set User Password', 'pw', 'Change/Set/Disable Password'],
+      ['Save & Exit Setup', 'save', 'Save Data to CMOS'], ['Exit Without Saving', 'quit', 'Abandon all Data'],
+    ],
+    pages: {
+      std: { title: 'Standard CMOS Features', items: [
+        { l: 'Date (mm:dd:yy)', show: () => B.date.slice(0, 6) + B.date.slice(8) }, { l: 'Time (hh:mm:ss)', show: () => B.time },
+        { l: 'IDE Channel 0 Master', show: () => 'None' }, { l: 'IDE Channel 0 Slave', show: () => 'None' },
+        { l: 'Drive A', o: ['None', '1.44M, 3.5 in.', '720K, 3.5 in.', '2.88M, 3.5 in.'] }, { l: 'Video', o: ['EGA/VGA', 'CGA 40', 'CGA 80', 'MONO'] },
+        { l: 'Halt On', o: ['All , But Keyboard', 'All Errors', 'No Errors', 'All , But Diskette', 'All , But Disk/Key'] },
+        { l: 'Base Memory', show: () => '640K' }, { l: 'Extended Memory', show: () => extKB + 'K' }, { l: 'Total Memory', show: () => B.memoryKiB + 'K' } ] },
+      bios: { title: 'Advanced BIOS Features', items: [
+        { l: 'CPU L1 & L2 Cache', o: EN }, { l: 'Quick Power On Self Test', o: EN, real: 'quickPOST' },
+        { l: 'First Boot Device', o: ['Floppy', 'LS120', 'HDD-0', 'SCSI', 'CDROM', 'ZIP100', 'USB-FDD', 'USB-CDROM', 'LAN', 'Disabled'] },
+        { l: 'Second Boot Device', o: ['HDD-0', 'Floppy', 'CDROM', 'LS120', 'SCSI', 'USB-FDD', 'LAN', 'Disabled'] },
+        { l: 'Third Boot Device', o: ['LS120', 'HDD-0', 'Floppy', 'CDROM', 'LAN', 'Disabled'] }, { l: 'Boot Other Device', o: EN },
+        { l: 'Boot Up Floppy Seek', o: EN, real: 'floppySeek' }, { l: 'Boot Up NumLock Status', o: ['On', 'Off'] },
+        { l: 'Gate A20 Option', o: ['Fast', 'Normal'] }, { l: 'Typematic Rate Setting', o: DIS }, { l: 'Security Option', o: ['Setup', 'System'] },
+        { l: 'APIC Mode', o: EN }, { l: 'MPS Version Control For OS', o: ['1.4', '1.1'] }, { l: 'OS Select For DRAM > 64MB', o: ['Non-OS2', 'OS2'] },
+        { l: 'Full Screen LOGO Show', o: DIS }, { l: 'Small Logo(EPA) Show', o: EN } ] },
+      chip: { title: 'Advanced Chipset Features', items: [
+        { l: 'DRAM Timing Selectable', o: ['By SPD', 'Manual'] }, { l: 'CAS Latency Time', o: ['2.5', '2', '3'] },
+        { l: 'AGP Aperture Size (MB)', o: ['128', '64', '256', '32'] }, { l: 'System BIOS Cacheable', o: EN }, { l: 'Video BIOS Cacheable', o: DIS } ] },
+      per: { title: 'Integrated Peripherals', items: [
+        { l: 'OnChip IDE Channel0', o: EN }, { l: 'OnChip IDE Channel1', o: EN }, { l: 'OnChip USB Controller', o: ['All Enabled', 'USB 1.1 only', 'Disabled'] },
+        { l: 'USB Keyboard Support', o: DIS }, { l: 'AC97 Audio', o: ['Auto', 'Disabled'] }, { l: 'Onboard Serial Port 1', o: ['3F8/IRQ4', '2F8/IRQ3', 'Disabled'] },
+        { l: 'Onboard Parallel Port', o: ['378/IRQ7', '278/IRQ5', 'Disabled'] }, { l: 'Parallel Port Mode', o: ['SPP', 'EPP', 'ECP', 'ECP+EPP'] } ] },
+      pm: { title: 'Power Management Setup', items: [
+        { l: 'ACPI Function', o: EN }, { l: 'ACPI Suspend Type', o: ['S1(POS)', 'S3(STR)'] }, { l: 'Video Off Method', o: ['DPMS', 'Blank Screen', 'V/H SYNC+Blank'] },
+        { l: 'Soft-Off by PWR-BTTN', o: ['Instant-Off', 'Delay 4 Sec'] }, { l: 'AC Back Function', o: ['Soft-Off', 'Full-On', 'Memory'] } ] },
+      pnp: { title: 'PnP/PCI Configurations', items: [
+        { l: 'Reset Configuration Data', o: DIS }, { l: 'Resources Controlled By', o: ['Auto(ESCD)', 'Manual'] }, { l: 'PCI/VGA Palette Snoop', o: DIS } ] },
+      freq: { title: 'Frequency/Voltage Control', items: [
+        { l: 'Auto Detect PCI Clk', o: EN }, { l: 'Spread Spectrum', o: DIS } ] },
+    },
+  },
+  ami92: {
+    style: 92, title: ['AMIBIOS SETUP PROGRAM - BIOS SETUP UTILITIES', '(C) 1992 American Megatrends Inc., All Rights Reserved'],
+    menu: [
+      ['Standard CMOS Setup', 'std', ''], ['Advanced CMOS Setup', 'bios', ''], ['Advanced Chipset Setup', 'chip', ''],
+      ['Auto Configuration with BIOS Defaults', 'defaults', ''], ['Auto Configuration with Power-On Defaults', 'defaults', ''],
+      ['Change Password', 'pw', ''], ['Auto Detect Hard Disks', 'ide', ''],
+      ['Write to CMOS and Exit', 'save', ''], ['Do Not Write to CMOS and Exit', 'quit', ''],
+    ],
+    pages: {
+      std: { title: 'STANDARD CMOS SETUP', items: [
+        { l: 'Date (mn/date/year)', show: () => B.date }, { l: 'Time (hour/min/sec)', show: () => B.time },
+        { l: 'Hard disk C: type', show: () => 'Not Installed' }, { l: 'Hard disk D: type', show: () => 'Not Installed' },
+        { l: 'Floppy drive A:', o: ['Not Installed', '360 KB 5¼"', '1.2 MB 5¼"', '720 KB 3½"', '1.44 MB 3½"'] },
+        { l: 'Floppy drive B:', o: ['Not Installed', '360 KB 5¼"', '1.2 MB 5¼"', '720 KB 3½"', '1.44 MB 3½"'] },
+        { l: 'Primary display', o: ['VGA/EGA', 'CGA 40x25', 'CGA 80x25', 'Monochrome'] }, { l: 'Keyboard', o: ['Installed', 'Not Installed'] },
+        { l: 'Base memory', show: () => '640 KB' }, { l: 'Ext. memory', show: () => extKB + ' KB' } ] },
+      bios: { title: 'ADVANCED CMOS SETUP', items: [
+        { l: 'Typematic Rate Programming', o: DIS }, { l: 'Typematic Rate Delay (msec)', o: ['500', '250', '750', '1000'] },
+        { l: 'Typematic Rate (Chars/Sec)', o: ['15', '6', '8', '10', '12', '20', '24', '30'] },
+        { l: 'Above 1 MB Memory Test', o: DIS, real: 'quickPOST', invert: true }, { l: 'Memory Test Tick Sound', o: EN },
+        { l: 'Hit <DEL> Message Display', o: EN }, { l: 'Floppy Drive Seek At Boot', o: EN, real: 'floppySeek' },
+        { l: 'System Boot Up Sequence', o: ['C:,A:', 'A:,C:'] }, { l: 'System Boot Up Speed', o: ['High', 'Low'] },
+        { l: 'System Boot Up Num Lock', o: ['On', 'Off'] }, { l: 'Password Checking Option', o: ['Setup', 'Always'] },
+        { l: 'Video ROM Shadow C000,32K', o: EN }, { l: 'Internal Cache Memory', o: EN } ] },
+      chip: { title: 'ADVANCED CHIPSET SETUP', items: [
+        { l: 'AT Bus Clock Source', o: ['CLKIN/4', 'CLKIN/3', 'CLKIN/5'] }, { l: 'Memory Read Wait State', o: ['1 W/S', '0 W/S'] },
+        { l: 'Memory Write Wait State', o: ['1 W/S', '0 W/S'] }, { l: 'Hidden Refresh Control', o: EN } ] },
+    },
+  },
+}[FW];
+
+const S = { page: null, sel: 0, dialog: null, snapshot: null };
+const key = it => FW + '/' + it.l;
+function value(it) {
+  if (it.show) return it.show();
+  if (it.real) { const on = !!B.bios[it.real] !== !!it.invert; return on ? 'Enabled' : 'Disabled'; }
+  return B.bios.values[key(it)] || it.o[0];
+}
+function step(it, d) {
+  if (!it.o) return;
+  const cur = value(it), i = Math.max(0, it.o.indexOf(cur)), next = it.o[(i + d + it.o.length) % it.o.length];
+  if (it.real) B.bios[it.real] = (next === 'Enabled') !== !!it.invert;
+  else B.bios.values[key(it)] = next;
+}
+function loadDefaults() {
+  for (const k of Object.keys(B.bios.values)) if (k.startsWith(FW + '/')) delete B.bios.values[k];
+  B.bios.quickPOST = true; B.bios.floppySeek = true;
+}
+function enterSetup() {
+  if (!SETUP) return;
+  phase = 'setup'; S.page = null; S.sel = 0; S.dialog = null;
+  S.snapshot = JSON.stringify(B.bios);
+  say('BIOS setup. Arrow keys move, Enter opens, Escape goes back, F10 saves and exits.');
+  drawSetup();
+}
+function leaveSetup(save) {
+  if (save) send({ type: 'save', bios: B.bios }); else B.bios = JSON.parse(S.snapshot);
+  phase = 'config'; t0 = performance.now(); loop();
+}
+function colours() {
+  // 4.51PG: blue with a red bar; 6.00PG: blue main menu, grey pages; AMI: blue and cyan.
+  return SETUP.style === 600 ? { bg: 1, fg: 15, hi: 14, bar: 4, page: 7, pfg: 1, val: 1 }
+       : SETUP.style === 92  ? { bg: 1, fg: 15, hi: 15, bar: 3, page: 1, pfg: 15, val: 14 }
+       : { bg: 1, fg: 15, hi: 15, bar: 4, page: 1, pfg: 15, val: 14 };
+}
+function drawSetup() {
+  const k = colours();
+  clear(k.bg);
+  if (!S.page) {
+    SETUP.title.forEach((s, i) => centre(i, s, 15));
+    const top = SETUP.title.length + (SETUP.style === 451 ? 0 : 1), menu = SETUP.menu;
+    if (SETUP.style === 92) {
+      box(14, top, 52, menu.length + 2, 15, null);
+      menu.forEach(([l], i) => put(17, top + 1 + i, pad(l, 46), i === S.sel ? 1 : 15, i === S.sel ? 3 : null));
+      put(0, 22, '─'.repeat(80), 15);
+      centre(23, 'ESC:Exit  ↑↓:Sel  Enter:Choose  F10:Save & Exit', 15);
+    } else {
+      const half = Math.ceil(menu.length / 2), h = half * 2 + 1;
+      box(1, top, 78, h, 15, null); put(40, top, '╤'); for (let r = 1; r < h - 1; r++) put(40, top + r, '│'); put(40, top + h - 1, '╧');
+      menu.forEach(([l], i) => {
+        const col = i < half ? 4 : 43, row = top + 1 + (i % half) * 2;
+        const mark = SETUP.style === 600 ? '► ' : '';
+        if (SETUP.style === 600) put(col - 2, row, '►', 14);
+        put(col, row, pad(l, 34), i === S.sel ? 15 : (SETUP.style === 600 ? 14 : 15), i === S.sel ? 4 : null);
+      });
+      const b = top + h;
+      box(1, b, 78, 4, 15, null);
+      put(3, b + 1, 'Esc : Quit', 15); put(43, b + 1, '↑ ↓ → ←   : Select Item', 15);
+      put(3, b + 2, 'F10 : Save & Exit Setup', 15);
+      box(1, b + 4, 78, 3, 15, null); centre(b + 5, menu[S.sel][2] || '', 15);
+    }
+  } else {
+    const pg = SETUP.pages[S.page], items = pg.items;
+    clear(k.page);
+    if (SETUP.style === 600) { centre(0, SETUP.title[0], 1); centre(1, pg.title, 1); }
+    else { centre(0, SETUP.title[0], k.pfg); centre(1, pg.title, k.pfg); if (SETUP.title[2]) centre(2, SETUP.title[2], k.pfg); }
+    const top = 4, rows = 16, two = items.length > rows;
+    box(0, top - 1, 80, rows + 2, k.pfg, null);
+    if (SETUP.style === 600) { put(56, top - 1, '╤', 1); for (let r = 0; r < rows; r++) put(56, top + r, '│', 1); put(56, top + rows, '╧', 1);
+      centre(top, '', 1); put(62, top, 'Item Help', 1); put(58, top + 2, 'Menu Level  ►', 1); }
+    // Label and value columns as the originals had them: two columns of 26 + 12 when a page is
+    // long, one wide column otherwise; 6.00PG keeps its Item Help panel on the right.
+    const lw = SETUP.style === 600 ? 27 : (two ? 26 : 30), vw = SETUP.style === 600 ? 24 : (two ? 12 : 44);
+    items.forEach((it, i) => {
+      const col = two && i >= rows ? 40 : 2, row = top + (two && i >= rows ? i - rows : i);
+      const v = SETUP.style === 600 ? '[' + value(it) + ']' : ': ' + value(it), sel = i === S.sel;
+      put(col, row, pad(it.l, lw), it.show ? (SETUP.style === 600 ? 8 : 7) : k.pfg);
+      put(col + lw, row, pad(v, vw), sel ? 15 : (SETUP.style === 600 ? 1 : k.val), sel ? 4 : null);
+    });
+    const hint = SETUP.style === 600
+      ? ['↑↓→←:Move  Enter:Select  +/-/PU/PD:Value  F10:Save  ESC:Exit', 'F5: Previous Values   F6: Fail-Safe Defaults   F7: Optimized Defaults']
+      : ['ESC : Quit   ↑↓→← : Select Item   PU/PD/+/- : Modify', 'F5 : Old Values   F6 : Load BIOS Defaults   F7 : Load Setup Defaults'];
+    hint.forEach((s, i) => centre(22 + i, s, k.pfg));
+  }
+  if (S.dialog) {
+    const d = S.dialog, w = Math.max(...d.lines.map(s => s.length)) + 6;
+    const c0 = Math.floor((80 - w) / 2), r0 = 10;
+    box(c0, r0, w, d.lines.length + 2, 15, 4);
+    d.lines.forEach((s, i) => put(c0 + 3, r0 + 1 + i, s, 15));
+  }
+}
+function ask(question, yes, onAnswer) {
+  S.dialog = { lines: [question + ' (Y/N)? ' + (yes ? 'Y' : 'N')], yes, onAnswer, yn: true };
+  say(question + ', yes or no');
+}
+function message(lines, then) { S.dialog = { lines, then }; say(lines.join('. ')); }
+function choose() {
+  if (!S.page) {
+    const [label, act] = SETUP.menu[S.sel];
+    if (SETUP.pages[act]) { S.page = act; S.sel = 0; say(SETUP.pages[act].title); return; }
+    if (act === 'save') return ask(SETUP.style === 92 ? 'Write data into CMOS and exit' : 'SAVE to CMOS and EXIT', true, y => y && leaveSetup(true));
+    if (act === 'quit') return ask(SETUP.style === 92 ? 'Quit without saving' : 'Quit Without Saving', false, y => y && leaveSetup(false));
+    if (act === 'defaults') return ask(label, false, y => y && loadDefaults());
+    if (act === 'pw') return message(['PASSWORD DISABLED !!!', 'Press any key to continue...']);
+    if (act === 'ide') return message(['Primary Master   : None', 'Primary Slave    : None', 'Secondary Master : None',
+                                       'Secondary Slave  : None', '', 'No drives are simulated.', 'Press any key to continue...']);
+  } else {
+    const it = SETUP.pages[S.page].items[S.sel]; step(it, 1); say(it.l + ' ' + value(it));
+  }
+}
+function setupKey(e) {
+  const k = e.key;
+  if (S.dialog) {
+    const d = S.dialog;
+    if (d.yn) {
+      if (k === 'y' || k === 'Y') { d.yes = true; d.lines = [d.lines[0].replace(/[YN]$/, 'Y')]; drawSetup(); return; }
+      if (k === 'n' || k === 'N') { d.yes = false; d.lines = [d.lines[0].replace(/[YN]$/, 'N')]; drawSetup(); return; }
+      if (k === 'Enter') { S.dialog = null; d.onAnswer(d.yes); }
+      if (k === 'Escape') S.dialog = null;
+    } else { S.dialog = null; }
+    if (phase === 'setup') drawSetup();
+    return;
+  }
+  const n = S.page ? SETUP.pages[S.page].items.length : SETUP.menu.length;
+  const half = S.page ? 16 : (SETUP.style === 92 ? n : Math.ceil(n / 2));
+  if (k === 'ArrowDown') S.sel = (S.sel + 1) % n;
+  else if (k === 'ArrowUp') S.sel = (S.sel - 1 + n) % n;
+  else if (k === 'ArrowRight' && !S.page) S.sel = Math.min(n - 1, S.sel + half);
+  else if (k === 'ArrowLeft' && !S.page) S.sel = Math.max(0, S.sel - half);
+  else if (k === 'Enter') choose();
+  else if (S.page && (k === 'PageDown' || k === '+' || k === '=' || k === 'ArrowRight')) { const it = SETUP.pages[S.page].items[S.sel]; step(it, 1); say(it.l + ' ' + value(it)); }
+  else if (S.page && (k === 'PageUp' || k === '-' || k === 'ArrowLeft')) { const it = SETUP.pages[S.page].items[S.sel]; step(it, -1); say(it.l + ' ' + value(it)); }
+  else if (S.page && k === 'F5') { const keep = JSON.parse(S.snapshot); B.bios.quickPOST = keep.quickPOST; B.bios.floppySeek = keep.floppySeek;
+    for (const it of SETUP.pages[S.page].items) if (!it.real && !it.show) { const v = keep.values[key(it)]; if (v) B.bios.values[key(it)] = v; else delete B.bios.values[key(it)]; } }
+  else if (k === 'F6' || k === 'F7') ask(k === 'F6' ? 'Load BIOS Defaults' : 'Load SETUP Defaults', false, y => y && loadDefaults());
+  else if (k === 'Escape') { if (S.page) { const i = SETUP.menu.findIndex(m => m[1] === S.page); S.page = null; S.sel = Math.max(0, i); say('Main menu'); }
+                             else ask(SETUP.style === 92 ? 'Quit without saving' : 'Quit Without Saving', false, y => y && leaveSetup(false)); }
+  else if (k === 'F10') ask(SETUP.style === 92 ? 'Write data into CMOS and exit' : 'SAVE to CMOS and EXIT', true, y => y && leaveSetup(true));
+  else return;
+  drawSetup();
+}
+
+// ---------------------------------------------------------------- run
+let ready = false, raf = 0, sought = false;
+function loop() {
+  cancelAnimationFrame(raf);
+  const t = (performance.now() - t0) / 1000, tm = T();
+  if (phase === 'post') {
+    drawPOST(t);
+    if (!sought && t > 0.2 && B.bios.floppySeek) { sought = true; send({ type: 'floppy' }); }
+    if (t >= tm.end) { phase = FW === 'ami92' ? 'end' : 'config'; t0 = performance.now(); }
+  } else if (phase === 'config') {
+    drawConfig();
+    if (t >= tm.config) { phase = 'end'; }
+  }
+  if (phase === 'end') { send({ type: 'done' }); return; }
+  if (phase === 'post' || phase === 'config') raf = requestAnimationFrame(loop);
+  if (!ready) { ready = true; send({ type: 'ready' }); }
+}
+addEventListener('keydown', e => {
+  e.preventDefault();
+  if (phase === 'setup') return setupKey(e);
+  if (phase === 'post' && (e.key === 'Delete' || e.key === 'Backspace')) { cancelAnimationFrame(raf); return enterSetup(); }
+  if (e.key === 'Escape') send({ type: 'skip' });
+});
+addEventListener('mousedown', () => { if (phase !== 'setup') send({ type: 'skip' }); });
+setInterval(() => {                                    // the setup's clock keeps going
+  if (phase !== 'setup') return;
+  const [h, m, s] = B.time.split(':').map(Number), n = (h * 3600 + m * 60 + s + 1) % 86400;
+  B.time = [Math.floor(n / 3600), Math.floor(n / 60) % 60, n % 60].map(v => String(v).padStart(2, '0')).join(':');
+  if (S.page === 'std' && !S.dialog) drawSetup();
+}, 1000);
+document.fonts.load('16px VGA').then(() => {
+  t0 = performance.now();
+  if (!P) { send({ type: 'error', message: 'unknown firmware ' + FW }); send({ type: 'done' }); return; }
+  say(P.name + ' BIOS starting. ' + (P.delKey));
+  loop();
+});
+</script>
+</body>
+</html>
