@@ -445,8 +445,8 @@ struct DetailTitleBar: View {
             // user heard nothing at all.
             Button("Show dock now") {
                 if AppSettings.shared.dockEnabled {
-                    DockController.shared.raiseWindow()
-                    MenuKeyboard.announce("The theme is already on")
+                    DockController.shared.showNow()
+                    MenuKeyboard.announce("Dock shown")
                 } else {
                     AppSettings.shared.dockEnabled = true
                     MenuKeyboard.announce("Theme on")

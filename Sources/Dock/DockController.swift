@@ -17,6 +17,21 @@ final class DockController {
     private var window: DockWindow?
     /// Back on top of a full-screen panel at the dock's own level (Launchpad).
     func raiseWindow() { window?.orderFrontRegardless() }
+
+    /// Settings' "Show dock now": the dock up, whatever hid it. A manual hide is lifted; with
+    /// auto-hide it slides in and stays a few seconds before it follows the pointer again (the
+    /// pointer is on the Settings window, so it would slide straight back out).
+    func showNow() {
+        manualToggle = nil
+        if autoHideActive {
+            autoHideHoldUntil = Date().addingTimeInterval(4)
+            slideIn()
+        } else {
+            evaluateVisibility()
+            raiseWindow()
+        }
+    }
+    private var autoHideHoldUntil = Date.distantPast
     private var dockView: DockView?
     func taskButtonScreenRect(for window: AXUIElement) -> NSRect? { dockView?.taskButtonScreenRect(for: window) }
     func itemScreenRect(bundleID: String) -> NSRect? { dockView?.itemScreenRect(bundleID: bundleID) }
@@ -821,7 +836,7 @@ final class DockController {
 
         if !autoHideVisible && triggerZone.contains(mouseLocation) {
             slideIn()
-        } else if autoHideVisible, let dockFrame = window?.frame {
+        } else if autoHideVisible, Date() > autoHideHoldUntil, let dockFrame = window?.frame {
             let expandedFrame = dockFrame.insetBy(dx: -autoHideLeaveMargin, dy: -autoHideLeaveMargin)
             if !expandedFrame.contains(mouseLocation) {
                 slideOut()

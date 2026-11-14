@@ -38,6 +38,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   inside its app but stayed behind the front one: the window server's front-process call
   RetroMac used reports success on macOS 27.3 and changes nothing. The app is now brought to
   the front through Accessibility as well.
+- **"Show dock now" shows the dock.** With the theme already on it only re-ordered the window,
+  so a dock hidden by hand or by auto-hide stayed hidden. It now lifts a manual hide, and with
+  auto-hide slides the dock in and keeps it there for a few seconds.
 - **Windows 95 shows the MS-DOS Prompt icon of Windows 98**, as Windows NT 4.0 now does.
 - **A boot screen left over from a quick theme switch no longer touches the next one.** The
   first switch's video deadline could stop the second one's video and run its switch.
