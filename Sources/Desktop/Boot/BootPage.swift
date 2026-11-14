@@ -6,6 +6,8 @@ import WebKit
 struct BIOSPrefs: Codable, Equatable {
     var quickPOST = true
     var floppySeek = true
+    /// The key that enters the setup during the POST: "Delete" (⌫ counts too), "F1", "F2", "F10".
+    var setupKey = "Delete"
     /// Every other field of every BIOS, by "profile/field".
     var values: [String: String] = [:]
 }

@@ -112,6 +112,7 @@ final class BootPhasesTests: XCTestCase {
         let partial = decodeOverDefaults(Data(#"{"floppySeek":false}"#.utf8), BIOSPrefs())
         XCTAssertEqual(partial?.floppySeek, false)
         XCTAssertEqual(partial?.quickPOST, true)
+        XCTAssertEqual(partial?.setupKey, "Delete", "a saved setup without the key keeps DEL")
     }
 
     /// The host data are whole numbers and real: memory in KiB as the POST counts it.

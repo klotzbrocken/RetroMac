@@ -95,16 +95,20 @@ const ribbon = pixelArt(24, 32, g => {
 
 // ---------------------------------------------------------------- the firmware
 const mb = Math.round(B.memoryKiB / 1024);
+// The setup key, as chosen in Settings; a Mac's delete key (⌫) counts as DEL.
+const KEY = ['Delete', 'F1', 'F2', 'F10'].includes(B.bios.setupKey) ? B.bios.setupKey : 'Delete';
+const KEYNAME = KEY === 'Delete' ? 'DEL' : KEY;
+const isSetupKey = e => KEY === 'Delete' ? (e.key === 'Delete' || e.key === 'Backspace') : e.key === KEY;
 const idDate = B.date.slice(0, 6) + B.date.slice(8);    // mm/dd/yy
 const P = {
   ami92: {
-    name: 'AMIBIOS', fg: 7, epa: false, delKey: 'Hit <DEL> if you want to run SETUP',
+    name: 'AMIBIOS', fg: 7, epa: false, delKey: 'Hit <' + KEYNAME + '> if you want to run SETUP',
     head: ['AMIBIOS (C)1992 American Megatrends Inc.,', B.model + ' (host data)'],
     count: n => lpad(n, 9) + 'KB OK',
     countRow: 3, more: [], id: '(C) American Megatrends Inc., 40-0000-001437-00101111-' + idDate.replace(/\//g, '') + '-HOST-' + B.model,
   },
   award451: {
-    name: 'Award', fg: 7, epa: true, delKey: 'Press DEL to enter SETUP',
+    name: 'Award', fg: 7, epa: true, delKey: 'Press ' + KEYNAME + ' to enter SETUP',
     head: ['Award Modular BIOS v4.51PG, An Energy Star Ally', 'Copyright (C) 1984-98, Award Software, Inc.'],
     lines: [[3, 'Host board/model : ' + B.model], [5, B.cpu + ' Processor / ' + B.cores + ' cores']],
     count: (n, done) => 'Memory Test : ' + lpad(n, 9) + 'K' + (done ? ' OK' : ''), countRow: 6,
@@ -112,7 +116,7 @@ const P = {
     id: B.date + '-HOST-<<' + B.model + '>>', configTitle: ['Award Software, Inc.', 'System Configurations'],
   },
   award600: {
-    name: 'Award', fg: 7, epa: true, delKey: 'Press DEL to enter SETUP',
+    name: 'Award', fg: 7, epa: true, delKey: 'Press ' + KEYNAME + ' to enter SETUP',
     head: ['Phoenix - AwardBIOS v6.00PG, An Energy Star Ally', 'Copyright (C) 1984-2004, Phoenix Technologies, LTD'],
     lines: [[3, 'Host board/model : ' + B.model], [5, 'Main Processor : ' + B.cpu + ' (' + B.cores + ' cores)']],
     count: (n, done) => 'Memory Testing : ' + lpad(n, 9) + 'K' + (done ? ' OK' : ''), countRow: 6,
@@ -141,7 +145,7 @@ function drawPOST(t) {
   if (t > tm.more) P.more.forEach(([r, s]) => put(0, r, s));
   const delOff = FW === 'ami92' && (B.bios.values['ami92/Hit <DEL> Message Display'] || 'Enabled') === 'Disabled';
   if (!delOff) put(0, FW === 'ami92' ? 5 : 23, P.delKey, 7);
-  if (FW !== 'ami92') put(6, 23, 'DEL', 15);
+  if (FW !== 'ami92') put(6, 23, KEYNAME, 15);
   put(0, 24, P.id);
 }
 function drawConfig() {
@@ -505,7 +509,7 @@ addEventListener('keydown', e => {
   e.preventDefault();
   if (OS) return ntKey(e);
   if (phase === 'setup') return setupKey(e);
-  if (phase === 'post' && (e.key === 'Delete' || e.key === 'Backspace')) { cancelAnimationFrame(raf); return enterSetup(); }
+  if (phase === 'post' && isSetupKey(e)) { cancelAnimationFrame(raf); return enterSetup(); }
   if (e.key === 'Escape') send({ type: 'skip' });
 });
 addEventListener('mousedown', () => {

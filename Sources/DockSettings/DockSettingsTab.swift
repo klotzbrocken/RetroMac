@@ -230,12 +230,21 @@ struct DockSettingsTab: View {
                     BootPhaseSlider(mode: $settings.bootPhaseMode)
                 }
                 RMRow(label: "Boot Phases for \u{201C}\(themeDisplayName)\u{201D}",
-                      hint: selectedThemeBootNote, isLast: true) {
+                      hint: selectedThemeBootNote) {
                     Picker("", selection: Binding(
                         get: { settings.themeBootPhase[settings.dockTheme] ?? "" },
                         set: { settings.themeBootPhase[settings.dockTheme] = $0.isEmpty ? nil : $0 })) {
                         Text("As above").tag("")
                         ForEach(BootPhaseMode.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
+                    }
+                    .labelsHidden().fixedSize()
+                }
+                RMRow(label: "BIOS setup key",
+                      hint: "Pressed during the POST of a PC theme. The Mac's delete key (\u{232B}) counts as DEL; F keys may need fn.",
+                      isLast: true) {
+                    Picker("", selection: $settings.bios.setupKey) {
+                        Text("DEL (\u{232B})").tag("Delete")
+                        ForEach(["F1", "F2", "F10"], id: \.self) { Text($0).tag($0) }
                     }
                     .labelsHidden().fixedSize()
                 }

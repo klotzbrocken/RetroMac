@@ -94,14 +94,21 @@ final class MinimizedWindowTracker {
             AXUIElementSetAttributeValue(e.window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
             AXUIElementSetAttributeValue(e.window, kAXMainAttribute as CFString, kCFBooleanTrue)
             AXUIElementPerformAction(e.window, kAXRaiseAction as CFString)
+            // The app to the front through Accessibility as well: on macOS 27.3 the window
+            // server's front-process call below reports success and changes nothing.
+            AXUIElementSetAttributeValue(AXUIElementCreateApplication(e.pid), kAXFrontmostAttribute as CFString, kCFBooleanTrue)
             // Since macOS 14 an app that is not active itself (a click on the taskbar does not
             // activate RetroMac) has its activate requests ignored: the window came up inside its
             // app, behind the front app's. The window server brings it to the front instead.
             var wid: CGWindowID = 0
-            if axUIElementGetWindow?(e.window, &wid) == .success, wid != 0, skb_focus_window(e.pid, wid) {
+            let got = axUIElementGetWindow?(e.window, &wid)
+            if got == .success, wid != 0, skb_focus_window(e.pid, wid) {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.poll() }
                 return
             }
+            // Left on purpose: this fallback is what macOS 14+ ignores, and when it is taken the
+            // window stays behind the front app.
+            print("[Taskbar] window id not resolved (\(got.map { String($0.rawValue) } ?? "no symbol"), trusted=\(AXIsProcessTrusted())) — falling back to activate")
         }
         app?.activate(options: [.activateIgnoringOtherApps])
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in self?.poll() }

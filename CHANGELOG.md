@@ -20,6 +20,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   can be walked with the arrow keys and changed with PgUp/PgDn or +/-, F10 saves. Two settings
   do something: *Quick Power On Self Test* shortens the POST, *Boot Up Floppy Seek* makes the
   floppy drive seek (with the drive sounds on). The rest are kept as set, as CMOS kept them.
+  The key that enters the setup can be chosen (Settings ▸ Dock ▸ Behaviour): DEL, which a Mac's
+  delete key (⌫) also is, or F1, F2 or F10, and the POST names the one chosen.
 
 - **New theme: Windows NT Workstation 4.0** (Build 1381, 1996, the shell before IE4's Desktop
   Update). 95's chrome and taskbar without Quick Launch; the desktop of a fresh install (My
@@ -32,6 +34,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **A click on a taskbar button brings its window to the front again.** The window came up
+  inside its app but stayed behind the front one: the window server's front-process call
+  RetroMac used reports success on macOS 27.3 and changes nothing. The app is now brought to
+  the front through Accessibility as well.
+- **Windows 95 shows the MS-DOS Prompt icon of Windows 98**, as Windows NT 4.0 now does.
 - **A boot screen left over from a quick theme switch no longer touches the next one.** The
   first switch's video deadline could stop the second one's video and run its switch.
 - **A theme's boot video stays inside the theme**, like every other file it names.
