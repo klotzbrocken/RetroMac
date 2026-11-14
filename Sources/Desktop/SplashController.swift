@@ -404,8 +404,10 @@ final class SplashController {
     /// mode. Nothing is ordered in until the page says it has drawn; if it never does, the
     /// firmware gives way to the OS phase and an OS page to the desktop.
     private func showPage(_ query: [String: String], on screen: NSScreen) {
-        guard let url = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Boot/Boot.html"),
-              var parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { dismiss(); return }
+        // absoluteURL: the bundle's resource URL can be relative to its base, and a relative URL
+        // with a query is no file URL — WebKit throws (not returns) on that.
+        guard let url = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Boot/Boot.html").absoluteURL,
+              var parts = URLComponents(url: url, resolvingAgainstBaseURL: true) else { dismiss(); return }
         parts.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
         let frame = screen.frame
         let gen = generation
@@ -456,7 +458,7 @@ final class SplashController {
         page = web
         pageWindow = win
         // The page reads ../../Fonts, so the whole Resources folder is readable to it.
-        if let pageURL = parts.url { web.loadFileURL(pageURL, allowingReadAccessTo: Bundle.main.resourceURL ?? url) }
+        if let pageURL = parts.url, pageURL.isFileURL { web.loadFileURL(pageURL, allowingReadAccessTo: url.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()) }
         // WebKit stuck: the firmware gives way to the OS phase, an OS page to the desktop.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             guard let self, gen == self.generation, !shown else { return }
