@@ -39,6 +39,8 @@
     "firmware": "award451",
     "os": "nt4"
   },
+  "splashVideo": "boot.mp4",
+  "splashFullscreen": true,
   "wallpaper": "wallpaper-nt-workstation.jpg",
   "wallpapers": [
     {

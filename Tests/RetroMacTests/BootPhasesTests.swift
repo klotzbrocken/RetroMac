@@ -73,7 +73,7 @@ final class BootPhasesTests: XCTestCase {
     }
 
     /// Windows NT Workstation 4.0: the desktop of a fresh install in its order, 95's Start menu
-    /// with NT's groups, the Award BIOS and NT's own text-mode boot, and no Win95 boot film.
+    /// with NT's groups, the Award BIOS, NT's own text-mode boot and its start-up screen.
     func testWindowsNT4Theme() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let bundle = root.appendingPathComponent("Resources/Themes/WindowsNT4-Workstation.retromactheme")
@@ -83,7 +83,8 @@ final class BootPhasesTests: XCTestCase {
         XCTAssertEqual(c.dock.startMenuProfile, "nt4")
         XCTAssertEqual(c.dock.showQuickLaunch, false)
         XCTAssertEqual(c.boot, DockThemeConfig.BootDecl(firmware: "award451", os: "nt4"))
-        XCTAssertNil(c.splashVideo)
+        XCTAssertEqual(c.splashVideo, "boot.mp4", "NT's start-up screen follows the kernel screen")
+        XCTAssertNotNil(ThemeBundle.confinedResource("boot.mp4", under: bundle))
         XCTAssertTrue(SplashController.hasOSBoot(c))
         for icon in c.desktopIcons ?? [] {
             XCTAssertTrue(FileManager.default.fileExists(atPath: bundle.appendingPathComponent("icons/\(icon.icon)").path), icon.icon)

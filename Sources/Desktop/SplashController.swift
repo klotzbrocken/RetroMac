@@ -138,9 +138,11 @@ final class SplashController {
 
     /// The OS phase: a text-mode boot (NT), the boot video, the Welcome or the picture.
     @discardableResult
-    private func presentOS(theme: ThemeBundle, on screen: NSScreen, onVisible: (() -> Void)?) -> Bool {
-        if let os = theme.config.boot?.os {
+    /// `afterText`: the text-mode boot has run, the theme's video (NT's start-up screen) follows.
+    private func presentOS(theme: ThemeBundle, on screen: NSScreen, onVisible: (() -> Void)?, afterText: Bool = false) -> Bool {
+        if !afterText, let os = theme.config.boot?.os {
             pendingWork = onVisible
+            bootTheme = theme
             showPage(["os": os], on: screen)
             return true
         }
@@ -389,11 +391,11 @@ final class SplashController {
 
     /// The page on screen now, so `dismiss()` can take its message handler off again.
     private var page: WKWebView?
-    /// The theme whose OS phase follows the firmware.
-    private var firmwareTheme: ThemeBundle?
+    /// The theme whose next boot step follows the page on screen.
+    private var bootTheme: ThemeBundle?
 
     private func showFirmware(_ profile: String, theme: ThemeBundle, on screen: NSScreen) {
-        firmwareTheme = theme
+        bootTheme = theme
         showPage(["firmware": profile], on: screen)
     }
 
@@ -425,7 +427,7 @@ final class SplashController {
                 self.present(win, dismissView: self.page ?? win.contentView!)
                 self.runPendingWork()
             case "done":
-                if isFirmware, let theme = self.firmwareTheme { self.nextPhase(theme, on: screen) } else { self.dismiss() }
+                if let theme = self.bootTheme { self.nextPhase(theme, on: screen, afterText: !isFirmware) } else { self.dismiss() }
             case "skip":
                 self.dismiss()
             case "save":
@@ -466,7 +468,7 @@ final class SplashController {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             guard let self, gen == self.generation, !shown else { return }
             print("[Splash] Boot page did not draw in time")
-            if isFirmware, let theme = self.firmwareTheme { self.nextPhase(theme, on: screen) } else { self.dismiss() }
+            if let theme = self.bootTheme { self.nextPhase(theme, on: screen, afterText: !isFirmware) } else { self.dismiss() }
         }
     }
     private var pageWindow: NSWindow?
@@ -483,16 +485,16 @@ final class SplashController {
 
     /// From the firmware to the OS boot without uncovering the desktop in between: the
     /// firmware's windows stay until the OS phase has its own up.
-    private func nextPhase(_ theme: ThemeBundle, on screen: NSScreen) {
+    private func nextPhase(_ theme: ThemeBundle, on screen: NSScreen, afterText: Bool = false) {
         generation += 1                       // the page's late messages no longer count
         page?.configuration.userContentController.removeScriptMessageHandler(forName: "boot")
-        page = nil; pageWindow = nil; pageHandler = nil; firmwareTheme = nil
+        page = nil; pageWindow = nil; pageHandler = nil; bootTheme = nil
         retiring += windows
         windows.removeAll()
         dismissTimer?.invalidate(); dismissTimer = nil
         let work = pendingWork; pendingWork = nil
         work?()                               // normally ran already, when the POST was drawn
-        if !presentOS(theme: theme, on: screen, onVisible: nil) { dismiss() }
+        if !presentOS(theme: theme, on: screen, onVisible: nil, afterText: afterText) { dismiss() }
     }
 
     /// Classic Mac boot screen: the "Welcome to Macintosh" dialog box on a grey desktop, drawn
@@ -514,7 +516,7 @@ final class SplashController {
         readyObservation = nil
         watchdogGeneration += 1
         page?.configuration.userContentController.removeScriptMessageHandler(forName: "boot")
-        page = nil; pageWindow = nil; pageHandler = nil; firmwareTheme = nil
+        page = nil; pageWindow = nil; pageHandler = nil; bootTheme = nil
         retiring.forEach { $0.orderOut(nil) }
         retiring.removeAll()
         // The cover comes down FIRST, whatever ended it. A switch still waiting behind it runs
