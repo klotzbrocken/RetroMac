@@ -817,7 +817,32 @@ final class ThemeManager {
         // starts on a menu-bar-hiding theme lands here. AppKit's own menu bar height is the right
         // answer on every display without a notch, and being a few points short for one pass is
         // better than rendering no strip and then correcting it with a black flash.
+        // `visibleFrame` also lags behind in a running app when the bar comes back after being
+        // hidden (a Windows theme handing over to a Mac one): the window server's own menu-bar
+        // window already has it. Without this a display without a notch got no strip.
+        if let bar = Self.menuBarWindowHeight(on: screen) {
+            knownMenuBarHeight[key] = bar
+            return bar
+        }
         return knownMenuBarHeight[key] ?? NSApp.mainMenu?.menuBarHeight ?? 0
+    }
+
+    /// The height of the window server's menu-bar window across the top of `screen`, if it is up.
+    static func menuBarWindowHeight(on screen: NSScreen) -> CGFloat? {
+        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]],
+              let primaryTop = NSScreen.screens.first?.frame.maxY else { return nil }
+        let level = Int(CGWindowLevelForKey(.mainMenuWindow))
+        let top = primaryTop - screen.frame.maxY          // the screen's top edge in window-server coordinates
+        for w in list where (w[kCGWindowLayer as String] as? Int) == level
+            && (w[kCGWindowOwnerName as String] as? String) == "Window Server" {
+            var b = CGRect.zero
+            guard let d = w[kCGWindowBounds as String] as? NSDictionary,
+                  CGRectMakeWithDictionaryRepresentation(d, &b) else { continue }
+            if abs(b.minY - top) < 1, abs(b.minX - screen.frame.minX) < 1, abs(b.width - screen.frame.width) < 1, b.height > 1 {
+                return b.height
+            }
+        }
+        return nil
     }
 
     /// A copy of `source`, rendered to this screen's pixel size with a solid strip painted across

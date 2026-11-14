@@ -110,6 +110,15 @@ enum SystemUIHelper {
         }
 
         print("[SystemUI] Menu bar auto-hide: \(hide) (AppleScript: \(success ? "ok" : "fallback"))")
+        // The wallpaper's menu-bar strip is painted only where macOS reports a menu bar, and it
+        // reports none until the bar is back. A display without a notch therefore kept the plain
+        // wallpaper when a theme with the bar hidden (Windows) handed over to a Mac one. Paint it
+        // again once the bar is there; an unchanged picture is not set twice.
+        if !hide {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                if ThemeManager.shared.activeTheme != nil { ThemeManager.shared.applyWallpaper() }
+            }
+        }
     }
 
     private static func setMenuBarAutoHideViaDefaults(_ hide: Bool) {
