@@ -92,6 +92,16 @@ final class BootPhasesTests: XCTestCase {
         XCTAssertTrue(page.contains("OS === 'nt4'"))
     }
 
+    /// The boot page's URL is an absolute file URL even from a relative resource URL: the first
+    /// live Firmware boot crashed on exactly that.
+    func testBootPageURLIsAFileURL() throws {
+        let relative = URL(fileURLWithPath: "Contents/Resources", relativeTo: URL(fileURLWithPath: "/Applications/RetroMac.app"))
+        let url = try XCTUnwrap(SplashController.bootPageURL(resources: relative, query: ["firmware": "award451"]))
+        XCTAssertTrue(url.isFileURL)
+        XCTAssertEqual(url.path, "/Applications/RetroMac.app/Contents/Resources/Widgets/Boot/Boot.html")
+        XCTAssertEqual(url.query, "firmware=award451")
+    }
+
     /// Settings survive a round trip, and a field the app does not know yet keeps its default.
     func testBIOSPrefs() throws {
         var p = BIOSPrefs()

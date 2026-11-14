@@ -40,12 +40,14 @@ enum BootHostData {
 
 /// Forwards the boot page's messages; a separate object because the content controller keeps
 /// a strong reference to its handler.
-final class BootPageHandler: NSObject, WKScriptMessageHandler {
+final class BootPageHandler: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
     let onMessage: ([String: Any]) -> Void
+    var onTerminate: (() -> Void)?
     init(_ onMessage: @escaping ([String: Any]) -> Void) { self.onMessage = onMessage }
     func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage) {
         if let body = message.body as? [String: Any] { onMessage(body) }
     }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { onTerminate?() }
 }
 
 /// The boot page's web view: it takes the keyboard (DEL, the setup's arrows) and the clicks.

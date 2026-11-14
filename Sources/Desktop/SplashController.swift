@@ -163,10 +163,7 @@ final class SplashController {
         }
         // Fall back to the image splash.
         guard let splashURL = theme.rootResource(theme.config.splashScreen),
-              let image = NSImage(contentsOf: splashURL) else {
-            if !retiring.isEmpty { dismiss(); return true }   // after a firmware phase: just end
-            onFinish = nil; return false
-        }
+              let image = NSImage(contentsOf: splashURL) else { onFinish = nil; return false }
         show(image: image, on: screen, fullscreen: theme.config.splashFullscreen == true)
         onVisible?()   // a still is on screen the moment it is ordered in
         return true
@@ -404,11 +401,8 @@ final class SplashController {
     /// mode. Nothing is ordered in until the page says it has drawn; if it never does, the
     /// firmware gives way to the OS phase and an OS page to the desktop.
     private func showPage(_ query: [String: String], on screen: NSScreen) {
-        // absoluteURL: the bundle's resource URL can be relative to its base, and a relative URL
-        // with a query is no file URL — WebKit throws (not returns) on that.
-        guard let url = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Boot/Boot.html").absoluteURL,
-              var parts = URLComponents(url: url, resolvingAgainstBaseURL: true) else { dismiss(); return }
-        parts.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
+        guard let resources = Bundle.main.resourceURL, let pageURL = Self.bootPageURL(resources: resources, query: query)
+        else { dismiss(); return }
         let frame = screen.frame
         let gen = generation
         let isFirmware = query["firmware"] != nil
@@ -427,7 +421,7 @@ final class SplashController {
             case "ready":
                 guard !shown, let win = self.pageWindow else { return }
                 shown = true
-                if self.retiring.isEmpty { self.addCoverScreens(except: screen) }
+                self.addCoverScreens(except: screen)   // the firmware's covers go once these are up
                 self.present(win, dismissView: self.page ?? win.contentView!)
                 self.runPendingWork()
             case "done":
@@ -451,6 +445,15 @@ final class SplashController {
         }
         cfg.userContentController.add(handler, name: "boot")
         let web = BootWebView(frame: NSRect(origin: .zero, size: frame.size), configuration: cfg)
+        // The page has no time limit (the setup waits for the user) and takes every key: if its
+        // web process dies, nothing could end it any more.
+        handler.onTerminate = { [weak self] in
+            guard let self, gen == self.generation else { return }
+            print("[Splash] Boot page's web process ended")
+            self.dismiss()
+        }
+        web.navigationDelegate = handler
+        pageHandler = handler
         web.setValue(false, forKey: "drawsBackground")
         let win = bootWindow(frame, opaque: true)
         win.hasShadow = false
@@ -458,7 +461,7 @@ final class SplashController {
         page = web
         pageWindow = win
         // The page reads ../../Fonts, so the whole Resources folder is readable to it.
-        if let pageURL = parts.url, pageURL.isFileURL { web.loadFileURL(pageURL, allowingReadAccessTo: url.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()) }
+        web.loadFileURL(pageURL, allowingReadAccessTo: resources.absoluteURL)
         // WebKit stuck: the firmware gives way to the OS phase, an OS page to the desktop.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             guard let self, gen == self.generation, !shown else { return }
@@ -467,13 +470,23 @@ final class SplashController {
         }
     }
     private var pageWindow: NSWindow?
+    private var pageHandler: BootPageHandler?   // the web view holds its navigation delegate weakly
+
+    /// The boot page with its query, always an absolute file URL: the bundle's resource URL can
+    /// be relative to its base, and WebKit throws (not returns) on a URL that is no file URL.
+    static func bootPageURL(resources: URL, query: [String: String]) -> URL? {
+        guard var parts = URLComponents(url: resources.appendingPathComponent("Widgets/Boot/Boot.html").absoluteURL,
+                                        resolvingAgainstBaseURL: true) else { return nil }
+        parts.queryItems = query.map { URLQueryItem(name: $0.key, value: $0.value) }
+        return parts.url.flatMap { $0.isFileURL ? $0 : nil }
+    }
 
     /// From the firmware to the OS boot without uncovering the desktop in between: the
     /// firmware's windows stay until the OS phase has its own up.
     private func nextPhase(_ theme: ThemeBundle, on screen: NSScreen) {
         generation += 1                       // the page's late messages no longer count
         page?.configuration.userContentController.removeScriptMessageHandler(forName: "boot")
-        page = nil; pageWindow = nil; firmwareTheme = nil
+        page = nil; pageWindow = nil; pageHandler = nil; firmwareTheme = nil
         retiring += windows
         windows.removeAll()
         dismissTimer?.invalidate(); dismissTimer = nil
@@ -501,7 +514,7 @@ final class SplashController {
         readyObservation = nil
         watchdogGeneration += 1
         page?.configuration.userContentController.removeScriptMessageHandler(forName: "boot")
-        page = nil; pageWindow = nil; firmwareTheme = nil
+        page = nil; pageWindow = nil; pageHandler = nil; firmwareTheme = nil
         retiring.forEach { $0.orderOut(nil) }
         retiring.removeAll()
         // The cover comes down FIRST, whatever ended it. A switch still waiting behind it runs
