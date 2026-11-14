@@ -14,7 +14,8 @@ struct DockSettingsTab: View {
     /// Left to itself it landed far from Settings.
     @AccessibilityFocusState private var exclusionFocus: String?
 
-    // `settings.dockTheme` holds the theme's STABLE ID, so every lookup here goes through
+    // `settings.themeChoice` (the dropdown's pick, which "Show theme now" makes the active
+    // `dockTheme`) holds the theme's STABLE ID, so every lookup here goes through
     // `ThemeManager.resolve` (id first, display name as the pre-Manifest-2.0 fallback) and
     // anything user-visible is derived from the resolved bundle's `name`, never from the id.
     private var selectedThemeConfig: DockThemeConfig? {
@@ -22,11 +23,11 @@ struct DockSettingsTab: View {
     }
 
     private var selectedThemeBundle: ThemeBundle? {
-        ThemeManager.resolve(settings.dockTheme, in: themes) ?? ThemeManager.shared.activeTheme
+        ThemeManager.resolve(settings.themeChoice, in: themes) ?? ThemeManager.shared.activeTheme
     }
 
     /// Display name of the selected theme — for labels, gradients and any name-based check.
-    private var selectedThemeName: String { selectedThemeBundle?.name ?? settings.dockTheme }
+    private var selectedThemeName: String { selectedThemeBundle?.name ?? settings.themeChoice }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
@@ -86,7 +87,7 @@ struct DockSettingsTab: View {
             RMSectionHeaderView(title: "Theme")
 
             HStack(spacing: RMSpacing.md) {
-                Picker("Theme", selection: $settings.dockTheme) {
+                Picker("Theme", selection: $settings.themeChoice) {
                     // Tag by stable id: the selection is what gets STORED, and it must not change
                     // when a theme is renamed. The label stays the display name.
                     ForEach(themes, id: \.stableID) { theme in
@@ -204,7 +205,7 @@ struct DockSettingsTab: View {
     /// What the selected theme can play: no boot, an OS boot, or firmware and OS.
     private var selectedThemeBootNote: String? {
         guard let c = selectedThemeConfig else { return nil }
-        let mode = settings.themeBootPhase[settings.dockTheme].flatMap(BootPhaseMode.init(rawValue:)) ?? settings.bootPhaseMode
+        let mode = settings.themeBootPhase[settings.themeChoice].flatMap(BootPhaseMode.init(rawValue:)) ?? settings.bootPhaseMode
         let effective = BootPhaseMode.effective(mode, hasOS: SplashController.hasOSBoot(c), hasFirmware: c.boot?.firmware != nil)
         if NSWorkspace.shared.isVoiceOverEnabled || NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             return "Off while VoiceOver or Reduce Motion is on: the theme comes straight up."
@@ -232,8 +233,8 @@ struct DockSettingsTab: View {
                 RMRow(label: "Boot Phases for \u{201C}\(themeDisplayName)\u{201D}",
                       hint: selectedThemeBootNote) {
                     Picker("", selection: Binding(
-                        get: { settings.themeBootPhase[settings.dockTheme] ?? "" },
-                        set: { settings.themeBootPhase[settings.dockTheme] = $0.isEmpty ? nil : $0 })) {
+                        get: { settings.themeBootPhase[settings.themeChoice] ?? "" },
+                        set: { settings.themeBootPhase[settings.themeChoice] = $0.isEmpty ? nil : $0 })) {
                         Text("As above").tag("")
                         ForEach(BootPhaseMode.allCases, id: \.self) { Text($0.title).tag($0.rawValue) }
                     }
@@ -265,11 +266,11 @@ struct DockSettingsTab: View {
                     RMRow(label: "Position") {
                         Picker("", selection: Binding(
                             get: {
-                                settings.themeDockPositionOverride[settings.dockTheme]
+                                settings.themeDockPositionOverride[settings.themeChoice]
                                     ?? selectedThemeConfig?.effectiveDockPosition
                                     ?? "bottom"
                             },
-                            set: { settings.themeDockPositionOverride[settings.dockTheme] = $0 }
+                            set: { settings.themeDockPositionOverride[settings.themeChoice] = $0 }
                         )) {
                             Text("Bottom").tag("bottom")
                             Text("Left").tag("left")

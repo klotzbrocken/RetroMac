@@ -442,13 +442,15 @@ struct DetailTitleBar: View {
         switch tab {
         case .dock:
             // Theme import lives in-context as "Add custom…" in the Themes section.
-            // Turns the theme on; with it on already there is nothing to do, so it greys out.
+            // Switches to the theme picked in the dropdown (which no longer switches by itself)
+            // and turns it on; greyed out while that theme is the one running.
             Button("Show theme now") {
-                AppSettings.shared.dockEnabled = true
+                settings.dockTheme = settings.themeChoice
+                settings.dockEnabled = true
                 MenuKeyboard.announce("Theme on")
             }
             .buttonStyle(RMPrimaryButtonStyle())
-            .disabled(settings.dockEnabled)
+            .disabled(settings.dockEnabled && settings.themeChoice == settings.dockTheme)
         default:
             EmptyView()
         }

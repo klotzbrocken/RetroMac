@@ -653,8 +653,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(dockTransparency, forKey: "dockTransparency") }
     }
     @Published var dockTheme: String {
-        didSet { defaults.set(dockTheme, forKey: "dockTheme") }
+        didSet { defaults.set(dockTheme, forKey: "dockTheme"); themeChoice = dockTheme }
     }
+    /// The theme picked in Settings' dropdown, not yet switched to: "Show theme now" makes it
+    /// `dockTheme`. Follows `dockTheme` whenever that changes elsewhere (the menu, a hotkey).
+    @Published var themeChoice: String = ""
     @Published var dockShowRunningApps: Bool {
         didSet { defaults.set(dockShowRunningApps, forKey: "dockShowRunningApps") }
     }
@@ -1357,7 +1360,9 @@ final class AppSettings: ObservableObject {
         dockShowApplications = defaults.object(forKey: "dockShowApplications") as? Bool ?? true
         deskbarShortcuts = defaults.stringArray(forKey: "deskbarShortcuts")
             ?? ["com.apple.finder", "com.apple.Safari", "com.apple.mail", "com.apple.MobileSMS", "com.apple.iCal", "com.apple.reminders", "com.apple.Notes"]
-        dockTheme = defaults.string(forKey: "dockTheme") ?? "Maiks Favourite"
+        let savedTheme = defaults.string(forKey: "dockTheme") ?? "Maiks Favourite"
+        dockTheme = savedTheme
+        themeChoice = savedTheme
         dockIconScale = defaults.object(forKey: "dockIconScale") as? Float ?? 1.0
         desktopIconScale = defaults.object(forKey: "desktopIconScale") as? Float ?? 1.0
         desktopIconScaleLinked = defaults.object(forKey: "desktopIconScaleLinked") as? Bool ?? true
