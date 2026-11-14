@@ -125,6 +125,7 @@
       "file": "wallpaper-blue-abstract.jpg"
     }
   ],
+  "desktopIconSize": 32,
   "desktopIcons": [
     {
       "name": "Macintosh HD",
