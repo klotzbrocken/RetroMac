@@ -399,6 +399,7 @@ struct SettingsDetailPane: View {
 }
 
 struct DetailTitleBar: View {
+    @ObservedObject private var settings = AppSettings.shared   // the button greys out as the theme comes on
     var tab: SettingsTab
     let updater: SPUUpdater
 
@@ -441,18 +442,13 @@ struct DetailTitleBar: View {
         switch tab {
         case .dock:
             // Theme import lives in-context as "Add custom…" in the Themes section.
-            // Says what it did: with the theme already on it changed nothing, and a VoiceOver
-            // user heard nothing at all.
-            Button("Show dock now") {
-                if AppSettings.shared.dockEnabled {
-                    DockController.shared.showNow()
-                    MenuKeyboard.announce("Dock shown")
-                } else {
-                    AppSettings.shared.dockEnabled = true
-                    MenuKeyboard.announce("Theme on")
-                }
+            // Turns the theme on; with it on already there is nothing to do, so it greys out.
+            Button("Show theme now") {
+                AppSettings.shared.dockEnabled = true
+                MenuKeyboard.announce("Theme on")
             }
             .buttonStyle(RMPrimaryButtonStyle())
+            .disabled(settings.dockEnabled)
         default:
             EmptyView()
         }
