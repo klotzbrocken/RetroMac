@@ -72,6 +72,26 @@ final class BootPhasesTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(seen, 7)
     }
 
+    /// Windows NT Workstation 4.0: the desktop of a fresh install in its order, 95's Start menu
+    /// with NT's groups, the Award BIOS and NT's own text-mode boot, and no Win95 boot film.
+    func testWindowsNT4Theme() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let bundle = root.appendingPathComponent("Resources/Themes/WindowsNT4-Workstation.retromactheme")
+        let c = try JSONDecoder().decode(DockThemeConfig.self, from: Data(contentsOf: bundle.appendingPathComponent("theme.json")))
+        XCTAssertEqual(c.name, "Windows NT Workstation 4.0")
+        XCTAssertEqual(c.desktopIcons?.map(\.name), ["My Computer", "Network Neighborhood", "Inbox", "Internet Explorer", "Recycle Bin", "My Briefcase"])
+        XCTAssertEqual(c.dock.startMenuProfile, "nt4")
+        XCTAssertEqual(c.dock.showQuickLaunch, false)
+        XCTAssertEqual(c.boot, DockThemeConfig.BootDecl(firmware: "award451", os: "nt4"))
+        XCTAssertNil(c.splashVideo)
+        XCTAssertTrue(SplashController.hasOSBoot(c))
+        for icon in c.desktopIcons ?? [] {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: bundle.appendingPathComponent("icons/\(icon.icon)").path), icon.icon)
+        }
+        let page = try String(contentsOf: root.appendingPathComponent("Resources/Widgets/Boot/Boot.html"), encoding: .utf8)
+        XCTAssertTrue(page.contains("OS === 'nt4'"))
+    }
+
     /// Settings survive a round trip, and a field the app does not know yet keeps its default.
     func testBIOSPrefs() throws {
         var p = BIOSPrefs()

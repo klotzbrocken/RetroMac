@@ -1,0 +1,90 @@
+[
+ {
+  "appID": "outlook",
+  "file": "outlook-32.png",
+  "sha256": "4cd648e19141560d938318cbc1be823dc1468cee2d154f4a78e5f654daa44e9a",
+  "kind": "historical-original",
+  "referenceVersion": "Microsoft Office 97 für Windows",
+  "generated": false,
+  "sourceArchive": "Office97_resources.zip",
+  "sourceResource": "outlook_1.ico",
+  "sourceSHA256": "53b78288ddc81b106e2a05aa7b72a18f94fc926220dce36ede305e59a67a6b33",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "nativeBitDepth": 4,
+  "visibleColors": 8,
+  "outputSize": [
+   32,
+   32
+  ],
+  "nativeHighResolution": false,
+  "provenanceLimitation": "Extraktion laut Archivbetreiber; nicht selbst mit Microsoft-Installationsmedium abgeglichen.",
+  "preferredFile": "outlook-32.png",
+  "visualReview": "passed",
+  "note": "Outlook 97 (1997) für Windows 95; kein Bestandteil von Office 95.",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "bundleIDs": [
+   "com.microsoft.Outlook"
+  ]
+ },
+ {
+  "appID": "iterm2",
+  "file": "iterm2-32.png",
+  "sha256": "54a44f7ae5f9d7ef0761f0e2bf190163dffec41c4dd930a9c2480796b2217299",
+  "kind": "historical-theme-asset",
+  "generated": false,
+  "referenceVersion": "MS-DOS-Eingabeaufforderung",
+  "windowsEquivalent": "MS-DOS-Eingabeaufforderung",
+  "preferredFile": "iterm2-32.png",
+  "sourceURL": null,
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "resampling": "none",
+  "sourceSHA256": "7758d8fcd442f1adb3687bb6a1c2dd9d08cd7f077ce00e5fdc61f4305a1e2d4e",
+  "visualReview": "passed",
+  "provenanceType": "Windows-Äquivalent · MS-DOS-Eingabeaufforderung",
+  "note": "",
+  "provenanceLimitation": "Bestehendes Theme-Asset; ursprüngliche Extraktion nicht unabhängig belegt.",
+  "bundleIDs": [
+   "com.googlecode.iterm2"
+  ]
+ },
+ {
+  "appID": "photoshop",
+  "file": "photoshop-32.png",
+  "sha256": "45442c47e9dbd64a4a764c80d6bc9a63292e59cdebfcd0c470dcb791ebf388c7",
+  "kind": "historical-original",
+  "referenceVersion": "Adobe Photoshop 3.0 für Windows (1994)",
+  "sourceURL": "https://archive.org/details/adobe-photoshop-3.0-deluxe",
+  "sourceArchive": "photoshop3-win.iso",
+  "sourceResource": "PHOTOSHP.EXE / GROUP_ICON 1000 / ICON 1",
+  "nativeSize": [
+   32,
+   32
+  ],
+  "nativeBitDepth": 4,
+  "outputSize": [
+   32,
+   32
+  ],
+  "generated": false,
+  "preferredFile": "photoshop-32.png",
+  "scaleFactor": 1,
+  "resampling": "none",
+  "provenanceType": "Historische Originalressource · native Auflösung",
+  "visualReview": "passed",
+  "bundleIDs": [
+   "com.adobe.Photoshop"
+  ]
+ }
+]

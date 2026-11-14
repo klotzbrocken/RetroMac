@@ -912,7 +912,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows XP" || tn == "Windows 7" || tn == "Windows Vista") {
+               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows NT Workstation 4.0" || tn == "Windows XP" || tn == "Windows 7" || tn == "Windows Vista") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -1261,7 +1261,7 @@ final class DockView: NSView {
             let traySize: CGFloat
             let trayPad: CGFloat = 3
             if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows XP" || tn == "Windows 7" || tn == "Windows Vista") {
+               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows NT Workstation 4.0" || tn == "Windows XP" || tn == "Windows 7" || tn == "Windows Vista") {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -4869,6 +4869,37 @@ final class DockView: NSView {
     /// The Programs list — every dock app, then whatever else is running, then Re:Amp.
     /// Shared by all three Start menus: the classic Programs submenu and the XP and
     /// Windows 7 "All Programs" flyouts show the same list.
+    /// Windows NT 4.0's program groups, each pointing at the Mac's own tool for the job:
+    /// RetroMac has no NT, so Disk Administrator is Disk Utility and Event Viewer the Console.
+    private func ntProgramGroups() -> [StartMenuPanel.MenuItem] {
+        typealias MI = StartMenuPanel.MenuItem
+        func app(_ title: String, _ bid: String, _ icon: String) -> MI? {
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) else { return nil }
+            return MI(title: title, icon: startMenuIcon(icon) ?? ThemeManager.shared.icon(for: bid, size: 20),
+                      action: { NSWorkspace.shared.openApplication(at: url, configuration: .init()) })
+        }
+        func widget(_ title: String, _ type: String, _ icon: String) -> MI {
+            MI(title: title, icon: startMenuIcon(icon), action: {
+                DesktopLauncher.launch(DockThemeConfig.DesktopIconEntry(name: title, icon: icon, type: type))
+            })
+        }
+        let accessories: [MI] = [widget("Calculator", "calculator", "calculator.png"), widget("Clock", "clock", "clock.png"),
+                                 widget("Notepad", "notepad", "notepadclassic.png"),
+                                 app("WordPad", "com.apple.TextEdit", "textedit.png")].compactMap { $0 }
+        let admin: [MI] = [app("Backup", "com.apple.backup.launcher", "settings.png"),
+                           app("Disk Administrator", "com.apple.DiskUtility", "computer.png"),
+                           app("Event Viewer", "com.apple.Console", "files.png"),
+                           app("Performance Monitor", "com.apple.ActivityMonitor", "activitymonitor.png"),
+                           app("Windows NT Diagnostics", "com.apple.SystemProfiler", "computer.png")].compactMap { $0 }
+        let group = startMenuIcon("programsfolder.png")
+        return [MI(title: "Accessories", icon: startMenuIcon("menu-accessories.png") ?? group, submenuItems: accessories),
+                MI(title: "Administrative Tools (Common)", icon: group, submenuItems: admin),
+                MI(title: "Startup", icon: group, submenuItems: [MI(title: "(empty)")]),
+                app("Command Prompt", "com.apple.Terminal", "terminal.png"),
+                app("Windows NT Explorer", "com.apple.finder", "files.png"),
+                MI(separator: true)].compactMap { $0 }
+    }
+
     private func startMenuProgramItems() -> [StartMenuPanel.MenuItem] {
         typealias MI = StartMenuPanel.MenuItem
         var programItems: [MI] = []
@@ -4937,7 +4968,9 @@ final class DockView: NSView {
             self.startMenuIcon(filename)
         }
 
-        let programItems = startMenuProgramItems()
+        let config = ThemeManager.shared.activeTheme?.config
+        let profile = config?.dock.startMenuProfile ?? (config?.name == "Windows 95" ? "win95" : nil)
+        let programItems = profile == "nt4" ? ntProgramGroups() + startMenuProgramItems() : startMenuProgramItems()
 
         // Favorites submenu items
         var favItems: [MI] = []
@@ -4982,7 +5015,7 @@ final class DockView: NSView {
         // Build top-level items. Windows Update, Favorites and Log Off all arrived with IE4/Win98 (or
         // networked profiles) — the default Windows 95 Start menu had none of them, so they are
         // omitted for Win95 (which shows Programs, Documents, Settings, Find, Help, Run, Shut Down).
-        let isWin95 = ThemeManager.shared.activeTheme?.config.name == "Windows 95"
+        let isWin95 = profile == "win95" || profile == "nt4"   // NT 4.0's Start menu was 95's
         var items: [MI] = []
         if !isWin95 {
             items.append(MI(title: "Windows Update", icon: win98Icon("menu-windows-update.png"), action: {
@@ -5019,7 +5052,7 @@ final class DockView: NSView {
             NSAppleScript(source: src)?.executeAndReturnError(nil)
         }))
 
-        let bannerText = ThemeManager.shared.activeTheme?.config.name ?? "Windows 98"
+        let bannerText = config?.dock.startMenuBanner ?? config?.name ?? "Windows 98"
         let panel = StartMenuPanel()
         startMenuPanel = panel
         panel.onClose = { [weak self] in self?.needsDisplay = true }

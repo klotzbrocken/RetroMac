@@ -432,6 +432,10 @@ struct AboutTab: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    Text("Windows NT Workstation 4.0 wallpaper: a modern redraw of NT’s start-up artwork (author not known to us), its typing errors corrected, centred on teal.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     Link("Hover! — the Microsoft HTML5 remake",
                          destination: URL(string: "http://hover.ie/")!)
                         .font(.caption)

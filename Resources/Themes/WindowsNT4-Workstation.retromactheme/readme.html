@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows NT Workstation 4.0</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:transparent; font-family:"Tahoma","MS Sans Serif","Helvetica Neue",sans-serif; color:#000; -webkit-font-smoothing:antialiased; margin:0; padding:0; }
+  .win { width:100%; min-height:100vh; margin:0; background:#c0c0c0; border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #808080;border-bottom:2px solid #808080; box-shadow:none; }
+  .titlebar { background:#000080;color:#fff;padding:3px 3px 3px 4px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:5px;user-select:none; }
+  .titlebar .tb-ico { width:16px; height:16px; image-rendering:-webkit-optimize-contrast; }
+  .titlebar .tb-title { flex:1; }
+  .tb-btns { display:flex; gap:2px; }
+  .tb-btn { width:16px; height:14px; background:#c0c0c0; border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #404040;border-bottom:1px solid #404040; box-shadow:inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080; display:flex;align-items:center;justify-content:center; padding:0; cursor:default; }
+  .tb-btn:active { border-top:1px solid #404040;border-left:1px solid #404040;border-right:1px solid #fff;border-bottom:1px solid #fff; box-shadow:inset 1px 1px 0 #808080; }
+  .tb-btn svg { display:block; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border:2px solid #808080; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#000; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#333; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#000080; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #808080; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#000080; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#cfcfcf; border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#000080; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  .dyk .item b { font-weight:700; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #808080; font-size:11px; color:#333; line-height:1.6; }
+  footer a { color:#000080; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar">
+      <img class="tb-ico" src="appIcon.png" alt="">
+      <span class="tb-title">Windows NT Workstation 4.0</span>
+      <span class="tb-btns">
+        <button class="tb-btn" aria-label="Minimize"><svg width="8" height="8" viewBox="0 0 8 8"><rect x="1" y="6" width="6" height="1.5" fill="#000"/></svg></button>
+        <button class="tb-btn" aria-label="Maximize"><svg width="9" height="9" viewBox="0 0 9 9"><rect x="0.5" y="0.5" width="8" height="8" fill="none" stroke="#000" stroke-width="1"/><rect x="0.5" y="0.5" width="8" height="2" fill="#000"/></svg></button>
+        <button class="tb-btn" id="tbClose" data-readme-close aria-label="Close"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 1 L7 7 M7 1 L1 7" stroke="#000" stroke-width="1.3"/></svg></button>
+      </span>
+    </div>
+    <div class="body">
+      <div class="hero">
+        <img src="appIcon.png" alt="Windows NT Workstation 4.0">
+        <div><h1>Windows NT Workstation 4.0</h1><p class="sub">Microsoft &middot; Build 1381 &middot; July 1996</p></div>
+      </div>
+      <p>Windows NT 4.0 put the <b>Windows 95 desktop</b> on top of Microsoft&rsquo;s fully 32-bit, protected-memory <b>NT kernel</b>: the Start button, the taskbar and the grey 3D chrome, but with user accounts, NTFS and a system that one crashing program could not take down.</p>
+      <p>This theme follows the original English Workstation release, Build 1381, with the Explorer shell it shipped with &mdash; before Internet Explorer 4&rsquo;s Desktop Update.</p>
+      <h2>In this theme</h2>
+      <ul class="facts"><li>The desktop of a fresh install: My Computer, Network Neighborhood, Inbox, Internet Explorer, Recycle Bin and My Briefcase.</li><li>The Start menu with NT&rsquo;s program groups. <b>Administrative Tools</b> open the Mac&rsquo;s own tools: Disk Administrator is Disk Utility, Event Viewer the Console, Performance Monitor the Activity Monitor, Windows NT Diagnostics the System Information.</li><li><b>Boot Phases</b> on Firmware: an Award BIOS, the OS Loader with its menu, the blue kernel screen and the &ldquo;Begin Logon&rdquo; box. Nothing asks for a password; any key goes on.</li><li>The wallpaper is a RetroMac adaptation on teal #058182 of a modern redraw of NT&rsquo;s start-up artwork, its three typing errors corrected.</li></ul>
+      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>Ctrl+Alt+Del to log on.</b> NT asked for the three-finger salute before every log-on: only the system itself can catch that combination, so no program could fake the password box.</div><div class="item"><b>Not a Windows 95.</b> NT ran on Intel, Alpha, MIPS and PowerPC machines; the 95 look was new in 4.0, the kernel underneath dated back to 1993.</div></div>
+      <footer>
+        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
+        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+      </footer>
+    </div>
+  </div>
+  <script>
+    document.getElementById('tbClose').addEventListener('click', function(){
+      try { window.webkit.messageHandlers.readmeClose.postMessage(1); } catch(e) {}
+    });
+  </script>
+</body></html>

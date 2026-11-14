@@ -31,7 +31,7 @@ const B = window.BOOT || { model: 'Mac', cpu: 'Apple M1', cores: 8, memoryKiB: 8
 B.bios = Object.assign({ quickPOST: true, floppySeek: true, values: {} }, B.bios || {});
 B.bios.values = B.bios.values || {};
 const Q = new URLSearchParams(location.search);
-const FW = Q.get('firmware');
+const FW = Q.get('firmware'), OS = Q.get('os');
 
 // ---------------------------------------------------------------- text-mode screen
 const C = document.getElementById('screen'), X = C.getContext('2d');
@@ -450,13 +450,100 @@ function loop() {
   if (phase === 'post' || phase === 'config') raf = requestAnimationFrame(loop);
   if (!ready) { ready = true; send({ type: 'ready' }); }
 }
+// ---------------------------------------------------------------- Windows NT 4.0 (?os=nt4)
+// OS Loader V4.0 with its BOOT.INI menu, NTDETECT, the blue kernel screen with this Mac's
+// processors and memory, then "Begin Logon". Nothing asks for a password; Ctrl+Alt+Del is only
+// the words on the box, any key goes on.
+const NT = { step: 'loader', sel: 0, count: 3, t0: 0, timer: 0 };
+const kb = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+function ntLoader() {
+  clear();
+  put(0, 1, 'OS Loader V4.0');
+  put(0, 3, 'Please select the operating system to start:');
+  ['Windows NT Workstation Version 4.00', 'Windows NT Workstation Version 4.00 [VGA mode]'].forEach((c, i) =>
+    put(4, 6 + i, pad(c, 72), i === NT.sel ? 0 : 7, i === NT.sel ? 7 : null));
+  put(0, 10, 'Use \u2191 and \u2193 to move the highlight to your choice.');
+  put(0, 11, 'Press Enter to choose.');
+  if (NT.count !== null) put(0, 14, 'Seconds until highlighted choice will be started automatically: ' + NT.count);
+}
+function ntDetect(t) {
+  clear();
+  put(0, 0, 'NTDETECT V4.0 Checking Hardware ...');
+  if (t > 0.8) { clear(); put(0, 1, 'OS Loader V4.0'); put(0, 3, 'Press spacebar NOW to invoke Hardware Profile/Last Known Good menu');
+                 put(0, 5, '.'.repeat(Math.min(40, Math.floor((t - 0.8) * 30)))); }
+}
+function ntKernel(t) {
+  clear(1);
+  const cpus = B.cores + ' System Processor' + (B.cores > 1 ? 's' : '');
+  put(0, 0, 'Microsoft (R) Windows NT (TM) Version 4.0 (Build 1381).', 15);
+  put(0, 1, cpus + ' [' + kb(B.memoryKiB) + ' KB Memory]' + (B.cores > 1 ? '  MultiProcessor Kernel' : ''), 15);
+  put(0, 2, '.'.repeat(Math.min(78, Math.floor(t * 18))), 15);
+}
+function ntLogon() {
+  C.width = 640; C.height = 480; fit();
+  const g = X; g.fillStyle = '#008080'; g.fillRect(0, 0, 640, 480);
+  const x = 130, y = 140, w = 380, h = 196;
+  const bevel = (x, y, w, h, up) => { g.fillStyle = '#C0C0C0'; g.fillRect(x, y, w, h);
+    g.fillStyle = up ? '#FFFFFF' : '#000000'; g.fillRect(x, y, w - 1, 1); g.fillRect(x, y, 1, h - 1);
+    g.fillStyle = up ? '#000000' : '#FFFFFF'; g.fillRect(x, y + h - 1, w, 1); g.fillRect(x + w - 1, y, 1, h);
+    g.fillStyle = up ? '#808080' : '#DFDFDF'; g.fillRect(x + 1, y + h - 2, w - 2, 1); g.fillRect(x + w - 2, y + 1, 1, h - 2); };
+  bevel(x, y, w, h, true);
+  g.fillStyle = '#000080'; g.fillRect(x + 3, y + 3, w - 6, 18);
+  g.font = 'bold 11px Tahoma, Verdana, sans-serif'; g.textBaseline = 'middle'; g.fillStyle = '#FFFFFF'; g.fillText('Begin Logon', x + 7, y + 12);
+  const bx = x + 8, by = y + 28, bw = w - 16, bh = 66;                     // the NT banner
+  const grad = g.createLinearGradient(bx, 0, bx + bw, 0); grad.addColorStop(0, '#000000'); grad.addColorStop(1, '#000060');
+  g.fillStyle = grad; g.fillRect(bx, by, bw, bh);
+  [['#FF4020', 0, 0], ['#20C040', 1, 0], ['#2060FF', 0, 1], ['#FFD020', 1, 1]].forEach(([c, i, j]) => {
+    g.fillStyle = c; g.fillRect(bx + 16 + i * 15, by + 14 + j * 15 - i * 2, 13, 13); });
+  g.fillStyle = '#FFFFFF'; g.textBaseline = 'alphabetic';
+  g.font = 'bold 24px Arial, Helvetica, sans-serif'; g.fillText('Windows NT', bx + 58, by + 34);
+  g.font = 'bold 15px Arial, Helvetica, sans-serif'; g.fillText('Workstation', bx + 160, by + 52);
+  g.font = '9px Arial, Helvetica, sans-serif'; g.fillText('Microsoft', bx + 58, by + 14);
+  g.fillStyle = '#000000'; g.font = '11px Tahoma, Verdana, sans-serif';
+  g.fillText('Press Ctrl+Alt+Delete to log on.', x + 60, y + 124);
+  g.strokeStyle = '#000000'; g.strokeRect(x + 22.5, y + 110.5, 26, 18);                      // the keyboard
+  for (let i = 0; i < 5; i++) g.fillRect(x + 25 + i * 5, y + 114, 3, 3);
+  bevel(x + w - 88, y + h - 34, 75, 23, true);
+  g.fillStyle = '#000000'; g.textBaseline = 'middle'; g.fillText('Help', x + w - 62, y + h - 22);
+  g.fillStyle = '#C0E0E0'; g.font = '10px Tahoma, Verdana, sans-serif'; g.textBaseline = 'alphabetic';
+  g.fillText('RetroMac: any key or click goes on, nothing is asked', 168, 470);
+  say('Begin Logon. Press Ctrl+Alt+Delete to log on. Any key continues.');
+}
+function ntRun() {
+  cancelAnimationFrame(NT.timer);
+  const t = (performance.now() - NT.t0) / 1000;
+  if (NT.step === 'detect') { ntDetect(t); if (t > 2.2) { NT.step = 'kernel'; NT.t0 = performance.now(); } }
+  else if (NT.step === 'kernel') { ntKernel(t); if (t > 3.2) { NT.step = 'logon'; ntLogon(); return; } }
+  NT.timer = requestAnimationFrame(ntRun);
+}
+function ntChoose() { NT.count = null; NT.step = 'detect'; NT.t0 = performance.now(); ntRun(); }
+function ntKey(e) {
+  if (NT.step === 'loader') {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { NT.sel = 1 - NT.sel; NT.count = null; ntLoader(); say(NT.sel ? 'VGA mode' : 'Windows NT Workstation'); }
+    else if (e.key === 'Enter') ntChoose();
+    else if (e.key === 'Escape') send({ type: 'skip' });
+  } else if (NT.step === 'logon') send({ type: 'done' });
+  else if (e.key === 'Escape') send({ type: 'skip' });
+}
+function ntStart() {
+  ntLoader(); send({ type: 'ready' }); say('OS Loader. Windows NT Workstation will start in 3 seconds.');
+  const tick = setInterval(() => {
+    if (NT.step !== 'loader' || NT.count === null) return clearInterval(tick);
+    if (--NT.count <= 0) { clearInterval(tick); ntChoose(); } else ntLoader();
+  }, 1000);
+}
+
 addEventListener('keydown', e => {
   e.preventDefault();
+  if (OS) return ntKey(e);
   if (phase === 'setup') return setupKey(e);
   if (phase === 'post' && (e.key === 'Delete' || e.key === 'Backspace')) { cancelAnimationFrame(raf); return enterSetup(); }
   if (e.key === 'Escape') send({ type: 'skip' });
 });
-addEventListener('mousedown', () => { if (phase !== 'setup') send({ type: 'skip' }); });
+addEventListener('mousedown', () => {
+  if (OS) return send({ type: NT.step === 'logon' ? 'done' : 'skip' });
+  if (phase !== 'setup') send({ type: 'skip' });
+});
 setInterval(() => {                                    // the setup's clock keeps going
   if (phase !== 'setup') return;
   const [h, m, s] = B.time.split(':').map(Number), n = (h * 3600 + m * 60 + s + 1) % 86400;
@@ -464,6 +551,7 @@ setInterval(() => {                                    // the setup's clock keep
   if (S.page === 'std' && !S.dialog) drawSetup();
 }, 1000);
 document.fonts.load('16px VGA').then(() => {
+  if (OS === 'nt4') return ntStart();
   t0 = performance.now();
   if (!P) { send({ type: 'error', message: 'unknown firmware ' + FW }); send({ type: 'done' }); return; }
   say(P.name + ' BIOS starting. ' + (P.delKey));

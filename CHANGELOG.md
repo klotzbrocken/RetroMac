@@ -21,6 +21,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   do something: *Quick Power On Self Test* shortens the POST, *Boot Up Floppy Seek* makes the
   floppy drive seek (with the drive sounds on). The rest are kept as set, as CMOS kept them.
 
+- **New theme: Windows NT Workstation 4.0** (Build 1381, 1996, the shell before IE4's Desktop
+  Update). 95's chrome and taskbar without Quick Launch; the desktop of a fresh install (My
+  Computer, Network Neighborhood, Inbox, Internet Explorer, Recycle Bin, My Briefcase); the Start
+  menu with NT's banner and program groups, whose Administrative Tools open the Mac's own (Disk
+  Administrator is Disk Utility, Event Viewer the Console, Performance Monitor the Activity
+  Monitor). On *Firmware* it boots through an Award BIOS, the OS Loader V4.0 menu, NTDETECT, the
+  blue kernel screen with this Mac's processors and memory, and "Begin Logon" — which asks for
+  nothing; any key goes on. The wallpaper centres NT's start-up artwork on teal #058182.
+
 ### Fixes
 
 - **A boot screen left over from a quick theme switch no longer touches the next one.** The

@@ -18,7 +18,7 @@ extension CursorThemeManager {
         // Me had the same black arrow with the white edge that 3.1 had, and no set of its own
         // is bundled, so it borrows it. 95 is that set with its own hourglass.
         case "Windows 3.1", "Windows Me":               return loadBundledSet("Cursors/Retrosmart")
-        case "Windows 95":                              return loadBundledSet("Cursors/Windows95")
+        case "Windows 95", "Windows NT Workstation 4.0": return loadBundledSet("Cursors/Windows95")   // NT 4.0 shipped 95's pointers
         case "Halloween":                               return loadBundledSet("Cursors/Halloween")   // the knife, arrow only
         case "Windows XP":                              return loadBundledSet("Cursors/WindowsXP", scale: AppSettings.shared.xpCursorScale)
         case "Windows 98":

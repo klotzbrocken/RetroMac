@@ -1552,7 +1552,8 @@ private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuH
 
         let bannerRect = NSRect(x: bw, y: bw + 1, width: bannerWidth, height: bounds.height - bw * 2 - 2)
         let isMe = bannerText.lowercased().contains("windows me")
-        let isWin95 = bannerText.lowercased().contains("windows 95")
+        // Windows NT 4.0 kept 95's grey banner.
+        let isWin95 = bannerText.lowercased().contains("windows 95") || bannerText.lowercased().contains("windows nt")
         if isWin95 {
             // Windows 95 side banner: a grey gradient (darker grey at the bottom → lighter up), NOT
             // the Win98 blue. "Windows 95" is drawn white over it (via the shared text path below).
@@ -1619,7 +1620,9 @@ private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuH
                 let boldFont = NSFont(name: "Tahoma-Bold", size: size) ?? NSFont.boldSystemFont(ofSize: size)
                 let regFont  = NSFont(name: "Tahoma", size: size) ?? NSFont.systemFont(ofSize: size)
                 let bannerTextColor = Win98Scheme.activeTitleTextColor() ?? NSColor.white
-                let parts = bannerText.split(separator: " ", maxSplits: 1).map(String.init)
+                let parts = bannerText.contains("|")
+                    ? bannerText.split(separator: "|", maxSplits: 1).map(String.init)   // "Windows NT|Workstation"
+                    : bannerText.split(separator: " ", maxSplits: 1).map(String.init)
                 let text = NSMutableAttributedString()
                 text.append(NSAttributedString(string: parts.first ?? bannerText,
                                                attributes: [.font: boldFont, .foregroundColor: bannerTextColor]))
