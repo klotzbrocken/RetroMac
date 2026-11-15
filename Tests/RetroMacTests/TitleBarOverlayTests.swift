@@ -167,3 +167,25 @@ final class TitleBarCacheTests: XCTestCase {
         XCTAssertEqual(TitleBarOverlayController.Style.aqua.doubleClickAction, .minimize, "10.0 minimised on a double-click")
     }
 }
+
+/// The band behind a still-rounded window takes the window's colour from a small photograph.
+final class TitleBarCornerBandTests: XCTestCase {
+    func testAverageColourOfASample() throws {
+        let image = NSImage(size: NSSize(width: 40, height: 2), flipped: false) { r in
+            NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1).setFill(); NSRect(x: 0, y: 0, width: 20, height: 2).fill()
+            NSColor(srgbRed: 0, green: 0, blue: 1, alpha: 1).setFill(); NSRect(x: 20, y: 0, width: 20, height: 2).fill()
+            return true
+        }
+        let c = try XCTUnwrap(TitleBarOverlayController.averageColour(of: image)?.usingColorSpace(.sRGB))
+        XCTAssertEqual(c.blueComponent, 1, accuracy: 0.02)
+        XCTAssertEqual(c.redComponent, 0.5, accuracy: 0.1)
+        XCTAssertEqual(c.alphaComponent, 1)
+    }
+
+    func testBandCoversTheTopOfTheWindow() {
+        let band = TitleBarOverlayController.cornerFrame(for: CGRect(x: 100, y: 200, width: 640, height: 400))
+        XCTAssertEqual(band.width, 640)
+        XCTAssertEqual(band.height, TitleBarOverlayController.cornerBandHeight)
+        XCTAssertEqual(band.minX, 100)
+    }
+}

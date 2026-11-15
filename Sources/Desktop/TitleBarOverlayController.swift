@@ -74,6 +74,12 @@ final class TitleBarOverlayController {
         var patchSampledFront: Bool?   // the front state the sample was taken in
         var sampleGeneration = 0       // the request whose picture is still wanted
         var sampleRetryAfter = Date.distantPast   // a failed capture is not repeated every sync
+        /// Behind the window, its top band in the window's own colour: a window opened before the
+        /// bars went on keeps its rounded corners, and under the square bar the desktop showed
+        /// through them. Hidden by the window everywhere else.
+        var corner: NSPanel?
+        var cornerSampledFront: Bool?
+        var cornerGeneration = 0
         init(panel: NSPanel, view: TitleBarOverlayView, bounds: CGRect, level: Int32, pid: pid_t) {
             self.panel = panel; self.view = view; self.bounds = bounds; self.level = level; self.pid = pid
         }
@@ -292,7 +298,7 @@ final class TitleBarOverlayController {
     }
 
     private func stopOverlays() {
-        for o in overlays.values { o.panel.alphaValue = 0; o.patch?.alphaValue = 0; o.panel.orderOut(nil); o.patch?.orderOut(nil) }
+        for o in overlays.values { o.panel.alphaValue = 0; o.patch?.alphaValue = 0; o.panel.orderOut(nil); o.patch?.orderOut(nil); o.corner?.orderOut(nil) }
         overlays.removeAll()
         axWindows.removeAll()
         lightOffsets.removeAll()
@@ -494,8 +500,10 @@ final class TitleBarOverlayController {
             if o.panel.frame != frame { o.panel.setFrame(frame, display: false) }
             if shaded[info.id] != nil {
                 o.patch?.orderOut(nil)   // the real lights are in the corner with the window
+                o.corner?.orderOut(nil)
             } else if style.isBar {
                 makeRoom(for: o, info: info, screens: screens); updatePatch(o, info: info, isFront: isFront)
+                updateCorner(o, info: info, isFront: isFront)
             }
             // The z-order is re-asserted on the WindowServer's reorder and front-change events
             // (`handleServerEvent`); here only when the level changed, and once every few
@@ -566,7 +574,10 @@ final class TitleBarOverlayController {
         overlays[info.id] = o
         panel.orderFrontRegardless()
         order(o, above: info.id)
-        if style.isBar { makeRoom(for: o, info: info, screens: screens); updatePatch(o, info: info, isFront: isFront) }
+        if style.isBar {
+            makeRoom(for: o, info: info, screens: screens); updatePatch(o, info: info, isFront: isFront)
+            updateCorner(o, info: info, isFront: isFront)
+        }
     }
 
     // MARK: - Room above, and the patch over the lights
@@ -705,6 +716,71 @@ final class TitleBarOverlayController {
         let anchor = WindowBorderController.shared.borderWindowID(for: target) ?? target
         o.panel.order(.above, relativeTo: Int(anchor))
         if let patch = o.patch { orderPatch(patch, above: target) }
+        if let corner = o.corner, corner.isVisible {
+            corner.level = o.panel.level
+            corner.order(.below, relativeTo: Int(target))
+        }
+    }
+
+    // MARK: - The rounded corners under a square bar
+
+    /// Taller than any window corner macOS draws; behind the window, the rest of it never shows.
+    static let cornerBandHeight: CGFloat = 28
+
+    static func cornerFrame(for bounds: CGRect) -> NSRect {
+        appKitFrame(topLeft: CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: cornerBandHeight),
+                    height: cornerBandHeight)
+    }
+
+    /// Create or refresh the band behind the window's top. Its colour is the window's own,
+    /// photographed from a strip across the middle of its top edge (away from the corners, the
+    /// lights and the title), and taken again when the window goes to the front or back.
+    private func updateCorner(_ o: Overlay, info: WindowInfo, isFront: Bool) {
+        let frame = Self.cornerFrame(for: info.bounds)
+        if o.corner == nil {
+            let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.hasShadow = false
+            panel.ignoresMouseEvents = true          // a click in the corner reaches what is behind
+            panel.setAccessibilityElement(false)
+            panel.hidesOnDeactivate = false
+            panel.isReleasedWhenClosed = false
+            panel.collectionBehavior = [.ignoresCycle, .fullScreenAuxiliary, .transient]
+            panel.animationBehavior = .none
+            panel.alphaValue = 0                     // nothing shows until it has the window's colour
+            o.corner = panel
+        } else if o.corner!.frame != frame {
+            o.corner!.setFrame(frame, display: false)
+        }
+        guard let corner = o.corner else { return }
+        if !corner.isVisible {
+            corner.level = o.panel.level
+            corner.order(.below, relativeTo: Int(info.id))   // straight in behind, never over it
+        }
+        guard o.cornerSampledFront != isFront else { return }
+        o.cornerSampledFront = isFront
+        let sample = CGRect(x: info.bounds.midX - 20, y: info.bounds.minY + 2, width: 40, height: 2)
+        o.cornerGeneration += 1
+        let generation = o.cornerGeneration, wid = info.id
+        NativeBarSampler.sample(sample) { [weak self, weak requester = o] image in
+            guard let self, let o = self.overlays[wid], o === requester, o.cornerGeneration == generation else { return }
+            guard let image, let colour = Self.averageColour(of: image) else { o.cornerSampledFront = nil; return }
+            o.corner?.backgroundColor = colour
+            o.corner?.alphaValue = 1
+        }
+    }
+
+    /// The mean colour of a small picture, opaque.
+    static func averageColour(of image: NSImage) -> NSColor? {
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        var px = [UInt8](repeating: 0, count: 4)
+        let space = CGColorSpace(name: CGColorSpace.sRGB)!
+        guard let ctx = CGContext(data: &px, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: space,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.interpolationQuality = .medium
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        return NSColor(srgbRed: CGFloat(px[0]) / 255, green: CGFloat(px[1]) / 255, blue: CGFloat(px[2]) / 255, alpha: 1)
     }
 
     /// Height of the bar above the window: the era's own, since nothing native has to be
@@ -854,6 +930,11 @@ final class TitleBarOverlayController {
             var moves: [(NSPanel, NSPoint)] = []
             if o.view.isBarPanel {
                 f = Self.barFrame(for: g, style: style)
+                if let corner = o.corner {
+                    let cf = Self.cornerFrame(for: g)
+                    if cf.size == corner.frame.size { if cf.origin != origin(of: corner) { moves.append((corner, cf.origin)) } }
+                    else { corner.setFrame(cf, display: false) }
+                }
                 if style == .beos { f.size.width = Self.beosTabWidth(o.view.currentTitle, max: f.width) }
                 if let patch = o.patch {
                     let d = CGPoint(x: g.minX - previous.minX, y: g.minY - previous.minY)
@@ -918,6 +999,7 @@ final class TitleBarOverlayController {
         o.patch?.alphaValue = 0
         o.panel.orderOut(nil)
         o.patch?.orderOut(nil)
+        o.corner?.orderOut(nil)
         overlays.removeValue(forKey: wid)
     }
 
@@ -1293,6 +1375,7 @@ final class TitleBarOverlayController {
             }
         }
         o.patch?.orderOut(nil)
+        o.corner?.orderOut(nil)
         WindowBorderController.shared.update()   // no frame around a window that is not there
     }
 

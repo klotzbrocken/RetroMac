@@ -34,6 +34,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **No desktop through the corners under a theme's title bar.** A window opened before the
+  bars went on keeps macOS's rounded corners until its app restarts, and under the square bar
+  the desktop showed through them. A band in the window's own colour now sits behind the top
+  of every barred window: the window hides it, except in those corners.
 - **A click on a taskbar button brings its window to the front again.** The window came up
   inside its app but stayed behind the front one: the window server's front-process call
   RetroMac used reports success on macOS 27.3 and changes nothing. The app is now brought to
