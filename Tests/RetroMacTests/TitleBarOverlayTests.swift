@@ -39,6 +39,22 @@ final class TitleBarOverlayTests: XCTestCase {
         XCTAssertTrue(TitleBarOverlayController.decodeGeometry(Data("garbage".utf8)).isEmpty)
     }
 
+    /// The way-back record: written before the move, dropped only when nothing moved, and a
+    /// put-back counts only when the window is where it was.
+    func testWayBackRecordFollowsTheWindow() {
+        typealias C = TitleBarOverlayController
+        let before = CGRect(x: 10, y: 0, width: 800, height: 600)
+        let moved = CGRect(x: 10, y: 52, width: 800, height: 600)
+        XCTAssertEqual(C.recordAfterMove(hadRecord: false, before: before, now: before), .drop)
+        XCTAssertEqual(C.recordAfterMove(hadRecord: false, before: before, now: nil), .drop)
+        XCTAssertEqual(C.recordAfterMove(hadRecord: false, before: before, now: moved), .update(moved))
+        XCTAssertEqual(C.recordAfterMove(hadRecord: true, before: before, now: before), .update(before))
+        XCTAssertEqual(C.recordAfterMove(hadRecord: true, before: before, now: nil), .keep)
+        XCTAssertTrue(C.restored(CGRect(x: 10.5, y: 0, width: 800, height: 600), to: before))
+        XCTAssertFalse(C.restored(CGRect(x: 10, y: 52, width: 800, height: 600), to: before), "size taken, position refused")
+        XCTAssertFalse(C.restored(nil, to: before))
+    }
+
     /// Off the main thread, a burst of moves becomes one pass with the newest event per window.
     func testMoveEventsCoalesce() {
         _ = MoveCoalescer.take()

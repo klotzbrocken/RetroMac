@@ -657,7 +657,7 @@ struct DockSettingsTab: View {
                     if settings.themeTitleBars {
                         RMRow(label: "Moving windows",
                               hint: settings.titleBarDragMode == "outline"
-                                ? "Only an outline moves; the window follows when you let go. Dragged by its own title bar, the bars and borders step aside until it stops, so nothing trails behind."
+                                ? "Dragged by the theme's bar, only an outline moves and the window follows when you let go. Dragged by the app's own title bar, the window itself still moves — macOS gives RetroMac no way to stop that — but the bars and borders step aside for an outline until it stops, so nothing trails behind."
                                 : settings.titleBarDragMode == "live"
                                     ? "The window itself moves, under every theme."
                                     : "As the era did: an outline under System 6 and 7, Mac OS 8 and 9, Windows 3.1 and 95 and CDE; the window itself elsewhere.") {

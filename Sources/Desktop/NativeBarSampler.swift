@@ -10,7 +10,8 @@ import ScreenCaptureKit
 /// itself had to be hidden for the photograph.
 enum NativeBarSampler {
 
-    /// Capture `rect` (Quartz global, top-left origin, points) out of window `wid`.
+    /// Capture `rect` out of window `wid`, in the window's own points from its top-left
+    /// corner — so a window list a moment old (the cache below) cannot shift the strip.
     static func sample(_ rect: CGRect, window wid: CGWindowID, completion: @escaping (NSImage?) -> Void) {
         Task {
             let image = await capture(rect, window: wid)
@@ -19,6 +20,7 @@ enum NativeBarSampler {
     }
 
     private static func capture(_ rect: CGRect, window wid: CGWindowID) async -> NSImage? {
+        guard rect.minX >= 0, rect.minY >= 0, rect.width > 0, rect.height > 0 else { return nil }
         // A window opened a moment ago may not be in a list that is still fresh: ask once more.
         var found = await Shareable.shared.content()?.windows.first { $0.windowID == wid }
         if found == nil { found = await Shareable.shared.content(fresh: true)?.windows.first { $0.windowID == wid } }
@@ -27,8 +29,7 @@ enum NativeBarSampler {
         let scale = CGFloat(filter.pointPixelScale)
         let config = SCStreamConfiguration()
         config.ignoreShadowsSingleWindow = true   // so the window's frame is the picture's frame
-        config.sourceRect = CGRect(x: rect.minX - window.frame.minX, y: rect.minY - window.frame.minY,
-                                   width: rect.width, height: rect.height)
+        config.sourceRect = rect
         config.width = max(1, Int(rect.width * scale))
         config.height = max(1, Int(rect.height * scale))
         config.showsCursor = false

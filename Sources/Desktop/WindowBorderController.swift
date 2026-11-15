@@ -129,6 +129,7 @@ final class WindowBorderController {
         releaseObserversIfIdle()
         for b in borders.values { skb_destroy(b.wid) }
         borders.removeAll()
+        dragHidden.removeAll()
     }
 
     /// The per-app Accessibility observers serve the title-bar overlay too; they live while
@@ -383,7 +384,7 @@ final class WindowBorderController {
     }
 
     private func reorderAll() {
-        for (target, b) in borders { skb_order(b.wid, b.level, target) }
+        for (target, b) in borders where !dragHidden.contains(target) { skb_order(b.wid, b.level, target) }
     }
 
 
