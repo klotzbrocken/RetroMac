@@ -222,11 +222,11 @@ final class StartMenuPanel: NSPanel {
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self else { return event }
             if event.window == self { return event }
-            // Allow clicks on submenu panels (Favorites, Programs, etc.)
-            if let host = self.menuContentView as? StartMenuPanel.SubmenuHost,
-               let subPanel = host.submenuPanel,
-               event.window == subPanel {
-                return event
+            // Allow clicks on submenu panels (Favorites, Programs, etc.) at any depth.
+            var host = self.menuContentView as? StartMenuPanel.SubmenuHost
+            while let sub = host?.submenuPanel {
+                if event.window == sub { return event }
+                host = sub.contentView as? StartMenuPanel.SubmenuHost
             }
             // Click on dock window: only pass through if on start button (DockView toggles)
             if event.window == self.dockWindow {
@@ -242,14 +242,25 @@ final class StartMenuPanel: NSPanel {
         }
         // The arrow keys, Return and Esc while it is open: the menu, and the flyout hanging off it.
         MenuKeyboard.attach("start", levels: { [weak self] in self?.keyLevels ?? [] }, close: { [weak self] level in
-            if level == 0 { self?.dismiss() } else { (self?.menuContentView as? StartMenuPanel.SubmenuHost)?.dismissSubmenu() }
+            guard let self else { return }
+            if level == 0 { self.dismiss() } else if level - 1 < self.hostChain.count { self.hostChain[level - 1].dismissSubmenu() }
         })
     }
 
     private var keyLevels: [KeyMenuLevel] {
         guard isVisible, let root = menuContentView as? KeyMenuLevel else { return [] }
-        let flyout = (menuContentView as? StartMenuPanel.SubmenuHost)?.submenuPanel?.contentView as? KeyMenuLevel
-        return [root] + (flyout.map { [$0] } ?? [])
+        return [root] + hostChain.compactMap { $0.submenuPanel?.contentView as? KeyMenuLevel }
+    }
+
+    /// The menu and each open flyout below it that can open one of its own, top down.
+    private var hostChain: [StartMenuPanel.SubmenuHost] {
+        var chain: [StartMenuPanel.SubmenuHost] = []
+        var host = menuContentView as? StartMenuPanel.SubmenuHost
+        while let h = host {
+            chain.append(h)
+            host = h.submenuPanel?.contentView as? StartMenuPanel.SubmenuHost
+        }
+        return chain
     }
 
     /// Told when the menu goes away, however it was closed, so the Start button can pop back up.
@@ -259,7 +270,7 @@ final class StartMenuPanel: NSPanel {
 
     func dismiss() {
         if typingAttached { StartMenuTyping.shared.detach(); typingAttached = false }
-        (menuContentView as? StartMenuPanel.SubmenuHost)?.dismissSubmenu()
+        ((menuContentView ?? contentView) as? StartMenuPanel.SubmenuHost)?.dismissSubmenu()   // every level below
         orderOut(nil)
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor); globalMonitor = nil }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor); localMonitor = nil }
@@ -1720,6 +1731,75 @@ private final class SubmenuContentView: NSView {
 
     var onDismiss: (() -> Void)?
 
+    /// A folder inside this flyout (All Programs ▸ Office, Accessories ▸ Games) opens its own,
+    /// beside this one.
+    private(set) var submenuPanel: StartMenuPanel?
+    private var openIndex: Int?
+
+    func dismissSubmenu() {
+        submenuPanel?.dismiss()
+        submenuPanel = nil
+        openIndex = nil
+    }
+
+    fileprivate func openSubmenu(_ i: Int) {
+        guard openIndex != i else { return }
+        dismissSubmenu()
+        guard let sub = items[i].submenuItems, !sub.isEmpty, let window else { return }
+        let font = NSFont(name: "Tahoma", size: 12) ?? NSFont.systemFont(ofSize: 12)
+        let visible = (window.screen ?? NSScreen.main)?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        // No scrolling in these menus: a list taller than the screen ends in "More…".
+        var shown = sub
+        let maxRows = max(6, Int((visible.height - 40) / itemHeight) - 1)
+        if shown.count > maxRows {
+            shown = Array(shown.prefix(maxRows - 1))
+            shown.append(StartMenuPanel.MenuItem(title: "More\u{2026}", action: {
+                NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications"))
+            }))
+        }
+        var contentW: CGFloat = 0
+        for it in shown where !it.isSeparator {
+            let tw = (it.title as NSString).size(withAttributes: [.font: font]).width
+            contentW = max(contentW, 6 + iconSize + 8 + tw + (it.submenuItems?.isEmpty == false ? 24 : 12) + 8)
+        }
+        let width = min(360, max(150, ceil(contentW)))
+        var height = bevelWidth * 2 + 2
+        for it in shown { height += it.isSeparator ? 9 : itemHeight }
+        let size = NSSize(width: width + bevelWidth * 2, height: height)
+        let content = SubmenuContentView(items: shown, itemHeight: itemHeight, menuWidth: width,
+                                         bevelWidth: bevelWidth, iconSize: iconSize, style: style)
+        content.onDismiss = onDismiss
+        content.frame = NSRect(origin: .zero, size: size)
+        let panel = StartMenuPanel()
+        panel.title = items[i].title
+        panel.contentView = content
+        // Beside this flyout, its top level with the folder's row; to the left when the right
+        // has no room, and never off the screen.
+        let row = rowRect(i)
+        let topRight = window.convertPoint(toScreen: convert(NSPoint(x: bounds.maxX, y: row.maxY), to: nil))
+        var x = topRight.x - 2, y = topRight.y - size.height + bevelWidth + 1
+        if x + size.width > visible.maxX {
+            x = window.convertPoint(toScreen: convert(NSPoint(x: bounds.minX, y: 0), to: nil)).x - size.width + 2
+        }
+        x = min(max(x, visible.minX), visible.maxX - size.width)
+        y = min(max(y, visible.minY), visible.maxY - size.height)
+        panel.setFrame(NSRect(origin: NSPoint(x: x, y: y), size: size), display: true)
+        panel.orderFrontRegardless()
+        submenuPanel = panel
+        openIndex = i
+    }
+
+    /// Row `i` in this view's coordinates.
+    private func rowRect(_ i: Int) -> NSRect {
+        var y = bounds.height - bevelWidth - 1
+        for (j, item) in items.enumerated() {
+            let h = item.isSeparator ? 9.0 : itemHeight
+            y -= h
+            if j == i { return NSRect(x: bevelWidth, y: y, width: bounds.width - bevelWidth * 2, height: h) }
+        }
+        return .zero
+    }
+
     init(items: [StartMenuPanel.MenuItem], itemHeight: CGFloat, menuWidth: CGFloat,
          bevelWidth: CGFloat, iconSize: CGFloat, style: Style = .classic) {
         self.items = items
@@ -1753,17 +1833,23 @@ private final class SubmenuContentView: NSView {
         if idx != hoveredIndex {
             hoveredIndex = idx
             needsDisplay = true
+            // A folder opens its flyout on hover, any other row closes the one that is open.
+            if let idx, !items[idx].isSeparator {
+                if items[idx].submenuItems?.isEmpty == false { openSubmenu(idx) } else { dismissSubmenu() }
+            }
         }
     }
 
     override func mouseExited(with event: NSEvent) {
-        hoveredIndex = nil
+        // The highlight stays on a folder whose flyout is open: the pointer went into it.
+        hoveredIndex = openIndex
         needsDisplay = true
     }
 
     override func mouseDown(with event: NSEvent) {
         let local = convert(event.locationInWindow, from: nil)
         guard let idx = itemIndex(at: local), !items[idx].isSeparator else { return }
+        if items[idx].submenuItems?.isEmpty == false { openSubmenu(idx); return }   // a folder opens, it does not close the menu
         items[idx].action?()
         onDismiss?()
     }
@@ -1849,6 +1935,13 @@ private final class SubmenuContentView: NSView {
             (item.title as NSString).draw(at: NSPoint(x: r.minX + 6 + iconSize + 8,
                                                      y: r.midY - size.height / 2),
                                           withAttributes: attrs)
+            if item.submenuItems?.isEmpty == false {   // a folder: XP's black arrow at the right
+                let arrowAttrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 10),
+                                                                 .foregroundColor: hoveredIndex == i ? selectedText : NSColor.black]
+                let arrow = "\u{25B8}" as NSString
+                let asz = arrow.size(withAttributes: arrowAttrs)
+                arrow.draw(at: NSPoint(x: r.maxX - asz.width - 8, y: r.midY - asz.height / 2), withAttributes: arrowAttrs)
+            }
         }
     }
 
@@ -1952,11 +2045,16 @@ extension ClassicStartMenuContentView: KeyMenuLevel {
     }
 }
 
+extension SubmenuContentView: StartMenuPanel.SubmenuHost {}
+
 extension SubmenuContentView: KeyMenuLevel {
-    var keyRows: [KeyMenuRow] { items.map { KeyMenuRow(label: $0.title, selectable: !$0.isSeparator) } }
+    var keyRows: [KeyMenuRow] {
+        items.map { KeyMenuRow(label: $0.title, selectable: !$0.isSeparator, submenu: $0.submenuItems?.isEmpty == false) }
+    }
     var keyHighlight: Int? { hoveredIndex }
-    func setKeyHighlight(_ i: Int) { hoveredIndex = i; needsDisplay = true }
+    func setKeyHighlight(_ i: Int) { dismissSubmenu(); hoveredIndex = i; needsDisplay = true }
     func activateKeyRow(_ i: Int) {
+        if items[i].submenuItems?.isEmpty == false { openSubmenu(i); return }
         items[i].action?()
         onDismiss?()
     }

@@ -43,6 +43,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **Folders inside the Start menu's flyouts open.** A folder in a flyout (All Programs ▸ Office,
+  Accessories ▸ Games) showed its arrow and did nothing; it now opens its own flyout beside it,
+  on hover, on a click or with the arrow keys.
 - **No desktop through the corners under a theme's title bar.** A window opened before the
   bars went on keeps macOS's rounded corners until its app restarts, and under the square bar
   the desktop showed through them. A band in the window's own colour now sits behind the top
