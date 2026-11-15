@@ -9,6 +9,7 @@ struct CompanionBalloonView: View {
 
     static let paper = Color(red: 1, green: 1, blue: 0.8)
     static let bullet = Color(red: 0, green: 0, blue: 0.75)
+    static let link = Color(red: 0, green: 0, blue: 0.8)
     static func font(_ size: CGFloat = 12, bold: Bool = false) -> Font {
         Font.custom(bold ? "Tahoma Bold" : "Tahoma", size: size)
     }
@@ -50,6 +51,9 @@ struct CompanionBalloonView: View {
                 choice("Clipboard history") { model.open(.clipboard) }
                 choice("Note and to-dos") { model.open(.notes) }
                 choice("Today's meetings and reminders") { model.showAgenda() }
+                if AppSettings.shared.companion.wikipedia {
+                    choice("Wikipedia: today's featured article") { model.showWikipedia() }
+                }
                 buttons([("Options", { model.closeBalloon(); AppDelegate.shared?.showSettings(tab: .desktop) }),
                          ("Close", { model.closeBalloon() })])
             }
@@ -173,12 +177,15 @@ struct CompanionBalloonView: View {
         Button(action: action) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Circle().fill(Self.bullet).frame(width: 7, height: 7)
-                Text(title).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                // Underlined in link blue, so it reads as something to click.
+                Text(title).underline().foregroundColor(Self.link)
+                    .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(.isLink)
     }
 
     private func buttons(_ list: [(String, () -> Void)]) -> some View {

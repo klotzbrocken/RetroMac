@@ -377,6 +377,48 @@ enum CompanionTips {
         "Press Command-Option-Esc to force a stuck app to quit.",
     ]
 
+    struct RetroTip {
+        let text: String
+        var tab: SettingsTab? = nil
+        /// Only under themes whose name contains one of these (lowercased); nil for all.
+        var themes: [String]? = nil
+    }
+
+    static let retro: [RetroTip] = [
+        .init(text: "Your Mac makes no sound? Settings ▸ Sounds gives it clicking keys, a spinning hard drive and a fan.", tab: .sounds),
+        .init(text: "A theme can start like the real thing: firmware, boot screen, desktop. Settings ▸ Themes ▸ Boot Phases.", tab: .dock),
+        .init(text: "Settings ▸ Shader lays a CRT over the whole screen: scanlines, glow, a curved tube.", tab: .shader),
+        .init(text: "Settings ▸ Favourite switches to your favourite look in one click, and back.", tab: .retroMode),
+        .init(text: "Hid a desktop icon by mistake? Settings ▸ Desktop brings it back.", tab: .desktop),
+        .init(text: "Settings ▸ Crashes: blue screens and bombs in period. Nothing ever really crashes.", tab: .crashes),
+        .init(text: "Lost in a theme? Rescue Desktop (Control-Option-Command-R unless you changed it) turns everything off and keeps your settings.", tab: .shortcuts),
+        .init(text: "Settings ▸ Health Check shows what RetroMac is doing right now.", tab: .health),
+        .init(text: "Every theme puts a Read Me on its desktop with the story of the system it recreates."),
+        .init(text: "Start ▸ All Programs lists every app on your Mac, sorted into folders.", themes: ["windows"]),
+        .init(text: "Double-click sheep.exe on the desktop and a sheep walks along your taskbar.",
+              themes: ["windows 95", "windows 98", "windows me", "windows xp"]),
+        .init(text: "With Boot Phases on Firmware, press the BIOS setup key while the memory counts up to enter the setup.",
+              tab: .dock, themes: ["windows"]),
+        .init(text: "Dashboard and Exposé are back. Their hotkeys are in Settings ▸ Shortcuts.", tab: .shortcuts,
+              themes: ["mac os x", "cheetah", "snow leopard", "mountain lion", "aqua"]),
+    ]
+
+    /// The next RetroMac tip that fits the theme, at most one an hour and never within twenty
+    /// minutes of any other tip.
+    static func nextRetro(themeName: String?, now: Date = Date(), defaults: UserDefaults = .standard) -> RetroTip? {
+        let t = now.timeIntervalSince1970
+        guard t - defaults.double(forKey: "companionRetroTipLast") > 3600,
+              t - defaults.double(forKey: "companionTipLast") > 20 * 60 else { return nil }
+        let name = themeName?.lowercased() ?? ""
+        let fitting = retro.filter { $0.themes?.contains { name.contains($0) } ?? true }
+        guard !fitting.isEmpty else { return nil }
+        let i = defaults.integer(forKey: "companionRetroTipIndex")
+        defaults.set(i + 1, forKey: "companionRetroTipIndex")
+        defaults.set(t, forKey: "companionRetroTipLast")
+        defaults.set(t, forKey: "companionTipLast")
+        return fitting[i % fitting.count]
+    }
+
     /// The tip for this app today, or nil when it already had one or the last was too recent.
     static func next(for bundleID: String, now: Date = Date(), defaults: UserDefaults = .standard) -> String? {
         let day = ISO8601DateFormatter.string(from: now, timeZone: .current, formatOptions: [.withFullDate])

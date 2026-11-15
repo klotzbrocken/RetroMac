@@ -14,9 +14,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   copied (in memory only, password fields stay out), a note with to-dos and the rest of today;
   it says when a meeting starts in ten minutes (with *Join* for its video link), when a
   reminder is due (*Done*, *Later*), when a download has finished, a disk is plugged in, the
-  battery is low, the disk nearly full or the last Time Machine backup a week old, and now and
-  then a Mac tip for the app in front. Drag it anywhere; right-click for Animate!, another
-  assistant or Hide. VoiceOver reads what it says; with Reduce Motion it stands still.
+  battery is low, the disk nearly full or the last Time Machine backup a week old. Tips are
+  yours to pick: Mac tips for the app in front, RetroMac tips (with *Show me*), and, if you
+  like, the start of English Wikipedia's article of the day with *Read more* — the only thing
+  it fetches from the internet. It slips out from under the flyout button and back in when
+  hidden; drag it anywhere, right-click for Animate!, another assistant or Hide. VoiceOver
+  reads what it says; with Reduce Motion it stands still.
 
 ### Fixes
 

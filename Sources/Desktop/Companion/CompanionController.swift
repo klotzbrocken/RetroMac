@@ -8,7 +8,12 @@ struct CompanionPrefs: Codable, Equatable {
     var clipboard = true
     var calendar = false
     var watcher = true
+    /// Mac tips for the app in front.
     var tips = true
+    /// Tips about RetroMac itself.
+    var retroTips = true
+    /// Wikipedia's featured article, once a day (the one thing fetched from the network).
+    var wikipedia = false
     var sounds = false
 }
 
@@ -96,6 +101,7 @@ final class CompanionController: ObservableObject {
         on && prefs.clipboard ? clipboard.start() : clipboard.stop()
         on && prefs.calendar ? calendar.start() : calendar.stop()
         on && prefs.watcher ? watcher.start() : watcher.stop()
+        if on && prefs.wikipedia { if wikiTimer == nil { scheduleWikipedia() } } else { wikiTimer?.invalidate(); wikiTimer = nil }
     }
 
     /// Picks a character in Settings, fetching it first when it is not on this Mac yet.
@@ -147,11 +153,43 @@ final class CompanionController: ObservableObject {
         p.level = NSWindow.Level(rawValue: 25)   // above the RetroMac taskbar (24), like the sheep
         p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         p.contentView = player
-        p.setFrameOrigin(startOrigin(size: character.frameSize))
-        p.orderFrontRegardless()
+        let target = startOrigin(size: character.frameSize)
         panel = p
         self.player = player
         player.play(.show) { [weak player] in player?.play(.greet) }
+        // It slips out from under the flyout button (one level above it) to its place.
+        guard let from = flyoutOrigin(size: character.frameSize), !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            p.setFrameOrigin(target)
+            p.orderFrontRegardless()
+            return
+        }
+        p.setFrameOrigin(from)
+        p.alphaValue = 0
+        p.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.7
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            p.animator().setFrame(NSRect(origin: target, size: p.frame.size), display: true)
+            p.animator().alphaValue = 1
+        }
+    }
+
+    /// The agent centred on the flyout button, when that button is on screen.
+    private func flyoutOrigin(size: CGSize) -> NSPoint? {
+        guard FloatingLauncherButton.shared.isVisible, let b = FloatingLauncherButton.shared.buttonWindow?.frame else { return nil }
+        return NSPoint(x: b.midX - size.width / 2, y: b.midY - size.height / 2)
+    }
+
+    /// Back into the flyout button, then gone.
+    private func slipAway(then done: @escaping () -> Void) {
+        guard let p = panel, let to = flyoutOrigin(size: p.frame.size),
+              !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { done(); return }
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.5
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            p.animator().setFrame(NSRect(origin: to, size: p.frame.size), display: true)
+            p.animator().alphaValue = 0
+        }, completionHandler: done)
     }
 
     private func tearDown() {
@@ -172,6 +210,11 @@ final class CompanionController: ObservableObject {
             if NSScreen.screens.contains(where: { $0.visibleFrame.intersects(r.insetBy(dx: size.width / 3, dy: size.height / 3)) }) {
                 return r.origin
             }
+        }
+        // First time: just above the flyout button it came out of.
+        if FloatingLauncherButton.shared.isVisible, let b = FloatingLauncherButton.shared.buttonWindow?.frame,
+           let vf = (FloatingLauncherButton.shared.buttonWindow?.screen ?? NSScreen.main)?.visibleFrame {
+            return NSPoint(x: min(max(b.midX - size.width / 2, vf.minX), vf.maxX - size.width), y: min(b.maxY + 6, vf.maxY - size.height))
         }
         guard let vf = NSScreen.main?.visibleFrame else { return .zero }
         let taskbar = DockController.shared.currentDockFrame()?.height ?? 0
@@ -258,7 +301,9 @@ final class CompanionController: ObservableObject {
     /// Above the character with the tail pointing down at it, or below it where the top has no room.
     func positionBalloon() {
         guard let b = balloon, let agent = panel?.frame, let content = b.contentView else { return }
-        let size = content.fittingSize
+        // The width is fixed: fittingSize can come back wider while a text field is edited,
+        // which made the balloon jump sideways.
+        let size = CGSize(width: Self.balloonWidth, height: content.fittingSize.height)
         let screen = (panel?.screen ?? NSScreen.main)?.visibleFrame ?? .zero
         let up = agent.maxY + size.height + 4 > screen.maxY
         var x = agent.midX - size.width / 2
@@ -306,7 +351,9 @@ final class CompanionController: ObservableObject {
         menu.addItem(.separator())
         item("Hide Assistant") { [weak self] in
             self?.closeBalloon()
-            self?.player?.play(.hide) { AppSettings.shared.companion.character = "off" }
+            self?.player?.play(.hide) {
+                self?.slipAway { AppSettings.shared.companion.character = "off" }
+            }
         }
         if let view = player { NSMenu.popUpContextMenu(menu, with: event, for: view) }
     }
@@ -368,13 +415,49 @@ final class CompanionController: ObservableObject {
     }
 
     private func appActivated(_ app: NSRunningApplication) {
-        guard player != nil, AppSettings.shared.companion.tips, case .none = page,
-              let id = app.bundleIdentifier, id != Bundle.main.bundleIdentifier,
-              let tip = CompanionTips.next(for: id) else { return }
-        say(tip, .explain, buttons: [
-            ("Thanks", { [weak self] in self?.closeBalloon() }),
-            ("No more tips", { AppSettings.shared.companion.tips = false }),
-        ])
+        let prefs = AppSettings.shared.companion
+        guard player != nil, case .none = page, let id = app.bundleIdentifier, id != Bundle.main.bundleIdentifier else { return }
+        if prefs.retroTips, let tip = CompanionTips.nextRetro(themeName: ThemeManager.shared.activeTheme?.config.name) {
+            var buttons: [(String, () -> Void)] = []
+            if let tab = tip.tab { buttons.append(("Show me", { AppDelegate.shared?.showSettings(tab: tab) })) }
+            buttons.append(("No more RetroMac tips", { AppSettings.shared.companion.retroTips = false }))
+            say(tip.text, .explain, buttons: buttons)
+        } else if prefs.tips, let tip = CompanionTips.next(for: id) {
+            say(tip, .explain, buttons: [
+                ("Thanks", { [weak self] in self?.closeBalloon() }),
+                ("No more Mac tips", { AppSettings.shared.companion.tips = false }),
+            ])
+        }
+    }
+
+    // MARK: - Wikipedia
+
+    private var wikiTimer: Timer?
+
+    /// Once a day, a minute or so after it is up: the start of Wikipedia's featured article.
+    private func scheduleWikipedia() {
+        wikiTimer?.invalidate()
+        let check: () -> Void = { [weak self] in
+            guard let self, AppSettings.shared.companion.wikipedia, WikipediaToday.due(), case .none = self.page else { return }
+            self.showWikipedia(daily: true)
+        }
+        wikiTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { _ in check() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 90) { [weak self] in if self?.wikiTimer != nil { check() } }
+    }
+
+    func showWikipedia(daily: Bool = false) {
+        WikipediaToday.fetch { [weak self] article in
+            guard let self else { return }
+            guard let article else {
+                if !daily { self.say("I couldn't reach Wikipedia just now. Try again later.", .think) }
+                return
+            }
+            if daily { WikipediaToday.markShown() }
+            self.say("Today's featured article: \(article.title)\n\n\(WikipediaToday.teaser(article.extract))", .explain, buttons: [
+                ("Read more", { NSWorkspace.shared.open(article.url) }),
+                ("Close", { [weak self] in self?.closeBalloon() }),
+            ])
+        }
     }
 }
 
@@ -399,4 +482,51 @@ final class MenuAction: NSObject {
 /// Takes the keyboard for the note field without bringing RetroMac to the front.
 final class BalloonPanel: NSPanel {
     override var canBecomeKey: Bool { true }
+}
+
+/// Wikipedia's featured article of the day (English), from its public REST feed.
+enum WikipediaToday {
+    struct Article: Equatable { let title: String; let extract: String; let url: URL }
+
+    private static var cached: (day: String, article: Article)?
+
+    static func day(_ date: Date = Date()) -> String {
+        ISO8601DateFormatter.string(from: date, timeZone: TimeZone(identifier: "UTC")!, formatOptions: [.withFullDate])
+    }
+
+    static func due(defaults: UserDefaults = .standard, now: Date = Date()) -> Bool {
+        defaults.string(forKey: "companionWikiShown") != day(now)
+    }
+    static func markShown(defaults: UserDefaults = .standard) { defaults.set(day(), forKey: "companionWikiShown") }
+
+    static func parse(_ data: Data) -> Article? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let tfa = json["tfa"] as? [String: Any],
+              let extract = tfa["extract"] as? String, !extract.isEmpty,
+              let title = (tfa["titles"] as? [String: Any])?["normalized"] as? String ?? tfa["title"] as? String,
+              let page = ((tfa["content_urls"] as? [String: Any])?["desktop"] as? [String: Any])?["page"] as? String,
+              let url = URL(string: page), url.scheme == "https", url.host?.hasSuffix("wikipedia.org") == true else { return nil }
+        return Article(title: title, extract: extract, url: url)
+    }
+
+    /// About 300 characters, cut at a word.
+    static func teaser(_ text: String, limit: Int = 300) -> String {
+        guard text.count > limit else { return text }
+        let cut = text.prefix(limit)
+        return (cut.range(of: " ", options: .backwards).map { String(cut[..<$0.lowerBound]) } ?? String(cut)) + " …"
+    }
+
+    static func fetch(_ done: @escaping (Article?) -> Void) {
+        let today = day()
+        if let c = cached, c.day == today { done(c.article); return }
+        // The feed is dated in UTC, as Wikipedia's Main Page is.
+        let url = URL(string: "https://en.wikipedia.org/api/rest_v1/feed/featured/\(today.replacingOccurrences(of: "-", with: "/"))")!
+        URLSession.shared.dataTask(with: url) { data, response, _ in
+            let article = (response as? HTTPURLResponse)?.statusCode == 200 ? data.flatMap(parse) : nil
+            DispatchQueue.main.async {
+                if let article { cached = (today, article) }
+                done(article)
+            }
+        }.resume()
+    }
 }

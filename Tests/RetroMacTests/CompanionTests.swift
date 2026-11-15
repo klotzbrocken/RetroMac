@@ -110,6 +110,8 @@ final class CompanionTests: XCTestCase {
         XCTAssertTrue(p.clipboard)
         XCTAssertFalse(p.calendar)   // needs a permission, so it starts off
         XCTAssertFalse(p.sounds)
+        XCTAssertTrue(p.retroTips)
+        XCTAssertFalse(p.wikipedia)   // the network only when asked for
     }
 
     // MARK: Jobs
@@ -161,5 +163,44 @@ final class CompanionTests: XCTestCase {
         XCTAssertNotNil(CompanionTips.next(for: "com.apple.Safari", now: t0.addingTimeInterval(21 * 60), defaults: d))
         XCTAssertNil(CompanionTips.next(for: "com.apple.finder", now: t0.addingTimeInterval(60 * 60), defaults: d))   // once a day
         XCTAssertNotNil(CompanionTips.next(for: "com.apple.finder", now: t0.addingTimeInterval(26 * 3600), defaults: d))
+    }
+
+    func testRetroTipsFitTheThemeAndComeAtMostHourly() {
+        let d = fresh()
+        let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+        var seen: [String] = []
+        for h in 0..<CompanionTips.retro.count * 2 {
+            let tip = CompanionTips.nextRetro(themeName: "Mac OS 9 Authentic", now: t0.addingTimeInterval(Double(h) * 3700), defaults: d)
+            seen.append(tip?.text ?? "")
+            XCTAssertNil(CompanionTips.nextRetro(themeName: "Mac OS 9 Authentic", now: t0.addingTimeInterval(Double(h) * 3700 + 600), defaults: d))
+        }
+        XCTAssertFalse(seen.contains { $0.contains("sheep.exe") || $0.contains("All Programs") || $0.contains("Dashboard") })
+        XCTAssertFalse(seen.contains(""))
+        let w = fresh("w")
+        var windows: [String] = []
+        for h in 0..<CompanionTips.retro.count { windows.append(CompanionTips.nextRetro(themeName: "Windows 98", now: t0.addingTimeInterval(Double(h) * 3700), defaults: w)?.text ?? "") }
+        XCTAssertTrue(windows.contains { $0.contains("sheep.exe") })
+        // A Mac tip a minute ago holds a RetroMac tip back.
+        let m = fresh("m")
+        XCTAssertNotNil(CompanionTips.next(for: "com.apple.finder", now: t0, defaults: m))
+        XCTAssertNil(CompanionTips.nextRetro(themeName: nil, now: t0.addingTimeInterval(60), defaults: m))
+    }
+
+    func testWikipediaFeaturedArticle() throws {
+        let json = #"{"tfa":{"titles":{"normalized":"Can't Let Go"},"extract":"A song.","content_urls":{"desktop":{"page":"https://en.wikipedia.org/wiki/X"}}}}"#
+        let a = try XCTUnwrap(WikipediaToday.parse(Data(json.utf8)))
+        XCTAssertEqual(a.title, "Can't Let Go")
+        XCTAssertEqual(a.url.host, "en.wikipedia.org")
+        XCTAssertNil(WikipediaToday.parse(Data(json.replacingOccurrences(of: "https://en.wikipedia.org", with: "https://evil.example").utf8)))
+        XCTAssertNil(WikipediaToday.parse(Data(#"{"mostread":{}}"#.utf8)))
+        let long = String(repeating: "word ", count: 100)
+        let t = WikipediaToday.teaser(long)
+        XCTAssertLessThanOrEqual(t.count, 302)
+        XCTAssertTrue(t.hasSuffix("word …"))
+        XCTAssertEqual(WikipediaToday.teaser("short"), "short")
+        let d = fresh()
+        XCTAssertTrue(WikipediaToday.due(defaults: d))
+        WikipediaToday.markShown(defaults: d)
+        XCTAssertFalse(WikipediaToday.due(defaults: d))
     }
 }

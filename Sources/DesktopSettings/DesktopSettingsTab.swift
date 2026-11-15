@@ -298,7 +298,7 @@ struct DesktopSettingsTab: View {
     /// The sheep or one of the Office assistants. One choice; the assistants also work without a theme.
     private var companionCard: some View {
         RMCard(title: "Desktop companion",
-               subtitle: "No AI: it only tells you what your Mac already knows.", bodyPadding: 0) {
+               subtitle: "No AI: it tells you what your Mac already knows.", bodyPadding: 0) {
             VStack(spacing: 0) {
                 let choice = settings.companion.character
                 let isAgent = choice != "off" && choice != "sheep"
@@ -338,8 +338,15 @@ struct DesktopSettingsTab: View {
                           hint: "Finished downloads, a plugged-in disk, a low battery, a nearly full disk, a Time Machine backup older than a week.") {
                         Toggle("", isOn: $settings.companion.watcher).toggleStyle(.switch).tint(.rmAccent)
                     }
-                    RMRow(label: "Occasional tips", hint: "A Mac tip for the app in front, at most once a day per app.") {
+                    RMRow(label: "Mac tips", hint: "A tip for the app in front, at most once a day per app.") {
                         Toggle("", isOn: $settings.companion.tips).toggleStyle(.switch).tint(.rmAccent)
+                    }
+                    RMRow(label: "RetroMac tips", hint: "What RetroMac can do that you may not have found yet, at most once an hour, with Show me.") {
+                        Toggle("", isOn: $settings.companion.retroTips).toggleStyle(.switch).tint(.rmAccent)
+                    }
+                    RMRow(label: "Wikipedia article of the day",
+                          hint: "Once a day, the start of English Wikipedia's featured article, with Read more. The only thing it fetches from the internet (en.wikipedia.org).") {
+                        Toggle("", isOn: $settings.companion.wikipedia).toggleStyle(.switch).tint(.rmAccent)
                     }
                     RMRow(label: "Sounds", isLast: true) {
                         Toggle("", isOn: $settings.companion.sounds).toggleStyle(.switch).tint(.rmAccent)
