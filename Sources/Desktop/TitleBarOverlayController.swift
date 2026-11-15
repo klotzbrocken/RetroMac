@@ -164,7 +164,8 @@ final class TitleBarOverlayController {
             && !AppSettings.shared.dockOnly
             && Self.accessibilityGranted
             && Self.style(for: RetroFrameTheme.key()) != nil   // an unsupported theme runs nothing at all
-        if want { start() } else { stop() }
+            && WindowBorderController.skyLightAvailable
+        if want { start() } else { stop(); restoreGeometryIfLeftOver() }
     }
 
     private func start() {
@@ -195,6 +196,7 @@ final class TitleBarOverlayController {
         // recovery below, whose requests would otherwise wait six seconds on a hung app.
         AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 0.5)
         restoreShadedAfterCrash()
+        adoptGeometryRecords()
         squareTheRealCorners()
         WindowBorderController.shared.ensureServerEvents()   // move/resize/minimise arrive through it
         WindowBorderController.shared.ensureObservers()      // and closed windows, through Accessibility
@@ -210,17 +212,20 @@ final class TitleBarOverlayController {
                     Self.bundleIDs.removeValue(forKey: pid)
                     Self.icons.removeValue(forKey: pid)
                     Self.classicIcons.removeValue(forKey: pid)
+                    Self.dropAXQueue(pid)
                     WindowBorderController.shared.removeMinimizeObserver(pid: pid)
                 } else if let pid = app?.processIdentifier {
                     // A new or re-activated app needs its AX observer (closed/minimised windows)
                     // whether or not the borders are running.
                     WindowBorderController.shared.addMinimizeObserver(pid: pid)
                 }
+                WindowInventory.invalidate()
                 self.sync()
             })
         }
         // A safety net behind the WindowServer and Accessibility events, not the main path.
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.sync() }
+        t.tolerance = 0.3
         RunLoop.main.add(t, forMode: .common)
         syncTimer = t
         sync()
@@ -267,7 +272,7 @@ final class TitleBarOverlayController {
         guard AXUIElementCopyAttributeValue(AXUIElementCreateApplication(pid), kAXFocusedWindowAttribute as CFString, &ref) == .success,
               let ref else { return }
         let w = ref as! AXUIElement
-        Self.axQueue.async { AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
+        Self.axQueue(pid).async(qos: .userInteractive) { AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
     }
 
     /// Write (or withdraw) the corner key through the adapter that handles the theme's own
@@ -593,7 +598,8 @@ final class TitleBarOverlayController {
         let top = Self.primaryTop(screens)
         let usableTop = top - scr.visibleFrame.maxY   // Quartz y of the first usable row (below the menu bar)
         let need = usableTop + Self.stripHeight(style ?? .luna) - info.bounds.minY
-        guard need > 0, let w = axWindow(info.id, pid: info.pid) else { return }
+        guard need > 0, !makingRoom.contains(info.id) else { return }
+        if let next = axWindowRetry[info.id], Date() < next { return }
         var target = CGRect(x: info.bounds.minX, y: info.bounds.minY + need, width: info.bounds.width, height: info.bounds.height)
         // A window as tall as the screen would now end under the taskbar or the Dock: take the
         // overhang off its height, as far as the app allows.
@@ -603,23 +609,93 @@ final class TitleBarOverlayController {
         }
         let overhang = target.maxY - usableBottom
         if overhang > 0 { target.size.height = max(100, target.height - overhang) }
-        guard let reached = Self.setFrame(target, of: w) else { return }
-        // Remembered, so the window goes back where it was when the bars go off — unless the
-        // user has moved or sized it since (then it is theirs to keep).
-        if autoGeometry[info.id] == nil { autoGeometry[info.id] = (before: info.bounds, after: reached) }
-        else { autoGeometry[info.id]?.after = reached }
+        // The move runs on the app's Accessibility queue: a slow app holds up its own window,
+        // not the main thread.
+        let wid = info.id, pid = info.pid, before = info.bounds, known = axWindows[wid], session = syncGeneration
+        let bundleID = Self.bundleID(for: pid)
+        makingRoom.insert(wid)
+        Self.axQueue(pid).async {
+            let w = known ?? Self.findAXWindow(wid, pid: pid)
+            let reached = w.flatMap { Self.setFrame(target, of: $0) }
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.makingRoom.remove(wid)
+                guard let w else { self.axWindowRetry[wid] = Date().addingTimeInterval(2); return }
+                guard let reached else { return }
+                // Recorded even if the bars stopped meanwhile: the window did move.
+                if self.session(session) { self.axWindows[wid] = w }
+                // Remembered, so the window goes back where it was when the bars go off — unless
+                // the user has moved or sized it since (then it is theirs to keep). On disk at
+                // once: after a crash the next start puts it back.
+                if self.autoGeometry[wid] == nil {
+                    self.autoGeometry[wid] = GeometryRecord(before: before, after: reached, pid: pid, bundleID: bundleID)
+                } else { self.autoGeometry[wid]?.after = reached }
+                self.saveAutoGeometry()
+                if !self.running { self.undoAutoGeometry() }   // stopped while it moved: straight back
+            }
+        }
+    }
+    private var makingRoom: Set<CGWindowID> = []
+    private func session(_ s: Int) -> Bool { running && s == syncGeneration }
+
+    /// A window `makeRoom` moved: where it was, where it went, and whose it is.
+    struct GeometryRecord: Codable, Equatable {
+        var before: CGRect
+        var after: CGRect
+        var pid: pid_t
+        var bundleID: String
+    }
+    private var autoGeometry: [CGWindowID: GeometryRecord] = [:]
+    static let geometryRecoveryKey = "titleBarAutoGeometry"
+
+    private func saveAutoGeometry() {
+        let d = UserDefaults.standard
+        if autoGeometry.isEmpty {
+            guard d.object(forKey: Self.geometryRecoveryKey) != nil else { return }
+            d.removeObject(forKey: Self.geometryRecoveryKey)
+        } else if let data = try? JSONEncoder().encode(Dictionary(uniqueKeysWithValues: autoGeometry.map { (String($0.key), $0.value) })) {
+            d.set(data, forKey: Self.geometryRecoveryKey)
+        }
+        d.synchronize()   // a kill -9 right after the move must not lose the way back
     }
 
-    private var autoGeometry: [CGWindowID: (before: CGRect, after: CGRect)] = [:]
+    static func decodeGeometry(_ data: Data) -> [CGWindowID: GeometryRecord] {
+        guard let byID = try? JSONDecoder().decode([String: GeometryRecord].self, from: data) else { return [:] }
+        return Dictionary(uniqueKeysWithValues: byID.compactMap { k, v in UInt32(k).map { (CGWindowID($0), v) } })
+    }
 
-    /// Put back every window `makeRoom` moved, if it still sits where we left it.
-    private func undoAutoGeometry() {
-        for (wid, g) in autoGeometry {
-            guard let now = PrivateWindowAPI.bounds(of: wid), Self.roughlySame(now, g.after),
-                  let w = axWindows[wid] else { continue }
-            _ = Self.setFrame(g.before, of: w)
+    /// What a previous run moved and did not put back (it crashed, or was killed): taken over at
+    /// start, so the windows go back where they really were when the bars go off. A window id
+    /// now held by another app's window is not ours to touch.
+    private func adoptGeometryRecords() {
+        guard let data = UserDefaults.standard.data(forKey: Self.geometryRecoveryKey) else { return }
+        for (wid, r) in Self.decodeGeometry(data) where autoGeometry[wid] == nil {
+            guard PrivateWindowAPI.bounds(of: wid) != nil,
+                  let app = NSRunningApplication(processIdentifier: r.pid),
+                  r.bundleID.isEmpty || app.bundleIdentifier == r.bundleID else { continue }
+            autoGeometry[wid] = r
         }
-        autoGeometry.removeAll()
+        saveAutoGeometry()
+    }
+
+    /// The bars are off at launch, but a crashed run left windows moved down: put them back.
+    func restoreGeometryIfLeftOver() {
+        guard !running, UserDefaults.standard.data(forKey: Self.geometryRecoveryKey) != nil else { return }
+        adoptGeometryRecords()
+        undoAutoGeometry()
+    }
+
+    /// Put back every window `makeRoom` moved, if it still sits where we left it. A window that
+    /// is there but would not move (minimised, its app busy) keeps its record for the next try.
+    private func undoAutoGeometry() {
+        var keep: [CGWindowID: GeometryRecord] = [:]
+        for (wid, g) in autoGeometry {
+            guard let now = PrivateWindowAPI.bounds(of: wid), Self.roughlySame(now, g.after) else { continue }
+            guard let w = axWindows[wid] ?? Self.findAXWindow(wid, pid: g.pid),
+                  Self.axQueue(g.pid).sync(execute: { Self.setFrame(g.before, of: w) }) != nil else { keep[wid] = g; continue }
+        }
+        autoGeometry = keep
+        saveAutoGeometry()
     }
 
     /// Create or refresh the patch that hides the real lights. The sample is retaken when the
@@ -643,7 +719,10 @@ final class TitleBarOverlayController {
             // The patch takes the mouse: a hover would otherwise reach the hidden green light,
             // whose "Move & Resize" popover would pop up out of nowhere. A click there behaves
             // like a click on the bar: it brings the window forward, and a drag moves it.
-            panel.ignoresMouseEvents = false
+            // Until the first photograph arrives it stays invisible and lets the mouse through
+            // to the real lights; then it takes the mouse.
+            panel.ignoresMouseEvents = true
+            panel.alphaValue = 0
             panel.setAccessibilityElement(false)   // no "new window" for VoiceOver
             panel.hidesOnDeactivate = false
             panel.isReleasedWhenClosed = false
@@ -671,16 +750,13 @@ final class TitleBarOverlayController {
             let gapEnd = (offsets[.minimize]?.minX ?? (close.maxX + 7)) - 2
             let sample = CGRect(x: info.bounds.minX + gapStart, y: quartz.minY, width: max(2, gapEnd - gapStart), height: quartz.height)
             let wid = info.id
-            // The sample lies under the patch itself: hide the patch for the photograph, and
-            // let the mouse through to the real lights until there is a picture to stand in
-            // for them. Only the newest request may deliver: two in flight (front, and back
-            // again) used to let whichever finished last win.
+            // The photograph is of the window alone, so the patch can stay up while it is taken:
+            // it no longer flickers off at every resample. Only the newest request may deliver:
+            // two in flight (front, and back again) used to let whichever finished last win.
             o.sampleGeneration += 1
             let generation = o.sampleGeneration
-            o.patch?.alphaValue = 0
-            o.patch?.ignoresMouseEvents = true
             count("sample")
-            NativeBarSampler.sample(sample) { [weak self, weak requester = o] image in
+            NativeBarSampler.sample(sample, window: wid) { [weak self, weak requester = o] image in
                 // The overlay that asked must still be the one on duty: a theme switch makes a
                 // new overlay for the same window, whose own count starts at one again.
                 guard let self, let o = self.overlays[wid], o === requester, o.sampleGeneration == generation else { return }
@@ -689,6 +765,8 @@ final class TitleBarOverlayController {
                     // asks again, not before five seconds have passed.
                     o.patchSampledFront = nil
                     o.sampleRetryAfter = Date().addingTimeInterval(5)
+                    o.patch?.alphaValue = 0
+                    o.patch?.ignoresMouseEvents = true
                     self.count("sample.failed")
                     return
                 }
@@ -763,7 +841,7 @@ final class TitleBarOverlayController {
         let sample = CGRect(x: info.bounds.midX - 20, y: info.bounds.minY + 2, width: 40, height: 2)
         o.cornerGeneration += 1
         let generation = o.cornerGeneration, wid = info.id
-        NativeBarSampler.sample(sample) { [weak self, weak requester = o] image in
+        NativeBarSampler.sample(sample, window: wid) { [weak self, weak requester = o] image in
             guard let self, let o = self.overlays[wid], o === requester, o.cornerGeneration == generation else { return }
             guard let image, let colour = Self.averageColour(of: image) else { o.cornerSampledFront = nil; return }
             o.corner?.backgroundColor = colour
@@ -923,6 +1001,7 @@ final class TitleBarOverlayController {
             // was: the parking move (and any later one) must not carry the bar along.
             guard shaded[wid] == nil else { return }
             guard let o = overlays[wid], let style else { return }
+            if outlinesNativeMove { outline(wid, o, style: style); return }
             guard let g = PrivateWindowAPI.bounds(of: wid) else { forget(wid); return }
             let previous = o.bounds
             o.bounds = g
@@ -985,6 +1064,57 @@ final class TitleBarOverlayController {
         }
     }
 
+    // MARK: Outline while a window moves by its own title bar
+
+    /// Windows whose bar, patch, corner and border are put away while they move.
+    private var outlined: [CGWindowID: [ObjectIdentifier: CGFloat]] = [:]
+    private var outlineSettle: Timer?
+    private var settlingOutline = false
+
+    /// Outline mode, and the user holding the window: an app's own move (or ours, after an
+    /// outline drag is released) happens with the button up and keeps the bars as they are.
+    private var outlinesNativeMove: Bool {
+        AppSettings.shared.titleBarDragMode == "outline" && !settlingOutline
+            && dragWindow == nil && (NSEvent.pressedMouseButtons & 1) == 1
+    }
+
+    /// The window moves: its decorations step aside and the era's outline follows it instead —
+    /// nothing is left trailing a frame behind. They come back once it has come to rest.
+    private func outline(_ wid: CGWindowID, _ o: Overlay, style: Style) {
+        guard let g = PrivateWindowAPI.bounds(of: wid) else { return }
+        if outlined[wid] == nil {
+            var alphas: [ObjectIdentifier: CGFloat] = [:]
+            for p in [o.panel, o.patch, o.corner].compactMap({ $0 }) { alphas[ObjectIdentifier(p)] = p.alphaValue; p.alphaValue = 0 }
+            outlined[wid] = alphas
+            WindowBorderController.shared.setBorderHidden(wid, true)
+        }
+        let h = style.isBar ? Self.stripHeight(style) : 0, over = Self.platinumOverhang(for: style)
+        let quartz = CGRect(x: g.minX - over, y: g.minY - h, width: g.width + 2 * over, height: g.height + h)
+        DragOutline.shared.show(Self.appKitFrame(topLeft: quartz, height: quartz.height), windows: style.isWindows)
+        outlineSettle?.invalidate()
+        outlineSettle = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in self?.settleOutline() }
+    }
+
+    private func settleOutline() {
+        // Held still without letting go: the outline waits.
+        if (NSEvent.pressedMouseButtons & 1) == 1 {
+            outlineSettle = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: false) { [weak self] _ in self?.settleOutline() }
+            return
+        }
+        DragOutline.shared.hide()
+        let done = outlined
+        outlined.removeAll()
+        settlingOutline = true
+        for (wid, alphas) in done {
+            handleServerEvent(event: PrivateWindowAPI.EVENT_WINDOW_MOVE, wid: wid)   // everything to where the window is now
+            if let o = overlays[wid] {
+                for p in [o.panel, o.patch, o.corner].compactMap({ $0 }) { p.alphaValue = alphas[ObjectIdentifier(p)] ?? 1 }
+            }
+            WindowBorderController.shared.setBorderHidden(wid, false)
+        }
+        settlingOutline = false
+    }
+
     /// Take the overlay away; what was learnt about the window stays. A window that gave no
     /// measurement keeps its retry schedule this way — dropping that with the overlay meant the
     /// next sync asked again at once, every second, for every window without buttons.
@@ -1023,7 +1153,8 @@ final class TitleBarOverlayController {
             forgetShade(wid)
         }
         drop(for: wid)
-        autoGeometry.removeValue(forKey: wid)
+        // autoGeometry stays: a minimised window still has to go back where it was. It goes
+        // only with the window itself (pruneCaches) or once it is put back.
         lightOffsets.removeValue(forKey: wid)
         lightOffsetsRetry.removeValue(forKey: wid)
         titles.removeValue(forKey: wid)
@@ -1046,6 +1177,7 @@ final class TitleBarOverlayController {
         let now = Date()
         for wid in known where PrivateWindowAPI.bounds(of: wid) == nil {
             forget(wid)
+            if autoGeometry.removeValue(forKey: wid) != nil { saveAutoGeometry() }
             axWindowRetry.removeValue(forKey: wid)
             if let until = leaving[wid], until < now { leaving.removeValue(forKey: wid) }
         }
@@ -1096,23 +1228,51 @@ final class TitleBarOverlayController {
     /// does not answer (Citrix, a process stopped in the debugger) costs its 0.5 s timeout on
     /// this queue, not in the dock's magnification. Results come back to main, where all the
     /// state lives. User actions (close, zoom, drag) stay on main: their wait is the user's.
-    static let axQueue = DispatchQueue(label: "com.retromac.titlebar.ax", qos: .userInitiated)
+    /// One serial Accessibility queue per app: an app that hangs holds up only its own
+    /// requests (each may wait the half-second timeout), not every other window's bar. Order
+    /// within an app stays as sent — a park still queued runs before the unroll after it.
+    private static var axQueues: [pid_t: DispatchQueue] = [:]
+    private static let axQueuesLock = NSLock()
+    static func axQueue(_ pid: pid_t) -> DispatchQueue {
+        axQueuesLock.lock(); defer { axQueuesLock.unlock() }
+        if let q = axQueues[pid] { return q }
+        let q = DispatchQueue(label: "com.retromac.titlebar.ax.\(pid)", qos: .userInitiated)
+        axQueues[pid] = q
+        return q
+    }
+    /// The queue of the app a window element belongs to.
+    static func axQueue(for w: AXUIElement) -> DispatchQueue {
+        var pid: pid_t = 0
+        AXUIElementGetPid(w, &pid)
+        return axQueue(pid)
+    }
+    /// For work across many apps at once (Rescue Desktop's sweep, the work-area watch).
+    static let sharedAXQueue = DispatchQueue(label: "com.retromac.titlebar.ax", qos: .userInitiated)
+    static func dropAXQueue(_ pid: pid_t) {
+        axQueuesLock.lock(); axQueues.removeValue(forKey: pid); axQueuesLock.unlock()
+    }
     private var measuring: Set<CGWindowID> = []
     private var fetchingTitle: Set<CGWindowID> = []
+
+    /// Whether an answer that comes back from the Accessibility queue still applies: the same
+    /// run of the bars (not one stopped and started since) and the window still that app's.
+    private func belongs(_ wid: CGWindowID, pid: pid_t, session: Int) -> Bool {
+        running && session == syncGeneration && (overlays[wid]?.pid ?? pid) == pid
+    }
 
     private func lightOffsets(for info: WindowInfo) -> [ChromeButtonKind: CGRect]? {
         if let cached = lightOffsets[info.id] { return cached }
         if let r = lightOffsetsRetry[info.id], Date() < r.next { return nil }
         guard !measuring.contains(info.id) else { return nil }   // one request in flight per window
         measuring.insert(info.id)
-        let wid = info.id, pid = info.pid, known = axWindows[wid]
-        Self.axQueue.async {
+        let wid = info.id, pid = info.pid, known = axWindows[wid], session = syncGeneration
+        Self.axQueue(pid).async {
             let w = known ?? Self.findAXWindow(wid, pid: pid)
             let offsets = w.flatMap { Self.measureLights(of: $0, fallbackOrigin: info.bounds.origin) }
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.measuring.remove(wid)
-                guard self.running else { return }
+                guard self.belongs(wid, pid: pid, session: session) else { return }
                 if let w { self.axWindows[wid] = w }
                 if let offsets {
                     self.lightOffsets[wid] = offsets
@@ -1199,8 +1359,8 @@ final class TitleBarOverlayController {
         }
         guard !fetchingTitle.contains(info.id) else { return info.ownerName }
         fetchingTitle.insert(info.id)
-        let wid = info.id, pid = info.pid, known = axWindows[wid]
-        Self.axQueue.async {
+        let wid = info.id, pid = info.pid, known = axWindows[wid], session = syncGeneration
+        Self.axQueue(pid).async {
             let w = known ?? Self.findAXWindow(wid, pid: pid)
             var title: String?
             if let w {
@@ -1212,7 +1372,7 @@ final class TitleBarOverlayController {
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.fetchingTitle.remove(wid)
-                guard self.running else { return }
+                guard self.belongs(wid, pid: pid, session: session) else { return }
                 if let w { self.axWindows[wid] = w }
                 if let title {
                     self.titles[wid] = TitleEntry(title: title, nextTry: .distantFuture, failures: 0)
@@ -1253,7 +1413,7 @@ final class TitleBarOverlayController {
     /// main thread long enough for the spinning cursor.
     private func activate(_ wid: CGWindowID, pid: pid_t) {
         let known = axWindows[wid]
-        Self.axQueue.async {
+        Self.axQueue(pid).async(qos: .userInteractive) {
             func raise(_ w: AXUIElement) -> Bool {
                 AXUIElementSetAttributeValue(w, kAXMainAttribute as CFString, kCFBooleanTrue)
                 return AXUIElementPerformAction(w, kAXRaiseAction as CFString) == .success
@@ -1284,7 +1444,7 @@ final class TitleBarOverlayController {
         dragWindow = wid
         dragOrigin = overlays[wid]?.bounds.origin
         guard axWindows[wid] == nil else { return }
-        Self.axQueue.async {
+        Self.axQueue(pid).async(qos: .userInteractive) {
             let w = Self.findAXWindow(wid, pid: pid)
             DispatchQueue.main.async { [weak self] in
                 guard let self, let w else { return }
@@ -1323,7 +1483,7 @@ final class TitleBarOverlayController {
     private var shaded: [CGWindowID: ShadeRecord] = [:]
     func isShaded(_ wid: CGWindowID) -> Bool { shaded[wid] != nil }
 
-    private func toggleShade(_ w: AXUIElement, wid: CGWindowID) {
+    private func toggleShade(_ w: AXUIElement, wid: CGWindowID, pid: pid_t) {
         guard !GarageDoor.shared.isMoving(wid) else { return }   // a door on its way finishes first
         if let record = shaded[wid] {
             // Unroll: the window back where its bar is — under Mac OS X once the door is down.
@@ -1332,7 +1492,7 @@ final class TitleBarOverlayController {
             // answer leaves it rolled up, its bar in place, to be unrolled again.
             let unroll = { [weak self] in
                 guard let self, self.shaded[wid] != nil else { return }
-                Self.axQueue.async { [weak self] in
+                Self.axQueue(pid).async { [weak self] in
                     let back = Self.move(w, to: frame.origin)
                     DispatchQueue.main.async {
                         guard let self else { return }
@@ -1354,7 +1514,7 @@ final class TitleBarOverlayController {
         shaded[wid] = ShadeRecord(frame: frame, pid: o.pid, bundleID: Self.bundleID(for: o.pid))
         saveShadeRecovery()
         var park = Self.parkingSpot(for: frame.size, screens: screens)
-        Self.axQueue.async { [weak self] in
+        Self.axQueue(pid).async { [weak self] in
             let set = AXValueCreate(.cgPoint, &park).map { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, $0) }
             // Where it really went: an app that keeps its windows on screen would leave it
             // standing in plain view, rolled up in name only.
@@ -1369,7 +1529,7 @@ final class TitleBarOverlayController {
                 // Not parked: undo the whole thing, the window back where it was.
                 self.forgetShade(wid)
                 var back = frame.origin
-                Self.axQueue.async { if let v = AXValueCreate(.cgPoint, &back) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
+                Self.axQueue(pid).async { if let v = AXValueCreate(.cgPoint, &back) { AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v) } }
                 WindowBorderController.shared.update()
                 self.sync()
             }
@@ -1429,11 +1589,9 @@ final class TitleBarOverlayController {
         guard !shaded.isEmpty else { GarageDoor.shared.forgetAll(); return }
         let jobs = shaded.map { wid, record in (wid, record, axWindows[wid] ?? Self.findAXWindow(wid, pid: record.pid)) }
         var outcomes: [(CGWindowID, ShadeRecord, ShadeOutcome)] = []
-        Self.axQueue.sync {
-            for (wid, record, w) in jobs {
-                let restored = w.map { Self.move($0, to: record.frame.origin) } ?? false
-                outcomes.append((wid, record, restored ? .restored : (PrivateWindowAPI.bounds(of: wid) == nil ? .gone : .failed)))
-            }
+        for (wid, record, w) in jobs {
+            let restored = w.map { w in Self.axQueue(record.pid).sync { Self.move(w, to: record.frame.origin) } } ?? false
+            outcomes.append((wid, record, restored ? .restored : (PrivateWindowAPI.bounds(of: wid) == nil ? .gone : .failed)))
         }
         shaded.removeAll()
         GarageDoor.shared.forgetAll()
@@ -1504,7 +1662,7 @@ final class TitleBarOverlayController {
                   record.bundleID.isEmpty || app.bundleIdentifier == record.bundleID else {
                 outcomes.append((wid, record, .gone)); continue
             }
-            let restored = Self.findAXWindow(wid, pid: record.pid).map { w in Self.axQueue.sync { Self.move(w, to: record.frame.origin) } } ?? false
+            let restored = Self.findAXWindow(wid, pid: record.pid).map { w in Self.axQueue(record.pid).sync { Self.move(w, to: record.frame.origin) } } ?? false
             outcomes.append((wid, record, restored ? .restored : .failed))
         }
         saveShadeRecovery(Self.remainingShadeRecords(outcomes))   // a window that would not move is tried at the next start
@@ -1522,28 +1680,50 @@ final class TitleBarOverlayController {
                      at: NSPoint(x: box.minX, y: box.minY), anchor: box, onAnchorDoubleClick: act(.close))
     }
 
+    /// A button on the bar. What it needs to know about the real window (the element, full
+    /// screen or not, the real button) is asked on that app's Accessibility queue, so a slow app
+    /// costs the click a moment but never the main thread; the rest happens back on main.
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
         count("action.\(kind)")
-        guard let w = axWindow(wid, pid: pid) else { return }
-        // A full-screen window's green light takes it out of full screen, as the real one does.
-        if kind == .zoom || kind == .maximize || kind == .restore {
-            var fs: CFTypeRef?
-            if AXUIElementCopyAttributeValue(w, "AXFullScreen" as CFString, &fs) == .success, (fs as? Bool) == true {
-                AXUIElementSetAttributeValue(w, "AXFullScreen" as CFString, kCFBooleanFalse)
-                return
-            }
-        }
-        let attr: String
+        let attr: String?
         switch kind {
-        case .close:              attr = kAXCloseButtonAttribute
-        case .collapse:           toggleShade(w, wid: wid); return
-        case .minimize:           attr = kAXMinimizeButtonAttribute
-        case .maximize, .zoom, .restore: zoom(w, wid: wid); return
+        case .close:    attr = kAXCloseButtonAttribute
+        case .minimize: attr = kAXMinimizeButtonAttribute
+        case .collapse, .maximize, .zoom, .restore: attr = nil
         default: return
         }
-        var ref: CFTypeRef?
-        let button = AXUIElementCopyAttributeValue(w, attr as CFString, &ref) == .success ? ref.map { $0 as! AXUIElement } : nil
-        guard button != nil || attr == kAXMinimizeButtonAttribute else { return }
+        let known = axWindows[wid], session = syncGeneration
+        Self.axQueue(pid).async(qos: .userInteractive) {
+            guard let w = known ?? Self.findAXWindow(wid, pid: pid) else { return }
+            // A full-screen window's green light takes it out of full screen, as the real one does.
+            if kind == .zoom || kind == .maximize || kind == .restore {
+                var fs: CFTypeRef?
+                if AXUIElementCopyAttributeValue(w, "AXFullScreen" as CFString, &fs) == .success, (fs as? Bool) == true {
+                    AXUIElementSetAttributeValue(w, "AXFullScreen" as CFString, kCFBooleanFalse)
+                    return
+                }
+            }
+            var button: AXUIElement?
+            if let attr {
+                var ref: CFTypeRef?
+                button = AXUIElementCopyAttributeValue(w, attr as CFString, &ref) == .success ? ref.map { $0 as! AXUIElement } : nil
+            }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.belongs(wid, pid: pid, session: session) else { return }
+                self.axWindows[wid] = w
+                self.finishPerform(kind, w: w, wid: wid, pid: pid, attr: attr, button: button)
+            }
+        }
+    }
+
+    private func finishPerform(_ kind: ChromeButtonKind, w: AXUIElement, wid: CGWindowID, pid: pid_t,
+                               attr: String?, button: AXUIElement?) {
+        switch kind {
+        case .collapse: toggleShade(w, wid: wid, pid: pid); return
+        case .maximize, .zoom, .restore: zoom(w, wid: wid); return
+        default: break
+        }
+        guard let attr, button != nil || attr == kAXMinimizeButtonAttribute else { return }
         // Under the theme without a dock the window zooms away in picture, a still of the
         // desktop under it hiding the real minimise; photographed while the bar still stands.
         // Under a Windows taskbar it flies into its own button there, not to where the hidden
@@ -1572,7 +1752,7 @@ final class TitleBarOverlayController {
         // The press itself runs off the main thread: the app answers it only when its
         // minimise or close animation is over (half a second for the genie), and a main thread
         // waiting that long would not have committed the panel's disappearance first.
-        Self.axQueue.async {
+        Self.axQueue(pid).async(qos: .userInteractive) {
             if let button { AXUIElementPerformAction(button, kAXPressAction as CFString) }
             else { AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
             if zoomed { DispatchQueue.main.async { MinimizeZoom.shared.end() } }
@@ -1705,7 +1885,9 @@ final class TitleBarOverlayController {
     /// Whether the era dragged only an outline of the window. Classic Mac OS did, as did
     /// Windows 3.x, Windows 95 (live dragging came with Plus! and was on by default from 98)
     /// and CDE's dtwm (moveOpaque off by default).
-    static func dragsOutline(_ style: Style, themeID: String?) -> Bool {
+    static func dragsOutline(_ style: Style, themeID: String?, mode: String = AppSettings.shared.titleBarDragMode) -> Bool {
+        if mode == "outline" { return true }
+        if mode == "live" { return false }
         switch style {
         case .system6, .system7, .platinum, .win31, .cde: return true
         case .win98: return themeID == "com.retromac.microsoft.windows95"
@@ -1736,7 +1918,7 @@ final class TitleBarOverlayController {
         dragSetting = true
         var point = target.point
         let riders = riders(of: target.wid)
-        Self.axQueue.async {
+        Self.axQueue(overlays[target.wid]?.pid ?? 0).async(qos: .userInteractive) {
             let started = CACurrentMediaTime()
             if let v = AXValueCreate(.cgPoint, &point) {
                 AXUIElementSetAttributeValue(w, kAXPositionAttribute as CFString, v)
@@ -1796,8 +1978,7 @@ final class TitleBarOverlayController {
 
     /// The other apps' windows worth a bar, and the z-order of everything on screen (ours too).
     private static func onScreenWindows() -> ([WindowInfo], [CGWindowID]) {
-        let opts: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
-        guard let raw = CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String: Any]] else { return ([], []) }
+        let raw = WindowInventory.onScreen()
         let myPID = getpid()
         var out: [WindowInfo] = []
         var order: [CGWindowID] = []

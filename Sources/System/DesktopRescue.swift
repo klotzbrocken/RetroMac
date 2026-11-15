@@ -93,7 +93,7 @@ final class DesktopRescue {
         let sweepLine = lines.count
         add(.pending, "Looking for windows out of reach…")
         let screens = Self.quartzVisibleFrames()
-        TitleBarOverlayController.axQueue.async {
+        TitleBarOverlayController.sharedAXQueue.async {
             let result = Self.bringBackUnreachableWindows(screens: screens)
             DispatchQueue.main.async {
                 self.lines[sweepLine] = Self.sweepLine(result)

@@ -21,8 +21,24 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   hidden; drag it anywhere, right-click for Animate!, another assistant or Hide. VoiceOver
   reads what it says; with Reduce Motion it stands still.
 
+- **Moving windows** (Settings ▸ Themes, under the title bars): *As the era did*, *Outline* or
+  *Whole window*. With *Outline* only a frame moves and the window follows when you let go;
+  dragged by its own title bar, the bars and borders step aside until it stops, so nothing
+  trails behind it.
+
 ### Fixes
 
+- **A macOS update can no longer stop RetroMac from starting.** The private WindowServer
+  functions behind the window borders and title bars are now linked weakly: if one is gone,
+  both features stay off (and say so in the log) instead of the app refusing to launch.
+- **Windows moved down for their title bar always go back.** The way back is kept on disk, kept
+  while a window is minimised, and used at the next start after a crash, even if the bars are
+  off by then.
+- **The patch over the real traffic lights takes its colour from that window alone**, not from
+  whatever lay over it, and no longer blinks off each time it is retaken.
+- **Smoother with many windows.** Moves arriving in bursts are handled once per window, the
+  borders and title bars share one window list, an app that does not answer holds up only its
+  own windows, and the buttons and the room-making move no longer wait on the main thread.
 - **VoiceOver keeps its place in Settings ▸ Sounds.** The tab was rebuilt every two seconds,
   whether anything had changed or not, and VoiceOver lost the setting it was on. It now changes
   only when something it shows does.

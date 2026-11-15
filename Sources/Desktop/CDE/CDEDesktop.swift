@@ -225,7 +225,7 @@ private final class CDEDesktopView: NSView {
         let restore = { MinimizedWindowTracker.shared.activate(e) }
         // The close button is asked for when Close is chosen, off the main thread (PERF-05).
         let close: (() -> Void)? = e.isAppLevel ? nil : {
-            TitleBarOverlayController.axQueue.async {
+            TitleBarOverlayController.axQueue(for: e.window).async {
                 var ref: CFTypeRef?
                 guard AXUIElementCopyAttributeValue(e.window, kAXCloseButtonAttribute as CFString, &ref) == .success, let ref else { return }
                 AXUIElementPerformAction(ref as! AXUIElement, kAXPressAction as CFString)

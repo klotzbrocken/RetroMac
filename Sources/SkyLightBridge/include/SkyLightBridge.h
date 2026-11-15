@@ -13,6 +13,8 @@
 // Filter `candidates` (CGWindowIDs) down to the ones that should get a border (real, top-level,
 // document/modal-floating windows — excludes menus, tooltips, sheets, sub-windows). Writes the
 // surviving window ids and their window-server level into the out arrays; returns the count.
+/// Whether this macOS still has every SkyLight function the borders and title bars use.
+bool skb_available(void);
 int  skb_filter_windows(const uint32_t *candidates, int n,
                         uint32_t *out_wid, int *out_level, int cap);
 

@@ -583,6 +583,12 @@ final class AppSettings: ObservableObject {
             WindowBorderController.shared.update()   // restyles the borders square, then the bars
         }
     }
+    /// Moving a window under the title bars: "era" (an outline where the era dragged one),
+    /// "outline" (always an outline; while a window moves by its own title bar the bars and
+    /// borders step aside for it, so nothing trails behind), "live" (the window itself, always).
+    @Published var titleBarDragMode: String {
+        didSet { defaults.set(titleBarDragMode, forKey: "titleBarDragMode") }
+    }
     /// Bundle identifiers whose windows keep their native title bar.
     @Published var themeTitleBarsExcludedApps: [String] {
         didSet {
@@ -1339,6 +1345,7 @@ final class AppSettings: ObservableObject {
         dockHideSystemDock = defaults.object(forKey: "dockHideSystemDock") as? Bool ?? true
         themeWindowBorders = defaults.bool(forKey: "themeWindowBorders")
         themeTitleBars = defaults.bool(forKey: "themeTitleBars")
+        titleBarDragMode = defaults.string(forKey: "titleBarDragMode") ?? "era"
         themeTitleBarsExcludedApps = Self.withOwnChromeExcluded(defaults.stringArray(forKey: "themeTitleBarsExcludedApps") ?? [], defaults: defaults)
         win98Scheme = defaults.string(forKey: "win98Scheme") ?? ""
         trayMessenger = defaults.string(forKey: "trayMessenger") ?? "msn"

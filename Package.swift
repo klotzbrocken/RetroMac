@@ -51,8 +51,9 @@ let package = Package(
                 .linkedFramework("IOSurface"),
                 .linkedFramework("SystemExtensions"),
                 .linkedFramework("WebKit"),
-                // Private WindowServer framework for per-window borders (SkyLightBridge).
-                .unsafeFlags(["-F", "/System/Library/PrivateFrameworks", "-framework", "SkyLight"]),
+                // Private WindowServer framework for per-window borders (SkyLightBridge). Weak, with
+                // weak imports in the bridge: a symbol a macOS update drops must not stop launch.
+                .unsafeFlags(["-F", "/System/Library/PrivateFrameworks", "-Xlinker", "-weak_framework", "-Xlinker", "SkyLight"]),
             ]
         ),
         .executableTarget(

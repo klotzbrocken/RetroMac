@@ -655,6 +655,19 @@ struct DockSettingsTab: View {
                         }
                     }
                     if settings.themeTitleBars {
+                        RMRow(label: "Moving windows",
+                              hint: settings.titleBarDragMode == "outline"
+                                ? "Only an outline moves; the window follows when you let go. Dragged by its own title bar, the bars and borders step aside until it stops, so nothing trails behind."
+                                : settings.titleBarDragMode == "live"
+                                    ? "The window itself moves, under every theme."
+                                    : "As the era did: an outline under System 6 and 7, Mac OS 8 and 9, Windows 3.1 and 95 and CDE; the window itself elsewhere.") {
+                            Picker("", selection: $settings.titleBarDragMode) {
+                                Text("As the era did").tag("era")
+                                Text("Outline").tag("outline")
+                                Text("Whole window").tag("live")
+                            }
+                            .labelsHidden().pickerStyle(.menu).frame(width: 160)
+                        }
                         titleBarExclusions
                     }
                 }

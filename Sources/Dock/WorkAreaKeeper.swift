@@ -95,7 +95,7 @@ final class WorkAreaKeeper {
         }
     }
 
-    private static let queue = TitleBarOverlayController.axQueue
+    private static let queue = TitleBarOverlayController.sharedAXQueue
 
     /// On the queue: the observer, its source already on the main run loop.
     private func attach(_ pid: pid_t) -> AXObserver? {

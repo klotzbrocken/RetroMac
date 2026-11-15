@@ -8,12 +8,54 @@ final class TitleBarOverlayTests: XCTestCase {
 
     func testOnlyTheOutlineErasDragAnOutline() {
         typealias C = TitleBarOverlayController
-        XCTAssertTrue(C.dragsOutline(.platinum, themeID: nil))
-        XCTAssertTrue(C.dragsOutline(.win31, themeID: nil))
-        XCTAssertTrue(C.dragsOutline(.win98, themeID: "com.retromac.microsoft.windows95"))
-        XCTAssertFalse(C.dragsOutline(.win98, themeID: "com.retromac.microsoft.windows98"))
-        XCTAssertFalse(C.dragsOutline(.aqua, themeID: nil))
-        XCTAssertFalse(C.dragsOutline(.luna, themeID: nil))
+        XCTAssertTrue(C.dragsOutline(.platinum, themeID: nil, mode: "era"))
+        XCTAssertTrue(C.dragsOutline(.win31, themeID: nil, mode: "era"))
+        XCTAssertTrue(C.dragsOutline(.win98, themeID: "com.retromac.microsoft.windows95", mode: "era"))
+        XCTAssertFalse(C.dragsOutline(.win98, themeID: "com.retromac.microsoft.windows98", mode: "era"))
+        XCTAssertFalse(C.dragsOutline(.aqua, themeID: nil, mode: "era"))
+        XCTAssertFalse(C.dragsOutline(.luna, themeID: nil, mode: "era"))
+    }
+
+    func testDragModeOverridesTheEra() {
+        typealias C = TitleBarOverlayController
+        XCTAssertTrue(C.dragsOutline(.luna, themeID: nil, mode: "outline"))
+        XCTAssertTrue(C.dragsOutline(.aqua, themeID: nil, mode: "outline"))
+        XCTAssertFalse(C.dragsOutline(.platinum, themeID: nil, mode: "live"))
+        XCTAssertFalse(C.dragsOutline(.win98, themeID: "com.retromac.microsoft.windows95", mode: "live"))
+    }
+
+    /// The way back for windows moved down for their bar survives a restart, keyed by id.
+    func testMovedWindowRecordsRoundTrip() throws {
+        typealias R = TitleBarOverlayController.GeometryRecord
+        let records: [String: R] = [
+            "4711": R(before: CGRect(x: 10, y: 0, width: 800, height: 600), after: CGRect(x: 10, y: 52, width: 800, height: 600),
+                      pid: 321, bundleID: "com.apple.TextEdit"),
+            "nope": R(before: .zero, after: .zero, pid: 1, bundleID: ""),
+        ]
+        let decoded = TitleBarOverlayController.decodeGeometry(try JSONEncoder().encode(records))
+        XCTAssertEqual(decoded.count, 1, "a key that is no window id is dropped")
+        XCTAssertEqual(decoded[4711]?.after.minY, 52)
+        XCTAssertEqual(decoded[4711]?.bundleID, "com.apple.TextEdit")
+        XCTAssertTrue(TitleBarOverlayController.decodeGeometry(Data("garbage".utf8)).isEmpty)
+    }
+
+    /// Off the main thread, a burst of moves becomes one pass with the newest event per window.
+    func testMoveEventsCoalesce() {
+        _ = MoveCoalescer.take()
+        XCTAssertTrue(MoveCoalescer.note(event: PrivateWindowAPI.EVENT_WINDOW_MOVE, wid: 1))
+        XCTAssertFalse(MoveCoalescer.note(event: PrivateWindowAPI.EVENT_WINDOW_MOVE, wid: 1))
+        XCTAssertFalse(MoveCoalescer.note(event: PrivateWindowAPI.EVENT_WINDOW_RESIZE, wid: 2))
+        XCTAssertFalse(MoveCoalescer.note(event: PrivateWindowAPI.EVENT_WINDOW_MOVE, wid: 2))   // a resize is not downgraded
+        let taken = Dictionary(uniqueKeysWithValues: MoveCoalescer.take())
+        XCTAssertEqual(taken.count, 2)
+        XCTAssertEqual(taken[2], PrivateWindowAPI.EVENT_WINDOW_RESIZE)
+        XCTAssertTrue(MoveCoalescer.note(event: PrivateWindowAPI.EVENT_WINDOW_MOVE, wid: 1), "after the pass the next event schedules again")
+        _ = MoveCoalescer.take()
+    }
+
+    /// SkyLight is linked weakly; on this macOS every function the borders and bars use is there.
+    func testSkyLightFunctionsResolve() {
+        XCTAssertTrue(WindowBorderController.skyLightAvailable)
     }
 
     func testPlatinumPlaqueNeverExceedsItsRoom() {

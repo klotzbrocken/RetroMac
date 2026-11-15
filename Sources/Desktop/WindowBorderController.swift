@@ -70,8 +70,17 @@ final class WindowBorderController {
             && AppSettings.shared.dockEnabled
             && !AppSettings.shared.dockOnly
             && !ThemeSpaces.shared.heldBack   // a Space without the theme
+            && Self.skyLightAvailable
         if want { start() } else { stop() }
     }
+
+    /// The private WindowServer functions the borders and title bars stand on. A macOS update
+    /// that removes one switches both off, said once in the log, instead of half-working.
+    static let skyLightAvailable: Bool = {
+        let ok = skb_available() && PrivateWindowAPI.eventsAvailable
+        if !ok { NSLog("[Windows] SkyLight functions missing on this macOS: window borders and title bars stay off") }
+        return ok
+    }()
 
     private func start() {
         currentKey = RetroFrameTheme.key()
@@ -100,10 +109,12 @@ final class WindowBorderController {
                    let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
                     self?.removeMinimizeObserver(pid: app.processIdentifier)
                 }
+                WindowInventory.invalidate()   // a Space switch or a launch changes the list wholesale
                 self?.sync()
             })
         }
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.sync() }   // safety net; events do the work
+        t.tolerance = 0.3   // lets macOS bundle the wake-ups with others
         RunLoop.main.add(t, forMode: .common)
         syncTimer = t
         sync()
@@ -275,12 +286,27 @@ final class WindowBorderController {
     /// The border window above `target`, for the title bar to order itself above it.
     func borderWindowID(for target: CGWindowID) -> CGWindowID? { borders[target]?.wid }
 
+    /// Borders put away while their window is dragged in outline mode (TitleBarOverlayController).
+    private var dragHidden: Set<CGWindowID> = []
+    func setBorderHidden(_ target: CGWindowID, _ hidden: Bool) {
+        if hidden {
+            dragHidden.insert(target)
+            if let b = borders[target] { skb_order_out(b.wid) }
+        } else {
+            dragHidden.remove(target)
+            guard borders[target] != nil else { return }
+            reposition(target)   // may rebuild it at a new size
+            if let b = borders[target] { skb_order(b.wid, b.level, target) }
+        }
+    }
+
     /// Create or update the border for one target window.
     private func apply(target: CGWindowID, windowBounds: CGRect, level: Int32, pid: pid_t) {
         if let until = leaving[target] {
             if Date() < until { return }
             leaving.removeValue(forKey: target)
         }
+        if dragHidden.contains(target) { return }   // comes back when the drag settles
         // A window rolled up to its title bar (WindowShade) has nothing to frame.
         if TitleBarOverlayController.shared.isShaded(target) {
             if let b = borders[target] { skb_destroy(b.wid); borders.removeValue(forKey: target) }
@@ -381,8 +407,7 @@ final class WindowBorderController {
     private struct WindowInfo { let id: CGWindowID; let bounds: CGRect; let pid: pid_t }
 
     private static func onScreenWindows() -> [WindowInfo] {
-        let opts: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
-        guard let raw = CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String: Any]] else { return [] }
+        let raw = WindowInventory.onScreen()
         let myPID = getpid()
         var out: [WindowInfo] = []
         for w in raw {
@@ -421,11 +446,13 @@ final class WindowBorderController {
     }
 
     fileprivate func handleServerEvent(event: UInt32, wid: CGWindowID) {
+        if event == PrivateWindowAPI.EVENT_WINDOW_CREATE || event == PrivateWindowAPI.EVENT_WINDOW_DESTROY
+            || event == PrivateWindowAPI.EVENT_WINDOW_MINIMIZE { WindowInventory.invalidate() }
         TitleBarOverlayController.shared.handleServerEvent(event: event, wid: wid)
         guard running, !currentStyle.isNone else { return }
         switch event {
         case PrivateWindowAPI.EVENT_WINDOW_MOVE, PrivateWindowAPI.EVENT_WINDOW_RESIZE:
-            reposition(wid)
+            if !dragHidden.contains(wid) { reposition(wid) }
         case PrivateWindowAPI.EVENT_WINDOW_MINIMIZE:
             // Fires at the START of the minimize (before the genie), unlike the AX notification
             // which only arrives at the end. Drop the border now so it doesn't trail. No-op for
@@ -587,13 +614,75 @@ private func borderNotifyProc(_ event: UInt32, _ data: UnsafeMutableRawPointer?,
     } else {
         wid = 0
     }
-    if ProcessInfo.processInfo.environment["RETROMAC_SLS_EVENT_SCAN"] != nil {
+    if slsEventScan {
         var words: [UInt32] = []
         if let data { for i in stride(from: 0, to: min(length, 32), by: 4) where i + 4 <= length { words.append(data.loadUnaligned(fromByteOffset: i, as: UInt32.self)) } }
         print(String(format: "[SLS] %.3f event %d wid %d len %d words %@", Date().timeIntervalSince1970, event, wid, length, words.description))
     }
-    if Thread.isMainThread { controller.handleServerEvent(event: event, wid: wid) }
-    else { DispatchQueue.main.async { controller.handleServerEvent(event: event, wid: wid) } }
+    if Thread.isMainThread { controller.handleServerEvent(event: event, wid: wid); return }
+    // Off the main thread a drag sends dozens of moves a second; queueing every one replayed
+    // stale positions one by one. Moves and resizes are kept per window, newest wins, and one
+    // pass on main handles them; every other event keeps its own place in line.
+    guard event == PrivateWindowAPI.EVENT_WINDOW_MOVE || event == PrivateWindowAPI.EVENT_WINDOW_RESIZE else {
+        DispatchQueue.main.async { controller.handleServerEvent(event: event, wid: wid) }
+        return
+    }
+    if MoveCoalescer.note(event: event, wid: wid) {
+        DispatchQueue.main.async {
+            for (wid, event) in MoveCoalescer.take() { controller.handleServerEvent(event: event, wid: wid) }
+        }
+    }
+}
+
+/// Read once: the environment is copied afresh on every access, and this is on the event path.
+private let slsEventScan = ProcessInfo.processInfo.environment["RETROMAC_SLS_EVENT_SCAN"] != nil
+private let titleBarStats = ProcessInfo.processInfo.environment["RETROMAC_TITLEBAR_STATS"] != nil
+
+/// The on-screen window list, shared by the borders and the title bars. A window appearing
+/// sends both a sync, and each asked the WindowServer for the whole list; within a tenth of a
+/// second they now share one answer. Any thread.
+enum WindowInventory {
+    private static let lock = NSLock()
+    private static var cached: (at: CFTimeInterval, list: [[String: Any]])?
+
+    static func onScreen(maxAge: CFTimeInterval = 0.1) -> [[String: Any]] {
+        let now = CACurrentMediaTime()
+        lock.lock()
+        if let c = cached, now - c.at < maxAge { lock.unlock(); return c.list }
+        lock.unlock()
+        let opts: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        let list = CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String: Any]] ?? []
+        lock.lock(); cached = (now, list); lock.unlock()
+        return list
+    }
+
+    /// A window came or went: the next ask goes to the WindowServer.
+    static func invalidate() { lock.lock(); cached = nil; lock.unlock() }
+}
+
+/// Move and resize events waiting for the main thread, one per window.
+enum MoveCoalescer {
+    private static let lock = NSLock()
+    private static var pending: [CGWindowID: UInt32] = [:]
+    private static var scheduled = false
+
+    /// Notes the event; true when the caller must schedule the pass on main.
+    static func note(event: UInt32, wid: CGWindowID) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        // A resize also moves: once one is noted it stays the event for that window.
+        if pending[wid] != PrivateWindowAPI.EVENT_WINDOW_RESIZE { pending[wid] = event }
+        if scheduled { return false }
+        scheduled = true
+        return true
+    }
+
+    static func take() -> [(CGWindowID, UInt32)] {
+        lock.lock(); defer { lock.unlock() }
+        let out = pending.map { ($0.key, $0.value) }
+        pending.removeAll()
+        scheduled = false
+        return out
+    }
 }
 
 /// Private AX helper (`_AXUIElementGetWindow`, in HIServices): maps an AXUIElement window to its
@@ -615,7 +704,7 @@ private func axWindowNotify(_ observer: AXObserver, _ element: AXUIElement,
     var wid: CGWindowID = 0
     let gotWid = (axUIElementGetWindow?(element, &wid) == .success) && wid != 0
     let name = notification as String
-    if ProcessInfo.processInfo.environment["RETROMAC_TITLEBAR_STATS"] != nil { controller.countAXNotification(name) }
+    if titleBarStats { controller.countAXNotification(name) }
     if name == (kAXUIElementDestroyedNotification as String) {
         // Any element of the app, not only a window: Photos drops its video player's views when a
         // video is selected, and those resolve to the window they were in. Dropping that window's

@@ -2,43 +2,69 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <string.h>
 
-// --- Private SkyLight / CoreGraphicsServices prototypes (resolved by linking SkyLight) ---
-extern int SLSMainConnectionID(void);
-extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *outRegion);
-extern CGError CGSNewRegionWithRectList(const CGRect *rects, int count, CFTypeRef *outRegion);
+// --- Private SkyLight / CoreGraphicsServices prototypes ---
+// Weakly imported (and SkyLight weakly linked, Package.swift): a symbol a macOS update removes
+// becomes NULL instead of dyld refusing to start RetroMac at all. Every entry point below
+// checks the symbols it needs and does nothing without them; skb_available() tells the Swift
+// side whether borders and title bars can run.
+#define SKB_WEAK __attribute__((weak_import))
+#define HAVE(f) ((void *)(f) != NULL)
+SKB_WEAK extern int SLSMainConnectionID(void);
+SKB_WEAK extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *outRegion);
+SKB_WEAK extern CGError CGSNewRegionWithRectList(const CGRect *rects, int count, CFTypeRef *outRegion);
 
-extern CGError SLSNewWindow(int cid, int type, float x, float y, CFTypeRef region, uint32_t *wid);
-extern CGError SLSReleaseWindow(int cid, uint32_t wid);
-extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef options);
-extern CGError SLSSetWindowShape(int cid, uint32_t wid, float x, float y, CFTypeRef shape);
-extern CGError SLSSetWindowResolution(int cid, uint32_t wid, double res);
-extern CGError SLSSetWindowOpacity(int cid, uint32_t wid, bool isOpaque);
-extern CGError SLSSetWindowTags(int cid, uint32_t wid, uint64_t *tags, int tag_size);
-extern CGError SLSClearWindowTags(int cid, uint32_t wid, uint64_t *tags, int tag_size);
-extern CGError SLSFlushWindowContentRegion(int cid, uint32_t wid, void *dirty);
+SKB_WEAK extern CGError SLSNewWindow(int cid, int type, float x, float y, CFTypeRef region, uint32_t *wid);
+SKB_WEAK extern CGError SLSReleaseWindow(int cid, uint32_t wid);
+SKB_WEAK extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef options);
+SKB_WEAK extern CGError SLSSetWindowShape(int cid, uint32_t wid, float x, float y, CFTypeRef shape);
+SKB_WEAK extern CGError SLSSetWindowResolution(int cid, uint32_t wid, double res);
+SKB_WEAK extern CGError SLSSetWindowOpacity(int cid, uint32_t wid, bool isOpaque);
+SKB_WEAK extern CGError SLSSetWindowTags(int cid, uint32_t wid, uint64_t *tags, int tag_size);
+SKB_WEAK extern CGError SLSClearWindowTags(int cid, uint32_t wid, uint64_t *tags, int tag_size);
+SKB_WEAK extern CGError SLSFlushWindowContentRegion(int cid, uint32_t wid, void *dirty);
 
-extern CFTypeRef SLSTransactionCreate(int cid);
-extern CGError SLSTransactionCommit(CFTypeRef transaction, int synchronous);
-extern CGError SLSTransactionMoveWindowWithGroup(CFTypeRef transaction, uint32_t wid, CGPoint origin);
-extern CGError SLSTransactionSetWindowLevel(CFTypeRef transaction, uint32_t wid, int level);
-extern CGError SLSTransactionSetWindowSubLevel(CFTypeRef transaction, uint32_t wid, int level);
-extern CGError SLSTransactionOrderWindow(CFTypeRef transaction, uint32_t wid, int order, uint32_t rel_wid);
+SKB_WEAK extern CFTypeRef SLSTransactionCreate(int cid);
+SKB_WEAK extern CGError SLSTransactionCommit(CFTypeRef transaction, int synchronous);
+SKB_WEAK extern CGError SLSTransactionMoveWindowWithGroup(CFTypeRef transaction, uint32_t wid, CGPoint origin);
+SKB_WEAK extern CGError SLSTransactionSetWindowLevel(CFTypeRef transaction, uint32_t wid, int level);
+SKB_WEAK extern CGError SLSTransactionSetWindowSubLevel(CFTypeRef transaction, uint32_t wid, int level);
+SKB_WEAK extern CGError SLSTransactionOrderWindow(CFTypeRef transaction, uint32_t wid, int order, uint32_t rel_wid);
 
-extern CGError SLSWindowThaw(int cid, uint32_t wid);
-extern CGError SLSWindowSetShadowProperties(uint32_t wid, CFDictionaryRef properties);
-extern CFArrayRef SLSCopySpacesForWindows(int cid, int selector, CFArrayRef window_list);
-extern CGError SLSMoveWindowsToManagedSpace(int cid, CFArrayRef window_list, uint64_t sid);
-extern CFArrayRef SLSCopyWindowsWithOptionsAndTags(int cid, uint32_t owner, CFArrayRef spaces,
+SKB_WEAK extern CGError SLSWindowThaw(int cid, uint32_t wid);
+SKB_WEAK extern CGError SLSWindowSetShadowProperties(uint32_t wid, CFDictionaryRef properties);
+SKB_WEAK extern CFArrayRef SLSCopySpacesForWindows(int cid, int selector, CFArrayRef window_list);
+SKB_WEAK extern CGError SLSMoveWindowsToManagedSpace(int cid, CFArrayRef window_list, uint64_t sid);
+SKB_WEAK extern CFArrayRef SLSCopyWindowsWithOptionsAndTags(int cid, uint32_t owner, CFArrayRef spaces,
                                                    uint32_t options, uint64_t *set_tags, uint64_t *clear_tags);
-extern CFTypeRef SLSWindowQueryWindows(int cid, CFArrayRef windows, int count);
-extern CFTypeRef SLSWindowQueryResultCopyWindows(CFTypeRef query);
-extern int  SLSWindowIteratorGetCount(CFTypeRef iterator);
-extern bool SLSWindowIteratorAdvance(CFTypeRef iterator);
-extern uint32_t SLSWindowIteratorGetWindowID(CFTypeRef iterator);
-extern uint64_t SLSWindowIteratorGetTags(CFTypeRef iterator);
-extern uint64_t SLSWindowIteratorGetAttributes(CFTypeRef iterator);
-extern uint32_t SLSWindowIteratorGetParentID(CFTypeRef iterator);
-extern int  SLSWindowIteratorGetLevel(CFTypeRef iterator);
+SKB_WEAK extern CFTypeRef SLSWindowQueryWindows(int cid, CFArrayRef windows, int count);
+SKB_WEAK extern CFTypeRef SLSWindowQueryResultCopyWindows(CFTypeRef query);
+SKB_WEAK extern int  SLSWindowIteratorGetCount(CFTypeRef iterator);
+SKB_WEAK extern bool SLSWindowIteratorAdvance(CFTypeRef iterator);
+SKB_WEAK extern uint32_t SLSWindowIteratorGetWindowID(CFTypeRef iterator);
+SKB_WEAK extern uint64_t SLSWindowIteratorGetTags(CFTypeRef iterator);
+SKB_WEAK extern uint64_t SLSWindowIteratorGetAttributes(CFTypeRef iterator);
+SKB_WEAK extern uint32_t SLSWindowIteratorGetParentID(CFTypeRef iterator);
+SKB_WEAK extern int  SLSWindowIteratorGetLevel(CFTypeRef iterator);
+
+// What the window functions (borders, title-bar riders) need.
+static bool windows_ok(void) {
+    static int ok = -1;
+    if (ok < 0) {
+        ok = HAVE(SLSMainConnectionID) && HAVE(CGSNewRegionWithRect) && HAVE(CGSNewRegionWithRectList)
+          && HAVE(SLSNewWindow) && HAVE(SLSReleaseWindow) && HAVE(SLWindowContextCreate) && HAVE(SLSSetWindowShape)
+          && HAVE(SLSSetWindowResolution) && HAVE(SLSSetWindowOpacity) && HAVE(SLSSetWindowTags)
+          && HAVE(SLSClearWindowTags) && HAVE(SLSFlushWindowContentRegion) && HAVE(SLSTransactionCreate)
+          && HAVE(SLSTransactionCommit) && HAVE(SLSTransactionMoveWindowWithGroup) && HAVE(SLSTransactionSetWindowLevel)
+          && HAVE(SLSTransactionSetWindowSubLevel) && HAVE(SLSTransactionOrderWindow) && HAVE(SLSWindowThaw)
+          && HAVE(SLSWindowSetShadowProperties) && HAVE(SLSCopySpacesForWindows) && HAVE(SLSMoveWindowsToManagedSpace)
+          && HAVE(SLSWindowQueryWindows) && HAVE(SLSWindowQueryResultCopyWindows) && HAVE(SLSWindowIteratorAdvance)
+          && HAVE(SLSWindowIteratorGetWindowID) && HAVE(SLSWindowIteratorGetTags) && HAVE(SLSWindowIteratorGetAttributes)
+          && HAVE(SLSWindowIteratorGetParentID) && HAVE(SLSWindowIteratorGetLevel);
+    }
+    return ok;
+}
+
+bool skb_available(void) { return windows_ok(); }
 
 // Window tag bits (yabai/JankyBorders naming).
 #define WINDOW_TAG_DOCUMENT      (1ULL << 0)
@@ -64,6 +90,7 @@ static bool window_suitable(CFTypeRef it) {
 
 int skb_filter_windows(const uint32_t *candidates, int n,
                        uint32_t *out_wid, int *out_level, int cap) {
+    if (!windows_ok()) return 0;
     if (n <= 0) return 0;
     int cid = SLSMainConnectionID();
     CFMutableArrayRef arr = CFArrayCreateMutable(NULL, n, &kCFTypeArrayCallBacks);
@@ -93,6 +120,7 @@ int skb_filter_windows(const uint32_t *candidates, int n,
 }
 
 CGContextRef skb_create(float w, float h, bool hidpi, uint32_t *out_wid) {
+    if (!windows_ok()) { *out_wid = 0; return NULL; }
     int cid = SLSMainConnectionID();
     CGRect frame = CGRectMake(0, 0, w, h);
     CFTypeRef region = NULL;
@@ -133,6 +161,7 @@ CGContextRef skb_create(float w, float h, bool hidpi, uint32_t *out_wid) {
 /// transparent, sat over the whole framed window, and drag-and-drop took it as the drop target —
 /// files dropped into a framed Finder window went nowhere (reported on 3.0.3).
 void skb_set_ring(uint32_t wid, float x, float y, float w, float h, float edge, float corner) {
+    if (!windows_ok()) return;
     if (wid == 0) return;
     int cid = SLSMainConnectionID();
     if (edge * 2 >= w || edge * 2 >= h) { skb_set_frame(wid, x, y, w, h); return; }
@@ -157,6 +186,7 @@ void skb_set_ring(uint32_t wid, float x, float y, float w, float h, float edge, 
 }
 
 void skb_set_frame(uint32_t wid, float x, float y, float w, float h) {
+    if (!windows_ok()) return;
     if (wid == 0) return;
     int cid = SLSMainConnectionID();
     CGRect frame = CGRectMake(0, 0, w, h);
@@ -168,6 +198,7 @@ void skb_set_frame(uint32_t wid, float x, float y, float w, float h) {
 }
 
 void skb_move(uint32_t wid, float x, float y) {
+    if (!windows_ok()) return;
     if (wid == 0) return;
     int cid = SLSMainConnectionID();
     CFTypeRef t = SLSTransactionCreate(cid);
@@ -178,6 +209,7 @@ void skb_move(uint32_t wid, float x, float y) {
 }
 
 void skb_move_many(const uint32_t *wids, const CGPoint *pts, int n) {
+    if (!windows_ok()) return;
     if (n <= 0) return;
     CFTypeRef t = SLSTransactionCreate(SLSMainConnectionID());
     if (!t) return;
@@ -187,6 +219,7 @@ void skb_move_many(const uint32_t *wids, const CGPoint *pts, int n) {
 }
 
 uint64_t skb_send_to_space(uint32_t wid, uint32_t target) {
+    if (!windows_ok()) return 0;
     if (wid == 0 || target == 0) return 0;
     int cid = SLSMainConnectionID();
     uint64_t sid = 0;
@@ -219,13 +252,15 @@ uint64_t skb_send_to_space(uint32_t wid, uint32_t target) {
 // Take any window of ours off the screen, from any thread. The boot-screen watchdog uses this
 // when the main thread has stopped answering with a full-screen cover up: AppKit's orderOut
 // needs the main thread, this does not.
-extern CGError SLSOrderWindow(int cid, uint32_t wid, int mode, uint32_t relative);
+SKB_WEAK extern CGError SLSOrderWindow(int cid, uint32_t wid, int mode, uint32_t relative);
 void skb_order_out(uint32_t wid) {
+    if (!HAVE(SLSOrderWindow) || !HAVE(SLSMainConnectionID)) return;
     if (wid == 0) return;
     SLSOrderWindow(SLSMainConnectionID(), wid, 0 /* out */, 0);
 }
 
 void skb_order(uint32_t wid, int level, uint32_t target) {
+    if (!windows_ok()) return;
     if (wid == 0) return;
     int cid = SLSMainConnectionID();
     CFTypeRef t = SLSTransactionCreate(cid);
@@ -238,6 +273,7 @@ void skb_order(uint32_t wid, int level, uint32_t target) {
 }
 
 void skb_flush(uint32_t wid, CGContextRef ctx) {
+    if (!windows_ok()) return;
     if (ctx) CGContextFlush(ctx);
     if (wid) {
         int cid = SLSMainConnectionID();
@@ -247,6 +283,7 @@ void skb_flush(uint32_t wid, CGContextRef ctx) {
 }
 
 void skb_destroy(uint32_t wid) {
+    if (!windows_ok()) return;
     if (!wid) return;
     int cid = SLSMainConnectionID();
     // Order the window OUT with a SYNCHRONOUS commit first, so it vanishes from the screen this
@@ -262,10 +299,11 @@ void skb_destroy(uint32_t wid) {
 }
 
 // Spaces: the current Space of a display and its type (0 user desktop, 4 full-screen app).
-extern uint64_t SLSManagedDisplayGetCurrentSpace(int cid, CFStringRef display_uuid);
-extern int SLSSpaceGetType(int cid, uint64_t sid);
+SKB_WEAK extern uint64_t SLSManagedDisplayGetCurrentSpace(int cid, CFStringRef display_uuid);
+SKB_WEAK extern int SLSSpaceGetType(int cid, uint64_t sid);
 
 bool skb_display_shows_fullscreen_space(CFStringRef display_uuid) {
+    if (!HAVE(SLSMainConnectionID) || !HAVE(SLSManagedDisplayGetCurrentSpace) || !HAVE(SLSSpaceGetType)) return false;
     if (!display_uuid) return false;
     int cid = SLSMainConnectionID();
     uint64_t sid = SLSManagedDisplayGetCurrentSpace(cid, display_uuid);
@@ -275,9 +313,10 @@ bool skb_display_shows_fullscreen_space(CFStringRef display_uuid) {
 // Every display's Spaces as the Dock keeps them: one dictionary per display ("Display Identifier"
 // is the display's uuid, or "Main" while all displays share one set of Spaces), with its
 // "Current Space" and all "Spaces", each carrying the "uuid" that survives a restart.
-extern CFArrayRef SLSCopyManagedDisplaySpaces(int cid);
+SKB_WEAK extern CFArrayRef SLSCopyManagedDisplaySpaces(int cid);
 
 CFStringRef skb_copy_current_space_uuid(CFStringRef display_uuid) {
+    if (!HAVE(SLSMainConnectionID) || !HAVE(SLSCopyManagedDisplaySpaces)) return NULL;
     if (!display_uuid) return NULL;
     CFArrayRef displays = SLSCopyManagedDisplaySpaces(SLSMainConnectionID());
     if (!displays) return NULL;
@@ -301,6 +340,7 @@ CFStringRef skb_copy_current_space_uuid(CFStringRef display_uuid) {
 }
 
 CFArrayRef skb_copy_space_uuids(void) {
+    if (!HAVE(SLSMainConnectionID) || !HAVE(SLSCopyManagedDisplaySpaces)) return NULL;
     CFArrayRef displays = SLSCopyManagedDisplaySpaces(SLSMainConnectionID());
     if (!displays) return NULL;
     CFMutableArrayRef out = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
@@ -321,6 +361,7 @@ CFArrayRef skb_copy_space_uuids(void) {
 }
 
 uint64_t skb_space_id_for_uuid(CFStringRef uuid) {
+    if (!HAVE(SLSMainConnectionID) || !HAVE(SLSCopyManagedDisplaySpaces)) return 0;
     if (!uuid) return 0;
     CFArrayRef displays = SLSCopyManagedDisplaySpaces(SLSMainConnectionID());
     if (!displays) return 0;
@@ -346,6 +387,7 @@ uint64_t skb_space_id_for_uuid(CFStringRef uuid) {
 }
 
 bool skb_move_window_to_space(uint32_t wid, uint64_t sid) {
+    if (!HAVE(SLSMainConnectionID) || !HAVE(SLSMoveWindowsToManagedSpace)) return false;
     if (!wid || !sid) return false;
     CFNumberRef n = CFNumberCreate(NULL, kCFNumberSInt32Type, &wid);
     const void *vals[1] = { n };
@@ -362,8 +404,8 @@ bool skb_move_window_to_space(uint32_t wid, uint64_t sid) {
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #include <ApplicationServices/ApplicationServices.h>
 
-extern CGError _SLPSSetFrontProcessWithOptions(ProcessSerialNumber *psn, uint32_t wid, uint32_t mode);
-extern CGError SLPSPostEventRecordTo(ProcessSerialNumber *psn, uint8_t *bytes);
+SKB_WEAK extern CGError _SLPSSetFrontProcessWithOptions(ProcessSerialNumber *psn, uint32_t wid, uint32_t mode);
+SKB_WEAK extern CGError SLPSPostEventRecordTo(ProcessSerialNumber *psn, uint8_t *bytes);
 
 // The front-process call alone activates the app but leaves its key window as it was; these two
 // event records (as the window server sends them on a click) make this window key.
@@ -381,6 +423,7 @@ static void make_key_window(ProcessSerialNumber *psn, uint32_t wid) {
 }
 
 bool skb_focus_window(pid_t pid, uint32_t wid) {
+    if (!HAVE(_SLPSSetFrontProcessWithOptions) || !HAVE(SLPSPostEventRecordTo)) return false;
     ProcessSerialNumber psn = {0, 0};
     if (GetProcessForPID(pid, &psn) != noErr) return false;
     _SLPSSetFrontProcessWithOptions(&psn, wid, 0x200 /* kCPSUserGenerated */);

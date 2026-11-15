@@ -188,7 +188,7 @@ final class AeroSnap {
                 // Pulled off its snap: back to its old size.
                 snapped[wid] = nil
                 let size = s.original.size
-                TitleBarOverlayController.axQueue.async {
+                TitleBarOverlayController.axQueue(pid).async {
                     if let w = TitleBarOverlayController.findAXWindow(wid, pid: pid) { WorkAreaKeeper.set(w, size: size) }
                 }
             } else {
@@ -210,7 +210,7 @@ final class AeroSnap {
         defer { drag = nil; barDrag = nil; preview.hide() }
         guard let (wid, pid) = barDrag, let d = drag, let target = d.target else { return false }
         let original = d.start
-        TitleBarOverlayController.axQueue.async { [weak self] in
+        TitleBarOverlayController.axQueue(pid).async { [weak self] in
             guard let w = TitleBarOverlayController.findAXWindow(wid, pid: pid) else { return }
             let applied = Self.apply(target, to: w)
             DispatchQueue.main.async { self?.snapped[wid] = (original, applied) }
@@ -228,7 +228,7 @@ final class AeroSnap {
     }
 
     private func snap(_ window: AXUIElement, to target: CGRect, original: CGRect) {
-        TitleBarOverlayController.axQueue.async { [weak self] in
+        TitleBarOverlayController.axQueue(for: window).async { [weak self] in
             let applied = Self.apply(target, to: window)
             guard let id = Self.id(of: window) else { return }
             DispatchQueue.main.async { self?.snapped[id] = (original, applied) }
@@ -256,7 +256,7 @@ final class AeroSnap {
         default:
             let back = id.flatMap { snapped[$0]?.original }
             if let id { snapped[id] = nil }
-            TitleBarOverlayController.axQueue.async {
+            TitleBarOverlayController.axQueue(for: w).async {
                 if let back { _ = Self.apply(back, to: w) }
                 else { AXUIElementSetAttributeValue(w, kAXMinimizedAttribute as CFString, kCFBooleanTrue) }
             }

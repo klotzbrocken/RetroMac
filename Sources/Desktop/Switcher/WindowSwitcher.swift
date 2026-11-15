@@ -212,7 +212,7 @@ final class WindowSwitcher {
               let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, t.wid) as? [[String: Any]], !info.isEmpty else { return false }
         // The window server, not activate(): since macOS 14 an inactive app's request is ignored.
         if !skb_focus_window(t.pid, t.wid) { app.activate(options: [.activateIgnoringOtherApps]) }
-        TitleBarOverlayController.axQueue.async {
+        TitleBarOverlayController.axQueue(t.pid).async {
             guard let w = TitleBarOverlayController.findAXWindow(t.wid, pid: t.pid) else { return }
             AXUIElementSetAttributeValue(w, kAXMainAttribute as CFString, kCFBooleanTrue)
             AXUIElementPerformAction(w, kAXRaiseAction as CFString)

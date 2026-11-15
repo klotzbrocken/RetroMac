@@ -252,12 +252,12 @@ enum TaskButtonMenu {
             item("Close window") { press(window, kAXCloseButtonAttribute) }
         case .win98, .winxp:
             item("Restore", enabled: minimized) {
-                TitleBarOverlayController.axQueue.async {
+                TitleBarOverlayController.axQueue(for: window).async {
                     AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
                 }
             }
             item("Minimize", enabled: !minimized) {
-                TitleBarOverlayController.axQueue.async {
+                TitleBarOverlayController.axQueue(for: window).async {
                     AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
                 }
             }
@@ -269,7 +269,7 @@ enum TaskButtonMenu {
     }
 
     private static func press(_ window: AXUIElement, _ button: String) {
-        TitleBarOverlayController.axQueue.async {
+        TitleBarOverlayController.axQueue(for: window).async {
             var ref: CFTypeRef?
             guard AXUIElementCopyAttributeValue(window, button as CFString, &ref) == .success, let ref else { return }
             AXUIElementPerformAction(ref as! AXUIElement, kAXPressAction as CFString)
