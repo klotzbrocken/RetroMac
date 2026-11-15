@@ -1048,6 +1048,15 @@ final class AppSettings: ObservableObject {
             if let data = try? JSONEncoder().encode(bios) { defaults.set(data, forKey: "bios") }
         }
     }
+    /// Settings ▸ Desktop ▸ Desktop companion: the sheep or an Office assistant, and its jobs.
+    @Published var companion: CompanionPrefs {
+        didSet {
+            if let data = try? JSONEncoder().encode(companion) { defaults.set(data, forKey: "companion") }
+            guard companion != oldValue else { return }
+            CompanionController.shared.apply()
+            DesktopPetController.shared.applyForCurrentTheme()
+        }
+    }
     /// The SETI@home Classic simulation (Settings ▸ Themes ▸ Screensaver).
     @Published var seti: SETIPrefs {
         didSet {
@@ -1484,6 +1493,7 @@ final class AppSettings: ObservableObject {
         sounds = defaults.data(forKey: "sounds").flatMap(SoundPrefs.load) ?? SoundPrefs()
         bios = defaults.data(forKey: "bios").flatMap { decodeOverDefaults($0, BIOSPrefs()) } ?? BIOSPrefs()
         seti = defaults.data(forKey: "seti").flatMap { decodeOverDefaults($0, SETIPrefs()) } ?? SETIPrefs()
+        companion = defaults.data(forKey: "companion").flatMap { decodeOverDefaults($0, CompanionPrefs()) } ?? CompanionPrefs()
         crashShowBadge = defaults.object(forKey: "crashShowBadge") as? Bool ?? true
         crashFullSequence = defaults.object(forKey: "crashFullSequence") as? Bool ?? true
         crashGlitches = defaults.object(forKey: "crashGlitches") as? Bool ?? true

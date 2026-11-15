@@ -46,6 +46,10 @@
 	</dict>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>RetroMac asks System Events to hide the Dock and menu bar while a theme or the overlay is active, and Finder whether the Trash is full, so the trash icon matches.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>The desktop companion tells you a few minutes before a meeting and can open its video link. Nothing leaves your Mac.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>The desktop companion tells you when a reminder is due and lets you check it off. Nothing leaves your Mac.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>RetroMac needs camera access to apply retro shader effects to your webcam for video calls.</string>
 	<key>NSScreenCaptureUsageDescription</key>

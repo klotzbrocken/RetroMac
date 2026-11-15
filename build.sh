@@ -123,6 +123,12 @@ if [ -d "Resources/Sounds" ]; then
     rsync -a --delete Resources/Sounds/ "$CONTENTS/Resources/Sounds/"
 fi
 
+# Office assistants shipped with the app (the others download on demand)
+if [ -d "Resources/Agents" ]; then
+    mkdir -p "$CONTENTS/Resources/Agents"
+    rsync -a --delete Resources/Agents/ "$CONTENTS/Resources/Agents/"
+fi
+
 # Copy desktop widgets (e.g. BeOS CPU Monitor HTML widget)
 if [ -d "Resources/Widgets" ]; then
     mkdir -p "$CONTENTS/Resources/Widgets"

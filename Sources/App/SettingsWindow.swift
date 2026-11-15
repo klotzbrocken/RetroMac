@@ -140,6 +140,11 @@ struct SettingsView: View {
         .onChange(of: selectedTab) { newTab in
             settings.lastSettingsTab = newTab.rawValue
         }
+        // The window outlives a close, so a tab asked for from outside (the companion's
+        // Options…) must switch the open view too.
+        .onChange(of: settings.lastSettingsTab) { saved in
+            if let tab = SettingsTab.resolve(saved), tab != selectedTab { selectedTab = tab }
+        }
     }
 }
 

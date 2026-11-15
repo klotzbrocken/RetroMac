@@ -32,6 +32,8 @@ struct DesktopSettingsTab: View {
     /// shortcuts of the new theme go with it.
     @State private var loadedForTheme = ""
     @State private var refresh = false          // forces a redraw after a store write
+    @ObservedObject private var companion = CompanionController.shared
+    @State private var calendarNote: String?
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
@@ -47,6 +49,7 @@ struct DesktopSettingsTab: View {
                     iconsCard
                     widgetsCard
                 }
+                companionCard   // works without a theme too
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
@@ -287,6 +290,75 @@ struct DesktopSettingsTab: View {
                         }
                 }
             }
+        }
+    }
+
+    // MARK: - Desktop companion
+
+    /// The sheep or one of the Office assistants. One choice; the assistants also work without a theme.
+    private var companionCard: some View {
+        RMCard(title: "Desktop companion",
+               subtitle: "No AI: it only tells you what your Mac already knows.", bodyPadding: 0) {
+            VStack(spacing: 0) {
+                let choice = settings.companion.character
+                let isAgent = choice != "off" && choice != "sheep"
+                RMRow(label: "Companion", hint: companionHint, isLast: !isAgent) {
+                    HStack(spacing: 8) {
+                        if companion.downloading != nil { ProgressView().controlSize(.small) }
+                        Picker("", selection: Binding(get: { choice }, set: { companion.choose($0) })) {
+                            Text("Off").tag("off")
+                            Text("Match the theme").tag("theme")
+                            Text("Sheep (Windows themes)").tag("sheep")
+                            Divider()
+                            ForEach(AgentCatalog.all, id: \.self) { name in
+                                Text(AgentCatalog.isAvailable(name) ? AgentCatalog.title(name)
+                                                                    : "\(AgentCatalog.title(name)) — download").tag(name)
+                            }
+                        }
+                        .labelsHidden().pickerStyle(.menu).frame(width: 220)
+                        .disabled(companion.downloading != nil)
+                    }
+                }
+                if isAgent {
+                    RMRow(label: "Clipboard history",
+                          hint: "Click the assistant for the last ten texts you copied. Kept in memory only; password fields stay out. macOS may ask once whether RetroMac may read the clipboard.") {
+                        Toggle("", isOn: $settings.companion.clipboard).toggleStyle(.switch).tint(.rmAccent)
+                    }
+                    RMRow(label: "Calendar & reminders",
+                          hint: calendarNote ?? "A word ten minutes before a meeting, with Join for its video link, and reminders as they fall due.") {
+                        Toggle("", isOn: Binding(get: { settings.companion.calendar }, set: { on in
+                            guard on else { settings.companion.calendar = false; return }
+                            companion.calendar.requestAccess { ok in
+                                calendarNote = ok ? nil : "macOS refused. Allow RetroMac under Privacy & Security ▸ Calendars and ▸ Reminders."
+                                settings.companion.calendar = ok
+                            }
+                        })).toggleStyle(.switch).tint(.rmAccent)
+                    }
+                    RMRow(label: "Mac watcher",
+                          hint: "Finished downloads, a plugged-in disk, a low battery, a nearly full disk, a Time Machine backup older than a week.") {
+                        Toggle("", isOn: $settings.companion.watcher).toggleStyle(.switch).tint(.rmAccent)
+                    }
+                    RMRow(label: "Occasional tips", hint: "A Mac tip for the app in front, at most once a day per app.") {
+                        Toggle("", isOn: $settings.companion.tips).toggleStyle(.switch).tint(.rmAccent)
+                    }
+                    RMRow(label: "Sounds", isLast: true) {
+                        Toggle("", isOn: $settings.companion.sounds).toggleStyle(.switch).tint(.rmAccent)
+                    }
+                }
+            }
+        }
+    }
+
+    private var companionHint: String {
+        if let name = companion.downloading { return "Downloading \(AgentCatalog.title(name))…" }
+        switch settings.companion.character {
+        case "theme":
+            return CompanionController.themeCharacter(ThemeManager.shared.activeTheme?.config.name)
+                .map { "Now: \(AgentCatalog.title($0)). Clippy on Windows themes, Rover on XP once downloaded." }
+                ?? "Clippy on the Windows themes, Rover on XP once downloaded; nobody on the others."
+        case "sheep": return "Walks on the Windows 95, 98, Me and XP taskbars."
+        case "off": return "Clippy and The Genius come with RetroMac; the others download when picked."
+        default: return "Click it for the clipboard, a note and today's agenda; right-click for more."
         }
     }
 }

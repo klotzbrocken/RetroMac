@@ -36,6 +36,7 @@ to support the project; it does not change the licence of anything in this repos
 | Starfield Simulation (the Windows 2000 screen saver) | `Resources/Widgets/Screensavers/Starfield` | RetroMac's own canvas port; the simulation's constants and integer arithmetic follow Ilya Kalimulin's macOS port (github.com/ilirium/starfield_simulation_screensaver_win2k_for_macos, MIT, © 2026 Ilya Kalimulin). The Windows saver itself is Microsoft's |
 | Stratagus / Wargus / War1gus (the Warcraft engine) | `vendor/peonpad`, `vendor/war1gus` (submodules) | GPL v2 |
 | Pac-Man clone (BeOS demo) | `vendor/pacman` | GPL v2, see its README |
+| clippy.js agent format (animation tables, sprite sheets and sounds unpacked from the Microsoft Agent files) | `Resources/Agents/`, downloads at a fixed commit | MIT, © 2012 Fireplace, Inc, [github.com/clippyjs/clippy.js](https://github.com/clippyjs/clippy.js). The player in `Sources/Desktop/Companion/` is RetroMac's own; the characters are Microsoft's, as listed below |
 | Shader presets | `Sources/Shaders/`, listed in About ▸ Shader Credits | Per preset: GPL-2.0 (zfast-crt, crt-geom, crt-royale-lite, crt-gdv-mini-ultra, retro-crisis, crt-easymode), MIT (crt-lottes, crt-hyllian-glow), CC BY-NC-SA 3.0 (newpixie-crt), Apache-2.0/MIT (NLO VHS SP, parameters only), and RetroMac's own |
 
 Game engines are not bundled: the Game Library downloads GZDoom, Raze, vkQuake and Yamagi
@@ -57,6 +58,7 @@ files are not offered for any use outside the app. Where a set has a written cre
 |---|---|---|
 | Apple | System 6, Mac OS 9, Mac OS X, Snow Leopard and Mountain Lion icons, wallpapers, cursors and boot screens; the icons, desktop patterns and a screenshot of the unreleased Mac OS 8 developer release Copland D11E4 (1996), decoded from its resource forks; the Chicago, Geneva and Courier bitmap faces of System 6; the bomb and Sad Mac of the crash screens | `Resources/Themes/MacOS*`, `Resources/Cursors/Apple*`, `Resources/Cursors/MacOSX`, `Resources/Crashes/` |
 | Microsoft | Windows 3.1, 95, 98, Me, NT 4.0, XP and 7 icons, wallpapers and pattern tiles, the Plus! schemes, the XP and 7 cursors, the Start orb, boot screens, the blue-screen wording, and Hover! (the 2013 HTML5 remake Microsoft published at hover.ie) | `Resources/Themes/Windows*`, `Resources/Cursors/WindowsXP`, `Resources/Cursors/Win98-*`, `Resources/Widgets/Hover` |
+| Microsoft (Office Assistants, Microsoft Agent) | Clippit ("Clippy") and The Genius in the app; F1, Genie, Links, Merlin, Peedy, Rocky and Rover downloaded from clippy.js when picked and kept in Application Support. Bonzi is left out | `Resources/Agents/` |
 | Be Inc. (now ACCESS) | BeOS icons, the Deskbar and the yellow tab | `Resources/Themes/BeOSClassic.retromactheme` |
 | IBM | OS/2 Warp 4 icons and WarpCenter | `Resources/Themes/OS2-Warp.retromactheme` |
 | Silicon Graphics | IRIX icons, Toolchest and 4Dwm look | `Resources/Themes/SGI-IRIX.retromactheme` |

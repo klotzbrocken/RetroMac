@@ -11,6 +11,9 @@
     <false/>
     <key>com.apple.security.device.camera</key>
     <true/>
+    <!-- Calendar and Reminders for the desktop companion; the hardened runtime refuses EventKit without it. -->
+    <key>com.apple.security.personal-information.calendars</key>
+    <true/>
     <!-- Apple Events to System Events (Dock and menu-bar auto-hide). Under the hardened runtime
          macOS refuses them without this, silently: no prompt, no entry under Automation. -->
     <key>com.apple.security.automation.apple-events</key>

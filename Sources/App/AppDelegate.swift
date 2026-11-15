@@ -122,6 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
         _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98
+        CompanionController.shared.apply()
         ScreensaverController.shared.beginIdleWatch()   // works regardless of the themed dock
         SETIController.shared.start()
 
@@ -2604,6 +2605,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
+        settingsWindow.show()
+    }
+
+    func showSettings(tab: SettingsTab) {
+        AppSettings.shared.lastSettingsTab = tab.rawValue
         settingsWindow.show()
     }
 

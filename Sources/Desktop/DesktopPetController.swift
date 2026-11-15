@@ -63,7 +63,8 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
     }
 
     private var enabledForActiveTheme: Bool {
-        guard AppSettings.shared.desktopPetEnabled else { return false }
+        // sheep.exe starts it for this session; Settings ▸ Desktop companion keeps it.
+        guard AppSettings.shared.desktopPetEnabled || AppSettings.shared.companion.character == "sheep" else { return false }
         let n = (ThemeManager.shared.activeTheme?.config.name ?? "").lowercased()
         return n.contains("windows 95") || n.contains("windows xp")
             || n.contains("windows 98") || n.contains("windows me")
@@ -177,6 +178,7 @@ final class DesktopPetController: NSObject, WKNavigationDelegate, WKScriptMessag
     }
 
     @objc private func menuQuitSheep(_ sender: NSMenuItem) {
+        if AppSettings.shared.companion.character == "sheep" { AppSettings.shared.companion.character = "off" }
         AppSettings.shared.desktopPetEnabled = false   // didSet hides the pet; sheep.exe re-enables
     }
 

@@ -5,6 +5,19 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+### New
+
+- **Desktop companion** (Settings ▸ Desktop). One choice for the sheep and the Office
+  assistants: Clippy and The Genius come with RetroMac; F1, Genie, Links, Merlin, Peedy, Rocky
+  and Rover download when picked. *Match the theme* puts Clippy on the Windows themes and Rover
+  on XP. The assistants also work without a theme. No AI: click one for the last ten texts you
+  copied (in memory only, password fields stay out), a note with to-dos and the rest of today;
+  it says when a meeting starts in ten minutes (with *Join* for its video link), when a
+  reminder is due (*Done*, *Later*), when a download has finished, a disk is plugged in, the
+  battery is low, the disk nearly full or the last Time Machine backup a week old, and now and
+  then a Mac tip for the app in front. Drag it anywhere; right-click for Animate!, another
+  assistant or Hide. VoiceOver reads what it says; with Reduce Motion it stands still.
+
 ### Fixes
 
 - **VoiceOver keeps its place in Settings ▸ Sounds.** The tab was rebuilt every two seconds,
