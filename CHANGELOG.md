@@ -3,6 +3,18 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+### Fixes
+
+- **VoiceOver keeps its place in Settings ▸ Sounds.** The tab was rebuilt every two seconds,
+  whether anything had changed or not, and VoiceOver lost the setting it was on. It now changes
+  only when something it shows does.
+- **VoiceOver reads the Sounds sliders' values**, not their position: "Starts at" said 31 % for
+  35 % CPU load, "Run-on" a percentage for seconds. Each slider says its own value and unit.
+- **The Sounds tab's switches are the ones of every other tab**, and the fan chart is one
+  element with a steady name and the current values as its value.
+
 ## 3.0.5
 
 ### New

@@ -198,9 +198,11 @@ struct SoundsTab: View {
                 if settings.sounds.drive.sensitivity == .custom {
                     RMRow(label: "Threshold", hint: String(format: "%.0f KB/s", settings.sounds.drive.customThreshold / 1000), stacked: true) {
                         Slider(value: thresholdKB, in: log10(20)...log10(20_000)).frame(width: 300)
+                            .accessibilityValue(String(format: "%.0f kilobytes per second", settings.sounds.drive.customThreshold / 1000))
                     }
                     RMRow(label: "Shortest access", hint: String(format: "%.0f ms", settings.sounds.drive.minDuration * 1000), stacked: true) {
                         Slider(value: $settings.sounds.drive.minDuration, in: 0.05...1).frame(width: 300)
+                            .accessibilityValue(String(format: "%.0f milliseconds", settings.sounds.drive.minDuration * 1000))
                     }
                 }
                 RMRow(label: "Ambient", hint: "Plays light activity of its own, whatever the disk does.") {
@@ -226,6 +228,7 @@ struct SoundsTab: View {
                 RMRow(label: "Base noise", hint: "A quiet whir even when the CPU is idle.") { toggle($settings.sounds.fan.baseNoise) }
                 RMRow(label: "Starts at", hint: String(format: "%.0f %% CPU load, smoothed", settings.sounds.fan.threshold * 100), stacked: true) {
                     Slider(value: $settings.sounds.fan.threshold, in: 0.1...0.9).frame(width: 300)
+                        .accessibilityValue(String(format: "%.0f percent CPU load", settings.sounds.fan.threshold * 100))
                 }
                 RMRow(label: "Loudest", stacked: true) { PercentSlider(value: $settings.sounds.fan.volume) }
                 RMRow(label: "Response", stacked: true) {
@@ -238,6 +241,7 @@ struct SoundsTab: View {
                 }
                 RMRow(label: "Run-on", hint: String(format: "%.0f seconds to fall quiet", settings.sounds.fan.decay), stacked: true) {
                     Slider(value: $settings.sounds.fan.decay, in: 2...20, step: 1).frame(width: 300)
+                        .accessibilityValue(String(format: "%.0f seconds", settings.sounds.fan.decay))
                 }
                 if settings.sounds.fan.enabled {
                     RMRow(label: "Last minute", hint: "CPU load (grey) and the fan's speed (accent).", stacked: true) {
@@ -290,7 +294,7 @@ struct SoundsTab: View {
     // MARK: - Parts
 
     private func toggle(_ on: Binding<Bool>) -> some View {
-        Toggle("", isOn: on).toggleStyle(.switch).tint(.rmAccent).labelsHidden()
+        Toggle("", isOn: on).toggleStyle(.switch).tint(.rmAccent)   // as in the other tabs
     }
 
     private func previewReset(_ m: SoundEngine.Module, reset: @escaping () -> Void) -> some View {
@@ -308,6 +312,7 @@ private struct PercentSlider: View {
     var body: some View {
         HStack(spacing: 10) {
             Slider(value: $value, in: 0...1).frame(width: 260)
+                .accessibilityValue("\(Int((value * 100).rounded())) percent")
             Text("\(Int((value * 100).rounded())) %")
                 .font(.rmSecondary).foregroundColor(.rmTextSecondary)
                 .frame(width: 44, alignment: .trailing)
@@ -333,7 +338,9 @@ private struct FanChart: View {
         }
         .frame(width: 360, height: 60)
         .background(Color.rmDivider.opacity(0.3))
-        .accessibilityLabel(String(format: "CPU load %.0f percent, fan %.0f percent",
+        .accessibilityElement()
+        .accessibilityLabel("Last minute, CPU load and fan speed")
+        .accessibilityValue(String(format: "CPU load %.0f percent, fan %.0f percent",
                                    (fan.history.last?.cpu ?? 0) * 100, (fan.history.last?.fan ?? 0) * 100))
     }
 }

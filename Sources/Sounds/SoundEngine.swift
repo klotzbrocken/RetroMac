@@ -177,8 +177,13 @@ final class SoundEngine: ObservableObject {
         // A drive turned off still parks and spins down; the master switch cuts it at once.
         let audible = p.drive.enabled || p.fan.enabled || p.keyboard.enabled || drive.isAudible
         setRunning((playing && audible) || previewing, release: !p.enabled)
-        objectWillChange.send()
+        // Only when something Settings shows has changed: the 2 s watch timer comes through here,
+        // and a change every time rebuilt the whole Sounds tab every 2 s, which took VoiceOver's
+        // focus off whatever setting it was on (reported by a VoiceOver user).
+        let shown = [keyboard.isTrusted, drive.countersFound, engine.isRunning]
+        if shown != lastShown { lastShown = shown; objectWillChange.send() }
     }
+    private var lastShown: [Bool] = []
 
     private func pauseReason(_ p: SoundPrefs) -> String? {
         if asleep { return "Paused while the Mac sleeps or is locked." }
