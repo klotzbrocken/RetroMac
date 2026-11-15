@@ -115,3 +115,46 @@ enum AllPrograms {
         return list
     }
 }
+
+/// The Mac's login items ("Open at Login"), for Windows NT's Startup group. Read through System
+/// Events in the background — an Apple event can take its time — and shown from the last read.
+enum LoginItems {
+    struct Item: Equatable { let name: String; let path: String }
+
+    private static var cache: [Item] = []
+    private static var reading = false
+    private static var lastRead = Date.distantPast
+
+    static func items() -> [Item] {
+        if !reading, Date().timeIntervalSince(lastRead) > 30 {
+            reading = true
+            lastRead = Date()
+            DispatchQueue.global(qos: .utility).async {
+                let fresh = read()
+                DispatchQueue.main.async { if let fresh { cache = fresh }; reading = false }
+            }
+        }
+        return cache
+    }
+
+    private static func read() -> [Item]? {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        p.arguments = ["-s", "s", "-e", "tell application \"System Events\" to get {name, path} of every login item"]
+        let out = Pipe(); p.standardOutput = out; p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return nil }
+        let data = (try? out.fileHandleForReading.readToEnd()) ?? Data()
+        p.waitUntilExit()
+        guard p.terminationStatus == 0 else { return nil }
+        return parse(String(decoding: data, as: UTF8.self))
+    }
+
+    /// `{{"Name A", "Name B"}, {"/path/a", "/path/b"}}`, AppleScript's source form, into pairs.
+    static func parse(_ text: String) -> [Item] {
+        let strings = text.matches(of: #/"((?:[^"\\]|\\.)*)"/#).map { String($0.1).replacingOccurrences(of: "\\\"", with: "\"") }
+        guard strings.count % 2 == 0 else { return [] }
+        let half = strings.count / 2
+        return (0..<half).map { Item(name: strings[$0], path: strings[half + $0]) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+}

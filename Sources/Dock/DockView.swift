@@ -4883,18 +4883,46 @@ final class DockView: NSView {
                 DesktopLauncher.launch(DockThemeConfig.DesktopIconEntry(name: title, icon: icon, type: type))
             })
         }
-        let accessories: [MI] = [widget("Calculator", "calculator", "calculator.png"), widget("Clock", "clock", "clock.png"),
+        func web(_ title: String, _ url: String, _ w: String, _ h: String, _ icon: String) -> MI {
+            MI(title: title, icon: startMenuIcon(icon), action: {
+                var e = DockThemeConfig.DesktopIconEntry(name: title, icon: icon, type: "webapp")
+                e.url = url; e.args = [w, h]
+                DesktopLauncher.launch(e)
+            })
+        }
+        func pane(_ title: String, _ url: String, _ icon: String) -> MI {
+            MI(title: title, icon: startMenuIcon(icon), action: { if let u = URL(string: url) { NSWorkspace.shared.open(u) } })
+        }
+        let group = startMenuIcon("menu-programs.png")   // NT drew every program group alike
+        let games: [MI] = [web("Minesweeper", "https://98.js.org/programs/minesweeper/index.html", "360", "460", "mines.png"),
+                           web("Solitaire", "https://98.js.org/programs/js-solitaire/index.html", "800", "600", "solitaire.png")]
+        let multimedia: [MI] = [app("CD Player", "com.apple.Music", "music.png"),
+                                app("Media Player", "com.apple.QuickTimePlayerX", "menu-multimedia.png"),
+                                app("Sound Recorder", "com.apple.VoiceMemos", "menu-multimedia.png"),
+                                pane("Volume Control", "x-apple.systempreferences:com.apple.Sound-Settings.extension", "volume.png")].compactMap { $0 }
+        let accessories: [MI] = [MI(title: "Games", icon: group, submenuItems: games),
+                                 MI(title: "Multimedia", icon: group, submenuItems: multimedia),
+                                 widget("Calculator", "calculator", "calculator.png"), widget("Clock", "clock", "clock.png"),
+                                 app("Imaging", "com.apple.Preview", "preview.png"),
                                  widget("Notepad", "notepad", "notepadclassic.png"),
+                                 web("Paint", "https://98.js.org/programs/jspaint/index.html", "920", "640", "paint98.png"),
                                  app("WordPad", "com.apple.TextEdit", "textedit.png")].compactMap { $0 }
         let admin: [MI] = [app("Backup", "com.apple.backup.launcher", "settings.png"),
+                           app("Command Prompt", "com.apple.Terminal", "terminal.png"),
                            app("Disk Administrator", "com.apple.DiskUtility", "computer.png"),
                            app("Event Viewer", "com.apple.Console", "files.png"),
                            app("Performance Monitor", "com.apple.ActivityMonitor", "activitymonitor.png"),
+                           pane("User Manager", "x-apple.systempreferences:com.apple.Users-Groups-Settings.extension", "settings.png"),
                            app("Windows NT Diagnostics", "com.apple.SystemProfiler", "computer.png")].compactMap { $0 }
-        let group = startMenuIcon("menu-programs.png")   // NT drew every program group alike
+        // What the Mac opens at login, as NT's Startup group held what Windows started.
+        var startup: [MI] = LoginItems.items().map { item in
+            let icon = NSWorkspace.shared.icon(forFile: item.path); icon.size = NSSize(width: 16, height: 16)
+            return MI(title: item.name, icon: icon, action: { NSWorkspace.shared.open(URL(fileURLWithPath: item.path)) })
+        }
+        if startup.isEmpty { startup = [MI(title: "(empty)")] }
         return [MI(title: "Accessories", icon: group, submenuItems: accessories),
                 MI(title: "Administrative Tools (Common)", icon: group, submenuItems: admin),
-                MI(title: "Startup", icon: group, submenuItems: [MI(title: "(empty)")]),
+                MI(title: "Startup", icon: group, submenuItems: startup),
                 app("Command Prompt", "com.apple.Terminal", "terminal.png"),
                 app("Windows NT Explorer", "com.apple.finder", "programsfolder.png")].compactMap { $0 }
     }

@@ -36,6 +36,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   System Tools by the app's own App Store category (and a list of well-known apps that have
   none, like the browsers); the rest follows below the folders. Everything else in the menu
   stays where it was.
+- **Windows NT 4.0's program groups are filled.** Accessories holds Calculator, Clock, Imaging,
+  Notepad, Paint and WordPad, with Games (Minesweeper, Solitaire) and Multimedia (CD Player,
+  Media Player, Sound Recorder, Volume Control); Administrative Tools adds Command Prompt and
+  User Manager; Startup lists what the Mac opens at login.
 
 ### Fixes
 

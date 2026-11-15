@@ -149,3 +149,13 @@ final class AllProgramsTests: XCTestCase {
     }
 }
 
+
+/// Windows NT's Startup group: the Mac's login items out of AppleScript's answer.
+final class LoginItemsTests: XCTestCase {
+    func testParse() {
+        let items = LoginItems.parse(#"{{"Zeta", "Alpha \"Pro\""}, {"/Applications/Zeta.app", "/Applications/Alpha.app"}}"#)
+        XCTAssertEqual(items.map(\.name), ["Alpha \"Pro\"", "Zeta"])
+        XCTAssertEqual(items.first?.path, "/Applications/Alpha.app")
+        XCTAssertEqual(LoginItems.parse("{{}, {}}"), [])
+    }
+}
