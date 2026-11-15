@@ -118,32 +118,30 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("SETI@home Classic, Stacks, Exposé and Launchpad as in Snow Leopard, and Mac OS X 10.0 as in 2001")
+                Text("Windows NT 4.0, a BIOS you can enter, and Boot Phases")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("desktopcomputer", .teal, "Windows NT 4.0",
+                            "The Workstation edition of 1996: 95\u{2019}s taskbar, the desktop of a fresh install, NT\u{2019}s Start menu with its program groups, and its start-up screen on teal. Administrative Tools open the Mac\u{2019}s own tools, and Startup lists what your Mac opens at login.")
+                    feature("cpu", .blue, "A BIOS you can enter",
+                            "The Windows themes start with their PC\u{2019}s firmware \u{2014} AMIBIOS, Award or Phoenix-Award \u{2014} counting this Mac\u{2019}s real memory. Press DEL (the \u{232B} key) during the POST for the CMOS setup: every page can be walked, and Quick POST and Floppy Seek do what they say. The key can be changed in Settings.")
+                    feature("slider.horizontal.3", .purple, "Boot Phases",
+                            "One slider for how a theme starts: straight to the desktop, the operating system booting, or the firmware first and then the OS. Each theme can keep a choice of its own.")
+                    feature("folder.fill", .orange, "All Programs",
+                            "Every app on your Mac in the Windows Start menus, sorted into Office, Design, Online, Games, Multimedia, Communication and System Tools. Folders inside the menus now open as well.")
+                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
+                            "A taskbar button brings its window to the front again. Under a theme\u{2019}s title bar no desktop shows through a window\u{2019}s rounded corners. The light menu-bar strip of the Mac themes reaches every display. Mountain Lion keeps Applications in the dock. In Settings the theme list picks a theme, and Show theme now switches to it.")
+
+                    sectionHeader("Also in 3.0.4")
+
                     feature("antenna.radiowaves.left.and.right", .green, "SETI@home Classic",
-                            "The search for signals of 1999 to 2005, simulated and offline: a window, a background task and a screensaver share one work unit, with the spectrum, the graphs and the occasional peak worth a second look. In the Windows 95 to XP Start menus and on their desktops, and in the menu bar of System 7.1, Mac OS 8/9 and Mac OS X 10.0.")
-                    feature("square.stack.3d.up.fill", .blue, "Stacks show everything",
-                            "A dock folder\u{2019}s stack lists the whole folder, scrolls, and opens a folder inside it with a back arrow. Its right-click has Snow Leopard\u{2019}s Sort by, Display as and View content as: Fan, Grid, List or Automatic, which fans out while everything fits.")
-                    feature("rectangle.3.group.fill", .indigo, "Exposé, as in 10.6",
-                            "Space shows the highlighted window at full size, the arrow keys move between windows and Return brings one forward. Held on a dock icon, it lists the app\u{2019}s minimised windows in a row of their own.")
-                    feature("square.grid.3x3.fill", .purple, "Launchpad keeps your order",
-                            "Drag an icon to move it, hold it at an edge for the next page. The order stays, Utilities and the like are in the grid, and the arrow keys and Return work.")
-                    feature("info.circle.fill", .teal, "About This Mac of 2001",
-                            "Mac OS X 10.0 and Mac OS 9 open the About windows of their day from the Apple menu, filled with this Mac: version, memory, processor, and on Mac OS 9 the open apps with a memory bar each.")
-                    feature("clock.arrow.circlepath", .gray, "Mac OS X 10.0 keeps to 2001",
-                            "Dashboard is off its desktop, the later wallpapers say which version they come from, and Location lists your Mac\u{2019}s real network locations and switches between them.")
+                            "The search for signals of 1999 to 2005, simulated and offline, as a window, a background task and a screensaver sharing one work unit.")
+                    feature("square.stack.3d.up.fill", .blue, "Stacks, Exposé and Launchpad as in Snow Leopard",
+                            "Stacks list the whole folder with 10.6\u{2019}s Fan, Grid and List, Exposé shows the highlighted window at full size, and Launchpad keeps your order.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "Files dropped into a window with a frame (Windows, NeXTSTEP and others) arrive again. Time Machine restores work with Classic Finder on. Frames and title bars no longer flash in Photos, and a click on the desktop brings the Finder forward. RetroMac no longer crashes now and then when you switch themes. Automation no longer shows as off when it is on. The floating button keeps clear of the theme\u{2019}s dock or taskbar. Widget windows only show the buttons they have.")
-
-                    sectionHeader("Also in 3.0.3")
-
-                    feature("apple.logo", .blue, "Snow Leopard\u{2019}s Apple menu",
-                            "The Apple in the menu bar opens the menu of Mac OS X 10.6, row for row: Software Update, Mac OS X Software, Dock, Location, Recent Items, Force Quit with the front app\u{2019}s name, and Log Out with yours.")
-                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "A click on a running app\u{2019}s tile in the dock brings its window forward again. VoiceOver reaches the menu-bar menu again. Turning dock magnification on no longer cuts the icons off. On Mountain Lion, Applications is a folder in the dock again and folders in the Downloads pile look their age.")
+                            "Files dropped into a framed window arrive again, Time Machine restores work with Classic Finder on, and RetroMac no longer crashes now and then when you switch themes.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
