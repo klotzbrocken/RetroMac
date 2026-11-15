@@ -18,7 +18,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   yours to pick: Mac tips for the app in front, RetroMac tips (with *Show me*), and, if you
   like, the start of English Wikipedia's article of the day with *Read more* — the only thing
   it fetches from the internet. It slips out from under the flyout button and back in when
-  hidden; drag it anywhere, right-click for Animate!, another assistant or Hide. VoiceOver
+  hidden; drag it anywhere, double-click to see its animations one by one, right-click for
+  Animate!, another assistant or Hide. After five quiet minutes it falls asleep (Clippy curls
+  up on his paper, Peedy yawns and nods off) and wakes at the next click or message. VoiceOver
   reads what it says; with Reduce Motion it stands still.
 
 - **Moving windows** (Settings ▸ Themes, under the title bars): *As the era did*, *Outline* or

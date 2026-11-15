@@ -50,6 +50,20 @@ final class CompanionTests: XCTestCase {
         XCTAssertTrue(list.contains("GetTechy"))
     }
 
+    /// Clippy curls up on frame 30 of IdleSnooze, and playing it gets there; the Genius has no
+    /// sleep of his own. Every entry of the table names a frame inside its animation.
+    func testSleepingFrameIsReached() throws {
+        let clippy = try XCTUnwrap(AgentCharacter.load(name: "Clippy", from: agents.appendingPathComponent("Clippy")))
+        let s = try XCTUnwrap(clippy.sleep)
+        var an = AgentAnimator(try XCTUnwrap(clippy.animations[s.sleep]))
+        var reached = false
+        for _ in 0..<500 { _ = an.step(roll: Double.random(in: 0..<100)); if an.index == s.frame { reached = true; break } }
+        XCTAssertTrue(reached)
+        let genius = try XCTUnwrap(AgentCharacter.load(name: "Genius", from: agents.appendingPathComponent("Genius")))
+        XCTAssertNil(genius.sleep)
+        XCTAssertTrue(AgentCharacter.sleeps.keys.allSatisfy { AgentCatalog.all.contains($0) })
+    }
+
     func testWrappersAreStripped() {
         let js = "clippy.ready('X', {\"overlayCount\":2,\"framesize\":[10,20],\"animations\":{\"A\":{\"frames\":[{\"duration\":100}]}}});"
         let parsed = AgentCharacter.parseAnimations(js)

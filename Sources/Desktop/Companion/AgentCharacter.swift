@@ -94,6 +94,24 @@ struct AgentCharacter {
         moment.candidates.first { animations[$0] != nil }
     }
 
+    /// How each character falls asleep: an optional yawn, then the animation it sleeps in and the
+    /// frame it stays on (chosen by looking at the frames: curled up, lying down, eyes shut).
+    /// The Genius and Rover have no sleep in their files; they only stop fidgeting.
+    struct Sleep: Equatable { let yawn: String?; let sleep: String; let frame: Int }
+    static let sleeps: [String: Sleep] = [
+        "Clippy": Sleep(yawn: nil, sleep: "IdleSnooze", frame: 30),
+        "F1": Sleep(yawn: nil, sleep: "IdleFallsAsleep", frame: 25),
+        "Links": Sleep(yawn: nil, sleep: "DeepIdleA", frame: 42),
+        "Rocky": Sleep(yawn: nil, sleep: "DeepIdle1", frame: 25),
+        "Genie": Sleep(yawn: "Idle3_1", sleep: "Idle3_2", frame: 23),
+        "Merlin": Sleep(yawn: "Idle3_1", sleep: "Idle3_2", frame: 18),
+        "Peedy": Sleep(yawn: "Idle3_1", sleep: "Idle3_2", frame: 15),
+    ]
+    var sleep: Sleep? {
+        guard let s = Self.sleeps[name], let a = animations[s.sleep], s.frame < a.frames.count else { return nil }
+        return s
+    }
+
     /// clippy.js picks idles by prefix; "DeepIdle" and "Idle(3)" count too.
     var idleAnimations: [String] {
         animations.keys.filter { $0.hasPrefix("Idle") || $0.hasPrefix("DeepIdle") }.sorted()

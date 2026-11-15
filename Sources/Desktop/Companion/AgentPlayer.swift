@@ -25,6 +25,9 @@ final class AgentPlayer: NSView {
     private var restTimer: Timer?
     private var exitTimer: Timer?
     private var idling = false
+    /// Asleep: held on a sleeping frame, no timers running until something wakes it.
+    private(set) var asleep = false
+    private var sleepHold: Int?
 
     private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
@@ -64,6 +67,8 @@ final class AgentPlayer: NSView {
     func play(_ name: String?, then done: (() -> Void)? = nil) {
         guard let name, character.animations[name] != nil else { done?(); return }
         queue.append((name, done))
+        if asleep { wake(); return }
+        if sleepHold != nil { sleepHold = nil; interrupt(); return }   // dozing off: it gets up again
         if idling, var a = animator { a.exiting = true; animator = a; restTimer?.invalidate() }
         else if animator == nil { next() }
     }
@@ -98,8 +103,10 @@ final class AgentPlayer: NSView {
         animator = AgentAnimator(anim)
         // clippy.js gives a looping animation five seconds, then asks it to leave.
         exitTimer?.invalidate()
-        exitTimer = Timer.scheduledTimer(withTimeInterval: idle ? 10 : 5, repeats: false) { [weak self] _ in
-            self?.interrupt()
+        if sleepHold == nil {
+            exitTimer = Timer.scheduledTimer(withTimeInterval: idle ? 10 : 5, repeats: false) { [weak self] _ in
+                self?.interrupt()
+            }
         }
         tick()
     }
@@ -111,6 +118,12 @@ final class AgentPlayer: NSView {
         if let f = a.frame {
             draw(f.images ?? [])
             if soundsOn, let s = f.sound, let data = character.sounds[s] { NSSound(data: data)?.play() }
+        }
+        // Reached the sleeping frame: stay there, nothing ticking.
+        if let hold = sleepHold, a.index == hold, !a.exiting {
+            asleep = true
+            exitTimer?.invalidate()
+            return
         }
         switch event {
         case .exited:
@@ -141,7 +154,7 @@ final class AgentPlayer: NSView {
     /// A pause before the next idle, like MS Agent's: idles every few seconds, not nonstop.
     private func scheduleIdle() {
         restTimer?.invalidate()
-        guard !reduceMotion, window?.isVisible == true else { return }
+        guard !reduceMotion, !asleep, window?.isVisible == true else { return }
         restTimer = Timer.scheduledTimer(withTimeInterval: .random(in: 6...14), repeats: false) { [weak self] _ in
             guard let self, self.animator == nil, self.queue.isEmpty,
                   let idle = self.character.idleAnimations.randomElement() else { return }
@@ -164,6 +177,41 @@ final class AgentPlayer: NSView {
     private func showRest() {
         let anim = character.animations["RestPose"] ?? character.animations["Idle1_1"] ?? character.animations.values.first
         draw(anim?.frames.first?.images ?? [])
+    }
+
+    // MARK: - Sleep
+
+    /// Falls asleep (yawning first, where the character can) and stays on the sleeping frame
+    /// until `wake()`. Without a sleep of its own it just stops fidgeting. Only from rest:
+    /// false while something plays, and the caller tries again a little later.
+    @discardableResult
+    func fallAsleep() -> Bool {
+        if asleep || sleepHold != nil { return true }
+        guard animator == nil, queue.isEmpty else { return false }
+        restTimer?.invalidate()
+        guard let s = character.sleep, let anim = character.animations[s.sleep] else { asleep = true; return true }
+        if reduceMotion {
+            draw(anim.frames[s.frame].images ?? [])
+            asleep = true
+            return true
+        }
+        let doze = { [weak self] in
+            guard let self, self.queue.isEmpty, self.animator == nil else { return }
+            self.sleepHold = s.frame
+            self.start(s.sleep, idle: false, done: nil)
+        }
+        if let yawn = s.yawn { play(yawn, then: doze) } else { doze() }
+        return true
+    }
+
+    /// Wakes up: the sleep animation leaves through its exit branches, then the queue goes on.
+    func wake() {
+        guard asleep else { return }
+        asleep = false
+        sleepHold = nil
+        guard animator != nil else { showRest(); next(); return }
+        if var a = animator { a.exiting = true; animator = a }
+        tick()
     }
 
     // MARK: - Mouse

@@ -50,6 +50,9 @@ final class CompanionController: ObservableObject {
     private var outsideMonitor: Any?
     private var pending: [(Message, AgentCharacter.Moment)] = []
     private var loading: String?
+    private var sleepTimer: Timer?
+    /// Five minutes without anything to do or say, and the character dozes off.
+    static let sleepAfter: TimeInterval = 300
 
     static let balloonWidth: CGFloat = 270
 
@@ -143,6 +146,7 @@ final class CompanionController: ObservableObject {
         player.onDoubleClick = { [weak self] in self?.animateNext() }
         player.onRightClick = { [weak self] e in self?.showMenu(e) }
         player.onMoved = { [weak self] origin in
+            self?.noteActivity()
             UserDefaults.standard.set([origin.x, origin.y], forKey: "companionOrigin")
             self?.positionBalloon()
         }
@@ -160,12 +164,14 @@ final class CompanionController: ObservableObject {
         player.play(.show) { [weak player] in player?.play(.greet) }
         // It slips out from under the flyout button (one level above it) to its place.
         guard let from = flyoutOrigin(size: character.frameSize), !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            noteActivity()
             p.setFrameOrigin(target)
             p.orderFrontRegardless()
             return
         }
         p.setFrameOrigin(from)
         p.alphaValue = 0
+        noteActivity()
         p.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { ctx in
             ctx.duration = 0.7
@@ -195,6 +201,7 @@ final class CompanionController: ObservableObject {
 
     private func tearDown() {
         loading = nil
+        sleepTimer?.invalidate(); sleepTimer = nil
         closeBalloon()
         pending.removeAll()
         player?.stop()
@@ -238,6 +245,7 @@ final class CompanionController: ObservableObject {
         case .home, .clipboard, .notes, .agenda: pending.append((m, moment)); return
         default: break
         }
+        noteActivity()
         player?.play(moment)
         open(.message(m))
         NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
@@ -256,6 +264,7 @@ final class CompanionController: ObservableObject {
     /// Double click: the character's animations one after another, round and round.
     private var cycleIndex = 0
     private func animateNext() {
+        noteActivity()
         guard let c = player?.character else { return }
         let list = Self.cycle(c)
         guard !list.isEmpty else { return }
@@ -271,6 +280,7 @@ final class CompanionController: ObservableObject {
     }
 
     private func clicked() {
+        noteActivity()
         switch page {
         case .none, .message: open(.home)
         default: closeBalloon()
@@ -333,9 +343,27 @@ final class CompanionController: ObservableObject {
         b.setFrame(NSRect(x: x, y: y, width: size.width, height: size.height), display: true)
     }
 
+    // MARK: - Sleep
+
+    /// Something happened: awake again, and the five minutes start over.
+    private func noteActivity() {
+        player?.wake()
+        sleepTimer?.invalidate()
+        sleepTimer = Timer.scheduledTimer(withTimeInterval: Self.sleepAfter, repeats: false) { [weak self] _ in self?.doze() }
+    }
+
+    /// Asleep only when nothing is open; busy with an animation, it tries again shortly.
+    private func doze() {
+        guard let player else { return }
+        if case .none = page, player.fallAsleep() { return }
+        sleepTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: false) { [weak self] _ in self?.doze() }
+    }
+
     // MARK: - Menu
 
     private func showMenu(_ event: NSEvent) {
+        noteActivity()
+        player?.wake()
         let menu = NSMenu()
         func item(_ title: String, _ action: @escaping () -> Void) {
             let i = NSMenuItem(title: title, action: #selector(MenuAction.run(_:)), keyEquivalent: "")
