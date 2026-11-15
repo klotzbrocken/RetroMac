@@ -31,6 +31,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Monitor). On *Firmware* it boots through an Award BIOS, the OS Loader V4.0 menu, NTDETECT, the
   blue kernel screen with this Mac's processors and memory, then NT's start-up screen on teal and
   the desktop: no log-on box, nothing asks for a password. The wallpaper centres NT's start-up artwork on teal #058182.
+- **All Programs in the Windows Start menus.** A new folder at the top of Programs lists every
+  app on the Mac, sorted into Communication, Design, Games, Multimedia, Office, Online and
+  System Tools by the app's own App Store category (and a list of well-known apps that have
+  none, like the browsers); the rest follows below the folders. Everything else in the menu
+  stays where it was.
 
 ### Fixes
 

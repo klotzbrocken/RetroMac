@@ -127,3 +127,25 @@ final class BootPhasesTests: XCTestCase {
         XCTAssertEqual((d["date"] as? String)?.count, 10)
     }
 }
+
+/// The Start menu's All Programs: where an app lands.
+final class AllProgramsTests: XCTestCase {
+    func testFolders() {
+        XCTAssertEqual(AllPrograms.folder(bundleID: "com.google.Chrome", category: "public.app-category.productivity"), .online,
+                       "the known list wins over the category")
+        XCTAssertEqual(AllPrograms.folder(bundleID: "com.apple.garageband10", category: nil), .multimedia)
+        XCTAssertEqual(AllPrograms.folder(bundleID: "com.adobe.Photoshop", category: nil), .design)
+        XCTAssertEqual(AllPrograms.folder(bundleID: "x.y", category: "public.app-category.puzzle-games"), .games)
+        XCTAssertEqual(AllPrograms.folder(bundleID: "x.y", category: "public.app-category.developer-tools"), .systemTools)
+        XCTAssertEqual(AllPrograms.folder(bundleID: "x.y", category: "public.app-category.social-networking"), .communication)
+        XCTAssertNil(AllPrograms.folder(bundleID: "x.y", category: nil))
+        XCTAssertNil(AllPrograms.folder(bundleID: "x.y", category: "public.app-category.kids"))
+    }
+
+    func testScanFindsSystemApps() {
+        let apps = AllPrograms.scan()
+        XCTAssertTrue(apps.contains { $0.bundleID == "com.apple.Terminal" && $0.folder == .systemTools })
+        XCTAssertEqual(Set(apps.map(\.bundleID)).count, apps.count, "each app once")
+    }
+}
+

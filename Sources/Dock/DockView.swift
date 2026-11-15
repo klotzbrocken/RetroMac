@@ -4899,9 +4899,27 @@ final class DockView: NSView {
                 app("Windows NT Explorer", "com.apple.finder", "programsfolder.png")].compactMap { $0 }
     }
 
+    /// "All Programs": every app on the Mac in folders by kind, then the rest (AllPrograms).
+    private func allProgramsItem() -> StartMenuPanel.MenuItem {
+        typealias MI = StartMenuPanel.MenuItem
+        let apps = AllPrograms.apps()
+        func row(_ a: AllPrograms.App) -> MI {
+            MI(title: a.name, icon: ThemeManager.shared.icon(for: a.bundleID, size: 20),
+               action: { AppLauncher.launchOrActivate(bundleID: a.bundleID) }, bundleID: a.bundleID)
+        }
+        let folderIcon = startMenuIcon("menu-programs.png")
+        var items: [MI] = AllPrograms.Folder.allCases.compactMap { folder in
+            let inside = apps.filter { $0.folder == folder }
+            return inside.isEmpty ? nil : MI(title: folder.rawValue, icon: folderIcon, submenuItems: inside.map(row))
+        }
+        items += apps.filter { $0.folder == nil }.map(row)
+        return MI(title: "All Programs", icon: folderIcon, submenuItems: items)
+    }
+
     private func startMenuProgramItems() -> [StartMenuPanel.MenuItem] {
         typealias MI = StartMenuPanel.MenuItem
-        var programItems: [MI] = []
+        // A folder of its own in front of the list; everything below it stays as it was.
+        var programItems: [MI] = [allProgramsItem(), MI(separator: true)]
         for app in AppManager.shared.apps {
             let bid = app.bundleID
             // Use the THEME-mapped icon (same as the dock), not the raw macOS app icon,
