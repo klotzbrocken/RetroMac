@@ -12,6 +12,7 @@ final class AgentPlayer: NSView {
     let character: AgentCharacter
     var soundsOn = false
     var onClick: (() -> Void)?
+    var onDoubleClick: (() -> Void)?
     var onRightClick: ((NSEvent) -> Void)?
     var onMoved: ((NSPoint) -> Void)?
 
@@ -44,7 +45,7 @@ final class AgentPlayer: NSView {
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
         setAccessibilityLabel(AgentCatalog.title(character.name))
-        setAccessibilityHelp("Click for the clipboard, notes and today's agenda.")
+        setAccessibilityHelp("Click for the clipboard, notes, today's agenda and Wikipedia's article of the day. Double-click for its next animation.")
         showRest()
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -187,9 +188,21 @@ final class AgentPlayer: NSView {
         onMoved?(window.frame.origin)
     }
 
+    private var pendingClick: DispatchWorkItem?
+
+    /// A single click waits the double-click interval, so a double click does only its own thing.
     override func mouseUp(with event: NSEvent) {
         defer { grab = nil }
-        if grab?.moved == false { onClick?() }
+        guard grab?.moved == false else { return }
+        pendingClick?.cancel()
+        if event.clickCount >= 2 {
+            pendingClick = nil
+            onDoubleClick?()
+            return
+        }
+        let w = DispatchWorkItem { [weak self] in self?.onClick?() }
+        pendingClick = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + NSEvent.doubleClickInterval, execute: w)
     }
 
     override func rightMouseDown(with event: NSEvent) { onRightClick?(event) }

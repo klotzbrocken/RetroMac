@@ -41,6 +41,15 @@ final class CompanionTests: XCTestCase {
         }
     }
 
+    func testDoubleClickCyclesThroughTheRealAnimations() throws {
+        let c = try XCTUnwrap(AgentCharacter.load(name: "Clippy", from: agents.appendingPathComponent("Clippy")))
+        let list = CompanionController.cycle(c)
+        XCTAssertGreaterThan(list.count, 20)
+        XCTAssertEqual(list, list.sorted())
+        XCTAssertFalse(list.contains { ["Show", "Hide", "RestPose"].contains($0) || $0.hasPrefix("Idle") })
+        XCTAssertTrue(list.contains("GetTechy"))
+    }
+
     func testWrappersAreStripped() {
         let js = "clippy.ready('X', {\"overlayCount\":2,\"framesize\":[10,20],\"animations\":{\"A\":{\"frames\":[{\"duration\":100}]}}});"
         let parsed = AgentCharacter.parseAnimations(js)

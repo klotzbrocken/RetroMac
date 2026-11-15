@@ -140,6 +140,7 @@ final class CompanionController: ObservableObject {
         let player = AgentPlayer(character: character)
         player.soundsOn = AppSettings.shared.companion.sounds
         player.onClick = { [weak self] in self?.clicked() }
+        player.onDoubleClick = { [weak self] in self?.animateNext() }
         player.onRightClick = { [weak self] e in self?.showMenu(e) }
         player.onMoved = { [weak self] origin in
             UserDefaults.standard.set([origin.x, origin.y], forKey: "companionOrigin")
@@ -250,6 +251,23 @@ final class CompanionController: ObservableObject {
             }
             self.closeBalloon()
         }
+    }
+
+    /// Double click: the character's animations one after another, round and round.
+    private var cycleIndex = 0
+    private func animateNext() {
+        guard let c = player?.character else { return }
+        let list = Self.cycle(c)
+        guard !list.isEmpty else { return }
+        player?.interrupt()
+        player?.play(list[cycleIndex % list.count])
+        cycleIndex += 1
+    }
+
+    /// Everything but showing up, leaving, resting and idling, in name order.
+    static func cycle(_ c: AgentCharacter) -> [String] {
+        let skip: Set<String> = ["Show", "Hide", "HideQuick", "RestPose"]
+        return c.animations.keys.filter { !skip.contains($0) && !$0.hasPrefix("Idle") && !$0.hasPrefix("DeepIdle") }.sorted()
     }
 
     private func clicked() {

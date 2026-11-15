@@ -51,9 +51,7 @@ struct CompanionBalloonView: View {
                 choice("Clipboard history") { model.open(.clipboard) }
                 choice("Note and to-dos") { model.open(.notes) }
                 choice("Today's meetings and reminders") { model.showAgenda() }
-                if AppSettings.shared.companion.wikipedia {
-                    choice("Wikipedia: today's featured article") { model.showWikipedia() }
-                }
+                choice("Wikipedia: today's featured article") { model.showWikipedia() }
                 buttons([("Options", { model.closeBalloon(); AppDelegate.shared?.showSettings(tab: .desktop) }),
                          ("Close", { model.closeBalloon() })])
             }

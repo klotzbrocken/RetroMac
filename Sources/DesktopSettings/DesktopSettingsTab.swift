@@ -365,7 +365,7 @@ struct DesktopSettingsTab: View {
                 ?? "Clippy on the Windows themes, Rover on XP once downloaded; nobody on the others."
         case "sheep": return "Walks on the Windows 95, 98, Me and XP taskbars."
         case "off": return "Clippy and The Genius come with RetroMac; the others download when picked."
-        default: return "Click it for the clipboard, a note and today's agenda; right-click for more."
+        default: return "Click it for the clipboard, a note, today's agenda and Wikipedia's article of the day; double-click to see its animations one by one; right-click for more."
         }
     }
 }
