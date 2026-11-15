@@ -23,7 +23,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   The key that enters the setup can be chosen (Settings ▸ Dock ▸ Behaviour): DEL, which a Mac's
   delete key (⌫) also is, or F1, F2 or F10, and the POST names the one chosen.
 
-- **New theme: Windows NT Workstation 4.0** (Build 1381, 1996, the shell before IE4's Desktop
+- **New theme: Windows NT 4.0**, the Workstation edition (Build 1381, 1996, the shell before IE4's Desktop
   Update). 95's chrome and taskbar without Quick Launch; the desktop of a fresh install (My
   Computer, Network Neighborhood, Inbox, Internet Explorer, Recycle Bin, My Briefcase); the Start
   menu with NT's banner and program groups, whose Administrative Tools open the Mac's own (Disk

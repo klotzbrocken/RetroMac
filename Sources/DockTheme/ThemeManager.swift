@@ -293,7 +293,7 @@ final class ThemeManager {
     static func isCrowned(_ name: String) -> Bool {
         let n = name.lowercased()
         return isMacOSTheme(name)
-            || n.contains("windows xp") || n.contains("windows 98") || n.contains("windows 95") || n.contains("windows me")
+            || n.contains("windows xp") || n.contains("windows 98") || n.contains("windows 95") || n.contains("windows me") || n.contains("windows nt")
             || (n.contains("beos") && n.contains("classic"))
             || n.contains("maiks favourite")
             || n.contains("nextstep")

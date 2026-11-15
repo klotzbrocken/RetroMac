@@ -78,7 +78,7 @@ final class BootPhasesTests: XCTestCase {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let bundle = root.appendingPathComponent("Resources/Themes/WindowsNT4-Workstation.retromactheme")
         let c = try JSONDecoder().decode(DockThemeConfig.self, from: Data(contentsOf: bundle.appendingPathComponent("theme.json")))
-        XCTAssertEqual(c.name, "Windows NT Workstation 4.0")
+        XCTAssertEqual(c.name, "Windows NT 4.0")
         XCTAssertEqual(c.desktopIcons?.map(\.name), ["My Computer", "Network Neighborhood", "Inbox", "Internet Explorer", "Recycle Bin", "My Briefcase"])
         XCTAssertEqual(c.dock.startMenuProfile, "nt4")
         XCTAssertEqual(c.dock.showQuickLaunch, false)
