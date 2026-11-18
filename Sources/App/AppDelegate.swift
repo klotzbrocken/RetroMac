@@ -1491,25 +1491,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let dockOn = AppSettings.shared.dockEnabled
         let currentTheme = AppSettings.shared.dockTheme
 
-        let offItem = NSMenuItem(title: "Off", action: #selector(disableTheme), keyEquivalent: "")
-        offItem.target = self
-        if !dockOn { offItem.state = .on }
-        themesMenu.addItem(offItem)
-        themesMenu.addItem(.separator())
-
         for category in ThemeManager.categories {
             let inCategory = ThemeManager.shared.availableThemes.filter { ThemeManager.category(of: $0) == category }
             guard !inCategory.isEmpty else { continue }
             // Each category is its own submenu entry.
             let catItem = NSMenuItem(title: category, action: nil, keyEquivalent: "")
             let catMenu = NSMenu()
-            for theme in inCategory.sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }) {
-                let item = NSMenuItem(title: ThemeManager.displayName(for: theme.name), action: #selector(selectTheme(_:)), keyEquivalent: "")
+            for theme in ThemeManager.byAge(inCategory) {
+                // A "100 %" Apple or Windows theme wears its family's logo instead of the 💯.
+                let logo = ThemeManager.familyLogo(for: theme)
+                let item = NSMenuItem(title: ThemeManager.displayName(for: theme.name, marker: logo == nil),
+                                      action: #selector(selectTheme(_:)), keyEquivalent: "")
                 item.target = self
                 item.representedObject = theme.name
+                item.image = logo
                 if dockOn && theme.stableID == currentTheme { item.state = .on }
-                // The crown (👑) is carried by displayName across all crowned themes —
-                // one consistent marker, no separate SF-Symbol image.
                 catMenu.addItem(item)
             }
             catItem.submenu = catMenu
@@ -1527,6 +1523,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         thisSpace.state = s.themeOnChosenSpaces && ThemeSpaces.shared.showsThemeHere ? .on : .off
         thisSpace.isEnabled = ThemeSpaces.currentSpace != nil
         themesMenu.addItem(thisSpace)
+        themesMenu.addItem(.separator())
+        let offItem = NSMenuItem(title: "Off", action: #selector(disableTheme), keyEquivalent: "")
+        offItem.target = self
+        if !dockOn { offItem.state = .on }
+        themesMenu.addItem(offItem)
         themesItem.submenu = themesMenu
         menu.addItem(themesItem)
 

@@ -233,6 +233,14 @@ final class AppSettings: ObservableObject {
     @Published var quickAccessSlots: [String] {
         didSet { defaults.set(quickAccessSlots, forKey: "quickAccessSlots") }
     }
+    /// The flyout's Quick Access, one row of eight per tab ("Apple", "Windows", "Various").
+    /// Empty until the flyout first fills it, from `quickAccessSlots` and the themes by age.
+    @Published var quickAccessTabs: [String: [String]] {
+        didSet { defaults.set(quickAccessTabs, forKey: "quickAccessTabs") }
+    }
+    @Published var quickAccessTab: String {
+        didSet { defaults.set(quickAccessTab, forKey: "quickAccessTab") }
+    }
     /// Quick-access flyout: when on, activating a theme restyles only the Dock (no wallpaper).
     @Published var dockOnly: Bool {
         didSet { defaults.set(dockOnly, forKey: "dockOnly") }
@@ -1239,6 +1247,8 @@ final class AppSettings: ObservableObject {
         }
         floatingLauncherEnabled = defaults.object(forKey: "floatingLauncherEnabled") as? Bool ?? true
         quickAccessSlots = defaults.stringArray(forKey: "quickAccessSlots") ?? []
+        quickAccessTabs = defaults.dictionary(forKey: "quickAccessTabs") as? [String: [String]] ?? [:]
+        quickAccessTab = defaults.string(forKey: "quickAccessTab") ?? "Apple"
         dockOnly = defaults.bool(forKey: "dockOnly")
         retroModeTheme = defaults.string(forKey: "retroModeTheme") ?? "Maiks Favourite"
         retroModeShader = defaults.string(forKey: "retroModeShader") ?? ""

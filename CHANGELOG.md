@@ -50,6 +50,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   up on his paper, Peedy yawns and nods off) and wakes at the next click or message. VoiceOver
   reads what it says; with Reduce Motion it stands still.
 
+- **Themes by age.** The menu bar's Themes menu and the flyout list each family youngest era
+  first (Mountain Lion down to System 6, Windows 7 down to 3.1). The 100 % Apple and Windows
+  themes wear the Apple or the Windows logo instead of 💯; Off moves to the bottom of the menu.
+- **Quick Access in tabs.** The flyout's eight slots become three rows of eight: Apple, Windows
+  and Various, each its own. The slots you had go to their family's tab first, the rest of each
+  family fills up behind them. "Edit Quick Access" sits beside RetroMac at the top; the Quick
+  Access caption is gone.
+
 - **Moving windows** (Settings ▸ Themes, under the title bars): *As the era did*, *Outline* or
   *Whole window*. With *Outline* only a frame moves and the window follows when you let go;
   dragged by its own title bar, the bars and borders step aside until it stops, so nothing

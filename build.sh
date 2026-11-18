@@ -107,6 +107,7 @@ cp Resources/rainbow_apple.png "$CONTENTS/Resources/rainbow_apple.png"
 cp Resources/aqua_apple.png "$CONTENTS/Resources/aqua_apple.png"
 cp Resources/aqua_classic_apple.png "$CONTENTS/Resources/aqua_classic_apple.png"
 cp Resources/apple_hell.png "$CONTENTS/Resources/apple_hell.png"
+cp Resources/windows_logo.png "$CONTENTS/Resources/windows_logo.png"   # the Themes menu's mark for the 100 % Windows themes
 cp Resources/IconCatalog.json "$CONTENTS/Resources/IconCatalog.json"   # the working catalogue of historic icons (Lastenheft 3.0, ICO-03)
 
 # Copy dock themes

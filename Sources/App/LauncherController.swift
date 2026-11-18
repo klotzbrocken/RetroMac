@@ -155,7 +155,7 @@ final class LauncherController {
 
 /// Publishes the live state the launcher renders, refreshed on the relevant notifications.
 final class LauncherModel: ObservableObject {
-    struct ThemeItem: Identifiable { let id = UUID(); let name: String; let icon: NSImage? }
+    struct ThemeItem: Identifiable { let id = UUID(); let name: String; let icon: NSImage?; var tab = "Various" }
     struct PresetGroup: Identifiable { let id = UUID(); let title: String; let items: [(id: String, name: String)] }
 
     @Published var specialThemes: [ThemeItem] = []
@@ -200,9 +200,10 @@ final class LauncherModel: ObservableObject {
 
     func refresh() {
         let mgr = ThemeManager.shared
-        let all = mgr.availableThemes.map { t -> ThemeItem in
+        // Youngest era first, as the menu bar's Themes menu lists them.
+        let all = ThemeManager.byAge(mgr.availableThemes).map { t -> ThemeItem in
             let img = t.themeIconURL().flatMap { NSImage(contentsOf: $0) }
-            return ThemeItem(name: t.config.name, icon: img)
+            return ThemeItem(name: t.config.name, icon: img, tab: ThemeManager.quickAccessTab(of: t))
         }
         allThemes = all
         specialThemes = all.filter { Self.isSpecial($0.name) }
@@ -291,12 +292,17 @@ struct LauncherView: View {
         }
     }
 
-    /// Exactly 8 slot entries ("" = empty).
+    static let tabs = ["Apple", "Windows", "Various"]
+    private var tab: String { Self.tabs.contains(settings.quickAccessTab) ? settings.quickAccessTab : "Apple" }
+
+    /// Exactly 8 slot entries ("" = empty) of the tab on show.
     private var slots: [String] {
-        var s = settings.quickAccessSlots
+        var s = settings.quickAccessTabs[tab] ?? []
         if s.count < 8 { s += Array(repeating: "", count: 8 - s.count) }
         return Array(s.prefix(8))
     }
+
+    private func store(_ s: [String]) { settings.quickAccessTabs[tab] = Array(s.prefix(8)) }
 
     var body: some View {
         Group {
@@ -332,7 +338,7 @@ struct LauncherView: View {
             }
             ScrollView {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 12) {
-                    ForEach(model.allThemes) { t in
+                    ForEach(model.allThemes.filter { $0.tab == tab }) { t in
                         Button {
                             if let s = changingSlot { setSlot(s, t.name) }
                             changingSlot = nil
@@ -367,18 +373,27 @@ struct LauncherView: View {
 
     // MARK: - Slot helpers
 
+    /// First open with tabs: the eight slots the flyout had go to their family's tab, then each
+    /// tab fills up with the rest of its family, youngest era first.
     private func prefillSlotsIfNeeded() {
-        guard settings.quickAccessSlots.allSatisfy({ $0.isEmpty }) else { return }
-        let starter = model.specialThemes.map { $0.name } + model.otherThemes.map { $0.name }
-        var s = Array(starter.prefix(8))
-        if s.count < 8 { s += Array(repeating: "", count: 8 - s.count) }
-        settings.quickAccessSlots = s
+        guard settings.quickAccessTabs.isEmpty else { return }
+        settings.quickAccessTabs = Self.sorted(previous: settings.quickAccessSlots, into: model.allThemes)
+    }
+
+    static func sorted(previous: [String], into themes: [LauncherModel.ThemeItem]) -> [String: [String]] {
+        var tabs: [String: [String]] = [:]
+        let byName = Dictionary(themes.map { ($0.name, $0.tab) }, uniquingKeysWith: { a, _ in a })
+        for name in previous + themes.map(\.name) {
+            guard let t = byName[name], tabs[t, default: []].count < 8, !tabs[t, default: []].contains(name) else { continue }
+            tabs[t, default: []].append(name)
+        }
+        return tabs
     }
 
     private func setSlot(_ index: Int, _ name: String) {
         var s = slots
         s[index] = name
-        settings.quickAccessSlots = s
+        store(s)
     }
 
     /// Tap a slot: activate its theme, or deactivate if it's already active.
@@ -402,21 +417,21 @@ struct LauncherView: View {
             }
             Text("RetroMac").font(.system(size: 14, weight: .bold))
             Spacer()
+            Button(editMode ? "Done" : "Edit Quick Access") { editMode.toggle() }
+                .buttonStyle(.plain)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(accentBlue)
         }
     }
 
     private var quickAccess: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("QUICK ACCESS").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
-                Spacer()
-                Button(editMode ? "Done" : "Edit") {
-                    editMode.toggle()
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(accentBlue)
+            Picker("Quick Access", selection: Binding(get: { tab }, set: { settings.quickAccessTab = $0 })) {
+                ForEach(Self.tabs, id: \.self) { Text($0).tag($0) }
             }
+            .pickerStyle(.segmented)
+            .controlSize(.mini)
+            .labelsHidden()
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 12) {
                 ForEach(0..<8, id: \.self) { i in slotView(i) }
             }
@@ -470,7 +485,7 @@ struct LauncherView: View {
         let item = s.remove(at: from)
         let dest = from < index ? index - 1 : index
         s.insert(item, at: max(0, min(dest, s.count)))
-        settings.quickAccessSlots = Array(s.prefix(8))
+        store(s)
         return true
     }
 

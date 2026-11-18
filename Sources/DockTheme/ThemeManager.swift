@@ -302,7 +302,7 @@ final class ThemeManager {
 
     /// User-facing theme name: "100 %" themes get a 💯 marker AFTER the name; the Mac OS
     /// family also gets a full "Mac OS …" name. Internal names are unchanged (display only).
-    static func displayName(for name: String) -> String {
+    static func displayName(for name: String, marker: Bool = true) -> String {
         var s = name
         switch name {
         case "Mountain Lion":      s = "Mac OS Mountain Lion"
@@ -311,7 +311,36 @@ final class ThemeManager {
         case "Mac OS 6 classic":   s = "Apple System 6"
         default: break
         }
-        return isCrowned(name) ? s + " 💯" : s
+        return marker && isCrowned(name) ? s + " 💯" : s
+    }
+
+    /// Youngest era first: newest release year at the top, a theme without one at the end,
+    /// equal years by name.
+    static func byAge(_ themes: [ThemeBundle]) -> [ThemeBundle] {
+        themes.sorted { a, b in
+            let ya = a.config.release?.year ?? Int.min, yb = b.config.release?.year ?? Int.min
+            return ya != yb ? ya > yb : a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+        }
+    }
+
+    /// The family a "100 %" theme shows instead of 💯 in the menu: the Apple or the Windows
+    /// logo. Nil for every other theme, which keeps the 💯 (or nothing).
+    static func familyLogo(for theme: ThemeBundle) -> NSImage? {
+        guard isCrowned(theme.name) else { return nil }
+        let img: NSImage?
+        switch category(of: theme) {
+        case "Apple": img = NSImage(systemSymbolName: "apple.logo", accessibilityDescription: "Apple")
+        case "Windows": img = Bundle.main.image(forResource: "windows_logo").map { i in i.accessibilityDescription = "Windows"; return i }
+        default: img = nil
+        }
+        img?.isTemplate = true
+        img?.size = NSSize(width: 14, height: 14)
+        return img
+    }
+
+    /// The flyout's Quick Access tabs: Apple, Windows, and everything else.
+    static func quickAccessTab(of theme: ThemeBundle) -> String {
+        switch category(of: theme) { case "Apple": return "Apple"; case "Windows": return "Windows"; default: return "Various" }
     }
 
     /// Per-theme dock variants ("Dock instead of Control Strip" options).
