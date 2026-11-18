@@ -252,7 +252,7 @@ final class TitleBarOverlayController {
     /// does — the picture zooms away, no shrinking into a corner (`MinimizeZoom`).
     private func takeCommandM() {
         MinimizeZoom.shared.onCommandM = { [weak self] in self?.minimizeFront() }
-        MinimizeZoom.shared.setHotKey(MinimizeZoom.wanted && (style?.isBar == true || style == .fireLights))
+        MinimizeZoom.shared.setHotKey(MinimizeZoom.wanted && (style?.isBar == true || MinimizeZoom.intoDockIcon))
     }
 
     /// ⌘M: the front window with a bar goes through the bar's own minimise; one without (an
