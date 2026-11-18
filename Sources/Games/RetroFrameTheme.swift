@@ -112,6 +112,9 @@ enum RetroFrameTheme {
       background:linear-gradient(to bottom,#f5f5f5 0 1px,transparent 1px),
         repeating-linear-gradient(to bottom,rgba(255,255,255,.05) 0 1px,rgba(0,0,0,.035) 1px 2px,rgba(255,255,255,0) 2px 3px),
         linear-gradient(to right,#b6b6b6,#c4c4c4 20%,#cfcfcf 35%,#dadada 50%,#d0d0d0 65%,#c4c4c4 80%,#b6b6b6)!important;}
+    body.brushed .mx-toolbar,body.brushed .be-win{border-bottom-color:#8e8e8e!important;
+      background:repeating-linear-gradient(to bottom,rgba(255,255,255,.05) 0 1px,rgba(0,0,0,.035) 1px 2px,rgba(255,255,255,0) 2px 3px),
+        linear-gradient(to right,#b6b6b6,#c4c4c4 20%,#cfcfcf 35%,#dadada 50%,#d0d0d0 65%,#c4c4c4 80%,#b6b6b6)!important;}
     body.brushed .mx-cap,body.brushed .mx-caption{text-shadow:0 1px 0 rgba(255,255,255,.7)!important;}
     """
 

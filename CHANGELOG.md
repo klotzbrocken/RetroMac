@@ -33,7 +33,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   lines, as on 10.4. Spotlight takes the rightmost place macOS gives an app. The Finder's
   toolbar has Tiger's glossy buttons (pale blue for the chosen view, grey arrows when there is
   nowhere to go), all three lights work, the sidebar selection is 10.4's blue, folders are
-  paled to its light blue and the icon grid is roomier.
+  paled to its light blue and the icon grid is roomier. The sidebar carries 10.4's own pictures
+  (Network's globe, the disk, Desktop, the house, Applications, Documents, Movies, Music,
+  Pictures) in 10.4's taller rows, Network first. The TV folder's toolbar is metal too.
 - **Exposé's F11.** A third Exposé shortcut (Settings ▸ Shortcuts, ⌃F11): every app out of the
   way and the desktop bare; again brings them back.
 - **Tiger's start-up chime.** On *Firmware → OS Boot → Desktop* Tiger strikes the Mac's

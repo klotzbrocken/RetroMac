@@ -86,5 +86,55 @@
  {
   "file": "(start-up chime)",
   "source": "Synthesised at run time by Sources/Sounds/MacChime.swift: an F-sharp major chord, no recording"
+ },
+ {
+  "file": "sidebar/applications.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Finder-Home.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "2dde98b59188971adaadd1c05eae7446dbaf5389bdaef346bb2bf27411c9528b"
+ },
+ {
+  "file": "sidebar/desktop.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Applications.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "c9aeed1241fd6844c9cd7a03ca8df70ef8596a38ef0df417281379d96aa8e6cd"
+ },
+ {
+  "file": "sidebar/disk.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Applications.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "098d7d760724d7e3bd3ed055e85e2c2a03537bbe8f095f2ac495fe310d714667"
+ },
+ {
+  "file": "sidebar/documents.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Applications.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "bc12cac1c44d4076bf7a9da88446ef1c9ee4e279059bf76abeb503cb404ed544"
+ },
+ {
+  "file": "sidebar/folder.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Applications.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "338938ead2e3a5ba8006d2672b69e34658e5ce5ea57caaea6dc834f901e2201d"
+ },
+ {
+  "file": "sidebar/home.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Applications.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "de1269835dd72c41e6d075df026da2a21b4790a9014f2cff2438d36877ebe107"
+ },
+ {
+  "file": "sidebar/movies.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Applications.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "23e067603df943d47f959012b09f24318b11634261fab6d529aa52700630043f"
+ },
+ {
+  "file": "sidebar/music.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Applications.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "680c8779a8232788cfc352f545fff9a1eac91836ba122849e6652f34089f8ae4"
+ },
+ {
+  "file": "sidebar/network.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Applications.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "16313d04a353615f7f2534c138861892c651ee614270815e1717c8124f568bc1"
+ },
+ {
+  "file": "sidebar/pictures.png",
+  "source": "Cut from a Mac OS X 10.4 screenshot (10-4-Tiger-Applications.png, Maik, Nov 2026): the Finder sidebar's 32-px picture, white around it taken out",
+  "sha256": "eb1772d06a79fc1353e333a3678727e76f4e34ff739ce544315488698201dc6e"
  }
 ]

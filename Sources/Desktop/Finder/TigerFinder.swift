@@ -663,21 +663,23 @@ final class MetalSegments: NSView {
 /// The places down the left: the startup disk, then the folders of the home.
 final class FinderSidebar: NSTableView, NSTableViewDataSource, NSTableViewDelegate {
     var onPick: ((URL) -> Void)?
-    private let places: [(String, URL)?]
+    private let places: [(String, URL, String)?]
 
     override init(frame: NSRect) {
         let fm = FileManager.default, home = fm.homeDirectoryForCurrentUser
         func dir(_ d: FileManager.SearchPathDirectory) -> URL { fm.urls(for: d, in: .userDomainMask).first ?? home }
-        places = [("Macintosh HD", URL(fileURLWithPath: "/")), nil,
-                  ("Desktop", dir(.desktopDirectory)), (NSUserName(), home),
-                  ("Applications", URL(fileURLWithPath: "/Applications")), ("Documents", dir(.documentDirectory)),
-                  ("Movies", dir(.moviesDirectory)), ("Music", dir(.musicDirectory)), ("Pictures", dir(.picturesDirectory))]
+        // 10.4's sidebar, in its order. Network has no folder of its own any more: it shows the
+        // mounted volumes, shares among them.
+        places = [("Network", URL(fileURLWithPath: "/Volumes"), "network"), ("Macintosh HD", URL(fileURLWithPath: "/"), "disk"), nil,
+                  ("Desktop", dir(.desktopDirectory), "desktop"), (NSUserName(), home, "home"),
+                  ("Applications", URL(fileURLWithPath: "/Applications"), "applications"), ("Documents", dir(.documentDirectory), "documents"),
+                  ("Movies", dir(.moviesDirectory), "movies"), ("Music", dir(.musicDirectory), "music"), ("Pictures", dir(.picturesDirectory), "pictures")]
         super.init(frame: frame)
         let c = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("place"))
         addTableColumn(c)
         headerView = nil
         columnAutoresizingStyle = .uniformColumnAutoresizingStyle
-        rowHeight = 24
+        rowHeight = 34   // 10.4's: 32-point pictures
         dataSource = self; delegate = self
         target = self; action = #selector(pick)
         setAccessibilityLabel("Places")
@@ -686,44 +688,43 @@ final class FinderSidebar: NSTableView, NSTableViewDataSource, NSTableViewDelega
     required init?(coder: NSCoder) { fatalError() }
 
     func select(_ url: URL?) {
-        guard let url, let row = places.firstIndex(where: { $0?.1.standardizedFileURL == url.standardizedFileURL }) else {
+        guard let url, let row = places.firstIndex(where: { $0?.1.standardizedFileURL == url.standardizedFileURL && $0?.2 != "network" }) else {
             deselectAll(nil); return
         }
         selectRowIndexes([row], byExtendingSelection: false)
     }
 
     func numberOfRows(in t: NSTableView) -> Int { places.count }
-    func tableView(_ t: NSTableView, heightOfRow row: Int) -> CGFloat { places[row] == nil ? 9 : 24 }
+    func tableView(_ t: NSTableView, heightOfRow row: Int) -> CGFloat { places[row] == nil ? 9 : 34 }
     func tableView(_ t: NSTableView, shouldSelectRow row: Int) -> Bool { places[row] != nil }
     func tableView(_ t: NSTableView, rowViewForRow row: Int) -> NSTableRowView? { TigerSelectionRow() }
     func tableView(_ t: NSTableView, viewFor col: NSTableColumn?, row: Int) -> NSView? {
-        guard let (name, url) = places[row] else {
+        guard let (name, url, picture) = places[row] else {
             let line = NSBox(); line.boxType = .separator; return line
         }
         let cell = NSTableCellView()
-        let img = NSImageView(image: Self.icon(for: url))
+        let img = NSImageView(image: Self.icon(picture, for: url))
         let text = NSTextField(labelWithString: name)
         text.font = .systemFont(ofSize: 12)
         for v in [img, text] { v.translatesAutoresizingMaskIntoConstraints = false; cell.addSubview(v) }
         cell.imageView = img; cell.textField = text
         NSLayoutConstraint.activate([img.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 4),
                                      img.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
-                                     img.widthAnchor.constraint(equalToConstant: 20), img.heightAnchor.constraint(equalToConstant: 20),
+                                     img.widthAnchor.constraint(equalToConstant: 30), img.heightAnchor.constraint(equalToConstant: 30),
                                      text.leadingAnchor.constraint(equalTo: img.trailingAnchor, constant: 5),
                                      text.trailingAnchor.constraint(equalTo: cell.trailingAnchor),
                                      text.centerYAnchor.constraint(equalTo: cell.centerYAnchor)])
         return cell
     }
     @objc private func pick() {
-        guard clickedRow >= 0, let (_, url) = places[clickedRow] else { return }
+        guard clickedRow >= 0, let (_, url, _) = places[clickedRow] else { return }
         onPick?(url)
     }
 
-    /// Tiger's pictures where the theme has them (the disk, Applications), the Mac's otherwise.
-    static func icon(for url: URL) -> NSImage {
-        let theme = ThemeManager.shared.activeTheme
-        let own: String? = url.path == "/" ? "harddisk.png" : url.path == "/Applications" ? "applicationsfolder.png" : nil
-        if let own, let u = theme?.iconResource(own), let img = NSImage(contentsOf: u) { return img }
+    /// 10.4's own sidebar pictures (the theme's `sidebar/` folder, cut from 10.4 screenshots);
+    /// the Mac's, paled to Tiger's blue, where a theme has none.
+    static func icon(_ picture: String, for url: URL) -> NSImage {
+        if let u = ThemeManager.shared.activeTheme?.rootResource("sidebar/\(picture).png"), let img = NSImage(contentsOf: u) { return img }
         return FinderItem.tigerTint(NSWorkspace.shared.icon(forFile: url.path))
     }
 }
