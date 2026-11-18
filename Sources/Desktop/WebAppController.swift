@@ -469,6 +469,9 @@ final class WebAppChromeView: NSView {
     var onBack: (() -> Void)?
     var onForward: (() -> Void)?
     var onZoom: (() -> Void)?
+    var onMinimize: (() -> Void)?
+    /// A real window (Tiger's Finder): all three lights in colour and working, not a widget's close.
+    var windowControls = false
     /// The Tiger Finder retitles its window as it moves from folder to folder.
     var title: String { didSet { needsDisplay = true } }
     private let iconImage: NSImage?
@@ -594,11 +597,16 @@ final class WebAppChromeView: NSView {
         let lights = AquaChrome.lightRects(in: bar, flipped: true)
         tracker.reset()
         tracker.add(.close, lights[0].insetBy(dx: -2, dy: -2), interactive: true)
+        if windowControls {
+            tracker.add(.minimize, lights[1].insetBy(dx: -2, dy: -2), interactive: true)
+            tracker.add(.zoom, lights[2].insetBy(dx: -2, dy: -2), interactive: true)
+        }
         // A widget neither minimises nor zooms: those two wear the grey of a button that is not
         // there for this window, as Aqua drew them, rather than promising something in colour.
-        let kinds: [SnowLeopardChrome.Light] = [.close, .minimize, .zoom]
-        for (k, r) in zip(kinds, lights) {
-            AquaGem.draw(r, k, active: active && k == .close, pressed: k == .close && tracker.state(for: .close) == .pressed, flipped: true)
+        let kinds: [(SnowLeopardChrome.Light, ChromeButtonKind)] = [(.close, .close), (.minimize, .minimize), (.zoom, .zoom)]
+        for ((k, b), r) in zip(kinds, lights) {
+            let live = k == .close || windowControls
+            AquaGem.draw(r, k, active: active && live, pressed: live && tracker.state(for: b) == .pressed, flipped: true)
         }
         if active && tracker.state(for: .close) == .hovered { SnowLeopardChrome.drawGlyph(.close, in: lights[0]) }
         AquaChrome.title(title, bar: bar, active: active, flipped: true, minX: lights[2].maxX, maxX: b.width - lights[2].maxX)
@@ -1207,6 +1215,7 @@ final class WebAppChromeView: NSView {
         switch r.fire {
         case .close: onClose?()
         case .zoom:  onZoom?()
+        case .minimize: onMinimize?()
         default: break
         }
     }

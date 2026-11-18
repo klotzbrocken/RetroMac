@@ -348,8 +348,10 @@ final class TVBrowserWindow: NSObject {
     }
 
     private func applySnowLeopardChrome(_ win: NSWindow, title: String) {
-        guard RetroFrameTheme.key() == "snowleopard", let content = win.contentView else { return }
-        let bar = SnowLeopardTVChromeView.barH, b = SnowLeopardTVChromeView.border
+        let key = RetroFrameTheme.key()
+        guard key == "snowleopard" || key == "macosx", let content = win.contentView else { return }
+        let aqua = key == "macosx"   // 10.0 to 10.4: Aqua's bar, Tiger's metal where the theme has it
+        let bar = aqua ? AquaChrome.barHeight : SnowLeopardTVChromeView.barH, b = SnowLeopardTVChromeView.border
         let size = win.frame.size
         win.styleMask = [.borderless, .resizable]
         win.isOpaque = false
@@ -359,6 +361,7 @@ final class TVBrowserWindow: NSObject {
         content.autoresizingMask = [.width, .height]
         let chrome = SnowLeopardTVChromeView(frame: NSRect(origin: .zero, size: size))
         chrome.wantsLayer = true
+        chrome.aqua = aqua
         chrome.title = title
         chrome.onClose = { [weak self] in self?.window?.close() }
         chrome.onMin = { [weak self] in self?.toggleMac9Collapse() }   // roll up (no taskbar here)
@@ -376,6 +379,7 @@ final class TVBrowserWindow: NSObject {
         switch RetroFrameTheme.key() {
         case "winxp":       bar = WinXPTVChromeView.barH
         case "snowleopard": bar = SnowLeopardTVChromeView.barH
+        case "macosx":      bar = AquaChrome.barHeight
         default:            bar = Mac9TVChromeView.barH
         }
         if let h = mac9PreCollapseHeight {

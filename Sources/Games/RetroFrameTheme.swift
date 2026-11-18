@@ -89,4 +89,30 @@ enum RetroFrameTheme {
         env["RETROMAC_THEME"] = key()
         return env
     }
+
+    /// What a widget page runs to dress itself: its `setTheme`, and under a theme with 10.4's
+    /// metal (`chrome.titleBar: "brushed"`) a layer that turns the Aqua bar and frame into it,
+    /// with the same profile `AquaChrome.brushedBar` draws natively.
+    static func widgetThemeJS(_ key: String) -> String {
+        var js = "window.setTheme && window.setTheme('\(key)');"
+        let on = AquaChrome.brushed && key == "macosx"
+        js += """
+        (function(){var s=document.getElementById('rm-brushed');
+        if(!s){s=document.createElement('style');s.id='rm-brushed';s.textContent=`\(brushedCSS)`;document.head.appendChild(s);}
+        document.body.classList.toggle('brushed',\(on));})();
+        """
+        return js
+    }
+
+    private static let brushedCSS = """
+    body.brushed #win,body.brushed .window{border-color:#7e7e7e!important;
+      background:repeating-linear-gradient(to bottom,rgba(255,255,255,.05) 0 1px,rgba(0,0,0,.035) 1px 2px,rgba(255,255,255,0) 2px 3px),
+        linear-gradient(to right,#b6b6b6,#c4c4c4 20%,#cfcfcf 35%,#dadada 50%,#d0d0d0 65%,#c4c4c4 80%,#b6b6b6)!important;}
+    body.brushed .mx-title{border-bottom:1px solid #8e8e8e!important;
+      background:linear-gradient(to bottom,#f5f5f5 0 1px,transparent 1px),
+        repeating-linear-gradient(to bottom,rgba(255,255,255,.05) 0 1px,rgba(0,0,0,.035) 1px 2px,rgba(255,255,255,0) 2px 3px),
+        linear-gradient(to right,#b6b6b6,#c4c4c4 20%,#cfcfcf 35%,#dadada 50%,#d0d0d0 65%,#c4c4c4 80%,#b6b6b6)!important;}
+    body.brushed .mx-cap,body.brushed .mx-caption{text-shadow:0 1px 0 rgba(255,255,255,.7)!important;}
+    """
+
 }

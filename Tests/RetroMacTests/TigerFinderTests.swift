@@ -62,3 +62,22 @@ final class TigerFinderTests: XCTestCase {
         XCTAssertEqual(f.view.list.numberOfRows, 5)
     }
 }
+
+/// Tiger's About This Mac, drawn offscreen (tiger-about.png with RETROMAC_SNAPSHOT_DIR).
+final class TigerAboutTests: XCTestCase {
+    @MainActor
+    func testAboutWindowLaysOutTigersRows() throws {
+        let w = TigerAboutWindow.shared.makeWindow()
+        let v = try XCTUnwrap(w.contentView)
+        let texts = v.subviews.compactMap { ($0 as? NSTextField)?.stringValue }
+        XCTAssertTrue(texts.contains("Mac OS X"))
+        XCTAssertTrue(texts.contains("Processor") && texts.contains("Memory"))
+        XCTAssertFalse(texts.contains("Startup Disk"), "10.4 had no startup disk row")
+        XCTAssertTrue(texts.contains { $0.contains("1983\u{2013}2005 Apple Computer") })
+        if let out = ProcessInfo.processInfo.environment["RETROMAC_SNAPSHOT_DIR"],
+           let rep = v.bitmapImageRepForCachingDisplay(in: v.bounds) {
+            v.cacheDisplay(in: v.bounds, to: rep)
+            try rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: out).appendingPathComponent("tiger-about.png"))
+        }
+    }
+}

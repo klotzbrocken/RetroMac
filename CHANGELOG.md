@@ -24,6 +24,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Applications, Documents, Folders, Images and the rest, at most five each, from the Mac's own
   index. The arrows move, Return opens, Escape closes; Show All opens the results in the Finder.
   A search typed over never shows the results of the letters before. ⌘Space stays the Mac's.
+- **Tiger's details, against 10.4 screenshots.** About This Mac is 10.4's own: the small window
+  with the smooth grey bar and faint pinstripes, the silver apple, "Mac OS X", Processor and
+  Memory, 2005's copyright line. The Apple menu is 10.4's (About This Mac, Software Update…,
+  Mac OS X Software…, Force Quit with the front app's name, Restart…, Shut Down…, Log Out with
+  your name) in the white menu. The desktop's Clock, CPU, Notepad, Calculator and TV wear brushed
+  metal, the TV window too. The dock's edge and divider are dark, a groove between two light
+  lines, as on 10.4. Spotlight takes the rightmost place macOS gives an app. The Finder's
+  toolbar has Tiger's glossy buttons (pale blue for the chosen view, grey arrows when there is
+  nowhere to go), all three lights work, the sidebar selection is 10.4's blue, folders are
+  paled to its light blue and the icon grid is roomier.
 - **Exposé's F11.** A third Exposé shortcut (Settings ▸ Shortcuts, ⌃F11): every app out of the
   way and the desktop bare; again brings them back.
 - **Tiger's start-up chime.** On *Firmware → OS Boot → Desktop* Tiger strikes the Mac's

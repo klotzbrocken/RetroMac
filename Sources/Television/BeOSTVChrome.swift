@@ -325,6 +325,9 @@ final class SnowLeopardTVChromeView: NSView {
     static let barH: CGFloat = SnowLeopardChrome.barH
     static let border: CGFloat = 1
     var title = ""
+    /// Mac OS X 10.0 to 10.4 instead: `AquaChrome`'s bar (pinstripes, or Tiger's metal) and gems.
+    var aqua = false
+    var barHeight: CGFloat { aqua ? AquaChrome.barHeight : Self.barH }
     var onClose: (() -> Void)?
     var onMin: (() -> Void)?
     var onMax: (() -> Void)?
@@ -332,11 +335,17 @@ final class SnowLeopardTVChromeView: NSView {
     private let gap: CGFloat = SnowLeopardChrome.lightGap
     private var tracker = ChromeButtonTracker()
 
-    private var barRect: NSRect { NSRect(x: 0, y: bounds.height - Self.barH, width: bounds.width, height: Self.barH) }
-    private var dotY: CGFloat { bounds.height - Self.barH + (Self.barH - dotS) / 2 }
-    private var closeRect: NSRect { NSRect(x: SnowLeopardChrome.lightInset, y: dotY, width: dotS, height: dotS) }
-    private var minRect: NSRect { NSRect(x: closeRect.maxX + gap, y: dotY, width: dotS, height: dotS) }
-    private var maxRect: NSRect { NSRect(x: minRect.maxX + gap, y: dotY, width: dotS, height: dotS) }
+    private var barRect: NSRect { NSRect(x: 0, y: bounds.height - barHeight, width: bounds.width, height: barHeight) }
+    private var dotY: CGFloat { bounds.height - barHeight + (barHeight - dotS) / 2 }
+    private var lights: [NSRect] {
+        if aqua { return AquaChrome.lightRects(in: barRect, flipped: false) }
+        let c = NSRect(x: SnowLeopardChrome.lightInset, y: dotY, width: dotS, height: dotS)
+        let m = NSRect(x: c.maxX + gap, y: dotY, width: dotS, height: dotS)
+        return [c, m, NSRect(x: m.maxX + gap, y: dotY, width: dotS, height: dotS)]
+    }
+    private var closeRect: NSRect { lights[0] }
+    private var minRect: NSRect { lights[1] }
+    private var maxRect: NSRect { lights[2] }
 
     override var isOpaque: Bool { false }
     private var isActive: Bool { window?.isKeyWindow ?? true }
@@ -363,6 +372,17 @@ final class SnowLeopardTVChromeView: NSView {
         NSBezierPath(rect: bounds).fill()
 
         let bar = barRect
+        if aqua {
+            AquaChrome.titleBar(bar, active: active, flipped: false)
+            tracker.reset()
+            let kinds: [(ChromeButtonKind, SnowLeopardChrome.Light)] = [(.close, .close), (.minimize, .minimize), (.maximize, .zoom)]
+            for ((k, light), r) in zip(kinds, lights) {
+                tracker.add(k, r.insetBy(dx: -2, dy: -2), interactive: true)
+                AquaGem.draw(r, light, active: active, pressed: tracker.state(for: k) == .pressed, flipped: false)
+            }
+            AquaChrome.title(title, bar: bar, active: active, flipped: false, minX: maxRect.maxX, maxX: bounds.width - maxRect.maxX)
+            return
+        }
         SnowLeopardChrome.drawTitleBar(bar, active: active, flipped: false)
 
         tracker.reset()

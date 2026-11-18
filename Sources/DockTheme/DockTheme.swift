@@ -428,6 +428,7 @@ extension DockThemeConfig {
     var hasMacOSXAppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "macosx" }
     var hasMountainLionAppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "mountainlion" }
     var hasSnowLeopardAppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "snowleopard" }
+    var hasTigerAppleMenu: Bool { menuBar?.appleMenuStyle?.lowercased() == "tiger" }
     /// Maiks-Favourite extras: hover a running icon → window preview; click a folder → file fan.
     var hasWindowPreview: Bool { dock.windowPreview == true }
     var hasFolderStacks: Bool { dock.folderStacks == true }

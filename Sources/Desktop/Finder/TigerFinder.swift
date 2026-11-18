@@ -1,4 +1,5 @@
 import AppKit
+import CoreImage
 
 /// Mac OS X 10.4's Finder, rebuilt for the Tiger theme (`"finder": "tiger"` in a manifest): a
 /// brushed-metal window with Back/Forward, the three views, the action menu and a search field
@@ -67,10 +68,12 @@ final class TigerFinder: NSObject {
         let chrome = WebAppChromeView(frame: frame, title: "", showNav: false)
         chrome.onClose = { [weak self] in self?.close() }
         chrome.onZoom = { [weak self] in self?.toggleZoom() }
+        chrome.onMinimize = { [weak self] in self?.panel?.miniaturize(nil) }
+        chrome.windowControls = true
         chrome.embed(view)
         self.chrome = chrome
 
-        let p = FinderPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let p = FinderPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel, .miniaturizable], backing: .buffered, defer: false)
         p.level = .normal
         p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
         p.hidesOnDeactivate = false
@@ -433,7 +436,7 @@ final class FinderView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         let layout = NSCollectionViewFlowLayout()
-        layout.itemSize = NSSize(width: 112, height: 96)
+        layout.itemSize = NSSize(width: 136, height: 100)   // 10.4's roomy grid
         layout.minimumInteritemSpacing = 6; layout.minimumLineSpacing = 8
         layout.sectionInset = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         icons.collectionViewLayout = layout
@@ -506,71 +509,155 @@ final class FinderView: NSView {
     }
 }
 
-/// Back/Forward, the three views, the action menu and the search field.
+/// Back/Forward, the three views, the action menu and the search field, as 10.4 drew them.
 final class FinderToolbar: NSView {
     var onBack: (() -> Void)?, onForward: (() -> Void)?
     var onMode: ((TigerFinder.Mode) -> Void)?
     var onAction: ((TigerFinder.Action) -> Void)?
     var onSearch: ((String) -> Void)?
     let search = NSSearchField()
-    private let nav = NSSegmentedControl()
-    private let views = NSSegmentedControl()
-    private let action = NSPopUpButton(frame: .zero, pullsDown: true)
+    private let nav = MetalSegments(glyphs: [.back, .forward], label: "Back and Forward")
+    private let views = MetalSegments(glyphs: [.icons, .list, .columns], label: "View")
+    private let action = MetalSegments(glyphs: [.gear], label: "Action")
+    private let actionMenu = NSMenu()
 
     override var isFlipped: Bool { true }
 
     override init(frame: NSRect) {
         super.init(frame: frame)
-        nav.segmentCount = 2
-        nav.setImage(NSImage(named: NSImage.goBackTemplateName), forSegment: 0)
-        nav.setImage(NSImage(named: NSImage.goForwardTemplateName), forSegment: 1)
-        nav.trackingMode = .momentary
-        nav.target = self; nav.action = #selector(navClick)
-        nav.setAccessibilityLabel("Back and Forward")
-        views.segmentCount = 3
-        for (i, n) in [NSImage.iconViewTemplateName, NSImage.listViewTemplateName, NSImage.columnViewTemplateName].enumerated() {
-            views.setImage(NSImage(named: n), forSegment: i)
-            views.setWidth(28, forSegment: i)
-        }
-        views.setToolTip("Icons", forSegment: 0); views.setToolTip("List", forSegment: 1); views.setToolTip("Columns", forSegment: 2)
-        views.trackingMode = .selectOne
-        views.target = self; views.action = #selector(viewClick)
-        views.setAccessibilityLabel("View")
-        action.addItem(withTitle: "")
-        action.item(at: 0)?.image = NSImage(named: NSImage.actionTemplateName)
+        nav.onPick = { [weak self] i in i == 0 ? self?.onBack?() : self?.onForward?() }
+        views.selectable = true
+        views.onPick = { [weak self] i in TigerFinder.Mode(rawValue: i).map { self?.onMode?($0) } }
+        views.toolTips = ["Icons", "List", "Columns"]
         for (t, a) in [("New Folder", TigerFinder.Action.newFolder), ("Rename\u{2026}", .rename), ("Duplicate", .duplicate),
                        ("Move to Trash", .trash), ("Show in the Mac\u{2019}s Finder", .revealInFinder)] {
             let item = NSMenuItem(title: t, action: #selector(actionPick(_:)), keyEquivalent: "")
             item.target = self; item.representedObject = a
-            action.menu?.addItem(item)
+            actionMenu.addItem(item)
         }
-        action.bezelStyle = .texturedRounded
-        action.setAccessibilityLabel("Action")
-        search.placeholderString = ""
+        action.onPick = { [weak self] _ in
+            guard let self else { return }
+            self.actionMenu.popUp(positioning: nil, at: NSPoint(x: self.action.frame.minX, y: self.action.frame.maxY + 2), in: self)
+        }
         search.target = self; search.action = #selector(searchChange)
         search.sendsSearchStringImmediately = false
         search.sendsWholeSearchString = true
+        search.controlSize = .small
         for v in [nav, views, action, search] as [NSView] { addSubview(v) }
     }
     required init?(coder: NSCoder) { fatalError() }
 
     override func setFrameSize(_ s: NSSize) {
         super.setFrameSize(s)
-        nav.frame = NSRect(x: 10, y: 7, width: 60, height: 24)
-        views.frame = NSRect(x: 78, y: 7, width: 92, height: 24)
-        action.frame = NSRect(x: 178, y: 6, width: 46, height: 26)
-        search.frame = NSRect(x: max(240, s.width - 190), y: 8, width: 180, height: 22)
+        nav.frame = NSRect(x: 9, y: 8, width: 52, height: 23)
+        views.frame = NSRect(x: 70, y: 8, width: 80, height: 23)
+        action.frame = NSRect(x: 159, y: 8, width: 45, height: 23)
+        search.frame = NSRect(x: max(220, s.width - 186), y: 9, width: 176, height: 21)
     }
 
-    func setNav(back: Bool, forward: Bool) {
-        nav.setEnabled(back, forSegment: 0); nav.setEnabled(forward, forSegment: 1)
-    }
-    func setMode(_ m: TigerFinder.Mode) { views.selectedSegment = m.rawValue }
+    func setNav(back: Bool, forward: Bool) { nav.enabled = [back, forward] }
+    func setMode(_ m: TigerFinder.Mode) { views.selected = m.rawValue }
 
-    @objc private func navClick() { nav.selectedSegment == 0 ? onBack?() : onForward?() }
-    @objc private func viewClick() { TigerFinder.Mode(rawValue: views.selectedSegment).map { onMode?($0) } }
     @objc private func actionPick(_ i: NSMenuItem) { (i.representedObject as? TigerFinder.Action).map { onAction?($0) } }
     @objc private func searchChange() { onSearch?(search.stringValue) }
+}
+
+/// 10.4's toolbar button: a rounded rectangle, glossy white over light grey, a grey rim, the
+/// segments split by fine lines, the chosen one pale Aqua blue. The glyphs are drawn, small and
+/// black (grey when the segment cannot be used), as Tiger's were.
+final class MetalSegments: NSView {
+    enum Glyph { case back, forward, icons, list, columns, gear }
+    let glyphs: [Glyph]
+    var selectable = false
+    var selected: Int? { didSet { needsDisplay = true } }
+    var enabled: [Bool] { didSet { needsDisplay = true } }
+    var toolTips: [String] = [] { didSet { updateToolTips() } }
+    var onPick: ((Int) -> Void)?
+    private var pressed: Int?
+
+    init(glyphs: [Glyph], label: String) {
+        self.glyphs = glyphs
+        enabled = glyphs.map { _ in true }
+        super.init(frame: .zero)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
+        setAccessibilityLabel(label)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override var isFlipped: Bool { true }
+    private func segment(_ i: Int) -> NSRect {
+        let w = bounds.width / CGFloat(glyphs.count)
+        return NSRect(x: CGFloat(i) * w, y: 0, width: w, height: bounds.height)
+    }
+    private func updateToolTips() {
+        removeAllToolTips()
+        for (i, t) in toolTips.enumerated() where i < glyphs.count { addToolTip(segment(i), owner: t as NSString, userData: nil) }
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let shape = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 4.5, yRadius: 4.5)
+        func gloss(_ c: [Int]) -> NSGradient? {
+            NSGradient(colors: c.map { NSColor(srgbRed: CGFloat($0 >> 16) / 255, green: CGFloat(($0 >> 8) & 0xFF) / 255, blue: CGFloat($0 & 0xFF) / 255, alpha: 1) },
+                       atLocations: [0, 0.5, 0.5, 1], colorSpace: .sRGB)
+        }
+        gloss([0xFFFFFF, 0xF1F1F1, 0xE2E2E2, 0xF5F5F5])?.draw(in: shape, angle: 90)
+        for i in glyphs.indices where i == selected || i == pressed {
+            NSGraphicsContext.saveGraphicsState()
+            shape.addClip()
+            let colours = i == pressed && i != selected ? [0xD4D4D4, 0xC6C6C6, 0xB8B8B8, 0xCDCDCD] : [0xD9ECFC, 0xACD2F8, 0x8FC0F3, 0xBDDFFB]
+            gloss(colours)?.draw(in: segment(i), angle: 90)
+            NSGraphicsContext.restoreGraphicsState()
+        }
+        NSColor(white: 0.6, alpha: 1).setFill()
+        for i in 1..<max(1, glyphs.count) { NSRect(x: segment(i).minX, y: 1, width: 1, height: bounds.height - 2).fill() }
+        NSColor(white: 0.52, alpha: 1).setStroke()
+        shape.lineWidth = 1; shape.stroke()
+        for (i, g) in glyphs.enumerated() { draw(g, in: segment(i), on: enabled[i]) }
+    }
+
+    private func draw(_ g: Glyph, in r: NSRect, on: Bool) {
+        (on ? NSColor(white: 0.1, alpha: 1) : NSColor(white: 0.62, alpha: 1)).set()
+        let c = NSPoint(x: r.midX.rounded(), y: r.midY.rounded())
+        switch g {
+        case .back, .forward:
+            let d: CGFloat = g == .back ? -1 : 1, p = NSBezierPath()
+            p.move(to: NSPoint(x: c.x + 4 * d, y: c.y)); p.line(to: NSPoint(x: c.x - 4 * d, y: c.y - 5)); p.line(to: NSPoint(x: c.x - 4 * d, y: c.y + 5))
+            p.close(); p.fill()
+        case .icons:
+            for dx in [-4.0, 2.0] { for dy in [-4.0, 2.0] { NSBezierPath(rect: NSRect(x: c.x + dx, y: c.y + dy, width: 3, height: 3)).stroke() } }
+        case .list:
+            for dy in [-4.5, -1.5, 1.5, 4.5] { NSRect(x: c.x - 7, y: c.y + dy - 0.5, width: 14, height: 1.2).fill() }
+        case .columns:
+            let box = NSRect(x: c.x - 8, y: c.y - 5.5, width: 16, height: 11)
+            NSBezierPath(rect: box.insetBy(dx: 0.5, dy: 0.5)).stroke()
+            for x in [box.minX + 5.5, box.minX + 10.5] { NSRect(x: x, y: box.minY, width: 1, height: box.height).fill() }
+        case .gear:
+            if let gear = NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: 13, weight: .regular)) {
+                let tinted = NSImage(size: gear.size, flipped: false) { rr in
+                    gear.draw(in: rr); (on ? NSColor(white: 0.15, alpha: 1) : NSColor.gray).set(); rr.fill(using: .sourceAtop); return true
+                }
+                tinted.draw(in: NSRect(x: c.x - 11, y: c.y - gear.size.height / 2, width: gear.size.width, height: gear.size.height))
+            }
+            let t = NSBezierPath()
+            t.move(to: NSPoint(x: c.x + 6, y: c.y - 1)); t.line(to: NSPoint(x: c.x + 12, y: c.y - 1)); t.line(to: NSPoint(x: c.x + 9, y: c.y + 2.5))
+            t.close(); t.fill()
+        }
+    }
+
+    override func mouseDown(with e: NSEvent) {
+        let p = convert(e.locationInWindow, from: nil)
+        guard let i = glyphs.indices.first(where: { segment($0).contains(p) }), enabled[i] else { return }
+        pressed = i; needsDisplay = true
+    }
+    override func mouseUp(with e: NSEvent) {
+        defer { pressed = nil; needsDisplay = true }
+        guard let i = pressed, segment(i).contains(convert(e.locationInWindow, from: nil)) else { return }
+        if selectable { selected = i }
+        onPick?(i)
+    }
+    override func setFrameSize(_ s: NSSize) { super.setFrameSize(s); updateToolTips() }
 }
 
 /// The places down the left: the startup disk, then the folders of the home.
@@ -608,12 +695,13 @@ final class FinderSidebar: NSTableView, NSTableViewDataSource, NSTableViewDelega
     func numberOfRows(in t: NSTableView) -> Int { places.count }
     func tableView(_ t: NSTableView, heightOfRow row: Int) -> CGFloat { places[row] == nil ? 9 : 24 }
     func tableView(_ t: NSTableView, shouldSelectRow row: Int) -> Bool { places[row] != nil }
+    func tableView(_ t: NSTableView, rowViewForRow row: Int) -> NSTableRowView? { TigerSelectionRow() }
     func tableView(_ t: NSTableView, viewFor col: NSTableColumn?, row: Int) -> NSView? {
         guard let (name, url) = places[row] else {
             let line = NSBox(); line.boxType = .separator; return line
         }
         let cell = NSTableCellView()
-        let img = NSImageView(image: NSWorkspace.shared.icon(forFile: url.path))
+        let img = NSImageView(image: Self.icon(for: url))
         let text = NSTextField(labelWithString: name)
         text.font = .systemFont(ofSize: 12)
         for v in [img, text] { v.translatesAutoresizingMaskIntoConstraints = false; cell.addSubview(v) }
@@ -630,6 +718,28 @@ final class FinderSidebar: NSTableView, NSTableViewDataSource, NSTableViewDelega
         guard clickedRow >= 0, let (_, url) = places[clickedRow] else { return }
         onPick?(url)
     }
+
+    /// Tiger's pictures where the theme has them (the disk, Applications), the Mac's otherwise.
+    static func icon(for url: URL) -> NSImage {
+        let theme = ThemeManager.shared.activeTheme
+        let own: String? = url.path == "/" ? "harddisk.png" : url.path == "/Applications" ? "applicationsfolder.png" : nil
+        if let own, let u = theme?.iconResource(own), let img = NSImage(contentsOf: u) { return img }
+        return FinderItem.tigerTint(NSWorkspace.shared.icon(forFile: url.path))
+    }
+}
+
+/// 10.4's sidebar selection: a blue gradient the width of the row, the name in white.
+final class TigerSelectionRow: NSTableRowView {
+    override func drawSelection(in dirtyRect: NSRect) {
+        guard selectionHighlightStyle != .none else { return }
+        let r = bounds
+        let top = isEmphasized ? NSColor(srgbRed: 0.42, green: 0.62, blue: 0.89, alpha: 1) : NSColor(white: 0.74, alpha: 1)
+        let bottom = isEmphasized ? NSColor(srgbRed: 0.16, green: 0.40, blue: 0.80, alpha: 1) : NSColor(white: 0.58, alpha: 1)
+        NSGradient(starting: top, ending: bottom)?.draw(in: r, angle: isFlipped ? 90 : -90)
+        (isEmphasized ? NSColor(srgbRed: 0.33, green: 0.55, blue: 0.86, alpha: 1) : NSColor(white: 0.66, alpha: 1)).setFill()
+        NSRect(x: r.minX, y: isFlipped ? r.minY : r.maxY - 1, width: r.width, height: 1).fill()
+    }
+    override var interiorBackgroundStyle: NSView.BackgroundStyle { isSelected ? .emphasized : .normal }
 }
 
 /// The icon view: a double-click opens, which a collection view does not do by itself.
@@ -648,10 +758,10 @@ final class FinderIconCell: NSCollectionViewItem {
     private let label = NSTextField(wrappingLabelWithString: "")
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 112, height: 96))
-        picture.frame = NSRect(x: 24, y: 30, width: 64, height: 64)
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 136, height: 100))
+        picture.frame = NSRect(x: 36, y: 32, width: 64, height: 64)
         picture.imageScaling = .scaleProportionallyUpOrDown
-        label.frame = NSRect(x: 2, y: 0, width: 108, height: 30)
+        label.frame = NSRect(x: 4, y: 0, width: 128, height: 30)
         label.alignment = .center
         label.font = .systemFont(ofSize: 11)
         label.maximumNumberOfLines = 2
@@ -705,8 +815,26 @@ final class FinderItem: NSObject {
     lazy var icon: NSImage = {
         if url.pathExtension == "app", let id = Bundle(url: url)?.bundleIdentifier,
            let u = ThemeManager.shared.activeTheme?.iconURL(for: id), let img = NSImage(contentsOf: u) { return img }
-        return NSWorkspace.shared.icon(forFile: url.path)
+        let mac = NSWorkspace.shared.icon(forFile: url.path)
+        return isFolder ? Self.tigerTint(mac) : mac
     }()
+
+    /// shortcut: Tiger's own folder pictures are not among the theme's assets, so today's
+    /// folders are paled to 10.4's light translucent blue; replace with the real icons when there.
+    static func tigerTint(_ img: NSImage) -> NSImage {
+        guard let tiff = img.tiffRepresentation, let ci = CIImage(data: tiff),
+              let f = CIFilter(name: "CIColorControls") else { return img }
+        f.setValue(ci, forKey: kCIInputImageKey)
+        f.setValue(0.55, forKey: kCIInputSaturationKey)
+        f.setValue(0.18, forKey: kCIInputBrightnessKey)
+        guard let pale = f.outputImage, let hue = CIFilter(name: "CIHueAdjust") else { return img }
+        hue.setValue(pale, forKey: kCIInputImageKey)
+        hue.setValue(-0.28, forKey: kCIInputAngleKey)   // from today's violet-blue toward 10.4's sky blue
+        guard let out = hue.outputImage else { return img }
+        let rep = NSCIImageRep(ciImage: out)
+        let tinted = NSImage(size: img.size); tinted.addRepresentation(rep)
+        return tinted
+    }
 
     var loadedChildren: [FinderItem] {
         if cachedChildren == nil { cachedChildren = Self.children(of: url) }

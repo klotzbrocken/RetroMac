@@ -79,7 +79,14 @@ final class SpotlightMenuController: NSObject {
         guard AppSettings.shared.dockEnabled, !AppSettings.shared.hideMenuBar,
               ThemeManager.shared.activeTheme?.config.menuBar?.spotlight == true else { hide(); return }
         guard item == nil else { return }
+        // Tiger's Spotlight sat at the far right. macOS keeps a status item's place under its
+        // autosave name, counted from the right edge: the first time, ask for the rightmost
+        // place it gives an app (left of the clock and Control Center, which are the system's);
+        // a ⌘-drag later is the user's and stays.
+        let name = "RetroMacSpotlight", key = "NSStatusItem Preferred Position \(name)"
+        if UserDefaults.standard.object(forKey: key) == nil { UserDefaults.standard.set(1, forKey: key) }
         let i = NSStatusBar.system.statusItem(withLength: 26)
+        i.autosaveName = name
         i.button?.image = Self.magnifier
         i.button?.target = self
         i.button?.action = #selector(toggle)

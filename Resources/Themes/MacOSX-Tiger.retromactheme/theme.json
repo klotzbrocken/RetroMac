@@ -61,7 +61,7 @@
   "menuBarApple": "aqua",
   "menuBar": {
     "appleMenu": true,
-    "appleMenuStyle": "macosx",
+    "appleMenuStyle": "tiger",
     "spotlight": true
   },
   "version": "1.0",
@@ -81,7 +81,7 @@
     "shelfLineColor": null,
     "backgroundImage": null,
     "backgroundImageMode": "tile",
-    "borderColor": "#FFFFFF99",
+    "borderColor": "#00000033",
     "borderWidth": 1,
     "shadowEnabled": true,
     "shadowColor": "#00000055",
@@ -90,7 +90,7 @@
     "bevelBottomColor": null,
     "bevelWidth": 0,
     "pinstripe": false,
-    "separatorStyle": "line",
+    "separatorStyle": "groove",
     "runningAppsSeparator": false,
     "launchBounce": true,
     "labelStyle": "outlined",

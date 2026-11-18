@@ -168,6 +168,8 @@ private final class LionWindowBackground: NSView {
 
 /// 10.8's push button: white to light grey, a mid-grey rim, rounded, 22 pt high.
 private final class LionButton: NSButton {
+    /// Tiger's Aqua push button is a capsule; 10.8's has corners of 4.
+    var capsule = false
     convenience init(title: String, target: AnyObject?, action: Selector?) {
         self.init(frame: .zero)
         self.title = title; self.target = target; self.action = action
@@ -176,7 +178,8 @@ private final class LionButton: NSButton {
     }
     override func draw(_ dirtyRect: NSRect) {
         let r = bounds.insetBy(dx: 1, dy: 1.5)
-        let shape = NSBezierPath(roundedRect: r, xRadius: 4, yRadius: 4)
+        let radius = capsule ? r.height / 2 : 4
+        let shape = NSBezierPath(roundedRect: r, xRadius: radius, yRadius: radius)
         let pressed = isHighlighted
         NSGradient(colors: pressed ? [NSColor(white: 0.80, alpha: 1), NSColor(white: 0.88, alpha: 1)]
                                    : [NSColor(white: 1, alpha: 1), NSColor(white: 0.90, alpha: 1)])?.draw(in: shape, angle: -90)
@@ -184,5 +187,104 @@ private final class LionButton: NSButton {
         let attrs: [NSAttributedString.Key: Any] = [.font: font ?? .systemFont(ofSize: 13), .foregroundColor: NSColor.black]
         let ts = title.size(withAttributes: attrs)
         title.draw(at: NSPoint(x: bounds.midX - ts.width / 2, y: bounds.midY - ts.height / 2), withAttributes: attrs)
+    }
+}
+/// Mac OS X 10.4's About This Mac, laid out off a 10.4 screenshot (Maik, Nov 2026): the small
+/// window with its smooth grey bar and faint pinstripes, the silver apple, "Mac OS X", the version,
+/// Software Update…, Processor and Memory read from this Mac, More Info…, and 2005's line.
+final class TigerAboutWindow: NSObject, NSWindowDelegate {
+    static let shared = TigerAboutWindow()
+    private var window: NSWindow?
+
+    func show() {
+        if let window { window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
+        let w = makeWindow()
+        w.center()
+        window = w
+        w.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// The window, built but not shown (the snapshot test draws it offscreen).
+    func makeWindow() -> NSWindow {
+        let f = MountainLionAboutWindow.facts()
+        let W: CGFloat = 308, H: CGFloat = 350
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: W, height: H),
+                         styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+        w.title = "About This Mac"
+        w.isReleasedWhenClosed = false
+        w.delegate = self
+        w.appearance = NSAppearance(named: .aqua)
+        w.titlebarAppearsTransparent = true
+        let barH = w.frame.height - w.contentLayoutRect.height
+        w.setContentSize(NSSize(width: W, height: H + barH))
+        let v = TigerWindowBackground(frame: NSRect(origin: .zero, size: w.frame.size))
+        w.contentView = v
+        let font = { (size: CGFloat, bold: Bool) -> NSFont in
+            NSFont(name: bold ? "LucidaGrande-Bold" : "LucidaGrande", size: size) ?? (bold ? .boldSystemFont(ofSize: size) : .systemFont(ofSize: size))
+        }
+        func label(_ s: String, _ f: NSFont, _ colour: NSColor = .black, y: CGFloat, x: CGFloat = 0, width: CGFloat = W,
+                   align: NSTextAlignment = .center) -> NSTextField {
+            let l = NSTextField(labelWithString: s)
+            l.font = f; l.textColor = colour; l.alignment = align
+            l.frame = NSRect(x: x, y: y, width: width, height: f.pointSize + 6)
+            v.addSubview(l); return l
+        }
+        let apple = NSImageView(frame: NSRect(x: W / 2 - 40, y: 248, width: 80, height: 92))
+        apple.image = MountainLionAboutWindow.silverApple(size: NSSize(width: 80, height: 92))
+        apple.setAccessibilityElement(false)
+        v.addSubview(apple)
+        _ = label("Mac OS X", font(25, true), NSColor(white: 0.13, alpha: 1), y: 218)
+        _ = label(f.version, font(12, false), NSColor(white: 0.3, alpha: 1), y: 199)
+        let update = LionButton(title: "Software Update\u{2026}", target: self, action: #selector(softwareUpdate))
+        update.capsule = true; update.font = font(11, false)
+        update.frame = NSRect(x: W / 2 - 62, y: 156, width: 124, height: 20)
+        v.addSubview(update)
+        var y: CGFloat = 132
+        var memoryValue: NSTextField?
+        for (name, value) in [("Processor", f.processor), ("Memory", f.memory)] {
+            _ = label(name, font(11, true), y: y, x: 0, width: 102, align: .right)
+            let val = label(value, font(11, false), y: y, x: 110, width: W - 118, align: .left)
+            if name == "Memory" { memoryValue = val }
+            y -= 34
+        }
+        let more = LionButton(title: "More Info\u{2026}", target: self, action: #selector(moreInfo))
+        more.capsule = true; more.font = font(11, false)
+        more.frame = NSRect(x: W / 2 - 62, y: 50, width: 124, height: 20)
+        v.addSubview(more)
+        let foot = NSTextField(wrappingLabelWithString: "TM & \u{00A9} 1983\u{2013}2005 Apple Computer, Inc.\nAll Rights Reserved.")
+        foot.font = font(9.5, false); foot.textColor = NSColor(white: 0.4, alpha: 1); foot.alignment = .center
+        foot.frame = NSRect(x: 0, y: 6, width: W, height: 28)
+        v.addSubview(foot)
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let type = MountainLionAboutWindow.memoryType() else { return }
+            DispatchQueue.main.async { memoryValue?.stringValue = "\(f.memory) \(type)" }
+        }
+        return w
+    }
+
+    func windowWillClose(_ notification: Notification) { window = nil }
+    @objc private func softwareUpdate() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Software-Update-Settings.extension")!)
+    }
+    @objc private func moreInfo() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension")!)
+    }
+}
+
+/// 10.4's standard window, measured: the bar a smooth #F8 to #D7 with a #9F line under it, the
+/// body faint pinstripes, two rows of #EF and two of #F3.
+private final class TigerWindowBackground: NSView {
+    override func draw(_ dirtyRect: NSRect) {
+        let h = window.map { bounds.height - $0.contentLayoutRect.height } ?? 22
+        let bar = NSRect(x: 0, y: bounds.maxY - h, width: bounds.width, height: h)
+        var y = bar.minY
+        while y > 0 {
+            NSColor(white: 0xEF / 255.0, alpha: 1).setFill(); NSRect(x: 0, y: y - 2, width: bounds.width, height: 2).fill()
+            NSColor(white: 0xF3 / 255.0, alpha: 1).setFill(); NSRect(x: 0, y: y - 4, width: bounds.width, height: 2).fill()
+            y -= 4
+        }
+        NSGradient(colors: [NSColor(white: 0xF8 / 255.0, alpha: 1), NSColor(white: 0xD7 / 255.0, alpha: 1)])?.draw(in: bar, angle: -90)
+        NSColor(white: 0x9F / 255.0, alpha: 1).setFill(); NSRect(x: 0, y: bar.minY, width: bounds.width, height: 1).fill()
     }
 }

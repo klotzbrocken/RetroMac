@@ -96,7 +96,7 @@ Everything under `"dock"`. Sizes are points.
 | `borderColor`, `borderWidth`, `cornerRadius`, `shadow*` | Outline and shadow |
 | `bevelTopColor`, `bevelBottomColor`, `bevelWidth` | The 3D edge of the Windows 9x bar |
 | `pinstripe` | Aqua's fine horizontal texture |
-| `separatorStyle` | `"line"`: Mac OS X 10.0's single solid divider, the shelf's full height; absent, Snow Leopard's dashes |
+| `separatorStyle` | `"line"`: Mac OS X 10.0's single solid divider, the shelf's full height; `"groove"`: 10.4's dark line between two light ones; absent, Snow Leopard's dashes |
 | `runningAppsSeparator` | `false`: running apps not kept in the dock follow the others with no divider of their own, as before Mojave; absent, they get one |
 | `squareBottom` | `true`: a bottom dock rounded on top only, with no border along the screen edge it sits on (use with `edgeOffset` 0) |
 | `separatorGap` | Room at each divider in points at the theme's icon size, the line in its middle (default: the icon spacing) |

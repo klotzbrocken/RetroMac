@@ -18,7 +18,7 @@ final class AppleMenuController {
 
     private static var look: RetroMenuLook {
         let cfg = ThemeManager.shared.activeTheme?.config
-        if cfg?.hasMountainLionAppleMenu == true || cfg?.hasSnowLeopardAppleMenu == true { return .lion }
+        if cfg?.hasMountainLionAppleMenu == true || cfg?.hasSnowLeopardAppleMenu == true || cfg?.hasTigerAppleMenu == true { return .lion }
         return cfg?.hasMacOSXAppleMenu == true ? .aqua : .platinum
     }
 
@@ -42,6 +42,7 @@ final class AppleMenuController {
         if ThemeManager.shared.activeTheme?.config.hasMacOSXAppleMenu == true { return macOSXItems() }
         if ThemeManager.shared.activeTheme?.config.hasMountainLionAppleMenu == true { return mountainLionItems() }
         if ThemeManager.shared.activeTheme?.config.hasSnowLeopardAppleMenu == true { return snowLeopardItems() }
+        if ThemeManager.shared.activeTheme?.config.hasTigerAppleMenu == true { return tigerItems() }
         // Mac OS 9's own About This Computer; Copland's developer release keeps today's pane.
         let about: PlatinumMenuItem = PlatinumBar.isCopland
             ? open("About This Computer…", "x-apple.systempreferences:com.apple.SystemProfiler.AboutExtension", icon: "computer.png")
@@ -142,6 +143,21 @@ final class AppleMenuController {
         }
         // 10.8 had no rule between About and the update rows: the first separator follows App Store.
         return rows
+    }
+
+    /// Mac OS X 10.4's Apple menu, row for row: 10.6's (they match but for two things) with
+    /// Tiger's own About This Mac, and Sleep without a shortcut.
+    func tigerItems() -> [PlatinumMenuItem] {
+        snowLeopardItems().map { row in
+            switch row.title {
+            case "About This Mac": return .action("About This Mac") { TigerAboutWindow.shared.show() }
+            case "Sleep": return .action("Sleep") {
+                let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset"); p.arguments = ["sleepnow"]
+                try? p.run()
+            }
+            default: return row
+            }
+        }
     }
 
     /// Mac OS X 10.6's Apple menu, row for row: Software Update and Mac OS X Software, Location,

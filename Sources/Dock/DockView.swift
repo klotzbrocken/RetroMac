@@ -2937,6 +2937,15 @@ final class DockView: NSView {
                 NSBezierPath(rect: NSRect(x: sx - 1, y: top, width: 1, height: gh)).fill()
                 NSColor(white: 0.50, alpha: 1).setFill()                  // shadow (right)
                 NSBezierPath(rect: NSRect(x: sx + 1, y: top, width: 1, height: gh)).fill()
+            } else if theme.dock.separatorStyle == "groove" {
+                // Mac OS X 10.4: a dark line with a light one either side, measured off a 10.4
+                // dock (#213B78 between #9FA9C7 on a #8A97BB shelf).
+                let x = (sx - 0.5).rounded(.down)
+                let line = NSRect(x: x, y: shelfRect.minY + 1, width: 1, height: shelfRect.height - 2)
+                NSColor(white: 1, alpha: 0.15).setFill()
+                line.offsetBy(dx: -1, dy: 0).fill(); line.offsetBy(dx: 1, dy: 0).fill()
+                NSColor(white: 0, alpha: 0.55).setFill()
+                line.fill()
             } else if theme.dock.separatorStyle == "line" {
                 // Mac OS X 10.0: one solid light line, the shelf's full height, clearly paler
                 // than the dock (#DBE2ED on #ACBDD6 in 10.0.4). White: the dock is a translucent
