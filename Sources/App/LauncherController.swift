@@ -185,6 +185,24 @@ final class LauncherModel: ObservableObject {
 
     private var observers: [NSObjectProtocol] = []
 
+    /// A theme's icon made once at the tiles' size, 36 points at twice the pixels, with
+    /// Core Graphics' best filter. Left to SwiftUI, a 128-pixel picture drawn at 36 points
+    /// lost its fine detail (fur, stripes, a checkerboard) to a cheap filter and looked grainy.
+    static func tileImage(_ img: NSImage) -> NSImage {
+        let px = 72
+        var r = NSRect(origin: .zero, size: img.size)
+        guard let cg = img.cgImage(forProposedRect: &r, context: nil, hints: nil),
+              let ctx = CGContext(data: nil, width: px, height: px, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return img }
+        ctx.interpolationQuality = .high
+        let s = min(CGFloat(px) / CGFloat(cg.width), CGFloat(px) / CGFloat(cg.height))
+        let w = CGFloat(cg.width) * s, h = CGFloat(cg.height) * s
+        ctx.draw(cg, in: CGRect(x: (CGFloat(px) - w) / 2, y: (CGFloat(px) - h) / 2, width: w, height: h))
+        guard let out = ctx.makeImage() else { return img }
+        return NSImage(cgImage: out, size: NSSize(width: 36, height: 36))
+    }
+
     init() {
         refresh()
         let nc = NotificationCenter.default
@@ -202,7 +220,7 @@ final class LauncherModel: ObservableObject {
         let mgr = ThemeManager.shared
         // Youngest era first, as the menu bar's Themes menu lists them.
         let all = ThemeManager.byAge(mgr.availableThemes).map { t -> ThemeItem in
-            let img = t.themeIconURL().flatMap { NSImage(contentsOf: $0) }
+            let img = t.themeIconURL().flatMap { NSImage(contentsOf: $0) }.map(Self.tileImage)
             return ThemeItem(name: t.config.name, icon: img, tab: ThemeManager.quickAccessTab(of: t))
         }
         allThemes = all
@@ -357,7 +375,7 @@ struct LauncherView: View {
         VStack(spacing: 4) {
             ZStack {
                 if let img = t.icon {
-                    Image(nsImage: img).resizable().scaledToFit().frame(width: 48, height: 36)
+                    Image(nsImage: img).resizable().interpolation(.high).antialiased(true).scaledToFit().frame(width: 48, height: 36)
                 } else {
                     Image(systemName: "square.dashed").font(.system(size: 18)).foregroundStyle(.secondary)
                 }
@@ -518,7 +536,7 @@ struct LauncherView: View {
         VStack(spacing: 4) {
             ZStack {
                 if let img = model.icon(for: name) {
-                    Image(nsImage: img).resizable().scaledToFit().frame(width: 48, height: 36)
+                    Image(nsImage: img).resizable().interpolation(.high).antialiased(true).scaledToFit().frame(width: 48, height: 36)
                 } else {
                     Image(systemName: "square.dashed").font(.system(size: 18)).foregroundStyle(.secondary)
                 }
