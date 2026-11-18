@@ -36,6 +36,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   paled to its light blue and the icon grid is roomier. The sidebar carries 10.4's own pictures
   (Network's globe, the disk, Desktop, the house, Applications, Documents, Movies, Music,
   Pictures) in 10.4's taller rows, Network first. The TV folder's toolbar is metal too.
+- **Minimising lands in the theme's dock again under Mac OS X and Tiger.** The Mac's own
+  minimise aims at the hidden Mac Dock, whose icons sit elsewhere, and the window flew past the
+  theme's dock to the left. A window minimised with the theme's yellow light or ⌘M now shrinks
+  into its app's icon in the theme's dock, as Halloween's does.
 - **Exposé's F11.** A third Exposé shortcut (Settings ▸ Shortcuts, ⌃F11): every app out of the
   way and the desktop bare; again brings them back.
 - **Tiger's start-up chime.** On *Firmware → OS Boot → Desktop* Tiger strikes the Mac's
