@@ -15,9 +15,13 @@
     "style": "macosx",
     "titleBar": "brushed"
   },
+  "finder": "tiger",
   "name": "Mac OS X Tiger",
   "splashVideo": "boot.mp4",
   "splashFullscreen": true,
+  "boot": {
+    "firmware": "chime"
+  },
   "systemTweaks": [
     {
       "domain": "-g",
@@ -54,10 +58,11 @@
       "refresh": "Dock"
     }
   ],
-  "menuBarApple": "rainbow",
+  "menuBarApple": "aqua",
   "menuBar": {
     "appleMenu": true,
-    "appleMenuStyle": "macosx"
+    "appleMenuStyle": "macosx",
+    "spotlight": true
   },
   "version": "1.0",
   "author": "RetroMac",

@@ -26,6 +26,8 @@ struct DockThemeConfig: Codable {
     /// Declared window/widget chrome. `chrome.style` replaces the display-name heuristic in
     /// `RetroFrameTheme.key()` — see that file.
     var chrome: ChromeDecl? = nil
+    /// "tiger": folders on the desktop open RetroMac's own 10.4 Finder instead of the Mac's.
+    var finder: String? = nil
     /// The oldest RetroMac this theme works on ("2.9"). A theme that uses a manifest key or a
     /// desktop icon type this build does not know is skipped with a log line instead of loading
     /// half of itself. Compared numerically, component by component; nil means any version.
@@ -97,6 +99,8 @@ struct DockThemeConfig: Codable {
         /// (System 7.1 (authentic)): every icon — dock, desktop, menus, Applications window,
         /// Control Strip — is snapped to it with a 1-bit mask, as System 7 drew at "256".
         var palette: String? = nil
+        /// Tiger's Spotlight: the blue magnifier at the right of the menu bar.
+        var spotlight: Bool? = nil
     }
     var menuBar: MenuBarConfig? = nil
     var hideMenuBarDefault: Bool? = nil   // when set, activating this theme applies it to Settings.hideMenuBar (Win 95/XP hide it)
@@ -115,7 +119,8 @@ struct DockThemeConfig: Codable {
     var splashFullscreen: Bool? = nil // true = fill the whole screen (e.g. Win 98 boot)
     var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present
     var splashWelcome: Bool? = nil    // true = draw the classic "Welcome to Macintosh" boot screen (System 6)
-    /// Boot Phases: the machine's firmware before the OS boot ("ami92", "award451", "award600"),
+    /// Boot Phases: the machine's firmware before the OS boot ("ami92", "award451", "award600";
+    /// "chime" for a Mac: the start-up chord, then the OS boot),
     /// and an OS boot drawn in text mode instead of `splash*` ("nt4"). Both optional.
     var boot: BootDecl? = nil
     struct BootDecl: Codable, Equatable { var firmware: String? = nil; var os: String? = nil }

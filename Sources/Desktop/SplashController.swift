@@ -128,6 +128,11 @@ final class SplashController {
         dismiss()
         onFinish = completion
 
+        // A Mac's firmware phase is its chime over the grey screen the OS boot starts on.
+        if firmware, theme.config.boot?.firmware == "chime" {
+            SoundEngine.shared.playPreview(MacChime.buffer)
+            return presentOS(theme: theme, on: screen, onVisible: onVisible)
+        }
         if firmware, let profile = theme.config.boot?.firmware {
             pendingWork = onVisible
             showFirmware(profile, theme: theme, on: screen)

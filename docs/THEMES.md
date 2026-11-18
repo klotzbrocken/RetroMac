@@ -210,7 +210,8 @@ its top.
 | `splashScreen` | Still shown while the theme switches on; `splashFullscreen: true` fills the screen |
 | `splashVideo` | An H.264 `.mp4` played full screen with sound instead of the still |
 | `splashWelcome` | `true` draws the "Welcome to Macintosh" screen (System 6) |
-| `boot.firmware` | The firmware played first when Boot Phases is on "Firmware": `ami92` (AMIBIOS 1992), `award451` (Award Modular BIOS v4.51PG), `award600` (Phoenix - AwardBIOS v6.00PG). A POST with this Mac's real values; DEL enters a setup. PC themes only |
+| `boot.firmware` | The firmware played first when Boot Phases is on "Firmware": `ami92` (AMIBIOS 1992), `award451` (Award Modular BIOS v4.51PG), `award600` (Phoenix - AwardBIOS v6.00PG). A POST with this Mac's real values; DEL enters a setup. PC themes only. A Mac theme may say `chime`: the start-up chord, then the OS boot |
+| `finder` | `"tiger"`: the desktop's folder icons open RetroMac's own 10.4 Finder (metal window, icon, list and column views, real files) instead of the Mac's |
 | `boot.os` | An OS boot drawn in text mode instead of the `splash*` keys (`nt4`) |
 | `screensaver` | `pipes`, `flowerbox`, `flying-toasters`, `flurry` or `none` |
 | `defaultPreset` | The shader preset the theme suggests |
@@ -221,6 +222,7 @@ its top.
 | `menuBar.applicationMenu` | `true` puts Mac OS 9's Application menu at the right end of the menu bar: the front app's icon, and Hide / Hide Others / Show All / the running apps under it (as far right as macOS lets a status item go) |
 | `menuBar.palette` | `"mac256"` draws the theme in the Mac's standard 256-colour table (System 7.1 (authentic)): every icon — desktop, Apple menu, Application menu, Applications window, dock — is resampled to the pixels it is shown at, snapped to the table's nearest colour and given a 1-bit mask; the Control Strip is the 1994 PowerBook strip, drawn in the table's colours; menus are white with the selected row inverted, and a desktop icon's selected name inverts instead of taking the accent colour |
 | `menuBar.applicationMenuIconOnly` | `true` shows the front app's icon alone in the Application menu, as System 7.1 did; Mac OS 8.5 added the name beside it (the default) |
+| `menuBar.spotlight` | `true` puts Tiger's Spotlight in the menu bar: the blue magnifier, a menu of results from the Mac's own index, Show All in the theme's Finder |
 | `menuBar.balloonHelp` | `true` adds System 7's Balloon Help item (the `?` balloon) left of the Application menu; its menu points at macOS's own help |
 | `dock.stripModules` | The Control Strip modules this theme shows, by id and in its own order: `appletalk`/`network`, `battery`, `sharing`, `keychain`, `mediabay`, `colours`, `resolution`, `printer`, `volume`, `soundsource`, `mirroring`, `hdspindown`, `power`, `sleep`. Absent: every module (the Mac OS 9 set). System 7.1 (authentic) takes the five of the System 7.5 colour strip: AppleTalk, File Sharing, colour depth, resolution, sound |
 | `dock.controlStripStyle` | `"system7"` builds the Control Strip as System 7.5 drew it on a colour Mac, from the original's pixels; absent, Mac OS 9's Platinum strip. Independent of the palette |

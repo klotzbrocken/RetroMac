@@ -15,11 +15,26 @@ final class TigerThemeTests: XCTestCase {
         XCTAssertEqual(c.id, "com.retromac.apple.tiger")
         XCTAssertEqual(c.chrome?.style, "macosx")
         XCTAssertEqual(c.chrome?.titleBar, "brushed")
-        XCTAssertEqual(c.menuBarAppleStyleDefault, 1, "the rainbow Apple")
+        XCTAssertEqual(c.menuBarAppleStyleDefault, 2, "the blue Aqua Apple")
         XCTAssertEqual(c.dock.pinstripe, false)
         XCTAssertTrue(c.supportsAutoHide)
         XCTAssertNotNil(SwitcherCapability.matrix["com.retromac.apple.tiger"])
         XCTAssertEqual(DockBadges.style(forThemeID: c.id), .leopard)
+        XCTAssertEqual(c.finder, "tiger")
+        XCTAssertEqual(c.menuBar?.spotlight, true)
+        XCTAssertEqual(c.boot?.firmware, "chime")
+    }
+
+    /// The chord rings out: loud at the strike, all but gone by the end of its four seconds.
+    func testChimeRingsOut() {
+        let b = MacChime.buffer
+        XCTAssertEqual(Double(b.frameLength) / SoundEngine.sampleRate, 4, accuracy: 0.01)
+        let s = b.floatChannelData![0]
+        func peak(_ from: Int, _ n: Int) -> Float { (from..<(from + n)).map { abs(s[$0]) }.max() ?? 0 }
+        let sr = Int(SoundEngine.sampleRate)
+        XCTAssertGreaterThan(peak(0, sr / 10), 0.2)
+        XCTAssertLessThan(peak(Int(b.frameLength) - sr / 10, sr / 10), 0.05)
+        XCTAssertLessThanOrEqual(peak(0, Int(b.frameLength)), 1, "no clipping")
     }
 
     /// Every wallpaper and every mapped icon resolves, the shared ones to the sibling's file.

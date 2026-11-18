@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashboardHotKeyRef: EventHotKeyRef?
     private var exposeHotKeyRef: EventHotKeyRef?
     private var exposeAppHotKeyRef: EventHotKeyRef?
+    private var exposeDesktopHotKeyRef: EventHotKeyRef?
     private var rescueHotKeyRef: EventHotKeyRef?
     private var launcherHotKeyRef: EventHotKeyRef?
     private var dockFocusHotKeyRef: EventHotKeyRef?
@@ -177,6 +178,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             BeOSDeskbarController.shared.update()
             ControlStripController.shared.update()
             ApplicationMenuController.shared.update()
+            SpotlightMenuController.shared.update()
             NextMenuController.shared.update()
             NextDockController.shared.update()
             CDEFrontPanelController.shared.update()
@@ -1748,6 +1750,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 exposeAppHotKeyRef = ref
             }
         }
+        if settings.exposeDesktopHotkeyModifiers != 0 {
+            var ref: EventHotKeyRef?
+            let hkID = EventHotKeyID(signature: hotkeySignature, id: 14)
+            if RegisterEventHotKey(settings.exposeDesktopHotkeyCode, settings.exposeDesktopHotkeyModifiers,
+                                   hkID, GetApplicationEventTarget(), 0, &ref) == noErr {
+                exposeDesktopHotKeyRef = ref
+            }
+        }
 
         // 6. Rescue Desktop (id: 11). A combination another app holds is said so in Settings
         //    ▸ Shortcuts rather than taken over (RET-02).
@@ -1809,6 +1819,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     case 11: DispatchQueue.main.async { DesktopRescue.shared.run() }
                     case 12: DispatchQueue.main.async { ThemeLauncher.open() }
                     case 13: DispatchQueue.main.async { KeyboardFocus.shared.toggle() }
+                    case 14: DispatchQueue.main.async { DockView.toggleShowDesktop() }
                     default: return OSStatus(eventNotHandledErr)
                     }
                     return noErr
@@ -1833,6 +1844,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let ref = exposeAppHotKeyRef {
             UnregisterEventHotKey(ref)
             exposeAppHotKeyRef = nil
+        }
+        if let ref = exposeDesktopHotKeyRef {
+            UnregisterEventHotKey(ref)
+            exposeDesktopHotKeyRef = nil
         }
         if let ref = dashboardHotKeyRef {
             UnregisterEventHotKey(ref)
@@ -2935,6 +2950,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         BeOSDeskbarController.shared.update()
         ControlStripController.shared.update()
         ApplicationMenuController.shared.update()
+        SpotlightMenuController.shared.update()
         NextMenuController.shared.update()
         NextDockController.shared.update()
         CDEFrontPanelController.shared.update()

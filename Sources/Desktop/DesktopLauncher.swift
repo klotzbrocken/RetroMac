@@ -26,7 +26,8 @@ enum DesktopLauncher {
         case "folder":
             if let path = entry.path {
                 let expanded = NSString(string: path).expandingTildeInPath
-                NSWorkspace.shared.open(URL(fileURLWithPath: expanded))
+                if TigerFinder.isEnabled { TigerFinder.show(URL(fileURLWithPath: expanded)) }   // Tiger's own Finder
+                else { NSWorkspace.shared.open(URL(fileURLWithPath: expanded)) }
             }
 
         case "network":
@@ -56,7 +57,8 @@ enum DesktopLauncher {
             }
 
         case "appfolder":
-            AppFolderController.shared.show()
+            if TigerFinder.isEnabled { TigerFinder.show(URL(fileURLWithPath: "/Applications")) }
+            else { AppFolderController.shared.show() }
 
         case "tvfolder":
             AppFolderController.tv.show()

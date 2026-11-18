@@ -268,7 +268,6 @@ struct ShortcutsTab: View {
                     hint: "Only the frontmost app\u{2019}s windows. \u{2303}F10 by default.",
                     hotkeyCode: settings.exposeAppHotkeyCode,
                     hotkeyModifiers: settings.exposeAppHotkeyModifiers,
-                    isLast: true,
                     onSet: { code, mods in
                         settings.exposeAppHotkeyCode = code
                         settings.exposeAppHotkeyModifiers = mods
@@ -277,6 +276,25 @@ struct ShortcutsTab: View {
                     onClear: {
                         settings.exposeAppHotkeyCode = 0
                         settings.exposeAppHotkeyModifiers = 0
+                        AppDelegate.shared?.registerHotkey()
+                    }
+                )
+
+                // 8. Exposé, the desktop
+                HotkeyRow(
+                    label: "Expos\u{00E9} \u{2014} desktop",
+                    hint: "Every app out of the way, the desktop bare; again brings them back. \u{2303}F11 by default.",
+                    hotkeyCode: settings.exposeDesktopHotkeyCode,
+                    hotkeyModifiers: settings.exposeDesktopHotkeyModifiers,
+                    isLast: true,
+                    onSet: { code, mods in
+                        settings.exposeDesktopHotkeyCode = code
+                        settings.exposeDesktopHotkeyModifiers = mods
+                        AppDelegate.shared?.registerHotkey()
+                    },
+                    onClear: {
+                        settings.exposeDesktopHotkeyCode = 0
+                        settings.exposeDesktopHotkeyModifiers = 0
                         AppDelegate.shared?.registerHotkey()
                     }
                 )

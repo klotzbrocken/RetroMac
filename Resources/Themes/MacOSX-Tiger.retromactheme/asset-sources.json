@@ -1,0 +1,90 @@
+[
+ {
+  "file": "wallpaper-graphite.jpg",
+  "name": "Aqua Graphite",
+  "source": "Mac OS X 10.4 retail DVD (Build 8A428), /Library/Desktop Pictures/Apple Images; scaled to 2880 px",
+  "sha256": "24e5c3456f93310d50631a2e4c772cb805c388c85fcb6901776dbfad02d99f1d"
+ },
+ {
+  "file": "wallpaper-lotus.jpg",
+  "name": "Lotus",
+  "source": "Mac OS X 10.4 retail DVD (Build 8A428), /Library/Desktop Pictures/Plants; scaled to 2880 px",
+  "sha256": "403580606627a050f7e2f4beade8903d21932c107c5e62cb96b375c4377e0937"
+ },
+ {
+  "file": "wallpaper-leafcurl.jpg",
+  "name": "Leaf Curl",
+  "source": "Mac OS X 10.4 retail DVD (Build 8A428), /Library/Desktop Pictures/Plants; scaled to 2880 px",
+  "sha256": "43452250fbe51fd862b2479c39901850d5e3f506e66d2337953d84f48ceb7eff"
+ },
+ {
+  "file": "wallpaper-tiger.jpg",
+  "name": "Tiger",
+  "source": "Mac OS X 10.4 retail DVD (Build 8A428), /Library/Desktop Pictures/Nature; scaled to 2880 px",
+  "sha256": "d30288e64b949a44979562fd050d7617f0511b64441500f788d415a1bf257ba1"
+ },
+ {
+  "file": "appIcon.png",
+  "name": "Theme icon",
+  "source": "Drawn by RetroMac: a crop of the Tiger desktop picture and a silver serif X",
+  "sha256": "d1fb81e1f21b268b5af0b66c769bc58cf0616be0f4dc802bcbe75ffba11f1df3"
+ },
+ {
+  "file": "preview.jpg",
+  "name": "Catalogue preview",
+  "source": "Composed by RetroMac from Aqua Blue, the shared icons and 10.4's menu bar with the blue Apple",
+  "sha256": "bf7c97f1b332c2eb9222823916b7f6b1fbcac447967d44b700b3cf1079cc3c6f"
+ },
+ {
+  "file": "icons/",
+  "shared": true,
+  "source": "Cheetah's icon set: 44 of the 55 icons of Mac OS X 10.4's applications match it pixel for pixel; provenance in ../MacOSX-Cheetah.retromactheme/icon-sources.json",
+  "linksTo": "../MacOSX-Cheetah.retromactheme/icons"
+ },
+ {
+  "file": "wallpaper.jpg",
+  "shared": true,
+  "source": "Aqua Blue (Tiger's default), Mac OS X 10.4 retail DVD, shared with Cheetah as wallpaper-tiger.jpg, 2880 px",
+  "linksTo": "../MacOSX-Cheetah.retromactheme/wallpaper-tiger.jpg"
+ },
+ {
+  "file": "wallpaper-classic-aqua.jpg",
+  "shared": true,
+  "source": "Classic Aqua Blue, shared with Cheetah",
+  "linksTo": "../MacOSX-Cheetah.retromactheme/wallpaper.jpg"
+ },
+ {
+  "file": "wallpaper-jaguar.jpg",
+  "shared": true,
+  "source": "Jaguar Aqua Blue, shared with Cheetah",
+  "linksTo": "../MacOSX-Cheetah.retromactheme/wallpaper-jaguar.jpg"
+ },
+ {
+  "file": "wallpaper-panther.jpg",
+  "shared": true,
+  "source": "Panther Aqua Blue, shared with Cheetah",
+  "linksTo": "../MacOSX-Cheetah.retromactheme/wallpaper-panther.jpg"
+ },
+ {
+  "file": "wallpaper-clownfish.jpg",
+  "shared": true,
+  "source": "Clown Fish, shared with Snow Leopard",
+  "linksTo": "../MacOSX-SnowLeopard.retromactheme/wallpaper-clownfish.jpg"
+ },
+ {
+  "file": "wallpaper-stones.jpg",
+  "shared": true,
+  "source": "Stones, shared with Snow Leopard",
+  "linksTo": "../MacOSX-SnowLeopard.retromactheme/wallpaper-stones.jpg"
+ },
+ {
+  "file": "boot.mp4",
+  "shared": true,
+  "source": "The grey Apple and spinner, shared with Snow Leopard (byte-identical to Mountain Lion's)",
+  "linksTo": "../MacOSX-SnowLeopard.retromactheme/boot.mp4"
+ },
+ {
+  "file": "(start-up chime)",
+  "source": "Synthesised at run time by Sources/Sounds/MacChime.swift: an F-sharp major chord, no recording"
+ }
+]

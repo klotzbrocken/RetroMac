@@ -8,13 +8,26 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 ### New
 
 - **New theme: Mac OS X 10.4 Tiger.** Aqua Blue, the frosted dock without 10.0's pinstripes
-  (white at about 42 %, black triangles under running apps), the rainbow Apple, and brushed metal
+  (white at about 42 %, black triangles under running apps), the blue Aqua Apple, and brushed metal
   across the title bars where Cheetah has pinstripes, with the title embossed in white. Ten of
   Tiger's desktop pictures: Aqua Blue and Aqua Graphite, Lotus, Leaf Curl, the tiger's fur, the
   Classic, Jaguar and Panther Aqua Blues, Clown Fish and Stones. Dashboard sits on the desktop,
   Exposé answers the window switcher, the Aqua pointers and the red dock badges come along. The
-  menu bar is 10.4's plain white one. Spotlight's menu, the metal Finder windows and Dashboard's
-  widget bar are not rebuilt yet.
+  menu bar is 10.4's plain white one.
+- **Tiger's Finder.** The desktop's Macintosh HD and Applications open a Finder of RetroMac's
+  own: brushed metal, Back and Forward, icon, list and column views (⌘1, ⌘2, ⌘3), the action
+  menu, the sidebar of places, "9 items, 70.32 GB available" along the bottom. It works on the
+  real files: a double-click opens a file in its app, Return renames, ⌘D duplicates, ⇧⌘N makes
+  a folder, ⌘⌫ moves to the Mac's Trash (nothing is deleted outright), ⌘↑ goes up, ⌘↓ opens,
+  folders fold open in the list. Its search field asks Spotlight.
+- **Tiger's Spotlight.** The blue magnifier in the menu bar drops the menu: the Top Hit, then
+  Applications, Documents, Folders, Images and the rest, at most five each, from the Mac's own
+  index. The arrows move, Return opens, Escape closes; Show All opens the results in the Finder.
+  A search typed over never shows the results of the letters before. ⌘Space stays the Mac's.
+- **Exposé's F11.** A third Exposé shortcut (Settings ▸ Shortcuts, ⌃F11): every app out of the
+  way and the desktop bare; again brings them back.
+- **Tiger's start-up chime.** On *Firmware → OS Boot → Desktop* Tiger strikes the Mac's
+  F-sharp-major chord before the grey Apple, once. Synthesised, not a recording.
 - **Built-in themes share their files.** Tiger's app icons are Cheetah's (the same 10.4 set), its
   boot film is Snow Leopard's and six of its desktop pictures live in Cheetah and Snow Leopard:
   links inside the app, not copies. Aqua Blue, shared with Cheetah, is now 2880 pixels wide

@@ -469,7 +469,8 @@ final class WebAppChromeView: NSView {
     var onBack: (() -> Void)?
     var onForward: (() -> Void)?
     var onZoom: (() -> Void)?
-    private let title: String
+    /// The Tiger Finder retitles its window as it moves from folder to folder.
+    var title: String { didSet { needsDisplay = true } }
     private let iconImage: NSImage?
     private let style: Style
     private let showNav: Bool
@@ -586,7 +587,8 @@ final class WebAppChromeView: NSView {
     private func drawAqua(_ b: NSRect) {
         let active = isActiveWindow
         let outline = AquaChrome.outline(b, flipped: true)
-        NSColor.white.setFill(); outline.fill()
+        // 10.4's metal windows are metal to the edge; 10.0's frame is white under the bar.
+        (AquaChrome.brushed ? NSColor(srgbRed: 0.77, green: 0.77, blue: 0.77, alpha: 1) : NSColor.white).setFill(); outline.fill()
         let bar = NSRect(x: 0, y: 0, width: b.width, height: AquaChrome.barHeight)
         AquaChrome.titleBar(bar, active: active, flipped: true)
         let lights = AquaChrome.lightRects(in: bar, flipped: true)

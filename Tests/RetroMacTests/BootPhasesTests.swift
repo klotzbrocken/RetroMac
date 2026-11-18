@@ -50,7 +50,7 @@ final class BootPhasesTests: XCTestCase {
         XCTAssertEqual(BootPhaseMode.effective(.os, hasOS: true, hasFirmware: true, reduceMotion: true), .desktop)
     }
 
-    /// Every Windows theme names its firmware, nothing else does, and the page knows each one.
+    /// Every Windows theme names its BIOS and the page knows each one; a Mac may only chime.
     func testThemesDeclareKnownFirmware() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let page = try String(contentsOf: root.appendingPathComponent("Resources/Widgets/Boot/Boot.html"), encoding: .utf8)
@@ -60,7 +60,9 @@ final class BootPhasesTests: XCTestCase {
             where bundle.pathExtension == "retromactheme" {
             let config = try JSONDecoder().decode(DockThemeConfig.self, from: Data(contentsOf: bundle.appendingPathComponent("theme.json")))
             let windows = bundle.lastPathComponent.hasPrefix("Windows")
-            if let fw = config.boot?.firmware {
+            if config.boot?.firmware == "chime" {
+                XCTAssertFalse(windows, "\(bundle.lastPathComponent): a PC has no Mac chime")
+            } else if let fw = config.boot?.firmware {
                 XCTAssertTrue(windows, "\(bundle.lastPathComponent): firmware only on PC themes")
                 XCTAssertTrue(["ami92", "award451", "award600"].contains(fw), fw)
                 XCTAssertTrue(page.contains("\(fw): {"), "Boot.html has no \(fw)")

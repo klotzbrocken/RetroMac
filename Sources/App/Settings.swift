@@ -931,6 +931,13 @@ final class AppSettings: ObservableObject {
     @Published var exposeAppHotkeyModifiers: UInt32 {
         didSet { defaults.set(exposeAppHotkeyModifiers, forKey: "exposeAppHotkeyModifiers") }
     }
+    /// The old F11: every app out of the way, the desktop bare; again brings them back. ⌃F11.
+    @Published var exposeDesktopHotkeyCode: UInt32 {
+        didSet { defaults.set(exposeDesktopHotkeyCode, forKey: "exposeDesktopHotkeyCode") }
+    }
+    @Published var exposeDesktopHotkeyModifiers: UInt32 {
+        didSet { defaults.set(exposeDesktopHotkeyModifiers, forKey: "exposeDesktopHotkeyModifiers") }
+    }
     /// Keyboard access (3.0): the theme's main menu — Start, Apple, Be, Workspace, Launch, the
     /// NeXT menu, the Toolchest. ⌃Esc by default, the shortcut Windows itself opens Start with.
     @Published var launcherHotkeyCode: UInt32 {
@@ -950,6 +957,7 @@ final class AppSettings: ObservableObject {
         [(hotkeyCode, hotkeyModifiers), (screenshotHotkeyCode, screenshotHotkeyModifiers),
          (menuBarToggleHotkeyCode, menuBarToggleHotkeyModifiers), (dashboardHotkeyCode, dashboardHotkeyModifiers),
          (exposeHotkeyCode, exposeHotkeyModifiers), (exposeAppHotkeyCode, exposeAppHotkeyModifiers),
+         (exposeDesktopHotkeyCode, exposeDesktopHotkeyModifiers),
          (launcherHotkeyCode, launcherHotkeyModifiers), (dockFocusHotkeyCode, dockFocusHotkeyModifiers)]
     }
     /// Whether one of RetroMac's own hotkeys already uses this combination.
@@ -1486,6 +1494,9 @@ final class AppSettings: ObservableObject {
         dockFocusHotkeyCode = defaults.object(forKey: "dockFocusHotkeyCode") as? UInt32 ?? 0x35   // Esc
         dockFocusHotkeyModifiers = defaults.object(forKey: "dockFocusHotkeyModifiers") as? UInt32 ?? 0x1200   // ⌃⇧
         exposeAppHotkeyModifiers = defaults.object(forKey: "exposeAppHotkeyModifiers") as? UInt32 ?? 0x1000
+        // kVK_F11 = 0x67, controlKey = 0x1000
+        exposeDesktopHotkeyCode = defaults.object(forKey: "exposeDesktopHotkeyCode") as? UInt32 ?? 0x67
+        exposeDesktopHotkeyModifiers = defaults.object(forKey: "exposeDesktopHotkeyModifiers") as? UInt32 ?? 0x1000
         bootPhaseMode = BootPhaseMode(rawValue: defaults.string(forKey: "bootPhaseMode") ?? "") ?? .desktop
         crashMode = defaults.string(forKey: "crashMode") ?? "authentic"
         crashIntensity = defaults.string(forKey: "crashIntensity") ?? "off"
