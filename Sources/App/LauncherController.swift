@@ -426,16 +426,41 @@ struct LauncherView: View {
 
     private var quickAccess: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("Quick Access", selection: Binding(get: { tab }, set: { settings.quickAccessTab = $0 })) {
-                ForEach(Self.tabs, id: \.self) { Text($0).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .controlSize(.mini)
-            .labelsHidden()
+            tabBar
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 12) {
                 ForEach(0..<8, id: \.self) { i in slotView(i) }
             }
         }
+    }
+
+    /// The three tabs as one quiet strip the width of the slot grid: a faint well, the chosen tab
+    /// a raised pill in it. Colours from the system, so it reads in light and dark alike.
+    private var tabBar: some View {
+        HStack(spacing: 2) {
+            ForEach(Self.tabs, id: \.self) { t in
+                let on = t == tab
+                Button { settings.quickAccessTab = t } label: {
+                    Text(t)
+                        .font(.system(size: 11, weight: on ? .semibold : .regular))
+                        .foregroundStyle(on ? .primary : .secondary)
+                        .frame(maxWidth: .infinity, minHeight: 22)
+                        .background {
+                            if on {
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(Color(nsColor: .controlBackgroundColor))
+                                    .shadow(color: .black.opacity(0.18), radius: 1.5, y: 0.5)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(2)
+        .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Quick Access")
     }
 
     @ViewBuilder
