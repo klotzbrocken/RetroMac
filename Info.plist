@@ -32,9 +32,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.0.5</string>
+	<string>3.0.6</string>
 	<key>CFBundleVersion</key>
-	<string>3.0.11</string>
+	<string>3.0.12</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -48,10 +48,10 @@
 	<string>RetroMac asks System Events to hide the Dock and menu bar while a theme or the overlay is active, and Finder whether the Trash is full, so the trash icon matches.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>The desktop companion tells you a few minutes before a meeting and can open its video link. Nothing leaves your Mac.</string>
-	<key>NSRemindersFullAccessUsageDescription</key>
-	<string>The desktop companion tells you when a reminder is due and lets you check it off. Nothing leaves your Mac.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>RetroMac needs camera access to apply retro shader effects to your webcam for video calls.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>The desktop companion tells you when a reminder is due and lets you check it off. Nothing leaves your Mac.</string>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>RetroMac needs screen recording permission to apply retro shader effects over your desktop.</string>
 	<key>NSSystemExtensionUsageDescription</key>
