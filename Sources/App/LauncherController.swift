@@ -617,6 +617,20 @@ struct LauncherView: View {
                 }
             }
 
+            // The assistant or the sheep: back after Hide Assistant without a trip to Settings.
+            HStack {
+                Label("Desktop Companion", systemImage: "paperclip")
+                Spacer()
+                Toggle("", isOn: Binding(get: { settings.companion.character != "off" },
+                                         set: { on in
+                                             let last = settings.companion.lastCharacter
+                                             // "Match the theme" has no one under a Mac theme: then Clippy, who ships.
+                                             let shows = last == "sheep" || CompanionController.resolved(last, themeName: ThemeManager.shared.activeTheme?.config.name) != nil
+                                             CompanionController.shared.choose(on ? (shows ? last : "Clippy") : "off")
+                                         }))
+                    .toggleStyle(.switch).controlSize(.small).tint(switchGreen).accessibilityLabel("Desktop Companion")
+            }
+
             appleCycleRow
         }
         .font(.system(size: 12))

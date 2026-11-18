@@ -15,6 +15,8 @@ struct CompanionPrefs: Codable, Equatable {
     /// Wikipedia's featured article, once a day (the one thing fetched from the network).
     var wikipedia = false
     var sounds = false
+    /// The last character that was on, so the flyout's switch can bring it back after Hide.
+    var lastCharacter = "Clippy"
 }
 
 /// The Office assistant on the desktop: a character from `AgentCatalog` in a small floating panel,
@@ -28,6 +30,8 @@ final class CompanionController: ObservableObject {
     struct Message {
         var text: String
         var buttons: [(String, () -> Void)] = []
+        /// A tip: gone after a few seconds, or at a click on it.
+        var tip = false
     }
     enum Page {
         case none, message(Message), home, clipboard, notes, agenda([CompanionCalendar.Item])
@@ -238,9 +242,9 @@ final class CompanionController: ObservableObject {
     // MARK: - Talking
 
     /// Says something with a matching animation. While a page the user opened is up, it waits.
-    func say(_ text: String, _ moment: AgentCharacter.Moment = .explain, buttons: [(String, () -> Void)] = []) {
+    func say(_ text: String, _ moment: AgentCharacter.Moment = .explain, buttons: [(String, () -> Void)] = [], tip: Bool = false) {
         guard player != nil else { return }
-        let m = Message(text: text, buttons: buttons)
+        let m = Message(text: text, buttons: buttons, tip: tip)
         switch page {
         case .home, .clipboard, .notes, .agenda: pending.append((m, moment)); return
         default: break
@@ -252,7 +256,7 @@ final class CompanionController: ObservableObject {
                              userInfo: [.announcement: "\(AgentCatalog.title(activeName ?? "")): \(text)",
                                         .priority: NSAccessibilityPriorityLevel.high.rawValue])
         hideTimer?.invalidate()
-        hideTimer = Timer.scheduledTimer(withTimeInterval: buttons.isEmpty ? 12 : 40, repeats: false) { [weak self] _ in
+        hideTimer = Timer.scheduledTimer(withTimeInterval: tip ? 8 : buttons.isEmpty ? 12 : 40, repeats: false) { [weak self] _ in
             guard let self, self.balloon?.frame.contains(NSEvent.mouseLocation) != true else {
                 self?.hideTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { [weak self] _ in self?.closeBalloon() }
                 return
@@ -467,12 +471,12 @@ final class CompanionController: ObservableObject {
             var buttons: [(String, () -> Void)] = []
             if let tab = tip.tab { buttons.append(("Show me", { AppDelegate.shared?.showSettings(tab: tab) })) }
             buttons.append(("No more RetroMac tips", { AppSettings.shared.companion.retroTips = false }))
-            say(tip.text, .explain, buttons: buttons)
+            say(tip.text, .explain, buttons: buttons, tip: true)
         } else if prefs.tips, let tip = CompanionTips.next(for: id) {
             say(tip, .explain, buttons: [
                 ("Thanks", { [weak self] in self?.closeBalloon() }),
                 ("No more Mac tips", { AppSettings.shared.companion.tips = false }),
-            ])
+            ], tip: true)
         }
     }
 

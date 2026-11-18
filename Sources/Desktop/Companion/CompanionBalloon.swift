@@ -41,6 +41,9 @@ struct CompanionBalloonView: View {
         case .message(let m):
             VStack(alignment: .leading, spacing: 8) {
                 Text(m.text).fixedSize(horizontal: false, vertical: true)
+                    .contentShape(Rectangle())
+                    .onTapGesture { if m.tip { model.closeBalloon() } }
+                    .accessibilityHint(m.tip ? "Click to close" : "")
                 if !m.buttons.isEmpty {
                     buttons(m.buttons.map { b in (b.0, { b.1(); model.closeBalloon() }) })
                 }

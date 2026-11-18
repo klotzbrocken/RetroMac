@@ -1073,6 +1073,8 @@ final class AppSettings: ObservableObject {
     /// Settings ▸ Desktop ▸ Desktop companion: the sheep or an Office assistant, and its jobs.
     @Published var companion: CompanionPrefs {
         didSet {
+            // Remember who was on, so the flyout can bring them back after Hide.
+            if companion.character != "off", companion.lastCharacter != companion.character { companion.lastCharacter = companion.character }
             if let data = try? JSONEncoder().encode(companion) { defaults.set(data, forKey: "companion") }
             guard companion != oldValue else { return }
             CompanionController.shared.apply()
