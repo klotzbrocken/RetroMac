@@ -118,30 +118,36 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Windows NT 4.0, a BIOS you can enter, and Boot Phases")
+                Text("Mac OS X Tiger, Spotlight, and a Finder of its own")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("pawprint.fill", .orange, "Mac OS X 10.4 Tiger",
+                            "Aqua Blue, the frosted dock, brushed-metal title bars, the blue Apple, Tiger\u{2019}s own About This Mac and Apple menu, and ten of its desktop pictures.")
+                    feature("folder.fill", .blue, "Tiger\u{2019}s Finder",
+                            "Brushed metal with icon, list and column views, Tiger\u{2019}s own sidebar, your real files, and a Trash that is the Mac\u{2019}s.")
+                    feature("magnifyingglass.circle.fill", .blue, "Spotlight",
+                            "The blue magnifier in the menu bar, with results from your Mac\u{2019}s own index, and Show All in the Finder.")
+                    feature("speaker.wave.2.fill", .purple, "Tiger\u{2019}s start-up chime",
+                            "On \u{201C}Firmware \u{2192} OS Boot\u{201D}, the Mac\u{2019}s chord before the grey Apple.")
+                    feature("square.grid.2x2.fill", .teal, "Quick Access in tabs",
+                            "Apple, Windows and Various in the flyout, every family youngest era first, with new theme icons.")
+                    feature("paperclip", .yellow, "Desktop Companion",
+                            "Back from the flyout after Hide, and tips that leave by themselves after a few seconds.")
+                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
+                            "Minimising lands in the theme\u{2019}s dock under Mac OS X, Tiger, Snow Leopard and Mountain Lion. \u{2303}F11 shows the desktop. Under Tiger the desktop widgets and the TV window wear its metal.")
+
+                    sectionHeader("Also in 3.0.5")
+
                     feature("desktopcomputer", .teal, "Windows NT 4.0",
-                            "The Workstation edition of 1996: 95\u{2019}s taskbar, the desktop of a fresh install, NT\u{2019}s Start menu with its program groups, and its start-up screen on teal. Administrative Tools open the Mac\u{2019}s own tools, and Startup lists what your Mac opens at login.")
+                            "The Workstation edition of 1996, with NT\u{2019}s Start menu, its program groups and its start-up screen on teal.")
                     feature("cpu", .blue, "A BIOS you can enter",
-                            "The Windows themes start with their PC\u{2019}s firmware \u{2014} AMIBIOS, Award or Phoenix-Award \u{2014} counting this Mac\u{2019}s real memory. Press DEL (the \u{232B} key) during the POST for the CMOS setup: every page can be walked, and Quick POST and Floppy Seek do what they say. The key can be changed in Settings.")
+                            "The Windows themes start with their PC\u{2019}s firmware, counting this Mac\u{2019}s real memory. Press DEL during the POST for the CMOS setup.")
                     feature("slider.horizontal.3", .purple, "Boot Phases",
-                            "One slider for how a theme starts: straight to the desktop, the operating system booting, or the firmware first and then the OS. Each theme can keep a choice of its own.")
-                    feature("folder.fill", .orange, "All Programs",
-                            "Every app on your Mac in the Windows Start menus, sorted into Office, Design, Online, Games, Multimedia, Communication and System Tools. Folders inside the menus now open as well.")
-                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "A taskbar button brings its window to the front again. Under a theme\u{2019}s title bar no desktop shows through a window\u{2019}s rounded corners. The light menu-bar strip of the Mac themes reaches every display. Mountain Lion keeps Applications in the dock. In Settings the theme list picks a theme, and Show theme now switches to it.")
-
-                    sectionHeader("Also in 3.0.4")
-
-                    feature("antenna.radiowaves.left.and.right", .green, "SETI@home Classic",
-                            "The search for signals of 1999 to 2005, simulated and offline, as a window, a background task and a screensaver sharing one work unit.")
-                    feature("square.stack.3d.up.fill", .blue, "Stacks, Exposé and Launchpad as in Snow Leopard",
-                            "Stacks list the whole folder with 10.6\u{2019}s Fan, Grid and List, Exposé shows the highlighted window at full size, and Launchpad keeps your order.")
-                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "Files dropped into a framed window arrive again, Time Machine restores work with Classic Finder on, and RetroMac no longer crashes now and then when you switch themes.")
+                            "One slider for how a theme starts: straight to the desktop, the operating system booting, or the firmware first.")
+                    feature("list.bullet.rectangle", .orange, "All Programs",
+                            "Every app on your Mac in the Windows Start menus, sorted into folders.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
