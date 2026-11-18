@@ -50,6 +50,9 @@ struct SwitcherCapability: Equatable {
         "com.retromac.apple.snow-leopard": SwitcherCapability(
             mode: .expose, reference: .documented, source: "Exposé since Mac OS X 10.3 [A1]",
             summary: "Opens Exposé with every window."),
+        "com.retromac.apple.tiger": SwitcherCapability(
+            mode: .expose, reference: .documented, source: "Exposé since Mac OS X 10.3 [A1]",
+            summary: "Opens Exposé with every window."),
         "com.retromac.apple.mountain-lion": SwitcherCapability(
             mode: .missionControl, reference: .documented, source: "Mission Control since Mac OS X 10.7",
             summary: "Opens Mission Control."),

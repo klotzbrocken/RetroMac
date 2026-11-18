@@ -49,6 +49,8 @@ struct DockThemeConfig: Codable {
     /// "snowleopard", "win31", "beos", "maiksfav", "default").
     struct ChromeDecl: Codable {
         var style: String? = nil
+        /// The Aqua title bar's material: absent → 10.0's pinstripes, "brushed" → 10.4's metal.
+        var titleBar: String? = nil
     }
     var dock: DockStyle
     var icon: IconStyle
@@ -355,7 +357,7 @@ extension DockThemeConfig {
 
     /// Themes whose real-world dock/taskbar supported auto-hide.
     var supportsAutoHide: Bool {
-        ["Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows 95", "Windows NT 4.0", "Windows Me", "Windows 7", "Windows Vista", "OS/2 Warp 4"].contains(name)
+        ["Mac OS X Tiger", "Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows 95", "Windows NT 4.0", "Windows Me", "Windows 7", "Windows Vista", "OS/2 Warp 4"].contains(name)
     }
     var dockAutoHideEnabled: Bool {
         supportsAutoHide && (AppSettings.shared.themeDockAutoHide[settingsKey] ?? false)

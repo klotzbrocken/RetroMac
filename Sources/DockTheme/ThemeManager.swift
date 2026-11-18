@@ -900,9 +900,12 @@ final class ThemeManager {
             // in the JPEGs; Platinum's is assumed.
             return MenuBarStyle(bottom: c(0.886), top: c(0.886), rule: c(0.333))
         case "Mac OS X":
-            // Aqua 10.0 to 10.4: near-white, finely pinstriped.
+            // Aqua 10.0 to 10.3: near-white, finely pinstriped.
             return MenuBarStyle(bottom: c(0.937), top: c(0.976), rule: c(0.588),
                                 pinstripe: NSColor(srgbRed: 0.898, green: 0.910, blue: 0.937, alpha: 1))
+        case "Mac OS X Tiger":
+            // 10.4 dropped the pinstripes: white, a faint grey waist, measured off a 10.4 desktop.
+            return MenuBarStyle(bottom: c(0.957), top: c(0.996), rule: c(0.784))
         case "Mountain Lion":
             return MenuBarStyle(bottom: c(0.894), top: c(0.969), rule: c(0.651))
         default:

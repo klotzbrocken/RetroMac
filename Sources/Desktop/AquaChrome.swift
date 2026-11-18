@@ -78,6 +78,7 @@ enum AquaChrome {
     /// The bar in `bar` (`barHeight` tall): pinstripes, the grey edge round its top and sides,
     /// the line under it. Pale pinstripes for an inactive window.
     static func titleBar(_ bar: NSRect, active: Bool, flipped: Bool) {
+        if brushed { brushedBar(bar, active: active, flipped: flipped); return }
         NSGraphicsContext.saveGraphicsState()
         let shape = outline(bar, flipped: flipped)
         shape.addClip()
@@ -94,6 +95,47 @@ enum AquaChrome {
         shape.lineWidth = 2
         shape.stroke()
         (active ? underline : grey(0xB4)).setFill()
+        rows(bar, CGFloat(n - 1), x: bar.minX, w: bar.width, flipped: flipped).fill()
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    // MARK: Brushed metal (10.4 Tiger)
+
+    /// The active theme asks for 10.4's metal instead of 10.0's pinstripes (`chrome.titleBar`).
+    static var brushed: Bool { ThemeManager.shared.activeTheme?.config.chrome?.titleBar == "brushed" }
+
+    /// Tiger's metal across the bar, measured off 10.4's Finder (Home window): brightest a little
+    /// left of the middle (#DA) and falling to #B6 at either end, every row a few levels lighter
+    /// or darker than its neighbours, which is what reads as brushed. A light first row, a dark
+    /// line under it all. An inactive window's metal pales.
+    static let metalProfile: [(UInt8, CGFloat)] = [(0xB6, 0), (0xC4, 0.2), (0xCF, 0.35), (0xDA, 0.5),
+                                                  (0xD0, 0.65), (0xC4, 0.8), (0xB6, 1)]
+    /// Each row's offset from the profile, read down one column of the same screenshot.
+    static let metalStreaks: [Int] = [-2, 4, -3, 1, -1, -3, -1, -5, 2, 2, 0, 3, -2, 7, -2, 4, -4, 3, 4, 2, 1]
+
+    static func brushedBar(_ bar: NSRect, active: Bool, flipped: Bool) {
+        NSGraphicsContext.saveGraphicsState()
+        let shape = outline(bar, flipped: flipped)
+        shape.addClip()
+        let n = Int(bar.height)
+        func shade(_ v: Int) -> NSColor {
+            let c = CGFloat(min(255, max(0, v))) / 255
+            let g = active ? c : 1 - (1 - c) * 0.55
+            return NSColor(srgbRed: g, green: g, blue: g, alpha: 1)
+        }
+        for i in 0..<n {
+            let streak = i == 0 ? 0 : metalStreaks[(i - 1) % metalStreaks.count]
+            let colours = metalProfile.map { shade(Int($0.0) + streak) }
+            let r = rows(bar, CGFloat(i), x: bar.minX, w: bar.width, flipped: flipped)
+            NSGradient(colors: colours, atLocations: metalProfile.map(\.1), colorSpace: .sRGB)?.draw(in: r, angle: 0)
+        }
+        grey(0x8E).setStroke()
+        shape.lineWidth = 2
+        shape.stroke()
+        // The light top edge between the corners, and the dark line where the bar meets the window.
+        shade(0xF5).setFill()
+        rows(bar, 0, x: bar.minX + cornerRadius, w: bar.width - 2 * cornerRadius, flipped: flipped).fill()
+        (active ? grey(0x7E) : grey(0xA8)).setFill()
         rows(bar, CGFloat(n - 1), x: bar.minX, w: bar.width, flipped: flipped).fill()
         NSGraphicsContext.restoreGraphicsState()
     }
@@ -125,8 +167,15 @@ enum AquaChrome {
     static func title(_ title: String, bar: NSRect, active: Bool, flipped: Bool, minX: CGFloat, maxX: CGFloat) {
         guard !title.isEmpty else { return }
         let para = NSMutableParagraphStyle(); para.lineBreakMode = .byTruncatingTail
-        let attrs: [NSAttributedString.Key: Any] = [.font: titleFont, .paragraphStyle: para,
+        var attrs: [NSAttributedString.Key: Any] = [.font: titleFont, .paragraphStyle: para,
                                                    .foregroundColor: active ? NSColor.black : grey(0x80)]
+        if brushed {   // metal's title sits embossed: a white line under each letter
+            let s = NSShadow()
+            s.shadowColor = NSColor.white.withAlphaComponent(0.7)
+            s.shadowOffset = NSSize(width: 0, height: -1)
+            s.shadowBlurRadius = 0
+            attrs[.shadow] = s
+        }
         let lo = minX + 8, hi = maxX - 8
         guard hi > lo else { return }
         let size = title.size(withAttributes: attrs)

@@ -60,7 +60,7 @@ More, and the videos, at [myretromac.app](https://myretromac.app).
   pass while your windows stay untouched. Nostalgia and work at the same time.
 - **Themes** — Windows 3.1, 95, 98 (with the Plus! schemes), Me, XP, 7; System 6 (true 1-bit), System 7.1 (authentic: 256 colours, the 1994 Control Strip, the Application menu and the Apple menu),
   Mac OS 9 (and an authentic cut with the Control Strip of system modules and the Application
-  menu instead of a dock), Mac OS X Cheetah, Mountain Lion, Snow Leopard; Windows Vista with its
+  menu instead of a dock), Mac OS X Cheetah, Tiger, Snow Leopard, Mountain Lion; Windows Vista with its
   Sidebar; Solaris 8 with CDE's Front Panel and QNX 6.2.1 with Photon's shelf; BeOS, OS/2 Warp 4,
   SGI IRIX, AmigaOS Workbench 4.1, NeXTSTEP, Futurama, and two of the maintainer's own.
 - **Rescue Desktop** — ⌃⌥⌘R turns every theme and effect off and brings back windows you

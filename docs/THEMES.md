@@ -79,7 +79,8 @@ imports themes it did not write.
   `winxp`, `win7`, `macos6`, `system7`, `macos9`, `macosx`, `snowleopard`, `beos`, `nextstep`, `futurama`,
   `cde`, `photon`, `maiksfav`, `default`. There is no "custom" chrome yet; pick the nearest. `cde`
   and `photon` bring Solaris's Front Panel and QNX's shelf and taskbar with them; set
-  `dock.dockStyle` to `none` alongside.
+  `dock.dockStyle` to `none` alongside. With `macosx`, `chrome.titleBar: "brushed"` draws 10.4's
+  brushed metal across the title bars instead of 10.0's pinstripes (Tiger does).
 
 ## Dock and taskbar
 

@@ -127,18 +127,25 @@ final class ThemeBundle {
     /// if the resolved path escapes the bundle via `../` or a symlink, or does not exist. RetroMac
     /// is unsandboxed and imports untrusted themes, so a theme must never reference files outside
     /// its own directory (arbitrary-file-as-icon/wallpaper). `internal` so tests can exercise it.
-    static func confinedResource(_ name: String?, under base: URL) -> URL? {
+    /// `root` widens the fence: a built-in theme may share a sibling built-in theme's files
+    /// through a symlink (Tiger's icons are Cheetah's), so for those the fence is the app's own
+    /// Themes folder. Imported themes keep `root` nil, the fence their own bundle.
+    static func confinedResource(_ name: String?, under base: URL, within root: URL? = nil) -> URL? {
         guard let name, !name.isEmpty else { return nil }
-        let root = base.standardizedFileURL.resolvingSymlinksInPath()
+        let fence = (root ?? base).standardizedFileURL.resolvingSymlinksInPath()
         let candidate = base.appendingPathComponent(name).standardizedFileURL.resolvingSymlinksInPath()
-        guard candidate.path == root.path || candidate.path.hasPrefix(root.path + "/") else { return nil }
+        guard candidate.path == fence.path || candidate.path.hasPrefix(fence.path + "/") else { return nil }
         guard FileManager.default.fileExists(atPath: candidate.path) else { return nil }
         return candidate
     }
+    /// How far a lookup may reach: the shipped Themes folder for a built-in theme, else the
+    /// bundle itself. Never `icons/` on its own: resolved, a linked `icons` folder would move
+    /// the fence to wherever it points.
+    private var fence: URL { isBuiltIn ? url.deletingLastPathComponent() : url }
     /// Confined lookup in the theme's `icons/` directory.
-    func iconResource(_ name: String?) -> URL? { Self.confinedResource(name, under: iconsDirectory) }
+    func iconResource(_ name: String?) -> URL? { Self.confinedResource(name, under: iconsDirectory, within: fence) }
     /// Confined lookup at the theme bundle root.
-    func rootResource(_ name: String?) -> URL? { Self.confinedResource(name, under: url) }
+    func rootResource(_ name: String?) -> URL? { Self.confinedResource(name, under: url, within: fence) }
 
     /// URL to the theme's preview image — prefers the compact preview.jpg, falls back to preview.png.
     var previewImageURL: URL? {
@@ -272,6 +279,27 @@ final class ThemeBundle {
         try data.write(to: jsonURL, options: .atomic)
     }
 
+    /// A copy is no longer next to the themes its symlinks point into (and, imported, may not
+    /// leave its own folder): every link in `copy` becomes a real copy of what it pointed to
+    /// in `source`. A link that points nowhere is dropped.
+    static func materializeSymlinks(in copy: URL, copiedFrom source: URL) throws {
+        let fm = FileManager.default
+        guard let walk = fm.enumerator(at: copy, includingPropertiesForKeys: [.isSymbolicLinkKey]) else { return }
+        var links: [URL] = []
+        for case let u as URL in walk where (try? u.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink == true {
+            links.append(u)
+        }
+        let copyRoot = copy.resolvingSymlinksInPath().path   // the walk may report /private/var for /var
+        for link in links {
+            let at = link.deletingLastPathComponent().resolvingSymlinksInPath().path + "/" + link.lastPathComponent
+            guard at.hasPrefix(copyRoot + "/") else { continue }
+            let relative = String(at.dropFirst(copyRoot.count))
+            let target = URL(fileURLWithPath: source.path + relative).resolvingSymlinksInPath()
+            try fm.removeItem(at: link)
+            if fm.fileExists(atPath: target.path) { try fm.copyItem(at: target, to: link) }
+        }
+    }
+
     static func create(name: String, basedOn source: ThemeBundle, at directory: URL) throws -> ThemeBundle {
         let safeName = name.replacingOccurrences(of: "/", with: "-")
             .replacingOccurrences(of: ":", with: "-")
@@ -283,6 +311,7 @@ final class ThemeBundle {
             try fm.removeItem(at: destURL)
         }
         try fm.copyItem(at: source.url, to: destURL)
+        try materializeSymlinks(in: destURL, copiedFrom: source.url)
 
         var newConfig = source.config
         newConfig.name = name

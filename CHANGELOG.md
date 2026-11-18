@@ -7,6 +7,20 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **New theme: Mac OS X 10.4 Tiger.** Aqua Blue, the frosted dock without 10.0's pinstripes
+  (white at about 42 %, black triangles under running apps), the rainbow Apple, and brushed metal
+  across the title bars where Cheetah has pinstripes, with the title embossed in white. Ten of
+  Tiger's desktop pictures: Aqua Blue and Aqua Graphite, Lotus, Leaf Curl, the tiger's fur, the
+  Classic, Jaguar and Panther Aqua Blues, Clown Fish and Stones. Dashboard sits on the desktop,
+  Exposé answers the window switcher, the Aqua pointers and the red dock badges come along. The
+  menu bar is 10.4's plain white one. Spotlight's menu, the metal Finder windows and Dashboard's
+  widget bar are not rebuilt yet.
+- **Built-in themes share their files.** Tiger's app icons are Cheetah's (the same 10.4 set), its
+  boot film is Snow Leopard's and six of its desktop pictures live in Cheetah and Snow Leopard:
+  links inside the app, not copies. Aqua Blue, shared with Cheetah, is now 2880 pixels wide
+  instead of 1920. A duplicated theme gets real copies, and an imported theme still cannot reach
+  outside its own folder.
+
 - **Desktop companion** (Settings ▸ Desktop). One choice for the sheep and the Office
   assistants: Clippy and The Genius come with RetroMac; F1, Genie, Links, Merlin, Peedy, Rocky
   and Rover download when picked. *Match the theme* puts Clippy on the Windows themes and Rover
@@ -30,6 +44,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixes
 
+- **An imported theme whose `icons` folder is a link stays inside its own folder.** The lookup
+  followed the link before drawing the fence, so the fence moved with it.
 - **A macOS update can no longer stop RetroMac from starting.** The private WindowServer
   functions behind the window borders and title bars are now linked weakly: if one is gone,
   both features stay off (and say so in the log) instead of the app refusing to launch.

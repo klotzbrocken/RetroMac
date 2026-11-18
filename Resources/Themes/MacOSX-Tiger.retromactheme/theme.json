@@ -1,0 +1,314 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.apple.tiger",
+  "family": {
+    "id": "apple",
+    "name": "Apple Macintosh",
+    "order": 1
+  },
+  "release": {
+    "label": "Mac OS X 10.4 Tiger",
+    "year": 2005
+  },
+  "experienceLevel": "partial",
+  "chrome": {
+    "style": "macosx",
+    "titleBar": "brushed"
+  },
+  "name": "Mac OS X Tiger",
+  "splashVideo": "boot.mp4",
+  "splashFullscreen": true,
+  "systemTweaks": [
+    {
+      "domain": "-g",
+      "key": "NSConvolutionOverride1",
+      "type": "float",
+      "value": "6",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "-g",
+      "key": "AppleShowScrollBars",
+      "type": "string",
+      "value": "Always"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "FXPreferredViewStyle",
+      "type": "string",
+      "value": "icnv",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.finder",
+      "key": "ShowPathbar",
+      "type": "bool",
+      "value": "true",
+      "refresh": "Finder"
+    },
+    {
+      "domain": "com.apple.dock",
+      "key": "mineffect",
+      "type": "string",
+      "value": "genie",
+      "refresh": "Dock"
+    }
+  ],
+  "menuBarApple": "rainbow",
+  "menuBar": {
+    "appleMenu": true,
+    "appleMenuStyle": "macosx"
+  },
+  "version": "1.0",
+  "author": "RetroMac",
+  "dock": {
+    "height": 70,
+    "iconSize": 60,
+    "padding": 4,
+    "spacing": 2,
+    "cornerRadius": 0,
+    "edgeOffset": 0,
+    "squareBottom": true,
+    "separatorGap": 30,
+    "backgroundColor": "#FFFFFF6B",
+    "backgroundGradientTop": null,
+    "backgroundGradientBottom": null,
+    "shelfLineColor": null,
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#FFFFFF99",
+    "borderWidth": 1,
+    "shadowEnabled": true,
+    "shadowColor": "#00000055",
+    "shadowRadius": 16,
+    "bevelTopColor": null,
+    "bevelBottomColor": null,
+    "bevelWidth": 0,
+    "pinstripe": false,
+    "separatorStyle": "line",
+    "runningAppsSeparator": false,
+    "launchBounce": true,
+    "labelStyle": "outlined",
+    "shelfStyle": "flat",
+    "magnification": true,
+    "magnificationScale": 2.0,
+    "showTrash": true,
+    "showUrlLauncher": true,
+    "showLabels": true
+  },
+  "magnification": {
+    "enabled": true,
+    "scale": 2.0
+  },
+  "icon": {
+    "renderStyle": "smooth",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0.0,
+    "hoverScale": 1.2,
+    "hoverAnimationDuration": 0.15
+  },
+  "indicator": {
+    "style": "triangle",
+    "color": "#000000",
+    "size": 9,
+    "offset": 6
+  },
+  "wallpaper": "wallpaper.jpg",
+  "wallpapers": [
+    {
+      "name": "Aqua Blue",
+      "file": "wallpaper.jpg"
+    },
+    {
+      "name": "Aqua Graphite",
+      "file": "wallpaper-graphite.jpg"
+    },
+    {
+      "name": "Lotus",
+      "file": "wallpaper-lotus.jpg"
+    },
+    {
+      "name": "Leaf Curl",
+      "file": "wallpaper-leafcurl.jpg"
+    },
+    {
+      "name": "Tiger",
+      "file": "wallpaper-tiger.jpg"
+    },
+    {
+      "name": "Classic Aqua Blue",
+      "file": "wallpaper-classic-aqua.jpg"
+    },
+    {
+      "name": "Jaguar Aqua Blue",
+      "file": "wallpaper-jaguar.jpg"
+    },
+    {
+      "name": "Panther Aqua Blue",
+      "file": "wallpaper-panther.jpg"
+    },
+    {
+      "name": "Clown Fish",
+      "file": "wallpaper-clownfish.jpg"
+    },
+    {
+      "name": "Stones",
+      "file": "wallpaper-stones.jpg"
+    }
+  ],
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "lcd-retro-lite",
+  "desktopIcons": [
+    {
+      "name": "Macintosh HD",
+      "icon": "harddisk.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Applications",
+      "icon": "applicationsfolder.png",
+      "type": "appfolder",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "Clock",
+      "icon": "clock.png",
+      "type": "clock",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "CPU Monitor",
+      "icon": "cpuwidget.png",
+      "type": "cpumonitor",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Notepad",
+      "icon": "notepad.png",
+      "type": "notepad",
+      "gridX": 0,
+      "gridY": 4
+    },
+    {
+      "name": "Dashboard",
+      "icon": "dashboard.png",
+      "type": "dashboard",
+      "gridX": 0,
+      "gridY": 5
+    },
+    {
+      "name": "Screen Saver",
+      "icon": "screensaver.png",
+      "type": "screensaver",
+      "gridX": 0,
+      "gridY": 6
+    },
+    {
+      "name": "TV",
+      "icon": "tv.png",
+      "type": "tvfolder",
+      "gridX": 1,
+      "gridY": 0
+    }
+  ],
+  "iconMappings": {
+    "com.anthropic.claudefordesktop": "claude.png",
+    "com.openai.chat": "chatgpt.png",
+    "com.openai.codex": "chatgpt.png",
+    "com.google.Chrome": "chrome.png",
+    "org.mozilla.firefox": "firefox.png",
+    "com.microsoft.teams2": "teams.png",
+    "com.microsoft.teams": "teams.png",
+    "com.microsoft.Outlook": "outlook.png",
+    "com.apple.dt.Xcode": "xcode.png",
+    "com.microsoft.Word": "word.png",
+    "com.microsoft.Excel": "excel.png",
+    "com.microsoft.Powerpoint": "powerpoint.png",
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "safari.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.Notes": "notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.retromac.retrocal": "calendar.png",
+    "com.apple.systempreferences": "systempreferences.png",
+    "com.apple.Terminal": "terminal.png",
+    "com.apple.Music": "itunes.png",
+    "com.apple.iTunes": "itunes.png",
+    "com.apple.AppStore": "appstore.png",
+    "com.apple.FaceTime": "facetime.png",
+    "com.apple.AddressBook": "contacts.png",
+    "com.apple.reminders": "reminders.png",
+    "com.apple.Preview": "preview_app.png",
+    "com.apple.TextEdit": "textedit.png",
+    "com.apple.calculator": "calculator.png",
+    "com.apple.Dictionary": "dictionary.png",
+    "com.apple.QuickTimePlayerX": "quicktime.png",
+    "com.apple.DiskUtility": "diskutility.png",
+    "com.apple.ActivityMonitor": "activitymonitor.png",
+    "com.apple.Console": "console.png",
+    "com.apple.iMovieApp": "imovie.png",
+    "com.apple.Automator": "automator.png",
+    "com.apple.FontBook": "fontbook.png",
+    "com.apple.Chess": "chess.png",
+    "com.apple.Stickies": "stickies.png",
+    "com.apple.PhotoBooth": "photobooth.png",
+    "com.apple.Image_Capture": "imagecapture.png",
+    "com.apple.grapher": "grapher.png",
+    "com.apple.DVDPlayer": "dvdplayer.png",
+    "com.apple.keychainaccess": "keychain.png",
+    "com.apple.clock": "clock.png",
+    "com.apple.garageband10": "garageband.png",
+    "com.apple.garageband": "garageband.png",
+    "com.apple.installer": "installer.png",
+    "com.apple.iWork.Keynote": "keynote.png",
+    "com.apple.Keynote": "keynote.png",
+    "com.apple.MigrateAssistant": "migration.png",
+    "com.apple.NetworkUtility": "networkutility.png",
+    "com.apple.iWork.Numbers": "numbers.png",
+    "com.apple.Numbers": "numbers.png",
+    "com.apple.iWork.Pages": "pages.png",
+    "com.apple.Pages": "pages.png",
+    "com.apple.screenshot.launcher": "screenshot.png",
+    "com.apple.SystemProfiler": "systemprofiler.png",
+    "com.apple.ColorSyncUtility": "colorsync.png",
+    "com.apple.audio.AudioMIDISetup": "audiomidi.png",
+    "com.apple.BluetoothFileExchange": "bluetoothfileexchange.png",
+    "com.apple.DigitalColorMeter": "digitalcolormeter.png",
+    "com.apple.VoiceOverUtility": "voiceover.png",
+    "com.apple.airport.airportutility": "airportutility.png",
+    "com.apple.DirectoryUtility": "directoryutility.png",
+    "com.microsoft.onenote.mac": "onenote-256.png",
+    "com.microsoft.edgemac": "edge-256.png",
+    "com.brave.Browser": "brave-256.png",
+    "company.thebrowser.Browser": "arc-256.png",
+    "com.todesktop.230313mzl4w4u92": "cursor-256.png",
+    "com.tinyspeck.slackmacgap": "slack-256.png",
+    "com.hnc.Discord": "discord-256.png",
+    "us.zoom.xos": "zoom-256.png",
+    "org.whispersystems.signal-desktop": "signal-256.png",
+    "net.whatsapp.WhatsApp": "whatsapp-256.png",
+    "com.microsoft.VSCode": "vscode-256.png",
+    "com.docker.docker": "docker-256.png",
+    "com.github.GitHubClient": "githubdesktop-256.png",
+    "com.spotify.client": "spotify-256.png",
+    "org.videolan.vlc": "vlc-128.png",
+    "com.seriflabs.affinitydesigner2": "affinitydesigner-256.png",
+    "com.seriflabs.affinitydesigner": "affinitydesigner-256.png",
+    "com.seriflabs.affinityphoto2": "affinityphoto-256.png",
+    "com.seriflabs.affinityphoto": "affinityphoto-256.png",
+    "com.seriflabs.affinitypublisher2": "affinitypublisher-256.png",
+    "com.seriflabs.affinitypublisher": "affinitypublisher-256.png",
+    "com.figma.Desktop": "figma-256.png"
+  },
+  "screensaver": "flurry",
+  "appearance": "light",
+  "accentColor": "blue"
+}

@@ -63,3 +63,17 @@ final class ThemeBundlePathTests: XCTestCase {
         XCTAssertFalse(WebAppController.isTrusted98Host("bored-entertainment.github.io"))
     }
 }
+
+/// An imported theme whose `icons` folder is itself a link must not reach through it.
+final class ThemeBundleLinkedIconsTests: XCTestCase {
+    func testLinkedIconsFolderStaysFenced() throws {
+        let tmp = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("rmlinked-\(UUID().uuidString)")
+        let bundle = tmp.appendingPathComponent("evil.retromactheme"), outside = tmp.appendingPathComponent("outside")
+        try FileManager.default.createDirectory(at: bundle, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        try Data([0x2]).write(to: outside.appendingPathComponent("secret.png"))
+        try FileManager.default.createSymbolicLink(at: bundle.appendingPathComponent("icons"), withDestinationURL: outside)
+        XCTAssertNil(ThemeBundle.confinedResource("secret.png", under: bundle.appendingPathComponent("icons"), within: bundle))
+    }
+}
