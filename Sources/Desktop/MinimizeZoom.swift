@@ -27,9 +27,11 @@ final class MinimizeZoom {
 
     /// Halloween: its fireballs stand in for the lights, so the Mac's own minimise would show the
     /// real lights on the shrinking window. The picture, fireballs and all, goes into the app's
-    /// dock icon instead. Mac OS X 10.0 and 10.4 too: the Mac's own minimise aims at the hidden
-    /// Mac Dock, whose icons sit elsewhere, and the window flew past the theme's dock.
-    static var intoDockIcon: Bool { [.fireLights, .aqua].contains(TitleBarOverlayController.style(for: RetroFrameTheme.key())) }
+    /// dock icon instead. Mac OS X 10.0, 10.4, 10.6 and 10.8 too: the Mac's own minimise aims at
+    /// the hidden Mac Dock, whose icons sit elsewhere, and the window flew past the theme's dock.
+    static var intoDockIcon: Bool {
+        [.fireLights, .aqua, .snowLights].contains(TitleBarOverlayController.style(for: RetroFrameTheme.key()))
+    }
 
     static let duration: TimeInterval = 0.4
     /// Windows' caption flight to the taskbar: quick, as fast as a maximise feels.
