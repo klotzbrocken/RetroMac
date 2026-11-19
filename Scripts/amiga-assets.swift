@@ -355,6 +355,284 @@ func unarc(_ c: CGContext) {
     magnifier(c, at: CGPoint(x: 21, y: 25), radius: 10)   // Unarc looks into the archive
 }
 
+// MARK: - The Mac's everyday apps, in the Workbench's glossy style
+// The AmiDock of 2008 carried OS4's own programs; the Mac's apps get pictures in the same manner
+// (soft highlights, a dark outline, the Workbench shadow), each standing for what the app does.
+
+func globe(_ c: CGContext, _ o: CGPoint, _ r: CGFloat, ocean: [(CGFloat, UInt32)], land: UInt32) {
+    let disc = CGPath(ellipseIn: CGRect(x: o.x - r, y: o.y - r, width: 2 * r, height: 2 * r), transform: nil)
+    radial(c, clip: disc, center: CGPoint(x: o.x - r * 0.35, y: o.y - r * 0.4), radius: r * 1.6, ocean.map { ($0.0, $0.1, 1) })
+    c.saveGState(); c.addPath(disc); c.clip()
+    // Continents: three soft blobs, then the meridians and parallels over them.
+    for (dx, dy, w, h) in [(-0.55, -0.35, 0.7, 0.5), (0.1, 0.05, 0.75, 0.6), (-0.3, 0.45, 0.45, 0.35)] as [(CGFloat, CGFloat, CGFloat, CGFloat)] {
+        fill(c, CGPath(ellipseIn: CGRect(x: o.x + dx * r, y: o.y + dy * r, width: w * r, height: h * r), transform: nil), land, alpha: 0.85)
+    }
+    for k in [-0.6, 0, 0.6] as [CGFloat] {
+        stroke(c, CGPath(ellipseIn: CGRect(x: o.x - r * (1 - abs(k)) , y: o.y - r, width: 2 * r * (1 - abs(k)), height: 2 * r), transform: nil), 0xFFFFFF, 0.5, alpha: 0.45)
+        let y = o.y + k * r
+        let half = r * sqrt(1 - k * k)
+        stroke(c, poly([(o.x - half, y), (o.x + half, y), (o.x + half, y + 0.01)]), 0xFFFFFF, 0.5, alpha: 0.45)
+    }
+    c.restoreGState()
+    radial(c, clip: disc, center: CGPoint(x: o.x - r * 0.4, y: o.y - r * 0.45), radius: r * 0.7, [(0, 0xFFFFFF, 0.7), (1, 0xFFFFFF, 0)])
+    stroke(c, disc, 0x10223F, 0.7)
+}
+func safari(_ c: CGContext) {
+    globe(c, CGPoint(x: 23, y: 23), 17, ocean: [(0, 0x9AD4FF), (0.6, 0x2F7FD8), (1, 0x123F86)], land: 0x6CC24A)
+    // The browser's pointer, as IBrowse's globe carried one.
+    fill(c, poly([(30, 28), (30, 42), (33.5, 38.5), (36.5, 44), (38.5, 43), (35.6, 37.6), (40.5, 37.4)]), 0xFFFFFF)
+    stroke(c, poly([(30, 28), (30, 42), (33.5, 38.5), (36.5, 44), (38.5, 43), (35.6, 37.6), (40.5, 37.4)]), 0x101010, 0.6)
+}
+func chrome(_ c: CGContext) {
+    let o = CGPoint(x: 24, y: 24), r: CGFloat = 18
+    for (i, col) in [0xE0453A, 0xF5C342, 0x3DA35A].enumerated() {
+        let p = CGMutablePath(); p.move(to: o)
+        p.addArc(center: o, radius: r, startAngle: CGFloat(i) * 2 * .pi / 3 - .pi / 2, endAngle: CGFloat(i + 1) * 2 * .pi / 3 - .pi / 2, clockwise: false)
+        p.closeSubpath()
+        linear(c, p, [(0, UInt32(col)), (1, UInt32(col))], from: .zero, to: CGPoint(x: 1, y: 0))
+    }
+    let ring = CGPath(ellipseIn: CGRect(x: o.x - 8.5, y: o.y - 8.5, width: 17, height: 17), transform: nil)
+    fill(c, ring, 0xFFFFFF)
+    globe(c, o, 6.8, ocean: [(0, 0x8EC8FF), (1, 0x2A6FD0)], land: 0x2A6FD0)
+    let all = CGPath(ellipseIn: CGRect(x: o.x - r, y: o.y - r, width: 2 * r, height: 2 * r), transform: nil)
+    radial(c, clip: all, center: CGPoint(x: 17, y: 15), radius: 14, [(0, 0xFFFFFF, 0.55), (1, 0xFFFFFF, 0)])
+    stroke(c, all, 0x2A2A2A, 0.6)
+}
+func firefox(_ c: CGContext) {
+    globe(c, CGPoint(x: 24, y: 24), 13, ocean: [(0, 0x9AD4FF), (1, 0x2350A8)], land: 0x6A5ACD)
+    let flame = CGMutablePath()
+    flame.addArc(center: CGPoint(x: 24, y: 24), radius: 18, startAngle: -.pi * 0.15, endAngle: .pi * 1.35, clockwise: false)
+    flame.addQuadCurve(to: CGPoint(x: 12, y: 7), control: CGPoint(x: 5, y: 15)); flame.addQuadCurve(to: CGPoint(x: 17, y: 13), control: CGPoint(x: 17, y: 8))
+    flame.addArc(center: CGPoint(x: 24, y: 24), radius: 13, startAngle: .pi * 1.3, endAngle: -.pi * 0.1, clockwise: true)
+    flame.closeSubpath()
+    linear(c, flame, [(0, 0xFFD23A), (0.5, 0xFF8A1E), (1, 0xD8361A)], from: CGPoint(x: 24, y: 6), to: CGPoint(x: 24, y: 42))
+    stroke(c, flame, 0x6A1A06, 0.6)
+}
+func envelope(_ c: CGContext, body: UInt32 = 0xFFFFFF) {
+    let env = rrect(5, 12, 38, 26, 1.5)
+    linear(c, env, [(0, body), (1, 0xD8DCE4)], from: CGPoint(x: 0, y: 12), to: CGPoint(x: 0, y: 38))
+    stroke(c, env, 0x4A5060, 0.7)
+    stroke(c, poly([(5.5, 13), (24, 27), (42.5, 13), (42.5, 12.6)]), 0x5A6070, 0.8)
+    stroke(c, poly([(5.5, 37.5), (19, 24), (19, 24.1)]), 0x8A90A0, 0.5)
+    stroke(c, poly([(42.5, 37.5), (29, 24), (29, 24.1)]), 0x8A90A0, 0.5)
+}
+func mail(_ c: CGContext) {
+    envelope(c)
+    let stamp = CGPath(rect: CGRect(x: 33, y: 15, width: 7, height: 8), transform: nil)
+    linear(c, stamp, [(0, 0xF5C342), (1, 0xD06A1A)], from: CGPoint(x: 0, y: 15), to: CGPoint(x: 0, y: 23))
+    stroke(c, stamp, 0x7A3A0A, 0.4)
+}
+/// A coloured badge with a letter, at the bottom right of a picture (Office, Outlook).
+func badge(_ c: CGContext, _ letter: String, _ top: UInt32, _ bottom: UInt32) {
+    let b = rrect(24, 24, 20, 20, 3.5)
+    c.saveGState(); c.setShadow(offset: CGSize(width: 0.8, height: -1), blur: 1.2, color: color(0, 0.4))
+    linear(c, b, [(0, top), (1, bottom)], from: CGPoint(x: 0, y: 24), to: CGPoint(x: 0, y: 44))
+    c.restoreGState()
+    radial(c, clip: b, center: CGPoint(x: 29, y: 27), radius: 12, [(0, 0xFFFFFF, 0.45), (1, 0xFFFFFF, 0)])
+    stroke(c, b, 0x101820, 0.6)
+    let t = text(letter, font: "DejaVuSans-Bold", size: 14)
+    let w = t.boundingBoxOfPath.width
+    c.saveGState(); c.translateBy(x: 34 - w / 2, y: 39.5); fill(c, t, 0xFFFFFF); c.restoreGState()
+}
+func officeDoc(_ letter: String, _ top: UInt32, _ bottom: UInt32) -> Painter { { c in project(c)
+    for k in 0..<5 { fill(c, CGPath(rect: CGRect(x: 14, y: 11 + CGFloat(k) * 3.4, width: 18, height: 0.8), transform: nil), 0x9AA0AA) }
+    badge(c, letter, top, bottom) } }
+func outlook(_ c: CGContext) { envelope(c); badge(c, "O", 0x3A8EE6, 0x0F4FA8) }
+func photos(_ c: CGContext) {
+    // Two prints, the front one a landscape: sky, hills, a sun.
+    c.saveGState(); c.translateBy(x: 24, y: 24); c.rotate(by: -0.16)
+    fill(c, rrect(-15, -15, 30, 28, 1), 0xE8E8E8); stroke(c, rrect(-15, -15, 30, 28, 1), 0x7A7A7A, 0.5)
+    c.restoreGState()
+    c.saveGState(); c.translateBy(x: 25, y: 26); c.rotate(by: 0.08)
+    let frame = rrect(-16, -14, 32, 28, 1)
+    fill(c, frame, 0xFFFFFF); stroke(c, frame, 0x6A6A6A, 0.6)
+    let pic = CGPath(rect: CGRect(x: -13.5, y: -11.5, width: 27, height: 20), transform: nil)
+    linear(c, pic, [(0, 0x5FA8F0), (1, 0xBFE4FF)], from: CGPoint(x: 0, y: -11.5), to: CGPoint(x: 0, y: 8.5))
+    c.saveGState(); c.addPath(pic); c.clip()
+    fill(c, CGPath(ellipseIn: CGRect(x: 4, y: -9, width: 6, height: 6), transform: nil), 0xFFE04A)
+    fill(c, CGPath(ellipseIn: CGRect(x: -20, y: 0, width: 30, height: 18), transform: nil), 0x4FA83A)
+    fill(c, CGPath(ellipseIn: CGRect(x: -2, y: 2, width: 28, height: 16), transform: nil), 0x2E7A24)
+    c.restoreGState()
+    c.restoreGState()
+}
+func bubble(_ c: CGContext, _ r: CGRect, _ top: UInt32, _ bottom: UInt32, tailLeft: Bool) {
+    let p = CGMutablePath()
+    p.addRoundedRect(in: r, cornerWidth: r.height * 0.45, cornerHeight: r.height * 0.45)
+    let tx = tailLeft ? r.minX + r.width * 0.2 : r.maxX - r.width * 0.2
+    p.move(to: CGPoint(x: tx - 3, y: r.maxY - 2)); p.addLine(to: CGPoint(x: tx + (tailLeft ? -5 : 5), y: r.maxY + 5)); p.addLine(to: CGPoint(x: tx + 3, y: r.maxY - 2))
+    linear(c, p, [(0, top), (1, bottom)], from: CGPoint(x: 0, y: r.minY), to: CGPoint(x: 0, y: r.maxY))
+    radial(c, clip: p, center: CGPoint(x: r.minX + r.width * 0.3, y: r.minY + 2), radius: r.width * 0.6, [(0, 0xFFFFFF, 0.55), (1, 0xFFFFFF, 0)])
+    stroke(c, p, 0x1A2A1A, 0.6)
+}
+func messages(_ c: CGContext) {
+    bubble(c, CGRect(x: 4, y: 7, width: 30, height: 20), 0x9EE07E, 0x3E9E2A, tailLeft: true)
+    bubble(c, CGRect(x: 16, y: 21, width: 28, height: 17), 0x8EC8FF, 0x2A70D0, tailLeft: false)
+}
+func notes(_ c: CGContext) {
+    let pad = rrect(8, 6, 32, 37, 1.5)
+    linear(c, pad, [(0, 0xFFF3A0), (1, 0xF0D040)], from: CGPoint(x: 0, y: 6), to: CGPoint(x: 0, y: 43))
+    fill(c, CGPath(rect: CGRect(x: 8, y: 6, width: 32, height: 5), transform: nil), 0xC8A020)
+    for k in 0..<6 { fill(c, CGPath(rect: CGRect(x: 11, y: 16 + CGFloat(k) * 4.3, width: 26, height: 0.6), transform: nil), 0xB89A30) }
+    stroke(c, pad, 0x6A5208, 0.6)
+}
+func calendar(_ c: CGContext) {
+    let page = rrect(7, 7, 34, 35, 2)
+    linear(c, page, [(0, 0xFFFFFF), (1, 0xE4E4E4)], from: CGPoint(x: 0, y: 7), to: CGPoint(x: 0, y: 42))
+    let head = CGPath(roundedRect: CGRect(x: 7, y: 7, width: 34, height: 10), cornerWidth: 2, cornerHeight: 2, transform: nil)
+    linear(c, head, [(0, 0xF06A5A), (1, 0xB8241A)], from: CGPoint(x: 0, y: 7), to: CGPoint(x: 0, y: 17))
+    for x in [14, 34] as [CGFloat] { fill(c, rrect(x - 1.3, 4.5, 2.6, 6, 1.2), 0x6A6A6A) }
+    let day = text("17", font: "DejaVuSans-Bold", size: 17)
+    c.saveGState(); c.translateBy(x: 24 - day.boundingBoxOfPath.width / 2, y: 37); fill(c, day, 0x2A2A2A); c.restoreGState()
+    stroke(c, page, 0x5A5A5A, 0.6)
+}
+func reminders(_ c: CGContext) {
+    project(c)
+    for k in 0..<4 {
+        let y = 11 + CGFloat(k) * 7.5
+        let box = CGPath(rect: CGRect(x: 14, y: y, width: 4.5, height: 4.5), transform: nil)
+        fill(c, box, 0xFFFFFF); stroke(c, box, 0x4A4A4A, 0.5)
+        if k < 2 { stroke(c, poly([(14.8, y + 2.3), (16.2, y + 4), (19.5, y - 0.8), (19.5, y - 0.7)]), 0xD02020, 1.1) }
+        fill(c, CGPath(rect: CGRect(x: 21, y: y + 1.8, width: 11, height: 0.9), transform: nil), 0x8A8A8A)
+    }
+}
+/// A CD, as PlayCD's on the 2008 AmiDock: gold, with a grey play button over it.
+func music(_ c: CGContext) {
+    let disc = CGPath(ellipseIn: CGRect(x: 4, y: 4, width: 36, height: 36), transform: nil)
+    c.saveGState(); c.addPath(disc); c.clip()
+    c.drawRadialGradient(CGGradient(colorsSpace: srgb, colors: [color(0xFFF4B0), color(0xE8C040), color(0xC89A20), color(0xFFF0A0)] as CFArray, locations: [0, 0.4, 0.75, 1])!,
+                         startCenter: CGPoint(x: 22, y: 22), startRadius: 0, endCenter: CGPoint(x: 22, y: 22), endRadius: 18, options: [])
+    linear(c, poly([(4, 4), (26, 4), (4, 30)]), [(0, 0xFFFFFF), (1, 0xFFFFFF)], from: .zero, to: CGPoint(x: 1, y: 0), alpha: 0.35)
+    c.restoreGState()
+    fill(c, CGPath(ellipseIn: CGRect(x: 18.5, y: 18.5, width: 7, height: 7), transform: nil), 0xFFFFFF)
+    stroke(c, CGPath(ellipseIn: CGRect(x: 18.5, y: 18.5, width: 7, height: 7), transform: nil), 0x8A7020, 0.5)
+    stroke(c, disc, 0x7A5A10, 0.6)
+    let btn = CGPath(ellipseIn: CGRect(x: 25, y: 25, width: 19, height: 19), transform: nil)
+    linear(c, btn, [(0, 0xB8BCC4), (1, 0x5A5E66)], from: CGPoint(x: 0, y: 25), to: CGPoint(x: 0, y: 44))
+    stroke(c, btn, 0x2A2A2A, 0.6)
+    fill(c, poly([(32, 30), (32, 39), (39.5, 34.5)]), 0xFFFFFF)
+}
+func xcode(_ c: CGContext) {
+    let print = rrect(6, 8, 34, 32, 2)
+    linear(c, print, [(0, 0x4A8AE0), (1, 0x1A4AA0)], from: CGPoint(x: 0, y: 8), to: CGPoint(x: 0, y: 40))
+    for k in 1..<6 { fill(c, CGPath(rect: CGRect(x: 6 + CGFloat(k) * 5.7, y: 8, width: 0.4, height: 32), transform: nil), 0xBFD8FF, alpha: 0.5)
+                     fill(c, CGPath(rect: CGRect(x: 6, y: 8 + CGFloat(k) * 5.3, width: 34, height: 0.4), transform: nil), 0xBFD8FF, alpha: 0.5) }
+    stroke(c, print, 0x0A2050, 0.6)
+    c.saveGState(); c.translateBy(x: 27, y: 25); c.rotate(by: .pi / 4)
+    let handle = rrect(-1.8, -4, 3.6, 22, 1.5)
+    linear(c, handle, [(0, 0xE0A060), (1, 0x7A4010)], from: CGPoint(x: -1.8, y: 0), to: CGPoint(x: 1.8, y: 0))
+    let head = rrect(-8, -9, 16, 6, 1.2)
+    linear(c, head, [(0, 0xF0F0F0), (1, 0x7A7A7A)], from: CGPoint(x: 0, y: -9), to: CGPoint(x: 0, y: -3))
+    stroke(c, handle, 0x3A1A04, 0.5); stroke(c, head, 0x2A2A2A, 0.5)
+    c.restoreGState()
+}
+func addressbook(_ c: CGContext) {
+    let book = rrect(9, 5, 30, 38, 2)
+    linear(c, book, [(0, 0xB87A3A), (1, 0x6A3A10)], from: CGPoint(x: 9, y: 0), to: CGPoint(x: 39, y: 0))
+    fill(c, CGPath(rect: CGRect(x: 9, y: 5, width: 4, height: 38), transform: nil), 0x4A2808)
+    for k in 0..<4 { fill(c, rrect(36.5, 9 + CGFloat(k) * 8, 4.5, 5, 1), [0xE04040, 0x40A040, 0x4080E0, 0xE0C040][k]) }
+    fill(c, CGPath(ellipseIn: CGRect(x: 19, y: 13, width: 10, height: 10), transform: nil), 0xF4E4C8)
+    fill(c, CGPath(ellipseIn: CGRect(x: 15, y: 24, width: 18, height: 12), transform: nil), 0xF4E4C8)
+    stroke(c, book, 0x2A1404, 0.6)
+}
+func vlc(_ c: CGContext) {
+    let cone = poly([(24, 5), (35, 38), (13, 38)])
+    linear(c, cone, [(0, 0xFFB050), (0.5, 0xF07A10), (1, 0xC04A04)], from: CGPoint(x: 13, y: 0), to: CGPoint(x: 35, y: 0))
+    for y in [16, 26] as [CGFloat] {
+        let half = (y - 5) / 33 * 11 + 0.5
+        fill(c, poly([(24 - half, y), (24 + half, y), (24 + half + 1.6, y + 4.5), (24 - half - 1.6, y + 4.5)]), 0xFFFFFF)
+    }
+    stroke(c, cone, 0x6A2A04, 0.6)
+    let base = rrect(9, 37, 30, 5, 1.5)
+    linear(c, base, [(0, 0xF07A10), (1, 0x9A3A04)], from: CGPoint(x: 0, y: 37), to: CGPoint(x: 0, y: 42))
+    stroke(c, base, 0x6A2A04, 0.6)
+}
+func claude(_ c: CGContext) {
+    let tile = rrect(5, 5, 38, 38, 8)
+    linear(c, tile, [(0, 0xF7EEDC), (1, 0xE4D4B8)], from: CGPoint(x: 0, y: 5), to: CGPoint(x: 0, y: 43))
+    stroke(c, tile, 0x8A7A5A, 0.6)
+    // The spark: twelve rounded rays of uneven length round the middle.
+    for k in 0..<12 {
+        c.saveGState(); c.translateBy(x: 24, y: 24); c.rotate(by: CGFloat(k) * .pi / 6 + 0.12)
+        let len: CGFloat = [13, 11, 12.5, 10.5][k % 4]
+        fill(c, rrect(-1.6, -len, 3.2, len, 1.6), 0xD9774A)
+        c.restoreGState()
+    }
+    fill(c, CGPath(ellipseIn: CGRect(x: 20.5, y: 20.5, width: 7, height: 7), transform: nil), 0xD9774A)
+}
+func chatgpt(_ c: CGContext) {
+    let tile = rrect(5, 5, 38, 38, 8)
+    linear(c, tile, [(0, 0x3A3A3A), (1, 0x0A0A0A)], from: CGPoint(x: 0, y: 5), to: CGPoint(x: 0, y: 43))
+    radial(c, clip: tile, center: CGPoint(x: 15, y: 10), radius: 26, [(0, 0xFFFFFF, 0.25), (1, 0xFFFFFF, 0)])
+    // The knot: six rounded links turned about the centre.
+    for k in 0..<6 {
+        c.saveGState(); c.translateBy(x: 24, y: 24); c.rotate(by: CGFloat(k) * .pi / 3)
+        stroke(c, CGPath(roundedRect: CGRect(x: -3.5, y: -11, width: 7, height: 13), cornerWidth: 3.5, cornerHeight: 3.5, transform: nil), 0xFFFFFF, 1.6)
+        c.restoreGState()
+    }
+}
+func iterm(_ c: CGContext) {
+    miniWindow(c, body: [(0, 0x2A2E36), (1, 0x0A0C10)], title: nil)
+    c.saveGState(); c.translateBy(x: 10, y: 24)
+    fill(c, text("$ _", font: "DejaVuSans-Bold", size: 7), 0x5AE05A)
+    c.restoreGState()
+}
+func photoshop(_ c: CGContext) {
+    let pal = CGMutablePath()
+    pal.addEllipse(in: CGRect(x: 4, y: 9, width: 36, height: 30))
+    pal.addEllipse(in: CGRect(x: 25, y: 26, width: 7, height: 6))
+    c.saveGState(); c.addPath(pal); c.clip(using: .evenOdd)
+    c.drawLinearGradient(CGGradient(colorsSpace: srgb, colors: [color(0xF0D8A8), color(0xC09A60)] as CFArray, locations: [0, 1])!,
+                         start: CGPoint(x: 0, y: 9), end: CGPoint(x: 0, y: 39), options: [])
+    c.restoreGState()
+    stroke(c, CGPath(ellipseIn: CGRect(x: 4, y: 9, width: 36, height: 30), transform: nil), 0x5A3A10, 0.6)
+    for (x, y, col) in [(11, 17, 0xE03030), (19, 13, 0xF0C030), (28, 15, 0x30A040), (11, 27, 0x3060E0)] as [(CGFloat, CGFloat, UInt32)] {
+        fill(c, CGPath(ellipseIn: CGRect(x: x, y: y, width: 6, height: 5), transform: nil), col)
+    }
+    c.saveGState(); c.translateBy(x: 38, y: 6); c.rotate(by: .pi * 0.72)
+    fill(c, rrect(0, -1.6, 26, 3.2, 1.5), 0x8A4A1A)
+    fill(c, poly([(26, -1.8), (32, 0), (26, 1.8)]), 0x2A2A2A)
+    c.restoreGState()
+}
+func calculator(_ c: CGContext) {
+    let body = rrect(9, 4, 30, 40, 3)
+    linear(c, body, [(0, 0xD8DCE4), (1, 0x8A909A)], from: CGPoint(x: 9, y: 0), to: CGPoint(x: 39, y: 0))
+    stroke(c, body, 0x2A2E36, 0.6)
+    let disp = CGPath(rect: CGRect(x: 12, y: 7.5, width: 24, height: 8), transform: nil)
+    linear(c, disp, [(0, 0x9ABA8A), (1, 0xC8E0B8)], from: CGPoint(x: 0, y: 7.5), to: CGPoint(x: 0, y: 15.5))
+    stroke(c, disp, 0x2A3A2A, 0.5)
+    for r in 0..<4 { for k in 0..<4 {
+        let key = rrect(12 + CGFloat(k) * 6.2, 18.5 + CGFloat(r) * 6.2, 5, 5, 1)
+        linear(c, key, [(0, k == 3 ? 0xF0A040 : 0xFFFFFF), (1, k == 3 ? 0xC06A10 : 0xB8BCC4)], from: CGPoint(x: 0, y: 18.5 + CGFloat(r) * 6.2), to: CGPoint(x: 0, y: 23.5 + CGFloat(r) * 6.2))
+        stroke(c, key, 0x4A4E56, 0.4)
+    }}
+}
+func activityMonitor(_ c: CGContext) {
+    let mon = rrect(5, 7, 38, 28, 2)
+    linear(c, mon, [(0, 0xE4E8EE), (1, 0x9AA0AA)], from: CGPoint(x: 0, y: 7), to: CGPoint(x: 0, y: 35))
+    let scr = CGPath(rect: CGRect(x: 8, y: 10, width: 32, height: 21), transform: nil)
+    fill(c, scr, 0x0A140A)
+    for k in 1..<4 { fill(c, CGPath(rect: CGRect(x: 8, y: 10 + CGFloat(k) * 5.25, width: 32, height: 0.4), transform: nil), 0x2A5A2A) }
+    stroke(c, poly([(8.5, 27), (12, 25), (15, 28), (19, 18), (23, 22), (27, 14), (31, 20), (35, 16), (39.5, 19), (39.5, 19.1)]), 0x5AF05A, 1.2)
+    stroke(c, mon, 0x2A2E36, 0.6)
+    fill(c, poly([(19, 35), (29, 35), (31, 41), (17, 41)]), 0x8A909A); stroke(c, poly([(19, 35), (29, 35), (31, 41), (17, 41)]), 0x2A2E36, 0.5)
+}
+/// QuickTime: a clapperboard, as DvPlayer's on the 2008 AmiDock.
+func quicktime(_ c: CGContext) {
+    let board = rrect(6, 17, 36, 25, 1.5)
+    linear(c, board, [(0, 0x3A3A3A), (1, 0x0A0A0A)], from: CGPoint(x: 0, y: 17), to: CGPoint(x: 0, y: 42))
+    stroke(c, board, 0x000000, 0.6)
+    c.saveGState(); c.translateBy(x: 6, y: 16); c.rotate(by: -0.22)
+    let clap = CGPath(rect: CGRect(x: 0, y: -7, width: 36, height: 7), transform: nil)
+    fill(c, clap, 0x1A1A1A)
+    for k in 0..<5 { fill(c, poly([(CGFloat(k) * 8 + 2, -7), (CGFloat(k) * 8 + 6, -7), (CGFloat(k) * 8 + 3, 0), (CGFloat(k) * 8 - 1, 0)]), 0xFFFFFF) }
+    stroke(c, clap, 0x000000, 0.6)
+    c.restoreGState()
+    let t = text("Dv", font: "Georgia-BoldItalic", size: 13)
+    c.saveGState(); c.translateBy(x: 13, y: 36)
+    linear(c, t, [(0, 0xFFE070), (1, 0xD09010)], from: CGPoint(x: 0, y: -10), to: .zero)
+    c.restoreGState()
+}
+
 /// One icon in its two states. The selected one: darker, with the orange glow AmigaOS 4 puts
 /// round a selected icon (the …Sel images of the default set).
 func icon(_ name: String, _ paint: @escaping Painter) {
@@ -407,6 +685,30 @@ icon("shell", shell)
 icon("multiview", multiview)
 icon("notepad", notepad)
 icon("unarc", unarc)
+icon("safari", safari)
+icon("chrome", chrome)
+icon("firefox", firefox)
+icon("mail", mail)
+icon("outlook", outlook)
+icon("word", officeDoc("W", 0x4A8AE6, 0x1A4AA0))
+icon("excel", officeDoc("X", 0x4AC07A, 0x1A7A3A))
+icon("powerpoint", officeDoc("P", 0xF08A5A, 0xC0401A))
+icon("photos", photos)
+icon("messages", messages)
+icon("notes", notes)
+icon("calendar", calendar)
+icon("reminders", reminders)
+icon("music", music)
+icon("xcode", xcode)
+icon("addressbook", addressbook)
+icon("vlc", vlc)
+icon("claude", claude)
+icon("chatgpt", chatgpt)
+icon("iterm", iterm)
+icon("photoshop", photoshop)
+icon("calculator", calculator)
+icon("activitymonitor", activityMonitor)
+icon("quicktime", quicktime)
 
 // MARK: - Clouds
 
