@@ -886,7 +886,10 @@ do {
 // MARK: - The boot splash (os41-boot.jpg)
 
 do {
-    let W = 2880, H = 1800
+    // 16:9: the boot screen fills a display by cutting only its sides, so a 16:9 picture fills
+    // a 16:9 monitor exactly and a 16:10 one with a little off each side (a 16:10 picture left
+    // black bars on a 16:9 monitor). The logo sits well inside.
+    let W = 3200, H = 1800
     let c = canvas(W, H, opaque: true)
     let all = CGPath(rect: CGRect(x: 0, y: 0, width: W, height: H), transform: nil)
     linear(c, all, [(0, 0xF4F6F9), (0.5, 0xFBFCFD), (1, 0xE8EDF3)], from: .zero, to: CGPoint(x: 0, y: H))

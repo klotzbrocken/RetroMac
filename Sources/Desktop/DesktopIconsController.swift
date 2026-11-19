@@ -598,7 +598,10 @@ final class DesktopIconsController {
         custom.positions[v.entry.name] = nil
         persist(); update()
     }
-    @objc private func menuNewShortcut() {
+    @objc private func menuNewShortcut() { newShortcut() }
+    /// The desktop menu's work, for the Amiga Workbench's Tools menu too (the right button opens
+    /// the Workbench menus there, not this menu).
+    func newShortcut() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
@@ -613,11 +616,20 @@ final class DesktopIconsController {
     }
     @objc private func menuPickWallpaper(_ sender: NSMenuItem) {
         guard let file = sender.representedObject as? String else { return }
+        pickWallpaper(file: file)
+    }
+    /// The theme's wallpaper chosen now: a custom picture, else the pick, else the theme's default.
+    var currentWallpaperFile: String? {
+        AppSettings.shared.themeCustomWallpaper[themeName].map { ($0 as NSString).lastPathComponent }
+            ?? AppSettings.shared.themeWallpaperOverrides[themeName] ?? ThemeManager.shared.activeTheme?.config.wallpaper
+    }
+    func pickWallpaper(file: String) {
         AppSettings.shared.themeCustomWallpaper[themeName] = nil
         AppSettings.shared.themeWallpaperOverrides[themeName] = file
         ThemeManager.shared.applyWallpaper()
     }
-    @objc private func menuBrowseWallpaper() {
+    @objc private func menuBrowseWallpaper() { browseWallpaper() }
+    func browseWallpaper() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.image]
         panel.message = "Choose a wallpaper image"

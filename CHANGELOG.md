@@ -19,7 +19,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   DvPlayer, Terminal as Shell), the rest Workbench-style pictures. The volumes are on the left: System, Work
   and a private RAM Disk. Drawers open in windows of their own, showing only objects with an icon
   (or all files), with Snapshot and AmigaOS 4 `.info` pictures. With Boot Phases on Firmware, the
-  AmigaOne's U-Boot comes first, then the AmigaOS 4.1 boot screen. Every picture is redrawn for
+  AmigaOne's U-Boot comes first, with today's date, then the AmigaOS 4.1 boot screen. The Tools
+  menu holds WBPattern (the wallpapers, among them djnick's Amiga Abstract and Andreas Argirakis's
+  Pairing Joysticks from amiga-look.org), New shortcut and the Clock, Calculator, Notepad and CPU
+  Monitor in Workbench windows; the mouse pointers are levellord's AmigaOS 4 set (CC BY-SA 4.0). Every picture is redrawn for
   RetroMac, including a reconstruction of the 2008 backdrop, and the type is DejaVu Sans, as on
   OS 4.1.
 

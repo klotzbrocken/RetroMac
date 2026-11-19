@@ -26,6 +26,8 @@ extension CursorThemeManager {
             guard let dir = Win98Scheme.byID[AppSettings.shared.win98Scheme]?.cursorDir else { return nil }
             return loadBundledSet(dir)
         case "NeXTSTEP":                                return nextstepSet()
+        // levellord's AmigaOS 4.1 pointers (2022, CC BY-SA 4.0): the red arrow and the ZZ cloud.
+        case "Amiga Workbench 4.1":                     return loadBundledSet("Cursors/AmigaOS4")
         default:                                        return nil
         }
     }

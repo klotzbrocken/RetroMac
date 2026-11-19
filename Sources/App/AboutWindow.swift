@@ -282,6 +282,27 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("Amiga Workbench Theme Credits") {
+                    Text("Wallpapers from amiga-look.org, freeware: \u{201C}Amiga Abstract Wallpaper Full HD\u{201D} by djnick (deetronic, www.djnick.rs), and \u{201C}Pairing joysticks\u{201D} by Andreas Argirakis (andreas.blazer.nu).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Link("amiga-look.org · Amiga Abstract Wallpaper",
+                         destination: URL(string: "https://www.amiga-look.org/artwork/amiga-abstract-wallpaper-full-hd-1920x1080-djnick-deetronic-wwwdjnickrs")!)
+                        .font(.caption)
+                    Link("amiga-look.org · Pairing joysticks",
+                         destination: URL(string: "https://www.amiga-look.org/artwork/pairing-joysticks")!)
+                        .font(.caption)
+                    Text("Mouse pointers: lvl.pointers_AOS4 by levellord, CC BY-SA 4.0, enlarged for Retina.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Link("amiga-look.org · lvl.pointers_AOS4",
+                         destination: URL(string: "https://www.amiga-look.org/node/782")!)
+                        .font(.caption)
+                    Text("Type: DejaVu Sans (Bitstream Vera licence). AmigaOS is a trademark of Hyperion Entertainment; the theme is an unofficial tribute, its own artwork drawn for RetroMac.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Futurama Theme Credits") {
                     Text("Futurama™ is a registered trademark of Twentieth Century Fox Film Corporation (20th Television, a division of The Walt Disney Company). The “Futurama” theme is an unofficial fan-made homage that celebrates the show’s look and feel. RetroMac is not affiliated with, sponsored by, or endorsed by The Walt Disney Company, 20th Television, Matt Groening, or any rights holder, and no ownership of the Futurama name or artwork is claimed.")
                         .font(.caption)

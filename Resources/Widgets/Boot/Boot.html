@@ -518,7 +518,16 @@ function ubConsole(t) {
   put(0, 0, 'U-Boot 1.1.1 (Mar  3 2005 - 16:42:53)', 10);
   if (t > 0.3) put(0, 2, 'CPU:   ' + B.cpu, 10);
   if (t > 0.5) put(0, 3, 'DRAM:  ' + mb + ' MB', 10);
-  if (t > 0.9) put(0, 5, 'Hit any key to stop autoboot: ' + UB.count, 10);
+  if (t > 0.7) put(0, 4, ubDate(), 10);
+  if (t > 0.9) put(0, 6, 'Hit any key to stop autoboot: ' + UB.count, 10);
+}
+// Today, from this Mac's clock, the way U-Boot's own `date` command prints it.
+function ubDate() {
+  const [m, d, y] = B.date.split('/').map(Number);
+  const day = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date(y, m - 1, d).getDay()];
+  const [hh, mm, ss] = B.time.split(':').map(Number);
+  return 'Date: ' + y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0') + ' (' + day + ')    Time: '
+       + String(hh).padStart(2, ' ') + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
 }
 function ubMenu() {
   clear();

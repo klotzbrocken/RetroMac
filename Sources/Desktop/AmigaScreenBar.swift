@@ -315,7 +315,26 @@ enum AmigaWorkbenchMenus {
                 off("Format disk..."), off("Empty trash"),
             ]
         default:
-            return [.action("ResetWB") { desk.update(); AmigaScreenBarController.shared.update() }]
+            // Tools: what the Workbench kept here, and what the Mac's desktop menu offers elsewhere
+            // (the right button opens these menus on the Workbench, not that one). WBPattern is
+            // AmigaOS's backdrop preferences.
+            let current = desk.currentWallpaperFile
+            var patterns: [PlatinumMenuItem] = (ThemeManager.shared.activeTheme?.wallpaperOptions() ?? []).map { wp in
+                let file = wp.url.lastPathComponent
+                return .action(wp.name, ticked: file == current) { desk.pickWallpaper(file: file) }
+            }
+            patterns += [.separator(), .action("Other picture...") { desk.browseWallpaper() }]
+            return [
+                .action("ResetWB") { desk.update(); AmigaScreenBarController.shared.update() },
+                .separator(),
+                .submenu("WBPattern", patterns),
+                .action("New shortcut...") { desk.newShortcut() },
+                .separator(),
+                .action("Clock") { ClockWidgetController.shared.show() },
+                .action("Calculator") { CalculatorController.shared.show() },
+                .action("Notepad") { NotepadController.shared.show() },
+                .action("CPU Monitor") { CPUMonitorController.shared.show() },
+            ]
         }
     }
 }
