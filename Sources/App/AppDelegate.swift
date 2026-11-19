@@ -120,8 +120,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         TerminalThemer.restoreIfNeeded()               // ditto for the matched Terminal profile
         SystemTweaksAdapter.restoreIfNeeded()          // ditto for the "Classic Finder" defaults tweaks
         ThemeManager.shared.restoreWallpapersIfNeeded() // ditto for the wallpaper (else it stuck on the theme's after a Mac restart)
-        restoreRetroModeSystemUI()
+        Self.restoreRetroModeSystemUI()
         DockController.shared.restoreSystemDockIfNeeded()
+        SystemWatchdog.launch()   // the same recovery at once if this run ends without its own
         _ = DesktopPetController.shared   // registers theme observer; auto-shows on XP/98
         CompanionController.shared.apply()
         ScreensaverController.shared.beginIdleWatch()   // works regardless of the themed dock
@@ -3065,7 +3066,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Restore any system UI that Retro Mode hid (menu bar / dock / desktop icons),
     /// based on persisted flags. Runs on quit and on launch (crash recovery). No-op
     /// when nothing was hidden, so a normal quit causes no Finder/Dock restart.
-    private func restoreRetroModeSystemUI() {
+    static func restoreRetroModeSystemUI() {
         let d = UserDefaults.standard
         if d.bool(forKey: "retroHidMenuBar") { SystemUIHelper.setMenuBarAutoHide(false) }
         if d.bool(forKey: "retroHidDock") { SystemUIHelper.setDockAutoHide(false) }
@@ -4960,7 +4961,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WindowBorderController.shared.update()
         DockController.shared.stop(synchronous: true)   // must finish before the process exits
         SystemTweaksAdapter.restore(sync: true)         // ditto — revert Classic Finder tweaks before exit
-        restoreRetroModeSystemUI()
+        Self.restoreRetroModeSystemUI()
         // The rest of the system look, each from the backup RetroMac took when it changed it.
         _ = rescueShowMenuBar()
         SystemUIHelper.restoreIfNeeded()

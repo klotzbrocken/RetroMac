@@ -1,6 +1,9 @@
 import AppKit
 import Foundation
 
+// The watchdog copy (see SystemWatchdog) skips everything below: it must not rotate the log or start the app.
+if let pid = SystemWatchdog.watchedPID { SystemWatchdog.run(watching: pid) }
+
 // Route stdout/stderr to a log in the standard macOS location, owner-only, with a
 // simple one-file rotation — instead of the world-readable /tmp/retromac.log, which
 // could expose URLs, license errors, window titles or other PII to any local user.
