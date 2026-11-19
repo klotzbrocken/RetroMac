@@ -1783,15 +1783,22 @@ final class DockView: NSView {
     /// Win98 Quick-Launch "Show Desktop": hides every regular app (toggle restores them).
     private static var showDesktopHidden: [NSRunningApplication] = []
 
+    /// Decided by what is on screen, not by what it did last: any program window showing → they
+    /// all go; nothing showing → what it put away comes back. Toggling by its own memory alone
+    /// felt like cycling the windows once an app had been brought back by hand (Maik).
     static func toggleShowDesktop() {
-        if showDesktopHidden.isEmpty {
-            let own = Bundle.main.bundleIdentifier
-            for app in NSWorkspace.shared.runningApplications
-            where app.activationPolicy == .regular && app.bundleIdentifier != own && !app.isHidden {
+        let own = Bundle.main.bundleIdentifier
+        let info = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        let onScreen = Set(info.filter { ($0[kCGWindowLayer as String] as? Int) == 0 }.compactMap { $0[kCGWindowOwnerPID as String] as? pid_t })
+        let showing = NSWorkspace.shared.runningApplications.filter {
+            $0.activationPolicy == .regular && $0.bundleIdentifier != own && !$0.isHidden && onScreen.contains($0.processIdentifier)
+        }
+        if !showing.isEmpty {
+            for app in showing {
                 // Kept whatever hide() answers: from a background app it says false and hides all
                 // the same, and the next press then had nothing to bring back.
                 _ = app.hide()
-                showDesktopHidden.append(app)
+                if !showDesktopHidden.contains(app) { showDesktopHidden.append(app) }
             }
         } else {
             for app in showDesktopHidden { app.unhide() }
