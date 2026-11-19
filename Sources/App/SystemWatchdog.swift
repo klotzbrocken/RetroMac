@@ -1,6 +1,7 @@
 import AppKit
 
-/// Puts the Mac's own Dock, menu bar, desktop icons and the theme's system defaults back when RetroMac ends without doing it
+/// Puts the Mac's own Dock, menu bar, desktop icons, wallpaper, appearance, cursors, Terminal
+/// profile and the theme's system defaults back when RetroMac ends without doing it
 /// itself (a crash, Force Quit, `kill -9`). Until now only the next launch recovered them, so a
 /// crash left the real Dock unreachable (autohide-delay 1 000 000) until RetroMac ran again.
 /// A second copy of the binary, started at launch with `--watchdog <pid>`, waits for that process
@@ -35,9 +36,9 @@ enum SystemWatchdog {
         freopen(log, "a", stdout); freopen(log, "a", stderr)
         setbuf(stdout, nil); setbuf(stderr, nil)
         let source = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
-        source.setEventHandler { recover(after: pid) }
+        source.setEventHandler { source.cancel(); recover(after: pid) }
         source.resume()
-        if kill(pid, 0) != 0, errno == ESRCH { recover(after: pid) }   // gone before the source was armed
+        if kill(pid, 0) != 0, errno == ESRCH { source.cancel(); recover(after: pid) }   // gone before the source was armed
         dispatchMain()
     }
 
@@ -63,8 +64,20 @@ enum SystemWatchdog {
             }
             AppDelegate.restoreRetroModeSystemUI()
             DockController.shared.restoreSystemDockIfNeeded()
+            // The wallpaper goes through the Dock: only once it is back (as Rescue Desktop does).
+            DockController.waitUntilRunning()
+            ThemeManager.shared.restoreWallpapersIfNeeded()
+            AppearanceAdapter.restoreIfNeeded()
+            CursorThemeManager.shared.restoreIfNeeded()
+            TerminalThemer.restoreIfNeeded()
         }
         print("[Watchdog] RetroMac \(pid) ended\(again ? "; another RetroMac has the Dock, nothing to do" : "")")
+        // shortcut: the appearance and Terminal restores finish on a background queue with no
+        // handle to wait on; 5 s is ample for their few `defaults` writes, and a cut-off one keeps
+        // its snapshot for the next launch. The main thread sleeps rather than running its queue:
+        // ThemeManager's screen and Space observers would otherwise put the theme's picture,
+        // Terminal profile and accent straight back (they did in the first try).
+        if !again { Thread.sleep(forTimeInterval: 5) }
         exit(0)
     }
 }
