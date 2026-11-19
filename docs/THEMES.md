@@ -77,9 +77,10 @@ imports themes it did not write.
 - **`experienceLevel`**: `full` (dock, desktop, windows, boot, everything), `partial`, `minimal`.
 - **`chrome.style`** picks how windows, widgets and menus are drawn. One of `win31`, `win98`,
   `winxp`, `win7`, `macos6`, `system7`, `macos9`, `macosx`, `snowleopard`, `beos`, `nextstep`, `futurama`,
-  `cde`, `photon`, `maiksfav`, `default`. There is no "custom" chrome yet; pick the nearest. `cde`
+  `cde`, `photon`, `amiga`, `maiksfav`, `default`. There is no "custom" chrome yet; pick the nearest. `cde`
   and `photon` bring Solaris's Front Panel and QNX's shelf and taskbar with them; set
-  `dock.dockStyle` to `none` alongside. With `macosx`, `chrome.titleBar: "brushed"` draws 10.4's
+  `dock.dockStyle` to `none` alongside. `amiga` brings the Workbench screen bar along the top and
+  the right mouse button for its menus. With `macosx`, `chrome.titleBar: "brushed"` draws 10.4's
   brushed metal across the title bars instead of 10.0's pinstripes (Tiger does).
 
 ## Dock and taskbar
@@ -102,6 +103,8 @@ Everything under `"dock"`. Sizes are points.
 | `separatorGap` | Room at each divider in points at the theme's icon size, the line in its middle (default: the icon spacing) |
 | `launchBounce` | `true`: an application's icon hops while it launches, as the Mac OS X Dock's did |
 | `labelStyle` | `"outlined"`: the name above the magnified icon in white with a black outline, no plate (Mac OS X 10.0); absent, a dark rounded plate (10.6) |
+| `labelsBelow` | `true`: every icon's name under it, white with a black outline, always shown, and the strip with the depth gadget at the right end (AmigaOS 4's AmiDock) |
+| `labelNames` | Names for apps that wear another system's name, bundle id → name (`"com.apple.TextEdit": "NotePad"`); with `labelsBelow` |
 | `shelfStyle` | `flat` or `3d` (Snow Leopard's perspective shelf); `shelfLineColor` |
 | `startButton`, `startButtonLabel`, `startButtonIcon`, `startButtonImage`, `startButtonStyle`, `startButtonColor`, `startButtonGradientTop/Bottom` | The Start button; `startButtonImage` is a sprite sheet with three states stacked vertically (normal, hover, pressed); `startButtonStyle` `raised`, `sunken`, `flat` |
 | `startMenuStyle` | `classic` (Windows 95/98/Me cascade) or `xp` (Luna's two columns) |
@@ -177,11 +180,12 @@ too is stored per theme `id`. The `type` decides what a double-click does:
 
 | Type | Opens |
 |---|---|
-| `folder` | `path` in Finder (`~` allowed) |
+| `folder` | `path` in Finder (`~` allowed; `RAM:` is a private RAM Disk in the user's temp folder, `SYS:` the Workbench's System drawer — the startup disk where there is no Amiga drawer) |
 | `app` | `bundleID`, with optional `args` |
 | `url` | `url` in the default browser |
 | `webapp` | `url` inside a themed window (the era's chrome around a web page) |
 | `trash` | The Trash; `iconFull` is shown while it has contents |
+| `volumes` | One icon per mounted volume, each with this entry's `icon`, in the rows from this one down |
 | `network` | Network Neighbourhood: the Network pane |
 | `appfolder` | A themed "Programs" window listing `/Applications` |
 | `tvfolder` | The television bookmarks as a folder |
@@ -210,13 +214,14 @@ its top.
 | `splashScreen` | Still shown while the theme switches on; `splashFullscreen: true` fills the screen |
 | `splashVideo` | An H.264 `.mp4` played full screen with sound instead of the still |
 | `splashWelcome` | `true` draws the "Welcome to Macintosh" screen (System 6) |
-| `boot.firmware` | The firmware played first when Boot Phases is on "Firmware": `ami92` (AMIBIOS 1992), `award451` (Award Modular BIOS v4.51PG), `award600` (Phoenix - AwardBIOS v6.00PG). A POST with this Mac's real values; DEL enters a setup. PC themes only. A Mac theme may say `chime`: the start-up chord, then the OS boot |
-| `finder` | `"tiger"`: the desktop's folder icons open RetroMac's own 10.4 Finder (metal window, icon, list and column views, real files) instead of the Mac's |
+| `boot.firmware` | The firmware played first when Boot Phases is on "Firmware": `ami92` (AMIBIOS 1992), `award451` (Award Modular BIOS v4.51PG), `award600` (Phoenix - AwardBIOS v6.00PG). A POST with this Mac's real values; DEL enters a setup. PC themes only. The Amiga's is `uboot` (the AmigaOne's U-Boot 1.1.1, a key opens Boot Select). A Mac theme may say `chime`: the start-up chord, then the OS boot |
+| `finder` | `"tiger"`: the desktop's folder icons open RetroMac's own 10.4 Finder (metal window, icon, list and column views, real files) instead of the Mac's. `"amiga"`: the Workbench's own drawer windows (one per drawer, free icons, Only icons / All files, `.info` pictures, Snapshot) |
 | `boot.os` | An OS boot drawn in text mode instead of the `splash*` keys (`nt4`) |
 | `screensaver` | `pipes`, `flowerbox`, `flying-toasters`, `flurry` or `none` |
 | `defaultPreset` | The shader preset the theme suggests |
 | `menuBarApple` | What covers the Apple menu: `off`, `rainbow`, `aqua`, `aqua-classic`, `hell`, `futurama`, `mono` (solid black, the 1-bit Mac's) |
 | `desktopLabel` | How the desktop icons are labelled: `font` (PostScript name of an installed or shipped face — `PixelOperator`, `ChiKareGo2`, `Px437_IBM_VGA_9x16`), `size`, `color`, and `background`, a plate behind the text (Mac OS 9 (authentic): Pixel Operator 16 on `#CFCFE1`). Absent: white system text with a shadow |
+| `<icon>-sel.png` | Beside a desktop icon in `icons/`: its selected picture, shown instead of the highlight behind the name (AmigaOS's …Sel images) |
 | `menuBar.appleMenu` | `true` makes the Apple cover a menu of its own — Mac OS 9's: About This Computer, Applications, Apple System Profiler, Calculator, Chooser, Control Panels, Favorites, Network Browser, Recent Applications / Documents / Servers, Sherlock 2, Stickies — each pointed at what macOS has today |
 | `menuBar.appleMenuStyle` | `"system7"` (System 7.1) or `"macosx"` (Mac OS X 10.0, in Aqua) gives the Apple menu System 7.1's items instead of Mac OS 9's: About This Macintosh, Alarm Clock, Applications ▸, Calculator, Chooser, Control Panels, Key Caps, Note Pad, Scrapbook. Absent: Mac OS 9's |
 | `menuBar.applicationMenu` | `true` puts Mac OS 9's Application menu at the right end of the menu bar: the front app's icon, and Hide / Hide Others / Show All / the running apps under it (as far right as macOS lets a status item go) |

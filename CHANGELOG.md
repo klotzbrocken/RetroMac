@@ -5,6 +5,20 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+### New
+
+- **Amiga Workbench 4.1, the AmigaOne of 2008.** The theme now follows AmigaOS 4.1 as it stood
+  after a fresh install. Its windows get AmigaOS's own title bars, blue in front and silver
+  behind, with the closer on the left and depth, zoom and iconify on the right; the depth gadget
+  sends the front window back. The Workbench screen bar runs along the top with the free memory.
+  Hold the right mouse button for the Workbench, Window, Icons and Tools menus. The AmiDock sits at
+  the bottom right with each name under its icon, and the volumes are on the left: System, Work
+  and a private RAM Disk. Drawers open in windows of their own, showing only objects with an icon
+  (or all files), with Snapshot and AmigaOS 4 `.info` pictures. With Boot Phases on Firmware, the
+  AmigaOne's U-Boot comes first, then the AmigaOS 4.1 boot screen. Every picture is redrawn for
+  RetroMac, including a reconstruction of the 2008 backdrop, and the type is DejaVu Sans, as on
+  OS 4.1.
+
 ### Fixed
 
 - **The Mac comes back after a crash.** When RetroMac ended without tidying up (a crash, Force

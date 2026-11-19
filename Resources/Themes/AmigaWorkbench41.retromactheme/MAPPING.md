@@ -1,5 +1,14 @@
 # Amiga Workbench 4.1 — RetroMac Theme Mapping
 
+> **November 2026:** the theme now follows AmigaOS 4.1 on the AmigaOne (2008) as Lastenheft 08
+> (AM-01 … AM-05) asks: chrome style `amiga` (`Sources/Desktop/AmigaChrome.swift`, bands and
+> gadgets measured off the 2008 screenshots), the Workbench screen bar and its menus
+> (`AmigaScreenBar.swift`), the AmiDock at the bottom right (`dock.labelsBelow`), the drawers
+> (`Finder/AmigaDrawer.swift`, `"finder": "amiga"`), U-Boot (`boot.firmware: "uboot"`) and the
+> redrawn boot screen. Every picture in this bundle is drawn by `Scripts/amiga-assets.swift`;
+> the reference shots, TAWS and Mason files were only compared against, never shipped. The
+> description below is the earlier, grey ReAction version and is kept for its history.
+
 Reproduces the **AmigaOS 4.1 Final Edition** (PowerPC era) default GUI — the neutral
 gray *ReAction* ("Brücke"/bridge-style) look, Glow-icon style, antialiased sans-serif.
 NOT Workbench 1.x/3.x (no blue/orange palette).
