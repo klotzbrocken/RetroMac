@@ -102,7 +102,16 @@ final class ThemeReadmeController: NSObject, WKScriptMessageHandler, WKNavigatio
         webView.evaluateJavaScript(Self.dragJS)
         // Size the window to the content so the readme never needs scrolling (#2). Measure after the
         // close-button injection so its presence is accounted for; clamp to the visible screen.
-        webView.evaluateJavaScript("Math.ceil(Math.max(document.body.scrollHeight, document.documentElement.scrollHeight))") { [weak self] result, _ in
+        // Measured with the card's min-height (100vh, set above) let go for the moment: with it the
+        // page was always at least the window's height, so a short readme never shrank (Amiga's).
+        webView.evaluateJavaScript("""
+        (function(){
+          var w=document.querySelector('.win'); if(w) w.style.setProperty('min-height','0','important');
+          var h=Math.ceil(Math.max(document.body.scrollHeight, w ? w.getBoundingClientRect().height : 0));
+          if(w) w.style.removeProperty('min-height');
+          return h;
+        })()
+        """) { [weak self] result, _ in
             guard let self = self, let win = self.window,
                   let n = result as? NSNumber else { return }
             let content = CGFloat(truncating: n)

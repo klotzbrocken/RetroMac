@@ -16,6 +16,9 @@ final class AmigaWorkbenchTests: XCTestCase {
         XCTAssertFalse(ram.hasPrefix("/tmp"))
         var isDir: ObjCBool = false
         XCTAssertTrue(FileManager.default.fileExists(atPath: ram, isDirectory: &isDir) && isDir.boolValue, "made on first use")
+        for d in AmigaRAMDisk.standardDrawers {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: ram + "/" + d), "RAM:\(d), as AmigaOS makes it at boot")
+        }
         XCTAssertEqual(AmigaRAMDisk.resolve("~"), NSHomeDirectory())
         XCTAssertEqual(AmigaRAMDisk.resolve("/"), "/")
     }

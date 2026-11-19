@@ -3,57 +3,64 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Amiga Workbench</title>
 <style>
+  /* An AmigaOS 4.1 window, after AmigaChrome (Sources/Desktop/AmigaChrome.swift): the active bar's
+     bands row for row, the closer left, the title left, zoom and depth right, the 5 pt blue frame,
+     the speckled grey of the 2008 requesters. */
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0; }
-  body { background:#8a95a5; font-family:"Courier New", monospace; color:#1a1a1a; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
-  .win { max-width:640px; margin:0 auto; background:#c9c9c9; border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #707070;border-bottom:2px solid #707070; box-shadow:0 10px 34px rgba(0,0,0,.38);  }
-  .titlebar { background:#4d6d9a;color:#fff;padding:5px 10px;font-size:13px;font-weight:700; }
-  .tb-dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:6px; vertical-align:middle; }
-  .body { padding:22px 26px 26px; }
-  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
-  .hero img { width:66px; height:66px; image-rendering:-webkit-optimize-contrast; border:1px solid #707070; }
-  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; color:#20304a; }
-  .hero .sub { margin:3px 0 0; font-size:13px; color:#3a3a3a; font-weight:600; }
-  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; color:#2a3a55; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #8a8a8a; }
-  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
-  .facts { list-style:none; margin:0; padding:0; }
-  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
-  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#d06a1a; font-size:12px; }
-  .dyk { margin:8px 0 4px; padding:14px 16px; background:#bcbcbc; border-top:2px solid #707070;border-left:2px solid #707070;border-right:2px solid #fff;border-bottom:2px solid #fff; }
-  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#2a3a55; }
-  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
-  .dyk .item:last-child { margin-bottom:0; }
-  .dyk .item b { font-weight:700; }
-  .quote { font-style:italic; border-left:3px solid #d06a1a; padding-left:12px; margin:4px 0 0; color:#3a3a3a; font-size:13px; }
-  footer { margin-top:20px; padding-top:12px; border-top:1px solid #8a8a8a; font-size:11px; color:#3a3a3a; line-height:1.6; }
-  footer a { color:#20408a; }
+  body { background:#5F8496; font-family:"DejaVu Sans", Verdana, sans-serif; color:#111; padding:22px 18px 40px; -webkit-font-smoothing:antialiased; }
+  .win { max-width:600px; margin:0 auto; display:flex; flex-direction:column; }
+  .titlebar { position:relative; height:31px; border:1px solid #1A244D; border-radius:8px 8px 0 0;
+    box-shadow: inset 1px 0 0 #90B4E6, inset -1px 0 0 #5576AE;
+    background: linear-gradient(180deg, #90B4E6 0 1px, #5C87C2 1px 2px, #4D7AB7 2px 5px, #5C87C2 5px 10px, #638CC4 10px 11px,
+      #648EC8 11px 14px, #749BD2 14px 17px, #86AADC 17px 20px, #90B4E6 20px 23px, #AFCBED 23px 27px, #90B4E6 27px 28px, #5576AE 28px 29px); }
+  .titlebar .tb-title { position:absolute; left:38px; top:0; line-height:29px; font-size:13px; color:#000; }
+  .gad { position:absolute; top:7px; width:16px; height:16px; padding:0; border:none; background:none; }
+  .closer { left:12px; top:10px; width:10px; height:10px; cursor:pointer; }
+  .closer::after { content:""; position:absolute; left:1px; top:1px; width:6px; height:6px; border:1px solid #3C464A;
+    background:linear-gradient(180deg,#DBE3E1 0 1px,#CDD0D0 1px,#EAF6F4); box-shadow:-1px -1px 0 rgba(0,0,0,.2), 1px 1px 0 rgba(255,255,255,.3); }
+  .closer:active::after { background:rgba(205,208,208,.55); box-shadow:0 0 0 1px rgba(255,255,255,.75), 0 0 0 2px rgba(255,255,255,.35); }
+  /* The frame on the body: the app's readme window drops a shadow on .win. */
+  .body { flex:1; padding:16px 22px 20px; background:#E9E8E8 url(drawer-pattern.png) 0 0/64px 64px;
+          box-shadow: inset 1px 0 0 #1A244D, inset 2px 0 0 #92BFFF, inset 4px 0 0 #648EC8, inset 5px 0 0 #204D8D, inset 6px 0 0 #1A244D,
+                      inset -1px 0 0 #1A244D, inset -2px 0 0 #92BFFF, inset -4px 0 0 #648EC8, inset -5px 0 0 #204D8D, inset -6px 0 0 #1A244D,
+                      inset 0 -1px 0 #1A244D, inset 0 -2px 0 #204D8D, inset 0 -5px 0 #648EC8, inset 0 -6px 0 #1A244D; }
+  .hero { display:flex; align-items:center; gap:16px; margin-bottom:10px; }
+  .hero img { width:96px; height:60px; object-fit:cover; border:1px solid #424242; }
+  .hero h1 { margin:0; font-size:22px; font-weight:700; }
+  .hero .sub { margin:3px 0 0; font-size:12px; color:#3a3a3a; }
+  h2 { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#1A244D; margin:16px 0 6px; padding-bottom:4px; border-bottom:1px solid #8C8D90; }
+  p, li { font-size:13px; line-height:1.5; }
+  p { margin:0 0 8px; }
+  ul { margin:0; padding-left:18px; }
+  li { margin:0 0 4px; }
+  footer { margin-top:14px; padding-top:8px; border-top:1px solid #8C8D90; font-size:11px; color:#3a3a3a; line-height:1.5; }
+  footer a { color:#1A4AA0; }
 </style></head>
 <body>
   <div class="win">
-    <div class="titlebar"><span class="tb-title">Amiga Workbench</span></div>
+    <div class="titlebar">
+      <button class="gad closer" data-readme-close aria-label="Close" onclick="try{window.webkit.messageHandlers.readmeClose.postMessage(1)}catch(e){}"></button>
+      <span class="tb-title">Amiga Workbench 4.1</span>
+      <svg class="gad" style="right:31px" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" fill="#C4C8C8" stroke="#3C464A"/><rect x="1" y="1" width="7" height="7" fill="#E6EEF0" stroke="#3C464A"/></svg>
+      <svg class="gad" style="right:12px" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="#B9C0C2" stroke="#3C464A"/><rect x="5" y="5" width="10" height="10" fill="#E6EEF0" stroke="#3C464A"/></svg>
+    </div>
     <div class="body">
       <div class="hero">
-        <img src="wallpaper-2008.jpg" alt="Amiga Workbench">
-        <div><h1>Amiga Workbench</h1><p class="sub">Commodore / Hyperion &middot; Workbench debuted 1985, 4.1 in 2008</p></div>
+        <img src="wallpaper-2008.jpg" alt="">
+        <div><h1>Amiga Workbench 4.1</h1><p class="sub">Hyperion, 2008 &middot; AmigaOne &middot; Workbench since 1985</p></div>
       </div>
-      <p>The Amiga arrived in 1985 with something no home computer had: real pre-emptive multitasking, driven by custom chips (Agnus, Denise and Paula) that handled graphics and four-channel sound in hardware. Workbench was its desktop &mdash; folders as “drawers”, disks on the workbench, a spare grey-blue-orange palette.</p><p>Workbench 4.1 (2008, Hyperion) is the modern PowerPC-era AmigaOS, keeping the drawers-and-Workbench metaphor decades after Commodore itself was gone.</p>
-      <h2>What made it special</h2>
-      <ul class="facts"><li><b>Pre-emptive multitasking in 1985</b> &mdash; years before the Mac or Windows managed it.</li><li>Custom silicon for graphics, blitter and sound made the Amiga a video and demo-scene legend.</li><li>Powered the <b>Video Toaster</b> and the CGI for TV shows like <i>Babylon&nbsp;5</i>.</li><li>The <b>Guru Meditation</b> &mdash; the Amiga's cryptic red crash screen.</li></ul>
+      <p>The Amiga of 1985 multitasked pre-emptively, with custom chips for graphics and four-voice sound; Workbench was its desktop, folders were &ldquo;drawers&rdquo;. AmigaOS&nbsp;4.1 (2008) carried it onto PowerPC.</p>
       <h2>This theme</h2>
-      <ul class="facts">
-        <li>The reference is <b>AmigaOS 4.1 on the AmigaOne, 2008</b>: the screenshots of a fresh install, from U-Boot to the finished Workbench.</li>
-        <li><b>Everything is redrawn</b> for RetroMac &mdash; the title bars and gadgets point for point, the icons, the AmiDock&rsquo;s. Nothing is taken from an icon pack or a theme.</li>
-        <li>The default backdrop is a <b>reconstruction</b> of the 2008 Workbench (clouds, the big ball, the logo): its unhidden original is not to hand. The &ldquo;AmigaOS 4.1&rdquo; lettering is set from Verdana and Georgia, not traced from the original logo.</li>
-        <li>Hold the <b>right mouse button</b> for the Workbench menus, as on the Amiga; let go over the titles and they stay open for clicking.</li>
-        <li><b>RAM Disk</b> is a private folder in your own temporary folder. It survives switching themes and restarting RetroMac; macOS empties it when the Mac restarts &mdash; just as RAM: was gone after a reboot. RetroMac never empties it itself.</li>
-        <li>Drawers show <b>only objects with an icon</b>, as the Workbench did; Window &#9656; Show &#9656; All files shows the rest. An AmigaOS&nbsp;4 <code>.info</code> beside a file gives it its picture. Snapshot remembers places in RetroMac&rsquo;s settings and writes nothing into your folders.</li>
-        <li>The AmiDock shows the apps you keep in the dock, the common ones in pictures drawn in the Workbench&rsquo;s style; TextEdit, Preview, Terminal and the Archive Utility take the names NotePad, MultiView, Shell and Unarc.</li>
-        <li>Not here yet: the AmigaOS&nbsp;4.1 mouse pointer (no picture of it from that install), and an open Workbench menu &mdash; none appears in the 2008 screenshots, so the menus follow the screen bar and the windows.</li>
+      <ul>
+        <li>After AmigaOS 4.1 on the AmigaOne, 2008. Everything is redrawn for RetroMac; the backdrop is a <b>reconstruction</b> (its unhidden original is not to hand).</li>
+        <li>Hold the <b>right mouse button</b> for the Workbench menus. The gadget at the right of the screen bar puts the other programs away and brings them back.</li>
+        <li><b>RAM Disk</b> lives in your own temporary folder: it outlasts RetroMac, the Mac's restart clears it, as with RAM:.</li>
+        <li>Drawers show objects with an icon; Window &#9656; Show &#9656; All files shows the rest. Snapshot keeps places in RetroMac's settings, never in your folders.</li>
       </ul>
-      <div class="dyk"><h3>&#9432;&nbsp; Did you know&hellip;</h3><div class="item"><b>The Boing Ball.</b> At CES 1984 a bouncing, spinning checkered ball with a stereo thud stunned onlookers &mdash; a demo showing the custom chips off before the Amiga even shipped. It became the machine's mascot.</div><div class="item"><b>Ahead of its time.</b> True multitasking, a 4096-colour mode and hardware sprites in a 1985 home computer that cost a fraction of a workstation.</div><div class="item"><b>Hollywood &amp; TV.</b> Amigas running the Video Toaster produced broadcast graphics and effects on a budget for years.</div></div>
       <footer>
-        RetroMac &middot; a love letter to the desktops that shaped computing.<br>
-        Updates &amp; source on GitHub: <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
+        RetroMac &middot; a love letter to the desktops that shaped computing &middot;
+        <a href="https://github.com/klotzbrocken/RetroMac">github.com/klotzbrocken/RetroMac</a>
       </footer>
     </div>
   </div>

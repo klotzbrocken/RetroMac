@@ -13,7 +13,13 @@ enum AmigaRAMDisk {
     static func resolve(_ path: String) -> String {
         if path == "SYS:" { return "/" }
         guard path == token else { return NSString(string: path).expandingTildeInPath }
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        for d in standardDrawers {
+            try? FileManager.default.createDirectory(at: url.appendingPathComponent(d, isDirectory: true), withIntermediateDirectories: true)
+        }
         return url.path
     }
+
+    /// What AmigaOS puts in RAM: at every boot: the clipboard units, the live environment
+    /// variables and the T: scratch drawer. Made when missing, never cleared.
+    static let standardDrawers = ["Clipboards", "ENV", "T"]
 }
