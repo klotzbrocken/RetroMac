@@ -56,3 +56,54 @@ final class AmigaWorkbenchTests: XCTestCase {
         XCTAssertNil(cfg.desktopIcons?.first { $0.type == "tvfolder" || $0.type == "cpumonitor" }, "no widgets on the Workbench")
     }
 }
+
+final class AmigaDrawerTests: XCTestCase {
+    private var dir: URL!
+
+    override func setUpWithError() throws {
+        dir = FileManager.default.temporaryDirectory.appendingPathComponent("AmigaDrawerTests-\(UUID().uuidString)")
+        let fm = FileManager.default
+        try fm.createDirectory(at: dir.appendingPathComponent("Docs"), withIntermediateDirectories: true)
+        try "hello".write(to: dir.appendingPathComponent("ReadMe.txt"), atomically: true, encoding: .utf8)
+        try Data([0, 1, 2]).write(to: dir.appendingPathComponent("blob.xyz123"))
+        try Data([3]).write(to: dir.appendingPathComponent("game.xyz456"))
+        try Data([4]).write(to: dir.appendingPathComponent("game.xyz456.info"))
+        try Data([5]).write(to: dir.appendingPathComponent(".hidden.txt"))
+    }
+    override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
+
+    /// Only icons: the drawer, the text project and the object with its .info; never the .info
+    /// itself or a hidden file. All files adds the unknown blob, still no .info, nothing hidden.
+    func testShowOnlyIconsAndAllFiles() {
+        let only = AmigaDrawer.items(in: dir, allFiles: false)
+        XCTAssertEqual(only.map(\.name), ["Docs", "game.xyz456", "ReadMe.txt"])
+        XCTAssertEqual(only.first { $0.name == "Docs" }?.kind, .drawer)
+        XCTAssertEqual(only.first { $0.name == "game.xyz456" }?.info?.lastPathComponent, "game.xyz456.info")
+        XCTAssertNil(only.first { $0.name == "ReadMe.txt" }?.info)
+        let all = AmigaDrawer.items(in: dir, allFiles: true)
+        XCTAssertEqual(all.map(\.name), ["blob.xyz123", "Docs", "game.xyz456", "ReadMe.txt"])
+        XCTAssertFalse(all.contains { $0.name.hasSuffix(".info") || $0.name.hasPrefix(".") })
+    }
+
+    func testSnapshotRoundTrip() throws {
+        let d = try XCTUnwrap(UserDefaults(suiteName: "AmigaDrawerTests"))
+        defer { d.removePersistentDomain(forName: "AmigaDrawerTests") }
+        XCTAssertEqual(AmigaDrawer.loadSnapshot("/x", d), AmigaDrawer.Snapshot())
+        let s = AmigaDrawer.Snapshot(frame: [10, 20, 300, 200], icons: ["Docs": [6, 6]], allFiles: true)
+        AmigaDrawer.saveSnapshot(s, "/x", d)
+        XCTAssertEqual(AmigaDrawer.loadSnapshot("/x", d), s)
+        AmigaDrawer.saveSnapshot(AmigaDrawer.Snapshot(), "/x", d)   // Unsnapshot of everything: nothing kept
+        XCTAssertNil(d.object(forKey: AmigaDrawer.defaultsKey("/x")))
+    }
+
+    /// The System drawer is a fixed list: Prefs, Utilities, Tools, Fonts, Trashcan and the
+    /// startup disk, nothing outside it.
+    func testSystemDrawerIsTheFixedList() {
+        let items = AmigaDrawer.systemItems()
+        XCTAssertEqual(Array(items.map(\.name).prefix(5)), ["Prefs", "Utilities", "Tools", "Fonts", "Trashcan"])
+        XCTAssertEqual(items.count, 6)
+        XCTAssertEqual(Set(items.compactMap { $0.url?.path }.filter { !$0.hasSuffix(".app") }),
+                       ["/Applications/Utilities", "/Applications", "/Library/Fonts", "/"])
+        XCTAssertEqual(AmigaRAMDisk.resolve(AmigaDrawer.systemToken), "/")
+    }
+}

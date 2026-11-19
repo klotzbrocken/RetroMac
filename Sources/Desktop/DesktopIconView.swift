@@ -244,6 +244,13 @@ final class DesktopIconView: NSView {
         onContextMenu?(self, e); return true
     }
 
+    /// Select this icon too (the Workbench's Select contents), the others staying selected.
+    func select() {
+        guard !isSelected else { return }
+        isSelected = true
+        needsDisplay = true
+    }
+
     /// Deselect this icon.
     func deselect() {
         guard isSelected else { return }

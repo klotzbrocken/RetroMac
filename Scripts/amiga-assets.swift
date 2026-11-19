@@ -577,3 +577,19 @@ do {
     c.restoreGState()
     write(c.makeImage()!, bundle.appendingPathComponent("boot-splash.jpg"), jpeg: true)
 }
+
+// MARK: - The drawer background (PostInstall.png's requesters)
+
+do {
+    // A 64-point tile of the speckled ReAction grey: #E9E8E8 with #F3EDEC, #F0F0EE and #EEEEED
+    // points, in the proportions the 2008 requesters show; each point 2×2 pixels for Retina.
+    var s: UInt64 = 4108
+    let colours: [UInt32] = [0xE9E8E8, 0xE9E8E8, 0xE9E8E8, 0xF3EDEC, 0xF3EDEC, 0xF0F0EE, 0xEEEEED]
+    let c = canvas(64, 64, scale: 2, opaque: true)
+    for y in 0..<64 { for x in 0..<64 {
+        s = s &* 6364136223846793005 &+ 1442695040888963407
+        c.setFillColor(color(colours[Int((s >> 33) % UInt64(colours.count))]))
+        c.fill(CGRect(x: x, y: y, width: 1, height: 1))
+    }}
+    write(c.makeImage()!, bundle.appendingPathComponent("drawer-pattern.png"))
+}

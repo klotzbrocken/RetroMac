@@ -26,7 +26,8 @@ enum DesktopLauncher {
         case "folder":
             if let path = entry.path {
                 let expanded = AmigaRAMDisk.resolve(path)
-                if TigerFinder.isEnabled { TigerFinder.show(URL(fileURLWithPath: expanded)) }   // Tiger's own Finder
+                if AmigaDrawer.isEnabled { AmigaDrawer.show(path == AmigaDrawer.systemToken ? path : expanded) }   // the Workbench's drawers
+                else if TigerFinder.isEnabled { TigerFinder.show(URL(fileURLWithPath: expanded)) }   // Tiger's own Finder
                 else { NSWorkspace.shared.open(URL(fileURLWithPath: expanded)) }
             }
 

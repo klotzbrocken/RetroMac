@@ -222,7 +222,9 @@ enum AmigaWorkbenchMenus {
 
     static func items(_ title: String) -> [PlatinumMenuItem] {
         let desk = DesktopIconsController.shared
-        let selected = desk.selectedEntry
+        // The Window and Icons menus work on the drawer last used, else on the backdrop.
+        let drawer = AmigaDrawer.active
+        let selected = drawer?.hasSelection ?? (desk.selectedEntry != nil)
         func off(_ t: String) -> PlatinumMenuItem { .action(t, dimmed: true) {} }
         switch title {
         case "Workbench":
@@ -230,31 +232,43 @@ enum AmigaWorkbenchMenus {
                 .action("Backdrop", ticked: true, dimmed: true) {},
                 .action("Execute command...") { AmigaRequester.executeCommand() },
                 .action("Redraw all") { desk.update() },
-                .action("Update all") { desk.update() },
+                .action("Update all") { desk.update(); drawer?.reload() },
                 off("Last message"),
                 .action("About...") { ThemeReadmeController.shared.showForActiveTheme() },
                 off("Quit..."),
             ]
         case "Window":
+            guard let drawer else {
+                return [off("New drawer"), off("Open parent"), off("Close"),
+                        .action("Update") { desk.update() }, off("Select contents"),
+                        .action("Clean up") { desk.snapToGrid() }, .separator(),
+                        .submenu("Snapshot", [off("Window"), off("All")]),
+                        .submenu("Show", [.action("Only icons", ticked: true, dimmed: true) {}, off("All files")]),
+                        .submenu("View by", [.action("Icon", ticked: true, dimmed: true) {}, off("Name"), off("Date"), off("Size"), off("Type")])]
+            }
             return [
-                off("New drawer"), off("Open parent"), off("Close"),
-                .action("Update") { desk.update() },
-                off("Select contents"),
-                .action("Clean up") { desk.snapToGrid() },
+                .action("New drawer", dimmed: !drawer.canChange) { drawer.newDrawer() },
+                .action("Open parent", dimmed: drawer.url == nil || drawer.url?.path == "/") { drawer.openParent() },
+                .action("Close") { drawer.close() },
+                .action("Update") { drawer.reload() },
+                .action("Select contents") { drawer.selectContents() },
+                .action("Clean up") { drawer.cleanUp() },
                 .separator(),
-                .submenu("Snapshot", [off("Window"), off("All")]),
-                .submenu("Show", [.action("Only icons", ticked: true, dimmed: true) {}, off("All files")]),
+                .submenu("Snapshot", [.action("Window") { drawer.snapshot(all: false) }, .action("All") { drawer.snapshot(all: true) }]),
+                .submenu("Show", [.action("Only icons", ticked: !drawer.showsAllFiles, dimmed: drawer.isSystem) { drawer.setAllFiles(false) },
+                                  .action("All files", ticked: drawer.showsAllFiles, dimmed: drawer.isSystem) { drawer.setAllFiles(true) }]),
                 .submenu("View by", [.action("Icon", ticked: true, dimmed: true) {}, off("Name"), off("Date"), off("Size"), off("Type")]),
             ]
         case "Icons":
             return [
-                .action("Open", dimmed: selected == nil) { desk.openSelected() },
+                .action("Open", dimmed: !selected) { if let drawer { drawer.openSelected() } else { desk.openSelected() } },
                 off("Copy"), off("Rename..."), off("Information..."),
-                .action("Snapshot", dimmed: selected == nil) { desk.snapshotSelected() },
-                .action("Unsnapshot", dimmed: selected == nil) { desk.unsnapshotSelected() },
+                .action("Snapshot", dimmed: !selected) { if let drawer { drawer.snapshotSelected() } else { desk.snapshotSelected() } },
+                .action("Unsnapshot", dimmed: !selected) { if let drawer { drawer.unsnapshotSelected() } else { desk.unsnapshotSelected() } },
                 off("Leave out"), off("Put away"),
                 .separator(),
-                off("Delete..."), off("Format disk..."), off("Empty trash"),
+                .action("Delete...", dimmed: drawer == nil || !selected || drawer?.canChange != true) { drawer?.deleteSelected() },
+                off("Format disk..."), off("Empty trash"),
             ]
         default:
             return [.action("ResetWB") { desk.update(); AmigaScreenBarController.shared.update() }]

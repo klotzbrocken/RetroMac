@@ -642,7 +642,8 @@ private final class DesktopIconsContentView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
-        if AmigaScreenBarController.shared.beginMenus() { controller?.deselectAll(); return }   // the Workbench menus
+        // The Workbench menus, working on the backdrop now rather than a drawer.
+        if AmigaScreenBarController.shared.beginMenus() { controller?.deselectAll(); AmigaDrawer.deactivate(); return }
         controller?.showDesktopMenu(at: event, in: self)
     }
 }
