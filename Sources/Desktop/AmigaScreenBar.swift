@@ -100,6 +100,10 @@ final class AmigaScreenBarController {
     @discardableResult func beginMenus() -> Bool {
         guard let view, window?.isVisible == true else { return false }
         view.menuMode = true
+        // Above the Mac's menu bar while the titles are up: on its way to them the pointer
+        // reaches the top edge, where the hidden menu bar slides in and covered them. Back
+        // under it afterwards, so the Mac's menus stay reachable at the top edge.
+        window?.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 2)
         if dragMonitor == nil {
             dragMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDragged, .rightMouseUp]) { [weak self] e in
                 self?.follow(e)
@@ -150,6 +154,7 @@ final class AmigaScreenBarController {
         if let m = dragMonitor { NSEvent.removeMonitor(m); dragMonitor = nil }
         view?.menuMode = false
         view?.openTitle = nil
+        window?.level = NSWindow.Level(rawValue: 24)
         if PlatinumMenuController.shared.isOpen { PlatinumMenuController.shared.dismissAll() }
     }
 }
@@ -300,6 +305,7 @@ final class AmigaRequester: NSObject, NSTextFieldDelegate {
         let p = KeyPanel(contentRect: NSRect(x: screen.midX - size.width / 2, y: screen.midY, width: size.width, height: size.height),
                          styleMask: [.borderless], backing: .buffered, defer: false)
         p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
+        p.hidesOnDeactivate = false   // stays up when another app is clicked, as a requester does
         p.title = "Execute a file"
         let chrome = WebAppChromeView(frame: NSRect(origin: .zero, size: size), title: "Execute a file")
         chrome.onClose = { [weak self] in self?.close() }

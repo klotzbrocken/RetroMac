@@ -156,6 +156,7 @@ final class AmigaDrawer: NSObject {
         let p = DrawerPanel(contentRect: frame, styleMask: [.borderless, .miniaturizable], backing: .buffered, defer: false)
         p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
         p.isReleasedWhenClosed = false
+        p.hidesOnDeactivate = false   // a panel hides with its app otherwise, and RetroMac is rarely the active one
         p.minSize = NSSize(width: 160, height: 110)
         p.contentView = chrome
         p.setAccessibilityTitle(title)
@@ -220,16 +221,29 @@ final class AmigaDrawer: NSObject {
     private func layoutIcons() {
         let width = max(scroll.contentSize.width, Self.cell.width + 12)
         let columns = max(1, Int((width - 12) / Self.cell.width))
-        var free = 0
         var maxY: CGFloat = 0, maxX: CGFloat = 0
+        // Icons with a place keep it; the others take the next cell in the rows that no icon
+        // stands in (a file shown by "All files" used to land on top of the first drawer).
+        func known(_ name: String) -> NSPoint? {
+            if let p = placed[name] { return p }
+            if let s = snap.icons[name], s.count == 2 { return NSPoint(x: s[0], y: s[1]) }
+            return nil
+        }
+        var taken = iconViews.compactMap { known($0.entry.name).map { NSRect(origin: $0, size: Self.cell).insetBy(dx: 4, dy: 4) } }
+        var slot = 0
         for v in iconViews {
             let name = v.entry.name
             let origin: NSPoint
-            if let p = placed[name] { origin = p }
-            else if let s = snap.icons[name], s.count == 2 { origin = NSPoint(x: s[0], y: s[1]) }
+            if let p = known(name) { origin = p }
             else {
-                origin = NSPoint(x: 6 + CGFloat(free % columns) * Self.cell.width, y: 6 + CGFloat(free / columns) * Self.cell.height)
-                free += 1
+                var cell: NSRect
+                repeat {
+                    cell = NSRect(x: 6 + CGFloat(slot % columns) * Self.cell.width, y: 6 + CGFloat(slot / columns) * Self.cell.height,
+                                  width: Self.cell.width, height: Self.cell.height)
+                    slot += 1
+                } while taken.contains { $0.intersects(cell) }
+                taken.append(cell.insetBy(dx: 4, dy: 4))
+                origin = cell.origin
             }
             placed[name] = origin
             v.frame = NSRect(origin: origin, size: Self.cell)
