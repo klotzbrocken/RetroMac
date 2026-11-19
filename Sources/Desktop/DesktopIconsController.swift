@@ -141,7 +141,7 @@ final class DesktopIconsController {
     /// string falls back to a generic document glyph (Amiga/SGI ship no text-document icon).
     private func readmeIconName(for theme: ThemeBundle) -> String {
         let candidates = ["simpletext.png", "textedit.png", "win7_notepad.png", "notepad98.png",
-                          "notepadclassic.png", "notepad.png", "write.png", "new-text.png",
+                          "notepadclassic.png", "project.png", "notepad.png", "write.png", "new-text.png",
                           "document.png", "documents.png", "notes.png", "file.png"]
         let dir = theme.url.appendingPathComponent("icons")
         for c in candidates where FileManager.default.fileExists(atPath: dir.appendingPathComponent(c).path) {
@@ -188,6 +188,7 @@ final class DesktopIconsController {
     /// ponytail: a bar along the bottom only; side docks still overlap the outer column.
     static func iconArea(of screen: NSScreen, bar: NSRect?) -> NSRect {
         var area = screen.visibleFrame
+        if let top = AmigaScreenBarController.reservedFrame(on: screen) { area.size.height = top.minY - area.minY }
         if let bar, bar.width > bar.height, bar.minY <= area.minY + 1, bar.maxY > area.minY, bar.maxY < area.maxY {
             area.size.height = area.maxY - bar.maxY
             area.origin.y = bar.maxY
@@ -296,6 +297,11 @@ final class DesktopIconsController {
 
             let view = DesktopIconView(entry: entry, image: iconImage, fullImage: fullImage,
                                        iconSize: iSize, isPixelated: isPixelated, labelStyle: ThemeManager.shared.activeTheme?.config.desktopLabel)
+            // A theme that drew each icon's selected state too (AmigaOS's …Sel images) ships it
+            // as "<icon>-sel.png"; the icon then changes instead of its name being highlighted.
+            if custom.iconOverrides[entry.name] == nil, !entry.icon.isEmpty {
+                view.selectedImage = loadIconImageByName((entry.icon as NSString).deletingPathExtension + "-sel.png", theme: theme, size: iSize)
+            }
             view.target = self
             view.action = #selector(iconDoubleClicked(_:))
             view.onMoved = { [weak self] v in self?.iconMoved(v) }
@@ -397,6 +403,18 @@ final class DesktopIconsController {
                 view.setTrashFull(!empty)
             }
         }
+    }
+
+    /// The selected icon's entry, for the Workbench's Icons menu.
+    var selectedEntry: DockThemeConfig.DesktopIconEntry? { iconViews.first { $0.selected }?.entry }
+    func openSelected() { if let e = selectedEntry { DesktopLauncher.launch(e) } }
+    /// Snapshot: the selected icon keeps the place it stands in now; Unsnapshot gives it back
+    /// to the theme's layout.
+    func snapshotSelected() { if let v = iconViews.first(where: { $0.selected }) { iconMoved(v) } }
+    func unsnapshotSelected() {
+        guard let e = selectedEntry else { return }
+        custom.positions.removeValue(forKey: e.name)
+        persist(); update()
     }
 
     /// Deselect all desktop icons (called when clicking on empty area).
@@ -624,6 +642,7 @@ private final class DesktopIconsContentView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        if AmigaScreenBarController.shared.beginMenus() { controller?.deselectAll(); return }   // the Workbench menus
         controller?.showDesktopMenu(at: event, in: self)
     }
 }

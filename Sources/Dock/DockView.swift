@@ -1071,7 +1071,7 @@ final class DockView: NSView {
                 // added to the dock it reached three of the four places that enumerate the row
                 // and not the fourth, so the bar came out a tile too narrow and the trash was
                 // drawn beside it.
-                let y = barRect.minY + (barRect.height - iconSize) / 2
+                let y = barRect.minY + (barRect.height - iconSize) / 2 + labelLift(theme, scale: scale)
                 for t in tiles {
                     if t.separator == .transients { separatorX = x + (t.gapBefore - spacing) / 2 }   // mid-gap
                     if t.separator == .rightGroup { trashSeparatorX = x + (t.gapBefore - spacing) / 2 }
@@ -1381,7 +1381,7 @@ final class DockView: NSView {
             // its Quick Launch group, divider and task-button strip are placed together in
             // rebuildItems(), and having a second, subtly different implementation here is what
             // made Show Desktop jump from the front of the group to the back after a relayout.
-            let y = barRect.minY + (barRect.height - iconSize) / 2
+            let y = barRect.minY + (barRect.height - iconSize) / 2 + labelLift(theme, scale: scale)
             for tile in tiles {
                 guard idx < itemViews.count else { break }
                 if tile.separator == .transients { separatorX = x + (tile.gapBefore - spacing) / 2 }   // mid-gap
@@ -2648,6 +2648,7 @@ final class DockView: NSView {
 
     private func drawBody(_ dirtyRect: NSRect) {
         guard let theme = ThemeManager.shared.activeTheme?.config else { return }
+        defer { if theme.dock.labelsBelow == true, !theme.isVertical { drawAmiDockExtras(theme) } }
         let ctx = NSGraphicsContext.current!.cgContext
         let scale = CGFloat(AppSettings.shared.dockIconScale)
         // The real Windows XP Luna start bar and the classic Mac Control Strip are fully
@@ -4437,6 +4438,45 @@ final class DockView: NSView {
     /// two LaunchServices round trips, and this runs on every mouse move while magnifying.
     /// Cleared whenever the tiles are rebuilt, which is when the set of apps changes.
     private var hoverNames: [String: String] = [:]
+
+    /// How far the icons sit above the bar's middle so their names fit below (AmiDock).
+    private func labelLift(_ theme: DockThemeConfig, scale: CGFloat) -> CGFloat {
+        theme.dock.labelsBelow == true && !theme.isVertical ? 6 * scale : 0
+    }
+
+    /// AmiDock, after WBPattern.png: each icon's name below it in white with a black outline,
+    /// and the narrow strip at the right end with the dock's depth gadget.
+    private func drawAmiDockExtras(_ theme: DockThemeConfig) {
+        let scale = CGFloat(AppSettings.shared.dockIconScale) * dynamicScale
+        let font = RetroFonts.dejaVu(9.5 * scale, bold: true)
+        NSGraphicsContext.current?.cgContext.setShouldSmoothFonts(false)
+        for v in itemViews where !v.isHidden {
+            let name = theme.dock.labelNames?[v.bundleID] ?? nameFor(v.bundleID)
+            let outline: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
+            let face: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.white]
+            let s = (name as NSString).size(withAttributes: face)
+            let o = NSPoint(x: (v.frame.midX - s.width / 2).rounded(), y: v.frame.minY - s.height + 1)
+            for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)] as [(CGFloat, CGFloat)] {
+                (name as NSString).draw(at: NSPoint(x: o.x + dx, y: o.y + dy), withAttributes: outline)
+            }
+            (name as NSString).draw(at: o, withAttributes: face)
+        }
+        // The strip: a hairline apart from the icons, the gadget at its foot (a box with a
+        // chevron, the dock's own depth arrangement on AmigaOS 4).
+        let bar = currentBarRect
+        let strip = NSRect(x: bar.maxX - 13 * scale, y: bar.minY + 1, width: 12 * scale, height: bar.height - 2)
+        AmigaChrome.rgb(0x8C8D90).setFill(); NSRect(x: strip.minX, y: strip.minY, width: 1, height: strip.height).fill()
+        NSColor.white.setFill(); NSRect(x: strip.minX + 1, y: strip.minY, width: 1, height: strip.height).fill()
+        let g = NSRect(x: strip.minX + 2 * scale, y: strip.minY + 2 * scale, width: 9 * scale, height: 9 * scale)
+        AmigaChrome.rgb(0xD6D7D7).setFill(); g.fill()
+        AmigaChrome.rgb(0x424242).setStroke()
+        let box = NSBezierPath(rect: g.insetBy(dx: 0.5, dy: 0.5)); box.lineWidth = 1; box.stroke()
+        let chev = NSBezierPath()
+        chev.move(to: NSPoint(x: g.minX + 2.5 * scale, y: g.midY + 1.5 * scale)); chev.line(to: NSPoint(x: g.midX, y: g.midY - 1 * scale))
+        chev.line(to: NSPoint(x: g.maxX - 2.5 * scale, y: g.midY + 1.5 * scale))
+        chev.move(to: NSPoint(x: g.minX + 2.5 * scale, y: g.minY + 2 * scale)); chev.line(to: NSPoint(x: g.maxX - 2.5 * scale, y: g.minY + 2 * scale))
+        chev.lineWidth = 1; chev.stroke()
+    }
 
     private func nameFor(_ bundleID: String) -> String {
         if let cached = hoverNames[bundleID] { return cached }

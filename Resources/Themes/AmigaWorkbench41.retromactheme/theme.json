@@ -17,8 +17,12 @@
   "name": "Amiga Workbench 4.1",
   "version": "1.0",
   "author": "RetroMac",
-  "wallpaper": "wallpaper.png",
+  "wallpaper": "wallpaper-2008.jpg",
   "wallpapers": [
+    {
+      "name": "Workbench 2008 (reconstruction)",
+      "file": "wallpaper-2008.jpg"
+    },
     {
       "name": "Workbench Gray (Gradient)",
       "file": "wallpaper.png"
@@ -29,32 +33,39 @@
     }
   ],
   "dock": {
-    "height": 26,
-    "iconSize": 18,
-    "padding": 6,
-    "spacing": 8,
+    "height": 64,
+    "iconSize": 40,
+    "padding": 16,
+    "spacing": 12,
     "cornerRadius": 0,
-    "backgroundColor": "#AEAEB2FF",
+    "backgroundColor": "#D2D2D4E8",
     "backgroundImage": null,
     "backgroundImageMode": "tile",
-    "borderColor": "#5E5E62FF",
+    "borderColor": "#6E6E72FF",
     "borderWidth": 1,
     "shadowEnabled": false,
     "shadowColor": "#00000000",
     "shadowRadius": 0,
-    "bevelTopColor": "#E6E6EAFF",
-    "bevelBottomColor": "#6E6E72FF",
+    "bevelTopColor": "#FFFFFFFF",
+    "bevelBottomColor": "#8C8D90FF",
     "bevelWidth": 1,
-    "backgroundGradientTop": "#D4D8DEFF",
-    "backgroundGradientBottom": "#A8AEB6FF",
     "orientation": "horizontal",
-    "position": "top",
-    "alignment": "left",
-    "fullWidth": true,
-    "showClock": true,
-    "clockFormat": "HH:mm",
+    "position": "bottom",
+    "alignment": "right",
+    "fullWidth": false,
+    "showClock": false,
+    "showTrash": false,
     "magnification": false,
-    "edgeOffset": 0
+    "edgeOffset": 0,
+    "labelsBelow": true,
+    "labelNames": {
+      "com.apple.finder": "Workbench",
+      "com.apple.TextEdit": "NotePad",
+      "com.apple.Preview": "MultiView",
+      "com.apple.Terminal": "Shell",
+      "com.apple.archiveutility": "Unarc",
+      "com.apple.systempreferences": "Prefs"
+    }
   },
   "icon": {
     "renderStyle": "smooth",
@@ -72,7 +83,7 @@
   "desktopIcons": [
     {
       "name": "System",
-      "icon": "harddrive.png",
+      "icon": "harddrive-system.png",
       "type": "folder",
       "path": "/",
       "gridX": 0,
@@ -80,7 +91,7 @@
     },
     {
       "name": "Work",
-      "icon": "drawer.png",
+      "icon": "floppy.png",
       "type": "folder",
       "path": "~",
       "gridX": 0,
@@ -90,36 +101,36 @@
       "name": "RAM Disk",
       "icon": "ramdisk.png",
       "type": "folder",
-      "path": "/tmp",
+      "path": "RAM:",
       "gridX": 0,
       "gridY": 2
     },
     {
-      "name": "TV",
-      "icon": "",
-      "type": "tvfolder",
+      "name": "Volumes",
+      "icon": "harddrive.png",
+      "type": "volumes",
       "gridX": 0,
       "gridY": 3
-    },
-    {
-      "name": "Clock",
-      "icon": "",
-      "type": "clock",
-      "gridX": 0,
-      "gridY": 4
-    },
-    {
-      "name": "CPU",
-      "icon": "",
-      "type": "cpumonitor",
-      "gridX": 0,
-      "gridY": 5
     }
   ],
-  "fallbackIcon": "drawer.png",
+  "desktopIconsSide": "left",
+  "desktopIconSize": 48,
+  "desktopLabel": {
+    "font": "DejaVuSans-Oblique",
+    "size": 12,
+    "color": "#000000"
+  },
+  "fallbackIcon": "tool.png",
   "defaultPreset": "lcd-sharp-lite",
   "hideMenuBarDefault": true,
-  "iconMappings": {},
+  "iconMappings": {
+    "com.apple.finder": "drawer-system.png",
+    "com.apple.TextEdit": "notepad.png",
+    "com.apple.Preview": "multiview.png",
+    "com.apple.Terminal": "shell.png",
+    "com.apple.archiveutility": "unarc.png",
+    "com.apple.systempreferences": "drawer-prefs.png"
+  },
   "appearance": "light",
   "accentColor": "orange"
 }

@@ -303,6 +303,11 @@ struct DockThemeConfig: Codable {
         /// The name shown above the magnified icon: `"outlined"` is Mac OS X 10.0's white
         /// letters with a black outline, straight on the desktop; absent, 10.6's dark plate.
         var labelStyle: String?
+        /// AmiDock: every icon's name under it, white with a black outline, always shown.
+        var labelsBelow: Bool?
+        /// The names to show for apps that wear another system's name (bundle id → name),
+        /// e.g. TextEdit as "NotePad" on the AmiDock. Apps without one keep their own.
+        var labelNames: [String: String]?
     }
 
     struct IconStyle: Codable {
@@ -444,6 +449,10 @@ extension DockThemeConfig {
     /// NeXTSTEP theme: shows the always-on-screen vertical Workspace menu (top-left). Gated on the
     /// declared chrome so only the NeXT theme brings up that panel.
     var isNextStep: Bool { chrome?.style == "nextstep" }
+
+    /// Amiga Workbench 4.1: the Workbench screen bar along the top (`AmigaScreenBarController`)
+    /// and the right mouse button for its menus. Gated on the declared chrome, as NeXT is.
+    var isAmiga: Bool { chrome?.style == "amiga" }
 }
 
 extension NSColor {

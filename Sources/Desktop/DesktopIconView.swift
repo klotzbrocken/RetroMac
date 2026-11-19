@@ -12,10 +12,13 @@ final class DesktopIconView: NSView {
     private let label: NSTextField
     private let iconSize: CGFloat
     private var isSelected = false
+    var selected: Bool { isSelected }
     private var isPixelated: Bool
 
     private var emptyImage: NSImage
     private var fullImage: NSImage?
+    /// The selected picture (AmigaOS): shown instead of the highlight behind the name.
+    var selectedImage: NSImage?
 
     /// The theme's label plate colour, drawn behind the text (nil: shadowed white text).
     private let labelPlate: NSColor?
@@ -139,6 +142,11 @@ final class DesktopIconView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
+        if let selectedImage {
+            imageView.image = isSelected ? selectedImage : emptyImage
+            if let plate = labelPlate { plate.setFill(); textRect.fill() }
+            return
+        }
         if isSelected {
             // Highlight hugs the LABEL TEXT only (the word), not the full two-line cell.
             // System 7.1's Finder: the name inverts, white on black, whatever the colours.
@@ -213,6 +221,13 @@ final class DesktopIconView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        // AmigaOS: the right button is the menu button; the icon under it is the one the
+        // Icons menu works on, so it is selected first.
+        if AmigaScreenBarController.shared.beginMenus() {
+            superview?.subviews.compactMap { $0 as? DesktopIconView }.filter { $0 !== self }.forEach { $0.deselect() }
+            isSelected = true; needsDisplay = true
+            return
+        }
         onContextMenu?(self, event)
     }
 

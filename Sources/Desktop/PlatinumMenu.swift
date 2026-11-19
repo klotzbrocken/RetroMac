@@ -70,7 +70,8 @@ struct PlatinumMenuItem {
 
 /// How the menus are drawn: Mac OS 8/9's Platinum (and System 7), or Mac OS X 10.0's Aqua.
 /// `lion`: Mountain Lion's white menu with a blue gradient highlight and thin rules between groups.
-enum RetroMenuLook { case platinum, aqua, lion }
+/// `amiga`: AmigaOS 4.1, in the screen bar's light bands with the window bar's blue for the chosen row.
+enum RetroMenuLook { case platinum, aqua, lion, amiga }
 
 final class PlatinumMenuController {
     static let shared = PlatinumMenuController()
@@ -93,6 +94,22 @@ final class PlatinumMenuController {
     /// A window whose clicks must not dismiss (the button that opens the menu toggles it itself).
     weak var ignoreClickWindow: NSWindow?
     var isOpen: Bool { !panels.isEmpty }
+    /// Called once when the menus close, however they close (the Amiga screen bar puts its
+    /// title back then).
+    var onDismiss: (() -> Void)?
+
+    /// Press, drag, release from outside the menus (AmigaOS's right button): the row under a
+    /// screen point lights up as the pointer passes; `release` chooses it. False when no menu
+    /// lies under the point.
+    func track(screenPoint p: NSPoint) {
+        guard let panel = panels.last(where: { $0.frame.contains(p) }), let v = panel.contentView as? PlatinumMenuView else { return }
+        v.hover(at: v.convert(panel.convertPoint(fromScreen: p), from: nil))
+    }
+    @discardableResult func release(screenPoint p: NSPoint) -> Bool {
+        guard let panel = panels.last(where: { $0.frame.contains(p) }), let v = panel.contentView as? PlatinumMenuView else { return false }
+        v.release(at: v.convert(panel.convertPoint(fromScreen: p), from: nil))
+        return true
+    }
 
     /// Show the root menu below `anchor` (screen coordinates, AppKit), left edges aligned;
     /// above it when there is no room below (the Control Strip at the bottom of the screen).
@@ -131,7 +148,7 @@ final class PlatinumMenuController {
         var x = parent.frame.maxX - 1
         if x + size.width > vf.maxX { x = parent.frame.minX - size.width + 1 }
         // The first row level with the parent row (Aqua has 4 px above its first row).
-        var y = rowRectInScreen.maxY - size.height + (look != .platinum ? 4 : 1)
+        var y = rowRectInScreen.maxY - size.height + (look == .aqua || look == .lion ? 4 : 1)
         y = max(vf.minY, min(y, vf.maxY - size.height))
         panel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.orderFrontRegardless()
@@ -159,6 +176,7 @@ final class PlatinumMenuController {
     func dismissAll() {
         panels.forEach { $0.orderOut(nil) }
         panels.removeAll()
+        let done = onDismiss; onDismiss = nil; done?()
         if let m = globalMonitor { NSEvent.removeMonitor(m); globalMonitor = nil }
         if let m = localMonitor { NSEvent.removeMonitor(m); localMonitor = nil }
         MenuKeyboard.detach("platinum")
@@ -216,11 +234,12 @@ private final class PlatinumMenuView: NSView {
     private var fullHeight: CGFloat { padTop + padBottom + items.reduce(0) { $0 + (isSeparator($1) ? sepH : rowH) } }
     private var scrolls: Bool { fullHeight > maxHeight }
 
-    private lazy var aqua = controller?.look != .platinum && controller?.look != nil
+    private lazy var aqua = controller?.look == .aqua || controller?.look == .lion
     private lazy var lion = controller?.look == .lion
-    private var rowH: CGFloat { aqua ? PlatinumMenuController.aquaRowHeight : PlatinumMenuController.rowHeight }
-    private var sepH: CGFloat { aqua ? PlatinumMenuController.aquaSeparatorHeight : PlatinumMenuController.separatorHeight }
-    private var menuFont: NSFont { aqua ? PlatinumMenuController.aquaFont : PlatinumMenuController.font }
+    private lazy var amiga = controller?.look == .amiga
+    private var rowH: CGFloat { amiga ? 21 : (aqua ? PlatinumMenuController.aquaRowHeight : PlatinumMenuController.rowHeight) }
+    private var sepH: CGFloat { amiga ? 6 : (aqua ? PlatinumMenuController.aquaSeparatorHeight : PlatinumMenuController.separatorHeight) }
+    private var menuFont: NSFont { amiga ? AmigaChrome.titleFont() : (aqua ? PlatinumMenuController.aquaFont : PlatinumMenuController.font) }
     /// Space above the first row and below the last.
     private var padTop: CGFloat { aqua ? 4 : 2 }
     private var padBottom: CGFloat { aqua ? 3 : 2 }
@@ -281,6 +300,7 @@ private final class PlatinumMenuView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         if aqua { drawAqua(); return }
+        if amiga { drawAmiga(); return }
         let b = bounds
         // The menu's own shadow: one dark line below and to the right, as os9.ca draws it.
         NSColor(white: 0.067, alpha: 1).setFill()
@@ -301,7 +321,7 @@ private final class PlatinumMenuView: NSView {
             NSRect(x: box.maxX - 2, y: 1, width: 1, height: box.height - 2).fill()
         }
 
-        let font = PlatinumMenuController.font
+        let font = menuFont
         let icons = hasIcons
         if scrolls {
             NSGraphicsContext.current?.saveGraphicsState()
@@ -435,6 +455,50 @@ private final class PlatinumMenuView: NSView {
         if scrolls { NSGraphicsContext.current?.restoreGraphicsState() }
     }
 
+    /// AmigaOS 4.1: the screen bar's light bands down the menu inside a #424242 line, lit
+    /// white along the top and left; the chosen row in the active window bar's blue bands, its
+    /// text staying black as on the bars; DejaVu Sans 13. No 2008 screenshot shows an open
+    /// menu, so the look follows the screen bar and the windows rather than a picture of one.
+    private func drawAmiga() {
+        let b = bounds
+        AmigaChrome.drawBands(AmigaChrome.screenRows.dropLast().map { $0 } + [AmigaChrome.rgb(0xD4D2D2)], in: b)
+        AmigaChrome.rgb(0x424242).setFill()
+        NSRect(x: 0, y: 0, width: b.width, height: 1).fill(); NSRect(x: 0, y: b.maxY - 1, width: b.width, height: 1).fill()
+        NSRect(x: 0, y: 0, width: 1, height: b.height).fill(); NSRect(x: b.maxX - 1, y: 0, width: 1, height: b.height).fill()
+        NSColor.white.setFill()
+        NSRect(x: 1, y: 1, width: b.width - 2, height: 1).fill(); NSRect(x: 1, y: 1, width: 1, height: b.height - 2).fill()
+        NSGraphicsContext.current?.cgContext.setShouldSmoothFonts(false)
+        for (i, it) in items.enumerated() {
+            let r = rowRect(i).insetBy(dx: 1, dy: 0)
+            if isSeparator(it) {
+                AmigaChrome.rgb(0x8C8D90).setFill(); NSRect(x: r.minX + 4, y: r.midY.rounded() - 1, width: r.width - 8, height: 1).fill()
+                NSColor.white.setFill(); NSRect(x: r.minX + 4, y: r.midY.rounded(), width: r.width - 8, height: 1).fill()
+                continue
+            }
+            let selected = i == hovered && !it.dimmed
+            if selected { AmigaChrome.drawBands(Array(AmigaChrome.activeRows.dropFirst().dropLast()), in: r) }
+            let colour: NSColor = it.dimmed ? AmigaChrome.rgb(0x8C8D90) : .black
+            if it.ticked {
+                let p = NSBezierPath()
+                p.move(to: NSPoint(x: r.minX + 5, y: r.midY)); p.line(to: NSPoint(x: r.minX + 8, y: r.midY + 3)); p.line(to: NSPoint(x: r.minX + 13, y: r.midY - 4))
+                p.lineWidth = 2; colour.setStroke(); p.stroke()
+            }
+            let attrs: [NSAttributedString.Key: Any] = [.font: menuFont, .foregroundColor: colour]
+            let ts = it.title.size(withAttributes: attrs)
+            it.title.draw(at: NSPoint(x: r.minX + 18, y: (r.midY - ts.height / 2).rounded()), withAttributes: attrs)
+            if let key = it.shortcut {
+                let ks = key.size(withAttributes: attrs)
+                key.draw(at: NSPoint(x: r.maxX - 10 - ks.width, y: (r.midY - ks.height / 2).rounded()), withAttributes: attrs)
+            }
+            if it.isSubmenu {
+                let ax = r.maxX - 12, ay = r.midY
+                let p = NSBezierPath()
+                p.move(to: NSPoint(x: ax, y: ay - 4)); p.line(to: NSPoint(x: ax + 5, y: ay)); p.line(to: NSPoint(x: ax, y: ay + 4)); p.close()
+                colour.setFill(); p.fill()
+            }
+        }
+    }
+
     func setHovered(_ i: Int) { hovered = i; needsDisplay = true }
 
     private func scroll(by delta: Int) {
@@ -472,8 +536,11 @@ private final class PlatinumMenuView: NSView {
         addTrackingArea(t); trackingArea = t
     }
 
-    override func mouseMoved(with event: NSEvent) {
-        let p = convert(event.locationInWindow, from: nil)
+    override func mouseMoved(with event: NSEvent) { hover(at: convert(event.locationInWindow, from: nil)) }
+
+    /// The row under `p` lights up and opens its submenu: the pointer moving over the menu, or
+    /// dragging over it with a button held elsewhere (`PlatinumMenuController.track`).
+    func hover(at p: NSPoint) {
         if scrolls {
             if upArrowRect.contains(p) { armScroll(-1); return }
             if downArrowRect.contains(p) { armScroll(1); return }
@@ -506,8 +573,10 @@ private final class PlatinumMenuView: NSView {
         }
     }
 
-    override func mouseDown(with event: NSEvent) {
-        let p = convert(event.locationInWindow, from: nil)
+    override func mouseDown(with event: NSEvent) { release(at: convert(event.locationInWindow, from: nil)) }
+
+    /// A click, or a held button let go, at `p`: the row there is chosen.
+    func release(at p: NSPoint) {
         if scrolls, !rowBand.contains(p) { return }
         if let i = items.indices.first(where: { rowRect($0).contains(p) }) { choose(i) }
     }

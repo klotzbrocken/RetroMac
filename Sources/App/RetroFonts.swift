@@ -8,7 +8,7 @@ enum RetroFonts {
     private static func registerIfNeeded() {
         guard !registered else { return }
         registered = true
-        for name in ["ChiKareGo2.ttf", "PixelOperator.ttf", "DejaVuSans.ttf", "DejaVuSans-Bold.ttf"] {
+        for name in ["ChiKareGo2.ttf", "PixelOperator.ttf", "DejaVuSans.ttf", "DejaVuSans-Bold.ttf", "DejaVuSans-Oblique.ttf"] {
             guard let u = Bundle.main.resourceURL?.appendingPathComponent("Fonts/\(name)"),
                   FileManager.default.fileExists(atPath: u.path) else { continue }
             CTFontManagerRegisterFontsForURL(u as CFURL, .process, nil)   // already registered → harmless error

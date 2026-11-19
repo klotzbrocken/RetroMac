@@ -171,7 +171,10 @@ final class WorkAreaKeeper {
         let screen = NSScreen.screens.first { $0.frame.intersects(barAppKit) } ?? primary
         let h = primary.frame.height
         func ax(_ r: NSRect) -> CGRect { CGRect(x: r.minX, y: h - r.maxY, width: r.width, height: r.height) }
-        return (ax(screen.visibleFrame), ax(barAppKit))
+        var visible = screen.visibleFrame
+        // The Amiga screen bar holds the top edge as a second bar.
+        if let top = AmigaScreenBarController.reservedFrame(on: screen) { visible.size.height = top.minY - visible.minY }
+        return (ax(visible), ax(barAppKit))
     }
 
     // MARK: - Accessibility
@@ -225,7 +228,8 @@ enum WorkArea {
     /// Where a window overlapping the bar should go: moved just clear of it, or shrunk to the work
     /// area where it is too big to fit. Nil when it does not overlap the bar.
     static func adjusted(frame: CGRect, visible: CGRect, bar: CGRect) -> CGRect? {
-        guard frame.intersects(bar), visible.intersects(frame) else { return nil }
+        // Over the bar, or reaching above the top of the work area (under a bar there).
+        guard frame.intersects(bar) || frame.minY < visible.minY - 0.5, visible.intersects(frame) else { return nil }
         let area = usable(visible: visible, bar: bar)
         guard area.width >= 200, area.height >= 150 else { return nil }
         var f = frame
