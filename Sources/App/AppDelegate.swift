@@ -4921,6 +4921,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         VirtualCameraManager.shared.stop()
         cleanupBeforeQuit()
+        SystemWatchdog.markCleanExit()   // the watchdog has nothing to do and leaves at once
     }
 
     /// The user quitting RetroMac (menu, flyout, Dock) — not a logout, a restart or an update,

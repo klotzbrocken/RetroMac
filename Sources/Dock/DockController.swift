@@ -346,7 +346,7 @@ final class DockController {
         NextMenuController.shared.hide()
         NextDockController.shared.hide()
         CDEFrontPanelController.shared.hide()
-        AmigaScreenBarController.shared.hide()
+        AmigaScreenBarController.shared.update()   // the Amiga theme has a dock AND its screen bar
         PhotonDesktopController.shared.hide()
         WindowSwitcher.shared.update()   // a dock theme may have a switcher too (Snow Leopard)
         AeroSnap.shared.update()

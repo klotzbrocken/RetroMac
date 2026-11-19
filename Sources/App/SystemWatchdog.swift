@@ -5,10 +5,22 @@ import AppKit
 /// itself (a crash, Force Quit, `kill -9`). Until now only the next launch recovered them, so a
 /// crash left the real Dock unreachable (autohide-delay 1 000 000) until RetroMac ran again.
 /// A second copy of the binary, started at launch with `--watchdog <pid>`, waits for that process
-/// to end and runs the same recovery the next launch would. After a normal quit there is nothing
-/// left to recover and it just exits.
+/// to end and runs the same recovery the next launch would. After a normal quit (marked by
+/// `markCleanExit`) there is nothing left to recover and it exits at once, before touching AppKit:
+/// once the recovery has used NSWorkspace, Launch Services counts the watchdog as a running
+/// RetroMac, and opening RetroMac again failed (-600) until it had finished.
 enum SystemWatchdog {
     static let flag = "--watchdog"
+    static let cleanExitKey = "watchdogCleanExitPID"
+
+    /// Called at the end of a normal quit, once RetroMac has put everything back itself.
+    static func markCleanExit(_ defaults: UserDefaults = .standard) {
+        defaults.set(Int(getpid()), forKey: cleanExitKey)
+        defaults.synchronize()   // the process ends right after; the watchdog reads it then
+    }
+    static func endedCleanly(_ pid: pid_t, _ defaults: UserDefaults = .standard) -> Bool {
+        defaults.integer(forKey: cleanExitKey) == Int(pid)
+    }
 
     /// The process to watch, when this process was started as the watchdog.
     static func watchedPID(in arguments: [String] = CommandLine.arguments) -> pid_t? {
@@ -43,6 +55,7 @@ enum SystemWatchdog {
     }
 
     private static func recover(after pid: pid_t) -> Never {
+        if endedCleanly(pid) { print("[Watchdog] RetroMac \(pid) quit normally"); exit(0) }
         // A RetroMac started again in the meantime recovers by itself and may already have hidden
         // the Dock again; the other build (release / dev) may be hiding it right now (the recovery
         // also acts on the Dock's own fingerprint, which either build leaves): leave it to them.
