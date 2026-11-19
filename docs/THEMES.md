@@ -105,6 +105,7 @@ Everything under `"dock"`. Sizes are points.
 | `labelStyle` | `"outlined"`: the name above the magnified icon in white with a black outline, no plate (Mac OS X 10.0); absent, a dark rounded plate (10.6) |
 | `labelsBelow` | `true`: every icon's name under it, white with a black outline, always shown, and the strip with the depth gadget at the right end (AmigaOS 4's AmiDock) |
 | `labelNames` | Names for apps that wear another system's name, bundle id → name (`"com.apple.TextEdit": "NotePad"`); with `labelsBelow` |
+| `dockies` | AmiDock's Dockies after the pinned apps: `"clock"` (analog), `"cpu"` (load graph), `"winbar"` (list of open windows) |
 | `shelfStyle` | `flat` or `3d` (Snow Leopard's perspective shelf); `shelfLineColor` |
 | `startButton`, `startButtonLabel`, `startButtonIcon`, `startButtonImage`, `startButtonStyle`, `startButtonColor`, `startButtonGradientTop/Bottom` | The Start button; `startButtonImage` is a sprite sheet with three states stacked vertically (normal, hover, pressed); `startButtonStyle` `raised`, `sunken`, `flat` |
 | `startMenuStyle` | `classic` (Windows 95/98/Me cascade) or `xp` (Luna's two columns) |
