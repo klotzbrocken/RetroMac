@@ -308,6 +308,8 @@ struct DockThemeConfig: Codable {
         /// The names to show for apps that wear another system's name (bundle id → name),
         /// e.g. TextEdit as "NotePad" on the AmiDock. Apps without one keep their own.
         var labelNames: [String: String]?
+        /// AmiDock's Dockies, after the pinned apps: "clock", "cpu", "winbar" (`AmigaDockies`).
+        var dockies: [String]?
     }
 
     struct IconStyle: Codable {

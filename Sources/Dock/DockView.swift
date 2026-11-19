@@ -192,6 +192,7 @@ final class DockView: NSView {
                            hasUrlLauncher: hasUrlLauncher && !isControlStrip,
                            hasTrash: hasTrash && !isControlStrip,
                            hasDoomLauncher: hasDoomLauncher && !isControlStrip,
+                           dockies: isWindowsTaskbar || isControlStrip ? [] : (ThemeManager.shared.activeTheme?.config.dock.dockies ?? []),
                            iconSize: iconSize,
                            spacing: spacing,
                            groupGap: ThemeManager.shared.activeTheme.flatMap { t in t.config.dock.separatorGap.map { $0 * iconSize / max(1, t.config.dock.iconSize) } },
@@ -1827,6 +1828,40 @@ final class DockView: NSView {
         case .urlLauncher:  addURLLauncherItem(frame: frame, theme: theme, iconSize: iconSize)
         case .trash:        addTrashItem(frame: frame, theme: theme, iconSize: iconSize)
         case .doomLauncher: addDoomLauncherItem(frame: frame, theme: theme, iconSize: iconSize)
+        case .docky(let name): addDockyItem(name, frame: frame, theme: theme, iconSize: iconSize)
+        }
+    }
+
+    /// An AmiDock Docky. The clock and the CPU graph are drawn again every second; WinBar opens
+    /// the list of open windows, as winbar.docky did, and brings the chosen one forward.
+    private func addDockyItem(_ name: String, frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
+        let ticker = AmigaDockyTicker.shared
+        let item = DockItemView(bundleID: AmigaDockies.id(name), frame: frame)
+        item.updateIcon(AmigaDockies.image(name, size: iconSize, load: ticker.load))
+        item.updateTheme(theme)
+        item.toolTip = AmigaDockies.names[name]
+        item.setAccessibilityLabel(AmigaDockies.names[name])
+        switch name {
+        case "winbar":
+            item.onLeftClick = { [weak item] _ in
+                guard let item, let win = item.window else { return }
+                AmigaDockies.showWindowList(below: win.convertToScreen(item.convert(item.bounds, to: nil)))
+            }
+        case "clock": item.onLeftClick = { _ in ClockWidgetController.shared.show() }   // the bigger clock
+        case "cpu": item.onLeftClick = { _ in CPUMonitorController.shared.show() }       // the full monitor
+        default: break
+        }
+        item.onRightClick = { [weak self] bid, point in self?.onContextMenu?(bid, point) }
+        addSubview(item)
+        itemViews.append(item)
+        guard name != "winbar" else { return }
+        ticker.start()
+        ticker.onTick = { [weak self] in
+            guard let self else { AmigaDockyTicker.shared.stop(); return }
+            let live = self.itemViews.filter { AmigaDockies.name(of: $0.bundleID).map { $0 != "winbar" } == true }
+            if live.isEmpty { AmigaDockyTicker.shared.stop(); return }
+            let size = live[0].frame.width
+            for v in live { v.updateIcon(AmigaDockies.image(AmigaDockies.name(of: v.bundleID) ?? "", size: size, load: AmigaDockyTicker.shared.load)) }
         }
     }
 
@@ -4503,6 +4538,7 @@ final class DockView: NSView {
         else if bundleID == "__urllauncher__" { name = "Link" }
         else if bundleID == "__dashboard__" { name = "Dashboard" }
         else if bundleID == "__showdesktop__" { name = "Show Desktop" }
+        else if let d = AmigaDockies.name(of: bundleID) { name = AmigaDockies.names[d] ?? d }
         else if let app = AppManager.shared.apps.first(where: { $0.bundleID == bundleID }) { name = app.displayName }
         else if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first { name = app.localizedName ?? bundleID }
         else { name = bundleID }

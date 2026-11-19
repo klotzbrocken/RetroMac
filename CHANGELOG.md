@@ -22,7 +22,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   AmigaOne's U-Boot comes first, with today's date, then the AmigaOS 4.1 boot screen. The Tools
   menu holds WBPattern (the wallpapers, among them djnick's Amiga Abstract and Andreas Argirakis's
   Pairing Joysticks from amiga-look.org), New shortcut and the Clock, Calculator, Notepad and CPU
-  Monitor in Workbench windows; the mouse pointers are levellord's AmigaOS 4 set (CC BY-SA 4.0). Every picture is redrawn for
+  Monitor in Workbench windows; the mouse pointers are levellord's AmigaOS 4 set (CC BY-SA 4.0).
+  The AmiDock carries three Dockies: an analog clock, a CPU load graph in Ranger's manner and
+  WinBar, the list of open windows, minimised ones included. Every picture is redrawn for
   RetroMac, including a reconstruction of the 2008 backdrop, and the type is DejaVu Sans, as on
   OS 4.1.
 

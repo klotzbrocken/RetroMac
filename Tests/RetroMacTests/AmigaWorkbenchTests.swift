@@ -60,6 +60,32 @@ final class AmigaWorkbenchTests: XCTestCase {
     }
 }
 
+final class AmigaDockyTests: XCTestCase {
+    /// The Dockies follow the pinned apps and come before the running ones, and only where asked.
+    func testDockiesSitAfterThePinnedApps() {
+        let apps = [DockApp(bundleID: "com.apple.finder", order: 0), DockApp(bundleID: "com.apple.Safari", order: 1)]
+        let tiles = DockView.iconDockTiles(taskbar: false, showQuickLaunch: false, apps: apps, transients: ["com.example.run"],
+                                           stacksOnRight: false, hasDashboard: false, hasShowDesktop: false,
+                                           hasUrlLauncher: false, hasTrash: false, hasDoomLauncher: false,
+                                           dockies: ["clock", "cpu", "winbar"], iconSize: 40, spacing: 12, doomWidth: 40)
+        XCTAssertEqual(tiles.map(\.id), ["com.apple.finder", "com.apple.Safari", "__docky_clock__", "__docky_cpu__", "__docky_winbar__", "com.example.run"])
+        XCTAssertEqual(AmigaDockies.name(of: "__docky_cpu__"), "cpu")
+        XCTAssertNil(AmigaDockies.name(of: "com.apple.finder"))
+        let plain = DockView.iconDockTiles(taskbar: false, showQuickLaunch: false, apps: apps, transients: [],
+                                           stacksOnRight: false, hasDashboard: false, hasShowDesktop: false,
+                                           hasUrlLauncher: false, hasTrash: false, hasDoomLauncher: false,
+                                           iconSize: 40, spacing: 12, doomWidth: 40)
+        XCTAssertFalse(plain.contains { AmigaDockies.name(of: $0.id) != nil }, "no dockies unless the theme names them")
+    }
+
+    func testDockyPicturesDraw() {
+        for name in ["clock", "cpu", "winbar"] {
+            let img = AmigaDockies.image(name, size: 40, load: [10, 50, 90])
+            XCTAssertNotNil(img.cgImage(forProposedRect: nil, context: nil, hints: nil), name)
+        }
+    }
+}
+
 final class AmigaDrawerTests: XCTestCase {
     private var dir: URL!
 

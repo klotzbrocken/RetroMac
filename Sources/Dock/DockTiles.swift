@@ -19,6 +19,8 @@ struct DockTile {
         case urlLauncher
         case trash
         case doomLauncher
+        /// An AmiDock Docky ("clock", "cpu", "winbar"), drawn live in place of an icon.
+        case docky(String)
     }
     /// Which separator, if any, belongs in this tile's leading gap.
     enum Separator: Equatable { case transients, rightGroup }
@@ -50,6 +52,7 @@ extension DockView {
                               hasUrlLauncher: Bool,
                               hasTrash: Bool,
                               hasDoomLauncher: Bool,
+                              dockies: [String] = [],
                               iconSize: CGFloat,
                               spacing: CGFloat,
                               groupGap: CGFloat? = nil,
@@ -86,6 +89,7 @@ extension DockView {
         }
         // A dock with no pinned apps still gets its Dashboard tile.
         if inline.isEmpty && hasDashboard { tile(.dashboard, "__dashboard__") }
+        for d in dockies { tile(.docky(d), AmigaDockies.id(d)) }
 
         if hasShowDesktop { tile(.showDesktop, "__showdesktop__") }
 

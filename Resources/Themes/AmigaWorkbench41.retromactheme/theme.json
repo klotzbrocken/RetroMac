@@ -89,7 +89,12 @@
       "com.apple.tips": "WBHelp",
       "com.apple.helpviewer": "WBHelp",
       "com.apple.calculator": "Calculator"
-    }
+    },
+    "dockies": [
+      "clock",
+      "cpu",
+      "winbar"
+    ]
   },
   "icon": {
     "renderStyle": "smooth",
