@@ -25,6 +25,17 @@ final class AmigaChromeTests: XCTestCase {
         XCTAssertFalse(AmigaChrome.depthSendsBack(isFrontmost: false))
     }
 
+    /// Sent to the back, a window lets every window it covers come up, in their own order;
+    /// windows elsewhere on the screen are left alone.
+    func testDepthRaisesWhatTheWindowCovers() {
+        let front = CGRect(x: 100, y: 100, width: 400, height: 300)
+        let below: [(Int, CGRect)] = [(2, CGRect(x: 0, y: 0, width: 1920, height: 1000)),
+                                      (3, CGRect(x: 1200, y: 100, width: 300, height: 300)),
+                                      (4, CGRect(x: 450, y: 350, width: 200, height: 200))]
+        XCTAssertEqual(AmigaChrome.windowsToRaise(behind: front, below: below), [2, 4])
+        XCTAssertEqual(AmigaChrome.windowsToRaise(behind: front, below: [(Int, CGRect)]()), [])
+    }
+
     /// The bands are the reference's rows: 31 each, edge rows dark, the active bar blue.
     func testBandsAreTheMeasuredRows() {
         XCTAssertEqual(AmigaChrome.activeRows.count, 31)

@@ -1458,16 +1458,21 @@ final class TitleBarOverlayController {
     /// not whichever of its windows was frontmost; and all of it runs off the main thread —
     /// an app slow to answer Accessibility (a browser with many windows) used to hold the
     /// main thread long enough for the spinning cursor.
-    /// AmigaOS's depth gadget: the front window goes behind the next one, any other comes forward.
-    /// shortcut: one step back only, by raising the window under it (Accessibility has no
-    /// "lower"); upgrade if ordering another app's window through SkyLight proves reliable.
+    /// AmigaOS's depth gadget: the front window goes to the back, any other comes forward.
+    /// Accessibility has no "lower", so every window the front one covers is raised instead,
+    /// the lowest first: they keep their order among themselves and end up above it (asked by
+    /// Maik; raising only the next one left the window a single step back).
     private func depth(_ wid: CGWindowID, pid: pid_t) {
         let list = Self.onScreenWindows().0
         guard let i = list.firstIndex(where: { $0.id == wid }) else { activate(wid, pid: pid); return }
-        if AmigaChrome.depthSendsBack(isFrontmost: i == 0), list.count > 1 {
-            activate(list[1].id, pid: list[1].pid)
-        } else {
-            activate(wid, pid: pid)
+        guard AmigaChrome.depthSendsBack(isFrontmost: i == 0) else { activate(wid, pid: pid); return }
+        let covered = AmigaChrome.windowsToRaise(behind: list[i].bounds, below: list.dropFirst(i + 1).map { ($0.id, $0.bounds) })
+        let pids = Dictionary(list.map { ($0.id, $0.pid) }, uniquingKeysWith: { a, _ in a })
+        // Raising alone does not reorder another app's window; each one is activated, a little
+        // apart so the WindowServer takes them in this order.
+        for (n, id) in covered.reversed().enumerated() {
+            guard let p = pids[id] else { continue }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12 * Double(n)) { [weak self] in self?.activate(id, pid: p) }
         }
     }
 

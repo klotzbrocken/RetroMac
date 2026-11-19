@@ -10,7 +10,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **Amiga Workbench 4.1, the AmigaOne of 2008.** The theme now follows AmigaOS 4.1 as it stood
   after a fresh install. Its windows get AmigaOS's own title bars, blue in front and silver
   behind, with the closer on the left and depth, zoom and iconify on the right; the depth gadget
-  sends the front window back. The Workbench screen bar runs along the top with the free memory.
+  sends the front window behind all the windows it covers. The Workbench screen bar runs along the
+  top with the free memory; its screen-depth gadget puts the other programs away to show the
+  Workbench, and brings them back.
   Hold the right mouse button for the Workbench, Window, Icons and Tools menus. The AmiDock sits at
   the bottom right with each name under its icon (the Mac's everyday apps, Office, the browsers
   and the AI apps in Workbench-style pictures), and the volumes are on the left: System, Work
@@ -21,6 +23,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   OS 4.1.
 
 ### Fixed
+
+- **Show Desktop brings the apps back.** The Windows 98 Show Desktop tile hid every app but often
+  could not show them again: macOS reports the hide as refused while doing it, so the second click
+  found nothing to restore.
 
 - **The Mac comes back after a crash.** When RetroMac ended without tidying up (a crash, Force
   Quit), the real Dock, the menu bar and the desktop icons stayed hidden, and the theme's wallpaper,

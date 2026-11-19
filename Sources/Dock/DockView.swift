@@ -1788,7 +1788,10 @@ final class DockView: NSView {
             let own = Bundle.main.bundleIdentifier
             for app in NSWorkspace.shared.runningApplications
             where app.activationPolicy == .regular && app.bundleIdentifier != own && !app.isHidden {
-                if app.hide() { showDesktopHidden.append(app) }
+                // Kept whatever hide() answers: from a background app it says false and hides all
+                // the same, and the next press then had nothing to bring back.
+                _ = app.hide()
+                showDesktopHidden.append(app)
             }
         } else {
             for app in showDesktopHidden { app.unhide() }

@@ -335,4 +335,10 @@ enum AmigaChrome {
 
     /// The depth gadget's rule: the window at the front goes to the back, any other comes to the front.
     static func depthSendsBack(isFrontmost: Bool) -> Bool { isFrontmost }
+
+    /// The windows a front window covers, front to back (from `below`, also front to back):
+    /// these come up above it when it goes to the back. At most twelve, the nearest.
+    static func windowsToRaise<ID>(behind front: CGRect, below: [(ID, CGRect)]) -> [ID] {
+        Array(below.filter { $0.1.intersects(front) }.map(\.0).prefix(12))
+    }
 }
