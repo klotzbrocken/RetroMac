@@ -1801,6 +1801,9 @@ final class DockView: NSView {
                 _ = app.hide()
                 if !showDesktopHidden.contains(app) { showDesktopHidden.append(app) }
             }
+            // The app in front sometimes ignores the first request while it is still active; ask
+            // again once the others are gone.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { for app in showing where !app.isHidden { _ = app.hide() } }
         } else {
             for app in showDesktopHidden { app.unhide() }
             showDesktopHidden.removeAll()

@@ -14,10 +14,6 @@ final class AmigaScreenBarController {
 
     private var window: NSPanel?
     private var view: AmigaScreenBarView?
-    /// The screen-depth gadget in a small window of its own above the Mac's menu bar: the bar
-    /// itself stays under it so the Mac's menus come in at the top edge, and they used to slide
-    /// over the gadget on the way to it (Maik's "nothing happens").
-    private var gadget: NSPanel?
     private var timer: Timer?
     private var copyrightUntil = Date.distantPast
     private var shownOnce = false
@@ -56,19 +52,6 @@ final class AmigaScreenBarController {
             window = panel; view = v
         }
         window?.setFrame(frame, display: true)
-        let g = AmigaChrome.screenDepthRect(in: NSRect(origin: .zero, size: frame.size)).insetBy(dx: -4, dy: -4)
-        let gFrame = NSRect(x: frame.minX + g.minX, y: frame.maxY - g.maxY, width: g.width, height: g.height)
-        if gadget == nil {
-            let p = TopEdgePanel(contentRect: gFrame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-            p.level = Self.level
-            p.isOpaque = true; p.hasShadow = false
-            p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
-            p.hidesOnDeactivate = false
-            p.contentView = AmigaScreenDepthView(frame: NSRect(origin: .zero, size: gFrame.size), barOffset: g.minY)
-            gadget = p
-        }
-        gadget?.setFrame(gFrame, display: true)
-        gadget?.orderFrontRegardless()
         if !shownOnce { shownOnce = true; copyrightUntil = Date().addingTimeInterval(5) }
         refreshTitle()
         if timer == nil {
@@ -82,7 +65,6 @@ final class AmigaScreenBarController {
         endMenus()
         window?.orderOut(nil)
         window = nil; view = nil
-        gadget?.orderOut(nil); gadget = nil
         shownOnce = false
     }
 
@@ -206,7 +188,7 @@ final class AmigaScreenBarView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         guard menuMode else {
-            AmigaChrome.drawScreenBar(in: bounds, title: title, depthPressed: false)
+            AmigaChrome.drawScreenBar(in: bounds, title: title, depthPressed: depthPressed)
             return
         }
         AmigaChrome.drawBands(AmigaChrome.screenRows, in: bounds)
@@ -221,9 +203,20 @@ final class AmigaScreenBarView: NSView {
         }
     }
 
+    private var depthPressed = false
+    private var depthRect: NSRect { AmigaChrome.screenDepthRect(in: bounds).insetBy(dx: -4, dy: -4) }
+
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if menuMode, let i = titleIndex(at: p) { AmigaScreenBarController.shared.open(i); return }
+        if depthRect.contains(p) { depthPressed = true; needsDisplay = true }
+    }
+    /// The screen-depth gadget: the Workbench screen to the front or the back. On the Mac the other
+    /// programs' windows go away so the Workbench lies open, and come back with the next press.
+    override func mouseUp(with event: NSEvent) {
+        guard depthPressed else { return }
+        depthPressed = false; needsDisplay = true
+        if depthRect.contains(convert(event.locationInWindow, from: nil)) { DockView.toggleShowDesktop() }
     }
     override func rightMouseDown(with event: NSEvent) {
         AmigaScreenBarController.shared.beginMenus()
@@ -236,33 +229,12 @@ final class AmigaScreenBarView: NSView {
         AmigaScreenBarController.shared.open(0)
         return true
     }
-}
-
-/// The screen-depth gadget on its own, over the bar's bands: the Workbench screen to the front or
-/// the back. On the Mac the other programs' windows go away so the Workbench lies open, and come
-/// back with the next press (asked by Maik).
-final class AmigaScreenDepthView: NSView {
-    private var pressed = false
-    private let barOffset: CGFloat
-    init(frame: NSRect, barOffset: CGFloat) {
-        self.barOffset = barOffset
-        super.init(frame: frame)
-        setAccessibilityElement(true); setAccessibilityRole(.button); setAccessibilityLabel("Screen depth: show the Workbench")
+    private var axDepth: AccessibleHotspot?
+    override func accessibilityChildren() -> [Any]? {
+        let b = AccessibleHotspot.make(in: self, label: "Screen depth: show the Workbench", rect: depthRect) { DockView.toggleShowDesktop() }
+        axDepth = b
+        return [b]
     }
-    @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
-    override var isFlipped: Bool { true }
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-    override func draw(_ dirtyRect: NSRect) {
-        // The bar's own bands behind it, lined up with the bar underneath.
-        AmigaChrome.drawBands(AmigaChrome.screenRows, in: NSRect(x: 0, y: -barOffset, width: bounds.width, height: AmigaChrome.screenBarHeight))
-        AmigaChrome.drawGadget(.depth, in: NSRect(x: 4, y: 4, width: bounds.width - 8, height: bounds.height - 8), tone: .screen, pressed: pressed)
-    }
-    override func mouseDown(with event: NSEvent) { pressed = true; needsDisplay = true }
-    override func mouseUp(with event: NSEvent) {
-        pressed = false; needsDisplay = true
-        if bounds.contains(convert(event.locationInWindow, from: nil)) { DockView.toggleShowDesktop() }
-    }
-    override func accessibilityPerformPress() -> Bool { DockView.toggleShowDesktop(); return true }
 }
 
 /// The Workbench's four menus. A row whose job has a counterpart on the Mac does it; the rest
