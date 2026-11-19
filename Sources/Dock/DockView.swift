@@ -4444,14 +4444,22 @@ final class DockView: NSView {
         theme.dock.labelsBelow == true && !theme.isVertical ? 6 * scale : 0
     }
 
+    /// The width one name may take: its tile and the gap to the next, less a point each side.
+    private func labelRoom(_ theme: DockThemeConfig, scale: CGFloat) -> CGFloat {
+        (theme.dock.iconSize + theme.dock.spacing) * scale - 2
+    }
+
     /// AmiDock, after WBPattern.png: each icon's name below it in white with a black outline,
     /// and the narrow strip at the right end with the dock's depth gadget.
     private func drawAmiDockExtras(_ theme: DockThemeConfig) {
         let scale = CGFloat(AppSettings.shared.dockIconScale) * dynamicScale
         let font = RetroFonts.dejaVu(9.5 * scale, bold: true)
         NSGraphicsContext.current?.cgContext.setShouldSmoothFonts(false)
+        let room = labelRoom(theme, scale: scale)
         for v in itemViews where !v.isHidden {
-            let name = theme.dock.labelNames?[v.bundleID] ?? nameFor(v.bundleID)
+            var name = theme.dock.labelNames?[v.bundleID] ?? nameFor(v.bundleID)
+            // A name wider than its place is cut, as the AmiDock cut it, rather than run into the next.
+            while name.count > 1, (name as NSString).size(withAttributes: [.font: font]).width > room { name.removeLast() }
             let outline: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
             let face: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.white]
             let s = (name as NSString).size(withAttributes: face)

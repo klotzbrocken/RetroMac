@@ -24,8 +24,10 @@ final class AmigaScreenBarController {
     static func reservedFrame(on screen: NSScreen) -> NSRect? {
         guard AppSettings.shared.dockEnabled, !AppSettings.shared.dockOnly, ThemeManager.shared.activeTheme?.config.isAmiga == true,
               screen == NSScreen.screens.first else { return nil }
-        let v = screen.visibleFrame
-        return NSRect(x: screen.frame.minX, y: v.maxY - AmigaChrome.screenBarHeight, width: screen.frame.width,
+        // At the very top while the theme hides the Mac's menu bar (as it does by default): the
+        // visible frame still keeps the hidden bar's height free, and the wallpaper showed there.
+        let top = AppSettings.shared.hideMenuBar ? screen.frame.maxY : screen.visibleFrame.maxY
+        return NSRect(x: screen.frame.minX, y: top - AmigaChrome.screenBarHeight, width: screen.frame.width,
                       height: AmigaChrome.screenBarHeight)
     }
 

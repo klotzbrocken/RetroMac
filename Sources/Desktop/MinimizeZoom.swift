@@ -29,8 +29,9 @@ final class MinimizeZoom {
     /// real lights on the shrinking window. The picture, fireballs and all, goes into the app's
     /// dock icon instead. Mac OS X 10.0, 10.4, 10.6 and 10.8 too: the Mac's own minimise aims at
     /// the hidden Mac Dock, whose icons sit elsewhere, and the window flew past the theme's dock.
+    /// AmigaOS 4.1 too: iconify takes the window to its app's icon on the AmiDock.
     static var intoDockIcon: Bool {
-        [.fireLights, .aqua, .snowLights].contains(TitleBarOverlayController.style(for: RetroFrameTheme.key()))
+        [.fireLights, .aqua, .snowLights, .amiga].contains(TitleBarOverlayController.style(for: RetroFrameTheme.key()))
     }
 
     static let duration: TimeInterval = 0.4

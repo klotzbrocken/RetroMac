@@ -1856,6 +1856,11 @@ final class TitleBarOverlayController {
                 visible = NSRect(x: visible.minX, y: visible.minY + r.bottom, width: visible.width - r.right, height: visible.height - r.bottom)
             }
         }
+        // The Amiga screen bar holds the top edge: a zoomed window under it was pushed down by the
+        // work-area keeper and no longer matched where the zoom took it, so it never came back.
+        if let top = AmigaScreenBarController.reservedFrame(on: screen), top.minY < visible.maxY {
+            visible = NSRect(x: visible.minX, y: visible.minY, width: visible.width, height: top.minY - visible.minY)
+        }
         // The bar above the window is part of it now: a zoomed window starts a bar lower.
         let bar = barAboveHeight
         visible = NSRect(x: visible.minX, y: visible.minY, width: visible.width, height: max(100, visible.height - bar))
