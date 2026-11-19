@@ -23,6 +23,11 @@ final class AmigaScreenBarController {
     private var shownOnce = false
     private var dragMonitor: Any?
 
+    /// Over the Mac's menu bar: the top edge is the Workbench screen's (asked by Maik). macOS 27
+    /// keeps its menu bar showing on a notched display even with auto-hide on, and it sat over the
+    /// bar; the Mac's menus are still there from the keyboard (⌃F2).
+    static let level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 2)
+
     /// The band the bar takes along the top of `screen` while the Amiga theme is on, nil
     /// otherwise: the desktop icons and the windows keep out of it.
     static func reservedFrame(on screen: NSScreen) -> NSRect? {
@@ -38,8 +43,8 @@ final class AmigaScreenBarController {
     func update() {
         guard let screen = NSScreen.screens.first, let frame = Self.reservedFrame(on: screen) else { hide(); return }
         if window == nil {
-            let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-            panel.level = NSWindow.Level(rawValue: 24)
+            let panel = TopEdgePanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            panel.level = Self.level
             panel.isOpaque = true
             panel.hasShadow = false
             panel.title = "Workbench Screen"   // what VoiceOver calls it
@@ -54,8 +59,8 @@ final class AmigaScreenBarController {
         let g = AmigaChrome.screenDepthRect(in: NSRect(origin: .zero, size: frame.size)).insetBy(dx: -4, dy: -4)
         let gFrame = NSRect(x: frame.minX + g.minX, y: frame.maxY - g.maxY, width: g.width, height: g.height)
         if gadget == nil {
-            let p = NSPanel(contentRect: gFrame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-            p.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 2)
+            let p = TopEdgePanel(contentRect: gFrame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            p.level = Self.level
             p.isOpaque = true; p.hasShadow = false
             p.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
             p.hidesOnDeactivate = false
@@ -118,10 +123,6 @@ final class AmigaScreenBarController {
     @discardableResult func beginMenus() -> Bool {
         guard let view, window?.isVisible == true else { return false }
         view.menuMode = true
-        // Above the Mac's menu bar while the titles are up: on its way to them the pointer
-        // reaches the top edge, where the hidden menu bar slides in and covered them. Back
-        // under it afterwards, so the Mac's menus stay reachable at the top edge.
-        window?.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 2)
         if dragMonitor == nil {
             dragMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDragged, .rightMouseUp]) { [weak self] e in
                 self?.follow(e)
@@ -172,9 +173,14 @@ final class AmigaScreenBarController {
         if let m = dragMonitor { NSEvent.removeMonitor(m); dragMonitor = nil }
         view?.menuMode = false
         view?.openTitle = nil
-        window?.level = NSWindow.Level(rawValue: 24)
         if PlatinumMenuController.shared.isOpen { PlatinumMenuController.shared.dismissAll() }
     }
+}
+
+/// A panel that may sit in the menu bar's strip: AppKit keeps windows below it, and on a display
+/// with a camera notch that left the screen bar 33 pt down with the Mac's menu bar above it.
+final class TopEdgePanel: NSPanel {
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 }
 
 final class AmigaScreenBarView: NSView {

@@ -6,7 +6,7 @@
 <!--
   Boot Phases: a PC's firmware (AMIBIOS 1992, Award Modular BIOS v4.51PG, Phoenix - AwardBIOS
   v6.00PG) and, later, an OS loader in text mode. 80x25 characters of IBM VGA 9x16 on a
-  720x400 canvas, shown at 4:3. Reconstructions: the layouts follow photographs of the
+  720x400 canvas, shown at 4:3 (U-Boot's console as wide as the screen). Reconstructions: the layouts follow photographs of the
   originals, the logos are drawn here, and the machine is this Mac (window.BOOT, read once by
   RetroMac) — no board, clock speed or drive is made up.
 -->
@@ -35,16 +35,20 @@ const FW = Q.get('firmware'), OS = Q.get('os');
 
 // ---------------------------------------------------------------- text-mode screen
 const C = document.getElementById('screen'), X = C.getContext('2d');
-const CW = 9, CH = 16, COLS = 80, ROWS = 25;
+const CW = 9, CH = 16, ROWS = 25;
+// 80 columns for the PC BIOS screens, shown at 4:3 as a VGA monitor showed them. U-Boot's console
+// runs as wide as the screen: the AmigaOne's ran full width on the wide monitor of the 2008 photos.
+let COLS = 80;
+if (FW === 'uboot') { COLS = Math.max(80, Math.round(540 * innerWidth / innerHeight / CW)); C.width = COLS * CW; }
 const PAL = ['#000000','#0000AA','#00AA00','#00AAAA','#AA0000','#AA00AA','#AA5500','#AAAAAA',
              '#555555','#5555FF','#55FF55','#55FFFF','#FF5555','#FF55FF','#FFFF55','#FFFFFF'];
 function fit() {
-  let k = Math.min(innerWidth / 720, innerHeight / 540);
-  if (k >= 1) k = Math.floor(k);
-  C.style.width = 720 * k + 'px'; C.style.height = 540 * k + 'px';
+  let k = Math.min(innerWidth / C.width, innerHeight / 540);
+  if (k >= 1 && FW !== 'uboot') k = Math.floor(k);   // whole pixels, except where the console fills the screen
+  C.style.width = C.width * k + 'px'; C.style.height = 540 * k + 'px';
 }
 addEventListener('resize', fit); fit();
-function clear(bg = 0) { X.fillStyle = PAL[bg]; X.fillRect(0, 0, 720, 400); }
+function clear(bg = 0) { X.fillStyle = PAL[bg]; X.fillRect(0, 0, C.width, 400); }
 function put(col, row, s, fg = 7, bg = null) {
   s = String(s);
   if (bg !== null) { X.fillStyle = PAL[bg]; X.fillRect(col * CW, row * CH, s.length * CW, CH); }
@@ -515,24 +519,21 @@ const UB_DEV = ['Floppy', 'Onboard VIA IDE CDROM', 'Onboard VIA IDE Disk', 'Netw
                 'USB CDROM', 'USB Disk', 'SII Parallel Disk', 'SII Parallel CDROM', 'SII Serial Disk', 'SII Serial CDROM', 'none'];
 function ubConsole(t) {
   clear();
-  put(0, 0, 'U-Boot 1.1.1 (Mar  3 2005 - 16:42:53)', 10);
+  put(0, 0, 'U-Boot 1.1.1 (' + ubStamp() + ')', 10);
   if (t > 0.3) put(0, 2, 'CPU:   ' + B.cpu, 10);
   if (t > 0.5) put(0, 3, 'DRAM:  ' + mb + ' MB', 10);
-  if (t > 0.7) put(0, 4, ubDate(), 10);
-  if (t > 0.9) put(0, 6, 'Hit any key to stop autoboot: ' + UB.count, 10);
+  if (t > 0.9) put(0, 5, 'Hit any key to stop autoboot: ' + UB.count, 10);
 }
-// Today, from this Mac's clock, the way U-Boot's own `date` command prints it.
-function ubDate() {
+// Today, from this Mac's clock, where the banner had the build's date: "Nov 19 2026 - 19:39:12".
+function ubStamp() {
   const [m, d, y] = B.date.split('/').map(Number);
-  const day = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date(y, m - 1, d).getDay()];
-  const [hh, mm, ss] = B.time.split(':').map(Number);
-  return 'Date: ' + y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0') + ' (' + day + ')    Time: '
-       + String(hh).padStart(2, ' ') + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
+  return mon + ' ' + String(d).padStart(2, ' ') + ' ' + y + ' - ' + B.time;
 }
 function ubMenu() {
   clear();
-  box(1, 1, 78, 3, 15, null, false); put(3, 2, 'U-Boot Boot Select', 15);
-  box(1, 4, 78, 16, 15, null, false);
+  box(1, 1, COLS - 2, 3, 15, null, false); put(3, 2, 'U-Boot Boot Select', 15);
+  box(1, 4, COLS - 2, 16, 15, null, false);
   const dev = B.bios.values['uboot/Boot Device'] || UB_DEV[2];
   UB_ROWS.forEach((r, i) => { if (r) put(3, 6 + i, r, 15); });
   put(33, 6, dev, UB.list ? 15 : 0, UB.list ? null : 2);
@@ -540,8 +541,8 @@ function ubMenu() {
     box(32, 5, 25, UB_DEV.length + 2, 15, 0, false);
     UB_DEV.forEach((d, i) => put(33, 6 + i, pad(d, 23), i === UB.sel ? 15 : 12, i === UB.sel ? 2 : null));
   }
-  box(1, 20, 78, 4, 15, null, false);
-  put(28, 23, 'Menu System (C) 2003 Hyperion Entertainment', 15);
+  box(1, 20, COLS - 2, 4, 15, null, false);
+  put(COLS - 3 - 43, 23, 'Menu System (C) 2003 Hyperion Entertainment', 15);
   put(3, 21, UB.list ? 'Up/Down choose, Enter sets the boot device, Esc keeps it' : 'Enter changes the boot device, Esc boots', 7);
 }
 function ubRun() {
