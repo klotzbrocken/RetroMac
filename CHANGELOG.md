@@ -14,8 +14,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   top with the free memory; its screen-depth gadget puts the other programs away to show the
   Workbench, and brings them back.
   Hold the right mouse button for the Workbench, Window, Icons and Tools menus. The AmiDock sits at
-  the bottom right with each name under its icon (the Mac's everyday apps, Office, the browsers
-  and the AI apps in Workbench-style pictures), and the volumes are on the left: System, Work
+  the bottom right with each name under its icon; the Mac's apps take their 2008 Amiga
+  counterparts where there was one (Safari as IBrowse, Mail as YAM, Music as PlayCD, QuickTime as
+  DvPlayer, Terminal as Shell), the rest Workbench-style pictures. The volumes are on the left: System, Work
   and a private RAM Disk. Drawers open in windows of their own, showing only objects with an icon
   (or all files), with Snapshot and AmigaOS 4 `.info` pictures. With Boot Phases on Firmware, the
   AmigaOne's U-Boot comes first, then the AmigaOS 4.1 boot screen. Every picture is redrawn for

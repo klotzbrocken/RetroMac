@@ -70,7 +70,17 @@
       "com.apple.Preview": "MultiView",
       "com.apple.Terminal": "Shell",
       "com.apple.archiveutility": "Unarc",
-      "com.apple.systempreferences": "Prefs"
+      "com.apple.systempreferences": "Prefs",
+      "com.apple.Safari": "IBrowse",
+      "com.apple.mail": "YAM",
+      "com.apple.Music": "PlayCD",
+      "com.apple.QuickTimePlayerX": "DvPlayer",
+      "org.videolan.vlc": "MPlayer",
+      "com.apple.ActivityMonitor": "Ranger",
+      "com.apple.DiskUtility": "MediaToolbox",
+      "com.apple.tips": "WBHelp",
+      "com.apple.helpviewer": "WBHelp",
+      "com.apple.calculator": "Calculator"
     }
   },
   "icon": {
@@ -136,7 +146,7 @@
     "com.apple.Terminal": "shell.png",
     "com.apple.archiveutility": "unarc.png",
     "com.apple.systempreferences": "drawer-prefs.png",
-    "com.apple.Safari": "safari.png",
+    "com.apple.Safari": "ibrowse.png",
     "com.google.Chrome": "chrome.png",
     "org.mozilla.firefox": "firefox.png",
     "com.apple.mail": "mail.png",
@@ -152,7 +162,7 @@
     "com.apple.Music": "music.png",
     "com.apple.dt.Xcode": "xcode.png",
     "com.apple.AddressBook": "addressbook.png",
-    "org.videolan.vlc": "vlc.png",
+    "org.videolan.vlc": "mplayer.png",
     "com.anthropic.claudefordesktop": "claude.png",
     "com.openai.chat": "chatgpt.png",
     "com.openai.codex": "chatgpt.png",
@@ -160,7 +170,10 @@
     "com.adobe.Photoshop": "photoshop.png",
     "com.apple.calculator": "calculator.png",
     "com.apple.ActivityMonitor": "activitymonitor.png",
-    "com.apple.QuickTimePlayerX": "quicktime.png"
+    "com.apple.QuickTimePlayerX": "quicktime.png",
+    "com.apple.DiskUtility": "mediatoolbox.png",
+    "com.apple.tips": "wbhelp.png",
+    "com.apple.helpviewer": "wbhelp.png"
   },
   "appearance": "light",
   "accentColor": "orange"

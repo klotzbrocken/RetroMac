@@ -377,11 +377,65 @@ func globe(_ c: CGContext, _ o: CGPoint, _ r: CGFloat, ocean: [(CGFloat, UInt32)
     radial(c, clip: disc, center: CGPoint(x: o.x - r * 0.4, y: o.y - r * 0.45), radius: r * 0.7, [(0, 0xFFFFFF, 0.7), (1, 0xFFFFFF, 0)])
     stroke(c, disc, 0x10223F, 0.7)
 }
-func safari(_ c: CGContext) {
-    globe(c, CGPoint(x: 23, y: 23), 17, ocean: [(0, 0x9AD4FF), (0.6, 0x2F7FD8), (1, 0x123F86)], land: 0x6CC24A)
-    // The browser's pointer, as IBrowse's globe carried one.
-    fill(c, poly([(30, 28), (30, 42), (33.5, 38.5), (36.5, 44), (38.5, 43), (35.6, 37.6), (40.5, 37.4)]), 0xFFFFFF)
-    stroke(c, poly([(30, 28), (30, 42), (33.5, 38.5), (36.5, 44), (38.5, 43), (35.6, 37.6), (40.5, 37.4)]), 0x101010, 0.6)
+/// IBrowse, the Amiga's browser of 2008, as its icon sits on the os41-desktop screenshot: a globe,
+/// gold over the top and blue beneath, with a white "IB" at its upper right. Safari wears it.
+func ibrowse(_ c: CGContext) {
+    globe(c, CGPoint(x: 22, y: 25), 17, ocean: [(0, 0xF6E27A), (0.45, 0xD8A630), (0.75, 0x5A7AB0), (1, 0x2A3E70)], land: 0xE8C050)
+    let ib = text("IB", font: "DejaVuSans-Bold", size: 15)
+    c.saveGState(); c.translateBy(x: 27, y: 21)
+    c.setShadow(offset: CGSize(width: 0.8, height: -0.8), blur: 1, color: color(0, 0.6))
+    fill(c, ib, 0xFFFFFF); stroke(c, ib, 0x3A3A3A, 0.4)
+    c.restoreGState()
+}
+/// WBHelp on the 2008 AmiDock: a white light bulb with a grey screw base.
+func wbhelp(_ c: CGContext) {
+    let glass = CGMutablePath()
+    glass.addArc(center: CGPoint(x: 24, y: 19), radius: 13, startAngle: .pi * 0.78, endAngle: .pi * 0.22, clockwise: false)
+    glass.addQuadCurve(to: CGPoint(x: 29, y: 35), control: CGPoint(x: 30, y: 30))
+    glass.addLine(to: CGPoint(x: 19, y: 35))
+    glass.addQuadCurve(to: CGPoint(x: 14, y: 27.4), control: CGPoint(x: 18, y: 30))
+    glass.closeSubpath()
+    radial(c, clip: glass, center: CGPoint(x: 20, y: 14), radius: 22, [(0, 0xFFFFFF, 1), (0.6, 0xEDEDED, 1), (1, 0xBDBDBD, 1)])
+    stroke(c, glass, 0x9A9A9A, 0.6)
+    for k in 0..<3 {
+        let r = rrect(18.5, 35.5 + CGFloat(k) * 2.4, 11, 2.2, 1)
+        linear(c, r, [(0, 0xB8B8B8), (1, 0x5A5A5A)], from: CGPoint(x: 0, y: 35.5 + CGFloat(k) * 2.4), to: CGPoint(x: 0, y: 37.7 + CGFloat(k) * 2.4))
+    }
+    fill(c, rrect(21.5, 42.6, 5, 2, 1), 0x3A3A3A)
+}
+/// MediaToolbox, the AmigaOS 4 drive tool (its window is among the 2008 shots): the drive with a spanner.
+func mediatoolbox(_ c: CGContext) {
+    harddrive(c)
+    c.saveGState(); c.translateBy(x: 30, y: 26); c.rotate(by: -.pi / 4)
+    let shaft = rrect(-1.8, -2, 3.6, 18, 1.5)
+    linear(c, shaft, [(0, 0xF0F0F0), (1, 0x7A7A7A)], from: CGPoint(x: -1.8, y: 0), to: CGPoint(x: 1.8, y: 0))
+    let jaw = CGMutablePath()
+    jaw.addEllipse(in: CGRect(x: -5, y: -10, width: 10, height: 10))
+    jaw.addRect(CGRect(x: -1.6, y: -11, width: 3.2, height: 5))
+    c.saveGState(); c.addPath(jaw); c.clip(using: .evenOdd)
+    c.drawLinearGradient(CGGradient(colorsSpace: srgb, colors: [color(0xF0F0F0), color(0x6A6A6A)] as CFArray, locations: [0, 1])!,
+                         start: CGPoint(x: -5, y: 0), end: CGPoint(x: 5, y: 0), options: [])
+    c.restoreGState()
+    stroke(c, shaft, 0x2A2A2A, 0.5); stroke(c, jaw, 0x2A2A2A, 0.5)
+    c.restoreGState()
+}
+/// MPlayer, the OS4 port of 2008: a film reel.
+func mplayer(_ c: CGContext) {
+    let reel = CGPath(ellipseIn: CGRect(x: 6, y: 6, width: 32, height: 32), transform: nil)
+    linear(c, reel, [(0, 0xD8DCE4), (1, 0x6A707A)], from: CGPoint(x: 6, y: 6), to: CGPoint(x: 38, y: 38))
+    for k in 0..<5 {
+        let a = CGFloat(k) * 2 * .pi / 5 - .pi / 2
+        fill(c, CGPath(ellipseIn: CGRect(x: 22 + 9 * cos(a) - 4, y: 22 + 9 * sin(a) - 4, width: 8, height: 8), transform: nil), 0x2A2E36)
+    }
+    fill(c, CGPath(ellipseIn: CGRect(x: 19.5, y: 19.5, width: 5, height: 5), transform: nil), 0x2A2E36)
+    stroke(c, reel, 0x2A2E36, 0.7)
+    let film = CGMutablePath()
+    film.move(to: CGPoint(x: 34, y: 30)); film.addQuadCurve(to: CGPoint(x: 44, y: 42), control: CGPoint(x: 42, y: 30))
+    stroke(c, film, 0x1A1A1A, 4)
+    for t in stride(from: 0.15, to: 1, by: 0.22) as StrideTo<CGFloat> {
+        let x = (1 - t) * (1 - t) * 34 + 2 * (1 - t) * t * 42 + t * t * 44, y = (1 - t) * (1 - t) * 30 + 2 * (1 - t) * t * 30 + t * t * 42
+        fill(c, CGPath(rect: CGRect(x: x - 0.6, y: y - 0.6, width: 1.2, height: 1.2), transform: nil), 0xD8D8D8)
+    }
 }
 func chrome(_ c: CGContext) {
     let o = CGPoint(x: 24, y: 24), r: CGFloat = 18
@@ -534,18 +588,6 @@ func addressbook(_ c: CGContext) {
     fill(c, CGPath(ellipseIn: CGRect(x: 15, y: 24, width: 18, height: 12), transform: nil), 0xF4E4C8)
     stroke(c, book, 0x2A1404, 0.6)
 }
-func vlc(_ c: CGContext) {
-    let cone = poly([(24, 5), (35, 38), (13, 38)])
-    linear(c, cone, [(0, 0xFFB050), (0.5, 0xF07A10), (1, 0xC04A04)], from: CGPoint(x: 13, y: 0), to: CGPoint(x: 35, y: 0))
-    for y in [16, 26] as [CGFloat] {
-        let half = (y - 5) / 33 * 11 + 0.5
-        fill(c, poly([(24 - half, y), (24 + half, y), (24 + half + 1.6, y + 4.5), (24 - half - 1.6, y + 4.5)]), 0xFFFFFF)
-    }
-    stroke(c, cone, 0x6A2A04, 0.6)
-    let base = rrect(9, 37, 30, 5, 1.5)
-    linear(c, base, [(0, 0xF07A10), (1, 0x9A3A04)], from: CGPoint(x: 0, y: 37), to: CGPoint(x: 0, y: 42))
-    stroke(c, base, 0x6A2A04, 0.6)
-}
 func claude(_ c: CGContext) {
     let tile = rrect(5, 5, 38, 38, 8)
     linear(c, tile, [(0, 0xF7EEDC), (1, 0xE4D4B8)], from: CGPoint(x: 0, y: 5), to: CGPoint(x: 0, y: 43))
@@ -685,7 +727,10 @@ icon("shell", shell)
 icon("multiview", multiview)
 icon("notepad", notepad)
 icon("unarc", unarc)
-icon("safari", safari)
+icon("ibrowse", ibrowse)
+icon("wbhelp", wbhelp)
+icon("mediatoolbox", mediatoolbox)
+icon("mplayer", mplayer)
 icon("chrome", chrome)
 icon("firefox", firefox)
 icon("mail", mail)
@@ -701,7 +746,6 @@ icon("reminders", reminders)
 icon("music", music)
 icon("xcode", xcode)
 icon("addressbook", addressbook)
-icon("vlc", vlc)
 icon("claude", claude)
 icon("chatgpt", chatgpt)
 icon("iterm", iterm)
