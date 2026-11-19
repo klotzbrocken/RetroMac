@@ -24,3 +24,10 @@ Pixel Operator
 By Jayvee Enaguas (HarvettFox96): https://fontlibrary.org/en/font/pixel-operator
 CC0 1.0 Universal (public domain dedication) — full text in PixelOperator-LICENSE.txt.
 The desktop icon labels of the Mac OS 9 (authentic) theme, at 16 px on the label plate.
+
+DejaVu Sans (Book and Bold)
+---------------------------
+DejaVu Fonts 2.37, https://dejavu-fonts.github.io (release dejavu-fonts-ttf-2.37.zip).
+Bitstream Vera license with the DejaVu additions (public domain) — full text in
+DejaVu-LICENSE.txt. AmigaOS 4.1's own system face: the Amiga Workbench 4.1 theme's screen bar,
+menus, window titles and icon labels. Used unmodified.

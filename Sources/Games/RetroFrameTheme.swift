@@ -73,6 +73,7 @@ enum RetroFrameTheme {
         if name.contains("qnx") { return "photon" }    // QNX 6.2.1, Photon
         if name.contains("futurama") { return "futurama" }
         if name.contains("halloween") { return "halloween" }   // fireballs for the lights
+        if name.contains("amiga") || name.contains("workbench") { return "amiga" }   // AmigaOS 4.1
         return "default"
     }
 

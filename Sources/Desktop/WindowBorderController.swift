@@ -512,6 +512,11 @@ final class WindowBorderController {
             // front, so it wears the inactive colours and the bar shows the active one.
             return .bevel(hiOuter: NSColor.fromHex("#DEDEE7"), hiInner: NSColor.fromHex("#ADB5C6"),
                           loInner: NSColor.fromHex("#ADB5C6"), loOuter: NSColor.fromHex("#5A636B"), width: 5, radius: 0)
+        case "amiga":
+            // AmigaOS 4.1's 5 pt sides, in the inactive silver (the frame does not know which
+            // window is in front; the bar shows that): #424242 edges, #DCDCDB lit, #8C8D90 shade.
+            return .bevel(hiOuter: NSColor.fromHex("#424242"), hiInner: NSColor.fromHex("#DCDCDB"),
+                          loInner: NSColor.fromHex("#8C8D90"), loOuter: NSColor.fromHex("#424242"), width: 5, radius: 0)
         case "photon":
             // Photon's 5 pt frame: black and #3F3F3F outside, white and #D9D9D9 lit inside the
             // top and left, #9D9D9D along the bottom and right.

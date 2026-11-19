@@ -463,7 +463,7 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
 /// Native themed window frame. Flipped coordinates (origin top-left) keep the math simple.
 final class WebAppChromeView: NSView {
 
-    enum Style { case win98, winxp, win7, macClassic, system6, system7, nextstep, aqua, snowLeopard, futurama, plain }
+    enum Style { case win98, winxp, win7, macClassic, system6, system7, nextstep, aqua, snowLeopard, futurama, amiga, plain }
 
     var onClose: (() -> Void)?
     var onBack: (() -> Void)?
@@ -502,6 +502,7 @@ final class WebAppChromeView: NSView {
         case "macosx": style = .aqua;       chromeStyle = ChromeStyleFactory.snowLeopard()   // the tracker's lights
         case "snowleopard": style = .snowLeopard; chromeStyle = ChromeStyleFactory.snowLeopard()
         case "futurama": style = .futurama; chromeStyle = nil
+        case "amiga":  style = .amiga;      chromeStyle = nil
         default:       style = .plain;      chromeStyle = nil
         }
         super.init(frame: frame)
@@ -533,12 +534,17 @@ final class WebAppChromeView: NSView {
     }
 
     private var titleH: CGFloat {
-        switch style { case .winxp, .win7: return 30; case .system6: return 20; case .system7: return System7Chrome.barHeight; case .aqua: return AquaChrome.barHeight; case .nextstep: return 22; case .futurama: return 26; default: return 22 }
+        switch style { case .amiga: return AmigaChrome.barHeight; case .winxp, .win7: return 30; case .system6: return 20; case .system7: return System7Chrome.barHeight; case .aqua: return AquaChrome.barHeight; case .nextstep: return 22; case .futurama: return 26; default: return 22 }
     }
     private var pad: CGFloat { 4 }
 
     /// Frame for the hosted webview (below the title bar, inside the window border).
     func contentRect() -> NSRect {
+        if style == .amiga {
+            // Inside the 5 pt sides, under the bar, over the 24 pt bottom border with the sizer.
+            let f = AmigaChrome.frameWidth, top = AmigaChrome.barHeight
+            return NSRect(x: f, y: top, width: bounds.width - 2 * f, height: bounds.height - top - AmigaChrome.sizerBorderHeight)
+        }
         let topOffset = pad + titleH + 2
         return NSRect(x: pad, y: topOffset,
                       width: bounds.width - pad * 2,
@@ -559,6 +565,13 @@ final class WebAppChromeView: NSView {
     private func layoutContents() {
         hosted?.frame = contentRect()
         let s: CGFloat = 16
+        if style == .amiga {
+            // The grip lies over the drawn sizer and draws nothing of its own.
+            grip?.frame = AmigaChrome.sizerRect(in: NSRect(x: 0, y: AmigaChrome.barHeight, width: bounds.width,
+                                                           height: bounds.height - AmigaChrome.barHeight)).insetBy(dx: -2, dy: -2)
+            grip?.drawsHatch = false
+            return
+        }
         grip?.frame = NSRect(x: bounds.maxX - pad - s, y: bounds.maxY - pad - s, width: s, height: s)
     }
 
@@ -581,8 +594,40 @@ final class WebAppChromeView: NSView {
         case .aqua:       drawAqua(b)
         case .snowLeopard: drawSnowLeopard(ctx, b)
         case .futurama:   drawFuturama(ctx, b)
+        case .amiga:      drawAmiga(b)
         case .plain:      drawPlain(ctx, b)
         }
+    }
+
+    // ---- AmigaOS 4.1: the banded bar, blue on the key window and silver on the others, the
+    //      five-point frame and the sizer, all from `AmigaChrome`, as the bars over other
+    //      apps' windows draw them. A widget gets close and depth; a real window also
+    //      iconify and zoom. ----
+    private func drawAmiga(_ b: NSRect) {
+        let active = isActiveWindow
+        AmigaChrome.rgb(0xE9E8E8).setFill(); contentRect().fill()
+        AmigaChrome.drawFrame(in: NSRect(x: 0, y: AmigaChrome.barHeight - 1, width: b.width, height: b.height - AmigaChrome.barHeight + 1),
+                              active: active, sizer: true)
+        let bar = NSRect(x: 0, y: 0, width: b.width, height: AmigaChrome.barHeight)
+        AmigaChrome.drawTitleBar(in: bar, active: active)
+        let kinds: Set<AmigaChrome.Gadget> = windowControls ? [.close, .iconify, .zoom, .depth] : [.close, .depth]
+        let gadgets = AmigaChrome.titleGadgets(width: b.width, kinds: kinds)
+        tracker.reset()
+        for (g, r) in gadgets { tracker.add(AmigaChrome.kind(g), r.insetBy(dx: -2, dy: -2), interactive: true) }
+        for (g, r) in gadgets {
+            AmigaChrome.drawGadget(g, in: r, tone: active ? .active : .inactive, pressed: tracker.state(for: AmigaChrome.kind(g)) == .pressed)
+        }
+        let left = (gadgets.first { $0.0 == .close }?.1.maxX ?? 0) + 16
+        let right = (gadgets.filter { $0.0 != .close }.map { $0.1.minX }.min() ?? b.width) - 6
+        AmigaChrome.drawTitle(title, in: bar, left: left, right: right)
+    }
+
+    /// The depth gadget on one of RetroMac's own windows: the key window goes to the back of
+    /// everything, any other comes to the front.
+    private func depth() {
+        guard let w = window else { return }
+        if AmigaChrome.depthSendsBack(isFrontmost: w.isKeyWindow && NSApp.isActive) { w.orderBack(nil) }
+        else { NSApp.activate(ignoringOtherApps: true); w.makeKeyAndOrderFront(nil) }
     }
 
     // ---- Mac OS X 10.0: the white pinstriped bar and the gems of `AquaChrome`, as the title
@@ -1202,6 +1247,7 @@ final class WebAppChromeView: NSView {
         }
         if backHit.contains(p) { onBack?(); return }
         if fwdHit.contains(p) { onForward?(); return }
+        if style == .amiga, p.y <= titleH, event.clickCount == 2, windowControls { onZoom?(); return }
         if p.y <= pad + titleH + 2 { window?.performDrag(with: event) }
     }
 
@@ -1216,6 +1262,7 @@ final class WebAppChromeView: NSView {
         case .close: onClose?()
         case .zoom:  onZoom?()
         case .minimize: onMinimize?()
+        case .depth: depth()
         default: break
         }
     }
@@ -1223,6 +1270,8 @@ final class WebAppChromeView: NSView {
 
 /// Bottom-right corner grip that resizes the borderless window (Notepad/Paint/IE et al.).
 final class ResizeGripView: NSView {
+    /// Off where the frame draws its own sizer (AmigaOS).
+    var drawsHatch = true { didSet { needsDisplay = true } }
     private var startMouse: NSPoint = .zero
     private var startFrame: NSRect = .zero
 
@@ -1230,6 +1279,7 @@ final class ResizeGripView: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func draw(_ dirtyRect: NSRect) {
+        guard drawsHatch else { return }
         // three subtle diagonal hatch lines, like a classic resize gripper
         NSColor(white: 0, alpha: 0.28).setStroke()
         let p = NSBezierPath(); p.lineWidth = 1

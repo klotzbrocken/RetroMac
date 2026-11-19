@@ -44,6 +44,7 @@ final class TitleBarOverlayController {
         case photon                            // QNX 6.2.1's Photon: menu box left, minimise, maximise, then close right
         case beos                              // BeOS R5: the yellow tab, only as wide as its title, close box left, zoom box right
         case nextstep                          // NeXTSTEP: miniaturize left, close right, the bar black on the key window
+        case amiga                             // AmigaOS 4.1: closer left, title left, iconify, zoom and depth right
         case snowLights                        // the three lights only (Snow Leopard, Mountain Lion)
         case fireLights                        // three glowing fireballs in place of the lights (Halloween)
         var isBar: Bool { self != .snowLights && self != .fireLights }
@@ -56,6 +57,7 @@ final class TitleBarOverlayController {
             switch self {
             case .platinum, .system7: return .collapse
             case .system6, .nextstep: return nil
+            case .amiga: return .zoom
             case .win31, .win98, .luna, .aero, .cde, .photon: return .zoom
             case .aqua, .snowLights, .fireLights, .beos: return .minimize   // BeOS: a double-click on the tab hid the window
             }
@@ -106,7 +108,7 @@ final class TitleBarOverlayController {
     /// The rounding of the bar's own top corners (Luna, Aero); the frame's sides stop under it.
     var barCornerRadius: CGFloat { style.map { Self.barCornerRadius(for: $0) } ?? 0 }
     static func barCornerRadius(for style: Style) -> CGFloat {
-        switch style { case .luna: return 8; case .aero: return 6; case .aqua: return AquaChrome.cornerRadius; default: return 0 }
+        switch style { case .luna: return 8; case .aero: return 6; case .amiga: return AmigaChrome.cornerRadius; case .aqua: return AquaChrome.cornerRadius; default: return 0 }
     }
     /// How much the bar adds above each window while a bar style runs (0 otherwise), for the
     /// border to frame and the zoom to allow for.
@@ -144,6 +146,7 @@ final class TitleBarOverlayController {
         case "photon":      return .photon     // QNX 6.2.1
         case "beos":        return .beos
         case "nextstep":    return .nextstep
+        case "amiga":       return .amiga      // AmigaOS 4.1 on the AmigaOne
         case "win98":       return .win98      // Windows 95, 98 and Me
         case "winxp":       return .luna
         case "win7":        return .aero
@@ -479,7 +482,9 @@ final class TitleBarOverlayController {
         if style.isBar {
             frame = Self.barFrame(for: info.bounds, style: style)
             deadZoneWidth = 0   // nothing native lies under a bar that sits above the window
-            _ = lightOffsets(for: info)   // measured for the patch, not needed for the bar itself
+            let offsets = lightOffsets(for: info)   // measured for the patch, not needed for the bar itself
+            // AmigaOS gives a window only the gadgets it can use: the real buttons it has decide.
+            if style == .amiga, let offsets { lights = offsets }
         } else {
             // The panel is just big enough for the three lights, wherever this window keeps
             // them; without the measurement there is nothing to draw.
@@ -896,6 +901,7 @@ final class TitleBarOverlayController {
         case .photon:   return 21   // measured off QNX 6.2.1: black and #3F3F3F, then a 19 pt bar
         case .beos:     return 22
         case .nextstep: return 22
+        case .amiga:    return AmigaChrome.barHeight   // measured off the 2008 AmigaOne screenshots
         case .win98:    return 24
         case .luna:     return 30
         case .aero:     return 30
@@ -1452,6 +1458,19 @@ final class TitleBarOverlayController {
     /// not whichever of its windows was frontmost; and all of it runs off the main thread —
     /// an app slow to answer Accessibility (a browser with many windows) used to hold the
     /// main thread long enough for the spinning cursor.
+    /// AmigaOS's depth gadget: the front window goes behind the next one, any other comes forward.
+    /// shortcut: one step back only, by raising the window under it (Accessibility has no
+    /// "lower"); upgrade if ordering another app's window through SkyLight proves reliable.
+    private func depth(_ wid: CGWindowID, pid: pid_t) {
+        let list = Self.onScreenWindows().0
+        guard let i = list.firstIndex(where: { $0.id == wid }) else { activate(wid, pid: pid); return }
+        if AmigaChrome.depthSendsBack(isFrontmost: i == 0), list.count > 1 {
+            activate(list[1].id, pid: list[1].pid)
+        } else {
+            activate(wid, pid: pid)
+        }
+    }
+
     private func activate(_ wid: CGWindowID, pid: pid_t) {
         let known = axWindows[wid]
         Self.axQueue(pid).async(qos: .userInteractive) {
@@ -1726,6 +1745,7 @@ final class TitleBarOverlayController {
     /// costs the click a moment but never the main thread; the rest happens back on main.
     private func perform(_ kind: ChromeButtonKind, on wid: CGWindowID, pid: pid_t) {
         count("action.\(kind)")
+        if kind == .depth { depth(wid, pid: pid); return }
         let attr: String?
         switch kind {
         case .close:    attr = kAXCloseButtonAttribute
@@ -2183,6 +2203,17 @@ final class TitleBarOverlayView: NSView {
                 tracker.add(k, r, interactive: true)
                 buttonRects.append((k, r))
             }
+        case .amiga:
+            // Only the gadgets the window has (its real buttons, once measured); depth always.
+            var kinds: Set<AmigaChrome.Gadget> = [.depth]
+            if lights.isEmpty || lights[.close] != nil { kinds.insert(.close) }
+            if lights.isEmpty || lights[.zoom] != nil { kinds.insert(.zoom) }
+            if lights.isEmpty || lights[.minimize] != nil { kinds.insert(.iconify) }
+            for (g, r) in AmigaChrome.titleGadgets(width: w, height: h, kinds: kinds) {
+                let k = AmigaChrome.kind(g)
+                tracker.add(k, r.insetBy(dx: -2, dy: -2), interactive: true)
+                buttonRects.append((k, r))
+            }
         case .beos:
             // The close box at the tab's left, the zoom box at its right, both 13 pt.
             let s: CGFloat = 13, y = ((h - s) / 2).rounded()
@@ -2252,6 +2283,7 @@ final class TitleBarOverlayView: NSView {
         case .cde:        drawCDE(b)
         case .photon:     drawPhoton(b)
         case .beos:       drawBeOS(b)
+        case .amiga:      drawAmiga(b)
         case .nextstep:   drawNextstep(b)
         case .win98:      drawWin98(b)
         case .luna:       Self.topCorners(b, radius: TitleBarOverlayController.barCornerRadius(for: .luna)).addClip(); drawLuna(b)
@@ -2457,6 +2489,19 @@ final class TitleBarOverlayView: NSView {
         let r = NSRect(x: left, y: ((b.height - s.height) / 2).rounded(), width: max(0, right - left), height: s.height)
         let para = NSMutableParagraphStyle(); para.lineBreakMode = .byTruncatingTail
         (title as NSString).draw(in: r, withAttributes: attrs.merging([.paragraphStyle: para]) { $1 })
+    }
+
+    /// AmigaOS 4.1: the banded bar, blue in front and silver behind, its gadgets and the title
+    /// left-aligned, 16 pt past the closer (15 pt in when there is none).
+    private func drawAmiga(_ b: NSRect) {
+        AmigaChrome.drawTitleBar(in: b, active: isFront)
+        for (k, r) in buttonRects {
+            let g: AmigaChrome.Gadget = k == .close ? .close : (k == .minimize ? .iconify : (k == .zoom ? .zoom : .depth))
+            AmigaChrome.drawGadget(g, in: r, tone: isFront ? .active : .inactive, pressed: tracker.state(for: k) == .pressed)
+        }
+        let left = buttonRects.first { $0.0 == .close }.map { $0.1.maxX + 16 } ?? 15
+        let right = (buttonRects.filter { $0.0 != .close }.map { $0.1.minX }.min() ?? b.width) - 6
+        AmigaChrome.drawTitle(title, in: b, left: left, right: right)
     }
 
     /// NeXTSTEP: black under the key window, #AAA with a black title under the others, and the

@@ -8,7 +8,7 @@ enum RetroFonts {
     private static func registerIfNeeded() {
         guard !registered else { return }
         registered = true
-        for name in ["ChiKareGo2.ttf", "PixelOperator.ttf"] {
+        for name in ["ChiKareGo2.ttf", "PixelOperator.ttf", "DejaVuSans.ttf", "DejaVuSans-Bold.ttf"] {
             guard let u = Bundle.main.resourceURL?.appendingPathComponent("Fonts/\(name)"),
                   FileManager.default.fileExists(atPath: u.path) else { continue }
             CTFontManagerRegisterFontsForURL(u as CFURL, .process, nil)   // already registered → harmless error
@@ -20,6 +20,13 @@ enum RetroFonts {
     static func chicago(_ size: CGFloat = 16) -> NSFont {
         registerIfNeeded()
         return NSFont(name: "ChiKareGo2", size: size) ?? NSFont(name: "Charcoal", size: size) ?? .systemFont(ofSize: size)
+    }
+
+    /// DejaVu Sans (Bitstream Vera licence), AmigaOS 4.1's system face.
+    static func dejaVu(_ size: CGFloat, bold: Bool = false) -> NSFont {
+        registerIfNeeded()
+        return NSFont(name: bold ? "DejaVuSans-Bold" : "DejaVuSans", size: size)
+            ?? NSFont(name: "Verdana", size: size) ?? .systemFont(ofSize: size)
     }
 
     /// A font by name, registered the same way, for themes that name one of the shipped faces.

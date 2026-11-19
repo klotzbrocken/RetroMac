@@ -121,6 +121,8 @@ final class TitleBarOverlayTests: XCTestCase {
             XCTAssertEqual(TitleBarOverlayController.stripHeight(style!), 0)
         }
         XCTAssertEqual(TitleBarOverlayController.style(for: "beos"), .beos)
+        XCTAssertEqual(TitleBarOverlayController.style(for: "amiga"), .amiga)
+        XCTAssertEqual(TitleBarOverlayController.stripHeight(.amiga), 31, "AmigaOS 4.1's bar, measured off the 2008 screenshots")
         XCTAssertNil(TitleBarOverlayController.style(for: "default"), "a chrome without a bar of its own runs none")
         // BeOS's tab is as wide as its title, never as wide as a wide window, never wider than a narrow one.
         let short = TitleBarOverlayController.beosTabWidth("Finder", max: 800)

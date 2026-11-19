@@ -15,6 +15,8 @@ import AppKit
 /// Which window control a hit region / glyph represents.
 enum ChromeButtonKind {
     case close, minimize, maximize, restore, collapse, zoom, back, forward
+    /// AmigaOS: the front window goes to the back, any other comes to the front.
+    case depth
 }
 
 /// Interaction state a button renders in.
