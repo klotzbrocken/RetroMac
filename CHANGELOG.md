@@ -8,7 +8,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 ### Fixed
 
 - **The Mac's Dock comes back after a crash.** When RetroMac ended without tidying up (a crash,
-  Force Quit), the real Dock, the menu bar and the desktop icons stayed hidden until RetroMac was
+  Force Quit), the real Dock, the menu bar, the desktop icons and the theme's Finder defaults stayed hidden until RetroMac was
   started again. A small watchdog now puts them back the moment RetroMac ends; it stays out of
   the way while another copy of RetroMac (release or dev) is running.
 

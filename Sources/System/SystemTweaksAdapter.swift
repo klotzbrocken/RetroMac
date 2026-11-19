@@ -198,8 +198,9 @@ enum SystemTweaksAdapter {
     /// Crash / force-quit recovery: a leftover snapshot at launch means the previous session
     /// never restored — undo unconditionally. If the theme is still active + the switch on,
     /// `applyWallpaper()` → `apply()` re-applies right after, so this can't fight a live theme.
-    static func restoreIfNeeded() {
-        if d.bool(forKey: snapKey) { restore() }
+    /// `sync`: done before returning, for the watchdog, which exits right after.
+    static func restoreIfNeeded(sync: Bool = false) {
+        if d.bool(forKey: snapKey) { restore(sync: sync) }
         queue.async { dropOrphanedSquareCorners() }
     }
 

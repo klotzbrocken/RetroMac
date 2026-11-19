@@ -1,6 +1,6 @@
 import AppKit
 
-/// Puts the Mac's own Dock, menu bar and desktop icons back when RetroMac ends without doing it
+/// Puts the Mac's own Dock, menu bar, desktop icons and the theme's system defaults back when RetroMac ends without doing it
 /// itself (a crash, Force Quit, `kill -9`). Until now only the next launch recovered them, so a
 /// crash left the real Dock unreachable (autohide-delay 1 000 000) until RetroMac ran again.
 /// A second copy of the binary, started at launch with `--watchdog <pid>`, waits for that process
@@ -28,6 +28,12 @@ enum SystemWatchdog {
 
     /// The watchdog's whole life.
     static func run(watching pid: pid_t) -> Never {
+        // The inherited stdout/stderr are RetroMac's console pipe, gone with it: writing there
+        // would raise SIGPIPE in the middle of the recovery. Write to the log file instead.
+        signal(SIGPIPE, SIG_IGN)
+        let log = (NSHomeDirectory() as NSString).appendingPathComponent("Library/Logs/RetroMac/retromac.log")
+        freopen(log, "a", stdout); freopen(log, "a", stderr)
+        setbuf(stdout, nil); setbuf(stderr, nil)
         let source = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
         source.setEventHandler { recover(after: pid) }
         source.resume()
@@ -36,20 +42,29 @@ enum SystemWatchdog {
     }
 
     private static func recover(after pid: pid_t) -> Never {
-        // A RetroMac started again in the meantime, or the other build (release / dev) still
-        // running, has the Dock hidden on purpose (the recovery also acts on the Dock's own
-        // fingerprint, which either build leaves): leave it to that one.
-        let ids: Set<String> = ["com.retromac.app", "com.retromac.app.dev"]
-        let again = NSWorkspace.shared.runningApplications.contains {
-            ids.contains($0.bundleIdentifier ?? "") && $0.processIdentifier != getpid() && $0.processIdentifier != pid
+        // A RetroMac started again in the meantime recovers by itself and may already have hidden
+        // the Dock again; the other build (release / dev) may be hiding it right now (the recovery
+        // also acts on the Dock's own fingerprint, which either build leaves): leave it to them.
+        let own = Bundle.main.bundleIdentifier ?? ""
+        let again = NSWorkspace.shared.runningApplications.contains { app in
+            guard app.processIdentifier != getpid(), app.processIdentifier != pid,
+                  let id = app.bundleIdentifier, ["com.retromac.app", "com.retromac.app.dev"].contains(id) else { return false }
+            return id == own || UserDefaults(suiteName: id)?.bool(forKey: "sysDockHidden") == true
         }
         if !again {
             SystemUIHelper.restoreIfNeeded()
             SystemUIHelper.restoreDesktopIconsIfNeeded()
+            SystemTweaksAdapter.restoreIfNeeded(sync: true)
+            // The theme's hidden menu bar: no launch recovery has it (the next start hides it again
+            // anyway), so it is put back here as it was before RetroMac first changed it.
+            if UserDefaults.standard.bool(forKey: "hideMenuBar") {
+                let original = OriginalSettings.value("-g", "_HIHideMenuBar") ?? OriginalSettings.value("NSGlobalDomain", "_HIHideMenuBar")
+                SystemUIHelper.setMenuBarAutoHide(((original ?? nil) as? Bool) ?? false)
+            }
             AppDelegate.restoreRetroModeSystemUI()
             DockController.shared.restoreSystemDockIfNeeded()
         }
-        print("[Watchdog] RetroMac \(pid) ended\(again ? "; another RetroMac is running, nothing to do" : "")")
+        print("[Watchdog] RetroMac \(pid) ended\(again ? "; another RetroMac has the Dock, nothing to do" : "")")
         exit(0)
     }
 }
