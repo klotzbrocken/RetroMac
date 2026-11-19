@@ -50,7 +50,8 @@ final class BootPhasesTests: XCTestCase {
         XCTAssertEqual(BootPhaseMode.effective(.os, hasOS: true, hasFirmware: true, reduceMotion: true), .desktop)
     }
 
-    /// Every Windows theme names its BIOS and the page knows each one; a Mac may only chime.
+    /// Every Windows theme names its BIOS and the page knows each one; the AmigaOne has its
+    /// U-Boot; a Mac may only chime.
     func testThemesDeclareKnownFirmware() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let page = try String(contentsOf: root.appendingPathComponent("Resources/Widgets/Boot/Boot.html"), encoding: .utf8)
@@ -62,6 +63,9 @@ final class BootPhasesTests: XCTestCase {
             let windows = bundle.lastPathComponent.hasPrefix("Windows")
             if config.boot?.firmware == "chime" {
                 XCTAssertFalse(windows, "\(bundle.lastPathComponent): a PC has no Mac chime")
+            } else if config.boot?.firmware == "uboot" {
+                XCTAssertTrue(bundle.lastPathComponent.hasPrefix("Amiga"), "\(bundle.lastPathComponent): U-Boot is the AmigaOne's")
+                XCTAssertTrue(page.contains("FW === 'uboot'"), "Boot.html has no U-Boot")
             } else if let fw = config.boot?.firmware {
                 XCTAssertTrue(windows, "\(bundle.lastPathComponent): firmware only on PC themes")
                 XCTAssertTrue(["ami92", "award451", "award600"].contains(fw), fw)

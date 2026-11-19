@@ -505,9 +505,69 @@ function ntStart() {
   }, 1000);
 }
 
+// ---------------------------------------------------------------- AmigaOne U-Boot (?firmware=uboot)
+// The AmigaOne's U-Boot 1.1.1 as the 2008 install photos show it: green on black, the CPU and
+// memory (this Mac's), then the countdown; a key stops it and opens Hyperion's Boot Select menu.
+// The board's FSB and its IDE disks are left out: the Mac has no honest value for them.
+const UB = { step: 'console', t0: 0, timer: 0, count: 3, sel: 2, list: false };
+const UB_ROWS = ['Boot Device', 'Configuration', '', 'Boot arguments for AmigaOS', 'Boot arguments for Linux'];
+const UB_DEV = ['Floppy', 'Onboard VIA IDE CDROM', 'Onboard VIA IDE Disk', 'Network', 'SCSI CDROM', 'SCSI Disk',
+                'USB CDROM', 'USB Disk', 'SII Parallel Disk', 'SII Parallel CDROM', 'SII Serial Disk', 'SII Serial CDROM', 'none'];
+function ubConsole(t) {
+  clear();
+  put(0, 0, 'U-Boot 1.1.1 (Mar  3 2005 - 16:42:53)', 10);
+  if (t > 0.3) put(0, 2, 'CPU:   ' + B.cpu, 10);
+  if (t > 0.5) put(0, 3, 'DRAM:  ' + mb + ' MB', 10);
+  if (t > 0.9) put(0, 5, 'Hit any key to stop autoboot: ' + UB.count, 10);
+}
+function ubMenu() {
+  clear();
+  box(1, 1, 78, 3, 15, null, false); put(3, 2, 'U-Boot Boot Select', 15);
+  box(1, 4, 78, 16, 15, null, false);
+  const dev = B.bios.values['uboot/Boot Device'] || UB_DEV[2];
+  UB_ROWS.forEach((r, i) => { if (r) put(3, 6 + i, r, 15); });
+  put(33, 6, dev, UB.list ? 15 : 0, UB.list ? null : 2);
+  if (UB.list) {
+    box(32, 5, 25, UB_DEV.length + 2, 15, 0, false);
+    UB_DEV.forEach((d, i) => put(33, 6 + i, pad(d, 23), i === UB.sel ? 15 : 12, i === UB.sel ? 2 : null));
+  }
+  box(1, 20, 78, 4, 15, null, false);
+  put(28, 23, 'Menu System (C) 2003 Hyperion Entertainment', 15);
+  put(3, 21, UB.list ? 'Up/Down choose, Enter sets the boot device, Esc keeps it' : 'Enter changes the boot device, Esc boots', 7);
+}
+function ubRun() {
+  cancelAnimationFrame(UB.timer);
+  const t = (performance.now() - UB.t0) / 1000;
+  if (UB.step !== 'console') return;
+  UB.count = Math.max(0, 3 - Math.floor(Math.max(0, t - 0.9)));
+  ubConsole(t);
+  if (t > 3.9) { send({ type: 'done' }); return; }
+  UB.timer = requestAnimationFrame(ubRun);
+}
+function ubKey(e) {
+  if (UB.step === 'console') {
+    if (e.key === 'Escape') return send({ type: 'skip' });
+    cancelAnimationFrame(UB.timer); UB.step = 'menu'; ubMenu(); say('U-Boot Boot Select. Enter changes the boot device, Escape boots.');
+    return;
+  }
+  if (!UB.list) {
+    if (e.key === 'Enter') { UB.list = true; UB.sel = Math.max(0, UB_DEV.indexOf(B.bios.values['uboot/Boot Device'] || UB_DEV[2])); say(UB_DEV[UB.sel]); }
+    else if (e.key === 'Escape') { send({ type: 'save', bios: B.bios }); return send({ type: 'done' }); }
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    UB.sel = (UB.sel + (e.key === 'ArrowDown' ? 1 : -1) + UB_DEV.length) % UB_DEV.length; say(UB_DEV[UB.sel]);
+  } else if (e.key === 'Enter') { B.bios.values['uboot/Boot Device'] = UB_DEV[UB.sel]; UB.list = false; say('Boot device ' + UB_DEV[UB.sel]); }
+  else if (e.key === 'Escape') UB.list = false;
+  ubMenu();
+}
+function ubStart() {
+  UB.t0 = performance.now(); ubRun(); send({ type: 'ready' });
+  say('U-Boot. Press any key to stop autoboot.');
+}
+
 addEventListener('keydown', e => {
   e.preventDefault();
   if (OS) return ntKey(e);
+  if (FW === 'uboot') return ubKey(e);
   if (phase === 'setup') return setupKey(e);
   if (phase === 'post' && isSetupKey(e)) { cancelAnimationFrame(raf); return enterSetup(); }
   if (e.key === 'Escape') send({ type: 'skip' });
@@ -524,6 +584,7 @@ setInterval(() => {                                    // the setup's clock keep
 }, 1000);
 document.fonts.load('16px VGA').then(() => {
   if (OS === 'nt4') return ntStart();
+  if (FW === 'uboot') return ubStart();
   t0 = performance.now();
   if (!P) { send({ type: 'error', message: 'unknown firmware ' + FW }); send({ type: 'done' }); return; }
   say(P.name + ' BIOS starting. ' + (P.delKey));

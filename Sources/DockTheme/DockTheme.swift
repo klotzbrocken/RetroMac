@@ -120,7 +120,7 @@ struct DockThemeConfig: Codable {
     var splashVideo: String? = nil    // boot video (H.264 mp4) played fullscreen with sound, if present
     var splashWelcome: Bool? = nil    // true = draw the classic "Welcome to Macintosh" boot screen (System 6)
     /// Boot Phases: the machine's firmware before the OS boot ("ami92", "award451", "award600";
-    /// "chime" for a Mac: the start-up chord, then the OS boot),
+    /// "uboot" for the AmigaOne; "chime" for a Mac: the start-up chord, then the OS boot),
     /// and an OS boot drawn in text mode instead of `splash*` ("nt4"). Both optional.
     var boot: BootDecl? = nil
     struct BootDecl: Codable, Equatable { var firmware: String? = nil; var os: String? = nil }

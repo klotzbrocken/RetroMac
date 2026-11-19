@@ -32,6 +32,11 @@
       "file": "wallpaper-flat.png"
     }
   ],
+  "splashScreen": "boot-splash.jpg",
+  "splashFullscreen": true,
+  "boot": {
+    "firmware": "uboot"
+  },
   "dock": {
     "height": 64,
     "iconSize": 40,

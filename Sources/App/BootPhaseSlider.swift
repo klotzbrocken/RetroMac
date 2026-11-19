@@ -10,7 +10,7 @@ struct BootPhaseSlider: View {
     private static let preview: [BootPhaseMode: String] = [
         .desktop: "The theme comes straight up, without a boot animation.",
         .os: "The operating system starts, then the desktop.",
-        .full: "The machine's firmware first (on a PC theme a BIOS you can enter with DEL), then the operating system.",
+        .full: "The machine's firmware first (on a PC theme a BIOS you can enter with DEL, on the AmigaOne its U-Boot), then the operating system.",
     ]
 
     var body: some View {

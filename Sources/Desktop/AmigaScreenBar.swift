@@ -63,9 +63,12 @@ final class AmigaScreenBarController {
 
     private func refreshTitle() {
         guard let view else { return }
+        // The copyright line counts its five seconds from when the boot screen is gone.
+        if SplashController.shared.isPresenting, copyrightUntil > .distantPast { copyrightUntil = Date().addingTimeInterval(5) }
         if Date() < copyrightUntil {
             view.title = "Copyright (C) 1985-2008 Hyperion Entertainment VOF and others. All Rights Reserved."
         } else {
+            copyrightUntil = .distantPast   // once only: a later boot screen does not bring it back
             view.title = "Amiga Workbench   \(Self.bytesFree()) bytes free"
         }
     }
