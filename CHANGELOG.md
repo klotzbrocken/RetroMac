@@ -30,6 +30,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixed
 
+- **XP's Start menu goes where it says.** My Music opens your Music folder instead of the TV
+  streams, Search opens RetroMac's search field instead of just bringing the Finder forward, and
+  Help and Support opens Microsoft's Windows help, as in Windows 7, instead of Reddit.
+
 - **XP Task Manager logs off only your own session.** With more than one user listed, Logoff
   worked on any selected row and then logged off this Mac's user, whoever was selected. It now
   works only on your own (Active) row.

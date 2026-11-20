@@ -103,10 +103,20 @@ final class SpotlightMenuController: NSObject {
     @objc private func toggle() {
         if let p = panel { p.close(); panel = nil; return }
         guard let button = item?.button, let win = button.window else { return }
+        show(below: win.convertToScreen(button.convert(button.bounds, to: nil)))
+    }
+
+    /// The search field under `anchor` (right-aligned to it), or in the upper middle of the main
+    /// screen without one: XP's Start ▸ Search opens it with no menu-bar item to hang from.
+    func show(below anchor: NSRect? = nil) {
+        panel?.close()
         let p = SpotlightPanel()
         p.onClose = { [weak self] in self?.panel = nil }
-        let anchor = win.convertToScreen(button.convert(button.bounds, to: nil))
-        p.setFrameTopLeftPoint(NSPoint(x: anchor.maxX - p.frame.width, y: anchor.minY - 1))
+        if let anchor {
+            p.setFrameTopLeftPoint(NSPoint(x: anchor.maxX - p.frame.width, y: anchor.minY - 1))
+        } else if let vf = NSScreen.main?.visibleFrame {
+            p.setFrameTopLeftPoint(NSPoint(x: vf.midX - p.frame.width / 2, y: vf.maxY - vf.height / 4))
+        }
         panel = p
         p.makeKeyAndOrderFront(nil)
     }

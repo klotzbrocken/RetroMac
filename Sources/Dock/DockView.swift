@@ -4860,7 +4860,7 @@ final class DockView: NSView {
                 NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures"))
             }),
             MI(title: "My Music", icon: xpIcon("xp_music.png"), action: {
-                AppFolderController.tv.show()   // TV-streams folder, styled like the App Folder
+                NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Music"))
             }),
             MI(title: "My Computer", icon: xpIcon("xp_mycomputer.png"), action: {
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/"))
@@ -4874,12 +4874,10 @@ final class DockView: NSView {
             }),
             MI(separator: true),
             MI(title: "Search", icon: xpIcon("xp_search.png"), action: {
-                if let finderURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.finder") {
-                    NSWorkspace.shared.open(finderURL)
-                }
+                SpotlightMenuController.shared.show()   // RetroMac's search field (Tiger's look; XP's dog is not built)
             }),
             MI(title: "Help and Support", icon: xpIcon("xp_help.png"), action: {
-                if let url = URL(string: "https://www.reddit.com") { NSWorkspace.shared.open(url) }
+                if let url = URL(string: "https://support.microsoft.com/windows") { NSWorkspace.shared.open(url) }
             }),
             MI(title: "Run…", icon: xpIcon("xp_run.png"), action: {
                 NSWorkspace.shared.launchApplication("Terminal")
