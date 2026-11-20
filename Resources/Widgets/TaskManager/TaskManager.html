@@ -291,7 +291,9 @@
       netGraphs();
     } else if(page==='users'){
       rowsInto('t-users', L.users, 'user', r=>'<td>'+esc(r.user)+'</td><td class="r">'+r.id+'</td><td>'+esc(r.status)+'</td><td></td><td>'+esc(r.session)+'</td>');
-      $('b-logoff').disabled=sel.users==null;
+      // Only the own session can be logged off from here (the Active row): any other row used to
+      // log off this Mac's user too.
+      $('b-logoff').disabled=!L.users.some(u=>u.user===sel.users&&u.status==='Active');
     }
   }
   // One graph per adapter, scaled like XP's: the smallest of 1/5/10/25/50/100 % that fits.
@@ -331,7 +333,7 @@
   $('b-switch').onclick=()=>{ if(sel.apps!=null) post({a:'switchTo',pid:sel.apps}); };
   $('b-new').onclick=()=>post({a:'run'});
   $('b-kill').onclick=()=>{ const r=L.procs.find(x=>x.pid===sel.procs); if(r) post({a:'endProcess',pid:r.pid,name:r.name}); };
-  $('b-logoff').onclick=()=>post({a:'logoff'});
+  $('b-logoff').onclick=()=>post({a:'logoff',user:sel.users});
   $('c-all').onchange=e=>post({a:'allUsers',v:e.target.checked});
   $('h-procs').addEventListener('mousedown',e=>{
     const th=e.target.closest('th'); if(!th) return;

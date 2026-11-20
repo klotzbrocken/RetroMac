@@ -30,6 +30,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixed
 
+- **XP Task Manager logs off only your own session.** With more than one user listed, Logoff
+  worked on any selected row and then logged off this Mac's user, whoever was selected. It now
+  works only on your own (Active) row.
+
 - **Amiga drawers keep same-named objects apart.** An app “Demo.app” shows as “Demo”, and beside a
   drawer “Demo” the two shared one place, so Open and Delete could take the other one. Each
   object now goes by its own file; Delete takes its `.info` icon along, names what it will put in

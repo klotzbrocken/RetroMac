@@ -204,7 +204,7 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.sample() }
         case "endProcess":
             if let pid = body["pid"] as? Int { endProcess(pid_t(pid), name: body["name"] as? String ?? "") }
-        case "logoff":  logOff()
+        case "logoff":  if body["user"] as? String == NSUserName() { logOff() }   // never on another user's row
         default: break
         }
     }

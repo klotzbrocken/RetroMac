@@ -20,9 +20,13 @@ enum TaskApplications {
     }
 
     private static var iconCache: [String: String] = [:]
-    /// The theme's icon for the app (as on the taskbar), 16 pt, as a data URL; cached per app.
+    /// The theme's icon for the app (as on the taskbar), 16 pt, as a data URL; cached per app and
+    /// per theme and icon package, as ThemeManager's own cache is, so a new package is not shown
+    /// from an old entry. Apps without a bundle id go by pid and launch date (pids are reused).
     private static func icon(for app: NSRunningApplication) -> String {
-        let key = app.bundleIdentifier ?? "pid\(app.processIdentifier)"
+        let theme = ThemeManager.shared.activeTheme
+        let pack = theme.map { "\($0.stableID)/\(IconPackStore.shared.revision(themeID: $0.stableID))" } ?? "-"
+        let key = pack + "|" + (app.bundleIdentifier ?? "pid\(app.processIdentifier)@\(app.launchDate?.timeIntervalSince1970 ?? 0)")
         if let c = iconCache[key] { return c }
         let img = app.bundleIdentifier.map { ThemeManager.shared.icon(for: $0, size: 32) } ?? app.icon
         var url = ""
