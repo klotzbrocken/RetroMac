@@ -19,7 +19,8 @@
 # A beta MUST NOT be written to RetroMac.dmg: that is the name the appcast and the
 # GitHub release asset use, and a beta sitting under it is indistinguishable from the
 # shipped build (it happened once, with 2.8).
-set -e
+# pipefail: codesign and spctl are piped into tail, whose success used to stand for theirs.
+set -eo pipefail
 cd "$(dirname "$0")"
 
 SKIP_BUILD=false

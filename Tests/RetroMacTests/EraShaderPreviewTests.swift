@@ -29,7 +29,7 @@ final class EraShaderPreviewTests: XCTestCase {
 
         let names = (ProcessInfo.processInfo.environment["RETROMAC_SHADER_NAMES"]?
             .split(separator: ",").map(String.init))
-            ?? ["lcd-tft-fine", "lcd-tft", "crt-readable-fine", "crt-readable"]
+            ?? ["lcd-tft", "crt-readable"]   // the presets BuiltinShaders offers
         for name in names {
             try renderer.loadShader(named: name)
             let image = try XCTUnwrap(renderer.renderToImage(sourceTexture: texture, viewportSize: size),

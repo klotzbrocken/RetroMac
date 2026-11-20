@@ -912,8 +912,9 @@ final class DockView: NSView {
             let hasTrayIcon: Bool
             let traySize: CGFloat
             let trayPad: CGFloat = 3
-            if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows NT 4.0" || tn == "Windows XP" || tn == "Windows 7" || tn == "Windows Vista") {
+            // The Windows taskbars (95 to Vista) by their chrome, not their English names: a
+            // theme saved under a new name keeps its tray.
+            if ["win98", "winxp", "win7"].contains(RetroFrameTheme.key()) {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -1261,8 +1262,9 @@ final class DockView: NSView {
             let hasTrayIcon: Bool
             let traySize: CGFloat
             let trayPad: CGFloat = 3
-            if let tn = ThemeManager.shared.activeTheme?.config.name,
-               (tn == "Windows 98" || tn == "Windows Me" || tn == "Windows 95" || tn == "Windows NT 4.0" || tn == "Windows XP" || tn == "Windows 7" || tn == "Windows Vista") {
+            // The Windows taskbars (95 to Vista) by their chrome, not their English names: a
+            // theme saved under a new name keeps its tray.
+            if ["win98", "winxp", "win7"].contains(RetroFrameTheme.key()) {
                 hasTrayIcon = true
                 traySize = max(14, iconSize * 0.55)
             } else {
@@ -5118,7 +5120,7 @@ final class DockView: NSView {
         }
 
         let config = ThemeManager.shared.activeTheme?.config
-        let profile = config?.dock.startMenuProfile ?? (config?.name == "Windows 95" ? "win95" : nil)
+        let profile = config?.dock.startMenuProfile
         let programItems = profile == "nt4" ? ntProgramGroups() + startMenuProgramItems() : startMenuProgramItems()
 
         // Favorites submenu items

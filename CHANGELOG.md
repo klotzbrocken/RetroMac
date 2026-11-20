@@ -30,6 +30,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixed
 
+- **A Windows theme saved under a new name keeps its taskbar.** The tray and the Windows 95 Start
+  menu were chosen by the theme's English name, so a copy saved as “My 95” lost them; they now
+  follow the theme's window style and Start-menu setting.
+
 - **XP's Start menu goes where it says.** My Music opens your Music folder instead of the TV
   streams, Search opens RetroMac's search field instead of just bringing the Finder forward, and
   Help and Support opens Microsoft's Windows help, as in Windows 7, instead of Reddit.

@@ -68,6 +68,7 @@
     { "name": "Waves (tiled)", "file": "tile-waves.png", "tiled": true }
   ],
   "dock": {
+    "startMenuProfile": "win95",
     "height": 40,
     "iconSize": 28,
     "padding": 4,
