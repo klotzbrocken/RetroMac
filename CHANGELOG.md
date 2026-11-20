@@ -30,6 +30,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixed
 
+- **Amiga drawers keep same-named objects apart.** An app “Demo.app” shows as “Demo”, and beside a
+  drawer “Demo” the two shared one place, so Open and Delete could take the other one. Each
+  object now goes by its own file; Delete takes its `.info` icon along, names what it will put in
+  the Trash and says so when the Trash refuses.
+
 - **Saving and importing themes never deletes another theme.** Save as a new theme removed any
   bundle already carrying the chosen name before copying, so saving the active theme again under
   its own name deleted it for good, and an import whose file name matched a different theme

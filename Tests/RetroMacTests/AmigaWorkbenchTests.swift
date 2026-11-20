@@ -135,6 +135,20 @@ final class AmigaDrawerTests: XCTestCase {
         XCTAssertNil(d.object(forKey: AmigaDrawer.defaultsKey("/x")))
     }
 
+    /// "Demo.app" and a drawer "Demo" both show as "Demo" but keep apart: each its own place, and
+    /// Delete takes an object's .info along.
+    func testSameShownNameKeepsObjectsApart() throws {
+        let fm = FileManager.default
+        try fm.createDirectory(at: dir.appendingPathComponent("Demo"), withIntermediateDirectories: true)
+        try fm.createDirectory(at: dir.appendingPathComponent("Demo.app"), withIntermediateDirectories: true)
+        let demos = AmigaDrawer.items(in: dir, allFiles: false).filter { $0.name == "Demo" }
+        XCTAssertEqual(demos.count, 2)
+        XCTAssertEqual(Set(demos.map { AmigaDrawer.placeKey(path: $0.url?.path, name: $0.name) }), ["Demo", "Demo.app"])
+        XCTAssertNotEqual(AmigaDrawer.placeKey(path: nil, name: "0"), AmigaDrawer.placeKey(path: dir.appendingPathComponent("0").path, name: "0"))
+        let game = try XCTUnwrap(AmigaDrawer.items(in: dir, allFiles: false).first { $0.name == "game.xyz456" })
+        XCTAssertEqual(AmigaDrawer.trashURLs(for: [game]).map(\.lastPathComponent), ["game.xyz456", "game.xyz456.info"])
+    }
+
     /// The System drawer is a fixed list: Prefs, Utilities, Tools, Fonts, Trashcan and the
     /// startup disk, nothing outside it.
     func testSystemDrawerIsTheFixedList() {

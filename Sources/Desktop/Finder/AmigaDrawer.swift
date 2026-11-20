@@ -30,6 +30,19 @@ final class AmigaDrawer: NSObject {
         var info: URL?
     }
 
+    /// Where an icon's place is kept: its file name, unique in a drawer where the shown names are
+    /// not ("Demo.app" shows as "Demo" beside a drawer "Demo"); the path-less ones (the clipboard
+    /// unit, the Trashcan) by name, marked so a real file of that name stays apart.
+    static func placeKey(path: String?, name: String) -> String {
+        path.map { ($0 as NSString).lastPathComponent } ?? "\u{1}" + name
+    }
+
+    /// What Delete puts in the Trash for these objects: each with its `.info`, which would
+    /// otherwise stay behind hidden and dress the next object of that name.
+    static func trashURLs(for items: [Item]) -> [URL] {
+        items.flatMap { [$0.url, $0.info].compactMap { $0 } }
+    }
+
     /// Opens the drawer at `path` ("SYS:" for the System list), or brings its window forward.
     static func show(_ path: String) {
         _ = observer
@@ -217,7 +230,7 @@ final class AmigaDrawer: NSObject {
             v.selectedImage = selected
             v.target = self
             v.action = #selector(openIcon(_:))
-            v.onMoved = { [weak self] v in self?.placed[v.entry.name] = v.frame.origin }
+            v.onMoved = { [weak self] v in self?.placed[Self.placeKey(v)] = v.frame.origin }
             iconViews.append(v)
             surface.addSubview(v)
         }
@@ -235,10 +248,10 @@ final class AmigaDrawer: NSObject {
             if let s = snap.icons[name], s.count == 2 { return NSPoint(x: s[0], y: s[1]) }
             return nil
         }
-        var taken = iconViews.compactMap { known($0.entry.name).map { NSRect(origin: $0, size: Self.cell).insetBy(dx: 4, dy: 4) } }
+        var taken = iconViews.compactMap { known(Self.placeKey($0)).map { NSRect(origin: $0, size: Self.cell).insetBy(dx: 4, dy: 4) } }
         var slot = 0
         for v in iconViews {
-            let name = v.entry.name
+            let name = Self.placeKey(v)
             let origin: NSPoint
             if let p = known(name) { origin = p }
             else {
@@ -278,9 +291,15 @@ final class AmigaDrawer: NSObject {
 
     @objc private func openIcon(_ v: DesktopIconView) {
         Self.active = self
-        guard let item = items.first(where: { $0.name == v.entry.name }) else { return }
+        guard let item = item(for: v) else { return }
         open(item)
     }
+
+    /// The object an icon stands for: by path and name, as two objects can share the shown name.
+    private func item(for v: DesktopIconView) -> Item? {
+        items.first { $0.url?.path == v.entry.path && $0.name == v.entry.name }
+    }
+    private static func placeKey(_ v: DesktopIconView) -> String { placeKey(path: v.entry.path, name: v.entry.name) }
 
     private func open(_ item: Item) {
         switch item.kind {
@@ -333,30 +352,37 @@ final class AmigaDrawer: NSObject {
     func snapshot(all: Bool) {
         guard let f = panel?.frame else { return }
         snap.frame = [f.minX, f.minY, f.width, f.height]
-        if all { for v in iconViews { snap.icons[v.entry.name] = [v.frame.minX, v.frame.minY] } }
+        if all { for v in iconViews { snap.icons[Self.placeKey(v)] = [v.frame.minX, v.frame.minY] } }
         Self.saveSnapshot(snap, key)
     }
     /// Icons ▸ Snapshot / Unsnapshot: the selected icons keep their place, or give it back.
     func snapshotSelected() {
-        for v in selectedViews { snap.icons[v.entry.name] = [v.frame.minX, v.frame.minY] }
+        for v in selectedViews { snap.icons[Self.placeKey(v)] = [v.frame.minX, v.frame.minY] }
         Self.saveSnapshot(snap, key)
     }
     func unsnapshotSelected() {
-        for v in selectedViews { snap.icons.removeValue(forKey: v.entry.name); placed.removeValue(forKey: v.entry.name) }
+        for v in selectedViews { snap.icons.removeValue(forKey: Self.placeKey(v)); placed.removeValue(forKey: Self.placeKey(v)) }
         Self.saveSnapshot(snap, key)
         layoutIcons()
     }
     func openSelected() { for v in selectedViews { openIcon(v) } }
     /// Delete: the selected objects go to the Mac's Trash (recoverable there), after asking.
     func deleteSelected() {
-        let urls = selectedViews.compactMap { v in items.first { $0.name == v.entry.name }?.url }
-        guard canChange, !urls.isEmpty else { return }
+        let picked = selectedViews.compactMap { item(for: $0) }.filter { $0.url != nil }
+        guard canChange, !picked.isEmpty else { return }
+        let names = picked.compactMap { $0.url.map { "\u{201C}\($0.lastPathComponent)\u{201D}" } }
         let a = NSAlert()
-        a.messageText = urls.count == 1 ? "Delete \u{201C}\(urls[0].lastPathComponent)\u{201D}?" : "Delete \(urls.count) objects?"
-        a.informativeText = "They go to the Trash, where they can be taken back out."
+        a.messageText = picked.count == 1 ? "Delete \(names[0])?" : "Delete \(picked.count) objects?"
+        a.informativeText = (picked.count == 1 ? "" : names.prefix(5).joined(separator: ", ") + (names.count > 5 ? " \u{2026}" : "") + "\n\n")
+            + "They go to the Trash, where they can be taken back out."
         a.addButton(withTitle: "Delete"); a.addButton(withTitle: "Cancel")
         guard a.runModal() == .alertFirstButtonReturn else { return }
-        NSWorkspace.shared.recycle(urls) { [weak self] _, _ in DispatchQueue.main.async { self?.reload() } }
+        NSWorkspace.shared.recycle(Self.trashURLs(for: picked)) { [weak self] _, error in
+            DispatchQueue.main.async {
+                if let error { NSAlert(error: error).runModal() }
+                self?.reload()
+            }
+        }
     }
 }
 
