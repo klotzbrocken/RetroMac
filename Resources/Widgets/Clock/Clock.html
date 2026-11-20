@@ -302,7 +302,36 @@
       default:       return {bg:'#1d1d1d', ring:'#f2bd23', tick:'#f2bd23', hand:'#fbe27e', sec:'#ffffff', num:false, face:'#2b2b2b'}; // BeOS dark replicant
     }
   }
+  // AmigaOS 4.1: the same face as the clock docky (AmigaDockies.drawClock), measure for measure:
+  // a rim dark above and pale below, a pale face, twelve ticks, dark hands, a red second hand.
+  function drawAmiga(){
+    const s = cv.width, c = s/2, rad = s*0.44, fr = rad*0.84;
+    ctx.clearRect(0,0,s,s);
+    let g = ctx.createLinearGradient(0, c-rad, 0, c+rad);
+    g.addColorStop(0,'rgb(71,92,133)'); g.addColorStop(1,'rgb(184,199,224)');
+    ctx.beginPath(); ctx.arc(c,c,rad,0,7); ctx.fillStyle=g; ctx.fill();
+    ctx.lineWidth=Math.max(0.6,s/60); ctx.strokeStyle='rgb(38,38,38)'; ctx.stroke();
+    g = ctx.createRadialGradient(c-0.3*fr, c-0.4*fr, 0, c-0.3*fr, c-0.4*fr, fr*1.5);
+    g.addColorStop(0,'#fff'); g.addColorStop(1,'rgb(219,219,219)');
+    ctx.beginPath(); ctx.arc(c,c,fr,0,7); ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle='rgb(51,51,51)'; ctx.lineCap='butt';
+    for(let k=0;k<12;k++){
+      const a=k*Math.PI/6, r1=fr*(k%3===0?0.74:0.84), r2=fr*0.94;
+      ctx.beginPath(); ctx.moveTo(c+r1*Math.sin(a), c-r1*Math.cos(a)); ctx.lineTo(c+r2*Math.sin(a), c-r2*Math.cos(a));
+      ctx.lineWidth = k%3===0 ? s/26 : s/50; ctx.stroke();
+    }
+    const now=new Date(), sec=now.getSeconds(), min=now.getMinutes()+sec/60, hr=now.getHours()%12+min/60;
+    const hand=(a,len,w,col)=>{ ctx.beginPath();
+      ctx.moveTo(c-len*0.16*Math.sin(a), c+len*0.16*Math.cos(a)); ctx.lineTo(c+len*Math.sin(a), c-len*Math.cos(a));
+      ctx.lineWidth=w; ctx.lineCap='round'; ctx.strokeStyle=col; ctx.stroke(); };
+    const red='rgb(214,31,26)';
+    hand(hr*Math.PI/6, fr*0.52, s/14, 'rgb(31,31,31)');
+    hand(min*Math.PI/30, fr*0.78, s/20, 'rgb(31,31,31)');
+    hand(sec*Math.PI/30, fr*0.84, Math.max(0.6,s/48), red);
+    ctx.beginPath(); ctx.arc(c,c,s/28,0,7); ctx.fillStyle=red; ctx.fill();
+  }
   function draw(){
+    if(theme==='amiga') return drawAmiga();
     const s = style(), W = cv.width, R = W/2, cx = R, cy = R, rad = R-8;
     ctx.clearRect(0,0,W,W);
     // face

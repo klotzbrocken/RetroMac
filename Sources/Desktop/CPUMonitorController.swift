@@ -126,13 +126,14 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
         UserDefaults.standard.set(NSStringFromPoint(panel.frame.origin), forKey: posKey)
     }
 
-    /// Restore the last position if it's still (at least partly) on a screen; else default.
+    /// Restore the last position if the widget still fits whole on a screen; else default.
     private func restorePosition() {
         guard let panel = panel else { return }
         if let s = UserDefaults.standard.string(forKey: posKey) {
             let origin = NSPointFromString(s)
             let frame = NSRect(origin: origin, size: panel.frame.size)
-            if NSScreen.screens.contains(where: { $0.visibleFrame.intersects(frame) }) {
+            // Whole, as the Clock does: a spot saved for a narrower widget (or a bigger display) left it all but off the edge.
+            if NSScreen.screens.contains(where: { $0.visibleFrame.contains(frame) }) {
                 panel.setFrameOrigin(origin)
                 return
             }
