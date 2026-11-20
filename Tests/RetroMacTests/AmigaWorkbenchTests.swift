@@ -23,6 +23,16 @@ final class AmigaWorkbenchTests: XCTestCase {
         XCTAssertEqual(AmigaRAMDisk.resolve("/"), "/")
     }
 
+    /// ENV: holds the Mac's answers under AmigaOS's names: the language in its own words.
+    func testEnvironmentVariables() {
+        let env = AmigaRAMDisk.environment(languageCode: "de", appVersion: "3.0.6",
+                                           os: OperatingSystemVersion(majorVersion: 27, minorVersion: 3, patchVersion: 0))
+        XCTAssertEqual(env["Language"], "deutsch")
+        XCTAssertEqual(env["Workbench"], "RetroMac 3.0.6")
+        XCTAssertEqual(env["Kickstart"], "macOS 27.3")
+        XCTAssertEqual(Set(env.keys), ["Language", "Workbench", "Kickstart"])
+    }
+
     /// The screen bar counts like the Workbench: thousands with commas, whatever the locale.
     func testBytesFreeGrouping() {
         XCTAssertEqual(AmigaScreenBarController.grouped(178_593_792), "178,593,792")

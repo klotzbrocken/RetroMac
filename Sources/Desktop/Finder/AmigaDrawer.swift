@@ -20,7 +20,7 @@ final class AmigaDrawer: NSObject {
     static func deactivate() { active = nil }
 
     struct Item: Equatable {
-        enum Kind: Equatable { case drawer, app, project, trash }
+        enum Kind: Equatable { case drawer, app, project, trash, clipboard }
         var name: String
         var url: URL?
         var kind: Kind
@@ -198,6 +198,12 @@ final class AmigaDrawer: NSObject {
     /// rest in rows, left to right.
     func reload() {
         items = isSystem ? Self.systemItems() : (url.map { Self.items(in: $0, allFiles: snap.allFiles) } ?? [])
+        // RAM:Clipboards holds unit 0, the clipboard, shown from memory and never written to disk:
+        // it is where passwords pass through.
+        if url?.standardizedFileURL.path == AmigaRAMDisk.url.appendingPathComponent("Clipboards").standardizedFileURL.path,
+           AmigaClipboardViewer.hasContent {
+            items.insert(Item(name: "0", url: nil, kind: .clipboard), at: 0)
+        }
         chrome?.title = title
         iconViews.forEach { $0.removeFromSuperview() }
         iconViews = []
@@ -260,7 +266,7 @@ final class AmigaDrawer: NSObject {
         switch item.kind {
         case .drawer: name = item.icon ?? "drawer.png"
         case .trash: name = "trashcan.png"
-        case .project: name = "project.png"
+        case .project, .clipboard: name = "project.png"
         case .app:
             let bid = item.url.flatMap { Bundle(url: $0)?.bundleIdentifier }
             name = item.icon ?? bid.flatMap { theme?.config.iconMappings[$0] } ?? "tool.png"
@@ -280,7 +286,18 @@ final class AmigaDrawer: NSObject {
         switch item.kind {
         case .drawer: if let u = item.url { Self.show(u.path) }
         case .trash: DesktopLauncher.launch(DockThemeConfig.DesktopIconEntry(name: "Trashcan", icon: "", type: "trash"))
-        case .app, .project: if let u = item.url { NSWorkspace.shared.open(u) }
+        case .app: if let u = item.url { NSWorkspace.shared.open(u) }
+        case .project:
+            guard let u = item.url else { return }
+            // A file no app claims opens as text, as MultiView showed anything (macOS asked which
+            // app instead, for a file with no known type).
+            if NSWorkspace.shared.urlForApplication(toOpen: u) == nil,
+               let edit = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.TextEdit") {
+                NSWorkspace.shared.open([u], withApplicationAt: edit, configuration: NSWorkspace.OpenConfiguration())
+            } else {
+                NSWorkspace.shared.open(u)
+            }
+        case .clipboard: AmigaClipboardViewer.show()
         }
     }
 
@@ -366,4 +383,53 @@ final class DrawerSurface: NSView {
     }
     override func mouseDown(with event: NSEvent) { subviews.compactMap { $0 as? DesktopIconView }.forEach { $0.deselect() } }
     override func rightMouseDown(with event: NSEvent) { AmigaScreenBarController.shared.beginMenus() }
+}
+
+/// Clipboard unit 0, as RAM:Clipboards/0 held it: what is on the Mac's clipboard now, text or a
+/// picture, in a Workbench window. Read when opened, kept in memory only.
+enum AmigaClipboardViewer {
+    private static var panel: NSPanel?
+
+    static var hasContent: Bool {
+        let pb = NSPasteboard.general
+        return pb.string(forType: .string) != nil || NSImage(pasteboard: pb) != nil
+    }
+
+    static func show() {
+        panel?.orderOut(nil)
+        let size = NSSize(width: 440, height: 300)
+        let chrome = WebAppChromeView(frame: NSRect(origin: .zero, size: size), title: "Clipboard unit 0")
+        let pb = NSPasteboard.general
+        let content: NSView
+        if let text = pb.string(forType: .string) {
+            let scroll = NSTextView.scrollableTextView()
+            if let tv = scroll.documentView as? NSTextView {
+                tv.string = text
+                tv.isEditable = false
+                tv.font = AmigaChrome.titleFont()
+                tv.backgroundColor = AmigaChrome.rgb(0xE9E8E8)
+            }
+            content = scroll
+        } else if let image = NSImage(pasteboard: pb) {
+            let iv = NSImageView(image: image)
+            iv.imageScaling = .scaleProportionallyDown
+            content = iv
+        } else {
+            let label = NSTextField(labelWithString: "The clipboard is empty.")
+            label.font = AmigaChrome.titleFont(); label.alignment = .center
+            content = label
+        }
+        chrome.embed(content)
+        let p = DrawerPanel(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
+        p.isOpaque = false; p.backgroundColor = .clear; p.hasShadow = true
+        p.hidesOnDeactivate = false
+        p.isReleasedWhenClosed = false
+        p.contentView = chrome
+        p.setAccessibilityTitle("Clipboard unit 0")
+        chrome.onClose = { p.orderOut(nil); if panel === p { panel = nil } }
+        p.center()
+        panel = p
+        NSApp.activate(ignoringOtherApps: true)
+        p.makeKeyAndOrderFront(nil)
+    }
 }
