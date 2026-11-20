@@ -962,7 +962,8 @@ struct DockSettingsTab: View {
                 if ThemeManager.shared.canSaveExistingTheme {
                     RMRow(label: "Save changes to \u{201C}\(themeDisplayName)\u{201D}") {
                         Button("Save") {
-                            try? ThemeManager.shared.saveExistingTheme()
+                            do { try ThemeManager.shared.saveExistingTheme() }
+                            catch { NSAlert(error: error).runModal() }
                             themes = ThemeManager.shared.availableThemes
                             iconOverrideRefresh.toggle()
                         }
@@ -977,9 +978,11 @@ struct DockSettingsTab: View {
                             .textFieldStyle(.roundedBorder)
                         Button("Save") {
                             guard !newThemeName.isEmpty else { return }
-                            try? ThemeManager.shared.saveAsNewTheme(name: newThemeName)
+                            do {
+                                try ThemeManager.shared.saveAsNewTheme(name: newThemeName)
+                                newThemeName = ""
+                            } catch { NSAlert(error: error).runModal() }
                             themes = ThemeManager.shared.availableThemes
-                            newThemeName = ""
                             iconOverrideRefresh.toggle()
                         }
                         .buttonStyle(RMDefaultButtonStyle())

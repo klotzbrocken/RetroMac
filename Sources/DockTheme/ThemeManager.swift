@@ -1365,14 +1365,23 @@ final class ThemeManager {
         let iconsDir = theme.iconsDirectory
         try? fm.createDirectory(at: iconsDir, withIntermediateDirectories: true)
 
+        // Every picture is copied in beside its target first and swapped over only once all of
+        // them are in: a source moved away since it was picked used to fail half-way, after the
+        // earlier pictures had already replaced the saved ones.
         var updatedConfig = theme.config
+        var staged: [(tmp: URL, dest: URL)] = []
+        defer { for s in staged { try? fm.removeItem(at: s.tmp) } }
         for (bundleID, sourcePath) in overrides {
             let ext = (sourcePath as NSString).pathExtension
             let iconName = bundleID.replacingOccurrences(of: ".", with: "_") + "." + (ext.isEmpty ? "png" : ext)
-            let destPath = iconsDir.appendingPathComponent(iconName)
-            try? fm.removeItem(at: destPath)
-            try fm.copyItem(atPath: sourcePath, toPath: destPath.path)
+            let tmp = iconsDir.appendingPathComponent(".new-\(UUID().uuidString)-\(iconName)")
+            try fm.copyItem(atPath: sourcePath, toPath: tmp.path)
+            staged.append((tmp, iconsDir.appendingPathComponent(iconName)))
             updatedConfig.iconMappings[bundleID] = iconName
+        }
+        for s in staged {
+            if fm.fileExists(atPath: s.dest.path) { _ = try fm.replaceItemAt(s.dest, withItemAt: s.tmp) }
+            else { try fm.moveItem(at: s.tmp, to: s.dest) }
         }
 
         try theme.save(config: updatedConfig)
@@ -1392,13 +1401,16 @@ final class ThemeManager {
         guard let base = activeTheme else { return }
         let safeName = name.replacingOccurrences(of: "/", with: "-")
             .replacingOccurrences(of: ":", with: "-")
-        let bundleName = "\(safeName).retromactheme"
-        let destURL = userThemesDir.appendingPathComponent(bundleName)
         let fm = FileManager.default
+        try fm.createDirectory(at: userThemesDir, withIntermediateDirectories: true)
 
-        if fm.fileExists(atPath: destURL.path) {
-            try fm.removeItem(at: destURL)
-        }
+        // Built in a staging folder beside the themes and moved in only when complete, under a
+        // name no bundle uses yet. Saving under a taken name used to delete that bundle first —
+        // the source itself when the active user theme was saved again under its own name.
+        let staging = userThemesDir.appendingPathComponent(".staging-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: staging, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: staging) }
+        let destURL = staging.appendingPathComponent("\(safeName).retromactheme")
         try fm.copyItem(at: base.url, to: destURL)
 
         var newConfig = base.config
@@ -1428,6 +1440,7 @@ final class ThemeManager {
 
         let newBundle = try ThemeBundle(url: destURL, isBuiltIn: false)
         try newBundle.save(config: newConfig)
+        try fm.moveItem(at: destURL, to: Self.freeURL(for: safeName, in: userThemesDir))
 
         iconOverrides.removeValue(forKey: base.stableID)
         defaults.set(iconOverrides, forKey: overridesKey)
@@ -1437,9 +1450,22 @@ final class ThemeManager {
         print("[Theme] Saved new theme: \(name) [\(newID)]")
     }
 
+    /// A theme bundle URL in `dir` that nothing uses yet: "Name", then "Name 2", "Name 3" … as the
+    /// Finder numbers copies. `fileExists` follows the volume's case rule, so "cool" finds "Cool".
+    static func freeURL(for stem: String, in dir: URL) -> URL {
+        var url = dir.appendingPathComponent("\(stem).retromactheme"), n = 2
+        while FileManager.default.fileExists(atPath: url.path) {
+            url = dir.appendingPathComponent("\(stem) \(n).retromactheme"); n += 1
+        }
+        return url
+    }
+
     /// Returns the imported theme's id (what `dockTheme` holds), so a caller can select it.
+    /// `expectedID` (the catalogue's) is checked before anything is installed.
+    /// shortcut: runs on the caller's (main) thread, ditto included; fine for themes of a few MB,
+    /// move the unzip off the main thread when bundles with long boot films appear.
     @discardableResult
-    func importTheme(from sourceURL: URL) throws -> String? {
+    func importTheme(from sourceURL: URL, expectedID: String? = nil) throws -> String? {
         let fm = FileManager.default
         try fm.createDirectory(at: userThemesDir, withIntermediateDirectories: true)
 
@@ -1461,11 +1487,11 @@ final class ThemeManager {
             guard let bundle = Self.findThemeBundle(in: tmp) else {
                 throw NSError(domain: "RetroMac", code: 2, userInfo: [NSLocalizedDescriptionKey: "No .retromactheme bundle found inside the .zip."])
             }
-            let id = try installThemeBundle(bundle)
+            let id = try installThemeBundle(bundle, expectedID: expectedID)
             reload()
             return id
         }
-        let id = try installThemeBundle(sourceURL)
+        let id = try installThemeBundle(sourceURL, expectedID: expectedID)
         reload()
         print("[Theme] Imported theme from \(sourceURL.lastPathComponent)")
         return id
@@ -1487,7 +1513,7 @@ final class ThemeManager {
     }
 
     @discardableResult
-    private func installThemeBundle(_ src: URL) throws -> String? {
+    private func installThemeBundle(_ src: URL, expectedID: String? = nil) throws -> String? {
         // Replace the bundle that carries the same theme id, not merely the same file name:
         // a renamed .retromactheme must still update the theme it *is*, and an unrelated theme
         // that happens to share a file name must not be clobbered.
@@ -1496,6 +1522,9 @@ final class ThemeManager {
         let incomingID: String
         do { incomingID = try ThemeBundle(url: src).stableID }
         catch { throw NSError(domain: "RetroMac", code: 3, userInfo: [NSLocalizedDescriptionKey: "This is not a valid RetroMac theme (\(error.localizedDescription))."]) }
+        if let expectedID, incomingID != expectedID {
+            throw NSError(domain: "RetroMac", code: 4, userInfo: [NSLocalizedDescriptionKey: "The download is not the theme the catalogue named, so it was not installed."])
+        }
         let existing = availableThemes.first { !$0.isBuiltIn && $0.stableID == incomingID }
         try Self.install(bundleAt: src, into: userThemesDir, replacing: existing?.url)
         return incomingID
@@ -1506,7 +1535,8 @@ final class ThemeManager {
     /// disk, denied permission) leaves the previously installed theme completely untouched.
     static func install(bundleAt src: URL, into themesDir: URL, replacing existing: URL?) throws {
         let fm = FileManager.default
-        let destURL = existing ?? themesDir.appendingPathComponent(src.lastPathComponent)
+        // No theme with this id: a free name, never the bundle of another theme that shares it.
+        let destURL = existing ?? freeURL(for: src.deletingPathExtension().lastPathComponent, in: themesDir)
 
         let staging = themesDir.appendingPathComponent(".staging-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: staging, withIntermediateDirectories: true)

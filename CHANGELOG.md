@@ -30,6 +30,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixed
 
+- **Saving and importing themes never deletes another theme.** Save as a new theme removed any
+  bundle already carrying the chosen name before copying, so saving the active theme again under
+  its own name deleted it for good, and an import whose file name matched a different theme
+  replaced that theme. Both now take a free name (“Cool 2”) and only move the new theme in once
+  it is complete; saving changes to a theme swaps its pictures only once all of them are copied;
+  a catalogue download is checked before it is installed, and a failed save now says why.
+
 - **Show Desktop brings the apps back.** The Windows 98 Show Desktop tile hid every app but often
   could not show them again: macOS reports the hide as refused while doing it, so the second click
   found nothing to restore.

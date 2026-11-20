@@ -84,17 +84,26 @@ final class ThemeInstallTests: XCTestCase {
                        "the rename created a duplicate instead of replacing the installed theme")
     }
 
-    /// Without a match, an unrelated theme that happens to share a file name is still overwritten
-    /// by name — but only because the caller passed `replacing: nil` and the name collides. The
-    /// point of this test is that the swap is still atomic and clean in that path.
-    func testNameCollisionWithoutAMatchStillSwapsCleanly() throws {
+    /// Without an id match, an unrelated theme that shares the file name stays as it is and the
+    /// new one lands beside it as "Cool 2" (it used to be overwritten: audit 09).
+    func testNameCollisionWithoutAMatchKeepsBothThemes() throws {
         let installed = try makeBundle("Cool.retromactheme", marker: "v1", in: themesDir)
         let src = try makeBundle("Cool.retromactheme", marker: "v2", in: root)
 
         try ThemeManager.install(bundleAt: src, into: themesDir, replacing: nil)
 
-        XCTAssertEqual(marker(of: installed), "v2")
+        XCTAssertEqual(marker(of: installed), "v1", "an unrelated theme was overwritten")
+        XCTAssertEqual(marker(of: themesDir.appendingPathComponent("Cool 2.retromactheme")), "v2")
         XCTAssertTrue(stagingLeftovers.isEmpty)
+    }
+
+    /// Save as a new theme takes the same free name: never the bundle already there, whatever the case.
+    func testFreeURLNumbersPastTakenNames() throws {
+        XCTAssertEqual(ThemeManager.freeURL(for: "Cool", in: themesDir).lastPathComponent, "Cool.retromactheme")
+        try makeBundle("Cool.retromactheme", marker: "a", in: themesDir)
+        try makeBundle("Cool 2.retromactheme", marker: "b", in: themesDir)
+        XCTAssertEqual(ThemeManager.freeURL(for: "Cool", in: themesDir).lastPathComponent, "Cool 3.retromactheme")
+        XCTAssertEqual(ThemeManager.freeURL(for: "cool", in: themesDir).lastPathComponent, "cool 3.retromactheme")
     }
 }
 

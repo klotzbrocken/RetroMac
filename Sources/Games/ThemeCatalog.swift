@@ -64,8 +64,8 @@ enum ThemeCatalog {
             }
             DispatchQueue.main.sync {
                 do {
-                    let id = try ThemeManager.shared.importTheme(from: zip)
-                    completion(id == e.id ? nil : "\(e.name) was installed, but it is not the theme the catalogue named.")
+                    try ThemeManager.shared.importTheme(from: zip, expectedID: e.id)
+                    completion(nil)
                 } catch {
                     completion(error.localizedDescription)
                 }
