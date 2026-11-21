@@ -4939,9 +4939,7 @@ final class DockView: NSView {
             MI(title: "Help and Support", icon: xpIcon("xp_help.png"), action: {
                 if let url = URL(string: "https://support.microsoft.com/windows") { NSWorkspace.shared.open(url) }
             }),
-            MI(title: "Run…", icon: xpIcon("xp_run.png"), action: {
-                NSWorkspace.shared.launchApplication("Terminal")
-            }),
+            MI(title: "Run…", icon: xpIcon("xp_run.png"), action: { RunDialogController.shared.show() }),
         ]
         if TaskManagerController.wanted,   // XP's Task Manager, under its Control Panel entries
            let at = rightItems.firstIndex(where: { $0.title == "RetroMac Settings" }) {
@@ -5255,9 +5253,7 @@ final class DockView: NSView {
         items.append(MI(title: "Help", icon: win98Icon("menu-help.png"), action: {
             NSApp.sendAction(Selector(("showAbout")), to: nil, from: nil)
         }))
-        items.append(MI(title: "Run…", icon: win98Icon("menu-run.png"), action: {
-            NSWorkspace.shared.launchApplication("Terminal")
-        }))
+        items.append(MI(title: "Run…", icon: win98Icon("menu-run.png"), action: { RunDialogController.shared.show() }))
         items.append(MI(separator: true))
         if !isWin95 {
             items.append(MI(title: "Log Off \(NSFullUserName())…", icon: win98Icon("menu-logoff.png"), action: {

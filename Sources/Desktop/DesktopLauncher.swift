@@ -4,6 +4,14 @@ import AppKit
 /// action (app / folder / url / trash) and performs it via NSWorkspace.
 enum DesktopLauncher {
 
+    /// A folder in the active theme's own file window: the Workbench's drawers, Tiger's Finder,
+    /// the Windows Explorer; the Finder otherwise.
+    static func openFolder(_ url: URL) {
+        if AmigaDrawer.isEnabled { AmigaDrawer.show(url.path) }
+        else if TigerFinder.isEnabled { TigerFinder.show(url) }
+        else { NSWorkspace.shared.open(url) }
+    }
+
     static func launch(_ entry: DockThemeConfig.DesktopIconEntry) {
         switch entry.type {
         case "trash":
@@ -25,10 +33,8 @@ enum DesktopLauncher {
 
         case "folder":
             if let path = entry.path {
-                let expanded = AmigaRAMDisk.resolve(path)
-                if AmigaDrawer.isEnabled { AmigaDrawer.show(path == AmigaDrawer.systemToken ? path : expanded) }   // the Workbench's drawers
-                else if TigerFinder.isEnabled { TigerFinder.show(URL(fileURLWithPath: expanded)) }   // Tiger's own Finder
-                else { NSWorkspace.shared.open(URL(fileURLWithPath: expanded)) }
+                if AmigaDrawer.isEnabled, path == AmigaDrawer.systemToken { AmigaDrawer.show(path) }
+                else { openFolder(URL(fileURLWithPath: AmigaRAMDisk.resolve(path))) }
             }
 
         case "network":

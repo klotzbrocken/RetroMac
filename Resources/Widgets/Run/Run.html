@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* The Run dialog of Windows 95/98/Me/NT (theme-win98) and XP (theme-winxp, also Vista and 7). */
+  @font-face{font-family:"W95FA";src:url("../Notepad/fonts/W95FA.woff") format("woff");}
+  html,body{margin:0;padding:0;background:transparent;overflow:hidden;-webkit-user-select:none;cursor:default;}
+  #win{position:relative;width:347px;display:flex;flex-direction:column;}
+  .w98-title,.xp-title{display:none;}
+  /* ---- Windows 98 ---- */
+  body.theme-win98{font:13px "W95FA","MS Sans Serif",Tahoma,sans-serif;-webkit-font-smoothing:none;}
+  body.theme-win98 #win{background:#c0c0c0;padding:3px;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dfdfdf,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
+  body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:20px;padding:0 2px 0 4px;
+    background:linear-gradient(90deg,#00007b,#1085d2);}
+  .w98-cap{color:#fff;font-weight:bold;flex:1;white-space:nowrap;}
+  .w98-btn{width:16px;height:14px;background:#c0c0c0;position:relative;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dfdfdf;
+    font:bold 11px Tahoma,sans-serif;display:flex;align-items:center;justify-content:center;color:#000;}
+  .w98-btn.is-press{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080,inset -2px -2px 0 #dfdfdf;}
+  #w98close{margin-left:2px;font-size:0;}
+  #w98close::before,#w98close::after{content:"";position:absolute;left:50%;top:50%;width:9px;height:2px;background:#000;}
+  #w98close::before{transform:translate(-50%,-50%) rotate(45deg);} #w98close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  body.theme-win98 .body{padding:14px 11px 11px;}
+  body.theme-win98 input{font:inherit;width:100%;box-sizing:border-box;padding:3px 4px;border:0;background:#fff;outline:none;
+    box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dfdfdf;}
+  body.theme-win98 button{font:inherit;min-width:75px;height:23px;background:#c0c0c0;border:0;color:#000;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dfdfdf;}
+  body.theme-win98 button.def{outline:1px solid #000;outline-offset:-1px;}
+  body.theme-win98 button:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080;}
+  /* ---- Windows XP ---- */
+  body.theme-winxp{font:11px Tahoma,"Segoe UI",sans-serif;}
+  body.theme-winxp #win{background:#0831D9;border-radius:8px 8px 0 0;overflow:hidden;box-shadow:2px 4px 12px rgba(0,0,0,.45);}
+  body.theme-winxp .xp-title{display:flex;align-items:center;height:28px;gap:6px;padding:0 5px 0 8px;
+    background:linear-gradient(180deg,#0997FF,#0053EE 45%,#0066FF 52%,#003DD2);}
+  .xp-cap{color:#fff;font:bold 13px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,40,.5);flex:1;}
+  .xp-help,.xp-close{width:21px;height:21px;border-radius:3px;border:1px solid #fff;position:relative;
+    background:linear-gradient(180deg,#5b9df4,#2f6fdd 55%,#1a52c4);color:#fff;font:bold 13px Tahoma;display:flex;align-items:center;justify-content:center;}
+  .xp-close{background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);font-size:0;}
+  .xp-close::before,.xp-close::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#fff;}
+  .xp-close::before{transform:translate(-50%,-50%) rotate(45deg);} .xp-close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  .xp-close.is-hover,.xp-help.is-hover{filter:brightness(1.12);} .xp-close.is-press{filter:brightness(.85);}
+  body.theme-winxp .body{background:#ECE9D8;margin:0 3px 3px;padding:14px 11px 11px;}
+  body.theme-winxp input{font:inherit;width:100%;box-sizing:border-box;padding:3px 4px;border:1px solid #7f9db9;background:#fff;outline:none;}
+  body.theme-winxp input:focus{border-color:#2f6fdd;}
+  body.theme-winxp button{font:inherit;min-width:75px;height:23px;border:1px solid #003c74;border-radius:3px;color:#000;
+    background:linear-gradient(180deg,#fdfeff,#eaf0fb 45%,#d6e2f5);}
+  body.theme-winxp button.def{box-shadow:inset 0 0 0 1px #9ab5e6;}
+  body.theme-winxp button:hover{border-color:#ff9a00;}
+  /* ---- shared ---- */
+  .top{display:flex;gap:14px;align-items:flex-start;}
+  #ico{width:32px;height:32px;flex:0 0 32px;background:center/contain no-repeat;image-rendering:pixelated;}
+  .msg{line-height:1.35;padding-top:2px;}
+  .open{display:flex;align-items:center;gap:8px;margin:16px 0 18px;}
+  .open label u{text-decoration:underline;}
+  .open .field{flex:1;position:relative;}
+  .btns{display:flex;justify-content:flex-end;gap:6px;}
+  #hist{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #000;display:none;z-index:5;max-height:120px;overflow:auto;}
+  #hist div{padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #hist div:hover{background:#000080;color:#fff;}
+</style>
+</head>
+<body class="theme-win98">
+  <div id="win">
+    <div class="w98-title" id="w98title"><span class="w98-cap">Run</span><span class="w98-btn" id="w98help">?</span><span class="w98-btn" id="w98close"></span></div>
+    <div class="xp-title" id="xptitle"><span class="xp-cap">Run</span><span class="xp-help" id="xphelp">?</span><span class="xp-close" id="xpclose"></span></div>
+    <div class="body">
+      <div class="top"><div id="ico"></div><div class="msg">Type the name of a program, folder, document, or Internet resource, and Windows will open it for you.</div></div>
+      <div class="open"><label for="cmd"><u>O</u>pen:</label><div class="field"><input id="cmd" autocomplete="off" spellcheck="false"><div id="hist"></div></div></div>
+      <div class="btns"><button class="def" id="ok">OK</button><button id="cancel">Cancel</button><button id="browse"><u>B</u>rowse...</button></div>
+    </div>
+  </div>
+<script>
+  const $=id=>document.getElementById(id);
+  function post(o){ try{ webkit.messageHandlers.run.postMessage(o); }catch(e){} }
+  let history=[];
+  window.setTheme=function(k){ document.body.className = (k==='winxp'||k==='win7') ? 'theme-winxp' : 'theme-win98'; };
+  window.setIcon=function(u){ $('ico').style.backgroundImage = u ? 'url('+u+')' : ''; };
+  window.setHistory=function(list){ history=list||[]; $('cmd').value=history[0]||''; $('cmd').select(); renderHist(); };
+  window.focusField=function(){ $('cmd').focus(); $('cmd').select(); };
+  window.setField=function(t){ $('cmd').value=t; $('cmd').focus(); };
+  function renderHist(){ $('hist').innerHTML=history.map(h=>'<div>'+h.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>').join('');
+    [...$('hist').children].forEach((d,i)=>d.onmousedown=e=>{ e.preventDefault(); $('cmd').value=history[i]; $('hist').style.display='none'; }); }
+  $('cmd').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); run(); }
+    else if(e.key==='Escape'){ post({a:'close'}); }
+    else if(e.key==='ArrowDown' && history.length){ $('hist').style.display='block'; }
+  });
+  $('cmd').addEventListener('blur',()=>{ $('hist').style.display='none'; });
+  function run(){ const t=$('cmd').value.trim(); if(t) post({a:'run', text:t}); }
+  $('ok').onclick=run;
+  $('cancel').onclick=()=>post({a:'close'});
+  $('browse').onclick=()=>post({a:'browse'});
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') post({a:'close'}); });
+  // Title + close rects for the native drag/close overlay (as the other widgets give them).
+  window.regions=function(){
+    const xp=document.body.classList.contains('theme-winxp');
+    const R=id=>{const b=$(id).getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
+    return xp ? [...R('xptitle'),...R('xpclose')] : [...R('w98title'),...R('w98close')];
+  };
+  window.widgetSize=function(){ const w=$('win'); return [w.offsetWidth, w.offsetHeight]; };
+  window.setBtnState=function(slot,state){ const xp=document.body.classList.contains('theme-winxp');
+    const el=$(xp?'xpclose':'w98close'); el.classList.remove('is-hover','is-press'); if(state==='hover')el.classList.add('is-hover'); if(state==='press')el.classList.add('is-press'); };
+</script>
+</body>
+</html>
