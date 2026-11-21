@@ -2045,7 +2045,8 @@ final class DockView: NSView {
         // Apps that currently have minimized windows MUST get a tile regardless of the
         // "show running apps" toggle: the system Dock is hidden, so the tile is the only
         // way to bring those windows back (clicking it calls restoreWindows(for:)).
-        let minimizedIDs = Set(MinimizedWindowTracker.shared.entries
+        // (AmigaOS: they are icons on the Workbench instead.)
+        let minimizedIDs = DesktopIconsController.iconifiesToWorkbench ? [] : Set(MinimizedWindowTracker.shared.entries
             .map { $0.bundleID }
             .filter { !pinnedIDs.contains($0) && $0 != ownBundleID })
 

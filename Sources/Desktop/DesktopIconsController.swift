@@ -156,7 +156,75 @@ final class DesktopIconsController {
         volumeObservers.removeAll()
     }
 
+    // MARK: - Iconified windows (AmigaOS 4.1)
+
+    /// AmigaOS put an iconified window on the Workbench as an icon, not in the dock: under the
+    /// amiga chrome each minimised window shows as an icon down the right edge, and a double-click
+    /// opens it again. Needs the per-window list (Accessibility); without it the dock keeps the tiles.
+    static var iconifiesToWorkbench: Bool {
+        RetroFrameTheme.key() == "amiga" && AppSettings.shared.dockEnabled && !AppSettings.shared.dockOnly
+            && !MinimizedWindowTracker.shared.isLimited
+    }
+    private var iconified: [(view: DesktopIconView, entry: MinimizedWindowTracker.Entry)] = []
+    private var iconifiedSignature = ""
+    private var iconifyObserver: NSObjectProtocol?
+
+    private func syncIconified() {
+        if iconifyObserver == nil {
+            iconifyObserver = NotificationCenter.default.addObserver(forName: .minimizedWindowsChanged, object: nil, queue: .main) { [weak self] _ in
+                self?.syncIconified()
+            }
+        }
+        let entries = Self.iconifiesToWorkbench && window != nil ? MinimizedWindowTracker.shared.entries.filter { !$0.isAppLevel } : []
+        let signature = entries.map { "\($0.pid)|\($0.title)" }.joined(separator: "\n")
+        guard signature != iconifiedSignature else { return }
+        iconifiedSignature = signature
+        iconified.forEach { $0.view.removeFromSuperview() }
+        iconified = []
+        guard let content = window?.contentView else { return }
+        let label = ThemeManager.shared.activeTheme?.config.desktopLabel
+        for (i, e) in entries.enumerated() {
+            var name = e.title
+            if name.count > 24 { name = String(name.prefix(23)) + "\u{2026}" }
+            let v = DesktopIconView(entry: DockThemeConfig.DesktopIconEntry(name: name, icon: "", type: "iconified"),
+                                    image: ThemeManager.shared.icon(for: e.bundleID, size: iconSize), fullImage: nil,
+                                    iconSize: iconSize, isPixelated: false, labelStyle: label)
+            v.frame = iconifySlot(i)
+            v.target = self
+            v.action = #selector(iconifiedDoubleClicked(_:))
+            v.toolTip = e.title
+            content.addSubview(v)
+            iconified.append((v, e))
+        }
+    }
+
+    /// Where the `index`th iconified window's icon stands (content coordinates): down the right
+    /// edge from the top, then the next column in.
+    private func iconifySlot(_ index: Int) -> NSRect {
+        guard let screen = window?.screen ?? NSScreen.main else { return .zero }
+        let area = Self.iconArea(of: screen, bar: DockController.shared.barScreenFrame).offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
+        let rows = max(1, Int((area.height - marginY * 2) / cellHeight))
+        let col = index / rows, row = index % rows
+        return NSRect(x: area.maxX - marginX - cellWidth * CGFloat(col + 1), y: area.maxY - marginY - cellHeight * CGFloat(row + 1),
+                      width: cellWidth, height: cellHeight)
+    }
+
+    /// Where the next window iconified goes, on screen: the zoom flies there.
+    func nextIconifyScreenRect() -> NSRect? {
+        guard let window else { return nil }
+        let r = iconifySlot(iconified.count)
+        return NSRect(x: window.frame.minX + r.midX - iconSize / 2, y: window.frame.minY + r.maxY - iconSize - 4, width: iconSize, height: iconSize)
+    }
+
+    @objc private func iconifiedDoubleClicked(_ sender: DesktopIconView) {
+        guard let e = iconified.first(where: { $0.view === sender })?.entry else { return }
+        MinimizedWindowTracker.shared.activate(e)
+    }
+
     func hide() {
+        iconified.forEach { $0.view.removeFromSuperview() }
+        iconified = []
+        iconifiedSignature = ""
         removeVolumeObservers()
         if let obs = trashObserver {
             DistributedNotificationCenter.default().removeObserver(obs)
@@ -342,6 +410,8 @@ final class DesktopIconsController {
             iconViews.append(view)
         }
 
+        iconifiedSignature = "\u{0}"   // lay them out again (screen or theme may have changed)
+        syncIconified()
         // A theme with volumes on the desktop redraws them when a disk comes or goes.
         let showsVolumes = ThemeManager.shared.activeTheme?.config.desktopIcons?.contains { $0.type == "volumes" } == true
         if showsVolumes && volumeObservers.isEmpty {

@@ -1799,7 +1799,9 @@ final class TitleBarOverlayController {
         if attr == kAXMinimizeButtonAttribute, MinimizeZoom.wanted, let o = overlays[wid] {
             if MinimizeZoom.intoDockIcon {
                 let bundleID = NSRunningApplication(processIdentifier: o.pid)?.bundleIdentifier
-                let icon = bundleID.flatMap { DockController.shared.itemScreenRect(bundleID: $0) }
+                // AmigaOS: to the icon it becomes on the Workbench (DesktopIconsController).
+                let icon = (DesktopIconsController.iconifiesToWorkbench ? DesktopIconsController.shared.nextIconifyScreenRect() : nil)
+                    ?? bundleID.flatMap { DockController.shared.itemScreenRect(bundleID: $0) }
                     ?? DockController.shared.barScreenFrame.map { NSRect(x: $0.midX - 24, y: $0.minY, width: 48, height: 48) }
                 zoomed = MinimizeZoom.shared.begin(wid: wid, windowBounds: o.bounds, bar: o.panel, barView: o.view,
                                                    patch: o.patch, icon: icon)
