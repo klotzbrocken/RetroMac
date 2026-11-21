@@ -1565,7 +1565,14 @@ private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuH
         let isMe = bannerText.lowercased().contains("windows me")
         let isWin95 = bannerText.lowercased().contains("windows 95")
         let isNT = bannerText.lowercased().replacingOccurrences(of: " ", with: "").contains("windowsnt")
-        if isNT {
+        let is2000 = bannerText.lowercased().replacingOccurrences(of: "|", with: "").contains("windows 2000")
+        if is2000 {
+            // 2000 Professional: pure blue at the bottom darkening to black, the top fifth black.
+            // Stops measured off a Start menu of 2000 Professional.
+            func c(_ b: CGFloat) -> NSColor { NSColor(srgbRed: 0, green: 0, blue: b / 255, alpha: 1) }
+            NSGradient(colorsAndLocations: (c(255), 0.0), (c(178), 0.25), (c(132), 0.47), (c(74), 0.74), (.black, 0.82), (.black, 1.0))?
+                .draw(in: bannerRect, angle: 90)
+        } else if isNT {
             // NT 4.0: pure blue at the bottom fading to black, the top tenth black. Stops measured
             // off a Start menu of NT 4.0 Workstation (the original dithers what this draws smooth).
             func c(_ b: CGFloat) -> NSColor { NSColor(srgbRed: 4 / 255, green: 2 / 255, blue: b / 255, alpha: 1) }
@@ -1637,15 +1644,14 @@ private final class ClassicStartMenuContentView: NSView, StartMenuPanel.SubmenuH
                 let boldFont = NSFont(name: "Tahoma-Bold", size: size) ?? NSFont.boldSystemFont(ofSize: size)
                 let regFont  = NSFont(name: "Tahoma", size: size) ?? NSFont.systemFont(ofSize: size)
                 let bannerTextColor = Win98Scheme.activeTitleTextColor() ?? NSColor.white
+                // "|" splits bold from regular, alternating: "Windows NT|Workstation", "Windows |2000| Professional".
                 let parts = bannerText.contains("|")
-                    ? bannerText.split(separator: "|", maxSplits: 1).map(String.init)   // "Windows NT|Workstation"
+                    ? bannerText.split(separator: "|").map(String.init)
                     : bannerText.split(separator: " ", maxSplits: 1).map(String.init)
                 let text = NSMutableAttributedString()
-                text.append(NSAttributedString(string: parts.first ?? bannerText,
-                                               attributes: [.font: boldFont, .foregroundColor: bannerTextColor]))
-                if parts.count > 1 {
-                    text.append(NSAttributedString(string: parts[1],
-                                                   attributes: [.font: regFont, .foregroundColor: bannerTextColor]))
+                for (i, part) in parts.enumerated() {
+                    text.append(NSAttributedString(string: part,
+                                                   attributes: [.font: i.isMultiple(of: 2) ? boldFont : regFont, .foregroundColor: bannerTextColor]))
                 }
                 let textSize = text.size()
                 ctx.translateBy(x: bannerRect.minX + (bannerRect.width + textSize.height) / 2, y: bannerRect.minY + 6)

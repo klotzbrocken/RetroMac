@@ -7,6 +7,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **New theme: Windows 2000 Professional.** The plain blue-grey desktop (#3A6EA5) with My
+  Documents, My Computer, My Network Places, the Recycle Bin and Internet Explorer, the grey
+  #D4D0C8 taskbar, and 2000's own Start menu: Windows Update, Programs, Documents, Settings,
+  Search (files, the Internet, people), Help, Run… and Shut Down…, under the black and blue
+  "Windows 2000 Professional" banner. Folders open in the Explorer.
+
 - **The Windows themes have their Explorer.** Windows 95 to 7 open folders, My Computer and My
   Documents in a Windows Explorer of their own: the Mac's disks as C:, D:…, Large Icons, List and
   Details, an address bar that takes Windows paths, Windows 98's folder panel or XP's task pane,

@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 @testable import RetroMac
 
@@ -97,6 +98,25 @@ final class BootPhasesTests: XCTestCase {
         }
         let page = try String(contentsOf: root.appendingPathComponent("Resources/Widgets/Boot/Boot.html"), encoding: .utf8)
         XCTAssertTrue(page.contains("OS === 'nt4'"))
+    }
+
+    /// Windows 2000 Professional: the five desktop icons of a fresh install in their order, its
+    /// own Start menu (Search, no Favorites or Log Off), the banner, and the plain #3A6EA5 desktop.
+    func testWindows2000Theme() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let bundle = root.appendingPathComponent("Resources/Themes/Windows2000.retromactheme")
+        let c = try JSONDecoder().decode(DockThemeConfig.self, from: Data(contentsOf: bundle.appendingPathComponent("theme.json")))
+        XCTAssertEqual(c.name, "Windows 2000")
+        XCTAssertEqual(c.desktopIcons?.map(\.name), ["My Documents", "My Computer", "My Network Places", "Recycle Bin", "Internet Explorer"])
+        XCTAssertEqual(c.dock.startMenuProfile, "win2000")
+        XCTAssertEqual(c.dock.startMenuBanner, "Windows |2000| Professional")
+        XCTAssertEqual(c.finder, "explorer")
+        for icon in c.desktopIcons ?? [] {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: bundle.appendingPathComponent("icons/\(icon.icon)").path), icon.icon)
+        }
+        let wallpaper = try XCTUnwrap(NSBitmapImageRep(data: Data(contentsOf: bundle.appendingPathComponent("wallpaper.png"))))
+        let px = try XCTUnwrap(wallpaper.cgImage?.dataProvider?.data as Data?)
+        XCTAssertEqual(Array(px.prefix(3)), [0x3A, 0x6E, 0xA5])
     }
 
     /// The boot page's URL is an absolute file URL even from a relative resource URL: the first

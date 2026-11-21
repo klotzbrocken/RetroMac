@@ -260,10 +260,12 @@ struct DockThemeConfig: Codable {
         var showGrip: Bool?      // show grip dots handle (BeOS deskbar style)
         var startMenuStyle: String?  // "classic" (Win98-style), "xp" (Luna Blue two-column)
         var showQuickLaunch: Bool?   // Windows Quick Launch (pinned tiles + Show Desktop); false = Win95, which had none
-        /// Which classic Start menu: "win95" (no Windows Update, Favorites or Log Off) or "nt4"
-        /// (the same, with NT's program groups). Absent: Windows 98's, or 95's for "Windows 95".
+        /// Which classic Start menu: "win95" (no Windows Update, Favorites or Log Off), "nt4" (the same,
+        /// with NT's program groups) or "win2000" (Search instead of Find, no Favorites or Log Off).
+        /// Absent: Windows 98's.
         var startMenuProfile: String?
-        /// The side banner's text, "bold|regular" (e.g. "Windows NT|Workstation"); absent = the name.
+        /// The side banner's text, "|" alternating bold and regular ("Windows NT|Workstation",
+        /// "Windows |2000| Professional"); absent = the name.
         var startMenuBanner: String?
         var startButtonColor: String?
         var startButtonGradientTop: String?
@@ -386,7 +388,7 @@ extension DockThemeConfig {
 
     /// Themes whose real-world dock/taskbar supported auto-hide.
     var supportsAutoHide: Bool {
-        ["Mac OS X Tiger", "Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows 95", "Windows NT 4.0", "Windows Me", "Windows 7", "Windows Vista", "OS/2 Warp 4"].contains(name)
+        ["Mac OS X Tiger", "Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows 95", "Windows NT 4.0", "Windows 2000", "Windows Me", "Windows 7", "Windows Vista", "OS/2 Warp 4"].contains(name)
     }
     var dockAutoHideEnabled: Bool {
         supportsAutoHide && (AppSettings.shared.themeDockAutoHide[settingsKey] ?? false)

@@ -1,0 +1,56 @@
+[
+ {
+  "appID": "iterm2",
+  "file": "iterm2-32.png",
+  "sha256": "f12d0a87acc47c5de4197289863833c0eb523fe0208247a688d2704f26a46a7a",
+  "kind": "historical-theme-asset",
+  "generated": false,
+  "referenceVersion": "MS-DOS-Eingabeaufforderung",
+  "windowsEquivalent": "MS-DOS-Eingabeaufforderung",
+  "preferredFile": "iterm2-32.png",
+  "sourceURL": null,
+  "nativeSize": [
+   32,
+   32
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "resampling": "none",
+  "sourceSHA256": "a48f67243b0b0571bf37dcdb9e01d0d7be4dc3c06129d4650d6499f025406204",
+  "visualReview": "passed",
+  "provenanceType": "Windows-\u00c4quivalent \u00b7 MS-DOS-Eingabeaufforderung",
+  "note": "",
+  "provenanceLimitation": "Bestehendes Theme-Asset; urspr\u00fcngliche Extraktion nicht unabh\u00e4ngig belegt.",
+  "bundleIDs": [
+   "com.googlecode.iterm2"
+  ]
+ },
+ {
+  "appID": "mydocuments",
+  "file": "mydocuments.png",
+  "sha256": "abebdf452ff995c8127ec98343d4dff91ed977dc341824cd3b75b795f5c308cf",
+  "kind": "historical-theme-asset",
+  "generated": false,
+  "referenceVersion": "Windows 2000 Professional",
+  "windowsEquivalent": "My Documents",
+  "preferredFile": "mydocuments.png",
+  "sourceURL": null,
+  "nativeSize": [
+   48,
+   48
+  ],
+  "outputSize": [
+   32,
+   32
+  ],
+  "resampling": "none",
+  "sourceSHA256": "cf594027be7c464e079f4ba91e856e0750e46e5a8c701d199e5ec118f3477365",
+  "visualReview": "passed",
+  "provenanceType": "Windows 2000 \u00b7 My Documents (Documents.ico, 8-bit 48 px frame)",
+  "note": "The 48 px frame cropped to its 32 px drawing, no resampling; its 32 px frame draws the folder smaller than the shell did. Me's documents.png carries a cropped German label.",
+  "provenanceLimitation": "Icon set supplied by the owner; original extraction not independently documented.",
+  "bundleIDs": []
+ }
+]

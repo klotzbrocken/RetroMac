@@ -160,7 +160,7 @@ enum AppCatalog {
     /// Desktop Games as stress.exe, the name it had, on the desktops of the Windows it ran on
     /// (95 and later); nil when it is not installed or the theme is another system.
     static func stressExeEntry(themeID: String?) -> DockThemeConfig.DesktopIconEntry? {
-        guard let id = themeID, ["windows95", "windows98", "windowsme", "windowsxp"].contains(where: { id.hasPrefix("com.retromac.microsoft.\($0)") }),
+        guard let id = themeID, ["windows95", "windows98", "windowsme", "windows2000", "windowsxp"].contains(where: { id.hasPrefix("com.retromac.microsoft.\($0)") }),
               NSWorkspace.shared.urlForApplication(withBundleIdentifier: desktopGamesBundleID) != nil else { return nil }
         var e = DockThemeConfig.DesktopIconEntry(name: "stress.exe", icon: "", type: "app")
         e.bundleID = desktopGamesBundleID

@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.microsoft.windows2000",
+  "family": {
+    "id": "microsoft",
+    "name": "Microsoft Windows",
+    "order": 3
+  },
+  "release": {
+    "label": "Windows 2000 Professional",
+    "year": 2000
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "win98"
+  },
+  "chromeColors": {
+    "activeTitle": "#0A246A",
+    "activeTitleEnd": "#A6CAF0",
+    "titleText": "#FFFFFF",
+    "inactiveTitle": "#808080",
+    "inactiveTitleText": "#D4D0C8",
+    "face": "#D4D0C8",
+    "hilight": "#FFFFFF",
+    "light": "#D4D0C8",
+    "shadow": "#808080",
+    "dkShadow": "#404040",
+    "window": "#FFFFFF",
+    "windowText": "#000000",
+    "menu": "#D4D0C8",
+    "menuText": "#000000",
+    "selection": "#0A246A",
+    "selectionText": "#FFFFFF"
+  },
+  "name": "Windows 2000",
+  "finder": "explorer",
+  "hideMenuBarDefault": true,
+  "version": "1.0",
+  "author": "RetroMac",
+  "boot": { "firmware": "award600" },
+  "wallpaper": "wallpaper.png",
+  "wallpapers": [
+    {
+      "name": "(None)",
+      "file": "wallpaper.png"
+    }
+  ],
+  "dock": {
+    "height": 40,
+    "iconSize": 28,
+    "padding": 4,
+    "spacing": 4,
+    "cornerRadius": 0,
+    "backgroundColor": "#D4D0C8FF",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#000000FF",
+    "borderWidth": 0,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#FFFFFFFF",
+    "bevelBottomColor": "#808080FF",
+    "bevelWidth": 2,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "fullWidth": true,
+    "startButton": true,
+    "startButtonLabel": "Start",
+    "startButtonIcon": "start.png",
+    "startMenuStyle": "classic",
+    "showClock": true,
+    "startMenuProfile": "win2000",
+    "startMenuBanner": "Windows |2000| Professional"
+  },
+  "icon": {
+    "renderStyle": "pixelated",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.05
+  },
+  "indicator": {
+    "style": "none",
+    "color": "#000080",
+    "size": 4,
+    "offset": 3
+  },
+  "fallbackIcon": "generic.png",
+  "defaultPreset": "crt-lite",
+  "iconMappings": {
+    "com.google.Chrome": "chrome.png",
+    "org.mozilla.firefox": "firefox.png",
+    "com.apple.finder": "finder.png",
+    "com.apple.Safari": "ie.png",
+    "com.apple.mail": "mail.png",
+    "com.apple.Photos": "photos.png",
+    "com.apple.MobileSMS": "messages.png",
+    "com.apple.Notes": "notes.png",
+    "com.apple.iCal": "calendar.png",
+    "com.apple.systempreferences": "settings.png",
+    "com.apple.Music": "music.png",
+    "com.apple.Terminal": "terminal.png",
+    "com.apple.AppStore": "appstore.png",
+    "com.apple.Preview": "preview.png",
+    "com.apple.TextEdit": "textedit.png",
+    "com.apple.calculator": "calculator.png",
+    "com.apple.Maps": "maps.png",
+    "com.apple.AddressBook": "contacts.png",
+    "com.apple.reminders": "reminders.png",
+    "com.apple.iBooksX": "books.png",
+    "com.apple.ActivityMonitor": "activitymonitor.png",
+    "com.apple.archiveutility": "archive.png",
+    "com.apple.dt.Xcode": "xcode.png",
+    "com.microsoft.Word": "word.png",
+    "com.microsoft.Excel": "excel.png",
+    "com.microsoft.Powerpoint": "powerpoint.png",
+    "org.gimp.gimp": "gimp.png",
+    "org.videolan.vlc": "vlc.png",
+    "com.apple.FaceTime": "facetime.png",
+    "com.apple.clock": "clock.png",
+    "com.apple.podcasts": "podcasts.png",
+    "com.microsoft.Outlook": "outlook.png",
+    "com.googlecode.iterm2": "iterm2-32.png"
+  },
+  "desktopIconsSide": "left",
+  "desktopIcons": [
+    {
+      "name": "My Documents",
+      "icon": "mydocuments.png",
+      "type": "folder",
+      "path": "~/Documents",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "My Computer",
+      "icon": "computer.png",
+      "type": "folder",
+      "path": "/",
+      "gridX": 0,
+      "gridY": 1
+    },
+    {
+      "name": "My Network Places",
+      "icon": "network.png",
+      "type": "network",
+      "gridX": 0,
+      "gridY": 2
+    },
+    {
+      "name": "Recycle Bin",
+      "icon": "trash.png",
+      "iconFull": "trash_full.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "name": "Internet Explorer",
+      "icon": "ie.png",
+      "type": "webapp",
+      "url": "https://98.js.org/programs/explorer/index.html?address=https%3A%2F%2Fwww.amazon.com",
+      "args": [
+        "1020",
+        "740"
+      ],
+      "gridX": 0,
+      "gridY": 4
+    }
+  ],
+  "desktopIconSize": 40,
+  "screensaver": "flowerbox",
+  "appearance": "light",
+  "accentColor": "blue",
+  "systemTweaks": [
+    {
+      "domain": "-g",
+      "key": "NSConvolutionOverride1",
+      "type": "float",
+      "value": "2",
+      "refresh": "Finder"
+    }
+  ]
+}

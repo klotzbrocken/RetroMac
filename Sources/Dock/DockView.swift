@@ -5231,7 +5231,7 @@ final class DockView: NSView {
             items.append(MI(separator: true))
         }
         items.append(MI(title: "Programs", icon: win98Icon("menu-programs.png"), submenuItems: programItems))
-        if !isWin95 {
+        if !isWin95 && profile != "win2000" {   // 2000 Professional's default menu had no Favorites
             items.append(MI(title: "Favorites", icon: win98Icon("menu-favorites.png"), submenuItems: favItems))
         }
         items.append(MI(title: "Documents", icon: win98Icon("menu-documents.png"), submenuItems: docItems))
@@ -5247,6 +5247,15 @@ final class DockView: NSView {
                 MI(title: "Computer…", icon: win98Icon("menu-computer.png"), action: {
                     DesktopLauncher.launch(DockThemeConfig.DesktopIconEntry(name: "Network", icon: "", type: "network"))
                 })]))
+        } else if profile == "win2000" {   // 2000 renamed Find to Search
+            items.append(MI(title: "Search", icon: win98Icon("menu-find.png"), submenuItems: [
+                MI(title: "For Files or Folders…", icon: win98Icon("menu-find.png"), action: openFinder),
+                MI(title: "On the Internet…", icon: win98Icon("menu-internet.png"), action: {
+                    NSWorkspace.shared.open(URL(string: "https://www.bing.com")!)
+                }),
+                MI(title: "For People…", icon: win98Icon("menu-find.png"), action: {
+                    if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.AddressBook") { NSWorkspace.shared.open(url) }
+                })]))
         } else {
             items.append(MI(title: "Find…", icon: win98Icon("menu-find.png"), action: openFinder))
         }
@@ -5255,7 +5264,7 @@ final class DockView: NSView {
         }))
         items.append(MI(title: "Run…", icon: win98Icon("menu-run.png"), action: { RunDialogController.shared.show() }))
         items.append(MI(separator: true))
-        if !isWin95 {
+        if !isWin95 && profile != "win2000" {   // Log Off appeared in 2000's menu only on a domain
             items.append(MI(title: "Log Off \(NSFullUserName())…", icon: win98Icon("menu-logoff.png"), action: {
                 let src = "tell application \"System Events\" to log out"
                 NSAppleScript(source: src)?.executeAndReturnError(nil)

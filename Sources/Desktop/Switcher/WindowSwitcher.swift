@@ -60,6 +60,7 @@ struct SwitcherCapability: Equatable {
         "com.retromac.microsoft.windows-nt4-workstation": pending(.altTab, "The Windows NT 4.0 Alt+Tab panel"),
         "com.retromac.microsoft.windows98": pending(.altTab, "The Windows 98 Alt+Tab panel"),
         "com.retromac.microsoft.windowsme": pending(.altTab, "The Windows Me Alt+Tab panel"),
+        "com.retromac.microsoft.windows2000": pending(.altTab, "The Windows 2000 Alt+Tab panel"),
         "com.retromac.microsoft.windowsxp": pending(.altTab, "The Windows XP Alt+Tab panel"),
         "com.retromac.microsoft.windowsvista": pending(.flip, "Windows Flip and Flip 3D"),
         "com.retromac.microsoft.windows7": pending(.flip, "Windows 7's Flip and Flip 3D"),

@@ -113,6 +113,8 @@ Everything under `"dock"`. Sizes are points.
 | `startButton`, `startButtonLabel`, `startButtonIcon`, `startButtonImage`, `startButtonStyle`, `startButtonColor`, `startButtonGradientTop/Bottom` | The Start button; `startButtonImage` is a sprite sheet with three states stacked vertically (normal, hover, pressed); `startButtonStyle` `raised`, `sunken`, `flat` |
 | `startMenuStyle` | `classic` (Windows 95/98/Me cascade) or `xp` (Luna's two columns) |
 | `showQuickLaunch` | `false` for Windows 95, which had none |
+| `startMenuProfile` | Which classic Start menu: `win95` (no Windows Update, Favorites or Log Off), `nt4` (the same with NT's program groups), `win2000` (Search instead of Find, no Favorites or Log Off); absent, Windows 98's |
+| `startMenuBanner` | The side banner's text, `\|` alternating bold and regular (`"Windows \|2000\| Professional"`); absent, the theme's name |
 | `showClock`, `clockFormat`, `clockFontSize` | The tray clock; `clockFormat` in the `h:mm a` / `HH:mm` family |
 | `showTrash`, `showUrlLauncher`, `showGrip`, `showDiskFree`, `showLabels` | Extra tiles: trash, an editable URL tile, the BeOS grip, OS/2's disk-free readout, Aqua's name labels |
 | `magnification`, `magnificationScale` | Aqua magnification |
