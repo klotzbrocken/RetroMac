@@ -118,36 +118,30 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Mac OS X Tiger, Spotlight, and a Finder of its own")
+                Text("Amiga Workbench 4.1, and themes that stay safe")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("macwindow.on.rectangle", .blue, "Amiga Workbench 4.1",
+                            "The AmigaOne of 2008: AmigaOS 4.1\u{2019}s blue title bars and gadgets, the Workbench screen bar, menus on the right mouse button, and drawers in windows of their own.")
+                    feature("dock.rectangle", .teal, "The AmiDock",
+                            "As a fresh install had it, names under the icons, the Extras, Internet and Players sub-docks, and three Dockies: a clock, a CPU graph and WinBar.")
+                    feature("memorychip", .orange, "RAM Disk, iconify and U-Boot",
+                            "A private RAM Disk with ENV and your clipboard, iconified windows as icons on the Workbench, and the AmigaOne\u{2019}s U-Boot before the boot screen.")
+                    feature("photo.on.rectangle", .pink, "Backdrops and pointers",
+                            "A reconstruction of the 2008 backdrop, djnick\u{2019}s Amiga Abstract and Pairing Joysticks from amiga-look.org, and levellord\u{2019}s AmigaOS 4 pointers.")
+                    feature("lock.shield.fill", .green, "Your themes stay safe",
+                            "Saving or importing a theme under a name that is taken now adds \u{201C}2\u{201D} instead of replacing the theme that was there.")
+                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
+                            "After a crash the Mac\u{2019}s Dock, menu bar and desktop come straight back. Show Desktop brings the apps back. XP\u{2019}s Start menu goes where it says, and its Task Manager logs off only your own session.")
+
+                    sectionHeader("Also in 3.0.6")
+
                     feature("pawprint.fill", .orange, "Mac OS X 10.4 Tiger",
-                            "Aqua Blue, the frosted dock, brushed-metal title bars, the blue Apple, Tiger\u{2019}s own About This Mac and Apple menu, and ten of its desktop pictures.")
-                    feature("folder.fill", .blue, "Tiger\u{2019}s Finder",
-                            "Brushed metal with icon, list and column views, Tiger\u{2019}s own sidebar, your real files, and a Trash that is the Mac\u{2019}s.")
-                    feature("magnifyingglass.circle.fill", .blue, "Spotlight",
-                            "The blue magnifier in the menu bar, with results from your Mac\u{2019}s own index, and Show All in the Finder.")
-                    feature("speaker.wave.2.fill", .purple, "Tiger\u{2019}s start-up chime",
-                            "On \u{201C}Firmware \u{2192} OS Boot\u{201D}, the Mac\u{2019}s chord before the grey Apple.")
+                            "Aqua Blue, the frosted dock, brushed metal, Tiger\u{2019}s own Finder, and Spotlight in the menu bar.")
                     feature("square.grid.2x2.fill", .teal, "Quick Access in tabs",
                             "Apple, Windows and Various in the flyout, every family youngest era first, with new theme icons.")
-                    feature("paperclip", .yellow, "Desktop Companion",
-                            "Back from the flyout after Hide, and tips that leave by themselves after a few seconds.")
-                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "Minimising lands in the theme\u{2019}s dock under Mac OS X, Tiger, Snow Leopard and Mountain Lion. \u{2303}F11 shows the desktop. Under Tiger the desktop widgets and the TV window wear its metal.")
-
-                    sectionHeader("Also in 3.0.5")
-
-                    feature("desktopcomputer", .teal, "Windows NT 4.0",
-                            "The Workstation edition of 1996, with NT\u{2019}s Start menu, its program groups and its start-up screen on teal.")
-                    feature("cpu", .blue, "A BIOS you can enter",
-                            "The Windows themes start with their PC\u{2019}s firmware, counting this Mac\u{2019}s real memory. Press DEL during the POST for the CMOS setup.")
-                    feature("slider.horizontal.3", .purple, "Boot Phases",
-                            "One slider for how a theme starts: straight to the desktop, the operating system booting, or the firmware first.")
-                    feature("list.bullet.rectangle", .orange, "All Programs",
-                            "Every app on your Mac in the Windows Start menus, sorted into folders.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
