@@ -182,7 +182,7 @@ final class DockView: NSView {
     private func iconDockTiles(iconSize: CGFloat, spacing: CGFloat) -> [DockTile] {
         Self.iconDockTiles(taskbar: isWindowsTaskbar,
                            showQuickLaunch: ThemeManager.shared.activeTheme?.config.showQuickLaunch ?? false,
-                           apps: AppManager.shared.apps,
+                           apps: AppManager.shared.apps.filter { !subdockMembers.contains($0.bundleID) },
                            transients: runningAppsNotInDock(),
                            transientsApart: ThemeManager.shared.activeTheme?.config.dock.runningAppsSeparator != false,
                            stacksOnRight: hasTrash && !isControlStrip,
@@ -192,11 +192,17 @@ final class DockView: NSView {
                            hasUrlLauncher: hasUrlLauncher && !isControlStrip,
                            hasTrash: hasTrash && !isControlStrip,
                            hasDoomLauncher: hasDoomLauncher && !isControlStrip,
+                           subdocks: isWindowsTaskbar || isControlStrip ? [] : (ThemeManager.shared.activeTheme?.config.dock.subdocks ?? []).map(\.name),
                            dockies: isWindowsTaskbar || isControlStrip ? [] : (ThemeManager.shared.activeTheme?.config.dock.dockies ?? []),
                            iconSize: iconSize,
                            spacing: spacing,
                            groupGap: ThemeManager.shared.activeTheme.flatMap { t in t.config.dock.separatorGap.map { $0 * iconSize / max(1, t.config.dock.iconSize) } },
                            doomWidth: doomTileWidth(iconSize))
+    }
+    /// Apps that live in one of the theme's sub-docks, out of the main row.
+    private var subdockMembers: Set<String> {
+        guard !isWindowsTaskbar, !isControlStrip else { return [] }
+        return Set((ThemeManager.shared.activeTheme?.config.dock.subdocks ?? []).flatMap(\.apps))
     }
     /// Win98-style taskbar (classic start menu): etched groove separators + Show Desktop.
     private var isClassicTaskbar: Bool {
@@ -1834,6 +1840,7 @@ final class DockView: NSView {
         case .trash:        addTrashItem(frame: frame, theme: theme, iconSize: iconSize)
         case .doomLauncher: addDoomLauncherItem(frame: frame, theme: theme, iconSize: iconSize)
         case .docky(let name): addDockyItem(name, frame: frame, theme: theme, iconSize: iconSize)
+        case .subdock(let i):  addSubdockItem(i, frame: frame, theme: theme, iconSize: iconSize)
         }
     }
 
@@ -1868,6 +1875,27 @@ final class DockView: NSView {
             let size = live[0].frame.width
             for v in live { v.updateIcon(AmigaDockies.image(AmigaDockies.name(of: v.bundleID) ?? "", size: size, load: AmigaDockyTicker.shared.load)) }
         }
+    }
+
+    /// An AmiDock sub-dock: its picture, and a click opens its apps in a column above it.
+    private func addSubdockItem(_ index: Int, frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
+        guard let subs = theme.dock.subdocks, subs.indices.contains(index) else { return }
+        let sub = subs[index]
+        let item = DockItemView(bundleID: AmigaSubdock.id(sub.name), frame: frame)
+        if let url = ThemeManager.shared.activeTheme?.iconResource(sub.icon ?? "drawer.png"), let img = NSImage(contentsOf: url) {
+            img.size = NSSize(width: iconSize, height: iconSize)
+            item.updateIcon(img)
+        }
+        item.updateTheme(theme)
+        item.toolTip = sub.name
+        item.setAccessibilityLabel(sub.name)
+        item.onLeftClick = { [weak item] _ in
+            guard let item, let win = item.window else { return }
+            AmigaSubdock.toggle(sub, theme: theme, above: win.convertToScreen(item.convert(item.bounds, to: nil)))
+        }
+        item.onRightClick = { [weak self] bid, point in self?.onContextMenu?(bid, point) }
+        addSubview(item)
+        itemViews.append(item)
     }
 
     private func addDashboardItem(frame: NSRect, theme: DockThemeConfig, iconSize: CGFloat) {
@@ -2021,7 +2049,8 @@ final class DockView: NSView {
             .map { $0.bundleID }
             .filter { !pinnedIDs.contains($0) && $0 != ownBundleID })
 
-        guard AppSettings.shared.dockShowRunningApps else {
+        guard AppSettings.shared.dockShowRunningApps,
+              ThemeManager.shared.activeTheme?.config.dock.showRunning != false else {
             return minimizedIDs.sorted()
         }
 
@@ -4544,6 +4573,7 @@ final class DockView: NSView {
         else if bundleID == "__dashboard__" { name = "Dashboard" }
         else if bundleID == "__showdesktop__" { name = "Show Desktop" }
         else if let d = AmigaDockies.name(of: bundleID) { name = AmigaDockies.names[d] ?? d }
+        else if let s = AmigaSubdock.name(of: bundleID) { name = s }
         else if let app = AppManager.shared.apps.first(where: { $0.bundleID == bundleID }) { name = app.displayName }
         else if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first { name = app.localizedName ?? bundleID }
         else { name = bundleID }

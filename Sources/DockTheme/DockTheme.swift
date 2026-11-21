@@ -310,6 +310,23 @@ struct DockThemeConfig: Codable {
         var labelNames: [String: String]?
         /// AmiDock's Dockies, after the pinned apps: "clock", "cpu", "winbar" (`AmigaDockies`).
         var dockies: [String]?
+        /// The dock as the system came installed: apps it carries ahead of the user's own (the
+        /// AmiDock's NotePad, Shell, MultiView, UnArc, Help), pinned while the theme is on and
+        /// taken out with it (`AppManager.syncThemeApps`).
+        var apps: [String]?
+        /// AmiDock's sub-docks: one tile each that opens a column of its apps above itself.
+        /// Their apps leave the main row.
+        var subdocks: [Subdock]?
+        /// `false`: running apps get no tile of their own; the AmiDock showed only what was put
+        /// in it (WinBar lists the windows).
+        var showRunning: Bool?
+    }
+
+    struct Subdock: Codable, Equatable {
+        var name: String
+        /// A picture from the theme's icons; the drawer without one.
+        var icon: String?
+        var apps: [String]
     }
 
     struct IconStyle: Codable {

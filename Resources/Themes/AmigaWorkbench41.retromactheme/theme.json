@@ -86,15 +86,29 @@
       "org.videolan.vlc": "MPlayer",
       "com.apple.ActivityMonitor": "Ranger",
       "com.apple.DiskUtility": "MediaToolbox",
-      "com.apple.tips": "WBHelp",
-      "com.apple.helpviewer": "WBHelp",
+      "com.apple.tips": "Help",
+      "com.apple.helpviewer": "Help",
       "com.apple.calculator": "Calculator"
     },
     "dockies": [
       "clock",
       "cpu",
       "winbar"
-    ]
+    ],
+    "apps": [
+      "com.apple.TextEdit",
+      "com.apple.Terminal",
+      "com.apple.Preview",
+      "com.apple.archiveutility",
+      "com.apple.helpviewer"
+    ],
+    "subdocks": [
+      { "name": "Extras", "apps": ["com.apple.calculator", "com.apple.Notes", "com.apple.iCal", "com.apple.reminders",
+                                   "com.apple.AddressBook", "com.apple.Photos", "com.apple.ActivityMonitor", "com.apple.DiskUtility"] },
+      { "name": "Internet", "apps": ["com.apple.Safari", "com.google.Chrome", "org.mozilla.firefox", "com.apple.mail", "com.apple.MobileSMS"] },
+      { "name": "Players", "apps": ["com.apple.Music", "com.apple.QuickTimePlayerX", "org.videolan.vlc"] }
+    ],
+    "showRunning": false
   },
   "icon": {
     "renderStyle": "smooth",

@@ -88,6 +88,28 @@ final class AmigaDockyTests: XCTestCase {
         XCTAssertFalse(plain.contains { AmigaDockies.name(of: $0.id) != nil }, "no dockies unless the theme names them")
     }
 
+    /// The sub-docks sit between the apps and the Dockies; the shipped theme fills them, carries
+    /// the AmiDock of a fresh install and hides running apps.
+    func testSubdocksFollowTheAppsAndTheThemeDeclaresThem() throws {
+        let apps = [DockApp(bundleID: "com.apple.finder", order: 0)]
+        let tiles = DockView.iconDockTiles(taskbar: false, showQuickLaunch: false, apps: apps, transients: [],
+                                           stacksOnRight: false, hasDashboard: false, hasShowDesktop: false,
+                                           hasUrlLauncher: false, hasTrash: false, hasDoomLauncher: false,
+                                           subdocks: ["Extras", "Internet"], dockies: ["clock"], iconSize: 40, spacing: 12, doomWidth: 40)
+        XCTAssertEqual(tiles.map(\.id), ["com.apple.finder", "__subdock_Extras__", "__subdock_Internet__", "__docky_clock__"])
+        XCTAssertEqual(AmigaSubdock.name(of: "__subdock_Players__"), "Players")
+        XCTAssertNil(AmigaSubdock.name(of: "__docky_clock__"))
+
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../Resources/Themes/AmigaWorkbench41.retromactheme")
+        let dock = try ThemeBundle(url: url, isBuiltIn: true).config.dock
+        XCTAssertEqual(dock.apps?.first, "com.apple.TextEdit")
+        XCTAssertEqual(dock.subdocks?.map(\.name), ["Extras", "Internet", "Players"])
+        XCTAssertEqual(dock.showRunning, false)
+        let inBoth = Set(dock.apps ?? []).intersection((dock.subdocks ?? []).flatMap(\.apps))
+        XCTAssertTrue(inBoth.isEmpty, "an app in the main row and a sub-dock: \(inBoth)")
+    }
+
     func testDockyPicturesDraw() {
         for name in ["clock", "cpu", "winbar"] {
             let img = AmigaDockies.image(name, size: 40, load: [10, 50, 90])

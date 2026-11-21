@@ -71,6 +71,7 @@ final class DockController {
         ThemeManager.shared.reload()
         AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
         AppManager.shared.syncAutoApplications(active: ThemeManager.shared.activeTheme?.config.hasApplicationsStack == true && AppSettings.shared.dockShowApplications)
+        AppManager.shared.syncThemeApps(ThemeManager.shared.activeTheme?.config.dock.apps ?? [])
         // Everything that puts something on screen waits until the boot screen is up, so turning
         // a theme on shows the boot screen and then the finished desktop, never the desktop being
         // assembled. Dock-only changes nothing but the dock, so it has no boot splash and runs
@@ -965,6 +966,7 @@ final class DockController {
                     }
                     AppManager.shared.syncAutoDownloads(active: ThemeManager.shared.activeTheme?.config.hasFolderStacks == true && AppSettings.shared.dockShowDownloads)
                     AppManager.shared.syncAutoApplications(active: ThemeManager.shared.activeTheme?.config.hasApplicationsStack == true && AppSettings.shared.dockShowApplications)
+                    AppManager.shared.syncThemeApps(ThemeManager.shared.activeTheme?.config.dock.apps ?? [])
                     self?.recreateWindow()
                     // The dock is rebuilt either way; the rest of the app — Quick Access, the
                     // status menu, the theme's shader, the menu-bar apple, the window borders —

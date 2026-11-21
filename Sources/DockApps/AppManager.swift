@@ -126,6 +126,23 @@ final class AppManager {
         }
     }
 
+    /// Pins the apps a theme's dock came with (`dock.apps`) after the Finder, ahead of the
+    /// user's own, marked `auto`; takes them out again in a theme without them. Apps the user
+    /// pinned stay as they are. Returns whether the list changed.
+    @discardableResult
+    func syncThemeApps(_ ids: [String]) -> Bool {
+        let want = ids.filter { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil }
+        let before = apps
+        apps.removeAll { $0.auto == true && $0.folderPath == nil && !want.contains($0.bundleID) }
+        let missing = want.filter { id in !apps.contains { $0.bundleID == id } }
+        let at = apps.first?.bundleID == "com.apple.finder" ? 1 : 0
+        apps.insert(contentsOf: missing.map { DockApp(bundleID: $0, customIconPath: nil, order: 0, auto: true) }, at: at)
+        guard apps != before else { return false }
+        save()
+        NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
+        return true
+    }
+
     func removeApp(bundleID: String) {
         apps.removeAll { $0.bundleID == bundleID }
         save()

@@ -106,6 +106,9 @@ Everything under `"dock"`. Sizes are points.
 | `labelsBelow` | `true`: every icon's name under it, white with a black outline, always shown, and the strip with the depth gadget at the right end (AmigaOS 4's AmiDock) |
 | `labelNames` | Names for apps that wear another system's name, bundle id → name (`"com.apple.TextEdit": "NotePad"`); with `labelsBelow` |
 | `dockies` | AmiDock's Dockies after the pinned apps: `"clock"` (analog), `"cpu"` (load graph), `"winbar"` (list of open windows) |
+| `apps` | The dock as the system came installed: bundle ids pinned after the Finder while the theme is on and taken out again with it (marked `auto`); the user's own stay |
+| `subdocks` | AmiDock sub-docks: `[{"name", "icon"?, "apps": [bundle ids]}]`, one tile each that opens its apps in a column above it; those apps leave the main row. `icon` from the theme's icons, `drawer.png` without |
+| `showRunning` | `false`: running apps get no tile of their own (only apps with minimised windows do) |
 | `shelfStyle` | `flat` or `3d` (Snow Leopard's perspective shelf); `shelfLineColor` |
 | `startButton`, `startButtonLabel`, `startButtonIcon`, `startButtonImage`, `startButtonStyle`, `startButtonColor`, `startButtonGradientTop/Bottom` | The Start button; `startButtonImage` is a sprite sheet with three states stacked vertically (normal, hover, pressed); `startButtonStyle` `raised`, `sunken`, `flat` |
 | `startMenuStyle` | `classic` (Windows 95/98/Me cascade) or `xp` (Luna's two columns) |

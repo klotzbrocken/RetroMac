@@ -142,3 +142,105 @@ extension AmigaDockies {
         PlatinumMenuController.shared.show(rows, below: anchor, look: .amiga)
     }
 }
+
+/// AmiDock's sub-docks (Extras, Internet, Players): a column of apps that opens above its tile.
+/// The real AmiDock opened it at a fixed place on the screen, which no longer matched once the
+/// dock changed; this one follows its tile.
+enum AmigaSubdock {
+    static func id(_ name: String) -> String { "__subdock_\(name)__" }
+    static func name(of id: String) -> String? {
+        guard id.hasPrefix("__subdock_"), id.hasSuffix("__") else { return nil }
+        return String(id.dropFirst(10).dropLast(2))
+    }
+
+    private static var panel: NSPanel?
+    private static var shown: String?
+    private static var monitors: [Any] = []
+
+    /// Opens the column above `anchor` (the tile, in screen points), or closes it when it is open.
+    static func toggle(_ sub: DockThemeConfig.Subdock, theme: DockThemeConfig, above anchor: NSRect) {
+        let wasOpen = shown == sub.name
+        close()
+        guard !wasOpen else { return }
+        let apps = sub.apps.filter { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil }
+        guard !apps.isEmpty else { NSSound.beep(); return }
+        let icon = theme.dock.iconSize, pad: CGFloat = 6, cellW = icon + 28, cellH = icon + 16
+        let size = NSSize(width: cellW + 2 * pad, height: CGFloat(apps.count) * cellH + 2 * pad)
+        var origin = NSPoint(x: (anchor.midX - size.width / 2).rounded(), y: anchor.maxY + 6)
+        if let vf = NSScreen.screens.first(where: { $0.frame.intersects(anchor) })?.visibleFrame {
+            origin.x = min(max(origin.x, vf.minX), vf.maxX - size.width)
+        }
+        let p = NSPanel(contentRect: NSRect(origin: origin, size: size), styleMask: [.borderless, .nonactivatingPanel],
+                        backing: .buffered, defer: false)
+        p.level = .popUpMenu
+        p.isOpaque = false
+        p.backgroundColor = .clear
+        p.hasShadow = true
+        let box = BoxView(frame: NSRect(origin: .zero, size: size), style: theme.dock)
+        let font = RetroFonts.dejaVu(9.5, bold: true)
+        for (i, bid) in apps.enumerated() {
+            let b = AppButton(frame: NSRect(x: pad, y: size.height - pad - CGFloat(i + 1) * cellH, width: cellW, height: cellH))
+            b.isBordered = false
+            b.imagePosition = .imageAbove
+            b.image = ThemeManager.shared.icon(for: bid, size: icon)
+            let name = theme.dock.labelNames?[bid] ?? DockApp(bundleID: bid, customIconPath: nil, order: 0).displayName
+            // White with a black outline, as the AmiDock wrote its names.
+            b.attributedTitle = NSAttributedString(string: name, attributes: [.font: font, .foregroundColor: NSColor.white,
+                                                                                .strokeColor: NSColor.black, .strokeWidth: -3])
+            b.setAccessibilityLabel(name)
+            b.onClick = {
+                close()
+                if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
+                    NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+                }
+            }
+            box.addSubview(b)
+        }
+        p.contentView = box
+        p.orderFrontRegardless()
+        panel = p
+        shown = sub.name
+        // A click anywhere else puts it away; a click on the dock is the tile's own (toggle).
+        if let g = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { _ in close() }) { monitors.append(g) }
+        if let l = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown], handler: { e in
+            if e.window !== panel, !(e.window is DockWindow) { close() }
+            return e
+        }) { monitors.append(l) }
+    }
+
+    static func close() {
+        monitors.forEach { NSEvent.removeMonitor($0) }
+        monitors = []
+        panel?.orderOut(nil)
+        panel = nil
+        shown = nil
+    }
+
+    private final class AppButton: NSButton {
+        var onClick: (() -> Void)?
+        override func mouseDown(with event: NSEvent) { onClick?() }
+    }
+
+    /// The column's box in the dock's own colours and bevel.
+    private final class BoxView: NSView {
+        let style: DockThemeConfig.DockStyle
+        init(frame: NSRect, style: DockThemeConfig.DockStyle) { self.style = style; super.init(frame: frame) }
+        required init?(coder: NSCoder) { nil }
+        override func draw(_ dirtyRect: NSRect) {
+            NSColor.fromHex(style.backgroundColor).setFill(); bounds.fill()
+            let w = max(1, style.bevelWidth)
+            if let top = style.bevelTopColor {
+                NSColor.fromHex(top).setFill()
+                NSRect(x: 0, y: bounds.maxY - w, width: bounds.width, height: w).fill()
+                NSRect(x: 0, y: 0, width: w, height: bounds.height).fill()
+            }
+            if let bottom = style.bevelBottomColor {
+                NSColor.fromHex(bottom).setFill()
+                NSRect(x: 0, y: 0, width: bounds.width, height: w).fill()
+                NSRect(x: bounds.maxX - w, y: 0, width: w, height: bounds.height).fill()
+            }
+            NSColor.fromHex(style.borderColor).setStroke()
+            NSBezierPath(rect: bounds.insetBy(dx: 0.5, dy: 0.5)).stroke()
+        }
+    }
+}
