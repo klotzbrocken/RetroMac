@@ -11,6 +11,7 @@ final class BeOSDeskbarController {
     private var window: NSPanel?
     private var view: BeOSDeskbarView?
     private var settingsObserver: NSObjectProtocol?
+    private var screenObserver: NSObjectProtocol?
 
     /// The launcher shortcut on BeOS: the Be menu, as the Be button opens it.
     func openBeMenu() -> Bool {
@@ -42,6 +43,7 @@ final class BeOSDeskbarController {
         window = nil
         view = nil
         if let o = settingsObserver { NotificationCenter.default.removeObserver(o); settingsObserver = nil }
+        if let o = screenObserver { NotificationCenter.default.removeObserver(o); screenObserver = nil }
     }
 
     private func show(theme: ThemeBundle) {
@@ -64,6 +66,13 @@ final class BeOSDeskbarController {
         if settingsObserver == nil {
             settingsObserver = NotificationCenter.default.addObserver(
                 forName: .deskbarSettingsChanged, object: nil, queue: .main) { [weak self] _ in self?.reposition() }
+        }
+        // The Deskbar is placed while the Mac's Dock is still being put away, so the work area
+        // still left the Dock's height free and the bar stood 90 pt above the bottom edge. It
+        // follows the work area (Dock hidden, display changed) from then on.
+        if screenObserver == nil {
+            screenObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in self?.reposition() }
         }
 
         let v = BeOSDeskbarView(theme: theme)

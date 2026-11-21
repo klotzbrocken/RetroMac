@@ -357,6 +357,18 @@ final class DesktopIconsController {
         }
 
         let cw = cellWidth, ch = cellHeight
+        /// The frame of grid cell (`col`, `row`) in the panel.
+        func cellFrame(_ col: Int, _ row: Int) -> NSRect {
+            let x = iconsFromLeft
+                ? visibleFrame.minX + marginX + (CGFloat(col) * cw) - screenFrame.origin.x
+                : visibleFrame.maxX - marginX - cw - (CGFloat(col) * cw) - screenFrame.origin.x
+            // A negative row counts from the bottom edge instead of the top (-1 is the
+            // bottom row): the Trash sat down there whatever the screen's size was.
+            let y = row < 0
+                ? visibleFrame.minY + marginY + (CGFloat(-row - 1) * ch) - screenFrame.origin.y
+                : visibleFrame.maxY - marginY - ch - (CGFloat(row) * ch) - screenFrame.origin.y
+            return NSRect(x: x, y: y, width: cw, height: ch)
+        }
         for entry in effective {
             var iconImage = loadIconImage(for: entry, theme: theme, size: iSize)
             if let ov = custom.iconOverrides[entry.name], let o = NSImage(contentsOfFile: ov) { iconImage = o }
@@ -381,6 +393,17 @@ final class DesktopIconsController {
                 let area = visibleFrame.offsetBy(dx: -screenFrame.origin.x, dy: -screenFrame.origin.y)
                 view.frame = NSRect(origin: Self.onScreen(NSPoint(x: pos[0], y: pos[1]), size: NSSize(width: cw, height: ch), in: area),
                                     size: NSSize(width: cw, height: ch))
+                // Pushed to the edge it can land on another icon (Tiger's Applications, saved on
+                // a wider display, sat on Macintosh HD): then back to its own cell, or the next free one.
+                func overlaps(_ f: NSRect) -> Bool { iconViews.contains { $0.frame.insetBy(dx: 8, dy: 8).intersects(f) } }
+                if overlaps(view.frame) {
+                    if let y = entry.gridY, y < rowsPerColumn, !overlaps(cellFrame(entry.gridX ?? 0, y)) {
+                        view.frame = cellFrame(entry.gridX ?? 0, y)
+                    } else {
+                        let free = firstFreeCell()
+                        view.frame = cellFrame(free.0, free.1)
+                    }
+                }
             } else {
                 let placed: (col: Int, row: Int)
                 if let y = entry.gridY, y >= rowsPerColumn {
@@ -394,17 +417,7 @@ final class DesktopIconsController {
                     let free = firstFreeCell()
                     placed = (free.0, free.1)
                 }
-                let col = placed.col
-                let row = placed.row
-                let x = iconsFromLeft
-                    ? visibleFrame.minX + marginX + (CGFloat(col) * cw) - screenFrame.origin.x
-                    : visibleFrame.maxX - marginX - cw - (CGFloat(col) * cw) - screenFrame.origin.x
-                // A negative row counts from the bottom edge instead of the top (-1 is the
-                // bottom row): the Trash sat down there whatever the screen's size was.
-                let y = row < 0
-                    ? visibleFrame.minY + marginY + (CGFloat(-row - 1) * ch) - screenFrame.origin.y
-                    : visibleFrame.maxY - marginY - ch - (CGFloat(row) * ch) - screenFrame.origin.y
-                view.frame = NSRect(x: x, y: y, width: cw, height: ch)
+                view.frame = cellFrame(placed.col, placed.row)
             }
             contentView.addSubview(view)
             iconViews.append(view)

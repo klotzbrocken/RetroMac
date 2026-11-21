@@ -3,6 +3,17 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
+## Unreleased
+
+### Fixed
+
+- **Desktop icons no longer land on each other.** An icon moved on a wider display was pushed to
+  this screen's edge and could sit on another one (Tiger's Applications on Macintosh HD); it now
+  goes back to its own place, or the next free one.
+
+- **The BeOS Deskbar sits on the screen's edge.** It was placed while the Mac's Dock was still
+  being put away and stayed 90 points above the bottom; it now follows the work area.
+
 ## 3.0.7
 
 ### New
