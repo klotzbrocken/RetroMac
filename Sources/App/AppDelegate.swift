@@ -299,6 +299,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if ProcessInfo.processInfo.environment["RETROMAC_SETI_SAVER"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { ScreensaverController.shared.start(saverID: "seti") }
                 }
+                // QA: open the Windows Explorer (a path, or "" for My Computer) once the desktop is up.
+                if let path = ProcessInfo.processInfo.environment["RETROMAC_OPEN_EXPLORER"] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 6) { ExplorerController.show(path.isEmpty ? nil : URL(fileURLWithPath: path)) }
+                }
                 // QA: open a Workbench drawer ("SYS:", "RAM:" or a path) once the boot screen is gone.
                 if let path = ProcessInfo.processInfo.environment["RETROMAC_OPEN_DRAWER"] {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 9) { AmigaDrawer.show(path == AmigaDrawer.systemToken ? path : AmigaRAMDisk.resolve(path)) }

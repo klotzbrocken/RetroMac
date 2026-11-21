@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* The Windows Explorer of RetroMac's Windows themes: Windows 98 (theme-win98, also 95, Me and
+     NT 4.0) and XP (theme-winxp, also Vista and 7). Every icon is drawn here (SVG), nothing copied. */
+  @font-face{font-family:"W95FA";src:url("../Notepad/fonts/W95FA.woff") format("woff");}
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;-webkit-user-select:none;cursor:default;}
+  #win{position:absolute;inset:0;display:flex;flex-direction:column;}
+  .w98-title,.xp-title{display:none;}
+  .ico16{width:16px;height:16px;flex:0 0 16px;}
+  /* ===== Windows 98 ===== */
+  body.theme-win98{font:13px "W95FA","MS Sans Serif",Tahoma,sans-serif;-webkit-font-smoothing:none;color:#000;}
+  body.theme-win98 #win{background:#c0c0c0;padding:3px;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dfdfdf,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
+  body.theme-win98 .w98-title{display:flex;align-items:center;gap:3px;height:20px;padding:0 2px 0 3px;flex:0 0 auto;
+    background:linear-gradient(90deg,#00007b,#1085d2);}
+  body.theme-win98.inactive .w98-title{background:linear-gradient(90deg,#808080,#b5b5b5);}
+  .w98-cap{color:#fff;font-weight:bold;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .w98-btn{width:16px;height:14px;background:#c0c0c0;position:relative;flex:0 0 auto;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dfdfdf;}
+  .w98-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080;}
+  #w98close{margin-left:2px;}
+  #w98close::before,#w98close::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:2px;background:#000;}
+  #w98close::before{transform:translate(-50%,-50%) rotate(45deg);} #w98close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  #w98min::before{content:"";position:absolute;left:4px;bottom:3px;width:6px;height:2px;background:#000;}
+  #w98max::before{content:"";position:absolute;left:3px;top:2px;width:9px;height:8px;border:1px solid #000;border-top-width:2px;}
+  body.theme-win98 .bar{display:flex;align-items:center;gap:2px;padding:2px;border-bottom:1px solid #808080;box-shadow:0 1px 0 #fff;}
+  body.theme-win98 .menubar{padding:0 2px;height:20px;}
+  body.theme-win98 .tbtn{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:44px;padding:2px 4px;font-size:12px;}
+  body.theme-win98 .tbtn:hover:not(.dis){box-shadow:inset -1px -1px 0 #808080,inset 1px 1px 0 #fff;}
+  body.theme-win98 .tbtn:active:not(.dis){box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
+  body.theme-win98 .sep{width:2px;align-self:stretch;margin:2px 3px;border-left:1px solid #808080;border-right:1px solid #fff;}
+  body.theme-win98 input,body.theme-win98 select{font:inherit;background:#fff;border:0;padding:2px 3px;outline:none;
+    box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dfdfdf;}
+  body.theme-win98 button{font:inherit;min-width:75px;height:23px;background:#c0c0c0;border:0;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dfdfdf;}
+  body.theme-win98 button:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080;}
+  body.theme-win98 .main{margin-top:2px;background:#fff;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dfdfdf;padding:2px;}
+  body.theme-win98 .side{width:190px;flex:0 0 190px;padding:14px 12px;background:#fff;overflow:hidden;
+    background-image:linear-gradient(90deg,#fff 70%,#f3f3f3);}
+  body.theme-win98 #sideico svg{width:56px;height:56px;}
+  body.theme-win98 .side .bigt{font:bold 22px Arial,"W95FA",sans-serif;-webkit-font-smoothing:antialiased;margin:6px 0 4px;word-break:break-word;}
+  body.theme-win98 .side .rule{height:3px;margin:6px 0 10px;background:linear-gradient(90deg,#ff0000,#ffd700,#00a000,#0000ff);}
+  body.theme-win98 .side .xpbox{display:none;}
+  body.theme-win98 .status{display:flex;gap:2px;margin-top:2px;height:20px;}
+  body.theme-win98 .status span{flex:1;padding:2px 4px;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;white-space:nowrap;overflow:hidden;}
+  body.theme-win98 .sel{background:#000080;color:#fff;}
+  body.theme-win98 .it.selected .nm{background:#000080;color:#fff;outline:1px dotted #ff0;}
+  body.theme-win98 .menu,body.theme-win98 #ctx{background:#c0c0c0;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dfdfdf,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff,2px 2px 3px rgba(0,0,0,.3);}
+  body.theme-win98 .mi:hover:not(.dis){background:#000080;color:#fff;}
+  /* ===== Windows XP ===== */
+  body.theme-winxp{font:11px Tahoma,"Segoe UI",sans-serif;color:#000;}
+  body.theme-winxp #win{background:#0831D9;border-radius:8px 8px 0 0;overflow:hidden;}
+  body.theme-winxp .xp-title{display:flex;align-items:center;height:28px;gap:4px;padding:0 5px 0 6px;flex:0 0 auto;
+    background:linear-gradient(180deg,#0997FF,#0053EE 45%,#0066FF 52%,#003DD2);}
+  body.theme-winxp.inactive .xp-title{background:linear-gradient(180deg,#7a96df,#6e8fdc 45%,#7d9ae0 52%,#6c88d6);}
+  .xp-cap{color:#fff;font:bold 13px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,40,.5);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .xp-b{width:21px;height:21px;border-radius:3px;border:1px solid #fff;position:relative;flex:0 0 auto;
+    background:linear-gradient(180deg,#5b9df4,#2f6fdd 55%,#1a52c4);}
+  #xpclose{background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
+  #xpclose::before,#xpclose::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#fff;}
+  #xpclose::before{transform:translate(-50%,-50%) rotate(45deg);} #xpclose::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  #xpmin::before{content:"";position:absolute;left:5px;bottom:4px;width:8px;height:3px;background:#fff;}
+  #xpmax::before{content:"";position:absolute;left:4px;top:4px;width:11px;height:10px;border:1px solid #fff;border-top-width:3px;}
+  .xp-b:hover{filter:brightness(1.12);}
+  body.theme-winxp .frame{flex:1;display:flex;flex-direction:column;background:#ECE9D8;margin:0 3px 3px;min-height:0;}
+  body.theme-winxp .bar{display:flex;align-items:center;gap:2px;padding:2px 4px;border-bottom:1px solid #fff;box-shadow:0 1px 0 #d6d3ce;}
+  body.theme-winxp .menubar{height:22px;background:#ECE9D8;}
+  body.theme-winxp .tbtn{display:flex;align-items:center;gap:4px;padding:3px 6px;border:1px solid transparent;border-radius:3px;}
+  body.theme-winxp .tbtn:hover:not(.dis){border-color:#c1d2ee;background:linear-gradient(#fff,#e3e9f5);}
+  body.theme-winxp .tbtn .ico24{width:24px;height:24px;}
+  body.theme-winxp .tbtn:not([data-c=back]) span{display:none;}   /* XP labelled Back alone */
+  body.theme-winxp .sep{width:1px;align-self:stretch;margin:2px 3px;background:#c5c2b2;}
+  body.theme-winxp input,body.theme-winxp select{font:inherit;border:1px solid #7f9db9;background:#fff;padding:2px 3px;outline:none;}
+  body.theme-winxp button{font:inherit;min-width:75px;height:23px;border:1px solid #003c74;border-radius:3px;background:linear-gradient(180deg,#fdfeff,#eaf0fb 45%,#d6e2f5);}
+  body.theme-winxp .main{background:#fff;border:1px solid #7f9db9;}
+  body.theme-winxp .side{width:200px;flex:0 0 200px;padding:10px;overflow:auto;background:linear-gradient(#7aa1e6,#6375d6);}
+  body.theme-winxp .side .w98box{display:none;}
+  body.theme-winxp .xpbox{margin-bottom:12px;border-radius:3px 3px 0 0;overflow:hidden;}
+  body.theme-winxp .xpbox h3{margin:0;padding:5px 10px;font:bold 11px Tahoma;color:#215dc6;background:linear-gradient(90deg,#fff,#c6d3f7);}
+  body.theme-winxp .xpbox div{background:#d6dff7;padding:6px 10px;}
+  body.theme-winxp .xpbox a{display:flex;align-items:center;gap:5px;color:#215dc6;padding:2px 0;cursor:pointer;}
+  body.theme-winxp .xpbox a:hover{text-decoration:underline;color:#428eff;}
+  body.theme-winxp .xpbox .det{color:#000;line-height:1.5;}
+  body.theme-winxp .status{display:flex;height:22px;align-items:center;background:#ECE9D8;border-top:1px solid #fff;}
+  body.theme-winxp .status span{flex:1;padding:0 6px;border-right:1px solid #c5c2b2;white-space:nowrap;overflow:hidden;}
+  body.theme-winxp .it.selected .nm{background:#316ac5;color:#fff;}
+  body.theme-winxp .it.selected svg,body.theme-winxp .it.selected img{filter:brightness(.82) sepia(.4) hue-rotate(180deg);}
+  body.theme-winxp .menu,body.theme-winxp #ctx{background:#fff;border:1px solid #aca899;box-shadow:2px 2px 3px rgba(0,0,0,.3);}
+  body.theme-winxp .mi:hover:not(.dis){background:#316ac5;color:#fff;}
+  /* ===== shared ===== */
+  .frame{flex:1;display:flex;flex-direction:column;min-height:0;}
+  .menubar .m{position:relative;padding:2px 7px;}
+  .menubar .m.open{background:#000080;color:#fff;}
+  body.theme-winxp .menubar .m.open{background:#316ac5;}
+  .menu{display:none;position:absolute;left:0;top:100%;min-width:180px;padding:2px;z-index:50;color:#000;}
+  .m.open .menu{display:block;}
+  .mi{display:flex;justify-content:space-between;gap:20px;padding:3px 18px 3px 20px;white-space:nowrap;position:relative;}
+  .mi.dis{color:#808080;}
+  .mi .chk{position:absolute;left:6px;}
+  .msep{height:0;margin:3px 1px;border-top:1px solid #808080;border-bottom:1px solid #fff;}
+  .tbtn.dis{opacity:.45;}
+  .addr{gap:6px;}
+  .addr input{flex:1;min-width:0;}
+  .body{flex:1;display:flex;min-height:0;margin-top:2px;}
+  .main{flex:1;min-width:0;overflow:auto;position:relative;}
+  #list{min-height:100%;padding:6px;}
+  /* Large icons */
+  #list.icons{display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px 4px;}
+  .icons .it{width:78px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:2px;}
+  .icons .it svg,.icons .it img{width:32px;height:32px;}
+  .icons .it .nm{margin-top:3px;padding:0 2px;max-width:76px;word-break:break-word;line-height:1.15;}
+  .icons .it .meta{display:none;}
+  /* List */
+  #list.list{display:flex;flex-direction:column;flex-wrap:wrap;align-content:flex-start;height:100%;gap:1px 18px;}
+  .list .it,.details .it{display:flex;align-items:center;gap:4px;height:18px;}
+  .list .it svg,.list .it img,.details .it svg,.details .it img{width:16px;height:16px;flex:0 0 16px;}
+  .list .it .nm{white-space:nowrap;padding:0 2px;}
+  .list .it .meta{display:none;}
+  /* Details */
+  #list.details{padding:0;}
+  .dhead{display:none;}
+  .details .dhead{display:flex;position:sticky;top:0;z-index:2;}
+  .dhead span{padding:2px 6px;background:#c0c0c0;box-shadow:inset -1px -1px 0 #808080,inset 1px 1px 0 #fff;white-space:nowrap;cursor:default;}
+  body.theme-winxp .dhead span{background:linear-gradient(#fff,#ebeadb);box-shadow:inset -1px 0 0 #d6d3ce,inset 0 -2px 0 #e2decd;}
+  .details .it{padding:0 4px;}
+  .details .it .nm{width:var(--c0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px;}
+  .details .it .meta{display:flex;}
+  .meta span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;}
+  .c0{width:var(--c0)} .c1{width:90px;text-align:right} .c2{width:150px} .c3{width:150px}
+  .it.cut svg,.it.cut img{opacity:.45;}
+  .it.drop .nm{outline:2px solid #000080;}
+  .it .nm input{font:inherit;width:100%;padding:0 1px;}
+  #ctx{display:none;position:fixed;z-index:100;min-width:150px;padding:2px;}
+  .footer{display:none;padding:8px 8px 6px;gap:6px;grid-template-columns:auto 1fr auto;align-items:center;}
+  body.dialog .footer{display:grid;}
+  body.dialog .side{display:none;}
+  .footer label{white-space:nowrap;}
+  #band{position:absolute;border:1px dotted #000;pointer-events:none;display:none;}
+</style>
+</head>
+<body class="theme-win98">
+<div id="win">
+  <div class="w98-title" id="w98title"><span class="ico16" id="tico98"></span><span class="w98-cap" id="cap98">Explorer</span><span class="w98-btn" id="w98min"></span><span class="w98-btn" id="w98max"></span><span class="w98-btn" id="w98close"></span></div>
+  <div class="xp-title" id="xptitle"><span class="ico16" id="ticoxp"></span><span class="xp-cap" id="capxp">Explorer</span><span class="xp-b" id="xpmin"></span><span class="xp-b" id="xpmax"></span><span class="xp-b" id="xpclose"></span></div>
+  <div class="frame">
+    <div class="bar menubar" id="menubar">
+      <div class="m"><u>F</u>ile<div class="menu">
+        <div class="mi" data-c="newFolder">New Folder</div><div class="msep"></div>
+        <div class="mi" data-c="delete" data-need="sel">Delete</div><div class="mi" data-c="rename" data-need="one">Rename</div>
+        <div class="mi" data-c="props" data-need="one">Properties</div><div class="msep"></div><div class="mi" data-c="close">Close</div></div></div>
+      <div class="m"><u>E</u>dit<div class="menu">
+        <div class="mi" data-c="undo" id="miundo">Undo<span>Ctrl+Z</span></div><div class="msep"></div>
+        <div class="mi" data-c="cut" data-need="sel">Cut<span>Ctrl+X</span></div><div class="mi" data-c="copy" data-need="sel">Copy<span>Ctrl+C</span></div>
+        <div class="mi" data-c="paste" id="mipaste">Paste<span>Ctrl+V</span></div><div class="msep"></div>
+        <div class="mi" data-c="selectAll">Select All<span>Ctrl+A</span></div></div></div>
+      <div class="m"><u>V</u>iew<div class="menu">
+        <div class="mi" data-c="view:icons">Large Icons</div><div class="mi" data-c="view:list">List</div><div class="mi" data-c="view:details">Details</div>
+        <div class="msep"></div><div class="mi" data-c="refresh">Refresh<span>F5</span></div></div></div>
+      <div class="m"><u>G</u>o<div class="menu">
+        <div class="mi" data-c="back" id="miback">Back</div><div class="mi" data-c="forward" id="mifwd">Forward</div><div class="mi" data-c="up" id="miup">Up One Level</div>
+        <div class="msep"></div><div class="mi" data-c="mycomputer">My Computer</div><div class="mi" data-c="mydocs">My Documents</div><div class="mi" data-c="desktop">Desktop</div></div></div>
+      <div class="m"><u>H</u>elp<div class="menu"><div class="mi" data-c="about">About Windows</div></div></div>
+    </div>
+    <div class="bar" id="toolbar">
+      <div class="tbtn" data-c="back" id="tbback"></div><div class="tbtn" data-c="forward" id="tbfwd"></div><div class="tbtn" data-c="up" id="tbup"></div>
+      <div class="sep"></div>
+      <div class="tbtn" data-c="cut" data-need="sel"></div><div class="tbtn" data-c="copy" data-need="sel"></div><div class="tbtn" data-c="paste" id="tbpaste"></div>
+      <div class="sep"></div><div class="tbtn" data-c="undo" id="tbundo"></div>
+      <div class="sep"></div><div class="tbtn" data-c="delete" data-need="sel"></div><div class="tbtn" data-c="props" data-need="one"></div>
+      <div class="sep"></div><div class="tbtn" data-c="views"></div>
+    </div>
+    <div class="bar addr"><span>A<u>d</u>dress</span><input id="addr" spellcheck="false"><button id="go" style="min-width:40px">Go</button></div>
+    <div class="body">
+      <div class="side" id="side">
+        <div class="w98box"><div id="sideico"></div><div class="bigt" id="sidetitle"></div><div class="rule"></div><div id="sideinfo"></div></div>
+        <div class="xpbox"><h3>File and Folder Tasks</h3><div>
+          <a data-c="newFolder"><span class="ico16" data-i="folder"></span>Make a new folder</a>
+          <a data-c="rename" data-need="one"><span class="ico16" data-i="doc"></span>Rename this item</a>
+          <a data-c="copy" data-need="sel"><span class="ico16" data-i="doc"></span>Copy this item</a>
+          <a data-c="delete" data-need="sel"><span class="ico16" data-i="recycle"></span>Delete this item</a></div></div>
+        <div class="xpbox"><h3>Other Places</h3><div>
+          <a data-c="desktop"><span class="ico16" data-i="desktop"></span>Desktop</a>
+          <a data-c="mydocs"><span class="ico16" data-i="mydocs"></span>My Documents</a>
+          <a data-c="mycomputer"><span class="ico16" data-i="computer"></span>My Computer</a>
+          <a data-c="recycle"><span class="ico16" data-i="recycle"></span>Recycle Bin</a></div></div>
+        <div class="xpbox"><h3>Details</h3><div class="det" id="xpdet"></div></div>
+      </div>
+      <div class="main" id="main"><div id="list" class="icons"></div><div id="band"></div></div>
+    </div>
+    <div class="footer" id="footer">
+      <label for="fname">File <u>n</u>ame:</label><input id="fname" spellcheck="false"><button id="accept">Open</button>
+      <label>Files of <u>t</u>ype:</label><select id="ftype"></select><button id="cancel">Cancel</button>
+    </div>
+    <div class="status"><span id="st1"></span><span id="st2" style="flex:0 0 120px"></span><span id="st3" style="flex:0 0 150px"></span></div>
+  </div>
+</div>
+<div id="ctx"></div>
+<script>
+const $=id=>document.getElementById(id);
+function post(o){ try{ webkit.messageHandlers.explorer.postMessage(o); }catch(e){} }
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+/* ---- icons, drawn here ---- */
+const SV=(b)=>'<svg viewBox="0 0 32 32" shape-rendering="crispEdges">'+b+'</svg>';
+const page=(fold,body)=>'<path d="M7 3h13l6 6v20H7z" fill="#fff" stroke="#000"/><path d="M20 3v6h6" fill="'+fold+'" stroke="#000"/>'+body;
+const ICONS={
+  folder:SV('<path d="M2 8h10l2 3h16v17H2z" fill="#c8a400" stroke="#000"/><path d="M2 13h28v15H2z" fill="#ffe94d" stroke="#000"/><path d="M3 14h26" stroke="#fff8b0"/>'),
+  drive:SV('<path d="M3 13l4-5h18l4 5v9H3z" fill="#c0c0c0" stroke="#000"/><path d="M3 13h26v9H3z" fill="#d4d0c8" stroke="#000"/><rect x="6" y="17" width="12" height="2" fill="#404040"/><rect x="23" y="17" width="3" height="2" fill="#00c000"/>'),
+  cd:SV('<path d="M3 13l4-5h18l4 5v9H3z" fill="#c0c0c0" stroke="#000"/><path d="M3 13h26v9H3z" fill="#d4d0c8" stroke="#000"/><circle cx="16" cy="13" r="8" fill="#e8e8ff" stroke="#000"/><circle cx="16" cy="13" r="2" fill="#c0c0c0" stroke="#000"/>'),
+  computer:SV('<rect x="5" y="3" width="22" height="17" fill="#c0c0c0" stroke="#000"/><rect x="8" y="6" width="16" height="11" fill="#008080" stroke="#404040"/><path d="M3 22h26l-2 6H5z" fill="#c0c0c0" stroke="#000"/><rect x="21" y="24" width="4" height="1" fill="#00c000"/>'),
+  control:SV('<path d="M2 8h10l2 3h16v17H2z" fill="#c8a400" stroke="#000"/><path d="M2 13h28v15H2z" fill="#ffe94d" stroke="#000"/><rect x="10" y="15" width="12" height="10" fill="#c0c0c0" stroke="#000"/><path d="M13 18h6M13 21h6" stroke="#000080"/>'),
+  doc:SV(page('#c0c0c0','')),
+  text:SV(page('#c0c0c0','<path d="M10 13h12M10 16h12M10 19h12M10 22h8" stroke="#000080"/>')),
+  image:SV(page('#c0c0c0','<rect x="9" y="12" width="14" height="12" fill="#80c0ff" stroke="#000"/><path d="M9 24l5-6 4 4 2-2 3 4z" fill="#008000"/><circle cx="19" cy="15" r="1.5" fill="#ff0"/>')),
+  audio:SV(page('#c0c0c0','<path d="M13 22V12l8-2v10" fill="none" stroke="#000" stroke-width="2"/><circle cx="11" cy="22" r="2.5" fill="#000"/><circle cx="19" cy="20" r="2.5" fill="#000"/>')),
+  video:SV(page('#c0c0c0','<rect x="9" y="12" width="14" height="11" fill="#404040"/><path d="M14 14v7l5-3.5z" fill="#fff"/>')),
+  archive:SV('<rect x="5" y="6" width="22" height="22" fill="#c08040" stroke="#000"/><rect x="5" y="6" width="22" height="5" fill="#a06020" stroke="#000"/><rect x="14" y="11" width="4" height="17" fill="#ffe94d" stroke="#000"/>'),
+  pdf:SV(page('#c0c0c0','<rect x="9" y="17" width="14" height="7" fill="#c00000"/><path d="M11 19h3M11 21h3M16 19h5" stroke="#fff"/>')),
+  web:SV(page('#c0c0c0','<circle cx="16" cy="18" r="6" fill="#4080ff" stroke="#000"/><path d="M10 18h12M16 12v12" stroke="#80ff80"/>')),
+  exe:SV('<rect x="3" y="5" width="26" height="22" fill="#fff" stroke="#000"/><rect x="3" y="5" width="26" height="5" fill="#000080"/><rect x="25" y="6" width="3" height="3" fill="#c0c0c0"/>'),
+  recycle:SV('<path d="M7 8h18l-2 20H9z" fill="#e0e0e0" stroke="#000"/><path d="M5 6h22v3H5z" fill="#c0c0c0" stroke="#000"/><path d="M12 12l1 13M16 12v13M20 12l-1 13" stroke="#808080"/>'),
+  desktop:SV('<rect x="3" y="5" width="26" height="18" fill="#008080" stroke="#000"/><path d="M12 23h8l1 4H11z" fill="#c0c0c0" stroke="#000"/>'),
+  mydocs:SV('<path d="M2 8h10l2 3h16v17H2z" fill="#c8a400" stroke="#000"/><path d="M2 13h28v15H2z" fill="#ffe94d" stroke="#000"/><path d="M11 15h9l3 3v8H11z" fill="#fff" stroke="#000"/>'),
+};
+const TB={back:['Back','<path d="M20 8l-10 8 10 8z" fill="#008000" stroke="#000"/>'],forward:['Forward','<path d="M12 8l10 8-10 8z" fill="#008000" stroke="#000"/>'],
+  up:['Up','<path d="M2 10h10l2 3h16v15H2z" fill="#ffe94d" stroke="#000"/><path d="M16 22v-9M12 17l4-4 4 4" stroke="#000" fill="none" stroke-width="2"/>'],
+  cut:['Cut','<circle cx="10" cy="24" r="4" fill="none" stroke="#000" stroke-width="2"/><circle cx="22" cy="24" r="4" fill="none" stroke="#000" stroke-width="2"/><path d="M12 21L22 5M20 21L10 5" stroke="#404040" stroke-width="2"/>'],
+  copy:['Copy','<path d="M5 4h12l4 4v14H5z" fill="#fff" stroke="#000"/><path d="M11 10h12l4 4v14H11z" fill="#fff" stroke="#000"/>'],
+  paste:['Paste','<rect x="6" y="6" width="16" height="22" fill="#c08040" stroke="#000"/><rect x="10" y="4" width="8" height="4" fill="#c0c0c0" stroke="#000"/><path d="M14 12h12v16H14z" fill="#fff" stroke="#000"/>'],
+  undo:['Undo','<path d="M8 14h12a6 6 0 010 12h-6" fill="none" stroke="#000080" stroke-width="3"/><path d="M4 14l6-6v12z" fill="#000080"/>'],
+  delete:['Delete','<path d="M8 8l16 16M24 8L8 24" stroke="#c00000" stroke-width="4"/>'],
+  props:['Properties','<path d="M5 4h18v24H5z" fill="#fff" stroke="#000"/><path d="M8 9h12M8 13h12M8 17h8" stroke="#000"/><rect x="18" y="18" width="10" height="10" fill="#c0c0c0" stroke="#000"/>'],
+  views:['Views','<rect x="4" y="6" width="10" height="9" fill="#ffe94d" stroke="#000"/><rect x="18" y="6" width="10" height="9" fill="#fff" stroke="#000"/><rect x="4" y="18" width="10" height="9" fill="#fff" stroke="#000"/><rect x="18" y="18" width="10" height="9" fill="#ffe94d" stroke="#000"/>']};
+function iconHTML(key){ if(key&&key.startsWith('app:')) return icons[key]?'<img src="'+icons[key]+'">':ICONS.exe; return ICONS[key]||ICONS.doc; }
+
+/* ---- state ---- */
+let theme='win98', view='icons', items=[], icons={}, sel=new Set(), anchor=null, cur='', dialog=null, cutSet=new Set(), canPaste=false;
+let sortKey='name', sortAsc=true;
+const fmtSize=n=>n<0?'':n<1024?n+' bytes':n<1048576?Math.ceil(n/1024)+'KB':(n/1048576).toFixed(1)+'MB';
+const fmtDate=t=>t?new Date(t*1000).toLocaleString([], {year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+
+window.setTheme=function(k){ theme=(k==='winxp'||k==='win7')?'winxp':'win98'; document.body.className='theme-'+theme+(dialog?' dialog':''); paintChrome(); };
+window.setView=function(m){ view=m||'icons'; draw(); };
+window.setDialog=function(d){ dialog=d; document.body.classList.add('dialog');
+  $('accept').textContent=d.save?'Save':'Open'; $('fname').value=d.name||'';
+  $('ftype').innerHTML=(d.types&&d.types.length?['Text Documents (*.'+d.types.join(';*.')+')']:[]).concat(['All Files (*.*)']).map(t=>'<option>'+esc(t)+'</option>').join('');
+  $('cap98').textContent=$('capxp').textContent=d.save?'Save As':'Open'; };
+window.render=function(p){
+  items=p.items||[]; icons=p.icons||{}; cur=p.path||''; canPaste=!!p.canPaste; cutSet=new Set(p.cut||[]);
+  const keep=new Set((p.select&&p.select.length)?p.select:[...sel].filter(x=>items.some(i=>i.path===x)));
+  sel=keep;
+  if(!dialog){ $('cap98').textContent=$('capxp').textContent=p.title; }
+  $('addr').value=p.address;
+  const ico=cur?(cur==='/'?ICONS.drive:ICONS.folder):ICONS.computer;
+  $('tico98').innerHTML=$('ticoxp').innerHTML=ico; $('sideico').innerHTML=cur?ICONS.folder:ICONS.computer; $('sidetitle').textContent=p.title;
+  setDis('tbback',!p.canBack); setDis('miback',!p.canBack); setDis('tbfwd',!p.canForward); setDis('mifwd',!p.canForward);
+  setDis('tbup',!p.canUp); setDis('miup',!p.canUp); setDis('tbpaste',!canPaste); setDis('mipaste',!canPaste);
+  setDis('tbundo',!p.undo.can); setDis('miundo',!p.undo.can); $('miundo').firstChild.textContent=p.undo.title;
+  $('st3').textContent=cur?'':'My Computer'; free=p.free;
+  draw(); if(keep.size){ const f=document.querySelector('.it.selected'); f&&f.scrollIntoView({block:'nearest'}); }
+  if(p.select&&p.select.length===1){ const it=items.find(i=>i.path===p.select[0]); if(it&&it.name.startsWith('New Folder')) startRename(it.path); }
+};
+let free='';
+function setDis(id,d){ const e=$(id); if(e) e.classList.toggle('dis',d); }
+function paintChrome(){ for(const [k,[label,svg]] of Object.entries(TB)){ document.querySelectorAll('.tbtn[data-c="'+k+'"]').forEach(b=>{
+    b.innerHTML='<svg class="'+(theme==='winxp'?'ico24':'ico16')+'" viewBox="0 0 32 32" style="width:'+(theme==='winxp'?24:20)+'px;height:'+(theme==='winxp'?24:20)+'px">'+svg+'</svg><span>'+label+'</span>'; }); }
+  document.querySelectorAll('[data-i]').forEach(s=>s.innerHTML=ICONS[s.dataset.i]); }
+
+function sorted(){ if(!cur&&sortKey==='name'&&sortAsc) return [...items];   // My Computer: C:, D:… in order
+  const f=(a,b)=>{ if(a.folder!==b.folder) return a.folder?-1:1;
+    let r= sortKey==='size'?(a.size-b.size): sortKey==='type'?a.type.localeCompare(b.type): sortKey==='mod'?(a.mod-b.mod): a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'});
+    return sortAsc?r:-r; }; return [...items].sort(f); }
+function draw(){
+  const list=$('list'); list.className=view;
+  const rows=sorted();
+  const head=view==='details'?'<div class="dhead"><span class="c0" data-s="name">Name</span><span class="c1" data-s="size">Size</span><span class="c2" data-s="type">Type</span><span class="c3" data-s="mod">Modified</span></div>':'';
+  list.style.setProperty('--c0','220px');
+  list.innerHTML=head+rows.map(it=>{
+    const meta=cur?'<span class="c1">'+fmtSize(it.size)+'</span><span class="c2">'+esc(it.type)+'</span><span class="c3">'+fmtDate(it.mod)+'</span>'
+      :'<span class="c1">'+(it.total?fmtSize(it.freeBytes)+' free':'')+'</span><span class="c2">'+esc(it.type)+'</span><span class="c3"></span>';
+    return '<div class="it'+(sel.has(it.path)?' selected':'')+(cutSet.has(it.path)?' cut':'')+'" draggable="'+(!!cur)+'" data-p="'+esc(it.path)+'"'+(it.special?' data-special="'+it.special+'"':'')+'>'
+      +iconHTML(it.icon)+'<span class="nm">'+esc(it.name)+'</span><span class="meta">'+meta+'</span></div>'; }).join('');
+  list.querySelectorAll('.dhead span').forEach(s=>s.onclick=()=>{ if(sortKey===s.dataset.s) sortAsc=!sortAsc; else { sortKey=s.dataset.s; sortAsc=true; } draw(); });
+  status();
+}
+function selected(){ return items.filter(i=>sel.has(i.path)&&!i.special); }
+function status(){
+  const s=selected(); const n=items.length;
+  $('st1').textContent=s.length?s.length+' object(s) selected':n+' object(s)'+(cur&&free?' (Disk free space: '+free+')':'');
+  $('st2').textContent=!cur?'':s.length?fmtSize(s.reduce((a,b)=>a+Math.max(0,b.size),0)):fmtSize(items.reduce((a,b)=>a+Math.max(0,b.size),0));
+  document.querySelectorAll('[data-need]').forEach(e=>e.classList.toggle('dis', e.dataset.need==='one'?s.length!==1:s.length===0));
+  const one=s.length===1?s[0]:null;
+  $('sideinfo').innerHTML=one?'<b>'+esc(one.name)+'</b><br>'+esc(one.type)+(one.size>=0?'<br><br>Size: '+fmtSize(one.size):'')+(one.mod?'<br>Modified: '+fmtDate(one.mod):'')
+    :(s.length?s.length+' items selected.':'Select an item to view its description.');
+  $('xpdet').innerHTML=one?'<b>'+esc(one.name)+'</b><br>'+esc(one.type)+(one.mod?'<br>Date Modified: '+fmtDate(one.mod):'')+(one.size>=0?'<br>Size: '+fmtSize(one.size):''):'<b>'+esc($('sidetitle').textContent)+'</b>';
+  if(dialog&&one&&!one.folder) $('fname').value=one.name;
+}
+
+/* ---- commands ---- */
+function cmd(c){
+  const s=selected(), paths=s.map(i=>i.path);
+  if(c.startsWith('view:')){ view=c.slice(5); post({a:'view',mode:view}); draw(); return; }
+  switch(c){
+    case 'views': view={icons:'list',list:'details',details:'icons'}[view]; post({a:'view',mode:view}); draw(); break;
+    case 'refresh': post({a:'nav',path:cur}); break;
+    case 'mycomputer': post({a:'nav',path:''}); break;
+    case 'selectAll': items.forEach(i=>sel.add(i.path)); draw(); break;
+    case 'rename': if(s.length===1) startRename(s[0].path); break;
+    case 'open': if(s.length) openItem(s[0]); break;
+    case 'about': post({a:'about'}); break;
+    case 'close': post({a:'close'}); break;
+    case 'delete': case 'copy': case 'cut': case 'props': if(!s.length) return; post({a:c,paths,path:paths[0]}); break;
+    case 'paste': if(!canPaste) return; post({a:'paste'}); break;
+    default: post({a:c});
+  }
+}
+function openItem(it){ if(it.special){ post({a:it.special}); return; } post({a:'open',path:it.path}); }
+document.querySelectorAll('[data-c]').forEach(e=>e.addEventListener('click',ev=>{ if(e.classList.contains('dis'))return; ev.stopPropagation(); closeMenus(); cmd(e.dataset.c); }));
+['back','forward','up'].forEach(k=>{});
+
+/* ---- menus ---- */
+function closeMenus(){ document.querySelectorAll('.m.open').forEach(m=>m.classList.remove('open')); $('ctx').style.display='none'; }
+document.querySelectorAll('.menubar .m').forEach(m=>{
+  m.addEventListener('mousedown',e=>{ if(e.target.closest('.menu'))return; const was=m.classList.contains('open'); closeMenus(); if(!was) m.classList.add('open'); e.stopPropagation(); });
+  m.addEventListener('mouseenter',()=>{ if(document.querySelector('.m.open')&&!m.classList.contains('open')){ closeMenus(); m.classList.add('open'); } });
+});
+document.addEventListener('mousedown',e=>{ if(!e.target.closest('.m')&&!e.target.closest('#ctx')) closeMenus(); });
+function ctxMenu(x,y,onItem){
+  const s=selected();
+  const rows=onItem?[['Open','open'],null,['Cut','cut'],['Copy','copy'],null,['Delete','delete'],['Rename','rename',s.length!==1],null,['Properties','props',s.length!==1]]
+    :[['View ▸ Large Icons','view:icons'],['View ▸ List','view:list'],['View ▸ Details','view:details'],null,['Paste','paste',!canPaste],['Undo','undo'],null,['New Folder','newFolder',!cur]];
+  const c=$('ctx'); c.innerHTML=rows.map(r=>r?'<div class="mi'+(r[2]?' dis':'')+'" data-x="'+r[1]+'">'+r[0]+'</div>':'<div class="msep"></div>').join('');
+  c.querySelectorAll('.mi').forEach(m=>m.onclick=()=>{ if(m.classList.contains('dis'))return; closeMenus(); cmd(m.dataset.x); });
+  c.style.display='block'; c.style.left=Math.min(x,innerWidth-c.offsetWidth-4)+'px'; c.style.top=Math.min(y,innerHeight-c.offsetHeight-4)+'px';
+}
+
+/* ---- selection, opening, dragging ---- */
+const main=$('main');
+main.addEventListener('mousedown',e=>{
+  if(e.button!==0) return;
+  const el=e.target.closest('.it'); if(e.target.tagName==='INPUT') return;
+  if(!el){ if(!e.metaKey&&!e.shiftKey) sel.clear(); draw(); startBand(e); return; }
+  const p=el.dataset.p||el.dataset.special;
+  if(e.shiftKey&&anchor){ const r=sorted().map(i=>i.path||i.special), a=r.indexOf(anchor), b=r.indexOf(p); sel=new Set(r.slice(Math.min(a,b),Math.max(a,b)+1)); }
+  else if(e.metaKey){ sel.has(p)?sel.delete(p):sel.add(p); anchor=p; }
+  else if(!sel.has(p)){ sel=new Set([p]); anchor=p; }
+  draw();
+});
+main.addEventListener('dblclick',e=>{ const el=e.target.closest('.it'); if(!el) return; const it=items.find(i=>(i.path||i.special)===(el.dataset.p||el.dataset.special)); if(it) openItem(it); });
+main.addEventListener('contextmenu',e=>{ e.preventDefault(); const el=e.target.closest('.it');
+  if(el){ const p=el.dataset.p; if(!sel.has(p)){ sel=new Set([p]); draw(); } } else { sel.clear(); draw(); }
+  ctxMenu(e.clientX,e.clientY,!!el); });
+main.addEventListener('dragstart',e=>{ const el=e.target.closest('.it'); if(!el||!cur){ e.preventDefault(); return; } if(!sel.has(el.dataset.p)){ sel=new Set([el.dataset.p]); draw(); }
+  e.dataTransfer.setData('text/x-explorer',JSON.stringify(selected().map(i=>i.path))); e.dataTransfer.effectAllowed='copyMove'; });
+main.addEventListener('dragover',e=>{ if(!e.dataTransfer.types.includes('text/x-explorer')) return; e.preventDefault();
+  document.querySelectorAll('.it.drop').forEach(x=>x.classList.remove('drop'));
+  const el=e.target.closest('.it'); const it=el&&items.find(i=>i.path===el.dataset.p);
+  if(it&&it.folder&&!sel.has(it.path)) el.classList.add('drop'); e.dataTransfer.dropEffect=e.altKey?'copy':'move'; });
+main.addEventListener('drop',e=>{ e.preventDefault(); document.querySelectorAll('.it.drop').forEach(x=>x.classList.remove('drop'));
+  const paths=JSON.parse(e.dataTransfer.getData('text/x-explorer')||'[]'); const el=e.target.closest('.it'); const it=el&&items.find(i=>i.path===el.dataset.p);
+  const to=(it&&it.folder&&!sel.has(it.path))?it.path:cur; if(!to||(to===cur&&!e.altKey)) return; post({a:'drop',paths,to,copy:e.altKey}); });
+/* rubber band */
+let band=null;
+function startBand(e){ const r=main.getBoundingClientRect(); band={x:e.clientX-r.left+main.scrollLeft,y:e.clientY-r.top+main.scrollTop,base:new Set(sel)};
+  const b=$('band'); b.style.display='block'; moveBand(e); }
+function moveBand(e){ if(!band) return; const r=main.getBoundingClientRect(); const x=e.clientX-r.left+main.scrollLeft, y=e.clientY-r.top+main.scrollTop;
+  const L=Math.min(x,band.x),T=Math.min(y,band.y),W=Math.abs(x-band.x),H=Math.abs(y-band.y), b=$('band');
+  Object.assign(b.style,{left:L+'px',top:T+'px',width:W+'px',height:H+'px'});
+  if(W<3&&H<3) return; sel=new Set(band.base);
+  document.querySelectorAll('#list .it').forEach(el=>{ const q=el.getBoundingClientRect(); const ex=q.left-r.left+main.scrollLeft, ey=q.top-r.top+main.scrollTop;
+    if(ex<L+W&&ex+q.width>L&&ey<T+H&&ey+q.height>T){ sel.add(el.dataset.p); el.classList.add('selected'); } else if(!band.base.has(el.dataset.p)) el.classList.remove('selected'); });
+}
+document.addEventListener('mousemove',moveBand);
+document.addEventListener('mouseup',()=>{ if(band){ band=null; $('band').style.display='none'; status(); } });
+
+/* ---- rename in place ---- */
+function startRename(path){
+  const el=[...document.querySelectorAll('#list .it')].find(x=>x.dataset.p===path); if(!el) return;
+  const it=items.find(i=>i.path===path); const nm=el.querySelector('.nm');
+  nm.innerHTML='<input value="'+esc(it.name)+'">'; const inp=nm.querySelector('input'); inp.focus();
+  const dot=it.folder?-1:it.name.lastIndexOf('.'); inp.setSelectionRange(0,dot>0?dot:it.name.length);
+  let done=false; const finish=ok=>{ if(done)return; done=true; if(ok&&inp.value!==it.name) post({a:'rename',path,name:inp.value}); else draw(); };
+  inp.onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter') finish(true); if(e.key==='Escape') finish(false); };
+  inp.onblur=()=>finish(true);
+}
+
+/* ---- keys ---- */
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') { if(e.target.id==='addr'&&e.key==='Enter') post({a:'address',text:$('addr').value});
+    if(e.target.id==='fname'&&e.key==='Enter') accept(); return; }
+  const k=e.key.toLowerCase(), m=e.metaKey||e.ctrlKey;
+  if(m&&k==='c') cmd('copy'); else if(m&&k==='x') cmd('cut'); else if(m&&k==='v') cmd('paste');
+  else if(m&&k==='z') cmd(e.shiftKey?'redo':'undo'); else if(m&&k==='a'){ e.preventDefault(); cmd('selectAll'); }
+  else if(m&&k==='w') cmd('close');
+  else if(e.key==='Delete'||(m&&e.key==='Backspace')) cmd('delete');
+  else if(e.key==='Backspace') cmd('up');
+  else if(e.key==='Enter') cmd('open');
+  else if(e.key==='F2') cmd('rename');
+  else if(e.key==='F5') cmd('refresh');
+  else if(e.key==='Escape'){ if(dialog) post({a:'close'}); closeMenus(); }
+  else return;
+  e.preventDefault();
+});
+$('go').onclick=()=>post({a:'address',text:$('addr').value});
+function accept(){ const s=selected(); const one=s.length===1?s[0]:null;
+  if(one&&one.folder&&!dialog.save){ post({a:'open',path:one.path}); return; }
+  post({a:'accept',name:$('fname').value,path:(one&&!one.folder&&!dialog.save)?one.path:''}); }
+$('accept').onclick=accept; $('cancel').onclick=()=>post({a:'close'});
+$('w98min').onclick=$('xpmin').onclick=()=>post({a:'min'}); $('w98max').onclick=$('xpmax').onclick=()=>post({a:'max'}); $('w98close').onclick=$('xpclose').onclick=()=>post({a:'close'});
+window.addEventListener('blur',()=>document.body.classList.add('inactive')); window.addEventListener('focus',()=>document.body.classList.remove('inactive'));
+
+/* the title for the native drag overlay: [title x,y,w,h, first button x,y,w,h] */
+window.regions=function(){ const xp=theme==='winxp'; const R=id=>{const b=$(id).getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
+  return xp?[...R('xptitle'),...R('xpmin')]:[...R('w98title'),...R('w98min')]; };
+window.setBtnState=function(){};
+paintChrome();
+</script>
+</body>
+</html>

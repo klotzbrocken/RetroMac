@@ -9,6 +9,7 @@ enum DesktopLauncher {
     static func openFolder(_ url: URL) {
         if AmigaDrawer.isEnabled { AmigaDrawer.show(url.path) }
         else if TigerFinder.isEnabled { TigerFinder.show(url) }
+        else if ExplorerController.isEnabled { ExplorerController.show(url.path == "/" ? nil : url) }   // "/" is My Computer
         else { NSWorkspace.shared.open(url) }
     }
 

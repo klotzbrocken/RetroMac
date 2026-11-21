@@ -33,6 +33,7 @@
     "selectionText": "#FFFFFF"
   },
   "name": "Windows Me",
+  "finder": "explorer",
   "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",

@@ -4911,19 +4911,19 @@ final class DockView: NSView {
 
         var rightItems: [MI] = [
             MI(title: "My Documents", icon: xpIcon("xp_documents.png"), action: {
-                NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents"))
+                DesktopLauncher.openFolder(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents"))
             }, isBold: true),
             MI(title: "My Recent Documents", icon: xpIcon("xp_recent.png"), action: {
                 DockView.openRecentDocuments()
             }),
             MI(title: "My Pictures", icon: xpIcon("xp_pictures.png"), action: {
-                NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures"))
+                DesktopLauncher.openFolder(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures"))
             }),
             MI(title: "My Music", icon: xpIcon("xp_music.png"), action: {
-                NSWorkspace.shared.open(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Music"))
+                DesktopLauncher.openFolder(FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Music"))
             }),
             MI(title: "My Computer", icon: xpIcon("xp_mycomputer.png"), action: {
-                NSWorkspace.shared.open(URL(fileURLWithPath: "/"))
+                DesktopLauncher.openFolder(URL(fileURLWithPath: "/"))
             }, isBold: true),
             MI(separator: true),
             MI(title: "Control Panel", icon: xpIcon("xp_controlpanel.png"), action: {
@@ -4993,7 +4993,7 @@ final class DockView: NSView {
         }
 
         // Right: places (text only — Win7's right column has no icons).
-        func open(_ url: URL) -> () -> Void { { NSWorkspace.shared.open(url) } }
+        func open(_ url: URL) -> () -> Void { { DesktopLauncher.openFolder(url) } }
         func settings(_ s: String) -> () -> Void { { if let u = URL(string: s) { NSWorkspace.shared.open(u) } } }
         var rightItems: [MI] = [
             MI(title: "Documents", action: open(home.appendingPathComponent("Documents"))),

@@ -32,6 +32,7 @@
     "selectionText": "#FFFFFF"
   },
   "name": "Windows NT 4.0",
+  "finder": "explorer",
   "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",

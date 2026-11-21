@@ -15,6 +15,7 @@
     "style": "win7"
   },
   "name": "Windows Vista",
+  "finder": "explorer",
   "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",

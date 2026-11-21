@@ -185,7 +185,7 @@ final class RunDialogController: NSObject, WKScriptMessageHandler, WKNavigationD
         case "taskmgr":
             if TaskManagerController.wanted { TaskManagerController.shared.show() }
             else { NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app")) }
-        case "explorer": DesktopLauncher.openFolder(FileManager.default.homeDirectoryForCurrentUser)
+        case "explorer": DesktopLauncher.openFolder(URL(fileURLWithPath: "/"))
         case "about": _ = NSApp.sendAction(Selector(("showAbout")), to: nil, from: nil)
         default: break
         }

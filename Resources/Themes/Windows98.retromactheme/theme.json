@@ -15,6 +15,7 @@
     "style": "win98"
   },
   "name": "Windows 98",
+  "finder": "explorer",
   "hideMenuBarDefault": true,
   "version": "1.0",
   "author": "RetroMac",
