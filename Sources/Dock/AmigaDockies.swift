@@ -130,7 +130,12 @@ final class AmigaDockyTicker {
 extension AmigaDockies {
     /// WinBar's list: every open window, minimised ones too, in the Workbench's menu look; the
     /// chosen one comes forward (or back out of the dock).
+    private static var listClosedAt = Date.distantPast
+
     static func showWindowList(below anchor: NSRect) {
+        // A second click on WinBar closes the list: the menu goes on that click's mouse-down,
+        // before the docky hears it, so a list closed a moment ago is not opened again.
+        if Date().timeIntervalSince(listClosedAt) < 0.4 { listClosedAt = .distantPast; return }
         let windows = MinimizedWindowTracker.shared.allWindows.filter { !$0.isAppLevel }
         var rows: [PlatinumMenuItem] = windows.map { e in
             let app = NSRunningApplication(processIdentifier: e.pid)?.localizedName ?? ""
@@ -140,6 +145,7 @@ extension AmigaDockies {
         }
         if rows.isEmpty { rows = [.label("No windows")] }
         PlatinumMenuController.shared.show(rows, below: anchor, look: .amiga)
+        PlatinumMenuController.shared.onDismiss = { listClosedAt = Date() }
     }
 }
 

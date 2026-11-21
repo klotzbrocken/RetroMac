@@ -18,6 +18,7 @@ final class AmigaScreenBarController {
     private var copyrightUntil = Date.distantPast
     private var shownOnce = false
     private var dragMonitor: Any?
+    private var screenObserver: NSObjectProtocol?
 
     /// Over the Mac's menu bar: the top edge is the Workbench screen's (asked by Maik). macOS 27
     /// keeps its menu bar showing on a notched display even with auto-hide on, and it sat over the
@@ -52,6 +53,15 @@ final class AmigaScreenBarController {
             window = panel; view = v
         }
         window?.setFrame(frame, display: true)
+        // A display coming or going (an external monitor unplugged) let macOS move the bar under
+        // the notch's strip, and nothing put it back: place it again on every change.
+        if screenObserver == nil {
+            screenObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
+                                                                    object: nil, queue: .main) { [weak self] _ in
+                guard self?.window != nil else { return }
+                self?.update()
+            }
+        }
         if !shownOnce { shownOnce = true; copyrightUntil = Date().addingTimeInterval(5) }
         refreshTitle()
         if timer == nil {
@@ -66,6 +76,7 @@ final class AmigaScreenBarController {
         window?.orderOut(nil)
         window = nil; view = nil
         shownOnce = false
+        if let o = screenObserver { NotificationCenter.default.removeObserver(o); screenObserver = nil }
     }
 
     /// What the bar says after the copyright line: "memory", the free bytes as the 2008 Workbench
