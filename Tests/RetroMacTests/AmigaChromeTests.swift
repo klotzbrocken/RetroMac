@@ -46,4 +46,12 @@ final class AmigaChromeTests: XCTestCase {
         XCTAssertEqual(AmigaChrome.kind(.depth), .depth)
         XCTAssertEqual(AmigaChrome.kind(.iconify), .minimize)
     }
+
+    /// Other apps' windows: blue frame only round the one in front, as on the Amiga; the other
+    /// chromes keep one frame for all.
+    func testOnlyAmigaColoursTheFrontFrame() {
+        XCTAssertNotNil(WindowBorderController.frontStyle(for: "amiga"))
+        XCTAssertNil(WindowBorderController.frontStyle(for: "win98"))
+        XCTAssertNil(WindowBorderController.frontStyle(for: "cde"))
+    }
 }

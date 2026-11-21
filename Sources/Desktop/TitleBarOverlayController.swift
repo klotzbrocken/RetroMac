@@ -433,6 +433,7 @@ final class TitleBarOverlayController {
                                                        ownerName: info.ownerName, bundleID: info.bundleID) } ?? info
             apply(placed, level: outLevel[i], style: style, isFront: wid == frontWID, screens: screens)
         }
+        WindowBorderController.shared.setFront(frontWID)
         // A rolled-up window parked off screen may drop off the list; while it exists, its bar
         // stays — forgetting it would leave the window stranded in the corner.
         for wid in overlays.keys where !suitable.contains(wid) {

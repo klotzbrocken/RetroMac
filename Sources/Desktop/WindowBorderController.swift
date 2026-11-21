@@ -26,6 +26,7 @@ final class WindowBorderController {
         var hidpi: Bool             // backing scale of the display this border was created for
         var barAbove: CGFloat = 0   // the title bar this frame goes round, 0 when the window has none
         var pid: pid_t = 0
+        var isFront = false         // drawn in the front window's colours (styles that have them)
         init(wid: UInt32, ctx: CGContext, size: CGSize, hidpi: Bool) {
             self.wid = wid; self.ctx = ctx; self.size = size; self.hidpi = hidpi
         }
@@ -35,6 +36,9 @@ final class WindowBorderController {
     private var borders: [CGWindowID: SkyBorder] = [:]
     private var currentStyle: WindowBorderStyle = .none
     private var currentKey = "default"
+    /// The window in front, from the title-bar overlay (which tracks it). Only a style with a
+    /// front colouring (`frontStyle`) cares.
+    private var frontTarget: CGWindowID = 0
     private var wsTokens: [NSObjectProtocol] = []
     private var syncTimer: Timer?
     private var didRegisterEvents = false
@@ -350,6 +354,7 @@ final class WindowBorderController {
         let b = SkyBorder(wid: wid, ctx: ctx, size: f.size, hidpi: hd)
         b.barAbove = bar
         b.pid = pid
+        b.isFront = target == frontTarget
         b.onSpace = (skb_send_to_space(b.wid, target) != 0)   // a fresh window is on no space → invisible
         // Only the ring is ours, not the window inside it: a full-size frame window, transparent or
         // not, was where drag-and-drop dropped anything let go over the framed window. Two points
@@ -393,7 +398,28 @@ final class WindowBorderController {
         // of its own there; a Mac window's bevel ran all the way round, bar included.
         let openTop = b.barAbove > 0 && Self.captionIsTheTop(currentKey)
         let inset = b.barAbove > 0 ? TitleBarOverlayController.shared.barCornerRadius : 0
-        Self.drawBorder(currentStyle, into: b.ctx, size: b.size, openTop: openTop, topInset: inset)
+        let style = b.isFront ? (Self.frontStyle(for: currentKey) ?? currentStyle) : currentStyle
+        Self.drawBorder(style, into: b.ctx, size: b.size, openTop: openTop, topInset: inset)
+    }
+
+    /// The window in front changed (TitleBarOverlayController): a style that colours the front
+    /// window's frame redraws the two borders whose state flipped.
+    func setFront(_ target: CGWindowID) {
+        guard target != frontTarget else { return }
+        frontTarget = target
+        guard running, Self.frontStyle(for: currentKey) != nil else { return }
+        for (t, b) in borders where b.isFront != (t == target) {
+            b.isFront = t == target
+            drawInto(b); skb_flush(b.wid, b.ctx)
+        }
+    }
+
+    /// The frame of the window in front, for chromes whose frame showed it. AmigaOS 4.1: blue
+    /// round the active window (AmigaChrome.frameColors), grey round the others.
+    static func frontStyle(for key: String) -> WindowBorderStyle? {
+        guard key == "amiga" else { return nil }
+        return .bevel(hiOuter: NSColor.fromHex("#1A244D"), hiInner: NSColor.fromHex("#92BFFF"),
+                      loInner: NSColor.fromHex("#204D8D"), loOuter: NSColor.fromHex("#1A244D"), width: 5, radius: 0)
     }
 
     /// The chrome families whose title bar is the frame's top: no separate edge above it.
@@ -513,8 +539,8 @@ final class WindowBorderController {
             return .bevel(hiOuter: NSColor.fromHex("#DEDEE7"), hiInner: NSColor.fromHex("#ADB5C6"),
                           loInner: NSColor.fromHex("#ADB5C6"), loOuter: NSColor.fromHex("#5A636B"), width: 5, radius: 0)
         case "amiga":
-            // AmigaOS 4.1's 5 pt sides, in the inactive silver (the frame does not know which
-            // window is in front; the bar shows that): #424242 edges, #DCDCDB lit, #8C8D90 shade.
+            // AmigaOS 4.1's 5 pt sides in the inactive silver: #424242 edges, #DCDCDB lit,
+            // #8C8D90 shade. The window in front wears `frontStyle`'s blue.
             return .bevel(hiOuter: NSColor.fromHex("#424242"), hiInner: NSColor.fromHex("#DCDCDB"),
                           loInner: NSColor.fromHex("#8C8D90"), loOuter: NSColor.fromHex("#424242"), width: 5, radius: 0)
         case "photon":
