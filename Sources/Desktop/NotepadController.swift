@@ -25,6 +25,8 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
     private let posKey = "notepadWidgetOrigin"
     private let textKey = "notepadText"
     private var currentFileURL: URL?
+    /// The opened file's line ending, byte-order mark and encoding, so Save writes the same kind back.
+    private var currentFile = TextFile(text: "")
 
     private override init() {
         super.init()
@@ -166,36 +168,72 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
         return String(json.dropFirst().dropLast())   // strip the [ ] → leaves "…"
     }
 
+    /// Open: the Explorer's Open dialog under the Windows themes, the Mac's panel elsewhere. Read
+    /// as TextFile (after retro98): binary and huge files are refused with a message.
     private func openFile() {
+        let load: (URL?) -> Void = { [weak self] url in
+            guard let self, let url else { return }
+            do {
+                let file = try TextFile.read(from: url)
+                self.currentFile = file
+                self.currentFileURL = url
+                UserDefaults.standard.set(file.text, forKey: self.textKey)
+                self.webView?.evaluateJavaScript("window.loadFile && window.loadFile(\(self.jsString(url.lastPathComponent)), \(self.jsString(file.text)), false)")
+            } catch {
+                self.problem("Cannot open \u{201C}\(url.lastPathComponent)\u{201D}", (error as? TextFileError)?.message ?? error.localizedDescription)
+            }
+        }
+        if ExplorerController.isEnabled {
+            ExplorerController.openDialog(extensions: ["txt", "text", "log", "ini", "md", "csv"], start: currentFileURL?.deletingLastPathComponent(), completion: load)
+            return
+        }
         let p = NSOpenPanel()
         p.allowedContentTypes = [.plainText, .text]
         p.allowsOtherFileTypes = true
         p.canChooseDirectories = false
         p.allowsMultipleSelection = false
         NSApp.activate(ignoringOtherApps: true)
-        guard p.runModal() == .OK, let url = p.url,
-              let content = (try? String(contentsOf: url, encoding: .utf8))
-                ?? (try? String(contentsOf: url, encoding: .isoLatin1)) else { return }
-        currentFileURL = url
-        UserDefaults.standard.set(content, forKey: textKey)
-        webView?.evaluateJavaScript("window.loadFile && window.loadFile(\(jsString(url.lastPathComponent)), \(jsString(content)), false)")
+        load(p.runModal() == .OK ? p.url : nil)
     }
 
+    /// Save writes the same kind of file back (line endings, BOM, encoding) through a finished copy;
+    /// a failure says so instead of losing the text quietly.
     private func saveFile(plain: String, forceDialog: Bool) {
         UserDefaults.standard.set(plain, forKey: textKey)
-        if !forceDialog, let url = currentFileURL {
-            try? plain.data(using: .utf8)?.write(to: url)
+        let write: (URL?) -> Void = { [weak self] url in
+            guard let self, let url else { return }
+            var file = self.currentFile
+            file.text = plain
+            do {
+                try file.write(to: url)
+                self.currentFile = file
+                self.currentFileURL = url
+                self.webView?.evaluateJavaScript("window.setFile && window.setFile(\(self.jsString(url.lastPathComponent)))")
+            } catch {
+                self.problem("Cannot save \u{201C}\(url.lastPathComponent)\u{201D}", error.localizedDescription)
+            }
+        }
+        if !forceDialog, let url = currentFileURL { write(url); return }
+        let name = currentFileURL?.lastPathComponent ?? "Untitled.txt"
+        if ExplorerController.isEnabled {
+            ExplorerController.saveDialog(name: name, start: currentFileURL?.deletingLastPathComponent(), completion: write)
             return
         }
         let p = NSSavePanel()
         p.allowedContentTypes = [.plainText]
         p.allowsOtherFileTypes = true
-        p.nameFieldStringValue = currentFileURL?.lastPathComponent ?? "Untitled.txt"
+        p.nameFieldStringValue = name
         NSApp.activate(ignoringOtherApps: true)
-        guard p.runModal() == .OK, let url = p.url else { return }
-        try? plain.data(using: .utf8)?.write(to: url)
-        currentFileURL = url
-        webView?.evaluateJavaScript("window.setFile && window.setFile(\(jsString(url.lastPathComponent)))")
+        write(p.runModal() == .OK ? p.url : nil)
+    }
+
+    private func problem(_ title: String, _ text: String) {
+        let a = NSAlert()
+        a.alertStyle = .warning
+        a.messageText = title
+        a.informativeText = text
+        NSApp.activate(ignoringOtherApps: true)
+        a.runModal()
     }
 
     /// The classic Mac themes turn the Notepad into their era's text editor: SimpleText for

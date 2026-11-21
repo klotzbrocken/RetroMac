@@ -5,6 +5,29 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+### New
+
+- **The Windows themes have their Explorer.** Windows 95 to 7 open folders, My Computer and My
+  Documents in a Windows Explorer of their own: the Mac's disks as C:, D:…, Large Icons, List and
+  Details, an address bar that takes Windows paths, Windows 98's folder panel or XP's task pane,
+  cut, copy and paste (with the Finder too), drag and drop, rename in place, the Recycle Bin and
+  Undo.
+
+- **Start ▸ Run… is the Run dialog.** It opens what you type: notepad, calc, cmd, control,
+  taskmgr or explorer, a web address, a path, or any app by name, and it remembers the last ten.
+
+- **File windows that never lose a file, with Undo.** Tiger's Finder, the Amiga drawers and the
+  Explorer copy without writing over anything, put a replaced item in the Trash, ask before
+  replacing, show the progress of long copies, and ⌘Z takes any of it back, the Trash included.
+  Tiger's Finder learns ⌘C, ⌘V and ⌥⌘V.
+
+- **Notepad keeps your files as they were.** It saves with the file's own line endings,
+  byte-order mark and encoding, refuses binary and very large files with a message, never
+  half-writes a file, and under the Windows themes opens and saves through Windows dialogs.
+
+  The file operations, the Run dialog's search and the text files are adapted from retro98 by
+  matheushchaves (MIT).
+
 ### Fixed
 
 - **Desktop icons no longer land on each other.** An icon moved on a wider display was pushed to
