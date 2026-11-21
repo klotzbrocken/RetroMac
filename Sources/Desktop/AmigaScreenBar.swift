@@ -68,7 +68,19 @@ final class AmigaScreenBarController {
         shownOnce = false
     }
 
-    private func refreshTitle() {
+    /// What the bar says after the copyright line: "memory", the free bytes as the 2008 Workbench
+    /// showed them (the default), or "system", the machine in one line as the Final Edition does.
+    static var titleFormat: String {
+        get { UserDefaults.standard.string(forKey: "amigaScreenTitle") ?? "memory" }
+        set { UserDefaults.standard.set(newValue, forKey: "amigaScreenTitle"); shared.refreshTitle() }
+    }
+    /// "AmigaOS Release 4.1. Apple M3 Pro CPU, 16 GB RAM".
+    static let systemTitle: String = {
+        let f = MountainLionAboutWindow.facts()
+        return "AmigaOS Release 4.1. \(f.processor) CPU, \(f.memory) RAM"
+    }()
+
+    func refreshTitle() {
         guard let view else { return }
         // The copyright line counts its five seconds from when the boot screen is gone.
         if SplashController.shared.isPresenting, copyrightUntil > .distantPast { copyrightUntil = Date().addingTimeInterval(5) }
@@ -76,7 +88,7 @@ final class AmigaScreenBarController {
             view.title = "Copyright (C) 1985-2008 Hyperion Entertainment VOF and others. All Rights Reserved."
         } else {
             copyrightUntil = .distantPast   // once only: a later boot screen does not bring it back
-            view.title = "Amiga Workbench   \(Self.bytesFree()) bytes free"
+            view.title = Self.titleFormat == "system" ? Self.systemTitle : "Amiga Workbench   \(Self.bytesFree()) bytes free"
         }
     }
 
@@ -255,6 +267,10 @@ enum AmigaWorkbenchMenus {
                 .action("Execute command...") { AmigaRequester.executeCommand() },
                 .action("Redraw all") { desk.update() },
                 .action("Update all") { desk.update(); drawer?.reload() },
+                .submenu("Screen title", [
+                    .action("Free memory", ticked: AmigaScreenBarController.titleFormat == "memory") { AmigaScreenBarController.titleFormat = "memory" },
+                    .action("System", ticked: AmigaScreenBarController.titleFormat == "system") { AmigaScreenBarController.titleFormat = "system" },
+                ]),
                 off("Last message"),
                 .action("About...") { ThemeReadmeController.shared.showForActiveTheme() },
                 off("Quit..."),

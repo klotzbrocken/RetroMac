@@ -24,9 +24,14 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Pairing Joysticks from amiga-look.org), New shortcut and the Clock, Calculator, Notepad and CPU
   Monitor in Workbench windows; the mouse pointers are levellord's AmigaOS 4 set (CC BY-SA 4.0).
   The AmiDock carries three Dockies: an analog clock, a CPU load graph in Ranger's manner and
-  WinBar, the list of open windows, minimised ones included. Every picture is redrawn for
-  RetroMac, including a reconstruction of the 2008 backdrop, and the type is DejaVu Sans, as on
-  OS 4.1.
+  WinBar, the list of open windows, minimised ones included. The AmiDock starts as a fresh
+  install had it (NotePad, Shell, MultiView, UnArc and Help), with the Extras, Internet and
+  Players sub-docks opening in a column above their tile; running programs get no tile of their
+  own, and an iconified window becomes an icon on the Workbench. The dockbar at the dock's end
+  holds its menu; other apps' windows wear the blue frame only in front; and the Workbench menu
+  can switch the screen title to the machine in one line, as the Final Edition shows it. Every
+  picture is redrawn for RetroMac, including a reconstruction of the 2008 backdrop, and the type
+  is DejaVu Sans, as on OS 4.1.
 
 ### Fixed
 

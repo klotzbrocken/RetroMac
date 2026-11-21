@@ -110,6 +110,13 @@ final class AmigaDockyTests: XCTestCase {
         XCTAssertTrue(inBoth.isEmpty, "an app in the main row and a sub-dock: \(inBoth)")
     }
 
+    /// The Final Edition's screen title: the machine in one line, from this Mac.
+    func testSystemScreenTitle() {
+        let t = AmigaScreenBarController.systemTitle
+        XCTAssertTrue(t.hasPrefix("AmigaOS Release 4.1. "), t)
+        XCTAssertTrue(t.hasSuffix(" RAM"), t)
+    }
+
     func testDockyPicturesDraw() {
         for name in ["clock", "cpu", "winbar"] {
             let img = AmigaDockies.image(name, size: 40, load: [10, 50, 90])
