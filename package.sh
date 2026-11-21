@@ -64,7 +64,8 @@ DR=$(codesign -d -r- "$APP_BUNDLE" 2>&1)
 echo "$DR"
 echo "$DR" | grep -q 'identifier "com.retromac.app"' || { echo "❌ Bundle ID mismatch!"; exit 1; }
 echo "$DR" | grep -q 'FTJLR8JRNS' || { echo "❌ Team ID mismatch!"; exit 1; }
-spctl -a -vvv -t exec "$APP_BUNDLE" 2>&1 | tail -3
+# Information only: the app is notarized with the DMG below, so Gatekeeper rejects it here.
+spctl -a -vvv -t exec "$APP_BUNDLE" 2>&1 | tail -3 || echo "  (not notarized yet: the DMG's notarization below covers it)"
 echo "  ✓ Identity stable (com.retromac.app / FTJLR8JRNS)"
 
 # --- Step 2: Create DMG ---
