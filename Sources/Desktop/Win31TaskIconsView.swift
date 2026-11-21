@@ -46,7 +46,7 @@ final class Win31TaskIconsView: NSView {
     func reload() {
         let own = Bundle.main.bundleIdentifier
         apps = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular && !$0.isTerminated && $0.bundleIdentifier != own }
+            .filter { $0.activationPolicy == .regular && !$0.isTerminated && ShowcaseFilter.allows($0) && $0.bundleIdentifier != own }
             .sorted { ($0.localizedName ?? "") .localizedCaseInsensitiveCompare($1.localizedName ?? "") == .orderedAscending }
         needsDisplay = true
     }

@@ -1981,7 +1981,7 @@ final class DockView: NSView {
 
     func updateRunningIndicators() {
         let running = Set(
-            NSWorkspace.shared.runningApplications
+            NSWorkspace.shared.runningApplications.filter(ShowcaseFilter.allows)
                 .compactMap { $0.bundleIdentifier }
         )
 
@@ -2055,7 +2055,7 @@ final class DockView: NSView {
             return minimizedIDs.sorted()
         }
 
-        var ids = Set(NSWorkspace.shared.runningApplications
+        var ids = Set(NSWorkspace.shared.runningApplications.filter(ShowcaseFilter.allows)
             .filter { app in
                 guard let bid = app.bundleIdentifier,
                       !pinnedIDs.contains(bid),

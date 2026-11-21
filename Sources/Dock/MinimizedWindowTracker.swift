@@ -18,6 +18,18 @@ extension Notification.Name {
 /// programs rather than windows, and says so (`isLimited`), instead of showing nothing and
 /// putting up the system prompt at every start. The moment the permission arrives, the next
 /// poll switches to windows on its own.
+/// QA, for pictures of a theme: RETROMAC_ONLY_APPS="bundle.id,bundle.id" lets the docks and
+/// taskbars see only those running apps, so a screenshot shows none of the user's own windows.
+/// Unset (always, outside a screenshot run) it lets everything through.
+enum ShowcaseFilter {
+    static let only: Set<String>? = ProcessInfo.processInfo.environment["RETROMAC_ONLY_APPS"]
+        .map { Set($0.split(separator: ",").map(String.init)) }
+    static func allows(_ app: NSRunningApplication) -> Bool {
+        guard let only else { return true }
+        return app.bundleIdentifier.map(only.contains) ?? false
+    }
+}
+
 final class MinimizedWindowTracker {
 
     static let shared = MinimizedWindowTracker()
@@ -135,7 +147,7 @@ final class MinimizedWindowTracker {
         let ownBundleID = Bundle.main.bundleIdentifier ?? ""
         let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? -1
         let apps: [(pid_t, String, String?)] = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular }
+            .filter { $0.activationPolicy == .regular && ShowcaseFilter.allows($0) }
             .compactMap { app in
                 guard let bid = app.bundleIdentifier, bid != ownBundleID else { return nil }
                 return (app.processIdentifier, bid, app.localizedName)
@@ -214,7 +226,7 @@ final class MinimizedWindowTracker {
         let info = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
         let withWindows = Self.pidsWithWindows(info)
         let all: [Entry] = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy == .regular && ($0.isHidden || withWindows.contains($0.processIdentifier)) }
+            .filter { $0.activationPolicy == .regular && ShowcaseFilter.allows($0) && ($0.isHidden || withWindows.contains($0.processIdentifier)) }
             .compactMap { app in
                 guard let bid = app.bundleIdentifier, bid != ownBundleID else { return nil }
                 let hidden = app.isHidden

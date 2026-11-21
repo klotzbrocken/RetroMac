@@ -33,7 +33,7 @@ final class NextRunningAppsController {
 
     private func rebuild() {
         let apps = NSWorkspace.shared.runningApplications.filter {
-            $0.activationPolicy == .regular
+            $0.activationPolicy == .regular && ShowcaseFilter.allows($0)
                 && $0.bundleIdentifier != Bundle.main.bundleIdentifier
                 && $0.bundleIdentifier != "com.apple.finder"
         }
