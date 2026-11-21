@@ -65,7 +65,7 @@ enum DesktopLauncher {
             }
 
         case "appfolder":
-            if TigerFinder.isEnabled { TigerFinder.show(URL(fileURLWithPath: "/Applications")) }
+            if TigerFinder.isEnabled || ExplorerController.isEnabled { openFolder(URL(fileURLWithPath: "/Applications")) }
             else { AppFolderController.shared.show() }
 
         case "tvfolder":

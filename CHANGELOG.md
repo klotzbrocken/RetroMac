@@ -17,7 +17,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Documents in a Windows Explorer of their own: the Mac's disks as C:, D:…, Large Icons, List and
   Details, an address bar that takes Windows paths, Windows 98's folder panel or XP's task pane,
   cut, copy and paste (with the Finder too), drag and drop, rename in place, the Recycle Bin and
-  Undo.
+  Undo. Windows 95 to 2000 show Windows 2000's own icons (folders, drives, CD-ROM, network drive,
+  Control Panel, text, sound, video, picture and web files) in 8 pt Tahoma, and the Programs icon
+  on the desktop opens Program Files in it.
 
 - **Start ▸ Run… is the Run dialog.** It opens what you type: notepad, calc, cmd, control,
   taskmgr or explorer, a web address, a path, or any app by name, and it remembers the last ten.
@@ -26,6 +28,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Explorer copy without writing over anything, put a replaced item in the Trash, ask before
   replacing, show the progress of long copies, and ⌘Z takes any of it back, the Trash included.
   Tiger's Finder learns ⌘C, ⌘V and ⌥⌘V.
+
+- **Notepad writes in its own font again.** Windows 95 to 2000 in a Fixedsys-like VGA face
+  (PxPlus IBM VGA 8x16), XP to 7 in Lucida Console where installed, not Courier New.
 
 - **Notepad keeps your files as they were.** It saves with the file's own line endings,
   byte-order mark and encoding, refuses binary and very large files with a message, never

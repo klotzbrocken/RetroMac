@@ -378,7 +378,7 @@ struct AboutTab: View {
                     Link("int10h.org — The Ultimate Oldschool PC Font Pack",
                          destination: URL(string: "https://int10h.org/oldschool-pc-fonts/")!)
                         .font(.caption)
-                    Text("Retro Crashes draws its Windows 9x blue screen in the real VGA text mode, so it uses the real VGA font: Px437 IBM VGA 9x16 by VileR, CC BY-SA 4.0, bundled unmodified. Full licence in the app.")
+                    Text("Retro Crashes draws its Windows 9x blue screen in the real VGA text mode, so it uses the real VGA font: Px437 IBM VGA 9x16 by VileR, CC BY-SA 4.0, bundled unmodified. Notepad writes in its sibling PxPlus IBM VGA 8x16 under Windows 95 to 2000, the same licence. Full licences in the app.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

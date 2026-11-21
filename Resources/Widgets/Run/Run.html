@@ -4,12 +4,11 @@
 <meta charset="utf-8">
 <style>
   /* The Run dialog of Windows 95/98/Me/NT (theme-win98) and XP (theme-winxp, also Vista and 7). */
-  @font-face{font-family:"W95FA";src:url("../Notepad/fonts/W95FA.woff") format("woff");}
   html,body{margin:0;padding:0;background:transparent;overflow:hidden;-webkit-user-select:none;cursor:default;}
   #win{position:relative;width:347px;display:flex;flex-direction:column;}
   .w98-title,.xp-title{display:none;}
   /* ---- Windows 98 ---- */
-  body.theme-win98{font:13px "W95FA","MS Sans Serif",Tahoma,sans-serif;-webkit-font-smoothing:none;}
+  body.theme-win98{font:11px Tahoma,"Microsoft Sans Serif",sans-serif;}   /* 8 pt MS Sans Serif / Tahoma */
   body.theme-win98 #win{background:#c0c0c0;padding:3px;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dfdfdf,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
   body.theme-win98 .w98-title{display:flex;align-items:center;gap:2px;height:20px;padding:0 2px 0 4px;

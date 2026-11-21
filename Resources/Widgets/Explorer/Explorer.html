@@ -3,16 +3,18 @@
 <head>
 <meta charset="utf-8">
 <style>
-  /* The Windows Explorer of RetroMac's Windows themes: Windows 98 (theme-win98, also 95, Me and
-     NT 4.0) and XP (theme-winxp, also Vista and 7). Every icon is drawn here (SVG), nothing copied. */
-  @font-face{font-family:"W95FA";src:url("../Notepad/fonts/W95FA.woff") format("woff");}
+  /* The Windows Explorer of RetroMac's Windows themes: Windows 98 (theme-win98, also 95, Me, NT 4.0
+     and 2000) and XP (theme-winxp, also Vista and 7). The 98 look wears Windows 2000's own icons
+     (icons/, see icons/README.txt); XP's are still drawn here (SVG). */
   *{box-sizing:border-box}
   html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;-webkit-user-select:none;cursor:default;}
   #win{position:absolute;inset:0;display:flex;flex-direction:column;}
   .w98-title,.xp-title{display:none;}
   .ico16{width:16px;height:16px;flex:0 0 16px;}
   /* ===== Windows 98 ===== */
-  body.theme-win98{font:13px "W95FA","MS Sans Serif",Tahoma,sans-serif;-webkit-font-smoothing:none;color:#000;}
+  /* 8 pt MS Sans Serif / Tahoma, the shell font of 95 to 2000. */
+  body.theme-win98{font:11px Tahoma,"Microsoft Sans Serif",sans-serif;color:#000;}
+  img.px{image-rendering:pixelated;}
   body.theme-win98 #win{background:#c0c0c0;padding:3px;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dfdfdf,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
   body.theme-win98 .w98-title{display:flex;align-items:center;gap:3px;height:20px;padding:0 2px 0 3px;flex:0 0 auto;
@@ -29,7 +31,7 @@
   #w98max::before{content:"";position:absolute;left:3px;top:2px;width:9px;height:8px;border:1px solid #000;border-top-width:2px;}
   body.theme-win98 .bar{display:flex;align-items:center;gap:2px;padding:2px;border-bottom:1px solid #808080;box-shadow:0 1px 0 #fff;}
   body.theme-win98 .menubar{padding:0 2px;height:20px;}
-  body.theme-win98 .tbtn{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:44px;padding:2px 4px;font-size:12px;}
+  body.theme-win98 .tbtn{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:44px;padding:2px 4px;}
   body.theme-win98 .tbtn:hover:not(.dis){box-shadow:inset -1px -1px 0 #808080,inset 1px 1px 0 #fff;}
   body.theme-win98 .tbtn:active:not(.dis){box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
   body.theme-win98 .sep{width:2px;align-self:stretch;margin:2px 3px;border-left:1px solid #808080;border-right:1px solid #fff;}
@@ -41,8 +43,9 @@
   body.theme-win98 .main{margin-top:2px;background:#fff;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff,inset 2px 2px 0 #000,inset -2px -2px 0 #dfdfdf;padding:2px;}
   body.theme-win98 .side{width:190px;flex:0 0 190px;padding:14px 12px;background:#fff;overflow:hidden;
     background-image:linear-gradient(90deg,#fff 70%,#f3f3f3);}
-  body.theme-win98 #sideico svg{width:56px;height:56px;}
-  body.theme-win98 .side .bigt{font:bold 22px Arial,"W95FA",sans-serif;-webkit-font-smoothing:antialiased;margin:6px 0 4px;word-break:break-word;}
+  body.theme-win98 #sideico svg,body.theme-win98 #sideico img{width:32px;height:32px;}
+  /* The web view's folder title was Verdana. */
+  body.theme-win98 .side .bigt{font:bold 18px Verdana,Tahoma,sans-serif;margin:8px 0 4px;word-break:break-word;}
   body.theme-win98 .side .rule{height:3px;margin:6px 0 10px;background:linear-gradient(90deg,#ff0000,#ffd700,#00a000,#0000ff);}
   body.theme-win98 .side .xpbox{display:none;}
   body.theme-win98 .status{display:flex;gap:2px;margin-top:2px;height:20px;}
@@ -236,12 +239,20 @@ const TB={back:['Back','<path d="M20 8l-10 8 10 8z" fill="#008000" stroke="#000"
   delete:['Delete','<path d="M8 8l16 16M24 8L8 24" stroke="#c00000" stroke-width="4"/>'],
   props:['Properties','<path d="M5 4h18v24H5z" fill="#fff" stroke="#000"/><path d="M8 9h12M8 13h12M8 17h8" stroke="#000"/><rect x="18" y="18" width="10" height="10" fill="#c0c0c0" stroke="#000"/>'],
   views:['Views','<rect x="4" y="6" width="10" height="9" fill="#ffe94d" stroke="#000"/><rect x="18" y="6" width="10" height="9" fill="#fff" stroke="#000"/><rect x="4" y="18" width="10" height="9" fill="#fff" stroke="#000"/><rect x="18" y="18" width="10" height="9" fill="#ffe94d" stroke="#000"/>']};
-function iconHTML(key){ if(key&&key.startsWith('app:')) return icons[key]?'<img src="'+icons[key]+'">':ICONS.exe; return ICONS[key]||ICONS.doc; }
+/* Windows 2000's icons for the 98 look, 32 px or 16 px (List, Details, title bar). */
+const PNG=new Set(['folder','folderopen','drive','cd','removable','netdrive','computer','control','mydocs','recycle','recyclefull',
+  'desktop','network','doc','text','exe','image','audio','video','web','font','programs']);
+const ALIAS={archive:'doc',pdf:'doc'};
+function iconHTML(key,small){
+  if(key&&key.startsWith('app:')) return icons[key]?'<img src="'+icons[key]+'">':iconHTML('exe',small);
+  const k=ALIAS[key]||key;
+  if(theme==='win98'&&PNG.has(k)) return '<img class="px" src="icons/'+k+'-'+(small?16:32)+'.png">';
+  return ICONS[key]||ICONS.doc; }
 
 /* ---- state ---- */
 let theme='win98', view='icons', items=[], icons={}, sel=new Set(), anchor=null, cur='', dialog=null, cutSet=new Set(), canPaste=false;
 let sortKey='name', sortAsc=true;
-const fmtSize=n=>n<0?'':n<1024?n+' bytes':n<1048576?Math.ceil(n/1024)+'KB':(n/1048576).toFixed(1)+'MB';
+const fmtSize=n=>n<0?'':n<1024?n+' bytes':n<1048576?Math.ceil(n/1024)+'KB':n<1073741824?(n/1048576).toFixed(1)+'MB':(n/1073741824).toFixed(1)+'GB';
 const fmtDate=t=>t?new Date(t*1000).toLocaleString([], {year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
 
 window.setTheme=function(k){ theme=(k==='winxp'||k==='win7')?'winxp':'win98'; document.body.className='theme-'+theme+(dialog?' dialog':''); paintChrome(); };
@@ -256,8 +267,8 @@ window.render=function(p){
   sel=keep;
   if(!dialog){ $('cap98').textContent=$('capxp').textContent=p.title; }
   $('addr').value=p.address;
-  const ico=cur?(cur==='/'?ICONS.drive:ICONS.folder):ICONS.computer;
-  $('tico98').innerHTML=$('ticoxp').innerHTML=ico; $('sideico').innerHTML=cur?ICONS.folder:ICONS.computer; $('sidetitle').textContent=p.title;
+  const role=!cur?'computer':cur==='/'?'drive':(p.role||'folderopen');
+  $('tico98').innerHTML=$('ticoxp').innerHTML=iconHTML(role,true); $('sideico').innerHTML=iconHTML(role==='folderopen'?'folder':role); $('sidetitle').textContent=p.title;
   setDis('tbback',!p.canBack); setDis('miback',!p.canBack); setDis('tbfwd',!p.canForward); setDis('mifwd',!p.canForward);
   setDis('tbup',!p.canUp); setDis('miup',!p.canUp); setDis('tbpaste',!canPaste); setDis('mipaste',!canPaste);
   setDis('tbundo',!p.undo.can); setDis('miundo',!p.undo.can); $('miundo').firstChild.textContent=p.undo.title;
@@ -284,7 +295,7 @@ function draw(){
     const meta=cur?'<span class="c1">'+fmtSize(it.size)+'</span><span class="c2">'+esc(it.type)+'</span><span class="c3">'+fmtDate(it.mod)+'</span>'
       :'<span class="c1">'+(it.total?fmtSize(it.freeBytes)+' free':'')+'</span><span class="c2">'+esc(it.type)+'</span><span class="c3"></span>';
     return '<div class="it'+(sel.has(it.path)?' selected':'')+(cutSet.has(it.path)?' cut':'')+'" draggable="'+(!!cur)+'" data-p="'+esc(it.path)+'"'+(it.special?' data-special="'+it.special+'"':'')+'>'
-      +iconHTML(it.icon)+'<span class="nm">'+esc(it.name)+'</span><span class="meta">'+meta+'</span></div>'; }).join('');
+      +iconHTML(it.icon,view!=='icons')+'<span class="nm">'+esc(it.name)+'</span><span class="meta">'+meta+'</span></div>'; }).join('');
   list.querySelectorAll('.dhead span').forEach(s=>s.onclick=()=>{ if(sortKey===s.dataset.s) sortAsc=!sortAsc; else { sortKey=s.dataset.s; sortAsc=true; } draw(); });
   status();
 }
@@ -350,8 +361,9 @@ main.addEventListener('mousedown',e=>{
   else if(e.metaKey){ sel.has(p)?sel.delete(p):sel.add(p); anchor=p; }
   else if(!sel.has(p)){ sel=new Set([p]); anchor=p; }
   draw();
+  // Not a dblclick listener: the first click redraws the list, so no dblclick ever reaches the item.
+  if(e.detail===2&&!e.metaKey&&!e.shiftKey){ const it=items.find(i=>(i.path||i.special)===p); if(it) openItem(it); }
 });
-main.addEventListener('dblclick',e=>{ const el=e.target.closest('.it'); if(!el) return; const it=items.find(i=>(i.path||i.special)===(el.dataset.p||el.dataset.special)); if(it) openItem(it); });
 main.addEventListener('contextmenu',e=>{ e.preventDefault(); const el=e.target.closest('.it');
   if(el){ const p=el.dataset.p; if(!sel.has(p)){ sel=new Set([p]); draw(); } } else { sel.clear(); draw(); }
   ctxMenu(e.clientX,e.clientY,!!el); });

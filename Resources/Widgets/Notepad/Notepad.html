@@ -263,6 +263,8 @@
 
   /* ===== Windows Notepad — authentic (shared by Windows 98 + XP) ===== */
   @font-face{font-family:"W95FA";src:url("fonts/W95FA.woff") format("woff");}
+  /* Fixedsys stand-in: PxPlus IBM VGA 8x16 by VileR (int10h.org), CC BY-SA 4.0, fonts/LICENSE-PxPlus_IBM_VGA_8x16.txt */
+  @font-face{font-family:"PxVGA";src:url("fonts/PxPlus_IBM_VGA_8x16.ttf");}
   /* title-bar document icon + minimise/maximise (win98) */
   .w98-ico{display:none;}
   body.theme-win98 .w98-ico,body.theme-winxp .w98-ico{display:block;width:16px;height:16px;flex:0 0 16px;margin-right:4px;
@@ -274,7 +276,7 @@
   /* menu bar (File / Edit / Search / Help) */
   .w98-menubar{display:none;}
   body.theme-win98 .w98-menubar,body.theme-winxp .w98-menubar{display:flex;align-items:stretch;height:23px;flex:0 0 auto;
-    padding:0 2px;background:#c0c0c0;font:15px "W95FA","MS Sans Serif",Tahoma,sans-serif;-webkit-font-smoothing:none;
+    padding:0 2px;background:#c0c0c0;font:11px Tahoma,"Microsoft Sans Serif",sans-serif;   /* 8 pt MS Sans Serif / Tahoma */
     color:#000;user-select:none;position:relative;z-index:40;}
   body.theme-winxp .w98-menubar{background:#ECE9D8;font:13px Tahoma,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;}
   .w98-m{position:relative;display:flex;align-items:center;padding:0 7px;cursor:default;}
@@ -299,12 +301,14 @@
     box-shadow:inset 1px 1px #808080,inset -1px -1px #fff,inset 2px 2px #404040,inset -2px -2px #dfdfdf;}
   body.theme-winxp #npedit{background:#ECE9D8;padding:0;margin:0 4px 4px;
     box-shadow:inset 1px 1px #7f9db9,inset -1px -1px #fff;}
-  body.theme-win98 #pad,body.theme-winxp #pad{background:#fff;color:#000;
-    font-family:"Lucida Console","Courier New",monospace;font-size:14px;line-height:1.2;padding:1px 3px;}
+  /* 95 to 2000 wrote in Fixedsys, XP in Lucida Console. */
+  body.theme-win98 #pad,body.theme-winxp #pad{background:#fff;color:#000;padding:1px 3px;}
+  body.theme-win98 #pad{font-family:"PxVGA",monospace;font-size:16px;line-height:16px;}
+  body.theme-winxp #pad{font-family:"Lucida Console",Consolas,Monaco,monospace;font-size:13px;line-height:1.2;}
   /* Notepad is plain text — neutralise any rich formatting persisted from other themes */
   body.theme-win98 #pad *,body.theme-winxp #pad *{
     text-decoration:none!important;font-weight:normal!important;font-style:normal!important;
-    background:transparent!important;color:#000!important;font-size:14px!important;font-family:inherit!important;}
+    background:transparent!important;color:#000!important;font-size:inherit!important;font-family:inherit!important;}
   /* Notepad opens with Word Wrap OFF → long lines scroll horizontally; bars show only when needed */
   body.theme-win98 #pad:not(.w98-wrap),body.theme-winxp #pad:not(.w98-wrap){white-space:pre;word-wrap:normal;overflow:auto;}
   body.theme-win98 #pad.w98-wrap,body.theme-winxp #pad.w98-wrap{white-space:pre-wrap;word-wrap:break-word;overflow-x:hidden;overflow-y:auto;}

@@ -327,7 +327,7 @@ enum ExplorerListing {
             return (a["name"] as? String ?? "").localizedStandardCompare(b["name"] as? String ?? "") == .orderedAscending
         }
         let free = (try? folder.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?.volumeAvailableCapacityForImportantUsage
-        return ["title": title(folder), "address": toWindows(folder), "path": folder.path, "items": items,
+        return ["title": title(folder), "address": toWindows(folder), "path": folder.path, "items": items, "role": role(folder),
                 "free": free.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? ""]
     }
 
@@ -335,20 +335,43 @@ enum ExplorerListing {
     static func myComputer() -> [String: Any] {
         var items: [[String: Any]] = []
         for (i, v) in volumes().enumerated() {
-            let r = try? v.resourceValues(forKeys: [.volumeNameKey, .volumeTotalCapacityKey, .volumeAvailableCapacityKey, .volumeIsRemovableKey, .volumeIsEjectableKey])
+            let r = try? v.resourceValues(forKeys: [.volumeNameKey, .volumeTotalCapacityKey, .volumeAvailableCapacityKey, .volumeIsRemovableKey,
+                                                    .volumeIsEjectableKey, .volumeIsLocalKey, .volumeTypeNameKey])
             let letter = String(UnicodeScalar(UInt8(67 + i)))   // C:, D:, E:…
+            let (icon, type) = driveKind(typeName: r?.volumeTypeName, isLocal: r?.volumeIsLocal ?? true,
+                                         isRemovable: r?.volumeIsRemovable == true || r?.volumeIsEjectable == true)
             items.append(["name": "\(r?.volumeName ?? v.lastPathComponent) (\(letter):)", "path": v.path, "folder": true,
-                          "icon": r?.volumeIsEjectable == true ? "cd" : "drive", "size": -1, "type": r?.volumeIsRemovable == true ? "Removable Disk" : "Local Disk",
+                          "icon": icon, "size": -1, "type": type,
                           "mod": 0, "total": Int64(r?.volumeTotalCapacity ?? 0), "freeBytes": Int64(r?.volumeAvailableCapacity ?? 0)])
         }
         items.append(["name": "Control Panel", "path": "", "special": "control", "folder": false, "icon": "control", "size": -1, "type": "System Folder", "mod": 0])
         return ["title": "My Computer", "address": "My Computer", "path": "", "items": items, "free": ""]
     }
 
+    /// A CD-ROM only for a disc's file system; an external disk is a Removable Disk, a server a
+    /// Network Drive.
+    static func driveKind(typeName: String?, isLocal: Bool, isRemovable: Bool) -> (icon: String, type: String) {
+        if ["cd9660", "udf", "cddafs"].contains(typeName?.lowercased() ?? "") { return ("cd", "CD-ROM Disc") }
+        if !isLocal { return ("netdrive", "Network Drive") }
+        if isRemovable { return ("removable", "Removable Disk") }
+        return ("drive", "Local Disk")
+    }
+
     static func volumes() -> [URL] {
         let all = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: nil, options: [.skipHiddenVolumes]) ?? []
         let root = URL(fileURLWithPath: "/")
         return [root] + all.filter { $0.path != "/" && $0.path.hasPrefix("/Volumes/") }
+    }
+
+    /// The window icon of the special folders; any other folder shows an open folder.
+    static func role(_ u: URL) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
+        switch u.standardizedFileURL.path {
+        case home + "/Documents": return "mydocs"
+        case home + "/Desktop": return "desktop"
+        case "/Applications": return "programs"
+        default: return "folderopen"
+        }
     }
 
     static func title(_ u: URL) -> String {
@@ -387,6 +410,7 @@ enum ExplorerListing {
     static func kind(_ type: UTType?, ext: String) -> String {
         guard let t = type else { return "doc" }
         if t.conforms(to: .plainText) || t.conforms(to: .sourceCode) { return "text" }
+        if t.conforms(to: .font) { return "font" }
         if t.conforms(to: .image) { return "image" }
         if t.conforms(to: .audio) { return "audio" }
         if t.conforms(to: .movie) || t.conforms(to: .video) { return "video" }
