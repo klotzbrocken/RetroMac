@@ -18,3 +18,8 @@ doc          Unknown filetype       text        Text file
 exe          Default Application    image       Paint (2)
 audio        Icon_2 (5)             video       Icon_2 (6)
 web          Unknown (10)           font        Font
+
+tb98.png, tb98-gray.png: the Windows 98 shell toolbar bitmap (browseui), 20 px cells, grey at rest and
+coloured under the pointer as 98, Me and 2000 drew it. Taken from 98.js (github.com/1j01/98,
+images/browse-ui-icons*.png). Cells used: 0 Back, 1 Forward, 44 Up, 21 Cut, 22 Copy, 23 Paste,
+24 Undo, 26 Delete, 31 Properties, 38 Views.

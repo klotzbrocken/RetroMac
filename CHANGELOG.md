@@ -18,8 +18,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   Details, an address bar that takes Windows paths, Windows 98's folder panel or XP's task pane,
   cut, copy and paste (with the Finder too), drag and drop, rename in place, the Recycle Bin and
   Undo. Windows 95 to 2000 show Windows 2000's own icons (folders, drives, CD-ROM, network drive,
-  Control Panel, text, sound, video, picture and web files) in 8 pt Tahoma, and the Programs icon
-  on the desktop opens Program Files in it.
+  Control Panel, text, sound, video, picture and web files) in 8 pt Tahoma with Windows 98's own
+  toolbar (grey, coloured under the pointer), XP to 7 show XP's icons and XP's toolbar (Back,
+  Forward, Up, Views), the title bar is the one the theme draws on every other window (the
+  theme's colours, height and buttons, XP's caption buttons), and the Programs icon on the desktop
+  opens Program Files in it.
 
 - **Start ▸ Run… is the Run dialog.** It opens what you type: notepad, calc, cmd, control,
   taskmgr or explorer, a web address, a path, or any app by name, and it remembers the last ten.

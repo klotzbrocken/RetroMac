@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <style>
   /* The Windows Explorer of RetroMac's Windows themes: Windows 98 (theme-win98, also 95, Me, NT 4.0
-     and 2000) and XP (theme-winxp, also Vista and 7). The 98 look wears Windows 2000's own icons
-     (icons/, see icons/README.txt); XP's are still drawn here (SVG). */
+     and 2000) and XP (theme-winxp, also Vista and 7). The 98 look wears Windows 2000's own icons and
+     98's toolbar bitmap (icons/, see icons/README.txt), XP its own (icons/xp/). The title bars copy
+     the ones RetroMac draws over every other window (TitleBarOverlayController drawWin98/drawLuna). */
   *{box-sizing:border-box}
   html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;-webkit-user-select:none;cursor:default;}
   #win{position:absolute;inset:0;display:flex;flex-direction:column;}
@@ -15,23 +16,30 @@
   /* 8 pt MS Sans Serif / Tahoma, the shell font of 95 to 2000. */
   body.theme-win98{font:11px Tahoma,"Microsoft Sans Serif",sans-serif;color:#000;}
   img.px{image-rendering:pixelated;}
-  body.theme-win98 #win{background:#c0c0c0;padding:3px;
+  body.theme-win98 #win{background:#c0c0c0;padding:0;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dfdfdf,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
-  body.theme-win98 .w98-title{display:flex;align-items:center;gap:3px;height:20px;padding:0 2px 0 3px;flex:0 0 auto;
+  body.theme-win98 .w98-title{display:flex;align-items:center;height:22px;padding:0 2px 0 3px;flex:0 0 auto;
     background:linear-gradient(90deg,#00007b,#1085d2);}
-  body.theme-win98.inactive .w98-title{background:linear-gradient(90deg,#808080,#b5b5b5);}
-  .w98-cap{color:#fff;font-weight:bold;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .w98-btn{width:16px;height:14px;background:#c0c0c0;position:relative;flex:0 0 auto;
-    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dfdfdf;}
+  /* !important: the theme's colours (Win98Scheme.widgetOverrideJS) must not paint a window in the back. */
+  body.theme-win98.inactive .w98-title{background:linear-gradient(90deg,#808080,#dbdbdb)!important;}
+  body.theme-win98.inactive .w98-cap{color:#c7c7c7!important;}
+  body.theme-win98 #tico98{margin-right:5px;}
+  .w98-cap{color:#fff;font:bold 12px Tahoma,"Microsoft Sans Serif",sans-serif;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .w98-btn{width:20px;height:18px;background:#c0c0c0;position:relative;flex:0 0 auto;
+    box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #dbdbdb,inset -2px -2px 0 #808080,inset 2px 2px 0 #fff;}
   .w98-btn:active{box-shadow:inset 1px 1px 0 #000,inset -1px -1px 0 #fff,inset 2px 2px 0 #808080;}
+  .w98-btn:active::before,.w98-btn:active::after{margin:1px 0 0 1px;}
   #w98close{margin-left:2px;}
-  #w98close::before,#w98close::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:2px;background:#000;}
-  #w98close::before{transform:translate(-50%,-50%) rotate(45deg);} #w98close::after{transform:translate(-50%,-50%) rotate(-45deg);}
-  #w98min::before{content:"";position:absolute;left:4px;bottom:3px;width:6px;height:2px;background:#000;}
-  #w98max::before{content:"";position:absolute;left:3px;top:2px;width:9px;height:8px;border:1px solid #000;border-top-width:2px;}
+  #w98close::before,#w98close::after{content:"";position:absolute;left:4px;top:8px;width:12px;height:2px;background:#000;}
+  #w98close::before{transform:rotate(45deg);} #w98close::after{transform:rotate(-45deg);}
+  #w98min::before{content:"";position:absolute;left:5px;top:12px;width:8px;height:2px;background:#000;}
+  #w98max::before{content:"";position:absolute;left:4px;top:3px;width:12px;height:11px;border:1px solid #000;border-top-width:2px;box-sizing:border-box;}
+  body.theme-win98 .frame{padding:2px 3px 3px;}
   body.theme-win98 .bar{display:flex;align-items:center;gap:2px;padding:2px;border-bottom:1px solid #808080;box-shadow:0 1px 0 #fff;}
   body.theme-win98 .menubar{padding:0 2px;height:20px;}
   body.theme-win98 .tbtn{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:44px;padding:2px 4px;}
+  body.theme-win98 .tbtn .tb{width:20px;height:20px;background:url(icons/tb98-gray.png) no-repeat;}
+  body.theme-win98 .tbtn:hover:not(.dis) .tb{background-image:url(icons/tb98.png);}
   body.theme-win98 .tbtn:hover:not(.dis){box-shadow:inset -1px -1px 0 #808080,inset 1px 1px 0 #fff;}
   body.theme-win98 .tbtn:active:not(.dis){box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;}
   body.theme-win98 .sep{width:2px;align-self:stretch;margin:2px 3px;border-left:1px solid #808080;border-right:1px solid #fff;}
@@ -58,18 +66,24 @@
   /* ===== Windows XP ===== */
   body.theme-winxp{font:11px Tahoma,"Segoe UI",sans-serif;color:#000;}
   body.theme-winxp #win{background:#0831D9;border-radius:8px 8px 0 0;overflow:hidden;}
-  body.theme-winxp .xp-title{display:flex;align-items:center;height:28px;gap:4px;padding:0 5px 0 6px;flex:0 0 auto;
-    background:linear-gradient(180deg,#0997FF,#0053EE 45%,#0066FF 52%,#003DD2);}
-  body.theme-winxp.inactive .xp-title{background:linear-gradient(180deg,#7a96df,#6e8fdc 45%,#7d9ae0 52%,#6c88d6);}
-  .xp-cap{color:#fff;font:bold 13px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,40,.5);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .xp-b{width:21px;height:21px;border-radius:3px;border:1px solid #fff;position:relative;flex:0 0 auto;
-    background:linear-gradient(180deg,#5b9df4,#2f6fdd 55%,#1a52c4);}
-  #xpclose{background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
-  #xpclose::before,#xpclose::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#fff;}
-  #xpclose::before{transform:translate(-50%,-50%) rotate(45deg);} #xpclose::after{transform:translate(-50%,-50%) rotate(-45deg);}
-  #xpmin::before{content:"";position:absolute;left:5px;bottom:4px;width:8px;height:3px;background:#fff;}
-  #xpmax::before{content:"";position:absolute;left:4px;top:4px;width:11px;height:10px;border:1px solid #fff;border-top-width:3px;}
-  .xp-b:hover{filter:brightness(1.12);}
+  body.theme-winxp .xp-title{display:flex;align-items:center;height:30px;gap:2px;padding:0 6px 0 8px;flex:0 0 auto;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+    background:linear-gradient(180deg,#459AFD,#1C78F5 8%,#0A61ED 42%,#054FDB 50%,#0F45D4 55%,#1A54E0);}
+  body.theme-winxp.inactive .xp-title{background:linear-gradient(180deg,#8CA8E8,#7894DB);}
+  body.theme-winxp #ticoxp{margin-right:2px;}
+  .xp-cap{color:#fff;font:bold 13px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 0 rgba(0,0,0,.6);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  body.theme-winxp.inactive .xp-cap{color:#e6e6e6;text-shadow:none;}
+  .xp-b{width:21px;height:21px;flex:0 0 auto;background:no-repeat center/21px 21px;}
+  body.theme-winxp.inactive .xp-b{opacity:.75;}
+  #xpclose{background-image:-webkit-image-set(url(../../Chrome/winxp/close.png) 1x,url(../../Chrome/winxp/close@2x.png) 2x);}
+  #xpclose:hover{background-image:-webkit-image-set(url(../../Chrome/winxp/close-hover.png) 1x,url(../../Chrome/winxp/close-hover@2x.png) 2x);}
+  #xpclose:active{background-image:-webkit-image-set(url(../../Chrome/winxp/close-active.png) 1x,url(../../Chrome/winxp/close-active@2x.png) 2x);}
+  #xpmax{background-image:-webkit-image-set(url(../../Chrome/winxp/max.png) 1x,url(../../Chrome/winxp/max@2x.png) 2x);}
+  #xpmax:hover{background-image:-webkit-image-set(url(../../Chrome/winxp/max-hover.png) 1x,url(../../Chrome/winxp/max-hover@2x.png) 2x);}
+  #xpmax:active{background-image:-webkit-image-set(url(../../Chrome/winxp/max-active.png) 1x,url(../../Chrome/winxp/max-active@2x.png) 2x);}
+  #xpmin{background-image:-webkit-image-set(url(../../Chrome/winxp/min.png) 1x,url(../../Chrome/winxp/min@2x.png) 2x);}
+  #xpmin:hover{background-image:-webkit-image-set(url(../../Chrome/winxp/min-hover.png) 1x,url(../../Chrome/winxp/min-hover@2x.png) 2x);}
+  #xpmin:active{background-image:-webkit-image-set(url(../../Chrome/winxp/min-active.png) 1x,url(../../Chrome/winxp/min-active@2x.png) 2x);}
   body.theme-winxp .frame{flex:1;display:flex;flex-direction:column;background:#ECE9D8;margin:0 3px 3px;min-height:0;}
   body.theme-winxp .bar{display:flex;align-items:center;gap:2px;padding:2px 4px;border-bottom:1px solid #fff;box-shadow:0 1px 0 #d6d3ce;}
   body.theme-winxp .menubar{height:22px;background:#ECE9D8;}
@@ -77,6 +91,9 @@
   body.theme-winxp .tbtn:hover:not(.dis){border-color:#c1d2ee;background:linear-gradient(#fff,#e3e9f5);}
   body.theme-winxp .tbtn .ico24{width:24px;height:24px;}
   body.theme-winxp .tbtn:not([data-c=back]) span{display:none;}   /* XP labelled Back alone */
+  body.theme-winxp .tbtn img{width:24px;height:24px;}
+  /* XP's toolbar out of the box: Back, Forward, Up, Views (the rest sat in the task pane and menus). */
+  body.theme-winxp .tbtn.x98,body.theme-winxp .sep.x98{display:none;}
   body.theme-winxp .sep{width:1px;align-self:stretch;margin:2px 3px;background:#c5c2b2;}
   body.theme-winxp input,body.theme-winxp select{font:inherit;border:1px solid #7f9db9;background:#fff;padding:2px 3px;outline:none;}
   body.theme-winxp button{font:inherit;min-width:75px;height:23px;border:1px solid #003c74;border-radius:3px;background:linear-gradient(180deg,#fdfeff,#eaf0fb 45%,#d6e2f5);}
@@ -171,10 +188,10 @@
     </div>
     <div class="bar" id="toolbar">
       <div class="tbtn" data-c="back" id="tbback"></div><div class="tbtn" data-c="forward" id="tbfwd"></div><div class="tbtn" data-c="up" id="tbup"></div>
-      <div class="sep"></div>
-      <div class="tbtn" data-c="cut" data-need="sel"></div><div class="tbtn" data-c="copy" data-need="sel"></div><div class="tbtn" data-c="paste" id="tbpaste"></div>
-      <div class="sep"></div><div class="tbtn" data-c="undo" id="tbundo"></div>
-      <div class="sep"></div><div class="tbtn" data-c="delete" data-need="sel"></div><div class="tbtn" data-c="props" data-need="one"></div>
+      <div class="sep x98"></div>
+      <div class="tbtn x98" data-c="cut" data-need="sel"></div><div class="tbtn x98" data-c="copy" data-need="sel"></div><div class="tbtn x98" data-c="paste" id="tbpaste"></div>
+      <div class="sep x98"></div><div class="tbtn x98" data-c="undo" id="tbundo"></div>
+      <div class="sep x98"></div><div class="tbtn x98" data-c="delete" data-need="sel"></div><div class="tbtn x98" data-c="props" data-need="one"></div>
       <div class="sep"></div><div class="tbtn" data-c="views"></div>
     </div>
     <div class="bar addr"><span>A<u>d</u>dress</span><input id="addr" spellcheck="false"><button id="go" style="min-width:40px">Go</button></div>
@@ -230,23 +247,21 @@ const ICONS={
   desktop:SV('<rect x="3" y="5" width="26" height="18" fill="#008080" stroke="#000"/><path d="M12 23h8l1 4H11z" fill="#c0c0c0" stroke="#000"/>'),
   mydocs:SV('<path d="M2 8h10l2 3h16v17H2z" fill="#c8a400" stroke="#000"/><path d="M2 13h28v15H2z" fill="#ffe94d" stroke="#000"/><path d="M11 15h9l3 3v8H11z" fill="#fff" stroke="#000"/>'),
 };
-const TB={back:['Back','<path d="M20 8l-10 8 10 8z" fill="#008000" stroke="#000"/>'],forward:['Forward','<path d="M12 8l10 8-10 8z" fill="#008000" stroke="#000"/>'],
-  up:['Up','<path d="M2 10h10l2 3h16v15H2z" fill="#ffe94d" stroke="#000"/><path d="M16 22v-9M12 17l4-4 4 4" stroke="#000" fill="none" stroke-width="2"/>'],
-  cut:['Cut','<circle cx="10" cy="24" r="4" fill="none" stroke="#000" stroke-width="2"/><circle cx="22" cy="24" r="4" fill="none" stroke="#000" stroke-width="2"/><path d="M12 21L22 5M20 21L10 5" stroke="#404040" stroke-width="2"/>'],
-  copy:['Copy','<path d="M5 4h12l4 4v14H5z" fill="#fff" stroke="#000"/><path d="M11 10h12l4 4v14H11z" fill="#fff" stroke="#000"/>'],
-  paste:['Paste','<rect x="6" y="6" width="16" height="22" fill="#c08040" stroke="#000"/><rect x="10" y="4" width="8" height="4" fill="#c0c0c0" stroke="#000"/><path d="M14 12h12v16H14z" fill="#fff" stroke="#000"/>'],
-  undo:['Undo','<path d="M8 14h12a6 6 0 010 12h-6" fill="none" stroke="#000080" stroke-width="3"/><path d="M4 14l6-6v12z" fill="#000080"/>'],
-  delete:['Delete','<path d="M8 8l16 16M24 8L8 24" stroke="#c00000" stroke-width="4"/>'],
-  props:['Properties','<path d="M5 4h18v24H5z" fill="#fff" stroke="#000"/><path d="M8 9h12M8 13h12M8 17h8" stroke="#000"/><rect x="18" y="18" width="10" height="10" fill="#c0c0c0" stroke="#000"/>'],
-  views:['Views','<rect x="4" y="6" width="10" height="9" fill="#ffe94d" stroke="#000"/><rect x="18" y="6" width="10" height="9" fill="#fff" stroke="#000"/><rect x="4" y="18" width="10" height="9" fill="#fff" stroke="#000"/><rect x="18" y="18" width="10" height="9" fill="#ffe94d" stroke="#000"/>']};
-/* Windows 2000's icons for the 98 look, 32 px or 16 px (List, Details, title bar). */
+/* Toolbar: the label and its cell in 98's toolbar bitmap (20 px each). XP draws Back, Forward, Up, Views. */
+const TB={back:['Back',0],forward:['Forward',1],up:['Up',44],cut:['Cut',21],copy:['Copy',22],paste:['Paste',23],
+  undo:['Undo',24],delete:['Delete',26],props:['Properties',31],views:['Views',38]};
+const TBXP=new Set(['back','forward','up','views']);
+/* Windows 2000's icons for the 98 look, XP's for XP; 32 px or 16 px (List, Details, title bar). */
 const PNG=new Set(['folder','folderopen','drive','cd','removable','netdrive','computer','control','mydocs','recycle','recyclefull',
   'desktop','network','doc','text','exe','image','audio','video','web','font','programs']);
+const PNGXP=new Set(['folder','folderopen','drive','cd','computer','control','mydocs','recycle','recyclefull','doc','text','exe','image','audio','web']);
 const ALIAS={archive:'doc',pdf:'doc'};
+const ALIASXP={removable:'drive',netdrive:'drive',desktop:'computer',network:'computer',font:'doc',programs:'folder',video:'audio'};
 function iconHTML(key,small){
   if(key&&key.startsWith('app:')) return icons[key]?'<img src="'+icons[key]+'">':iconHTML('exe',small);
-  const k=ALIAS[key]||key;
+  let k=ALIAS[key]||key;
   if(theme==='win98'&&PNG.has(k)) return '<img class="px" src="icons/'+k+'-'+(small?16:32)+'.png">';
+  if(theme==='winxp'){ k=ALIASXP[k]||k; if(PNGXP.has(k)) return '<img src="icons/xp/'+k+'-'+(small?16:32)+'.png">'; }
   return ICONS[key]||ICONS.doc; }
 
 /* ---- state ---- */
@@ -278,9 +293,9 @@ window.render=function(p){
 };
 let free='';
 function setDis(id,d){ const e=$(id); if(e) e.classList.toggle('dis',d); }
-function paintChrome(){ for(const [k,[label,svg]] of Object.entries(TB)){ document.querySelectorAll('.tbtn[data-c="'+k+'"]').forEach(b=>{
-    b.innerHTML='<svg class="'+(theme==='winxp'?'ico24':'ico16')+'" viewBox="0 0 32 32" style="width:'+(theme==='winxp'?24:20)+'px;height:'+(theme==='winxp'?24:20)+'px">'+svg+'</svg><span>'+label+'</span>'; }); }
-  document.querySelectorAll('[data-i]').forEach(s=>s.innerHTML=ICONS[s.dataset.i]); }
+function paintChrome(){ for(const [k,[label,cell]] of Object.entries(TB)){ document.querySelectorAll('.tbtn[data-c="'+k+'"]').forEach(b=>{
+    b.innerHTML=(theme==='winxp'?(TBXP.has(k)?'<img src="icons/xp/tb-'+k+'-24.png">':''):'<div class="tb" style="background-position:'+(-cell*20)+'px 0"></div>')+'<span>'+label+'</span>'; }); }
+  document.querySelectorAll('[data-i]').forEach(s=>s.innerHTML=iconHTML(s.dataset.i,true)); }
 
 function sorted(){ if(!cur&&sortKey==='name'&&sortAsc) return [...items];   // My Computer: C:, D:… in order
   const f=(a,b)=>{ if(a.folder!==b.folder) return a.folder?-1:1;

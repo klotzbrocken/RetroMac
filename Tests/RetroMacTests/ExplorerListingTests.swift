@@ -24,13 +24,22 @@ final class ExplorerListingTests: XCTestCase {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let dir = root.appendingPathComponent("Resources/Widgets/Explorer")
         let page = try String(contentsOf: dir.appendingPathComponent("Explorer.html"), encoding: .utf8)
-        let list = try XCTUnwrap(page.range(of: #"const PNG=new Set\(\[([^\]]*)\]"#, options: .regularExpression).map { String(page[$0]) })
-        let roles = list.split(separator: "'").enumerated().filter { $0.offset % 2 == 1 }.map { String($0.element) }
-        XCTAssertGreaterThan(roles.count, 20)
-        for role in roles + ["exe"] {
-            for size in [16, 32] {
-                XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appendingPathComponent("icons/\(role)-\(size).png").path), "\(role)-\(size)")
+        func roles(_ name: String) throws -> [String] {
+            let list = try XCTUnwrap(page.range(of: "const \(name)=new Set\\(\\[([^\\]]*)\\]", options: .regularExpression).map { String(page[$0]) })
+            return list.split(separator: "'").enumerated().filter { $0.offset % 2 == 1 }.map { String($0.element) }
+        }
+        let win98 = try roles("PNG"), xp = try roles("PNGXP"), toolbar = try roles("TBXP")
+        XCTAssertGreaterThan(win98.count, 20)
+        XCTAssertGreaterThan(xp.count, 12)
+        for (folder, list) in [("icons", win98 + ["exe"]), ("icons/xp", xp + ["exe"])] {
+            for role in list {
+                for size in [16, 32] {
+                    XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appendingPathComponent("\(folder)/\(role)-\(size).png").path), "\(folder)/\(role)-\(size)")
+                }
             }
+        }
+        for name in toolbar.map({ "icons/xp/tb-\($0)-24.png" }) + ["icons/tb98.png", "icons/tb98-gray.png"] {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appendingPathComponent(name).path), name)
         }
     }
 }

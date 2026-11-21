@@ -84,7 +84,8 @@ final class ExplorerController: NSObject, WKScriptMessageHandler, WKNavigationDe
         }
         panel = p; webView = wv; overlay = ov
         fileObserver = NotificationCenter.default.addObserver(forName: .fileOperationsDidChange, object: nil, queue: .main) { [weak self] _ in self?.render() }
-        wv.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent().deletingLastPathComponent())
+        // Resources, not Widgets: the XP title bar takes its buttons from Resources/Chrome/winxp.
+        wv.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent())
         NSApp.activate(ignoringOtherApps: true)
         p.makeKeyAndOrderFront(nil)
     }
@@ -122,6 +123,7 @@ final class ExplorerController: NSObject, WKScriptMessageHandler, WKNavigationDe
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript("window.setTheme('\(RetroFrameTheme.widgetKey())')")
+        webView.evaluateJavaScript(Win98Scheme.widgetOverrideJS())   // the theme's title colours, as on its other windows
         if let d = dialog { send("window.setDialog", ["save": d.save, "name": d.name, "types": d.extensions]) }
         let mode = UserDefaults.standard.string(forKey: "explorerView") ?? "icons"
         webView.evaluateJavaScript("window.setView('\(mode)')")
