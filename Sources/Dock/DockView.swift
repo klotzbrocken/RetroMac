@@ -3962,6 +3962,7 @@ final class DockView: NSView {
 
         // Control Strip: left cap click → collapse/expand
         if handleControlStripCollapseClick(at: local) { return }
+        if handleAmiDockBarClick(at: local) { return }
 
         // Tray speaker. Single click opens the little slider, double click opens the mixer —
         // which is what Windows did, and not the "click to mute" people remember.
@@ -4551,8 +4552,7 @@ final class DockView: NSView {
         }
         // The strip: a hairline apart from the icons, the gadget at its foot (a box with a
         // chevron, the dock's own depth arrangement on AmigaOS 4).
-        let bar = currentBarRect
-        let strip = NSRect(x: bar.maxX - 13 * scale, y: bar.minY + 1, width: 12 * scale, height: bar.height - 2)
+        let strip = amiDockBarRect(scale: scale)
         AmigaChrome.rgb(0x8C8D90).setFill(); NSRect(x: strip.minX, y: strip.minY, width: 1, height: strip.height).fill()
         NSColor.white.setFill(); NSRect(x: strip.minX + 1, y: strip.minY, width: 1, height: strip.height).fill()
         let g = NSRect(x: strip.minX + 2 * scale, y: strip.minY + 2 * scale, width: 9 * scale, height: 9 * scale)
@@ -4564,6 +4564,33 @@ final class DockView: NSView {
         chev.line(to: NSPoint(x: g.maxX - 2.5 * scale, y: g.midY + 1.5 * scale))
         chev.move(to: NSPoint(x: g.minX + 2.5 * scale, y: g.minY + 2 * scale)); chev.line(to: NSPoint(x: g.maxX - 2.5 * scale, y: g.minY + 2 * scale))
         chev.lineWidth = 1; chev.stroke()
+    }
+
+    /// The AmiDock's dockbar: the narrow strip at the dock's right end.
+    private func amiDockBarRect(scale: CGFloat) -> NSRect {
+        let bar = currentBarRect
+        return NSRect(x: bar.maxX - 13 * scale, y: bar.minY + 1, width: 12 * scale, height: bar.height - 2)
+    }
+
+    /// A click on the dockbar opens its little menu, where AmigaOS 4 kept the dock's settings.
+    private func handleAmiDockBarClick(at p: NSPoint) -> Bool {
+        guard let theme = ThemeManager.shared.activeTheme?.config, theme.dock.labelsBelow == true, !theme.isVertical,
+              let win = window else { return false }
+        let strip = amiDockBarRect(scale: CGFloat(AppSettings.shared.dockIconScale) * dynamicScale).insetBy(dx: -1, dy: -1)
+        guard strip.contains(p) else { return false }
+        let s = AppSettings.shared
+        func size(_ title: String, _ v: Float) -> PlatinumMenuItem { .action(title, ticked: abs(s.dockIconScale - v) < 0.05) { s.dockIconScale = v } }
+        let items: [PlatinumMenuItem] = [
+            .submenu("Icon size", [size("Small", 0.8), size("Normal", 1.0), size("Large", 1.25)]),
+            .action("Hide automatically", ticked: s.dockAutoHide) { s.dockAutoHide.toggle() },
+            .separator(),
+            .action("AmiDock prefs\u{2026}") {
+                s.lastSettingsTab = SettingsTab.dock.rawValue
+                NSApp.sendAction(Selector(("openSettings")), to: nil, from: nil)
+            },
+        ]
+        PlatinumMenuController.shared.show(items, below: win.convertToScreen(convert(strip, to: nil)), look: .amiga)
+        return true
     }
 
     private func nameFor(_ bundleID: String) -> String {
