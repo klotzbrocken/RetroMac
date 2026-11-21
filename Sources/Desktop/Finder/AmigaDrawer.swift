@@ -121,6 +121,7 @@ final class AmigaDrawer: NSObject {
 
     let key: String
     private var panel: DrawerPanel?
+    private var fileObserver: NSObjectProtocol?
     private var chrome: WebAppChromeView?
     private let surface = DrawerSurface(frame: NSRect(x: 0, y: 0, width: 400, height: 260))
     private let scroll = NSScrollView()
@@ -174,6 +175,8 @@ final class AmigaDrawer: NSObject {
         p.contentView = chrome
         p.setAccessibilityTitle(title)
         p.onKey = { [weak self] in Self.active = self }
+        // Any file window's copy, move or undo can change what this drawer shows.
+        fileObserver = NotificationCenter.default.addObserver(forName: .fileOperationsDidChange, object: nil, queue: .main) { [weak self] _ in self?.reload() }
         if let f = snap.frame, f.count == 4 {
             p.setFrame(NSRect(x: f[0], y: f[1], width: f[2], height: f[3]), display: false)
         } else if let screen = NSScreen.main {
@@ -190,6 +193,8 @@ final class AmigaDrawer: NSObject {
     }
 
     func close() {
+        if let o = fileObserver { NotificationCenter.default.removeObserver(o) }
+        fileObserver = nil
         panel?.orderOut(nil); panel = nil
         Self.open.removeValue(forKey: key)
         if Self.active === self { Self.active = nil }
@@ -330,12 +335,17 @@ final class AmigaDrawer: NSObject {
         guard let u = url, u.path != "/" else { return }
         Self.show(u.deletingLastPathComponent().path)
     }
+    /// "Unnamed1", "Unnamed2"…, as the Workbench named a new drawer; ⌘Z takes it back.
     func newDrawer() {
         guard let u = url, canChange else { return }
-        var n = 1
-        while FileManager.default.fileExists(atPath: u.appendingPathComponent("Unnamed\(n)").path) { n += 1 }
-        try? FileManager.default.createDirectory(at: u.appendingPathComponent("Unnamed\(n)"), withIntermediateDirectories: false)
-        reload()
+        FileOps.shared.run(.newFolder, title: "New drawer") { _, _, _, _ in
+            var n = 1
+            while FileManager.default.fileExists(atPath: u.appendingPathComponent("Unnamed\(n)").path) { n += 1 }
+            let d = u.appendingPathComponent("Unnamed\(n)")
+            do { try FileManager.default.createDirectory(at: d, withIntermediateDirectories: false) }
+            catch { return OperationOutcome(failure: .failed(d, error.localizedDescription)) }
+            return OperationOutcome(changes: [.created(d)])
+        }
     }
     func selectContents() { iconViews.forEach { $0.select() } }
     /// Clean up: the icons back into rows, keeping their order; the snapshot stays until Snapshot.
@@ -377,12 +387,7 @@ final class AmigaDrawer: NSObject {
             + "They go to the Trash, where they can be taken back out."
         a.addButton(withTitle: "Delete"); a.addButton(withTitle: "Cancel")
         guard a.runModal() == .alertFirstButtonReturn else { return }
-        NSWorkspace.shared.recycle(Self.trashURLs(for: picked)) { [weak self] _, error in
-            DispatchQueue.main.async {
-                if let error { NSAlert(error: error).runModal() }
-                self?.reload()
-            }
-        }
+        FileOps.shared.trash(Self.trashURLs(for: picked))   // ⌘Z puts them back, .info and all
     }
 }
 
@@ -391,6 +396,11 @@ final class DrawerPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
     override func becomeKey() { super.becomeKey(); onKey?() }
+    /// Right-Amiga-Z (⌘Z) and ⇧⌘Z: undo and redo the last file operation of any file window.
+    override func keyDown(with e: NSEvent) {
+        guard e.modifierFlags.contains(.command), e.charactersIgnoringModifiers?.lowercased() == "z" else { return super.keyDown(with: e) }
+        e.modifierFlags.contains(.shift) ? FileOps.shared.redo() : FileOps.shared.undo()
+    }
 }
 
 /// The drawer's inside: the speckled grey tile, the icons on it; a click on the empty space

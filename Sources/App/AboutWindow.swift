@@ -262,6 +262,12 @@ struct AboutTab: View {
                         .foregroundStyle(.secondary)
                 }
 
+                Section("File Window Credits") {
+                    Text("The file operations of the Finder, the drawers and the Explorer (copy without overwriting, replace into the Trash, undo), the Run dialog\u{2019}s way of finding what you typed and Notepad\u{2019}s text files are adapted from retro98 by matheushchaves (github.com/matheushchaves/retro98), MIT License, Copyright \u{00A9} 2026 matheushchaves.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Halloween Theme Credits") {
                     Text("The Halloween theme\u{2019}s wallpapers were generated with Google Gemini. The knife pointer is Maik\u{2019}s own; the pumpkin in the menu bar is macOS\u{2019}s emoji. The Halloween films and their characters belong to their respective owners; the theme is an unofficial fan-made tribute, and RetroMac is not affiliated with, sponsored by, or endorsed by them.")
                         .font(.caption)

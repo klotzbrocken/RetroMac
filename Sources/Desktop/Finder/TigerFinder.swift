@@ -55,6 +55,7 @@ final class TigerFinder: NSObject {
     private var mode: Mode = .icons
     private var searching: String?
     private var keyMonitor: Any?
+    private var fileObserver: NSObjectProtocol?
     private let engine = SpotlightSearch()
 
     private var search: NSSearchField { view.toolbar.search }
@@ -94,6 +95,10 @@ final class TigerFinder: NSObject {
             guard let self, e.window === self.panel else { return e }
             return self.handleKey(e) ? nil : e
         }
+        // Any file window's copy, move or undo can change what this one shows.
+        fileObserver = NotificationCenter.default.addObserver(forName: .fileOperationsDidChange, object: nil, queue: .main) { [weak self] _ in
+            self?.reload()
+        }
         NSApp.activate(ignoringOtherApps: true)
         p.makeKeyAndOrderFront(nil)
     }
@@ -101,6 +106,8 @@ final class TigerFinder: NSObject {
     private func close() {
         if let m = keyMonitor { NSEvent.removeMonitor(m) }
         keyMonitor = nil
+        if let o = fileObserver { NotificationCenter.default.removeObserver(o) }
+        fileObserver = nil
         engine.cancel()
         panel?.orderOut(nil); panel = nil
         Self.windows.removeAll { $0 === self }
@@ -237,31 +244,31 @@ final class TigerFinder: NSObject {
 
     enum Action { case newFolder, rename, duplicate, trash, revealInFinder }
 
+    /// Through FileOps (after retro98): nothing written over, a progress window for long copies,
+    /// and ⌘Z takes any of it back, the Trash included.
     private func perform(_ a: Action) {
-        let fm = FileManager.default
+        let ops = FileOps.shared
         switch a {
         case .newFolder:
             guard searching == nil else { return }
-            let url = FinderItem.unusedURL(in: current, base: "untitled folder", ext: "")
-            do { try fm.createDirectory(at: url, withIntermediateDirectories: false) } catch { report(error); return }
-            reload()
+            ops.newFolder(in: current, base: "untitled folder")
         case .rename:
             guard let item = selection.first else { NSSound.beep(); return }
             rename(item)
         case .duplicate:
-            for item in selection {
-                let base = item.url.deletingPathExtension().lastPathComponent + " copy"
-                let to = FinderItem.unusedURL(in: item.url.deletingLastPathComponent(), base: base, ext: item.url.pathExtension)
-                do { try fm.copyItem(at: item.url, to: to) } catch { report(error) }
+            // Each item beside itself ("name copy"), the way the Finder duplicates.
+            let byFolder = Dictionary(grouping: selection.map(\.url)) { $0.deletingLastPathComponent() }
+            guard !byFolder.isEmpty else { NSSound.beep(); return }
+            for (folder, urls) in byFolder {
+                ops.run(.duplicate, title: "Duplicating…") { o, c, resolve, progress in
+                    o.transfer(.copy, urls, to: folder, control: c, resolve: resolve, progress: progress)
+                }
             }
-            reload()
         case .trash:
             let urls = selection.map(\.url)
             guard !urls.isEmpty else { NSSound.beep(); return }
-            NSWorkspace.shared.recycle(urls) { [weak self] _, error in
-                if let error { self?.report(error) }
+            ops.trash(urls) { [weak self] _ in
                 if let self, self.searching != nil { self.items.removeAll { urls.contains($0.url) } }
-                self?.reload()
             }
         case .revealInFinder:
             let urls = selection.map(\.url)
@@ -281,17 +288,34 @@ final class TigerFinder: NSObject {
         alert.window.initialFirstResponder = field
         alert.beginSheetModal(for: panel) { [weak self] resp in
             guard resp == .alertFirstButtonReturn else { return }
-            let name = field.stringValue.trimmingCharacters(in: .whitespaces)
-            guard !name.isEmpty, !name.contains("/"), name != item.url.lastPathComponent else { return }
-            let to = item.url.deletingLastPathComponent().appendingPathComponent(name)
-            do { try FileManager.default.moveItem(at: item.url, to: to) } catch { self?.report(error); return }
-            self?.reload()
+            let isFolder = FileOperations.isPlainFolder(item.url)
+            switch RenameRules.check(original: item.url.lastPathComponent, typed: field.stringValue, isFolder: isFolder) {
+            case .unchanged: return
+            case .invalid(let why): self?.say(why)
+            case .accept(let name): FileOps.shared.rename(item.url, to: name)
+            case .confirmExtensionChange(let from, let to):
+                let ask = NSAlert()
+                ask.messageText = "Are you sure you want to change the extension from \u{201C}\(from)\u{201D} to \u{201C}\(to.isEmpty ? "(none)" : to)\u{201D}?"
+                ask.addButton(withTitle: "Use \(to.isEmpty ? "None" : to)"); ask.addButton(withTitle: "Keep \(from)")
+                if ask.runModal() == .alertFirstButtonReturn {
+                    FileOps.shared.rename(item.url, to: field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+            }
         }
     }
 
-    private func report(_ error: Error) {
+    private func say(_ text: String) {
         guard let panel else { return }
-        NSAlert(error: error).beginSheetModal(for: panel)
+        let a = NSAlert(); a.messageText = text
+        a.beginSheetModal(for: panel)
+    }
+
+    /// ⌘C puts the selection on the pasteboard as files (the Finder pastes them too); ⌘V copies
+    /// them here, ⌥⌘V moves them, as 10.4's Finder could not but its successors can.
+    private func paste(move: Bool) {
+        let urls = FileOps.pasteboardFiles()
+        guard searching == nil, !urls.isEmpty else { NSSound.beep(); return }
+        move ? FileOps.shared.move(urls, to: current) : FileOps.shared.copy(urls, to: current)
     }
 
     // MARK: - Keys (Finder 10.4's)
@@ -319,6 +343,10 @@ final class TigerFinder: NSObject {
         case "N": perform(.newFolder)   // ⇧⌘N; the shift is in the character
         case "f": panel?.makeFirstResponder(search)
         case "w": close()
+        case "z": FileOps.shared.undo()
+        case "Z": FileOps.shared.redo()                  // ⇧⌘Z
+        case "c": FileOps.putOnPasteboard(selection.map(\.url))
+        case "v": paste(move: e.modifierFlags.contains(.option))
         default: return false
         }
         return true
