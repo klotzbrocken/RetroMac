@@ -9,6 +9,28 @@ import UniformTypeIdentifiers
 final class ExplorerController: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
     static var isEnabled: Bool { ThemeManager.shared.activeTheme?.config.finder == "explorer" }
     private static var windows: [ExplorerController] = []
+    static let windowsChanged = Notification.Name("explorerWindowsChanged")
+    static let finderBundleID = "com.apple.finder"
+
+    /// What Start ▸ Programs ▸ Windows Explorer and Quick Launch opened: C:\ on 95 to Me and NT,
+    /// My Documents from 2000 on.
+    static func showDefault() {
+        let classic = RetroFrameTheme.key() == "win98" && ThemeManager.shared.activeTheme?.config.id != "com.retromac.microsoft.windows2000"
+        show(classic ? URL(fileURLWithPath: "/") : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents"))
+    }
+
+    /// The Finder's name where the Explorer stands in for it.
+    static func name(for bundleID: String) -> String? { bundleID == finderBundleID && isEnabled ? "Windows Explorer" : nil }
+
+    /// The open Explorer windows (not the Open/Save dialogs) for the taskbar: title, in front, and
+    /// what a click on its button does (minimise the one in front, bring back any other).
+    static var tasks: [(title: String, active: Bool, toggle: () -> Void)] {
+        windows.filter { $0.dialog == nil && $0.panel != nil }.map { w in
+            let active = !w.minimized && w.panel?.isKeyWindow == true
+            return (w.title, active, { active ? w.minimize() : w.restore() })
+        }
+    }
+    private static func changed() { NotificationCenter.default.post(name: windowsChanged, object: nil) }
 
     /// Opens `url` in a new Explorer window; nil is My Computer.
     static func show(_ url: URL?) {
@@ -47,6 +69,9 @@ final class ExplorerController: NSObject, WKScriptMessageHandler, WKNavigationDe
     private var cut: [URL] = []
     private var restoreFrame: NSRect?
     private var pendingSelect: [String] = []
+    private var title = "Explorer"
+    private var minimized = false
+    private var keyObservers: [NSObjectProtocol] = []
 
     private init(dialog: Dialog?) { self.dialog = dialog; super.init(); _ = Self.observer }
 
@@ -86,8 +111,23 @@ final class ExplorerController: NSObject, WKScriptMessageHandler, WKNavigationDe
         fileObserver = NotificationCenter.default.addObserver(forName: .fileOperationsDidChange, object: nil, queue: .main) { [weak self] _ in self?.render() }
         // Resources, not Widgets: the XP title bar takes its buttons from Resources/Chrome/winxp.
         wv.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent())
+        let nc = NotificationCenter.default
+        keyObservers = [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification].map {
+            nc.addObserver(forName: $0, object: p, queue: .main) { _ in Self.changed() }
+        }
         NSApp.activate(ignoringOtherApps: true)
         p.makeKeyAndOrderFront(nil)
+        Self.changed()
+    }
+
+    /// Into its taskbar button: a borderless panel cannot miniaturise, so it is put away.
+    private func minimize() { minimized = true; panel?.orderOut(nil); Self.changed() }
+
+    private func restore() {
+        minimized = false
+        NSApp.activate(ignoringOtherApps: true)
+        panel?.makeKeyAndOrderFront(nil)
+        Self.changed()
     }
 
     /// Closes the window; a dialog answers its caller first.
@@ -95,9 +135,12 @@ final class ExplorerController: NSObject, WKScriptMessageHandler, WKNavigationDe
         if let o = fileObserver { NotificationCenter.default.removeObserver(o) }
         fileObserver = nil
         webView?.configuration.userContentController.removeScriptMessageHandler(forName: "explorer")
+        keyObservers.forEach(NotificationCenter.default.removeObserver)
+        keyObservers = []
         panel?.orderOut(nil)
         panel = nil; webView = nil
         Self.windows.removeAll { $0 === self }
+        Self.changed()
         dialog?.completion(result)
     }
 
@@ -160,6 +203,7 @@ final class ExplorerController: NSObject, WKScriptMessageHandler, WKNavigationDe
                 page["canPaste"] = at != nil && !FileOps.pasteboardFiles().isEmpty
                 page["cut"] = self.cut.map(\.path)
                 page["select"] = self.pendingSelect
+                if let t = listing["title"] as? String, t != self.title { self.title = t; Self.changed() }
                 self.pendingSelect = []
                 self.send("window.render", page)
             }
@@ -181,7 +225,7 @@ final class ExplorerController: NSObject, WKScriptMessageHandler, WKNavigationDe
         let ops = FileOps.shared
         switch a {
         case "close": finish(nil)
-        case "min": panel?.miniaturize(nil)
+        case "min": if dialog == nil { minimize() }
         case "max": toggleMaximize()
         case "view": UserDefaults.standard.set(b["mode"] as? String, forKey: "explorerView")
         case "nav": go(path)

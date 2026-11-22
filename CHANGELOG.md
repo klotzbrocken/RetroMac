@@ -22,7 +22,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   toolbar (grey, coloured under the pointer), XP to 7 show XP's icons and XP's toolbar (Back,
   Forward, Up, Views), the title bar is the one the theme draws on every other window (the
   theme's colours, height and buttons, XP's caption buttons), and the Programs icon on the desktop
-  opens Program Files in it.
+  opens Program Files in it. The Finder's places in the Start menu and on Quick Launch are
+  Windows Explorer there (C:\ on 95 to Me and NT, My Documents from 2000 on), and every Explorer
+  window has its button on the taskbar: its minimise button puts it there, a click brings it back.
 
 - **Start ▸ Run… is the Run dialog.** It opens what you type: notepad, calc, cmd, control,
   taskmgr or explorer, a web address, a path, or any app by name, and it remembers the last ten.

@@ -5,6 +5,8 @@ import SkyLightBridge
 enum AppLauncher {
 
     static func launchOrActivate(bundleID: String) {
+        // The Windows themes' Finder is their Explorer: Start menu, Quick Launch and the rest.
+        if bundleID == ExplorerController.finderBundleID, ExplorerController.isEnabled { ExplorerController.showDefault(); return }
         let ws = NSWorkspace.shared
         guard let url = ws.urlForApplication(withBundleIdentifier: bundleID) else {
             print("[Dock] App not found: \(bundleID)")

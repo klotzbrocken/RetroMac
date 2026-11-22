@@ -80,6 +80,7 @@ final class DockView: NSView {
     private var badgesObserver: NSObjectProtocol?
     private var occlusionObserver: NSObjectProtocol?
     private var minimizedObserver: NSObjectProtocol?
+    private var explorerObserver: NSObjectProtocol?
     private var pelletLayer: CAShapeLayer?
     private var pacLayer: CAShapeLayer?
     private var pacmanConfiguredRect: NSRect = .zero
@@ -620,6 +621,7 @@ final class DockView: NSView {
         if let obs = pacmanObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = occlusionObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = minimizedObserver { NotificationCenter.default.removeObserver(obs) }
+        if let obs = explorerObserver { NotificationCenter.default.removeObserver(obs) }
     }
 
     private func setupObservers() {
@@ -658,6 +660,9 @@ final class DockView: NSView {
         minimizedObserver = nc2.addObserver(forName: .minimizedWindowsChanged, object: nil, queue: .main) { [weak self] _ in
             self?.rebuildItems()
             self?.onRunningAppsChanged?()   // resize the dock window to fit the new minimized-tile count
+        }
+        explorerObserver = nc2.addObserver(forName: ExplorerController.windowsChanged, object: nil, queue: .main) { [weak self] _ in
+            self?.rebuildItems()
         }
         // Unread counts from the Mac's Dock: onto the icons and taskbar buttons that are there.
         DockBadges.shared.start()
@@ -1679,6 +1684,11 @@ final class DockView: NSView {
         for w in all where !pinnedBundles.contains(w.bundleID) {
             models.append(windowModel(w))
         }
+        // RetroMac's own Explorer windows, which macOS does not list as another app's.
+        let explorerIcon = ThemeManager.shared.icon(for: ExplorerController.finderBundleID, size: 24)
+        for t in ExplorerController.tasks {
+            models.append((t.title, explorerIcon, t.active, false, nil, ExplorerController.finderBundleID, t.toggle))
+        }
         return models
     }
 
@@ -1718,6 +1728,7 @@ final class DockView: NSView {
     }
 
     private func appDisplayName(_ bundleID: String) -> String {
+        if let n = ExplorerController.name(for: bundleID) { return n }
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
             return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
         }
@@ -4602,6 +4613,7 @@ final class DockView: NSView {
         else if bundleID == "__showdesktop__" { name = "Show Desktop" }
         else if let d = AmigaDockies.name(of: bundleID) { name = AmigaDockies.names[d] ?? d }
         else if let s = AmigaSubdock.name(of: bundleID) { name = s }
+        else if let n = ExplorerController.name(for: bundleID) { name = n }
         else if let app = AppManager.shared.apps.first(where: { $0.bundleID == bundleID }) { name = app.displayName }
         else if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first { name = app.localizedName ?? bundleID }
         else { name = bundleID }
@@ -4873,7 +4885,7 @@ final class DockView: NSView {
         for app in AppManager.shared.apps.prefix(6) {
             let bid = app.bundleID
             if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
-                let name = FileManager.default.displayName(atPath: appURL.path)
+                let name = ExplorerController.name(for: bid) ?? FileManager.default.displayName(atPath: appURL.path)
                     .replacingOccurrences(of: ".app", with: "")
                 let icon = ThemeManager.shared.icon(for: bid, size: xpIconSize)
                 leftItems.append(MI(title: name, icon: icon, action: {
@@ -4987,7 +4999,7 @@ final class DockView: NSView {
         for app in AppManager.shared.apps.prefix(10) {
             let bid = app.bundleID
             guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) else { continue }
-            let name = FileManager.default.displayName(atPath: appURL.path).replacingOccurrences(of: ".app", with: "")
+            let name = ExplorerController.name(for: bid) ?? FileManager.default.displayName(atPath: appURL.path).replacingOccurrences(of: ".app", with: "")
             let icon = ThemeManager.shared.icon(for: bid, size: 32)
             leftItems.append(MI(title: name, icon: icon, action: { AppLauncher.launchOrActivate(bundleID: bid) }, bundleID: bid))
         }
@@ -5086,7 +5098,7 @@ final class DockView: NSView {
                 MI(title: "Administrative Tools (Common)", icon: group, submenuItems: admin),
                 MI(title: "Startup", icon: group, submenuItems: startup),
                 app("Command Prompt", "com.apple.Terminal", "terminal.png"),
-                app("Windows NT Explorer", "com.apple.finder", "programsfolder.png")].compactMap { $0 }
+                app("Windows NT Explorer", ExplorerController.finderBundleID, "programsfolder.png")].compactMap { $0 }
     }
 
     /// "All Programs": every app on the Mac in folders by kind, then the rest (AllPrograms).
@@ -5116,7 +5128,7 @@ final class DockView: NSView {
             // so the list matches whichever Windows the theme is.
             let icon = ThemeManager.shared.icon(for: bid, size: 20)
             if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bid) {
-                let name = FileManager.default.displayName(atPath: appURL.path)
+                let name = ExplorerController.name(for: bid) ?? FileManager.default.displayName(atPath: appURL.path)
                     .replacingOccurrences(of: ".app", with: "")
                 programItems.append(MI(title: name, icon: icon, action: {
                     AppLauncher.launchOrActivate(bundleID: bid)
