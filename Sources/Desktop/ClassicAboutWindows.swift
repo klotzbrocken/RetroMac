@@ -101,7 +101,7 @@ private class AboutChromeView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        guard closeRect.insetBy(dx: -2, dy: -2).contains(p) else { window?.performDrag(with: event); return }
+        guard closeRect.insetBy(dx: -2, dy: -2).contains(p) else { window?.dragWithMouse(from: event); return }
         pressedClose = true
         while let e = window?.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
             let q = convert(e.locationInWindow, from: nil)

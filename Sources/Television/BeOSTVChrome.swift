@@ -52,7 +52,7 @@ final class BeOSTVChromeView: NSView {
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if closeRect.contains(p) { onClose?(); return }
-        if tabRect.contains(p) { window?.performDrag(with: event); return }
+        if tabRect.contains(p) { window?.dragWithMouse(from: event); return }
     }
 }
 
@@ -162,7 +162,7 @@ final class Mac9TVChromeView: NSView {
             if tracker.mouseDown(at: p) { needsDisplay = true }
             return
         }
-        if barRect.contains(p) { window?.performDrag(with: event); return }
+        if barRect.contains(p) { window?.dragWithMouse(from: event); return }
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -299,7 +299,7 @@ final class WinXPTVChromeView: NSView {
             if tracker.mouseDown(at: p) { needsDisplay = true }
             return
         }
-        if barRect.contains(p) { window?.performDrag(with: event); return }
+        if barRect.contains(p) { window?.dragWithMouse(from: event); return }
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -434,7 +434,7 @@ final class SnowLeopardTVChromeView: NSView {
             if tracker.mouseDown(at: p) { needsDisplay = true }
             return
         }
-        if barRect.contains(p) { window?.performDrag(with: event); return }
+        if barRect.contains(p) { window?.dragWithMouse(from: event); return }
     }
     override func mouseDragged(with event: NSEvent) {
         if tracker.mouseDragged(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }
@@ -520,7 +520,7 @@ final class System6TVChromeView: NSView {
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if tracker.hitTest(p) != nil { if tracker.mouseDown(at: p) { needsDisplay = true }; return }
-        if barRect.contains(p) { window?.performDrag(with: event); return }
+        if barRect.contains(p) { window?.dragWithMouse(from: event); return }
     }
     override func mouseDragged(with event: NSEvent) {
         if tracker.mouseDragged(to: convert(event.locationInWindow, from: nil)) { needsDisplay = true }

@@ -293,6 +293,21 @@ final class CPUMonitorController: NSObject, WKScriptMessageHandler, WKNavigation
     }
 }
 
+extension NSWindow {
+    /// Moves the window with the pointer until the button comes up. RetroMac's borderless,
+    /// non-activating widget panels did not move with `performDrag(with:)` (Maik, Windows 98 and
+    /// other themes), so the window follows the pointer here, as the title-bar overlays move
+    /// other apps' windows.
+    func dragWithMouse(from event: NSEvent) {
+        let start = NSEvent.mouseLocation, origin = frame.origin
+        while let e = NSApp.nextEvent(matching: [.leftMouseDragged, .leftMouseUp], until: .distantFuture, inMode: .eventTracking, dequeue: true),
+              e.type == .leftMouseDragged {
+            let p = NSEvent.mouseLocation
+            setFrameOrigin(NSPoint(x: (origin.x + p.x - start.x).rounded(), y: (origin.y + p.y - start.y).rounded()))
+        }
+    }
+}
+
 /// Transparent view placed over the BeOS yellow title-tab: dragging it moves the window,
 /// clicking the close-box region closes the widget. (A WKWebView mouseDown override never
 /// fires because the web content's internal views swallow the event — hence this overlay.)
@@ -383,7 +398,7 @@ final class DragOverlayView: NSView {
             let k = RetroFrameTheme.key()
             if k == "macos9" || k == "macos6" || k == "system7" { onCollapse?(); return }
         }
-        window?.performDrag(with: event)
+        window?.dragWithMouse(from: event)
     }
     override func mouseDragged(with event: NSEvent) {
         guard let pr = pressed else { return }

@@ -447,7 +447,7 @@ final class NextWindowFrameView: NSView {
     override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         if closeRect.insetBy(dx: -2, dy: -2).contains(p) { onClose(); return }
-        if p.y <= border + titleH { window?.performDrag(with: event) }   // drag by the title bar
+        if p.y <= border + titleH { window?.dragWithMouse(from: event) }   // drag by the title bar
     }
 }
 

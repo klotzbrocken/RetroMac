@@ -1248,7 +1248,7 @@ final class WebAppChromeView: NSView {
         if backHit.contains(p) { onBack?(); return }
         if fwdHit.contains(p) { onForward?(); return }
         if style == .amiga, p.y <= titleH, event.clickCount == 2, windowControls { onZoom?(); return }
-        if p.y <= pad + titleH + 2 { window?.performDrag(with: event) }
+        if p.y <= pad + titleH + 2 { window?.dragWithMouse(from: event) }
     }
 
     override func mouseDragged(with event: NSEvent) {

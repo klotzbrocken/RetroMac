@@ -24,7 +24,7 @@ final class TicTacToeController: NSObject, WKNavigationDelegate {
         override func mouseDown(with event: NSEvent) {
             let p = convert(event.locationInWindow, from: nil)
             if closeRect.contains(p) { pressingClose = true; onClosePress?(true); return }
-            window?.performDrag(with: event)
+            window?.dragWithMouse(from: event)
         }
         override func mouseDragged(with event: NSEvent) {
             guard pressingClose else { return }

@@ -51,6 +51,12 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **The BeOS Deskbar sits on the screen's edge.** It was placed while the Mac's Dock was still
   being put away and stayed 90 points above the bottom; it now follows the work area.
 
+### Fixes
+
+- **Widgets move again.** The Clock, CPU Monitor, Programs, Notepad, Calculator, Defrag, Task
+  Manager, Run and Explorer windows (and the TV windows, Tic-Tac-Toe and the About boxes) follow
+  the pointer by their title bar again, in every theme.
+
 ## 3.0.7
 
 ### New
