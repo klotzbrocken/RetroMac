@@ -194,8 +194,8 @@
   #w98close::before,#w98close::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#000;}
   #w98close::before{transform:translate(-50%,-50%) rotate(45deg);}
   #w98close::after{transform:translate(-50%,-50%) rotate(-45deg);}
-  #w98min::before{content:"";position:absolute;left:4px;bottom:4px;width:8px;height:2px;background:#808080;box-shadow:1px 1px 0 #fff;}
-  #w98max::before{content:"";position:absolute;left:4px;top:3px;width:10px;height:9px;border:1px solid #808080;border-top-width:2px;box-shadow:1px 1px 0 #fff;}
+  #w98min::before{content:"";position:absolute;left:4px;bottom:4px;width:8px;height:2px;background:#000;}
+  #w98max::before{content:"";position:absolute;left:4px;top:3px;width:10px;height:9px;border:1px solid #000;border-top-width:2px;}
   body.theme-win98 .tab{display:none;}
   body.theme-win98 #win{background:#c0c0c0;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;}
@@ -1006,9 +1006,8 @@
     const win=document.getElementById('win');
     const cl=document.body.classList;
     if(cl.contains('theme-win98')||cl.contains('theme-winxp')){
-      // Windows has no WindowShade — "minimise" removes the window from the screen
-      // (text is autosaved; reopen from the desktop icon).
-      post({action:'save',text:cleanHTML()}); post({action:'close'});
+      // Windows has no WindowShade — minimise puts the window into its taskbar button.
+      post({action:'save',text:cleanHTML()}); post({action:'minimize'});
       return [win.offsetWidth, win.offsetHeight];
     }
     if(!npCollapsed){

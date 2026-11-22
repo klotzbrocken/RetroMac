@@ -1689,6 +1689,17 @@ final class DockView: NSView {
         for t in ExplorerController.tasks {
             models.append((t.title, explorerIcon, t.active, false, nil, ExplorerController.finderBundleID, t.toggle))
         }
+        // Notepad and Calculator, RetroMac windows too, sit there like the programs they were.
+        if ExplorerController.isEnabled {
+            let widgets: [(PanelTask, String, String, String)] = [
+                (NotepadController.shared.taskbar, NotepadController.shared.taskTitle, "notepad", "notepadclassic.png"),
+                (CalculatorController.shared.taskbar, "Calculator", "calculator", "calculator.png")]
+            for (task, title, type, fallback) in widgets {
+                guard let t = task.task(title) else { continue }
+                let name = ThemeManager.shared.activeTheme?.config.desktopIcons?.first(where: { $0.type == type })?.icon ?? fallback
+                models.append((t.title, startMenuIcon(name) ?? explorerIcon, t.active, false, nil, "com.retromac.\(type)", t.toggle))
+            }
+        }
         return models
     }
 

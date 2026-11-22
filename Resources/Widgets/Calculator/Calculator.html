@@ -65,8 +65,15 @@
   body.theme-winxp .xp-title{display:flex;align-items:center;height:26px;gap:6px;padding:0 4px 0 8px;
     border-radius:8px 8px 0 0;background:linear-gradient(180deg,#0997FF,#0053EE 45%,#0066FF 52%,#003DD2);}
   .xp-cap{color:#fff;font:700 12px "Trebuchet MS",Tahoma,sans-serif;text-shadow:1px 1px 1px rgba(0,0,40,.5);}
-  .xp-close{margin-left:auto;width:21px;height:19px;border-radius:3px;position:relative;cursor:pointer;
-    border:1px solid rgba(255,255,255,.55);background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
+  .xp-min,.xp-max,.xp-close{width:21px;height:19px;border-radius:3px;position:relative;cursor:pointer;flex:0 0 auto;
+    border:1px solid rgba(255,255,255,.55);}
+  .xp-close{background:linear-gradient(180deg,#F7B39E,#E35F44 55%,#C4382A);}
+  /* calc.exe: minimise works, maximise is greyed (the window has a fixed size) */
+  .xp-min,.xp-max{background:linear-gradient(180deg,#5b9df4,#2f6fdd 55%,#1a52c4);}
+  .xp-min{margin-left:auto;} .xp-max,.xp-close{margin-left:-4px;}
+  .xp-max{opacity:.5;cursor:default;}
+  .xp-min::before{content:"";position:absolute;left:5px;bottom:4px;width:9px;height:2px;background:#fff;}
+  .xp-max::before{content:"";position:absolute;left:5px;top:4px;width:10px;height:8px;border:1px solid #fff;border-top-width:2px;}
   .xp-close::before,.xp-close::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#fff;}
   .xp-close::before{transform:translate(-50%,-50%) rotate(45deg);} .xp-close::after{transform:translate(-50%,-50%) rotate(-45deg);}
   /* XP Luna keys */
@@ -127,6 +134,11 @@
   #w98close::before,#w98close::after{content:"";position:absolute;left:50%;top:50%;width:11px;height:2px;background:#000;}
   #w98close::before{transform:translate(-50%,-50%) rotate(45deg);}
   #w98close::after{transform:translate(-50%,-50%) rotate(-45deg);}
+  #w98min,#w98max{font-size:0;position:relative;}
+  #w98min{margin-left:auto;}
+  #w98min::before{content:"";position:absolute;left:4px;bottom:4px;width:8px;height:2px;background:#000;}
+  #w98max{cursor:default;}
+  #w98max::before{content:"";position:absolute;left:4px;top:3px;width:10px;height:9px;border:1px solid #808080;border-top-width:2px;box-shadow:1px 1px 0 #fff;}
   body.theme-win98 .tab{display:none;}
   body.theme-win98 #win{background:#c4c4c4;
     box-shadow:inset -1px -1px 0 #000,inset 1px 1px 0 #fff,inset -2px -2px 0 #808080,inset 2px 2px 0 #dbdbdb;}
@@ -154,6 +166,11 @@
   body.theme-win7 .xp-cap{color:#0b1a2e;font-family:"Segoe UI",Tahoma,sans-serif;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 3px #fff;}
   body.theme-win7 .body{background:#f0f0f0;}
   body.theme-win7 .xp-close{background:linear-gradient(180deg,#e7a99e,#d76b58 45%,#d54f36 55%,#c23b22);border:1px solid rgba(0,0,0,.3);}
+  body.theme-win7 .xp-min,body.theme-win7 .xp-max{
+    background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.3) 45%,rgba(0,0,0,.08) 55%,rgba(255,255,255,.5));
+    border:1px solid rgba(0,0,0,.3);}
+  body.theme-win7 .xp-min::before{background:#1a1a1a;}
+  body.theme-win7 .xp-max::before{border-color:#1a1a1a;}
 
   /* ===== AmigaOS 4.1 (theme-amiga): AmigaChrome's banded bar row for row (the 2008 AmigaOne
      screenshots), the closer left, the title left in DejaVu Sans, the 5 pt blue frame ===== */
@@ -170,8 +187,8 @@
 </style>
 <style>
 /* Live title-bar button feedback (native DragOverlayView → window.setBtnState). */
-.xp-close.is-hover,.mf-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
-.xp-close.is-press,.mf-close.is-press,.closebox.is-press{filter:brightness(.82);}
+.xp-min.is-hover,.xp-close.is-hover,.mf-close.is-hover,.closebox.is-hover{filter:brightness(1.13);}
+.xp-min.is-press,.xp-close.is-press,.mf-close.is-press,.closebox.is-press{filter:brightness(.82);}
 .mx-close.is-press{box-shadow:inset 0 0 3px 1px rgba(0,0,0,.45),inset 0 -4px 5px rgba(0,0,0,.32);}
 .w98-btn.is-hover{filter:brightness(1.06);}
 .w98-btn.is-press{box-shadow:inset 2px 2px 0 #000,inset -2px -2px 0 #dbdbdb,inset 4px 4px 0 #808080,inset -4px -4px 0 #fff;}
@@ -211,7 +228,7 @@
     <!-- Mac OS 9 -->
     <div class="m9-title" id="m9title"><span class="m9-close" id="m9close"></span><div class="m9-plaque">Calculator</div></div>
     <!-- Windows XP -->
-    <div class="xp-title" id="xptitle"><span class="xp-cap">Calculator</span><span class="xp-close" id="xpclose"></span></div>
+    <div class="xp-title" id="xptitle"><span class="xp-cap">Calculator</span><span class="xp-min" id="xpmin" title="Minimieren"></span><span class="xp-max" id="xpmax"></span><span class="xp-close" id="xpclose"></span></div>
     <!-- Maiks Favourite -->
     <div class="mf-title" id="mftitle"><span class="mf-close" id="mfclose"></span><span class="mf-cap">Calculator</span></div>
     <!-- Mac OS X Aqua -->
@@ -220,7 +237,7 @@
       <span class="mx-cap">Calculator</span>
     </div>
     <!-- Windows 98 -->
-    <div class="w98-title" id="w98title"><img class="w98-ico" id="w98ico" alt=""><span class="w98-cap">Calculator</span><span class="w98-btn w98-close" id="w98close">×</span></div>
+    <div class="w98-title" id="w98title"><img class="w98-ico" id="w98ico" alt=""><span class="w98-cap">Calculator</span><span class="w98-btn" id="w98min" title="Minimieren"></span><span class="w98-btn" id="w98max"></span><span class="w98-btn w98-close" id="w98close">×</span></div>
     <div class="w98-menubar" id="w98menu"><span><u>E</u>dit</span><span><u>V</u>iew</span><span><u>H</u>elp</span></div>
     <div class="body">
       <div class="disp" id="disp">0</div>
@@ -335,10 +352,10 @@
   window.regions=function(){
     const cl=document.body.classList;
     const R=id=>{const e=document.getElementById(id);if(!e)return[0,0,0,0];const b=e.getBoundingClientRect();return[b.x,b.y,b.width,b.height];};
-    if(cl.contains('theme-win98'))    return [...R('w98title'),...R('w98close')];
+    if(cl.contains('theme-win98'))    return [...R('w98title'),...R('w98close'),...R('w98min')];
     if(cl.contains('theme-macosx'))   return [...R('mxtitle'),...R('mxclose')];
     if(cl.contains('theme-maiksfav')) return [...R('mftitle'),...R('mfclose')];
-    if(cl.contains('theme-winxp'))    return [...R('xptitle'),...R('xpclose')];
+    if(cl.contains('theme-winxp'))    return [...R('xptitle'),...R('xpclose'),...R('xpmin')];
     if(cl.contains('theme-macos9'))   return [...R('m9title'),...R('m9close')];
     return [...R('tab'),...R('bxclose')];
   };
@@ -349,10 +366,10 @@
 window.setBtnState = function(slot, state){
   const cl = document.body.classList;
   let ids;
-  if (cl.contains('theme-win98'))         ids = {close:'w98close'};
+  if (cl.contains('theme-win98'))         ids = {close:'w98close', collapse:'w98min'};
   else if (cl.contains('theme-macosx'))   ids = {close:'mxclose'};
   else if (cl.contains('theme-maiksfav')) ids = {close:'mfclose'};
-  else if (cl.contains('theme-winxp'))    ids = {close:'xpclose'};
+  else if (cl.contains('theme-winxp'))    ids = {close:'xpclose', collapse:'xpmin'};
   else if (cl.contains('theme-macos9'))   ids = {close:'m9close'};
   else ids = {close:'closebox'};
   const el = ids[slot] && document.getElementById(ids[slot]);

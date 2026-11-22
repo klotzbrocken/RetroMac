@@ -16,6 +16,8 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
     private var dragOverlay: DragOverlayView?
     private var moveObserver: NSObjectProtocol?
     private let posKey = "calculatorWidgetOrigin"
+    /// Its button on the Windows taskbar.
+    let taskbar = PanelTask()
 
     private override init() {
         super.init()
@@ -28,7 +30,7 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
     func toggle() { if panel?.isVisible == true { close() } else { show() } }
 
     /// Warm hide — keeps the WebView alive for instant reopen.
-    func close() { saveOrigin(); panel?.orderOut(nil) }
+    func close() { saveOrigin(); panel?.orderOut(nil); taskbar.closed() }
 
     /// Cold teardown — removes the script-message handler and releases the WebView.
     func destroy() {
@@ -45,6 +47,7 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
         blurTokens.forEach { NotificationCenter.default.removeObserver($0) }
         blurTokens = []
         panel?.orderOut(nil); panel = nil
+        taskbar.closed()
     }
 
     private func saveOrigin() {
@@ -69,6 +72,7 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
     func show() {
         guard let html = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Calculator/Calculator.html"),
               FileManager.default.fileExists(atPath: html.path) else { NSSound.beep(); return }
+        if taskbar.minimized { taskbar.restore(); return }   // back out of its taskbar button with the sum it held
 
         if panel == nil {
             let initial = NSRect(x: 0, y: 0, width: 236, height: 240)
@@ -86,6 +90,7 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
 
             let overlay = DragOverlayView(frame: .zero)
             overlay.onClose = { [weak self] in self?.close() }
+            overlay.onCollapse = { [weak self] in self?.taskbar.minimize() }   // Windows' minimise box
             overlay.onHover = { [weak self] h in
                 self?.webView?.evaluateJavaScript("window.setHover && window.setHover(\(h))")
             }
@@ -113,6 +118,7 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
         restorePosition()
         NSApp.activate(ignoringOtherApps: true)
         panel?.makeKeyAndOrderFront(nil)
+        if let p = panel { taskbar.opened(p) }
     }
 
     func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -144,7 +150,9 @@ final class CalculatorController: NSObject, WKScriptMessageHandler, WKNavigation
             let H = wv.bounds.height
             overlay.frame = CGRect(x: 0, y: H - (tabY + tabH), width: wv.bounds.width, height: tabH)
             overlay.closeRect = CGRect(x: a[4], y: tabH - ((a[5] - tabY) + a[7]), width: a[6], height: a[7])
-            overlay.collapseRect = .zero; overlay.zoomRect = .zero
+            // Windows titles add a minimise box after the close box's rect.
+            overlay.collapseRect = a.count >= 12 ? CGRect(x: a[8], y: tabH - ((a[9] - tabY) + a[11]), width: a[10], height: a[11]) : .zero
+            overlay.zoomRect = .zero
         }
     }
 }

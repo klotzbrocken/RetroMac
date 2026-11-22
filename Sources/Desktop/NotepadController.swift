@@ -24,9 +24,12 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
     private var moveObserver: NSObjectProtocol?
     private let posKey = "notepadWidgetOrigin"
     private let textKey = "notepadText"
-    private var currentFileURL: URL?
+    private var currentFileURL: URL? { didSet { PanelTask.changed() } }   // the taskbar button shows its name
     /// The opened file's line ending, byte-order mark and encoding, so Save writes the same kind back.
     private var currentFile = TextFile(text: "")
+    /// Its button on the Windows taskbar.
+    let taskbar = PanelTask()
+    var taskTitle: String { (currentFileURL?.lastPathComponent ?? "Untitled") + " - Notepad" }
 
     private override init() {
         super.init()
@@ -39,7 +42,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
     func toggle() { if panel?.isVisible == true { close() } else { show() } }
 
     /// Warm hide — keeps the WebView alive for instant reopen.
-    func close() { saveOrigin(); panel?.orderOut(nil) }
+    func close() { saveOrigin(); panel?.orderOut(nil); taskbar.closed() }
 
     /// Cold teardown — removes the script-message handler and releases the WebView.
     func destroy() {
@@ -56,6 +59,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
         blurTokens.forEach { NotificationCenter.default.removeObserver($0) }
         blurTokens = []
         panel?.orderOut(nil); panel = nil
+        taskbar.closed()
     }
 
     private func saveOrigin() {
@@ -80,6 +84,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
     func show() {
         guard let html = Bundle.main.resourceURL?.appendingPathComponent("Widgets/Notepad/Notepad.html"),
               FileManager.default.fileExists(atPath: html.path) else { NSSound.beep(); return }
+        if taskbar.minimized { taskbar.restore(); return }   // back out of its taskbar button, text and all
 
         if panel == nil {
             let sz = restoredSize()
@@ -144,6 +149,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
         restorePosition()
         NSApp.activate(ignoringOtherApps: true)
         panel?.makeKeyAndOrderFront(nil)
+        if let p = panel { taskbar.opened(p) }
     }
 
     func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -154,6 +160,7 @@ final class NotepadController: NSObject, WKScriptMessageHandler, WKNavigationDel
         case "save": UserDefaults.standard.set(dict["text"] as? String ?? "", forKey: textKey)
         case "menuOpen": dragOverlay?.passthrough = (dict["open"] as? Bool ?? false)
         case "close": close()
+        case "minimize": taskbar.minimize()
         case "open": openFile()
         case "saveFile": saveFile(plain: dict["plain"] as? String ?? "", forceDialog: false)
         case "saveAs": saveFile(plain: dict["plain"] as? String ?? "", forceDialog: true)
