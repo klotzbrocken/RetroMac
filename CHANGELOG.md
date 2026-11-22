@@ -3,7 +3,7 @@
 All notable changes to RetroMac are documented here. For older releases and the
 downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/RetroMac/releases).
 
-## Unreleased
+## 3.0.8
 
 ### New
 
@@ -25,8 +25,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   opens Program Files in it. The Finder's places in the Start menu and on Quick Launch are
   Windows Explorer there (C:\ on 95 to Me and NT, My Documents from 2000 on), and every Explorer
   window has its button on the taskbar: its minimise button puts it there, a click brings it back.
-  Notepad, Calculator and XP's Task Manager get theirs too (Task Manager's minimise used to close it), Calculator with the minimise box it lacked (and calc.exe's
-  greyed maximise), and Notepad's minimise no longer closes it.
+  Notepad, Calculator and XP's Task Manager get theirs too (their minimise used to close them),
+  and Calculator gets the minimise box it lacked, with calc.exe's greyed maximise.
 
 - **Start ▸ Run… is the Run dialog.** It opens what you type: notepad, calc, cmd, control,
   taskmgr or explorer, a web address, a path, or any app by name, and it remembers the last ten.
@@ -48,18 +48,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixed
 
+- **Widgets move again.** The Clock, CPU Monitor, Programs, Notepad, Calculator, Defrag, Task
+  Manager, Run and Explorer windows (and the TV windows, Tic-Tac-Toe and the About boxes) follow
+  the pointer by their title bar again, in every theme.
+
 - **Desktop icons no longer land on each other.** An icon moved on a wider display was pushed to
   this screen's edge and could sit on another one (Tiger's Applications on Macintosh HD); it now
   goes back to its own place, or the next free one.
 
 - **The BeOS Deskbar sits on the screen's edge.** It was placed while the Mac's Dock was still
   being put away and stayed 90 points above the bottom; it now follows the work area.
-
-### Fixes
-
-- **Widgets move again.** The Clock, CPU Monitor, Programs, Notepad, Calculator, Defrag, Task
-  Manager, Run and Explorer windows (and the TV windows, Tic-Tac-Toe and the About boxes) follow
-  the pointer by their title bar again, in every theme.
 
 ## 3.0.7
 

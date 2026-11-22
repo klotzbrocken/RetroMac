@@ -118,30 +118,32 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Amiga Workbench 4.1, and themes that stay safe")
+                Text("Windows 2000, the Explorer, and Clippy at your side")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    feature("desktopcomputer", .blue, "Windows 2000 Professional",
+                            "The plain blue-grey desktop, the grey taskbar, and 2000\u{2019}s own Start menu with Windows Update, Search and Run\u{2026}")
+                    feature("folder.fill", .orange, "The Explorer",
+                            "Windows 95 to 7 open folders in a Windows Explorer of their own: your disks as C: and D:, Windows 2000\u{2019}s and XP\u{2019}s icons and toolbars, copy, paste, drag and drop, the Recycle Bin and Undo. The Start menu and Quick Launch open it too.")
+                    feature("menubar.dock.rectangle", .teal, "On the taskbar",
+                            "Explorer windows, Notepad, Calculator and XP\u{2019}s Task Manager get their own taskbar buttons: minimise puts them there, a click brings them back.")
+                    feature("paperclip", .indigo, "Clippy and friends",
+                            "Clippy and The Genius sit on the Windows desktop again. Click for your last ten copied texts, a note with to-dos, today\u{2019}s meetings and Wikipedia\u{2019}s article of the day. No AI. Settings \u{25B8} Desktop \u{25B8} Desktop companion, Match the theme.")
+                    feature("terminal.fill", .gray, "Run\u{2026} and Notepad",
+                            "Start \u{25B8} Run\u{2026} opens notepad, calc, cmd, a path, a web address or any app by name. Notepad saves your files with their own line endings and encoding.")
+                    feature("arrow.uturn.backward.circle.fill", .green, "Copy without losing a file",
+                            "The Explorer, Tiger\u{2019}s Finder and the Amiga drawers never write over anything, ask before replacing, and \u{2318}Z takes it back.")
+                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
+                            "Widgets move again by their title bar, desktop icons no longer land on each other, and the BeOS Deskbar sits on the screen\u{2019}s edge.")
+
+                    sectionHeader("Also in 3.0.7")
+
                     feature("macwindow.on.rectangle", .blue, "Amiga Workbench 4.1",
-                            "The AmigaOne of 2008: AmigaOS 4.1\u{2019}s blue title bars and gadgets, the Workbench screen bar, menus on the right mouse button, and drawers in windows of their own.")
-                    feature("dock.rectangle", .teal, "The AmiDock",
-                            "As a fresh install had it, names under the icons, the Extras, Internet and Players sub-docks, and three Dockies: a clock, a CPU graph and WinBar.")
-                    feature("memorychip", .orange, "RAM Disk, iconify and U-Boot",
-                            "A private RAM Disk with ENV and your clipboard, iconified windows as icons on the Workbench, and the AmigaOne\u{2019}s U-Boot before the boot screen.")
-                    feature("photo.on.rectangle", .pink, "Backdrops and pointers",
-                            "A reconstruction of the 2008 backdrop, djnick\u{2019}s Amiga Abstract and Pairing Joysticks from amiga-look.org, and levellord\u{2019}s AmigaOS 4 pointers.")
+                            "The AmigaOne of 2008: AmigaOS 4.1\u{2019}s title bars and gadgets, the screen bar, menus on the right mouse button, drawers and the AmiDock.")
                     feature("lock.shield.fill", .green, "Your themes stay safe",
                             "Saving or importing a theme under a name that is taken now adds \u{201C}2\u{201D} instead of replacing the theme that was there.")
-                    feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "After a crash the Mac\u{2019}s Dock, menu bar and desktop come straight back. Show Desktop brings the apps back. XP\u{2019}s Start menu goes where it says, and its Task Manager logs off only your own session.")
-
-                    sectionHeader("Also in 3.0.6")
-
-                    feature("pawprint.fill", .orange, "Mac OS X 10.4 Tiger",
-                            "Aqua Blue, the frosted dock, brushed metal, Tiger\u{2019}s own Finder, and Spotlight in the menu bar.")
-                    feature("square.grid.2x2.fill", .teal, "Quick Access in tabs",
-                            "Apple, Windows and Various in the flyout, every family youngest era first, with new theme icons.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
