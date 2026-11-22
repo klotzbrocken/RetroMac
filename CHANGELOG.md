@@ -25,7 +25,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   opens Program Files in it. The Finder's places in the Start menu and on Quick Launch are
   Windows Explorer there (C:\ on 95 to Me and NT, My Documents from 2000 on), and every Explorer
   window has its button on the taskbar: its minimise button puts it there, a click brings it back.
-  Notepad and Calculator get theirs too, Calculator with the minimise box it lacked (and calc.exe's
+  Notepad, Calculator and XP's Task Manager get theirs too (Task Manager's minimise used to close it), Calculator with the minimise box it lacked (and calc.exe's
   greyed maximise), and Notepad's minimise no longer closes it.
 
 - **Start ▸ Run… is the Run dialog.** It opens what you type: notepad, calc, cmd, control,

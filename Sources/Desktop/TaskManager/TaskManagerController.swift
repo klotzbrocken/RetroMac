@@ -28,6 +28,8 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
     private var allUsers = false
     /// Seconds between samples: XP's High, Normal and Low; nil while paused.
     private var interval: TimeInterval? = 1
+    /// Its button on the taskbar; minimised it keeps sampling, as XP's did.
+    let taskbar = PanelTask()
 
     private override init() {
         super.init()
@@ -59,6 +61,7 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         startSampling()
+        if let p = panel { taskbar.opened(p) }
     }
 
     private static let size = NSSize(width: 410, height: 470)
@@ -75,7 +78,7 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
 
         let ov = DragOverlayView(frame: .zero)
         ov.onClose = { [weak self] in self?.close() }
-        ov.onCollapse = { [weak self] in self?.close() }   // minimise: out of sight, back with Ctrl+Option+Delete
+        ov.onCollapse = { [weak self] in self?.taskbar.minimize() }
         ov.onButtonState = { [weak self] slot, state in
             self?.webView?.evaluateJavaScript("window.setBtnState && window.setBtnState('\(slot)','\(state)')")
         }
@@ -108,6 +111,7 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
         saveOrigin()
         timer?.invalidate(); timer = nil
         panel?.orderOut(nil)
+        taskbar.closed()
     }
 
     func destroy() {
@@ -122,6 +126,7 @@ final class TaskManagerController: NSObject, WKScriptMessageHandler, WKNavigatio
         }
         webView = nil; overlay = nil
         panel?.orderOut(nil); panel = nil
+        taskbar.closed()
     }
 
     // MARK: Sampling
