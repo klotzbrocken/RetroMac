@@ -15,6 +15,21 @@
       2.3. DO NOT add an <enclosure> here — it can't be signed with the lost key.
     -->
     <item>
+      <title>Version 3.0.8</title>
+      <pubDate>Mon, 23 Nov 2026 01:10:45 +0000</pubDate>
+      <sparkle:version>3.0.14</sparkle:version>
+      <sparkle:shortVersionString>3.0.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>RetroMac 3.0.8</h2><h3>New</h3><ul><li><b>New theme: Windows 2000 Professional.</b> The plain blue-grey desktop (#3A6EA5) with My Documents, My Computer, My Network Places, the Recycle Bin and Internet Explorer, the grey #D4D0C8 taskbar, and 2000's own Start menu: Windows Update, Programs, Documents, Settings, Search (files, the Internet, people), Help, Run… and Shut Down…, under the black and blue "Windows 2000 Professional" banner. Folders open in the Explorer.</li><li><b>The Windows themes have their Explorer.</b> Windows 95 to 7 open folders, My Computer and My Documents in a Windows Explorer of their own: the Mac's disks as C:, D:…, Large Icons, List and Details, an address bar that takes Windows paths, Windows 98's folder panel or XP's task pane, cut, copy and paste (with the Finder too), drag and drop, rename in place, the Recycle Bin and Undo. Windows 95 to 2000 show Windows 2000's own icons (folders, drives, CD-ROM, network drive, Control Panel, text, sound, video, picture and web files) in 8 pt Tahoma with Windows 98's own toolbar (grey, coloured under the pointer), XP to 7 show XP's icons and XP's toolbar (Back, Forward, Up, Views), the title bar is the one the theme draws on every other window (the theme's colours, height and buttons, XP's caption buttons), and the Programs icon on the desktop opens Program Files in it. The Finder's places in the Start menu and on Quick Launch are Windows Explorer there (C:\ on 95 to Me and NT, My Documents from 2000 on), and every Explorer window has its button on the taskbar: its minimise button puts it there, a click brings it back. Notepad, Calculator and XP's Task Manager get theirs too (their minimise used to close them), and Calculator gets the minimise box it lacked, with calc.exe's greyed maximise.</li><li><b>Start ▸ Run… is the Run dialog.</b> It opens what you type: notepad, calc, cmd, control, taskmgr or explorer, a web address, a path, or any app by name, and it remembers the last ten.</li><li><b>File windows that never lose a file, with Undo.</b> Tiger's Finder, the Amiga drawers and the Explorer copy without writing over anything, put a replaced item in the Trash, ask before replacing, show the progress of long copies, and ⌘Z takes any of it back, the Trash included. Tiger's Finder learns ⌘C, ⌘V and ⌥⌘V.</li><li><b>Notepad writes in its own font again.</b> Windows 95 to 2000 in a Fixedsys-like VGA face (PxPlus IBM VGA 8x16), XP to 7 in Lucida Console where installed, not Courier New.</li><li><b>Notepad keeps your files as they were.</b> It saves with the file's own line endings, byte-order mark and encoding, refuses binary and very large files with a message, never half-writes a file, and under the Windows themes opens and saves through Windows dialogs. The file operations, the Run dialog's search and the text files are adapted from retro98 by matheushchaves (MIT).</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/klotzbrocken/RetroMac/releases/download/v3.0.8/RetroMac.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="wDh5RztxzzqRmjU9inSad+Wn92vHpFUkTWb9TzkP3KHth+7BDXSTvjkr6sDUyy89OmsFH7cDUjqpJ8DW4Ux4Bw==" length="151755099"
+      />
+    </item>
+    <item>
       <title>Version 3.0.7</title>
       <pubDate>Sat, 21 Nov 2026 03:47:24 +0000</pubDate>
       <sparkle:version>3.0.13</sparkle:version>
@@ -72,21 +87,6 @@
         url="https://github.com/klotzbrocken/RetroMac/releases/download/v3.0.4/RetroMac.dmg"
         type="application/octet-stream"
         sparkle:edSignature="bpsO5SE2zQNMmUgnCGVhWfUJGu+6Wk3UvyAQwXLldY0EIN9OkZSmmBTtBiPnedL/JmVX0B4LJoGtujOmH1XUAQ==" length="129120515"
-      />
-    </item>
-    <item>
-      <title>Version 3.0.3</title>
-      <pubDate>Sat, 07 Nov 2026 07:40:20 +0000</pubDate>
-      <sparkle:version>3.0.9</sparkle:version>
-      <sparkle:shortVersionString>3.0.3</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-        <h2>RetroMac 3.0.3</h2><h3>New</h3><ul><li><b>Snow Leopard's Apple menu.</b> The Apple in the menu bar opens the menu of Mac OS X 10.6, row for row, instead of today's system menu: About This Mac, Software Update, Mac OS X Software, System Preferences, Dock, Location, Recent Items, Force Quit with the name of the front app, Sleep, Restart, Shut Down and Log Out with your full name. Force Quit opens the Force Quit window and ends nothing on its own.</li></ul><h3>Fixes</h3><ul><li><b>Switching apps from the dock.</b> A click on a running app's tile did nothing while another app was in front: since macOS 14 an app in the background may no longer bring another to the front. The window server does it now, and it needs no permission.</li><li><b>VoiceOver and the menu-bar menu.</b> Since 3.0 VoiceOver saw RetroMac's icon as a plain button, the menu never opened and the focus fell to the Apple menu or the desktop. While VoiceOver runs the menu hangs on the icon again, as it did before 3.0.</li><li><b>Dock magnification cut the icons off.</b> Turned on while the dock was up, the icons grew but the dock's window kept its old height, and they ended at its top edge.</li><li><b>Mountain Lion's folders in the dock.</b> Applications is a folder again rather than a pile of the apps last installed, and a folder in the Downloads pile is a folder of its time, not today's flat blue one.</li></ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/klotzbrocken/RetroMac/releases/download/v3.0.3/RetroMac.dmg"
-        type="application/octet-stream"
-        sparkle:edSignature="k/eutL1HDSqEIbwcGtl7P9qyf077GTzIt2SeGeQ1B2SFQjxh7uMjj9pvPu2V2XVIHCsAiqqfzSHvs55yG2y7Aw==" length="133369068"
       />
     </item>
     <item>
