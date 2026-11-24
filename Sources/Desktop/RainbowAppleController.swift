@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import SkyLightBridge
 
 /// Covers the system Apple-menu glyph (top-left of the menu bar) with the classic
 /// rainbow Apple for Apple-OS themes. One borderless, **click-through** window per
@@ -69,11 +70,14 @@ final class RainbowAppleController {
     }
 
     private var updateTimer: Timer?
+    /// Runs only while a screen shows a full-screen app's Space, where the menu bar slides away.
+    private var fullScreenTimer: Timer?
 
     /// Whether the cover can be placed at all: Accessibility grants the menu bar's geometry.
     static var canPlaceCover: Bool { AXIsProcessTrusted() }
 
     func hide() {
+        fullScreenTimer?.invalidate(); fullScreenTimer = nil
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
         observers.forEach { NotificationCenter.default.removeObserver($0) }
@@ -161,6 +165,50 @@ final class RainbowAppleController {
             win.setFrame(rect, display: false)
             layoutImage(in: win, itemRect: rect)
         }
+        syncFullScreen()
+    }
+
+    // MARK: - Full-screen Spaces
+
+    /// A full-screen app hides the menu bar until the pointer reaches the top; the cover goes
+    /// and comes with it there, instead of floating alone over the app. Elsewhere it stays up.
+    private func syncFullScreen() {
+        var anyFullScreen = false
+        var bars: [CGRect]?   // the menu bars on screen, read once per pass and only when needed
+        for win in windows {
+            guard let screen = win.screen ?? NSScreen.screens.first(where: { $0.frame.intersects(win.frame) }) else { continue }
+            let fullScreen = screen.displayUUID.map { skb_display_shows_fullscreen_space($0 as CFString) } ?? false
+            anyFullScreen = anyFullScreen || fullScreen
+            if bars == nil, fullScreen { bars = Self.menuBarRects() }
+            let show = !fullScreen || Self.barIsDown(bars ?? [], displayTop: CGDisplayBounds(screen.displayID))
+            if show, !win.isVisible { win.orderFrontRegardless() }
+            if !show, win.isVisible { win.orderOut(nil) }
+        }
+        if anyFullScreen, fullScreenTimer == nil {
+            fullScreenTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in self?.syncFullScreen() }
+        } else if !anyFullScreen {
+            fullScreenTimer?.invalidate(); fullScreenTimer = nil
+        }
+    }
+
+    /// The system menu bars on screen (Quartz coordinates): the Window Server's windows at the
+    /// main-menu level. Owner and level, not the window name, which needs Screen Recording.
+    private static func menuBarRects() -> [CGRect] {
+        let level = Int(CGWindowLevelForKey(.mainMenuWindow))
+        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+        return list.compactMap { w in
+            guard w[kCGWindowLayer as String] as? Int == level,
+                  w[kCGWindowOwnerName as String] as? String == "Window Server",
+                  let b = w[kCGWindowBounds as String] as? NSDictionary,
+                  let r = CGRect(dictionaryRepresentation: b) else { return nil }
+            return r
+        }
+    }
+
+    /// Whether a menu bar sits fully down at the top of this display (Quartz coordinates):
+    /// in a full-screen Space it is pushed up above the display while hidden.
+    static func barIsDown(_ bars: [CGRect], displayTop d: CGRect) -> Bool {
+        bars.contains { $0.height > 0 && $0.minX < d.maxX && $0.maxX > d.minX && abs($0.minY - d.minY) <= 1 }
     }
 
     private func makeWindow(itemRect: NSRect) -> NSWindow {
