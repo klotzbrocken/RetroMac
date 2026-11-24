@@ -12,7 +12,8 @@
   },
   "experienceLevel": "partial",
   "chrome": {
-    "style": "snowleopard"
+    "style": "snowleopard",
+    "titleBar": "lion"
   },
   "name": "Mavericks",
   "splashVideo": "boot.mp4",

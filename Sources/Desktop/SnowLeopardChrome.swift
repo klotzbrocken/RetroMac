@@ -24,8 +24,13 @@ enum SnowLeopardChrome {
     static let lightGap: CGFloat = 7
     static let lightInset: CGFloat = 8
 
+    /// 10.7 to 10.9 (`chrome.titleBar: "lion"`): the same bar and lights, but a lighter ramp and a
+    /// regular-weight title. Measured on a Mavericks Finder window, scaled back to 1x.
+    static var lion: Bool { ThemeManager.shared.activeTheme?.config.chrome?.titleBar == "lion" }
+
     static var titleFont: NSFont {
-        NSFont(name: "Lucida Grande Bold", size: 13)
+        if lion { return NSFont(name: "Lucida Grande", size: 13) ?? .systemFont(ofSize: 13) }
+        return NSFont(name: "Lucida Grande Bold", size: 13)
             ?? NSFont(name: "Lucida Grande", size: 13) ?? .boldSystemFont(ofSize: 13)
     }
     static let titleColor = NSColor(srgbRed: 0.247, green: 0.247, blue: 0.247, alpha: 1)
@@ -50,6 +55,12 @@ enum SnowLeopardChrome {
     private static let barActive:   [(CGFloat, NSColor)] = [(0, c(0xCFCFCF)), (1, c(0xA8A8A8))]
     /// An unfocused 10.6 window keeps the same ramp, lifted and flattened.
     private static let barInactive: [(CGFloat, NSColor)] = [(0, c(0xE8E8E8)), (1, c(0xD2D2D2))]
+
+    /// 10.9: #F3F3F3 hairline, #EAEAEA → #D3D3D3 ramp, #7F7F7F separator; unfocused flatter still.
+    static let lionBarActive:   [(CGFloat, NSColor)] = [(0, c(0xEAEAEA)), (1, c(0xD3D3D3))]
+    private static let lionBarInactive: [(CGFloat, NSColor)] = [(0, c(0xF6F6F6)), (1, c(0xE8E8E8))]
+    private static let lionHairline = c(0xF3F3F3)
+    private static let lionSeparator = c(0x7F7F7F)
 
     private static func sample(_ stops: [(CGFloat, NSColor)], _ t: CGFloat) -> NSColor {
         if t <= stops[0].0 { return stops[0].1 }
@@ -89,10 +100,11 @@ enum SnowLeopardChrome {
         }
         let ramped = NSRect(x: rect.minX, y: flipped ? rect.minY + 1 : rect.minY + 1,
                             width: rect.width, height: rect.height - 2)
-        ramp(ramped, flipped: flipped, active ? barActive : barInactive)
-        (active ? hairline : NSColor(white: 0.96, alpha: 1)).setFill()
+        let l = lion
+        ramp(ramped, flipped: flipped, l ? (active ? lionBarActive : lionBarInactive) : (active ? barActive : barInactive))
+        (active ? (l ? lionHairline : hairline) : NSColor(white: 0.96, alpha: 1)).setFill()
         row(0).fill()
-        (active ? topBorder : borderInactive).setFill()
+        (active ? (l ? lionSeparator : topBorder) : borderInactive).setFill()
         row(rect.height - 1).fill()
     }
 

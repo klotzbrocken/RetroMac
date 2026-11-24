@@ -51,7 +51,8 @@ struct DockThemeConfig: Codable {
     /// "snowleopard", "win31", "beos", "maiksfav", "default").
     struct ChromeDecl: Codable {
         var style: String? = nil
-        /// The Aqua title bar's material: absent → 10.0's pinstripes, "brushed" → 10.4's metal.
+        /// The Aqua title bar's material: absent → 10.0's pinstripes, "brushed" → 10.4's metal;
+        /// with style "snowleopard", "lion" → 10.7–10.9's lighter bar and regular-weight title.
         var titleBar: String? = nil
     }
     var dock: DockStyle

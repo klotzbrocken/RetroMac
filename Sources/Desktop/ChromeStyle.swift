@@ -156,14 +156,16 @@ enum ChromeStyleFactory {
     // and their glyphs only appear while the pointer is over the cluster — `drawSnowLeopard`
     // handles that, since the tracker is per-button and 10.6 lights up all three together.
     static func snowLeopard() -> ChromeStyle {
-        let font = NSFont(name: "Lucida Grande Bold", size: 13)
-            ?? NSFont(name: "Lucida Grande", size: 13) ?? .boldSystemFont(ofSize: 13)
-        // Measured 10.6 caption: DARK at the top (#A8A8A8) falling to light (#CFCFCF).
-        // Drawing happens in SnowLeopardChrome; this is only for callers that read the model.
-        let caption = ChromeGradient(stops: [
-            (NSColor(srgbRed: 0.659, green: 0.659, blue: 0.659, alpha: 1), 0.0),
-            (NSColor(srgbRed: 0.812, green: 0.812, blue: 0.812, alpha: 1), 1.0),
-        ], angle: -90)
+        let font = SnowLeopardChrome.titleFont
+        // Measured 10.6 caption: DARK at the top (#A8A8A8) falling to light (#CFCFCF); 10.9's is
+        // lighter. Drawing happens in SnowLeopardChrome; this is only for callers that read the model.
+        let lion = SnowLeopardChrome.lionBarActive
+        let caption = SnowLeopardChrome.lion
+            ? ChromeGradient(stops: [(lion[1].1, 0.0), (lion[0].1, 1.0)], angle: -90)
+            : ChromeGradient(stops: [
+                (NSColor(srgbRed: 0.659, green: 0.659, blue: 0.659, alpha: 1), 0.0),
+                (NSColor(srgbRed: 0.812, green: 0.812, blue: 0.812, alpha: 1), 1.0),
+            ], angle: -90)
         return ChromeStyle(
             titleHeight: SnowLeopardChrome.barH, windowBorder: 1,
             buttonSize: NSSize(width: SnowLeopardChrome.lightD, height: SnowLeopardChrome.lightD),

@@ -101,10 +101,22 @@ enum RetroFrameTheme {
         js += """
         (function(){var s=document.getElementById('rm-brushed');
         if(!s){s=document.createElement('style');s.id='rm-brushed';s.textContent=`\(brushedCSS)`;document.head.appendChild(s);}
-        document.body.classList.toggle('brushed',\(on));})();
+        document.body.classList.toggle('brushed',\(on));
+        var l=document.getElementById('rm-lion');
+        if(!l){l=document.createElement('style');l.id='rm-lion';l.textContent=`\(lionCSS)`;document.head.appendChild(l);}
+        document.body.classList.toggle('lion',\(key == "snowleopard" && SnowLeopardChrome.lion));})();
         """
         return js
     }
+
+    /// 10.9's caption over the widgets' 10.6 one, the same values SnowLeopardChrome draws.
+    /// CPU Monitor's page is scaled 5/3 (it has .mx-btn lights), so its lines are too.
+    private static let lionCSS = """
+    body.lion.theme-snowleopard .mx-title{background:linear-gradient(to bottom,#eaeaea,#d3d3d3)!important;
+      box-shadow:inset 0 1px 0 #f3f3f3,inset 0 -1px 0 #7f7f7f!important;}
+    body.lion.theme-snowleopard .mx-title:has(.mx-btn){box-shadow:inset 0 1.67px 0 #f3f3f3,inset 0 -1.67px 0 #7f7f7f!important;}
+    body.lion.theme-snowleopard .mx-cap,body.lion.theme-snowleopard .mx-caption{font-weight:400!important;}
+    """
 
     private static let brushedCSS = """
     body.brushed #win,body.brushed .window{border-color:#7e7e7e!important;
