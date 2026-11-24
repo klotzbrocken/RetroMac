@@ -16,7 +16,7 @@ final class QuickAccessTabsTests: XCTestCase {
         let apple = ThemeManager.byAge(try themes().filter { ThemeManager.category(of: $0) == "Apple" })
         let years = apple.compactMap { $0.config.release?.year }
         XCTAssertEqual(years, years.sorted(by: >))
-        XCTAssertEqual(apple.first?.name, "Mountain Lion")
+        XCTAssertEqual(apple.first?.name, "Mavericks")
         let i = apple.firstIndex { $0.name == "Mac OS X Tiger" }!, j = apple.firstIndex { $0.name == "Mac OS X" }!
         XCTAssertLessThan(i, j, "10.4 before 10.0")
     }

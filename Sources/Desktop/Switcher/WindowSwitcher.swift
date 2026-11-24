@@ -56,6 +56,9 @@ struct SwitcherCapability: Equatable {
         "com.retromac.apple.mountain-lion": SwitcherCapability(
             mode: .missionControl, reference: .documented, source: "Mission Control since Mac OS X 10.7",
             summary: "Opens Mission Control."),
+        "com.retromac.apple.mavericks": SwitcherCapability(
+            mode: .missionControl, reference: .documented, source: "Mission Control since Mac OS X 10.7",
+            summary: "Opens Mission Control."),
         "com.retromac.microsoft.windows95": pending(.altTab, "The Windows 95 Alt+Tab panel"),
         "com.retromac.microsoft.windows-nt4-workstation": pending(.altTab, "The Windows NT 4.0 Alt+Tab panel"),
         "com.retromac.microsoft.windows98": pending(.altTab, "The Windows 98 Alt+Tab panel"),

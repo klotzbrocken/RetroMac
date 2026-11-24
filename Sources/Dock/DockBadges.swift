@@ -26,7 +26,7 @@ final class DockBadges {
     static func style(forThemeID id: String?) -> Style? {
         switch id {
         case "com.retromac.apple.aqua-cheetah": return .cheetah
-        case "com.retromac.apple.tiger", "com.retromac.apple.snow-leopard", "com.retromac.apple.mountain-lion": return .leopard
+        case "com.retromac.apple.tiger", "com.retromac.apple.snow-leopard", "com.retromac.apple.mountain-lion", "com.retromac.apple.mavericks": return .leopard
         case "com.retromac.microsoft.windows7": return .win7
         default: return nil
         }

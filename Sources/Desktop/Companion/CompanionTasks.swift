@@ -400,7 +400,7 @@ enum CompanionTips {
         .init(text: "With Boot Phases on Firmware, press the BIOS setup key while the memory counts up to enter the setup.",
               tab: .dock, themes: ["windows"]),
         .init(text: "Dashboard and Exposé are back. Their hotkeys are in Settings ▸ Shortcuts.", tab: .shortcuts,
-              themes: ["mac os x", "cheetah", "snow leopard", "mountain lion", "aqua"]),
+              themes: ["mac os x", "cheetah", "snow leopard", "mountain lion", "mavericks", "aqua"]),
     ]
 
     /// The next RetroMac tip that fits the theme, at most one an hour and never within twenty

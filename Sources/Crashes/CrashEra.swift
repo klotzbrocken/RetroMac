@@ -49,7 +49,8 @@ enum CrashEra: String, CaseIterable {
         // with Panther and stayed through Snow Leopard and Mountain Lion.
         case "com.retromac.apple.aqua-cheetah":  return .macosxAqua
         case "com.retromac.apple.snow-leopard",
-             "com.retromac.apple.mountain-lion": return .macosxModern
+             "com.retromac.apple.mountain-lion",
+             "com.retromac.apple.mavericks": return .macosxModern
         case "com.retromac.sun.solaris8-cde":   return .solaris8
         default: break
         }
@@ -64,7 +65,7 @@ enum CrashEra: String, CaseIterable {
         if name.contains("windows 7") || name.contains("windows vista") { return .win7 }
         if name.contains("system 6") || name.contains("mac os 6") { return .macos6 }
         if name.contains("mac os 9") || name.contains("copland") { return .macos9 }
-        if name.contains("snow leopard") || name.contains("mountain lion") { return .macosxModern }
+        if name.contains("snow leopard") || name.contains("mountain lion") || name.contains("mavericks") { return .macosxModern }
         if name.contains("mac os x")   { return .macosxAqua }
         if name.contains("solaris")    { return .solaris8 }
         return nil

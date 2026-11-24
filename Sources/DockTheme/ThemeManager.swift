@@ -277,14 +277,14 @@ final class ThemeManager {
         if n.contains("beos") || n.contains("os/2") || n.contains("warp") || n.contains("sgi")
             || n.contains("irix") || n.contains("amiga") || n.contains("workbench") { return "Unix & Amiga" }
         if n.contains("mac os") || n.contains("aqua") || n.contains("snow leopard")
-            || n.contains("mountain lion") || n.contains("platinum") || n.contains("classic") { return "Apple" }
+            || n.contains("mountain lion") || n.contains("mavericks") || n.contains("platinum") || n.contains("classic") { return "Apple" }
         if n.contains("windows") { return "Windows" }
         return "Other"
     }
 
     static func isMacOSTheme(_ name: String) -> Bool {
         let n = name.lowercased()
-        return n.hasPrefix("mac os") || n == "mountain lion" || n == "snow leopard"
+        return n.hasPrefix("mac os") || n == "mountain lion" || n == "mavericks" || n == "snow leopard"
     }
 
     /// "100 %" themes — the fully-realised, full-chrome specials that carry the 💯 marker,
@@ -306,6 +306,7 @@ final class ThemeManager {
         var s = name
         switch name {
         case "Mountain Lion":      s = "Mac OS Mountain Lion"
+        case "Mavericks":          s = "Mac OS Mavericks"
         case "Snow Leopard":       s = "Mac OS Snow Leopard"
         case "Mac OS 9.2 Classic": s = "Mac OS System 9"
         case "Mac OS 6 classic":   s = "Apple System 6"
@@ -935,7 +936,7 @@ final class ThemeManager {
         case "Mac OS X Tiger":
             // 10.4 dropped the pinstripes: white, a faint grey waist, measured off a 10.4 desktop.
             return MenuBarStyle(bottom: c(0.957), top: c(0.996), rule: c(0.784))
-        case "Mountain Lion":
+        case "Mountain Lion", "Mavericks":   // 10.9 kept 10.8's bar
             return MenuBarStyle(bottom: c(0.894), top: c(0.969), rule: c(0.651))
         default:
             // Snow Leopard and any future Apple theme: the 10.6 bar.

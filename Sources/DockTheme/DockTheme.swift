@@ -388,7 +388,7 @@ extension DockThemeConfig {
 
     /// Themes whose real-world dock/taskbar supported auto-hide.
     var supportsAutoHide: Bool {
-        ["Mac OS X Tiger", "Snow Leopard", "Mountain Lion", "Windows XP", "Windows 98", "Windows 95", "Windows NT 4.0", "Windows 2000", "Windows Me", "Windows 7", "Windows Vista", "OS/2 Warp 4"].contains(name)
+        ["Mac OS X Tiger", "Snow Leopard", "Mountain Lion", "Mavericks", "Windows XP", "Windows 98", "Windows 95", "Windows NT 4.0", "Windows 2000", "Windows Me", "Windows 7", "Windows Vista", "OS/2 Warp 4"].contains(name)
     }
     var dockAutoHideEnabled: Bool {
         supportsAutoHide && (AppSettings.shared.themeDockAutoHide[settingsKey] ?? false)

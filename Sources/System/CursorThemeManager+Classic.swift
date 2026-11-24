@@ -13,8 +13,8 @@ extension CursorThemeManager {
         switch name {
         case "Mac OS 6 classic", "System 7.1 (authentic)": return loadBundledSet("Cursors/AppleSystem6")
         case "Mac OS 9.2 Classic", "Mac OS 9 (authentic)", "Mac OS 8 (Copland)": return loadBundledSet("Cursors/AppleSystem9")
-        // The Aqua pointer did not change between 10.0 and 10.8; one set serves all four.
-        case "Mac OS X", "Mac OS X Tiger", "Snow Leopard", "Mountain Lion": return loadBundledSet("Cursors/MacOSX")
+        // The Aqua pointer did not change between 10.0 and 10.9; one set serves all five.
+        case "Mac OS X", "Mac OS X Tiger", "Snow Leopard", "Mountain Lion", "Mavericks": return loadBundledSet("Cursors/MacOSX")
         // Me had the same black arrow with the white edge that 3.1 had, and no set of its own
         // is bundled, so it borrows it. 95 is that set with its own hourglass.
         case "Windows 3.1", "Windows Me":               return loadBundledSet("Cursors/Retrosmart")

@@ -199,7 +199,7 @@ final class ThemeIdentityTests: XCTestCase {
         // The Mac eras, and only those. A new Apple theme falls through to the 10.6 bar
         // rather than to nil, so adding one is meant to change this list.
         XCTAssertEqual(Set(tinted), ["Mac OS 6 classic", "System 7.1 (authentic)", "Mac OS 8 (Copland)", "Mac OS 9.2 Classic", "Mac OS 9 (authentic)",
-                                     "Mac OS X", "Mac OS X Tiger", "Snow Leopard", "Mountain Lion"])
+                                     "Mac OS X", "Mac OS X Tiger", "Snow Leopard", "Mountain Lion", "Mavericks"])
     }
 
     /// A built-in theme ships with the app it runs in, so it must never ask for a newer one:

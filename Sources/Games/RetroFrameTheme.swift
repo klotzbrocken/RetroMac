@@ -58,7 +58,7 @@ enum RetroFrameTheme {
         // The Aqua family splits in two. "macosx" is Cheetah-era Aqua: pinstripes, gel controls,
         // candy scrollbars. 10.6 dropped all of that for a flat unified grey title bar, and 10.8 kept
         // it, so Snow Leopard and Mountain Lion share their own key instead of borrowing 2001's look.
-        if name.contains("snow leopard") || name.contains("mountain lion") { return "snowleopard" }
+        if name.contains("snow leopard") || name.contains("mountain lion") || name.contains("mavericks") { return "snowleopard" }
         if name.contains("mac os x") { return "macosx" }
         if name.contains("windows 7") || name.contains("windows vista") { return "win7" }   // Aero glass chrome (drawWin7)
         if name.contains("windows 98") { return "win98" }
