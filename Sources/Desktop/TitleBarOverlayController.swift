@@ -1760,6 +1760,8 @@ final class TitleBarOverlayController {
         default: return
         }
         let known = axWindows[wid], session = syncGeneration
+        // Option-click on the zoom box: the native full screen the era's green button did not have.
+        let fullScreenAsked = kind == .zoom && NSEvent.modifierFlags.contains(.option)
         Self.axQueue(pid).async(qos: .userInteractive) {
             guard let w = known ?? Self.findAXWindow(wid, pid: pid) else { return }
             // A full-screen window's green light takes it out of full screen, as the real one does.
@@ -1770,6 +1772,8 @@ final class TitleBarOverlayController {
                     return
                 }
             }
+            // A window that cannot go full screen refuses the attribute and zooms instead.
+            if fullScreenAsked, AXUIElementSetAttributeValue(w, "AXFullScreen" as CFString, kCFBooleanTrue) == .success { return }
             var button: AXUIElement?
             if let attr {
                 var ref: CFTypeRef?

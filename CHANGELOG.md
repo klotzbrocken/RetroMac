@@ -5,6 +5,11 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ## Unreleased
 
+### New
+
+- **Option-click the green button for full screen.** Under the Mac themes the green button zooms
+  the window, as it did before Lion; with Option held it now puts the app into macOS full screen.
+
 ### Fixed
 
 - **The old Apple logo leaves with the menu bar in full screen.** The rainbow or Aqua Apple the
