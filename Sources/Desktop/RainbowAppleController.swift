@@ -133,6 +133,7 @@ final class RainbowAppleController {
         for screen in screens {
             windows.append(makeWindow(itemRect: itemRect(for: screen, axFrame: axFrame)))
         }
+        syncFullScreen()   // a cover made on a full-screen Space starts hidden with its bar
 
         if observers.isEmpty {
             observers.append(NotificationCenter.default.addObserver(
@@ -170,45 +171,57 @@ final class RainbowAppleController {
 
     // MARK: - Full-screen Spaces
 
+    /// Per cover window: whether the menu bar of its full-screen Space is down right now.
+    private var revealed: [ObjectIdentifier: Bool] = [:]
+
     /// A full-screen app hides the menu bar until the pointer reaches the top; the cover goes
     /// and comes with it there, instead of floating alone over the app. Elsewhere it stays up.
+    /// The Window Server keeps its menu-bar window in place while the bar is hidden, so the
+    /// bar's state is followed the way macOS drives it: the pointer at the top edge brings it
+    /// down, leaving the bar lets it go, and an open menu holds it.
     private func syncFullScreen() {
         var anyFullScreen = false
-        var bars: [CGRect]?   // the menu bars on screen, read once per pass and only when needed
+        let pointer = NSEvent.mouseLocation
         for win in windows {
             guard let screen = win.screen ?? NSScreen.screens.first(where: { $0.frame.intersects(win.frame) }) else { continue }
+            let id = ObjectIdentifier(win)
             let fullScreen = screen.displayUUID.map { skb_display_shows_fullscreen_space($0 as CFString) } ?? false
             anyFullScreen = anyFullScreen || fullScreen
-            if bars == nil, fullScreen { bars = Self.menuBarRects() }
-            let show = !fullScreen || Self.barIsDown(bars ?? [], displayTop: CGDisplayBounds(screen.displayID))
+            var show = true
+            if fullScreen {
+                let onScreen = pointer.x >= screen.frame.minX && pointer.x <= screen.frame.maxX
+                let ownBarH = screen.frame.maxY - screen.visibleFrame.maxY
+                let barH = ownBarH > 1 ? ownBarH : NSStatusBar.system.thickness
+                let was = revealed[id] ?? false
+                show = Self.barRevealed(was: was, pointerY: onScreen ? pointer.y : -.greatestFiniteMagnitude,
+                                        screenTop: screen.frame.maxY, barHeight: barH,
+                                        menuOpen: was && Self.menuIsOpen())
+                revealed[id] = show
+            } else {
+                revealed[id] = nil
+            }
             if show, !win.isVisible { win.orderFrontRegardless() }
             if !show, win.isVisible { win.orderOut(nil) }
         }
         if anyFullScreen, fullScreenTimer == nil {
-            fullScreenTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in self?.syncFullScreen() }
+            fullScreenTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in self?.syncFullScreen() }
         } else if !anyFullScreen {
             fullScreenTimer?.invalidate(); fullScreenTimer = nil
         }
     }
 
-    /// The system menu bars on screen (Quartz coordinates): the Window Server's windows at the
-    /// main-menu level. Owner and level, not the window name, which needs Screen Recording.
-    private static func menuBarRects() -> [CGRect] {
-        let level = Int(CGWindowLevelForKey(.mainMenuWindow))
-        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
-        return list.compactMap { w in
-            guard w[kCGWindowLayer as String] as? Int == level,
-                  w[kCGWindowOwnerName as String] as? String == "Window Server",
-                  let b = w[kCGWindowBounds as String] as? NSDictionary,
-                  let r = CGRect(dictionaryRepresentation: b) else { return nil }
-            return r
-        }
+    /// The menu bar of a full-screen Space: down once the pointer touches the top edge, and it
+    /// stays down while the pointer is over it or one of its menus is open.
+    static func barRevealed(was: Bool, pointerY: CGFloat, screenTop: CGFloat, barHeight: CGFloat, menuOpen: Bool) -> Bool {
+        if pointerY >= screenTop - 1 { return true }
+        return was && (pointerY >= screenTop - barHeight || menuOpen)
     }
 
-    /// Whether a menu bar sits fully down at the top of this display (Quartz coordinates):
-    /// in a full-screen Space it is pushed up above the display while hidden.
-    static func barIsDown(_ bars: [CGRect], displayTop d: CGRect) -> Bool {
-        bars.contains { $0.height > 0 && $0.minX < d.maxX && $0.maxX > d.minX && abs($0.minY - d.minY) <= 1 }
+    /// Whether a menu is open anywhere: a window at the pop-up menu level is on screen.
+    private static func menuIsOpen() -> Bool {
+        let level = Int(CGWindowLevelForKey(.popUpMenuWindow))
+        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        return list.contains { $0[kCGWindowLayer as String] as? Int == level }
     }
 
     private func makeWindow(itemRect: NSRect) -> NSWindow {

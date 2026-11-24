@@ -49,7 +49,7 @@ final class FloatingLauncherButton {
         // in the dock's transparent magnification-overflow fall through to the dock /
         // a revealing system Dock instead of the button).
         win.level = NSWindow.Level(rawValue: 26)
-        win.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
+        win.collectionBehavior = [.canJoinAllSpaces, .stationary]   // not on a full-screen app's Space
         win.ignoresMouseEvents = false
         win.alphaValue = 0.5
         win.contentView = view

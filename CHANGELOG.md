@@ -10,6 +10,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 - **The old Apple logo leaves with the menu bar in full screen.** The rainbow or Aqua Apple the
   Mac themes put over the menu bar stayed on a full-screen app after its menu bar slid away; it
   now goes with the bar and comes back when the pointer brings the bar down.
+  RetroMac's round launcher button stays off full-screen apps too.
 
 ## 3.0.8
 
