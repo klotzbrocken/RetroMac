@@ -9,7 +9,7 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 - **New theme: OS X Mavericks.** 10.9 of 2013, built on the Mountain Lion theme: the Mavericks
   wave as the desktop, an empty desktop as after a fresh install, the glass dock with its
-  reflections, 10.8's Apple menu, About This Mac, title bars, pointers and crash screen, Mission
+  reflections and the new Maps and iBooks icons of 10.9, 10.8's Apple menu, About This Mac, title bars, pointers and crash screen, Mission
   Control as the switcher, and a Read Me with the story of the first free OS X.
 
 - **Option-click the green button for full screen.** Under the Mac themes the green button zooms

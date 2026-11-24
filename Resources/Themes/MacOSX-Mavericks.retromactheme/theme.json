@@ -169,7 +169,9 @@
     "com.apple.installer": "installer.png",
     "com.apple.notificationcenterui": "notifications.png",
     "com.apple.clock": "clock.png",
-    "com.apple.BluetoothFileExchange": "bluetooth.png"
+    "com.apple.BluetoothFileExchange": "bluetooth.png",
+    "com.apple.Maps": "maps.png",
+    "com.apple.iBooksX": "books.png"
   },
   "appearance": "light",
   "accentColor": "blue",
