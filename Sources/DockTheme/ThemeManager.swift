@@ -93,6 +93,11 @@ final class ThemeManager {
         reload()
 
         observeScreenChanges()
+        // A dated Calendar tile turns over at midnight: the day is in its cache key, so a rebuild
+        // is enough.
+        NotificationCenter.default.addObserver(forName: .NSCalendarDayChanged, object: nil, queue: .main) { _ in
+            NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
+        }
     }
 
     var userThemesDirectory: URL { userThemesDir }
@@ -1143,7 +1148,8 @@ final class ThemeManager {
         // The delivered package's revision is part of the key: a new package is never shown
         // from an old cache entry (ICO-11).
         let pack = activeTheme.map { IconPackStore.shared.revision(themeID: $0.stableID) } ?? "-"
-        let cacheKey = "\(activeTheme?.name ?? "default")_\(bundleID)_\(Int(size))_\(pack)" as NSString
+        let day = bundleID == CalendarDockIcon.bundleID ? "_" + CalendarDockIcon.dayKey() : ""
+        let cacheKey = "\(activeTheme?.name ?? "default")_\(bundleID)_\(Int(size))_\(pack)\(day)" as NSString
         if let cached = iconCache.object(forKey: cacheKey) {
             return cached
         }
@@ -1179,6 +1185,11 @@ final class ThemeManager {
                 img.size = NSSize(width: size, height: size)
                 return img
             }
+        }
+
+        if bundleID == CalendarDockIcon.bundleID, let theme = activeTheme,
+           let blank = NSImage(contentsOf: theme.iconsDirectory.appendingPathComponent(CalendarDockIcon.blankFile)) {
+            return CalendarDockIcon.render(blank: blank, size: size)
         }
 
         if let theme = activeTheme, let img = IconPackStore.shared.image(themeID: theme.stableID, bundleID: bundleID, size: size) {
