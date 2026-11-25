@@ -134,7 +134,7 @@ final class KeyboardNavigationTests: XCTestCase {
     }
 
     func testShortcutDefaults() {
-        let suite = "retromac.keys.\(UUID().uuidString)"
+        let suite = "retromac.keys.tests"   // fixed: every new suite leaves an empty plist behind
         let store = UserDefaults(suiteName: suite)!
         defer { store.removePersistentDomain(forName: suite) }
         let s = AppSettings(defaults: store)
@@ -147,7 +147,7 @@ final class KeyboardNavigationTests: XCTestCase {
 
     /// An overlay toggle of yours on ⌃Esc stays yours: the launcher starts without a shortcut.
     func testTheLauncherNeverTakesYourShortcut() {
-        let suite = "retromac.keys.\(UUID().uuidString)"
+        let suite = "retromac.keys.tests"   // fixed: every new suite leaves an empty plist behind
         let store = UserDefaults(suiteName: suite)!
         defer { store.removePersistentDomain(forName: suite) }
         store.set(UInt32(kVK_Escape), forKey: "hotkeyCode")
