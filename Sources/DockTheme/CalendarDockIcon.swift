@@ -1,9 +1,10 @@
 import AppKit
 import CoreText
 
-/// OS X 10.9's Calendar tile shows today's date even while the app is closed. A theme opts in by
-/// shipping `icons/calendar-empty.png`, the blank page Apple drew the date onto; the month and
-/// day go where they sit on 10.9's own "JUL 17" artwork.
+/// iCal's tile showed today's date while iCal ran (10.2 – 10.4) and, through its Dock tile plug-in,
+/// at all times from 10.5 on. A theme opts in with `dock.calendarDate` and ships
+/// `icons/calendar-empty.png`, the blank page Apple drew the date onto; the page stayed the same
+/// from iCal 1 to 10.9, so month and day go where they sit on its "JUL 17" artwork.
 enum CalendarDockIcon {
     static let bundleID = "com.apple.iCal"
     static let blankFile = "calendar-empty.png"

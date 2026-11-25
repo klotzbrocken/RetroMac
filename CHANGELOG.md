@@ -15,6 +15,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   and widgets, 10.8's Apple menu, About This Mac, pointers and crash screen, Mission Control as
   the switcher, and a Read Me with the story of the first free OS X.
 
+- **Today's date on the Calendar icon in Tiger, Snow Leopard and Mountain Lion.** As in the
+  originals: Snow Leopard and Mountain Lion show it at all times, as every Mac OS X since 10.5
+  did; Tiger only while Calendar is running and JUL 17 otherwise, as iCal did up to 10.4.
+
 - **Option-click the green button for full screen.** Under the Mac themes the green button zooms
   the window, as it did before Lion; with Option held it now puts the app into macOS full screen.
 

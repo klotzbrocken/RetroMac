@@ -98,6 +98,24 @@ final class ThemeManager {
         NotificationCenter.default.addObserver(forName: .NSCalendarDayChanged, object: nil, queue: .main) { _ in
             NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
         }
+        // 10.2 – 10.4: the date comes and goes with Calendar itself.
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                guard self?.activeTheme?.config.dock.calendarDate == "running",
+                      (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+                        == CalendarDockIcon.bundleID else { return }
+                NotificationCenter.default.post(name: .dockAppsChanged, object: nil)
+            }
+        }
+    }
+
+    /// Whether the Calendar tile shows today's date right now (`dock.calendarDate`).
+    private var calendarDated: Bool {
+        switch activeTheme?.config.dock.calendarDate {
+        case "always": return true
+        case "running": return !NSRunningApplication.runningApplications(withBundleIdentifier: CalendarDockIcon.bundleID).isEmpty
+        default: return false
+        }
     }
 
     var userThemesDirectory: URL { userThemesDir }
@@ -1148,7 +1166,7 @@ final class ThemeManager {
         // The delivered package's revision is part of the key: a new package is never shown
         // from an old cache entry (ICO-11).
         let pack = activeTheme.map { IconPackStore.shared.revision(themeID: $0.stableID) } ?? "-"
-        let day = bundleID == CalendarDockIcon.bundleID ? "_" + CalendarDockIcon.dayKey() : ""
+        let day = bundleID == CalendarDockIcon.bundleID ? "_" + CalendarDockIcon.dayKey() + (calendarDated ? "_d" : "") : ""
         let cacheKey = "\(activeTheme?.name ?? "default")_\(bundleID)_\(Int(size))_\(pack)\(day)" as NSString
         if let cached = iconCache.object(forKey: cacheKey) {
             return cached
@@ -1187,7 +1205,7 @@ final class ThemeManager {
             }
         }
 
-        if bundleID == CalendarDockIcon.bundleID, let theme = activeTheme,
+        if bundleID == CalendarDockIcon.bundleID, calendarDated, let theme = activeTheme,
            let blank = NSImage(contentsOf: theme.iconsDirectory.appendingPathComponent(CalendarDockIcon.blankFile)) {
             return CalendarDockIcon.render(blank: blank, size: size)
         }

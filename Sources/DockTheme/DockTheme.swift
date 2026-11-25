@@ -293,6 +293,10 @@ struct DockThemeConfig: Codable {
         /// single solid light line, top to bottom of the shelf; `"slant"` is 10.9's thin dark line
         /// leaning with the glass shelf's perspective; absent, Snow Leopard's dashes.
         var separatorStyle: String?
+        /// The Calendar tile shows today's date on the theme's blank page (`icons/calendar-empty.png`):
+        /// `"running"` only while Calendar runs, as iCal did on 10.2 – 10.4; `"always"`, as the
+        /// Dock tile plug-in has done since 10.5. Absent: the theme's fixed icon.
+        var calendarDate: String?
         /// `false`: apps that are running but not kept in the dock line up after the others
         /// with no divider of their own, as before Mojave. Absent: they get one.
         var runningAppsSeparator: Bool?

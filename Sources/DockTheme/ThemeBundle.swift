@@ -296,7 +296,12 @@ final class ThemeBundle {
             let relative = String(at.dropFirst(copyRoot.count))
             let target = URL(fileURLWithPath: source.path + relative).resolvingSymlinksInPath()
             try fm.removeItem(at: link)
-            if fm.fileExists(atPath: target.path) { try fm.copyItem(at: target, to: link) }
+            guard fm.fileExists(atPath: target.path) else { continue }
+            try fm.copyItem(at: target, to: link)
+            // A linked folder can hold links of its own (Tiger's icons → Cheetah's → Mavericks' blank page).
+            if (try? target.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
+                try materializeSymlinks(in: link, copiedFrom: target)
+            }
         }
     }
 

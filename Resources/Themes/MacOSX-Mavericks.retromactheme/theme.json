@@ -56,6 +56,7 @@
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
+    "calendarDate": "always",
     "separatorStyle": "slant",
     "runningAppsSeparator": false,
     "showTrash": true,

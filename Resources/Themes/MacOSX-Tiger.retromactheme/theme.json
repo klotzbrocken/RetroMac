@@ -67,6 +67,7 @@
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
+    "calendarDate": "running",
     "height": 70,
     "iconSize": 60,
     "padding": 4,

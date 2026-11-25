@@ -33,6 +33,7 @@
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
+    "calendarDate": "always",
     "height": 72,
     "iconSize": 52,
     "padding": 24,

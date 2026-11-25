@@ -31,6 +31,7 @@
   "version": "1.0",
   "author": "RetroMac",
   "dock": {
+    "calendarDate": "always",
     "runningAppsSeparator": false,
     "showTrash": true,
     "launchpad": true,
