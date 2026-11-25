@@ -3050,6 +3050,22 @@ final class DockView: NSView {
                 line.offsetBy(dx: -1, dy: 0).fill(); line.offsetBy(dx: 1, dy: 0).fill()
                 NSColor(white: 0, alpha: 0.55).setFill()
                 line.fill()
+            } else if theme.dock.separatorStyle == "slant" {
+                // OS X 10.9: a thin dark line across the glass floor, leaning like the shelf's
+                // ends (more the further it sits from the middle), with a faint light edge on the
+                // outer side. Measured off 13A603's dock: about 15 % darker than the glass.
+                let front = shelfRect.minY + Self.frostedFrontHeight + 1, back = shelfRect.maxY - 1
+                let lean = CGFloat(tan(27.3 * Double.pi / 180)) * (sx - shelfRect.midX) / max(1, shelfRect.width / 2)
+                let p = NSBezierPath()
+                p.move(to: NSPoint(x: sx, y: front))
+                p.line(to: NSPoint(x: sx - lean * (back - front), y: back))
+                p.lineWidth = 1
+                NSGraphicsContext.saveGraphicsState()
+                let side: CGFloat = sx >= shelfRect.midX ? 1 : -1
+                let shift = NSAffineTransform(); shift.translateX(by: side, yBy: 0); shift.concat()
+                NSColor(white: 1, alpha: 0.12).setStroke(); p.stroke()
+                NSGraphicsContext.restoreGraphicsState()
+                NSColor(white: 0, alpha: 0.2).setStroke(); p.stroke()
             } else if theme.dock.separatorStyle == "line" {
                 // Mac OS X 10.0: one solid light line, the shelf's full height, clearly paler
                 // than the dock (#DBE2ED on #ACBDD6 in 10.0.4). White: the dock is a translucent

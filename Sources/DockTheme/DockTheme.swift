@@ -290,7 +290,8 @@ struct DockThemeConfig: Codable {
         /// original's pixels; absent, Mac OS 9's Platinum strip.
         var controlStripStyle: String?
         /// How the dock divides apps from folders and the trash: `"line"` is Mac OS X 10.0's
-        /// single solid light line, top to bottom of the shelf; absent, Snow Leopard's dashes.
+        /// single solid light line, top to bottom of the shelf; `"slant"` is 10.9's thin dark line
+        /// leaning with the glass shelf's perspective; absent, Snow Leopard's dashes.
         var separatorStyle: String?
         /// `false`: apps that are running but not kept in the dock line up after the others
         /// with no divider of their own, as before Mojave. Absent: they get one.
