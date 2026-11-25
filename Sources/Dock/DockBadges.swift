@@ -7,7 +7,10 @@ import ApplicationServices
 /// - **Mac OS X 10.0 Cheetah:** only Mail. It painted a red circle with the number into the top
 ///   right of its own icon; there was no way yet for other apps to do it (that came with
 ///   `NSDockTile` in 10.5).
-/// - **Mac OS X 10.6, OS X 10.8:** every app, the glossy red pill of the 10.5 – 10.9 Dock.
+/// - **Mac OS X 10.4 Tiger:** still no badge API, but any app could paint one into its icon
+///   (`setApplicationIconImage`), and they copied Mail's red dot; so every app, in Mail's look.
+/// - **Mac OS X 10.6, OS X 10.8 – 10.9:** every app, the glossy red pill the Dock itself drew
+///   from 10.5 (`NSDockTile`) until Yosemite.
 /// - **Windows 7:** an overlay icon on the taskbar button's bottom right corner (the
 ///   `ITaskbarList3` overlay Windows 7 introduced), which mail and chat programs used for counts.
 ///
@@ -20,13 +23,15 @@ import ApplicationServices
 final class DockBadges {
     static let shared = DockBadges()
 
-    enum Style { case cheetah, leopard, win7 }
+    /// `cheetah` and `tiger` are the badge the app painted itself, `leopard` the Dock's own.
+    enum Style { case cheetah, tiger, leopard, win7 }
 
     /// Which badge a theme's system had. By theme id: an imported or user theme gets none.
     static func style(forThemeID id: String?) -> Style? {
         switch id {
         case "com.retromac.apple.aqua-cheetah": return .cheetah
-        case "com.retromac.apple.tiger", "com.retromac.apple.snow-leopard", "com.retromac.apple.mountain-lion", "com.retromac.apple.mavericks": return .leopard
+        case "com.retromac.apple.tiger": return .tiger
+        case "com.retromac.apple.snow-leopard", "com.retromac.apple.mountain-lion", "com.retromac.apple.mavericks": return .leopard
         case "com.retromac.microsoft.windows7": return .win7
         default: return nil
         }
@@ -118,7 +123,7 @@ enum DockBadgeArt {
 
     /// The Mac OS X badge: red with a white rim, lit from above, a soft shadow below; round for
     /// one digit and a pill that grows with the text. 10.0's Mail painted its own a little
-    /// brighter and more glassy, Aqua's look; 10.5 – 10.8's Dock drew the deeper red.
+    /// brighter and more glassy, Aqua's look, and 10.4's apps copied it; 10.5 – 10.9's Dock drew the deeper red.
     static func macBadge(_ text: String, style: DockBadges.Style, height h: CGFloat) -> NSImage {
         let font = NSFont(name: "Helvetica-Bold", size: h * 0.58) ?? .boldSystemFont(ofSize: h * 0.58)
         let label = NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: NSColor.white])
@@ -138,13 +143,13 @@ enum DockBadgeArt {
             let border = max(1, h * 0.09)
             let body = pill.insetBy(dx: border, dy: border)
             let fill = NSBezierPath(roundedRect: body, xRadius: body.height / 2, yRadius: body.height / 2)
-            let (top, bottom): (NSColor, NSColor) = style == .cheetah
+            let (top, bottom): (NSColor, NSColor) = style != .leopard
                 ? (NSColor(srgbRed: 1.00, green: 0.45, blue: 0.40, alpha: 1), NSColor(srgbRed: 0.86, green: 0.05, blue: 0.02, alpha: 1))
                 : (NSColor(srgbRed: 0.98, green: 0.30, blue: 0.25, alpha: 1), NSColor(srgbRed: 0.76, green: 0.00, blue: 0.00, alpha: 1))
             NSGradient(starting: bottom, ending: top)?.draw(in: fill, angle: 90)
             // The shine on the upper half.
             let shine = NSRect(x: body.minX + body.height * 0.18, y: body.midY, width: body.width - body.height * 0.36, height: body.height * 0.46)
-            NSColor.white.withAlphaComponent(style == .cheetah ? 0.45 : 0.28).setFill()
+            NSColor.white.withAlphaComponent(style != .leopard ? 0.45 : 0.28).setFill()
             NSBezierPath(roundedRect: shine, xRadius: shine.height / 2, yRadius: shine.height / 2).fill()
 
             let ts = label.size()

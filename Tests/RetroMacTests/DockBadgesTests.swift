@@ -6,6 +6,8 @@ import XCTest
 final class DockBadgesTests: XCTestCase {
     func testOnlyTheSystemsThatHadBadges() {
         XCTAssertEqual(DockBadges.style(forThemeID: "com.retromac.apple.aqua-cheetah"), .cheetah)
+        XCTAssertEqual(DockBadges.style(forThemeID: "com.retromac.apple.tiger"), .tiger)
+        XCTAssertEqual(DockBadges.style(forThemeID: "com.retromac.apple.mavericks"), .leopard)
         XCTAssertEqual(DockBadges.style(forThemeID: "com.retromac.apple.snow-leopard"), .leopard)
         XCTAssertEqual(DockBadges.style(forThemeID: "com.retromac.apple.mountain-lion"), .leopard)
         XCTAssertEqual(DockBadges.style(forThemeID: "com.retromac.microsoft.windows7"), .win7)

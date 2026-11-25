@@ -19,7 +19,7 @@ final class TigerThemeTests: XCTestCase {
         XCTAssertEqual(c.dock.pinstripe, false)
         XCTAssertTrue(c.supportsAutoHide)
         XCTAssertNotNil(SwitcherCapability.matrix["com.retromac.apple.tiger"])
-        XCTAssertEqual(DockBadges.style(forThemeID: c.id), .leopard)
+        XCTAssertEqual(DockBadges.style(forThemeID: c.id), .tiger, "apps painted Mail's dot themselves before 10.5")
         XCTAssertEqual(c.finder, "tiger")
         XCTAssertEqual(c.menuBar?.spotlight, true)
         XCTAssertEqual(c.boot?.firmware, "chime")

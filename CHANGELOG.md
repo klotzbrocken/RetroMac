@@ -19,6 +19,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   originals: Snow Leopard and Mountain Lion show it at all times, as every Mac OS X since 10.5
   did; Tiger only while Calendar is running and JUL 17 otherwise, as iCal did up to 10.4.
 
+- **Tiger's dock badges in Mail's look.** Before 10.5 the Dock drew no badges; apps painted the
+  red dot into their own icons the way Mail did, so Tiger now shows that brighter dot instead of
+  the deeper red pill the Dock itself drew from Leopard to Mavericks.
+
 - **Option-click the green button for full screen.** Under the Mac themes the green button zooms
   the window, as it did before Lion; with Option held it now puts the app into macOS full screen.
 
