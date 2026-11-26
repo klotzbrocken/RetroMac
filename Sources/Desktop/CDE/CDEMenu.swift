@@ -27,8 +27,9 @@ enum CDEMenu {
     /// runs `onAnchorDoubleClick` (dtwm: a double-click on the window-menu box closes the window).
     /// Whose menus these are: dtwm's (Solaris), or Photon's (QNX 6.2.1), which draws every entry
     /// as a bar of its own and every section as a box of its own.
-    enum Look { case cde, photon }
-    private(set) static var look: Look = .cde
+    /// KDE 1.0's are Qt 1's Windows-style popups (see `KDEColors`).
+    enum Look { case cde, photon, kde }
+    static var look: Look = .cde
 
     static func show(_ items: [CDEMenuItem], title: String? = nil, at topLeft: NSPoint, look: Look = .cde,
                      anchor: NSRect? = nil, onAnchorDoubleClick: (() -> Void)? = nil) {
@@ -75,7 +76,13 @@ enum CDEMenu {
 
     // MARK: Metrics
 
-    static var font: NSFont { look == .photon ? PhotonColors.label : (NSFont(name: "LucidaGrande", size: 14) ?? .systemFont(ofSize: 14)) }
+    static var font: NSFont {
+        switch look {
+        case .photon: return PhotonColors.label
+        case .kde: return KDEColors.font
+        case .cde: return NSFont(name: "LucidaGrande", size: 14) ?? .systemFont(ofSize: 14)
+        }
+    }
     static let titleH: CGFloat = 20, ruleH: CGFloat = 4, rowH: CGFloat = 21, iconRowH: CGFloat = 23, sepH: CGFloat = 2
 
     /// Photon, measured off the Launch menu in `qnx621about2.png`: a black edge, a #F1F1F1 light
@@ -84,15 +91,26 @@ enum CDEMenu {
     static let photonTop: CGFloat = 5, photonBottom: CGFloat = 3, photonSide: CGFloat = 4, photonRow: CGFloat = 19,
                photonBar: CGFloat = 17, photonSep: CGFloat = 7, photonLabel: CGFloat = 37
 
+    /// Qt 1's Windows-style popup: a 2 pt frame, rows of 20 pt (a 16 pt mini icon fits), an
+    /// 8 pt etched separator; the label stands clear of the icon column whenever one item has one.
+    static let kdeRow: CGFloat = 20, kdeSep: CGFloat = 8
+    static func kdeLabel(_ items: [CDEMenuItem]) -> CGFloat { items.contains { $0.icon != nil } ? 26 : 8 }
+
     /// A row with an icon is 2 pt taller than one without, side by side in the same menu.
     static func height(of item: CDEMenuItem) -> CGFloat {
         if look == .photon { return item.isSeparator ? photonSep : photonRow }
+        if look == .kde { return item.isSeparator ? kdeSep : kdeRow }
         return item.isSeparator ? sepH : item.icon == nil ? rowH : iconRowH
     }
 
     /// Size of a menu: the widest label, its icon column and cascade arrow, or the title.
     static func size(of items: [CDEMenuItem], title: String?) -> NSSize {
         let hasArrows = items.contains { $0.submenu != nil }
+        if look == .kde {
+            let w = items.map { ($0.title as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
+            return NSSize(width: ceil(kdeLabel(items) + w + (hasArrows ? 26 : 16) + 2),
+                          height: 4 + items.reduce(0) { $0 + height(of: $1) })
+        }
         if look == .photon {
             let w = items.map { ($0.title as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
             return NSSize(width: ceil(photonLabel + w + (hasArrows ? 26 : 14) + photonSide),
@@ -148,9 +166,9 @@ final class CDEMenuView: NSView {
 
     /// Row rectangles of a level, in view coordinates, with the item index.
     private func rows(_ l: Level) -> [(NSRect, Int)] {
-        let photon = CDEMenu.look == .photon
-        var y = l.frame.minY + (photon ? CDEMenu.photonTop : 1 + (l.title == nil ? 0 : CDEMenu.titleH + CDEMenu.ruleH))
-        let inset = photon ? CDEMenu.photonSide : 1
+        let photon = CDEMenu.look == .photon, kde = CDEMenu.look == .kde
+        var y = l.frame.minY + (photon ? CDEMenu.photonTop : kde ? 2 : 1 + (l.title == nil ? 0 : CDEMenu.titleH + CDEMenu.ruleH))
+        let inset: CGFloat = photon ? CDEMenu.photonSide : kde ? 2 : 1
         var out: [(NSRect, Int)] = []
         for (i, it) in l.items.enumerated() {
             let h = CDEMenu.height(of: it)
@@ -181,7 +199,9 @@ final class CDEMenuView: NSView {
         levels = Array(levels.prefix(level + 1))
         if let i = item, let sub = levels[level].items[i].submenu,
            let row = rows(levels[level]).first(where: { $0.1 == i })?.0 {
-            if CDEMenu.look == .photon {   // Photon: the cascade's first bar level with its entry, edges shared
+            if CDEMenu.look == .kde {   // Qt: the cascade's first row level with its entry
+                open(sub, title: nil, at: NSPoint(x: levels[level].frame.maxX - 3, y: row.minY - 2), level: level + 1)
+            } else if CDEMenu.look == .photon {   // Photon: the cascade's first bar level with its entry, edges shared
                 open(sub, title: nil, at: NSPoint(x: levels[level].frame.maxX - 1, y: row.minY - CDEMenu.photonTop), level: level + 1)
             } else {
                 open(sub, title: levels[level].items[i].title, at: NSPoint(x: levels[level].frame.maxX - 2, y: row.minY + 4), level: level + 1)
@@ -322,8 +342,40 @@ final class CDEMenuView: NSView {
         }
     }
 
+    /// Qt 1's Windows style: the grey popup in a 2 pt panel, the armed row in dark blue with white
+    /// text, a dimmed row etched in white, the cascade arrow a small solid triangle.
+    private func drawKDE(_ l: Level) {
+        let f = l.frame
+        KDEColors.face.setFill(); f.fill()
+        KDEColors.winPanel(f, sunken: false)
+        let labelX = f.minX + CDEMenu.kdeLabel(l.items)
+        for (r, i) in rows(l) {
+            let it = l.items[i]
+            if it.isSeparator {
+                KDEColors.dark.setFill(); NSRect(x: r.minX + 1, y: r.midY - 1, width: r.width - 2, height: 1).fill()
+                KDEColors.light.setFill(); NSRect(x: r.minX + 1, y: r.midY, width: r.width - 2, height: 1).fill()
+                continue
+            }
+            let armed = l.armed == i && it.enabled
+            if armed { KDEColors.select.setFill(); r.fill() }
+            if let icon = it.icon {
+                icon.draw(in: NSRect(x: f.minX + 5, y: r.midY - 8, width: 16, height: 16), from: .zero,
+                          operation: .sourceOver, fraction: it.enabled ? 1 : 0.5, respectFlipped: true, hints: nil)
+            }
+            let tr = NSRect(x: labelX, y: r.minY, width: r.maxX - labelX, height: r.height)
+            if !it.enabled { text(it.title, tr.offsetBy(dx: 1, dy: 1), centred: false, color: KDEColors.light) }
+            text(it.title, tr, centred: false, color: armed ? .white : it.enabled ? .black : KDEColors.dark)
+            if it.submenu != nil {
+                let a = NSBezierPath(), x = r.maxX - 12, y = r.midY
+                a.move(to: NSPoint(x: x, y: y - 4)); a.line(to: NSPoint(x: x + 4, y: y)); a.line(to: NSPoint(x: x, y: y + 4)); a.close()
+                (armed ? NSColor.white : NSColor.black).setFill(); a.fill()
+            }
+        }
+    }
+
     private func draw(_ l: Level) {
         if CDEMenu.look == .photon { drawPhoton(l, isLast: l.frame == levels.last?.frame); return }
+        if CDEMenu.look == .kde { drawKDE(l); return }
         let f = l.frame
         Self.face.setFill(); f.fill()
         bevel(f, sunken: false)

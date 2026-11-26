@@ -7,6 +7,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **New theme: KDE 1.0.** The K Desktop Environment of July 1998, from KDE's own sources: the
+  panel along the bottom with the K menu, the window list, launchers that open the nearest Mac
+  app, logout and lock, the four desktops One to Four with the four backgrounds KDE shipped, and
+  the clock; the taskbar along the top with a button per window (a click brings it forward, the
+  middle button iconifies, the right one opens the window menu); Qt's grey menus; KDE 1.0's
+  original icons, with pictures in its style for today's apps; and kwm's shaded blue title bars
+  on RetroMac's own windows. The K menu sorts your apps into KDE's groups, "All Applications"
+  lists every one and "Run Command..." starts one by its name.
+
 - **New theme: OS X Mavericks.** 10.9 of 2013, built on the Mountain Lion theme: the Mavericks
   wave as the desktop, an empty desktop as after a fresh install, the glass dock with its
   reflections, the thin dark divider that leans with the shelf, today's date on the Calendar

@@ -34,7 +34,7 @@ enum RetroFrameTheme {
 
     /// The chrome a widget page draws. The pages have none for CDE or Photon: they draw their
     /// Windows 98 furniture and `CDEWidgetChrome` / `PhotonWidgetChrome` repaint it.
-    static func widgetKey() -> String { ["cde", "photon"].contains(key()) ? "win98" : key() }
+    static func widgetKey() -> String { ["cde", "photon", "kde"].contains(key()) ? "win98" : key() }
 
     static func key() -> String {
         // Only frame launched content (TV window chrome, game frames) when a theme
@@ -72,6 +72,7 @@ enum RetroFrameTheme {
         if name.contains("nextstep") || name.contains("next step") { return "nextstep" }
         if name.contains("solaris") { return "cde" }   // Solaris 8, the Common Desktop Environment
         if name.contains("qnx") { return "photon" }    // QNX 6.2.1, Photon
+        if name.hasPrefix("kde") { return "kde" }       // KDE 1.0
         if name.contains("futurama") { return "futurama" }
         if name.contains("halloween") { return "halloween" }   // fireballs for the lights
         if name.contains("amiga") || name.contains("workbench") { return "amiga" }   // AmigaOS 4.1

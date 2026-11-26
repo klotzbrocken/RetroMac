@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 2,
+  "id": "com.retromac.kde.kde1",
+  "minAppVersion": "3.0",
+  "family": {
+    "id": "kde",
+    "name": "KDE",
+    "order": 12
+  },
+  "release": {
+    "label": "KDE 1.0",
+    "year": 1998
+  },
+  "experienceLevel": "full",
+  "chrome": {
+    "style": "kde"
+  },
+  "name": "KDE 1.0",
+  "version": "1.0",
+  "author": "RetroMac",
+  "wallpaper": "wallpaper.png",
+  "wallpapers": [
+    {
+      "name": "One",
+      "file": "wallpaper.png"
+    },
+    {
+      "name": "Two",
+      "file": "wallpaper-two.png"
+    },
+    {
+      "name": "Three",
+      "file": "ruins.jpg",
+      "tiled": true
+    },
+    {
+      "name": "Four",
+      "file": "water01.jpg",
+      "tiled": true
+    }
+  ],
+  "dock": {
+    "height": 64,
+    "iconSize": 48,
+    "padding": 8,
+    "spacing": 0,
+    "cornerRadius": 0,
+    "backgroundColor": "#C0C0C0FF",
+    "backgroundImage": null,
+    "backgroundImageMode": "tile",
+    "borderColor": "#000000FF",
+    "borderWidth": 1,
+    "shadowEnabled": false,
+    "shadowColor": "#00000000",
+    "shadowRadius": 0,
+    "bevelTopColor": "#FFFFFFFF",
+    "bevelBottomColor": "#808080FF",
+    "bevelWidth": 2,
+    "orientation": "horizontal",
+    "position": "bottom",
+    "fullWidth": true,
+    "startButton": false,
+    "showClock": false,
+    "magnification": false,
+    "showTrash": false,
+    "showGrip": false,
+    "alignment": "left",
+    "edgeOffset": 0,
+    "dockStyle": "none"
+  },
+  "icon": {
+    "renderStyle": "pixelated",
+    "reflectionEnabled": false,
+    "reflectionOpacity": 0,
+    "hoverScale": 1.0,
+    "hoverAnimationDuration": 0.1
+  },
+  "indicator": {
+    "style": "dot",
+    "color": "#000000",
+    "size": 4,
+    "offset": 3
+  },
+  "fallbackIcon": "app_generic.png",
+  "desktopIcons": [
+    {
+      "name": "Home",
+      "icon": "kfm_home.png",
+      "type": "folder",
+      "path": "~",
+      "gridX": 0,
+      "gridY": 0
+    },
+    {
+      "name": "Trash",
+      "icon": "kfm_trash.png",
+      "iconFull": "kfm_fulltrash.png",
+      "type": "trash",
+      "gridX": 0,
+      "gridY": 1
+    }
+  ],
+  "desktopLabel": {
+    "font": "Helvetica",
+    "size": 12,
+    "color": "#FFFFFF"
+  },
+  "iconMappings": {
+    "com.anthropic.claudefordesktop": "app_claude.png",
+    "com.apple.FaceTime": "app_meeting.png",
+    "com.apple.MobileSMS": "app_messages.png",
+    "com.apple.Music": "app_music.png",
+    "com.apple.Photos": "app_photos.png",
+    "com.apple.Preview": "app_photos.png",
+    "com.apple.Safari": "app_web.png",
+    "com.apple.Terminal": "kvt.png",
+    "com.apple.TextEdit": "kedit.png",
+    "com.apple.archiveutility": "app_zip.png",
+    "com.apple.calculator": "kcalc.png",
+    "com.apple.finder": "kfm.png",
+    "com.apple.iCal": "app_date.png",
+    "com.apple.iWork.Keynote": "app_slides.png",
+    "com.apple.iWork.Numbers": "app_sheet.png",
+    "com.apple.iWork.Pages": "app_writer.png",
+    "com.apple.mail": "kmail.png",
+    "com.apple.systempreferences": "kcontrol.png",
+    "com.barebones.bbedit": "app_text.png",
+    "com.brave.Browser": "app_web.png",
+    "com.google.Chrome": "app_web.png",
+    "com.googlecode.iterm2": "app_terminal.png",
+    "com.microsoft.Excel": "app_sheet.png",
+    "com.microsoft.Outlook": "app_outlook.png",
+    "com.microsoft.Powerpoint": "app_slides.png",
+    "com.microsoft.VSCode": "app_codex.png",
+    "com.microsoft.Word": "app_writer.png",
+    "com.microsoft.edgemac": "app_web.png",
+    "com.microsoft.teams2": "app_meeting.png",
+    "com.openai.chat": "app_chatgpt.png",
+    "com.openai.codex": "app_codex.png",
+    "com.spotify.client": "app_music.png",
+    "company.thebrowser.Browser": "app_web.png",
+    "org.mozilla.firefox": "app_web.png",
+    "org.mozilla.thunderbird": "app_mail.png",
+    "org.whispersystems.signal-desktop": "app_messages.png",
+    "us.zoom.xos": "app_meeting.png"
+  },
+  "defaultPreset": "lcd-retro-lite",
+  "screensaver": "none",
+  "appearance": "light",
+  "accentColor": "blue"
+}

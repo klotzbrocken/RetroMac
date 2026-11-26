@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KDE 1.0</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:linear-gradient(#000080,#0004FF); font-family:Helvetica,Arial,sans-serif; color:#000; padding:22px 18px 40px; min-height:100vh; }
+  .win { max-width:640px; margin:0 auto; background:#C0C0C0; border:4px solid #C0C0C0; box-shadow:inset 1px 1px 0 #FFF,inset -1px -1px 0 #000,0 10px 34px rgba(0,0,0,.38); }
+  .titlebar { background:linear-gradient(to right,#000080,#000000); color:#FFF; padding:3px 8px; font-size:12px; font-weight:700; }
+  .body { padding:20px 24px 24px; background:#C0C0C0; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:64px; height:64px; image-rendering:pixelated; }
+  .hero h1 { margin:0; font-size:28px; font-weight:700; color:#000080; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#404040; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#000080; margin:22px 0 8px; padding-bottom:4px; border-bottom:1px solid #808080; box-shadow:0 1px 0 #FFF; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 18px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; color:#000080; }
+  .dyk { margin:8px 0 4px; padding:12px 14px; background:#D8D8D8; box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #FFF; }
+  .dyk h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#000080; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 9px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #808080; font-size:11px; color:#404040; line-height:1.6; }
+  footer a { color:#000080; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar">KDE 1.0</div>
+    <div class="body">
+      <div class="hero">
+        <img src="appIcon.png" alt="KDE">
+        <div><h1>KDE 1.0</h1><p class="sub">The K Desktop Environment &middot; 12 July 1998</p></div>
+      </div>
+      <p>In October 1996 Matthias Ettrich, a student in Tübingen, asked on Usenet for help with a "Kool Desktop Environment": one consistent desktop for Unix, where every program looked alike and could be configured without editing text files. Twenty months later, on 12 July 1998, KDE 1.0 came out.</p>
+      <p>It brought the <b>panel</b> along the bottom with the K menu, launchers, four virtual desktops and the clock, a <b>taskbar</b> along the top with a button for every window, the <b>kwm</b> window manager with its shaded blue title bars, and the KFM file manager that also drew the desktop icons.</p>
+      <h2>In RetroMac</h2>
+      <ul class="facts">
+        <li>The K menu sorts your Mac apps into KDE's groups by the category each app declares. "All Applications" lists every one, and "Run Command..." starts one by typing its name.</li>
+        <li>The panel buttons open the nearest Mac app: KVT is Terminal, KEdit TextEdit, KNotes Stickies, KMail your mail app, the KDE Control Center System Settings.</li>
+        <li>One to Four switch between the four backgrounds KDE 1.0 shipped with. Your Mac windows stay where they are: macOS cannot move a single window to another desktop without minimising it.</li>
+        <li>Logout ends the KDE session, which switches the theme off. Your Mac session stays.</li>
+      </ul>
+      <div class="dyk"><h3>Did you know?</h3>
+        <p class="item">KDE was built on Trolltech's Qt, which was not free software in 1998. The dispute led to the GNOME project and was settled when Qt went GPL in 2000.</p>
+        <p class="item">The K button's tooltip asked "Where do you want to go tomorrow?", a dig at Microsoft's slogan of the day.</p>
+      </div>
+      <footer>Sizes, colours and the four backgrounds come from KDE's own sources and configuration (kde1-kdebase, 10 July 1998). The icons are KDE 1.0's originals; the pictures for today's apps were drawn for RetroMac in the same style.</footer>
+    </div>
+  </div>
+</body></html>

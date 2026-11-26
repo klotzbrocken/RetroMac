@@ -1867,6 +1867,9 @@ final class TitleBarOverlayController {
             if let r = PhotonDesktopController.shared.reserved {
                 visible = NSRect(x: visible.minX, y: visible.minY + r.bottom, width: visible.width - r.right, height: visible.height - r.bottom)
             }
+            if let r = KDEDesktopController.shared.reserved {
+                visible = NSRect(x: visible.minX, y: visible.minY + r.bottom, width: visible.width, height: visible.height - r.bottom - r.top)
+            }
         }
         // The Amiga screen bar holds the top edge: a zoomed window under it was pushed down by the
         // work-area keeper and no longer matched where the zoom took it, so it never came back.
