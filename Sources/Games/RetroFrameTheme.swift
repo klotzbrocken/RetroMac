@@ -33,8 +33,11 @@ enum RetroFrameTheme {
     }
 
     /// The chrome a widget page draws. The pages have none for CDE or Photon: they draw their
-    /// Windows 98 furniture and `CDEWidgetChrome` / `PhotonWidgetChrome` repaint it.
-    static func widgetKey() -> String { ["cde", "photon", "kde"].contains(key()) ? "win98" : key() }
+    /// Windows 98 furniture and `CDEWidgetChrome` / `PhotonWidgetChrome` / `KDEWidgetChrome` repaint it. None for GEM yet either.
+    static func widgetKey() -> String {
+        if key() == "gem" { return "macos6" }   // TOS: GEM's white windows in black lines are closest to System 6's
+        return ["cde", "photon", "kde"].contains(key()) ? "win98" : key()
+    }
 
     static func key() -> String {
         // Only frame launched content (TV window chrome, game frames) when a theme
@@ -76,6 +79,7 @@ enum RetroFrameTheme {
         if name.contains("futurama") { return "futurama" }
         if name.contains("halloween") { return "halloween" }   // fireballs for the lights
         if name.contains("amiga") || name.contains("workbench") { return "amiga" }   // AmigaOS 4.1
+        if name.contains("atari") { return "gem" }   // TOS 4.04, GEM on the Falcon030
         return "default"
     }
 

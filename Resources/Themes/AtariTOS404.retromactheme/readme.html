@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atari TOS 4.04</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body { background:#9EBEFF; font-family:"Lucida Grande","Lucida Sans","Helvetica Neue",Arial,sans-serif; color:#111; -webkit-font-smoothing:antialiased; padding:22px 18px 40px; }
+  .win { max-width:640px; margin:0 auto; background:#FFFFFF; border:1px solid #000; box-shadow:0 10px 34px rgba(0,0,0,.3); }
+  .titlebar { background:#CFCFCF; color:#000; text-align:center; padding:6px 12px; font-family:Menlo,Monaco,monospace; font-size:14px; border-bottom:1px solid #000; }
+  .body { padding:22px 26px 26px; }
+  .hero { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+  .hero img { width:66px; height:66px; image-rendering:pixelated; }
+  .hero h1 { margin:0; font-size:29px; font-weight:700; letter-spacing:-.4px; }
+  .hero .sub { margin:3px 0 0; font-size:13px; color:#444; font-weight:600; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:1.1px; margin:22px 0 8px; padding-bottom:5px; border-bottom:1px solid #000; }
+  p { font-size:14px; line-height:1.55; margin:0 0 11px; }
+  .facts { list-style:none; margin:0; padding:0; }
+  .facts li { font-size:13px; line-height:1.5; padding:4px 0 4px 20px; position:relative; }
+  .facts li::before { content:"\25AA"; position:absolute; left:3px; top:3px; font-size:12px; }
+  .dyk { margin:8px 0 4px; padding:14px 16px; background:#CFCFCF; border:3px solid #000; }
+  .dyk h3 { margin:0 0 9px; font-size:12px; text-transform:uppercase; letter-spacing:1px; }
+  .dyk .item { font-size:13px; line-height:1.5; margin:0 0 10px; }
+  .dyk .item:last-child { margin-bottom:0; }
+  footer { margin-top:20px; padding-top:12px; border-top:1px solid #000; font-size:11px; color:#444; line-height:1.6; }
+</style></head>
+<body>
+  <div class="win">
+    <div class="titlebar">D:\README.TXT</div>
+    <div class="body">
+      <div class="hero">
+        <img src="appIcon.png" alt="Atari TOS 4.04">
+        <div><h1>Atari TOS 4.04</h1><p class="sub">Atari Corporation &middot; 1993</p></div>
+      </div>
+      <p>The <b>Falcon030</b> was Atari's last computer: a 16 MHz 68030 with a DSP for sound, sold from 1992. Its operating system, <b>TOS 4</b>, lived in ROM, so the desktop was there a second after switching on. Version 4.04 was the last build Atari shipped.</p>
+      <p>The desktop is <b>GEM</b>, the Graphic Environment Manager Digital Research wrote in 1985: a menu bar with Desk, File, View and Options, drives and a trash can on a coloured desktop, and windows with a close box, a full box, scroll arrows and a size box. On the Falcon it came in colour, with a new icon set on the Language Disk.</p>
+      <h2>In RetroMac</h2>
+      <ul class="facts">
+        <li>The menus open as the pointer reaches their title, as GEM's did. When a Mac app is in front, its own menus come back; a click on the desktop brings GEM's.</li>
+        <li><b>C</b> is your startup disk and opens in the Finder. <b>APPS</b> is a RetroMac addition: a drive with every Mac app on it, shown as icons or as text.</li>
+        <li><b>TRASH</b> is the Mac's own: what you drop on it can be put back. An app you install on the desktop loses only its icon there.</li>
+        <li>Options &rsaquo; Install Application puts an app on the desktop; nothing is copied.</li>
+      </ul>
+      <div class="dyk"><h3>Did you know?</h3>
+        <p class="item">GEM ran on the PC too, until Apple's 1985 lawsuit made Digital Research change it there. The Atari version kept its overlapping windows and its trash can.</p>
+        <p class="item">The Falcon's icons came in a resource file, DESKICON.RSC. Every icon has two pictures: the trash lifts its lid and a folder opens when you select it.</p>
+      </div>
+      <footer>Measured off TOS 4.04 screenshots at 640 × 480. Drive, trash and program icons are the originals from DESKICON.RSC on the Falcon030 Language Disk; the icons for today's apps are new drawings in their style. The system font is IBM's VGA 8 × 16 (PxPlus, VileR, CC BY-SA 4.0), close to the Falcon's own.</footer>
+    </div>
+  </div>
+</body></html>
