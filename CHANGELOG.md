@@ -14,7 +14,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   middle button iconifies, the right one opens the window menu); Qt's grey menus; KDE 1.0's
   original icons, with pictures in its style for today's apps; and kwm's shaded blue title bars
   on RetroMac's own windows. The K menu sorts your apps into KDE's groups, "All Applications"
-  lists every one and "Run Command..." starts one by its name.
+  lists every one and "Run Command..." starts one by its name. The Mac menu bar hides while
+  the theme is on, so the taskbar holds the top edge as it did on a KDE screen.
 
 - **New theme: Atari TOS 4.04.** The colour GEM desktop of the Falcon030 (1993): the white menu
   bar with Desk, File, View and Options whose menus open as the pointer reaches them, the light
