@@ -71,7 +71,7 @@ struct PlatinumMenuItem {
 /// How the menus are drawn: Mac OS 8/9's Platinum (and System 7), or Mac OS X 10.0's Aqua.
 /// `lion`: Mountain Lion's white menu with a blue gradient highlight and thin rules between groups.
 /// `amiga`: AmigaOS 4.1, in the screen bar's light bands with the window bar's blue for the chosen row.
-enum RetroMenuLook { case platinum, aqua, lion, amiga }
+enum RetroMenuLook { case platinum, aqua, lion, amiga, gem }
 
 final class PlatinumMenuController {
     static let shared = PlatinumMenuController()
@@ -119,7 +119,8 @@ final class PlatinumMenuController {
         let panel = makePanel(items: items, level: 0)
         let size = panel.contentSize
         let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main!
-        let vf = screen.visibleFrame
+        // GEM's bar lies over the Mac's menu bar, so its pulldowns start inside the Mac bar's strip.
+        let vf = look == .gem ? screen.frame : screen.visibleFrame
         var x = min(max(anchor.minX, vf.minX), vf.maxX - size.width)
         var y = anchor.minY - size.height
         if y < vf.minY { y = anchor.maxY }                          // no room below: open above
@@ -190,7 +191,7 @@ final class PlatinumMenuController {
         panel.level = .themeMenu
         panel.title = "Menu"   // what VoiceOver calls it; a submenu is renamed after its row
         panel.isOpaque = false; panel.backgroundColor = .clear
-        panel.hasShadow = look != .platinum   // Platinum's drawn 1 px shadow is its shadow; Aqua's is soft
+        panel.hasShadow = look != .platinum && look != .gem   // Platinum's drawn 1 px shadow is its shadow; Aqua's is soft; GEM had none
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         panel.hidesOnDeactivate = false
         view.frame = NSRect(origin: .zero, size: view.intrinsicSize)
@@ -237,12 +238,14 @@ private final class PlatinumMenuView: NSView {
     private lazy var aqua = controller?.look == .aqua || controller?.look == .lion
     private lazy var lion = controller?.look == .lion
     private lazy var amiga = controller?.look == .amiga
-    private var rowH: CGFloat { amiga ? 21 : (aqua ? PlatinumMenuController.aquaRowHeight : PlatinumMenuController.rowHeight) }
-    private var sepH: CGFloat { amiga ? 6 : (aqua ? PlatinumMenuController.aquaSeparatorHeight : PlatinumMenuController.separatorHeight) }
-    private var menuFont: NSFont { amiga ? AmigaChrome.titleFont() : (aqua ? PlatinumMenuController.aquaFont : PlatinumMenuController.font) }
+    /// Atari TOS 4.04: a white box in a black line, one 16 pt row per entry, separators a dimmed row of dashes.
+    private lazy var gem = controller?.look == .gem
+    private var rowH: CGFloat { gem ? GEMChrome.rowH : amiga ? 21 : (aqua ? PlatinumMenuController.aquaRowHeight : PlatinumMenuController.rowHeight) }
+    private var sepH: CGFloat { gem ? GEMChrome.rowH : amiga ? 6 : (aqua ? PlatinumMenuController.aquaSeparatorHeight : PlatinumMenuController.separatorHeight) }
+    private var menuFont: NSFont { gem ? GEMChrome.font : amiga ? AmigaChrome.titleFont() : (aqua ? PlatinumMenuController.aquaFont : PlatinumMenuController.font) }
     /// Space above the first row and below the last.
-    private var padTop: CGFloat { aqua ? 4 : 2 }
-    private var padBottom: CGFloat { aqua ? 3 : 2 }
+    private var padTop: CGFloat { gem ? 1 : aqua ? 4 : 2 }
+    private var padBottom: CGFloat { gem ? 1 : aqua ? 3 : 2 }
     /// System 7.1 (authentic), at 256 colours: a white menu in a black line with a 1 px
     /// shadow, the selected row inverted, dimmed rows in #888888; else Platinum.
     private let mono = Mac256.active
@@ -258,6 +261,8 @@ private final class PlatinumMenuView: NSView {
     private let iconColumn: CGFloat = 26
 
     var intrinsicSize: NSSize {
+        // GEM sized a menu by its longest entry: two cells for the tick, the text, three to spare (View in `_3.png`: 25 cells).
+        if gem { return NSSize(width: CGFloat((items.map(\.title.count).max() ?? 0) + 5) * GEMChrome.charW + 2, height: min(fullHeight, maxHeight)) }
         let font = menuFont
         var maxW: CGFloat = 100
         let hasIcons = items.contains { $0.icon != nil }
@@ -289,6 +294,7 @@ private final class PlatinumMenuView: NSView {
         for j in 0..<min(firstRow, items.count) { y -= isSeparator(items[j]) ? sepH : rowH }
         let h = isSeparator(items[i]) ? sepH : rowH
         if aqua { return NSRect(x: 0, y: y, width: bounds.width, height: h) }   // edge to edge: no frame
+        if gem { return NSRect(x: 1, y: y, width: bounds.width - 2, height: h) }   // inside the line; no shadow
         return NSRect(x: 1, y: y, width: bounds.width - 3, height: h)   // inside the line and the shadow
     }
     private var upArrowRect: NSRect { NSRect(x: 1, y: 2, width: bounds.width - 3, height: rowH) }
@@ -301,6 +307,7 @@ private final class PlatinumMenuView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         if aqua { drawAqua(); return }
         if amiga { drawAmiga(); return }
+        if gem { drawGem(); return }
         let b = bounds
         // The menu's own shadow: one dark line below and to the right, as os9.ca draws it.
         NSColor(white: 0.067, alpha: 1).setFill()
@@ -496,6 +503,31 @@ private final class PlatinumMenuView: NSView {
                 p.move(to: NSPoint(x: ax, y: ay - 4)); p.line(to: NSPoint(x: ax + 5, y: ay)); p.line(to: NSPoint(x: ax, y: ay + 4)); p.close()
                 colour.setFill(); p.fill()
             }
+        }
+    }
+
+    /// TOS 4.04 (View in `_3.png`): the chosen row inverted edge to edge, the tick in the first
+    /// cell, the text two cells in, dimmed entries and the separators' dashes stippled.
+    private func drawGem() {
+        NSColor.white.setFill(); bounds.fill()
+        GEMChrome.outline(bounds)
+        for (i, it) in items.enumerated() {
+            let r = rowRect(i)
+            if isSeparator(it) {
+                NSColor.black.setFill()
+                var x = r.minX
+                while x + 8 <= r.maxX {
+                    for c in 1...6 { NSRect(x: x + CGFloat(c), y: r.minY + CGFloat(6 + (c + 1) % 2), width: 1, height: 1).fill() }
+                    x += 8
+                }
+                continue
+            }
+            let selected = i == hovered && !it.dimmed
+            if selected { NSColor.black.setFill(); r.fill() }
+            let colour: NSColor = selected ? .white : .black
+            if it.ticked { GEMChrome.bitmap(GEMChrome.tick, at: NSPoint(x: r.minX + 2, y: r.minY + 2), color: colour) }
+            GEMChrome.text(it.title, at: NSPoint(x: r.minX + 17, y: r.minY), color: colour)
+            if it.dimmed { GEMChrome.checker(r, color: .white) }
         }
     }
 

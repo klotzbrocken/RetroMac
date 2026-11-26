@@ -382,6 +382,7 @@ enum ThemeLauncher {
         if DockController.shared.openStartMenuFromKeyboard() { return }
         if BeOSDeskbarController.shared.openBeMenu() { return }
         if PhotonDesktopController.shared.openLaunchMenu() { return }
+        if GEMDesktopController.shared.openApps() { return }
         if SGIDesktopController.shared.openToolchest() { return }
         if CDEDesktop.shared.openWorkspaceMenu() { return }
         if NextMenuController.shared.focusFromKeyboard() { return }

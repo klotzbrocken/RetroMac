@@ -7,6 +7,15 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### New
 
+- **New theme: Atari TOS 4.04.** The colour GEM desktop of the Falcon030 (1993): the white menu
+  bar with Desk, File, View and Options whose menus open as the pointer reaches them, the light
+  blue desktop with the startup disk as drive C, TRASH in the bottom left corner and the original
+  icons from the Falcon's Language Disk, each with its selected picture. APPS, a drive added by
+  RetroMac, opens a GEM window with every Mac app, as icons or as text, sorted by name or type,
+  with scroll arrows, sliders and a size box. Install Application puts an app on the desktop
+  without copying it; what you drop on TRASH goes to the Mac's own trash. While a Mac app is in
+  front, its own menus are back.
+
 - **New theme: OS X Mavericks.** 10.9 of 2013, built on the Mountain Lion theme: the Mavericks
   wave as the desktop, an empty desktop as after a fresh install, the glass dock with its
   reflections, the thin dark divider that leans with the shelf, today's date on the Calendar

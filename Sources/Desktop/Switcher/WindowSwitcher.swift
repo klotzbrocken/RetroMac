@@ -80,6 +80,7 @@ struct SwitcherCapability: Equatable {
         "com.retromac.ibm.os2warp4": none("OS/2 keeps its WarpCenter."),
         "com.retromac.sgi.irix": none("IRIX keeps its Toolchest."),
         "com.retromac.amiga.workbench41": none("Workbench keeps its screens."),
+        "com.retromac.atari.tos404": none("TOS 4.04 ran one program at a time; the application list in the Desk menu came with MultiTOS."),
         "com.retromac.tv.futurama": none("A made-up theme gets no made-up switcher."),
         "com.retromac.personal.maiks-favourite": none("A made-up theme gets no made-up switcher."),
         "com.retromac.personal.maiks-favourite-2": none("A made-up theme gets no made-up switcher."),
