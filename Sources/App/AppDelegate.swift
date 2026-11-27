@@ -293,15 +293,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // the theme on screen — to VoiceOver, no theme at all.
                 self.rebuildMenu()
                 // QA hook: the theme's main menu (Start, K menu, Apple menu, ...), as the launcher shortcut opens it.
+                // RETROMAC_QA_DELAY (seconds) holds the menu, Read Me and dock hooks back, so a
+                // screenshot script can settle which app is in front first: a switch closes a menu.
+                let qaDelay = Double(ProcessInfo.processInfo.environment["RETROMAC_QA_DELAY"] ?? "") ?? 0
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_START_MENU"] != nil {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { ThemeLauncher.open() }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2 + qaDelay) { ThemeLauncher.open() }
                 }
                 // QA for screenshot sets: the theme's Read Me, and the pointer resting on dock item N.
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_README"] != nil {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { ThemeReadmeController.shared.showForActiveTheme() }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1 + qaDelay) { ThemeReadmeController.shared.showForActiveTheme() }
                 }
                 if let n = ProcessInfo.processInfo.environment["RETROMAC_HOVER_DOCK"].flatMap(Int.init) {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { DockController.shared.hoverForScreenshot(item: n) }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3 + qaDelay) { DockController.shared.hoverForScreenshot(item: n) }
                 }
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_SETI"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { SETIController.shared.showWindow() }

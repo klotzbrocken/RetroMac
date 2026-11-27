@@ -6,8 +6,8 @@
 # Only the desktop picture, the menu bar, RetroMac and TextEdit are captured; the user's windows stay out.
 #
 # usage: shoot.sh <outdir> <theme-id> [<theme-id> ...]
-# Themes that keep the Mac menu bar wait until the Finder is in front (the user presses Cmd-Tab):
-# macOS does not let a script bring another app forward while the user's app is active.
+# Themes that keep the Mac menu bar are shot with the Finder in front. The script brings it forward
+# when macOS lets it (while the user's Claude is in front); otherwise it waits for Cmd-Tab.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="$1"; shift
@@ -47,29 +47,46 @@ for T in "$@"; do
   M=$(manifest "$T"); [ -z "$M" ] && { echo "$T: no such theme"; continue; }
   NAME=$(basename "$(dirname "$M")" .retromactheme)
   MACBAR=$(grep -q '"hideMenuBarDefault": true' "$M" && echo 0 || echo 1)
-  # Shoot only with the Finder in front: the Mac menu bar shows whichever app is. Asked again
-  # before every picture, as the Finder can lose the front between the restarts.
-  shot() {
-    if [ "$MACBAR" = 1 ] && [ "$(front)" != Finder ]; then
-      echo "$NAME: waiting for the Finder in front (Cmd-Tab to the Finder)..."
-      for i in $(seq 300); do [ "$(front)" = Finder ] && break; sleep 1; done
-      [ "$(front)" = Finder ] || { echo "$NAME: Finder never came forward, $1 skipped"; return 1; }
-      sleep 1
-    fi
-    "$BIN" "$OUT/$NAME-$1.png" "${@:2}" && echo "$NAME-$1.png"
+  # Mac menu bar themes are shot with the Finder in front, as the bar shows whichever app is.
+  # RetroMac's start hands the front back to Claude, and a later switch closes an opened menu, so
+  # the hooks wait (RETROMAC_QA_DELAY) while the script brings the Finder forward after the start.
+  # macOS lets it while Claude is in front; otherwise the user must (Cmd-Tab).
+  finder_front() {
+    [ "$(front)" = Finder ] && return 0
+    osascript -e 'tell application "Finder" to activate' >/dev/null 2>&1; sleep 1
+    [ "$(front)" = Finder ] && return 0
+    echo "$NAME: waiting for the Finder in front (Cmd-Tab to the Finder)..."
+    for i in $(seq 300); do [ "$(front)" = Finder ] && { sleep 1; return 0; }; sleep 1; done
+    return 1
+  }
+  # variant <suffix> "<extra bundle ids>" <launch env...>: launch, capture; again if the Finder lost the front.
+  variant() {
+    local suf=$1 extra=$2; shift 2
+    for try in 1 2 3; do
+      if [ "$MACBAR" = 0 ]; then
+        launch "$T" "$@"
+      else
+        quit_app
+        defaults write $DOMAIN dockTheme "$T"
+        env RETROMAC_AUTOACTIVATE_THEME=1 RETROMAC_QA_DELAY=6 "$@" nohup "$APP/Contents/MacOS/RetroMac" >/dev/null 2>&1 &
+        sleep 4
+        finder_front || { echo "$NAME: no Finder in front, $suf skipped"; return 1; }
+        sleep 8
+      fi
+      if [ "$MACBAR" = 0 ] || [ "$(front)" = Finder ]; then
+        "$BIN" "$OUT/$NAME-$suf.png" $extra && echo "$NAME-$suf.png"; return
+      fi
+      echo "$NAME: the Finder lost the front during $suf, once more"
+    done
   }
 
-  launch "$T" RETROMAC_ONLY_APPS=none
-  shot 1-clean
-
-  launch "$T" RETROMAC_ONLY_APPS=none RETROMAC_OPEN_START_MENU=1 RETROMAC_HOVER_DOCK=$HOVER
-  shot 2-menu
+  variant 1-clean "" RETROMAC_ONLY_APPS=none
+  variant 2-menu "" RETROMAC_ONLY_APPS=none RETROMAC_OPEN_START_MENU=1 RETROMAC_HOVER_DOCK=$HOVER
 
   # A script-launched TextEdit starts hidden; unhiding does not bring it in front of the user's app.
   DOC=$(osascript -e 'tell application "TextEdit" to return name of (make new document)' 2>/dev/null)
   osascript -e 'tell application "System Events" to set visible of process "TextEdit" to true' \
             -e "tell application \"TextEdit\" to set bounds of (first window whose name is \"$DOC\") to {1040, 120, 1450, 520}" >/dev/null 2>&1
-  launch "$T" RETROMAC_ONLY_APPS=com.apple.TextEdit RETROMAC_OPEN_README=1 RETROMAC_OPEN_START_MENU=1
-  shot 3-windows com.apple.TextEdit
+  variant 3-windows com.apple.TextEdit RETROMAC_ONLY_APPS=com.apple.TextEdit RETROMAC_OPEN_README=1 RETROMAC_OPEN_START_MENU=1
   [ -n "$DOC" ] && osascript -e "tell application \"TextEdit\" to close document \"$DOC\" saving no" >/dev/null 2>&1 || true
 done

@@ -31,12 +31,13 @@ Maik wants every theme in three variants:
   - `RETROMAC_HOVER_DOCK=<n>` puts the pointer on dock item n.
   - `RETROMAC_OPEN_README` opens the Read Me.
   - `RETROMAC_ONLY_APPS` limits which apps get taskbar buttons and title bars.
+  - `RETROMAC_QA_DELAY=<s>` delays the menu, Read Me and dock hooks.
 - **What is captured:** only the desktop picture, the menu bar, RetroMac's windows and TextEdit. Maik's own windows never appear, and with `RETROMAC_ONLY_APPS` they also give no taskbar buttons or floating title bars. The floating launcher button is left out.
-- **Themes that keep the Mac menu bar** (everything without `"hideMenuBarDefault": true`, including Mac OS and Atari TOS): the menu bar shows the frontmost app, and macOS does not let a script bring the Finder forward while Maik's app is active.
-  - The script waits up to 5 min for the Finder in front.
-  - **Before starting, tell Maik: "Cmd-Tab zum Finder".**
-  - Start the run in the background so he can read the message.
-  - The check runs again before every picture. If the Finder lost the front in between (it can, across the restarts), the script prints the waiting line again: watch the output and tell him again.
+- **Themes that keep the Mac menu bar** (everything without `"hideMenuBarDefault": true`, including Mac OS and Atari TOS): the menu bar shows the frontmost app, so these are shot with the Finder in front.
+  - RetroMac's start hands the front back to Claude, so the script brings the Finder forward after the start.
+  - `RETROMAC_QA_DELAY=6` holds the menu, Read Me and dock hooks back meanwhile, because a later switch would close the opened menu.
+  - macOS allows this only while Claude is the frontmost app. If Maik is in another app, the script prints "waiting for the Finder in front" and waits up to 5 min: tell him "Cmd-Tab zum Finder".
+  - Ask Maik not to use the Mac during the run (about 45 s per theme), since a click elsewhere takes the front. If the Finder loses the front, the script tries the variant again, up to three times.
 - **TextEdit:** the script opens an empty document, places it at the right, beside the centred Read Me, closes it without saving and quits TextEdit if it was not running before.
 - **Settings:** afterwards it puts back the theme and the boot-screen setting (it sets `bootPhaseMode desktop` while shooting) and quits the dev app.
 
