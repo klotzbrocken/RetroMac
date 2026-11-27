@@ -292,8 +292,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // The menu was built while everything was still off, and said "Themes: Off" with
                 // the theme on screen — to VoiceOver, no theme at all.
                 self.rebuildMenu()
+                // QA hook: the theme's main menu (Start, K menu, Apple menu, ...), as the launcher shortcut opens it.
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_START_MENU"] != nil {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { _ = DockController.shared.openStartMenuFromKeyboard() }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { ThemeLauncher.open() }
                 }
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_SETI"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { SETIController.shared.showWindow() }

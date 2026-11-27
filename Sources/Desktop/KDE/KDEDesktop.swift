@@ -39,8 +39,13 @@ final class KDEDesktopController {
         if CDEMenu.look == .kde { CDEMenu.close() }
     }
 
+    /// AppKit keeps windows out of the menu bar's place; the taskbar belongs there once it hides.
+    private final class BarPanel: NSPanel {
+        override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
+    }
+
     private static func makePanel(_ title: String) -> NSPanel {
-        let p = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let p = BarPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         p.level = NSWindow.Level(rawValue: 5)   // over the windows, like the dock it stands in for
         p.isOpaque = true
         p.hasShadow = false
@@ -82,11 +87,17 @@ final class KDEDesktopController {
         let f = screen.visibleFrame
         let hidden = KPanelView.isHidden
         panel?.setFrame(NSRect(x: f.minX, y: f.minY, width: hidden ? KPanelView.hideW : f.width, height: KPanelView.height), display: true)
-        taskbar?.setFrame(NSRect(x: f.minX, y: f.maxY - KTaskbarView.height, width: f.width, height: KTaskbarView.height), display: true)
+        // With the menu bar hidden the visible frame still stops below its place (the notch's
+        // safe area), so the taskbar takes the screen's own top edge, as GEM's bar does.
+        let top = AppSettings.shared.hideMenuBar ? screen.frame.maxY : f.maxY
+        taskbar?.setFrame(NSRect(x: f.minX, y: top - KTaskbarView.height, width: f.width, height: KTaskbarView.height), display: true)
     }
 
-    /// The bands the two hold, for maximised windows.
-    var reserved: (top: CGFloat, bottom: CGFloat)? { panel == nil ? nil : (KTaskbarView.height, KPanelView.height) }
+    /// What the two hold, for maximised windows: the taskbar's lower edge and the panel's height.
+    var reserved: (taskbarBottom: CGFloat, bottom: CGFloat)? {
+        guard panel != nil, let t = taskbar else { return nil }
+        return (t.frame.minY, KPanelView.height)
+    }
 
     // MARK: The four desktops
 
