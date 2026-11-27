@@ -56,6 +56,19 @@ final class AtariTOSTests: XCTestCase {
         XCTAssertTrue(moved["trash"]! == (0, 7), "off screen: back to its corner")
     }
 
+    /// `_2.png`: FLOPPY DISK A above the drives, GAMES after them, the program column down the right
+    /// edge; each built-in icon is an original from DESKICON.RSC with its selected picture.
+    func testFloppyGamesAndTheProgramColumn() throws {
+        let ids = ["floppy", "boot", "apps", "games", "trash"] + GEMDesktopView.links.map { "link:" + $0.name } + ["link:README"]
+        let l = GEMDesktopView.layout(ids, saved: [:], columns: 10, rows: 8)
+        XCTAssertTrue(l["floppy"]! == (0, 0)); XCTAssertTrue(l["boot"]! == (0, 1)); XCTAssertTrue(l["games"]! == (0, 3))
+        XCTAssertTrue(l["link:TEXTEDIT"]! == (9, 0)); XCTAssertTrue(l["link:README"]! == (9, 4))
+        let theme = try ThemeBundle(url: bundle, isBuiltIn: true)
+        for icon in GEMDesktopView.links.map(\.icon) + ["gem_floppy", "gem_games", "gem_text"] {
+            XCTAssertNotNil(theme.iconResource(icon + ".png"), icon); XCTAssertNotNil(theme.iconResource(icon + "_sel.png"), icon)
+        }
+    }
+
     /// Apps one level into vendor folders, none deeper; a link and an installed copy count once.
     func testAppsScanFindsEachAppOnce() throws {
         let fm = FileManager.default

@@ -55,7 +55,10 @@ final class GEMDialog {
             if let free = v?.volumeAvailableCapacityForImportantUsage { lines.append(.text("\(fmt.string(fromByteCount: free)) free")) }
         case .apps: lines.append(.text("Every application on this Mac"))
         case .trash: lines.append(.text("The Mac's Trash"))
-        case .app(let u): lines.append(.text("in \(u.deletingLastPathComponent().path)"))
+        case .app(let u), .link(let u, _): lines.append(.text("in \(u.deletingLastPathComponent().path)"))
+        case .floppy: lines.append(.text("No disk"))
+        case .games: lines.append(.text("RetroMac's games"))
+        case .readme: lines.append(.text("About this desktop"))
         }
         show(lines, buttons: ["OK"])
     }

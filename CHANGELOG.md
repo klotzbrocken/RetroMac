@@ -24,7 +24,10 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   RetroMac, opens a GEM window with every Mac app, as icons or as text, sorted by name or type,
   with scroll arrows, sliders and a size box. Install Application puts an app on the desktop
   without copying it; what you drop on TRASH goes to the Mac's own trash. While a Mac app is in
-  front, its own menus are back.
+  front, its own menus are back. The desktop comes furnished as a Falcon owner's did: FLOPPY DISK
+  A (which, a Mac having no floppy drive, answers that it is not responding), GAMES with the
+  joystick opening RetroMac's games, and down the right edge TextEdit with the pencil, Preview
+  with the drawing hand, Documents, Utilities with the pliers and the README.
 
 - **New theme: OS X Mavericks.** 10.9 of 2013, built on the Mountain Lion theme: the Mavericks
   wave as the desktop, an empty desktop as after a fresh install, the glass dock with its

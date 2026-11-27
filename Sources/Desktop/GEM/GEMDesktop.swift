@@ -265,7 +265,7 @@ final class GEMMenuBarView: NSView {
 // MARK: - Desktop (D1, D2)
 
 final class GEMDesktopView: NSView {
-    enum Kind: Equatable { case boot(URL), apps, trash, volume(URL), app(URL) }
+    enum Kind: Equatable { case boot(URL), apps, trash, volume(URL), app(URL), floppy, games, readme, link(URL, icon: String) }
     struct Item { let id: String; let name: String; let kind: Kind; let letter: Character? }
 
     var top: CGFloat = GEMChrome.barHeight
@@ -295,19 +295,38 @@ final class GEMDesktopView: NSView {
     var columns: Int { max(1, Int(bounds.width / GEMChrome.cellW)) }
     var rows: Int { max(2, Int((bounds.height - top) / GEMChrome.cellH)) }
 
-    /// The drives in their letters (C the startup disk, D APPS as in `_2.png`, then the mounted
-    /// volumes), the trash, and the apps installed on the desktop.
+    /// The right column a TOS user filled with programs and folders (`_2.png`: ATARIWORKS with the
+    /// pencil, IMAGECOPY with the drawing hand, ATARIMANIA, UTILS), as the Mac's counterparts.
+    static let links: [(name: String, path: String, icon: String)] = [
+        ("TEXTEDIT", "/System/Applications/TextEdit.app", "gem_pencil"),
+        ("PREVIEW", "/System/Applications/Preview.app", "gem_paint"),
+        ("DOCUMENTS", NSHomeDirectory() + "/Documents", "gem_folder"),
+        ("UTILS", "/System/Applications/Utilities", "gem_tools"),
+    ]
+
+    /// The drives in their letters (A the floppy drive, C the startup disk, D APPS as in `_2.png`,
+    /// then the mounted volumes and GAMES), the trash, the program column on the right and the
+    /// apps installed on the desktop.
+    /// shortcut: the built-in icons cannot be removed (only installed apps can), until someone asks.
     func reload() {
         custom = DesktopStore.load(theme: themeKey)
         let boot = URL(fileURLWithPath: "/")
         let bootName = (try? boot.resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Hard Disk"
-        var list = [Item(id: "boot", name: bootName, kind: .boot(boot), letter: "C"),
+        var list = [Item(id: "floppy", name: "FLOPPY DISK", kind: .floppy, letter: "A"),
+                    Item(id: "boot", name: bootName, kind: .boot(boot), letter: "C"),
                     Item(id: "apps", name: "APPS", kind: .apps, letter: "D")]
         let letters = Array("EFGHIJKLMNOPQRSTUVWXYZ")
-        for (n, v) in DesktopIconsController.mountedVolumes().enumerated() {
+        let volumes = DesktopIconsController.mountedVolumes()
+        for (n, v) in volumes.enumerated() {
             list.append(Item(id: "vol:" + v.path, name: v.lastPathComponent, kind: .volume(v), letter: n < letters.count ? letters[n] : nil))
         }
+        // GAMES was a partition of its own, with the next letter (H in `_2.png`).
+        list.append(Item(id: "games", name: "GAMES", kind: .games, letter: volumes.count < letters.count ? letters[volumes.count] : nil))
         list.append(Item(id: "trash", name: "TRASH", kind: .trash, letter: nil))
+        for l in Self.links where FileManager.default.fileExists(atPath: l.path) {
+            list.append(Item(id: "link:" + l.name, name: l.name, kind: .link(URL(fileURLWithPath: l.path), icon: l.icon), letter: nil))
+        }
+        list.append(Item(id: "link:README", name: "README", kind: .readme, letter: nil))
         for e in custom.added where e.type == "app" {
             guard let path = e.path, FileManager.default.fileExists(atPath: path) else { continue }
             list.append(Item(id: "app:" + path, name: e.name, kind: .app(URL(fileURLWithPath: path)), letter: nil))
@@ -339,7 +358,7 @@ final class GEMDesktopView: NSView {
             if !taken.contains(key(0, rows - 1)) { place("trash", 0, rows - 1) } else { let f = free(fromRight: false); place("trash", f.0, f.1) }
         }
         for id in ids where out[id] == nil {
-            let f = free(fromRight: id.hasPrefix("app:"))
+            let f = free(fromRight: id.hasPrefix("app:") || id.hasPrefix("link:"))
             place(id, f.0, f.1)
         }
         return out
@@ -381,7 +400,17 @@ final class GEMDesktopView: NSView {
         case .apps: GEMAppsWindowController.shared.show()
         case .trash: NSWorkspace.shared.open(CDEActions.trash)
         case .app(let u): GEMApps.open(GEMApp(url: u, name: item.name, bundleID: Bundle(url: u)?.bundleIdentifier, category: ""))
+        case .link(let u, _): NSWorkspace.shared.open(u)
+        case .games: GameLibraryWindowController.shared.show(tab: .games)
+        case .readme: ThemeReadmeController.shared.showForActiveTheme()
+        case .floppy: Self.noDiskInA()
         }
+    }
+
+    /// A Mac has no drive A, so it answers as an empty one did; Retry asks the drive again.
+    static func noDiskInA() {
+        GEMDialog.show([.text("Drive A: is not responding."), .text("Please check the disk drive,"), .text("or insert a disk.")],
+                       buttons: ["Cancel", "Retry"]) { if $0 == 1 { noDiskInA() } }
     }
 
     // MARK: Geometry
@@ -417,6 +446,10 @@ final class GEMDesktopView: NSView {
         case .boot, .volume, .apps: return image("gem_disk\(s).png")
         case .trash: return image((GEMDesktopController.shared.trashFull ? "gem_trash_full" : "gem_trash") + "\(s).png")
         case .app(let u): return GEMApps.icon(bundleID: Bundle(url: u)?.bundleIdentifier, selected: selected)
+        case .floppy: return image("gem_floppy\(s).png")
+        case .games: return image("gem_games\(s).png")
+        case .readme: return image("gem_text\(s).png")
+        case .link(_, let icon): return image(icon + "\(s).png")
         }
     }
 
@@ -425,7 +458,8 @@ final class GEMDesktopView: NSView {
         for item in items {
             guard let ir = iconRect(item.id), let lr = labelRect(item.id) else { continue }
             let sel = selection.contains(item.id) || dropTarget == item.id
-            GEMDesktopView.drawIcon(picture(item, selected: sel), letter: item.letter, name: item.name, icon: ir, labelBox: lr, selected: sel)
+            GEMDesktopView.drawIcon(picture(item, selected: sel), letter: item.letter, letterAt: Self.letterOffset(item.kind),
+                                    name: item.name, icon: ir, labelBox: lr, selected: sel)
         }
         // The outlines GEM drags across the desktop, and the rubber band.
         if let off = dragOffset {
@@ -440,9 +474,19 @@ final class GEMDesktopView: NSView {
 
     /// An icon as GEM put it down: the picture, the drive letter in its window, the white label
     /// box under it with the name in the small font, white on black when selected.
-    static func drawIcon(_ picture: NSImage?, letter: Character?, name: String, icon ir: NSRect, labelBox lr: NSRect, selected: Bool) {
+    /// Where the desktop wrote the drive letter: in the disk's window, on the floppy's label, and in
+    /// the top left corner beside the joystick (Festplatte-C, Diskette-A and Spiele from `_2.png`).
+    static func letterOffset(_ kind: Kind) -> NSPoint {
+        switch kind {
+        case .floppy: return NSPoint(x: 13, y: 18)
+        case .games: return NSPoint(x: 0, y: 0)
+        default: return NSPoint(x: 13, y: 19)
+        }
+    }
+
+    static func drawIcon(_ picture: NSImage?, letter: Character?, letterAt: NSPoint = NSPoint(x: 13, y: 19), name: String, icon ir: NSRect, labelBox lr: NSRect, selected: Bool) {
         picture?.draw(in: ir, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
-        if let letter { GEMChrome.smallText(String(letter), at: NSPoint(x: ir.minX + 13, y: ir.minY + 19), color: .black) }
+        if let letter { GEMChrome.smallText(String(letter), at: NSPoint(x: ir.minX + letterAt.x, y: ir.minY + letterAt.y), color: .black) }
         (selected ? NSColor.black : NSColor.white).setFill(); lr.fill()
         let text = GEMChrome.smallLabel(name)
         GEMChrome.smallText(text, at: NSPoint(x: lr.minX + ((lr.width - CGFloat(text.count * 6)) / 2).rounded(.down), y: lr.minY + 1),

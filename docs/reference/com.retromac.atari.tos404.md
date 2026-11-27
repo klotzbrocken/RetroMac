@@ -31,6 +31,7 @@
 | `icons/gem_disk*.png` | RSC-Index 11 (HARD DISK), normal und Auswahl |
 | `icons/gem_trash*.png`, `gem_trash_full*.png` | RSC-Index 02 und 22 |
 | `icons/gem_program*.png` | RSC-Index 03, Programmsymbol für jede App ohne eigenes Motiv |
+| `icons/gem_floppy*.png`, `gem_games*.png`, `gem_tools*.png`, `gem_folder*.png`, `gem_pencil*.png`, `gem_paint*.png`, `gem_text*.png` | RSC-Index 09, 23, 24, 32, 28, 26 und 04: FLOPPY DISK A, GAMES und die Programmspalte rechts (TextEdit, Vorschau, Dokumente, Dienstprogramme, README) nach `_2.png` |
 | `icons/<motiv>.png`, `<motiv>_sel.png` | 20 neu gezeichnete App-Motive (`tos404-assets/app-icons`), Zuordnung nach `Zuordnung.csv` |
 | `appIcon.png` | RSC-Index 10 (TOS-Datei), vierfach ohne Glättung |
 | Atari-Zeichen in Desktop Info | Bitmap aus `_2.png` abgelesen |
