@@ -2077,6 +2077,8 @@ final class TitleBarOverlayController {
             guard let num = w[kCGWindowNumber as String] as? CGWindowID else { continue }
             if (w[kCGWindowLayer as String] as? Int) == 0 { order.append(num) }
             guard let pid = w[kCGWindowOwnerPID as String] as? pid_t, pid != myPID else { continue }
+            // Showcase runs (RETROMAC_ONLY_APPS) dress only the apps they show, no stray bars.
+            if let only = ShowcaseFilter.only, !only.contains(NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "") { continue }
             guard let bDict = w[kCGWindowBounds as String] as? [String: Any] else { continue }
             var b = CGRect.zero
             guard CGRectMakeWithDictionaryRepresentation(bDict as CFDictionary, &b),

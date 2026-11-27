@@ -4230,6 +4230,16 @@ final class DockView: NSView {
         if AppSettings.shared.debugLogging { print("[DockMouse] entered key=\(window?.isKeyWindow ?? false) onActiveSpace=\(window?.isOnActiveSpace ?? false) appActive=\(NSApp.isActive) front=\(NSWorkspace.shared.frontmostApplication?.localizedName ?? "?")") }
     }
 
+    /// QA (RETROMAC_HOVER_DOCK): a move to item `i`'s centre, so magnification and the label show
+    /// as under a resting pointer. Nothing moves the real pointer.
+    func hoverForScreenshot(item i: Int) {
+        guard itemViews.indices.contains(i), let window else { return }
+        let p = convert(NSPoint(x: itemViews[i].frame.midX, y: itemViews[i].frame.midY), to: nil)
+        guard let e = NSEvent.mouseEvent(with: .mouseMoved, location: p, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                         windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 0, pressure: 0) else { return }
+        mouseMoved(with: e)
+    }
+
     override func mouseMoved(with event: NSEvent) {
         if AppSettings.shared.debugLogging, CACurrentMediaTime() - lastMoveLog > 2 {
             lastMoveLog = CACurrentMediaTime()

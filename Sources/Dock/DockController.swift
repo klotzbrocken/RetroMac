@@ -18,6 +18,9 @@ final class DockController {
     /// Back on top of a full-screen panel at the dock's own level (Launchpad).
     func raiseWindow() { window?.orderFrontRegardless() }
     private var dockView: DockView?
+
+    /// QA (RETROMAC_HOVER_DOCK): the dock as it looks with the pointer resting on item `i`.
+    func hoverForScreenshot(item i: Int) { dockView?.hoverForScreenshot(item: i) }
     func taskButtonScreenRect(for window: AXUIElement) -> NSRect? { dockView?.taskButtonScreenRect(for: window) }
     func itemScreenRect(bundleID: String) -> NSRect? { dockView?.itemScreenRect(bundleID: bundleID) }
 

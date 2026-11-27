@@ -296,6 +296,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_START_MENU"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { ThemeLauncher.open() }
                 }
+                // QA for screenshot sets: the theme's Read Me, and the pointer resting on dock item N.
+                if ProcessInfo.processInfo.environment["RETROMAC_OPEN_README"] != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { ThemeReadmeController.shared.showForActiveTheme() }
+                }
+                if let n = ProcessInfo.processInfo.environment["RETROMAC_HOVER_DOCK"].flatMap(Int.init) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { DockController.shared.hoverForScreenshot(item: n) }
+                }
                 if ProcessInfo.processInfo.environment["RETROMAC_OPEN_SETI"] != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { SETIController.shared.showWindow() }
                 }
