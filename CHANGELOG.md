@@ -52,6 +52,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   now goes with the bar and comes back when the pointer brings the bar down.
   RetroMac's round launcher button stays off full-screen apps too.
 
+- **Windows 2000 has its own logo.** The theme picker and the Read Me showed the Windows Me
+  badge; Windows 2000 now has its flag on the blue-grey of its desktop, with "2000".
+
 ## 3.0.8
 
 ### New

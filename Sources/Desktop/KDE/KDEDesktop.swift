@@ -84,12 +84,15 @@ final class KDEDesktopController {
     /// Position=bottom, TaskbarPosition=top). A hidden panel leaves its 12 pt button in the corner.
     func layout() {
         guard let screen = NSScreen.screens.first else { return }
-        let f = screen.visibleFrame
+        // The screen's own edges, as GEM's bar uses: the visible frame lags behind the hidden menu
+        // bar and Dock (no screen-parameter change always follows), and with the menu bar hidden it
+        // still stops below its place, so the taskbar sometimes sat 33 pt down. Only when the menu
+        // bar stays (VoiceOver, see ThemeManager.syncMenuBarVisibility) does the taskbar go under it.
+        let f = screen.frame
+        let barStays = NSWorkspace.shared.isVoiceOverEnabled || ThemeManager.shared.activeTheme?.config.hideMenuBarDefault != true
+        let top = barStays ? screen.visibleFrame.maxY : f.maxY
         let hidden = KPanelView.isHidden
         panel?.setFrame(NSRect(x: f.minX, y: f.minY, width: hidden ? KPanelView.hideW : f.width, height: KPanelView.height), display: true)
-        // With the menu bar hidden the visible frame still stops below its place (the notch's
-        // safe area), so the taskbar takes the screen's own top edge, as GEM's bar does.
-        let top = AppSettings.shared.hideMenuBar ? screen.frame.maxY : f.maxY
         taskbar?.setFrame(NSRect(x: f.minX, y: top - KTaskbarView.height, width: f.width, height: KTaskbarView.height), display: true)
     }
 

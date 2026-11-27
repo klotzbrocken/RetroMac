@@ -510,8 +510,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// item drawn under the notch would still count.
     private func checkStatusItemShows() {
         // Not while the menu bar hides itself (a theme's, or the user's own): then the icon is
-        // there, only out of sight until the pointer goes up.
+        // there, only out of sight until the pointer goes up. Nor under GEM, whose bar lies over it.
         let barHides = AppSettings.shared.hideMenuBar || (OriginalSettings.read("-g", "_HIHideMenuBar") as? Bool) == true
+            || GEMDesktopController.isActiveTheme
         // Not under VoiceOver: its Screen Curtain leaves every window occluded, so the icon read
         // as missing while the blind tester was using it.
         guard !AppSettings.shared.dockModeEnabled, !barHides, !NSWorkspace.shared.isVoiceOverEnabled,
