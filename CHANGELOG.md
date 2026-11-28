@@ -60,7 +60,8 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   - The pager in the top right corner, as in KDE 1.1: the four desktops' backgrounds, the windows
     on the current one as they stand, the current desktop framed in yellow; a click switches.
   - A right-click on the bare desktop posts kfm's menu (help, execute command, display
-    properties, refresh, arrange icons, lock screen, logout) instead of a Mac menu.
+    properties, refresh, arrange icons, lock screen, logout) instead of a Mac menu. Display
+    properties holds the backgrounds: the theme's four, ticked, and Browse... for your own.
   - KDE is listed under Unix & Amiga.
   - The taskbar along the top is as tall as the Mac menu bar, so the bar macOS slides in over it
     covers it exactly. While it is in, the taskbar steps down beneath it, so its buttons stay in

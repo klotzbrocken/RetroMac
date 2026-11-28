@@ -70,12 +70,22 @@ enum KDEMenus {
     static func desktopMenu() -> [CDEMenuItem] {
         [CDEMenuItem(title: "Help on desktop", icon: mini("kdehelp.png"), action: { ThemeReadmeController.shared.showForActiveTheme() }),
          CDEMenuItem(title: "Execute command", icon: mini("go.png"), action: { KDECommandPanel.show() }),
-         CDEMenuItem(title: "Display properties", action: CDEActions.settings("com.apple.Wallpaper-Settings.extension")),
+         // kcmdisplay's Background page, in short: the theme's pictures, or one of your own.
+         CDEMenuItem(title: "Display properties", submenu: backgroundMenu()),
          CDEMenuItem(title: "Refresh desktop", action: { DesktopIconsController.shared.update() }),
          CDEMenuItem(title: "Arrange icons", action: { DesktopIconsController.shared.snapToGrid() }),
          .separator,
          CDEMenuItem(title: "Lock screen", icon: mini("key.png"), action: { ScreensaverController.shared.start() }),
          CDEMenuItem(title: "Logout", icon: mini("exit.png"), action: logout)]
+    }
+
+    static func backgroundMenu() -> [CDEMenuItem] {
+        let d = DesktopIconsController.shared
+        let options = ThemeManager.shared.activeTheme?.wallpaperOptions() ?? []
+        return options.map { wp in
+            let file = wp.url.lastPathComponent
+            return CDEMenuItem(title: (d.currentWallpaperFile == file ? "\u{2713} " : "   ") + wp.name, action: { d.pickWallpaper(file: file) })
+        } + [.separator, CDEMenuItem(title: "Browse...", action: { d.browseWallpaper() })]
     }
 
     /// kfind looked for files; the Mac's is Finder's search, from a Finder window at home.
