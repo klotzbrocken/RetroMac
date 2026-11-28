@@ -118,32 +118,30 @@ struct WelcomeFlowView: View {
             VStack(spacing: 8) {
                 Image(systemName: "sparkles").font(.system(size: 40)).foregroundStyle(.yellow).padding(.top, 24)
                 Text("What's New in RetroMac \(whatsNewVersion)").font(.title2.bold())
-                Text("Windows 2000, the Explorer, and Clippy at your side")
+                Text("KDE 1.0, Atari TOS and OS X Mavericks")
                     .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 12)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    feature("desktopcomputer", .blue, "Windows 2000 Professional",
-                            "The plain blue-grey desktop, the grey taskbar, and 2000\u{2019}s own Start menu with Windows Update, Search and Run\u{2026}")
-                    feature("folder.fill", .orange, "The Explorer",
-                            "Windows 95 to 7 open folders in a Windows Explorer of their own: your disks as C: and D:, Windows 2000\u{2019}s and XP\u{2019}s icons and toolbars, copy, paste, drag and drop, the Recycle Bin and Undo. The Start menu and Quick Launch open it too.")
-                    feature("menubar.dock.rectangle", .teal, "On the taskbar",
-                            "Explorer windows, Notepad, Calculator and XP\u{2019}s Task Manager get their own taskbar buttons: minimise puts them there, a click brings them back.")
-                    feature("paperclip", .indigo, "Clippy and friends",
-                            "Clippy and The Genius sit on the Windows desktop again. Click for your last ten copied texts, a note with to-dos, today\u{2019}s meetings and Wikipedia\u{2019}s article of the day. No AI. Settings \u{25B8} Desktop \u{25B8} Desktop companion, Match the theme.")
-                    feature("terminal.fill", .gray, "Run\u{2026} and Notepad",
-                            "Start \u{25B8} Run\u{2026} opens notepad, calc, cmd, a path, a web address or any app by name. Notepad saves your files with their own line endings and encoding.")
-                    feature("arrow.uturn.backward.circle.fill", .green, "Copy without losing a file",
-                            "The Explorer, Tiger\u{2019}s Finder and the Amiga drawers never write over anything, ask before replacing, and \u{2318}Z takes it back.")
+                    feature("k.circle.fill", .blue, "KDE 1.0",
+                            "The K Desktop Environment of 1998: the panel with the K menu and four desktops, the taskbar along the top, a pager in the corner, kwm\u{2019}s blue title bars on your windows and kfm\u{2019}s menu on the desktop.")
+                    feature("opticaldiscdrive.fill", .teal, "Atari TOS 4.04",
+                            "The Falcon030\u{2019}s colour GEM desktop: the white menu bar, the drives, APPS with every Mac app in a GEM window, the trash, and a floppy drive that is, of course, not responding.")
+                    feature("water.waves", .indigo, "OS X Mavericks",
+                            "10.9 of 2013: the wave, the glass dock, today\u{2019}s date on the Calendar icon and the lighter title bars.")
+                    feature("calendar", .red, "Small things from the era",
+                            "Today\u{2019}s date on the Calendar icon in Tiger, Snow Leopard and Mountain Lion, Tiger\u{2019}s badges in Mail\u{2019}s own look, and Option-click on the green button for full screen.")
+                    feature("lock.shield.fill", .green, "Safer, and kinder to your Mac",
+                            "No file lost when copying, game data goes to the Trash, downloads stay on HTTPS and refuse an unsigned swap, and your own menu bar and Dock settings come back as you had them.")
                     feature("wrench.and.screwdriver.fill", .gray, "Fixes",
-                            "Widgets move again by their title bar, desktop icons no longer land on each other, and the BeOS Deskbar sits on the screen\u{2019}s edge.")
+                            "Windows 2000 has its own logo, the old Apple logo leaves with the menu bar in full screen, and the menus of CDE, Photon and KDE keep up with the pointer.")
 
-                    sectionHeader("Also in 3.0.7")
+                    sectionHeader("Also in 3.0.8")
 
-                    feature("macwindow.on.rectangle", .blue, "Amiga Workbench 4.1",
-                            "The AmigaOne of 2008: AmigaOS 4.1\u{2019}s title bars and gadgets, the screen bar, menus on the right mouse button, drawers and the AmiDock.")
-                    feature("lock.shield.fill", .green, "Your themes stay safe",
-                            "Saving or importing a theme under a name that is taken now adds \u{201C}2\u{201D} instead of replacing the theme that was there.")
+                    feature("desktopcomputer", .blue, "Windows 2000 and the Explorer",
+                            "Windows 2000 Professional, and an Explorer of their own for Windows 95 to 7: your disks as C: and D:, copy, paste, the Recycle Bin and Undo.")
+                    feature("paperclip", .indigo, "Clippy and friends",
+                            "Clippy and The Genius on the Windows desktop again, with your last copied texts, a note, today\u{2019}s meetings and Wikipedia\u{2019}s article of the day.")
 
                 }.padding(.horizontal, 24).padding(.bottom, 12)
             }
