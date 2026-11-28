@@ -59,6 +59,9 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   - The Read Me has the same bar, with a working close button.
   - The pager in the top right corner, as in KDE 1.1: the four desktops' backgrounds, the windows
     on the current one as they stand, the current desktop framed in yellow; a click switches.
+  - A right-click on the bare desktop posts kfm's menu at once (help, execute command, display
+    properties, refresh, arrange icons, lock screen, logout) and the middle button kwm's window
+    list. The click used to fall through to the Finder, whose Mac menu came late.
   - The taskbar along the top is as tall as the Mac menu bar, so the bar macOS slides in over it
     covers it exactly. While it is in, the taskbar steps down beneath it, so its buttons stay in
     reach; it goes back up once the pointer has left it.

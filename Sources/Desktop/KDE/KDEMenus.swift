@@ -64,6 +64,20 @@ enum KDEMenus {
         return items
     }
 
+    /// kfm's menu on the bare desktop (KDE 1.x root menu), with what the Mac can do: help, the
+    /// command line, the display settings, a refresh, the icons arranged, lock and logout. Its
+    /// window arranging (unclutter, cascade) is left out: macOS lets no app place others' windows.
+    static func desktopMenu() -> [CDEMenuItem] {
+        [CDEMenuItem(title: "Help on desktop", icon: mini("kdehelp.png"), action: { ThemeReadmeController.shared.showForActiveTheme() }),
+         CDEMenuItem(title: "Execute command", icon: mini("go.png"), action: { KDECommandPanel.show() }),
+         CDEMenuItem(title: "Display properties", action: CDEActions.settings("com.apple.Wallpaper-Settings.extension")),
+         CDEMenuItem(title: "Refresh desktop", action: { DesktopIconsController.shared.update() }),
+         CDEMenuItem(title: "Arrange icons", action: { DesktopIconsController.shared.snapToGrid() }),
+         .separator,
+         CDEMenuItem(title: "Lock screen", icon: mini("key.png"), action: { ScreensaverController.shared.start() }),
+         CDEMenuItem(title: "Logout", icon: mini("exit.png"), action: logout)]
+    }
+
     /// kfind looked for files; the Mac's is Finder's search, from a Finder window at home.
     static func findFiles() { CDEActions.open(CDEActions.home)() }
 
