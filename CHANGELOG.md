@@ -50,6 +50,17 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixed
 
+- **No more files lost to copying.**
+  - Dropping a folder on a Dock stack of one of its own subfolders (~/Documents on
+    ~/Documents/Inbox) copied it into its own copy, level after level, until the path grew too
+    long, silently and with the app frozen. Drops now go through the file windows' copy, which
+    refuses that, asks before replacing, reports errors and can be undone.
+  - "Use My Own Files…" in the game library, adding a ROM and the Johnny Castaway originals no
+    longer erase a file picked from the very folder it would be copied to.
+  - "Delete" on a game card moves the files to the Trash instead of erasing them, so a retail
+    Quake or DOOM the card was pointed at can be brought back.
+  - Extracting Warcraft again keeps the working data until the new extraction has succeeded.
+
 - **The old Apple logo leaves with the menu bar in full screen.** The rainbow or Aqua Apple the
   Mac themes put over the menu bar stayed on a full-screen app after its menu bar slid away; it
   now goes with the bar and comes back when the pointer brings the bar down.

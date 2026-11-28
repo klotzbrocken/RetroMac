@@ -87,6 +87,24 @@ final class FileOperationsTests: XCTestCase {
         XCTAssertTrue(fm.fileExists(atPath: inner.path))
     }
 
+    /// A folder dropped on a Dock stack of its own subfolder: a plain copyItem copied it into
+    /// its own copy, level after level, until the path grew too long.
+    func testCopyIntoItselfIsRefused() throws {
+        let f = try folder("Documents")
+        let inbox = try folder("Documents/Inbox")
+        let out = ops.transfer(.copy, [f], to: inbox, control: OperationControl(), resolve: { _ in .cancel }, progress: { _ in })
+        XCTAssertEqual(out.failure, .intoItself(f))
+        XCTAssertEqual(try fm.contentsOfDirectory(atPath: inbox.path), [])
+    }
+
+    /// The game and ROM imports skip a file that is already where it would go, else removing
+    /// the "old" one first erases the only copy. Another letter case is the same file here.
+    func testTheSameFileIsRecognisedWhateverCaseSpellsIt() throws {
+        let wad = try file("Games/doom.wad")
+        XCTAssertTrue(FileOperations.sameFolder(wad, root.appendingPathComponent("Games/DOOM.WAD")))
+        XCTAssertFalse(FileOperations.sameFolder(wad, try file("Games/doom2.wad")))
+    }
+
     func testMoveRenameAndNewFolderAreUndoneInOrder() throws {
         let a = try file("A/doc.txt", "d")
         let b = try folder("B")

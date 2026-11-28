@@ -148,6 +148,8 @@ enum JohnnyCastaway {
             try fm.createDirectory(at: folder, withIntermediateDirectories: true)
             for (name, url) in found {
                 let dest = folder.appendingPathComponent(name)
+                // The originals picked from that very folder (by file identity: the case may differ).
+                if FileOperations.sameFolder(url, dest) { continue }
                 try? fm.removeItem(at: dest)
                 try fm.copyItem(at: url, to: dest)
             }

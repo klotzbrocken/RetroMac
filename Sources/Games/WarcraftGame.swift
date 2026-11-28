@@ -121,14 +121,17 @@ enum WarcraftGame {
             return
         }
         let dest = extractedDataDir(title)
+        // Extract beside the old data and swap only on success: a folder that passes the quick
+        // check but fails in the extractor must not cost the working installation.
+        let staging = dest.appendingPathExtension("new")
         DispatchQueue.global(qos: .userInitiated).async {
             let fm = FileManager.default
-            try? fm.removeItem(at: dest)
-            try? fm.createDirectory(at: dest, withIntermediateDirectories: true)
+            try? fm.removeItem(at: staging)
+            try? fm.createDirectory(at: staging, withIntermediateDirectories: true)
 
             let p = Process()
             p.executableURL = tool
-            p.arguments = [source.path, dest.path]
+            p.arguments = [source.path, staging.path]
             let pipe = Pipe()
             p.standardOutput = pipe; p.standardError = pipe
             do { try p.run() } catch {
@@ -140,8 +143,20 @@ enum WarcraftGame {
             let output = String(data: ((try? pipe.fileHandleForReading.readToEnd()) ?? Data()), encoding: .utf8) ?? ""
             p.waitUntilExit()
 
+            var swapError: Error?
+            let extracted = p.terminationStatus == 0 && hasExtractedData(at: staging, title)
+            if extracted {
+                do {
+                    if fm.fileExists(atPath: dest.path) { _ = try fm.replaceItemAt(dest, withItemAt: staging) }
+                    else { try fm.moveItem(at: staging, to: dest) }
+                } catch { swapError = error }
+            }
+            try? fm.removeItem(at: staging)
+
             DispatchQueue.main.async {
-                if p.terminationStatus == 0, hasExtractedData(at: dest, title) {
+                if let swapError {
+                    completion(.failure(ExtractionFailure(message: swapError.localizedDescription)))
+                } else if extracted {
                     completion(.success(dest))
                 } else {
                     let tail = output.split(separator: "\n").suffix(2).joined(separator: " — ")

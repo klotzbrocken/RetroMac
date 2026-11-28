@@ -50,10 +50,13 @@ final class ROMLibrary: ObservableObject {
         let destURL = systemDir.appendingPathComponent(filename)
 
         do {
-            if fileManager.fileExists(atPath: destURL.path) {
-                try fileManager.removeItem(at: destURL)
+            // Re-adding a ROM that already sits in the managed folder: removing it would erase it.
+            if !FileOperations.sameFolder(sourceURL, destURL) {
+                if fileManager.fileExists(atPath: destURL.path) {
+                    try fileManager.removeItem(at: destURL)
+                }
+                try fileManager.copyItem(at: sourceURL, to: destURL)
             }
-            try fileManager.copyItem(at: sourceURL, to: destURL)
         } catch {
             print("[ROMLibrary] Copy failed: \(error.localizedDescription)")
             return nil

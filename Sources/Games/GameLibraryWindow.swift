@@ -574,6 +574,8 @@ final class GameLibraryModel: ObservableObject {
         do {
             for f in files {
                 let to = dest.appendingPathComponent(f.lastPathComponent)
+                // Picking the file that already sits there: removing the "old" one would erase it.
+                if FileOperations.sameFolder(f, to) { continue }
                 if FileManager.default.fileExists(atPath: to.path) {
                     try FileManager.default.removeItem(at: to)
                 }
@@ -624,7 +626,7 @@ final class GameLibraryModel: ObservableObject {
         alert.messageText = foreignFolder ? "Forget \(t.name)?" : "Delete \(t.name) game data?"
         alert.informativeText = foreignFolder
             ? "This data is outside RetroMac's own folders, so it looks like your own copy:\n\n\(files.map(\.path).joined(separator: "\n"))\n\nRetroMac will forget the path and leave the files alone."
-            : "This deletes:\n\n\(files.map(\.path).joined(separator: "\n"))"
+            : "This moves to the Trash:\n\n\(files.map(\.path).joined(separator: "\n"))"
         alert.addButton(withTitle: foreignFolder ? "Forget" : "Delete")
         alert.addButton(withTitle: "Cancel")
         alert.alertStyle = .warning

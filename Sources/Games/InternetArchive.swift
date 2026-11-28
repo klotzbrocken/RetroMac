@@ -547,21 +547,23 @@ enum InternetArchive {
     /// RetroMac's own folders is deliberately left alone — that is the user's own copy of the
     /// game sitting where they put it — and only the stored path is cleared.
     @discardableResult
-    static func deleteInstalled(_ t: Title) -> [URL] {
+    static func deleteInstalled(_ t: Title,
+                                remove: (URL) throws -> Void = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }) -> [URL] {
         let files = installedFiles(t)
         guard !files.isEmpty else { return [] }
         if case .warcraftInstall(let wc) = t.destination {
             var removed: [URL] = []
-            if let f = files.first, isInsideOurSupportFolder(f) {
-                try? FileManager.default.removeItem(at: f)
+            if let f = files.first, isInsideOurSupportFolder(f),
+               (try? remove(f)) != nil {
                 removed.append(f)
             }
             if wc == .warcraft2 { AppSettings.shared.warcraft2DataFolder = "" }
             else                { AppSettings.shared.warcraft1DataFolder = "" }
             return removed
         }
-        for f in files { try? FileManager.default.removeItem(at: f) }
-        return files
+        // To the Trash, not erased: the folder can be the user's own copy of the game (a retail
+        // Quake the card was pointed at), and "Delete" there must be recoverable.
+        return files.filter { (try? remove($0)) != nil }
     }
 
     /// True when deleting this title would only forget a path rather than erase anything.

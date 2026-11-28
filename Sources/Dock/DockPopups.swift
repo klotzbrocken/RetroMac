@@ -980,17 +980,12 @@ final class DockStackView: NSView, NSDraggingSource {
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         guard let folder = folderURL,
               let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self]) as? [URL], !urls.isEmpty else { return false }
-        var changed = false
-        for src in urls where src.standardizedFileURL.deletingLastPathComponent() != folder.standardizedFileURL {
-            var dest = folder.appendingPathComponent(src.lastPathComponent)
-            var n = 1
-            while FileManager.default.fileExists(atPath: dest.path) {
-                let base = src.deletingPathExtension().lastPathComponent, ext = src.pathExtension
-                dest = folder.appendingPathComponent(ext.isEmpty ? "\(base) \(n)" : "\(base) \(n).\(ext)"); n += 1
-            }
-            if (try? FileManager.default.copyItem(at: src, to: dest)) != nil { changed = true }
-        }
-        if changed { onChanged?() }
-        return changed
+        // The file windows' copy: off the main thread, refuses a folder into itself (dropping
+        // ~/Documents on a stack of ~/Documents/Inbox copied it into its own copy until the path
+        // grew too long), asks before replacing, reports errors and can be undone.
+        let items = urls.filter { $0.isFileURL && $0.standardizedFileURL.deletingLastPathComponent() != folder.standardizedFileURL }
+        guard !items.isEmpty else { return false }
+        FileOps.shared.copy(items, to: folder) { [weak self] _ in self?.onChanged?() }
+        return true
     }
 }

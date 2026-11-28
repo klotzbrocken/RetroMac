@@ -81,13 +81,16 @@ final class GameLibraryTests: XCTestCase {
 
     // MARK: - Deletion
 
+    /// The app moves to the Trash; the tests erase, so a run leaves nothing in the user's Trash.
+    private let erase: (URL) throws -> Void = { try FileManager.default.removeItem(at: $0) }
+
     func testDeleteRemovesOnlyThatTitlesFiles() throws {
         AppSettings.shared.doomWadFolder = tempDir.path
         write("doom.wad")
         write("doom2.wad")
         write("HERETIC.WAD")
 
-        let removed = InternetArchive.deleteInstalled(try title("doom2"))
+        let removed = InternetArchive.deleteInstalled(try title("doom2"), remove: erase)
         XCTAssertEqual(removed.map { $0.lastPathComponent }, ["doom2.wad"])
 
         let fm = FileManager.default
@@ -98,7 +101,7 @@ final class GameLibraryTests: XCTestCase {
 
     func testDeletingSomethingThatIsNotThereDoesNothing() throws {
         AppSettings.shared.doomWadFolder = tempDir.path
-        XCTAssertTrue(InternetArchive.deleteInstalled(try title("doom")).isEmpty)
+        XCTAssertTrue(InternetArchive.deleteInstalled(try title("doom"), remove: erase).isEmpty)
     }
 
     /// Warcraft data outside RetroMac's own folders is the user's own copy of the game. Deleting
@@ -118,7 +121,7 @@ final class GameLibraryTests: XCTestCase {
         XCTAssertTrue(InternetArchive.isInstalled(t))
         XCTAssertTrue(InternetArchive.deleteOnlyForgets(t))
 
-        XCTAssertTrue(InternetArchive.deleteInstalled(t).isEmpty, "nothing may be erased")
+        XCTAssertTrue(InternetArchive.deleteInstalled(t, remove: erase).isEmpty, "nothing may be erased")
         XCTAssertTrue(fm.fileExists(atPath: scripts.appendingPathComponent("wc1-config.lua").path))
         XCTAssertEqual(AppSettings.shared.warcraft1DataFolder, "")
     }
