@@ -1895,7 +1895,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Global hotkey: toggle the system menu bar auto-hide on/off.
     func toggleMenuBar() {
         menuBarHiddenByHotkey.toggle()
-        SystemUIHelper.setMenuBarAutoHide(menuBarHiddenByHotkey)
+        if menuBarHiddenByHotkey { SystemUIHelper.setMenuBarAutoHide(true) } else { SystemUIHelper.restoreMenuBarAutoHide() }
     }
 
     // MARK: - Per-App Launch Observer
@@ -3094,7 +3094,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// when nothing was hidden, so a normal quit causes no Finder/Dock restart.
     static func restoreRetroModeSystemUI() {
         let d = UserDefaults.standard
-        if d.bool(forKey: "retroHidMenuBar") { SystemUIHelper.setMenuBarAutoHide(false) }
+        if d.bool(forKey: "retroHidMenuBar") { SystemUIHelper.restoreMenuBarAutoHide() }
         if d.bool(forKey: "retroHidDock") { SystemUIHelper.setDockAutoHide(false) }
         if d.bool(forKey: "retroHidDesktop") { SystemUIHelper.setDesktopIconsHidden(false) }
         d.removeObject(forKey: "retroHidMenuBar")
@@ -3104,7 +3104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func exitRetroMode() {
         // Restore system UI
-        if retroHidMenuBar { SystemUIHelper.setMenuBarAutoHide(false) }
+        if retroHidMenuBar { SystemUIHelper.restoreMenuBarAutoHide() }
         if retroHidDock { SystemUIHelper.setDockAutoHide(false) }
         if retroHidDesktop { SystemUIHelper.setDesktopIconsHidden(false) }
         let d = UserDefaults.standard
@@ -3199,8 +3199,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func rescueShowMenuBar() -> Bool? {
         guard AppSettings.shared.hideMenuBar || menuBarHiddenByHotkey else { return nil }
         menuBarHiddenByHotkey = false
-        SystemUIHelper.setMenuBarAutoHide(false)
-        return !SystemUIHelper.isMenuBarAutoHidden()
+        SystemUIHelper.restoreMenuBarAutoHide()
+        return SystemUIHelper.isMenuBarAutoHidden() == SystemUIHelper.userHidesMenuBar
     }
 
     func rescueTurnEverythingOff() {

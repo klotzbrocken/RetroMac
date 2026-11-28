@@ -96,6 +96,13 @@ enum SystemUIHelper {
 
     // MARK: - Menu Bar Auto-Hide
 
+    /// Whether the user had macOS hide the menu bar before RetroMac first changed it.
+    static var userHidesMenuBar: Bool { (OriginalSettings.value("-g", "_HIHideMenuBar") ?? nil) as? Bool ?? false }
+
+    /// Undo RetroMac's hiding: back to the user's own choice. Writing "shown" here turned off a
+    /// menu bar the user had set to hide themselves, for good, at every theme switch and quit.
+    static func restoreMenuBarAutoHide() { setMenuBarAutoHide(userHidesMenuBar) }
+
     static func setMenuBarAutoHide(_ hide: Bool) {
         OriginalSettings.remember("-g", "_HIHideMenuBar")
         // Primary: AppleScript via System Events (updates both preference and live state)

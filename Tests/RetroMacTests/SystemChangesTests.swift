@@ -8,6 +8,20 @@ final class SystemChangesTests: XCTestCase {
             .appendingPathComponent("../../Resources/Themes/MacOS9-Authentic.retromactheme"), isBuiltIn: true)
     }
 
+    /// Undoing a theme's hidden menu bar puts back the user's own choice, not always "shown":
+    /// a bar the user had set to hide stays hidden. Read from what was remembered at the first change.
+    func testTheMenuBarComesBackAsTheUserHadIt() {
+        let d = UserDefaults.standard, key = "originalSystemSettings"
+        let saved = d.object(forKey: key)
+        defer { if let saved { d.set(saved, forKey: key) } else { d.removeObject(forKey: key) } }
+        d.set(["-g\t_HIHideMenuBar": ["v": true]], forKey: key)
+        XCTAssertTrue(SystemUIHelper.userHidesMenuBar)
+        d.set(["-g\t_HIHideMenuBar": ["unset": true]], forKey: key)
+        XCTAssertFalse(SystemUIHelper.userHidesMenuBar)
+        d.removeObject(forKey: key)
+        XCTAssertFalse(SystemUIHelper.userHidesMenuBar)
+    }
+
     func testTheListReadsYoursAgainstTheThemes() throws {
         let theme = try macOS9()
         var on = ThemeSystemChanges.Switches()

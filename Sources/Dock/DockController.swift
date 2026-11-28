@@ -214,7 +214,7 @@ final class DockController {
 
         // Restore menu bar and desktop icons
         if AppSettings.shared.hideMenuBar {
-            SystemUIHelper.setMenuBarAutoHide(false)
+            SystemUIHelper.restoreMenuBarAutoHide()
         }
         if AppSettings.shared.hideDesktopIcons {
             SystemUIHelper.setDesktopIconsHidden(false)
@@ -1389,10 +1389,15 @@ final class DockController {
         let isNewState = d.object(forKey: "sysDockOrigMinToApp") != nil
         let minToApp = (persisted && isNewState) ? d.bool(forKey: "sysDockOrigMinToApp") : nil
         let minEffect = persisted ? d.string(forKey: "sysDockOrigMinEffect") : nil
+        // The user's own delay (e.g. 0 for an instant Dock) comes back; it was saved but never
+        // read, so every recovery reset it to macOS's half second. Never our fingerprint value.
+        let delay = persisted ? d.string(forKey: "sysDockOrigAutohideDelay").flatMap { v in
+            Double(v).map { $0 < 100_000 } == true ? v : nil
+        } : nil
         reanchorBottomDockToPrimaryIfNeeded(orientation: restorePos)
         let ok = setSystemDockPrefs(autohide: restoreHide, position: restorePos,
                                     minimizeToApp: minToApp, minEffect: minEffect,
-                                    autohideDelay: nil, deleteAutohideDelay: true)
+                                    autohideDelay: delay, deleteAutohideDelay: delay == nil)
         guard ok else {
             print("[Dock] ⚠️ System dock recovery failed — keeping recovery keys for next launch")
             return

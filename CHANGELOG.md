@@ -72,6 +72,13 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
   - Websites browsed in 98.js's Internet Explorer can no longer open RetroMac's native Save and
     Print dialogs; only the 98.js programs themselves reach them.
 
+- **Your own Mac settings survive.**
+  - A menu bar you set to hide in macOS stays hidden: switching from a theme that hides it, turning
+    the theme off, quitting, Retro Mode, the menu-bar shortcut and Rescue Desktop put it back as you
+    had it instead of always showing it.
+  - After a crash or Force Quit, the recovered Dock keeps your own auto-hide delay (an instant
+    Dock with a delay of 0, say) instead of macOS's half second.
+
 - **The old Apple logo leaves with the menu bar in full screen.** The rainbow or Aqua Apple the
   Mac themes put over the menu bar stayed on a full-screen app after its menu bar slid away; it
   now goes with the bar and comes back when the pointer brings the bar down.

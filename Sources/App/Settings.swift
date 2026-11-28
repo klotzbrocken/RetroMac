@@ -640,7 +640,7 @@ final class AppSettings: ObservableObject {
     @Published var hideMenuBar: Bool {
         didSet {
             defaults.set(hideMenuBar, forKey: "hideMenuBar")
-            SystemUIHelper.setMenuBarAutoHide(hideMenuBar)
+            if hideMenuBar { SystemUIHelper.setMenuBarAutoHide(true) } else { SystemUIHelper.restoreMenuBarAutoHide() }
             RainbowAppleController.shared.update()   // apple cover depends on menu-bar visibility
         }
     }

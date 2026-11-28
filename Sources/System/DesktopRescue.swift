@@ -69,7 +69,7 @@ final class DesktopRescue {
         // The menu bar is checked, not assumed: a theme or the shortcut may have hidden it, and
         // macOS may not take the change (no Automation permission for System Events).
         switch AppDelegate.shared?.rescueShowMenuBar() {
-        case true?: add(.done, "The menu bar shows again.")
+        case true?: add(.done, "The menu bar is back as you had it.")
         case false?: add(.failed, "The menu bar is still set to hide. Turn it off in System Settings ▸ Control Center ▸ Automatically hide and show the menu bar.")
         case nil: break
         }
