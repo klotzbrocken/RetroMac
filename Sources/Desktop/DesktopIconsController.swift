@@ -739,6 +739,10 @@ private final class DesktopIconsContentView: NSView {
     override func rightMouseDown(with event: NSEvent) {
         // The Workbench menus, working on the backdrop now rather than a drawer.
         if AmigaScreenBarController.shared.beginMenus() { controller?.deselectAll(); AmigaDrawer.deactivate(); return }
+        // KDE: kfm's own menu, posted at once, not a Mac menu.
+        if KDEDesktopController.isActiveTheme {
+            CDEMenu.show(KDEMenus.desktopMenu(), at: NSEvent.mouseLocation, look: .kde); return
+        }
         controller?.showDesktopMenu(at: event, in: self)
     }
 }

@@ -291,7 +291,7 @@ final class ThemeManager {
         switch theme.config.family?.id {
         case "apple": return "Apple"
         case "microsoft", "windows": return "Windows"
-        case "be", "ibm", "sgi", "amiga", "sun", "qnx", "next": return "Unix & Amiga"
+        case "be", "ibm", "sgi", "amiga", "sun", "qnx", "next", "kde": return "Unix & Amiga"
         case .some: return "Other"
         case nil: break
         }

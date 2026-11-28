@@ -21,6 +21,7 @@ final class KDESnapshotTests: XCTestCase {
         let t = try theme()
         XCTAssertEqual(t.config.id, "com.retromac.kde.kde1")
         XCTAssertEqual(t.config.chrome?.style, "kde")
+        XCTAssertEqual(ThemeManager.category(of: t), "Unix & Amiga")
         XCTAssertTrue(t.config.hidesDock, "the panel and the taskbar stand in for the dock")
         XCTAssertEqual(t.config.hideMenuBarDefault, true, "the taskbar holds the top edge, as on a KDE screen")
         XCTAssertEqual(t.config.wallpapers?.map(\.name), KDEDesktopController.desktopNames, "one background per desktop, kdisplayrc's four")

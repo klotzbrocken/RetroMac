@@ -31,8 +31,18 @@ enum CDEMenu {
     enum Look { case cde, photon, kde }
     static var look: Look = .cde
 
+    /// RETROMAC_MENU_STATS=1: how late a menu or cascade comes after the event that asked for it.
+    static let statsEnabled = ProcessInfo.processInfo.environment["RETROMAC_MENU_STATS"] != nil
+    static func logLatency(_ what: String, since start: CFTimeInterval) {
+        guard statsEnabled else { return }
+        let age = NSApp.currentEvent.map { (ProcessInfo.processInfo.systemUptime - $0.timestamp) * 1000 } ?? -1
+        print(String(format: "[Menu] %@: event %.0f ms old, built in %.1f ms", what, age, (CACurrentMediaTime() - start) * 1000))
+    }
+
     static func show(_ items: [CDEMenuItem], title: String? = nil, at topLeft: NSPoint, look: Look = .cde,
                      anchor: NSRect? = nil, onAnchorDoubleClick: (() -> Void)? = nil) {
+        let t0 = CACurrentMediaTime()
+        defer { logLatency("show \(items.count) items", since: t0) }
         close()
         self.look = look
         CDESubpanel.closeAll()
@@ -130,7 +140,11 @@ enum CDEMenu {
 /// The open menus of one posting: the first, and the cascades opened from it.
 final class CDEMenuView: NSView {
     struct Level { var items: [CDEMenuItem]; var title: String?; var frame: NSRect; var armed: Int? }
-    private var levels: [Level] = []
+    /// Only the menus repaint, old and new places: the view covers the whole screen, and a
+    /// full repaint at every armed row made the cascades lag behind the pointer.
+    private var levels: [Level] = [] {
+        didSet { for f in oldValue.map(\.frame) + levels.map(\.frame) { setNeedsDisplay(f.insetBy(dx: -2, dy: -2)) } }
+    }
     var anchor: NSRect?
     var onAnchorDoubleClick: (() -> Void)?
     private let openedAt = Date()
@@ -155,7 +169,6 @@ final class CDEMenuView: NSView {
         f.origin.x = max(0, f.origin.x)
         f.origin.y = max(0, min(f.origin.y, bounds.maxY - s.height))
         levels.append(Level(items: items, title: title, frame: f, armed: nil))
-        needsDisplay = true
     }
 
     override func updateTrackingAreas() {
@@ -195,6 +208,8 @@ final class CDEMenuView: NSView {
 
     private func arm(_ level: Int, _ item: Int?) {
         if levels[level].armed == item { return }
+        let t0 = CACurrentMediaTime()
+        defer { if let i = item, levels.indices.contains(level), levels[level].items.indices.contains(i), levels[level].items[i].submenu != nil { CDEMenu.logLatency("cascade \(levels[level].items[i].title)", since: t0) } }
         levels[level].armed = item
         levels = Array(levels.prefix(level + 1))
         if let i = item, let sub = levels[level].items[i].submenu,
@@ -207,7 +222,6 @@ final class CDEMenuView: NSView {
                 open(sub, title: levels[level].items[i].title, at: NSPoint(x: levels[level].frame.maxX - 2, y: row.minY + 4), level: level + 1)
             }
         }
-        needsDisplay = true
     }
 
     override func mouseMoved(with event: NSEvent) { track(convert(event.locationInWindow, from: nil)) }
@@ -248,7 +262,6 @@ final class CDEMenuView: NSView {
     func closeKeyLevel(_ level: Int) {
         guard level > 0, level < levels.count else { return }
         levels = Array(levels.prefix(level))
-        needsDisplay = true
     }
 
     fileprivate func keyRows(_ level: Int) -> [KeyMenuRow] {
@@ -299,8 +312,10 @@ final class CDEMenuView: NSView {
     // MARK: Drawing
 
     override func draw(_ dirtyRect: NSRect) {
+        let t0 = CACurrentMediaTime()
         NSGraphicsContext.current?.imageInterpolation = .high
-        for l in levels { draw(l) }
+        for l in levels where l.frame.insetBy(dx: -2, dy: -2).intersects(dirtyRect) { draw(l) }
+        if CDEMenu.statsEnabled { print(String(format: "[Menu] draw %.0f×%.0f in %.1f ms", dirtyRect.width, dirtyRect.height, (CACurrentMediaTime() - t0) * 1000)) }
     }
 
     private func bevel(_ r: NSRect, sunken: Bool) {

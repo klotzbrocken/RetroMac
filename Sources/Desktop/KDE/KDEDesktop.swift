@@ -15,7 +15,6 @@ final class KDEDesktopController {
     private var panel: NSPanel?
     private var taskbar: NSPanel?
     private var pager: NSPanel?
-    private var root: NSPanel?
     private var pagerTimer: Timer?
     private var revealWatch: Timer?
     private var observers: [NSObjectProtocol] = []
@@ -47,8 +46,8 @@ final class KDEDesktopController {
         revealWatch?.invalidate(); revealWatch = nil
         pagerTimer?.invalidate(); pagerTimer = nil
         (panel?.contentView as? KPanelView)?.stop()
-        panel?.orderOut(nil); taskbar?.orderOut(nil); pager?.orderOut(nil); root?.orderOut(nil)
-        panel = nil; taskbar = nil; pager = nil; root = nil
+        panel?.orderOut(nil); taskbar?.orderOut(nil); pager?.orderOut(nil)
+        panel = nil; taskbar = nil; pager = nil
         if CDEMenu.look == .kde { CDEMenu.close() }
     }
 
@@ -76,14 +75,6 @@ final class KDEDesktopController {
             g.contentView = KPagerView(theme: theme)
             g.level = .normal   // a window among windows, as kpager was: over a title bar it hid the buttons
             panel = p; taskbar = t; pager = g
-            // The root window: under the desktop icons, a breath of colour so the bare desktop's
-            // clicks come here. Clear, they fell through to the Finder, whose Mac menu came late.
-            let r = Self.makePanel("Desktop")
-            r.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.normalWindow)) - 5)
-            r.isOpaque = false
-            r.backgroundColor = NSColor(white: 0, alpha: 1.0 / 255)
-            r.contentView = KRootView()
-            root = r
             // The pager shows the windows live: they move without telling anyone.
             pagerTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
                 self?.pager?.contentView?.needsDisplay = true
@@ -108,7 +99,7 @@ final class KDEDesktopController {
             ].compactMap { $0 }
         }
         layout()
-        root?.orderFrontRegardless(); panel?.orderFrontRegardless(); pager?.orderFrontRegardless(); taskbar?.orderFrontRegardless()
+        panel?.orderFrontRegardless(); pager?.orderFrontRegardless(); taskbar?.orderFrontRegardless()
         (panel?.contentView as? KPanelView)?.start()
         (taskbar?.contentView as? KTaskbarView)?.reload()
         KDEApps.prepare()
@@ -129,7 +120,6 @@ final class KDEDesktopController {
         panel?.setFrame(NSRect(x: f.minX, y: f.minY, width: hidden ? KPanelView.hideW : f.width, height: KPanelView.height), display: true)
         let barY = top - h - (lowered ? h : 0)
         taskbar?.setFrame(NSRect(x: f.minX, y: barY, width: f.width, height: h), display: true)
-        root?.setFrame(f, display: false)
         let ps = KPagerView.size(for: f)
         pager?.setFrame(NSRect(x: f.maxX - ps.width, y: barY - ps.height, width: ps.width, height: ps.height), display: true)
     }
@@ -691,25 +681,4 @@ final class KPagerView: NSView {
     override func isAccessibilityElement() -> Bool { true }
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
     override func accessibilityLabel() -> String? { "Pager, desktop \(KDEDesktopController.desktopNames[KDEDesktopController.currentDesktop])" }
-}
-
-
-// MARK: - Root window
-
-/// The bare desktop: kfm's menu on the right button, kwm's window list on the middle one, and a
-/// left click brings the Finder forward and clears the icon selection, as a click on the Mac's
-/// desktop does.
-final class KRootView: NSView {
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-    override func mouseDown(with event: NSEvent) {
-        DesktopIconsController.shared.deselectAll()
-        NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder").first?.activate()
-    }
-    override func rightMouseDown(with event: NSEvent) {
-        CDEMenu.show(KDEMenus.desktopMenu(), at: NSEvent.mouseLocation, look: .kde)
-    }
-    override func otherMouseDown(with event: NSEvent) {
-        guard event.buttonNumber == 2 else { return }
-        CDEMenu.show(KDEMenus.windowList(), at: NSEvent.mouseLocation, look: .kde)
-    }
 }
