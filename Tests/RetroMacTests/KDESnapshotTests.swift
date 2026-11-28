@@ -75,3 +75,30 @@ final class KDESnapshotTests: XCTestCase {
         XCTAssertEqual(KPanelView.clockLines(Calendar.current.date(from: c)!), ["Sun", "09:05", "Jul 12"])
     }
 }
+
+/// kwm's three buttons answer a click where they are drawn, the window in front or behind.
+final class KWMBarClickTests: XCTestCase {
+    func testEachButtonFiresItsAction() {
+        let h = TitleBarOverlayController.stripHeight(.kde)
+        for front in [true, false] {
+            let view = TitleBarOverlayView(frame: NSRect(x: 0, y: 0, width: 420, height: h))
+            let win = NSWindow(contentRect: view.frame, styleMask: .borderless, backing: .buffered, defer: false)
+            win.contentView = view
+            view.configure(style: .kde, title: "Untitled", icon: nil, isFront: front, lights: [:], deadZoneWidth: 0, zoomed: false)
+            if let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) { view.cacheDisplay(in: view.bounds, to: rep) }   // lays the buttons out
+            var fired: [ChromeButtonKind] = []
+            view.onAction = { fired.append($0) }
+            // flipped view: y from the top; the buttons are 18 pt squares 5 pt down, close 4 pt from the right
+            let xs: [CGFloat] = [407, 387, 367]   // close, maximise, iconify: centres of the 18 pt squares
+            for x in xs {
+                let p = view.convert(NSPoint(x: x, y: 5 + 9), to: nil)
+                for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                    let e = NSEvent.mouseEvent(with: type, location: p, modifierFlags: [], timestamp: 0, windowNumber: win.windowNumber,
+                                               context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+                    type == .leftMouseDown ? view.mouseDown(with: e) : view.mouseUp(with: e)
+                }
+            }
+            XCTAssertEqual(fired, [.close, .maximize, .minimize], "front=\(front)")
+        }
+    }
+}
