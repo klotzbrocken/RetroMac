@@ -14,10 +14,13 @@ final class KDEDesktopController {
     static let shared = KDEDesktopController()
     private var panel: NSPanel?
     private var taskbar: NSPanel?
+    private var pager: NSPanel?
+    private var pagerTimer: Timer?
+    private var revealWatch: Timer?
     private var observers: [NSObjectProtocol] = []
     private var mouseMonitors: [Any] = []
-    /// The taskbar has stepped down under the Mac menu bar, which macOS shows over it whenever
-    /// the pointer touches the top edge; it goes back up once the pointer has left it below.
+    /// The taskbar has stepped down under the Mac menu bar, which macOS slides in over it when the
+    /// pointer comes up there; it goes back up once the pointer has left it below.
     private var lowered = false
 
     static var isActiveTheme: Bool { ThemeManager.shared.activeTheme?.config.chrome?.style == "kde" }
@@ -40,9 +43,11 @@ final class KDEDesktopController {
         mouseMonitors.forEach(NSEvent.removeMonitor)
         mouseMonitors = []
         lowered = false
+        revealWatch?.invalidate(); revealWatch = nil
+        pagerTimer?.invalidate(); pagerTimer = nil
         (panel?.contentView as? KPanelView)?.stop()
-        panel?.orderOut(nil); taskbar?.orderOut(nil)
-        panel = nil; taskbar = nil
+        panel?.orderOut(nil); taskbar?.orderOut(nil); pager?.orderOut(nil)
+        panel = nil; taskbar = nil; pager = nil
         if CDEMenu.look == .kde { CDEMenu.close() }
     }
 
@@ -64,19 +69,27 @@ final class KDEDesktopController {
 
     private func show(theme: ThemeBundle) {
         if panel == nil {
-            let p = Self.makePanel("Panel"), t = Self.makePanel("Taskbar")
+            let p = Self.makePanel("Panel"), t = Self.makePanel("Taskbar"), g = Self.makePanel("Pager")
             p.contentView = KPanelView(theme: theme)
             t.contentView = KTaskbarView()
-            panel = p; taskbar = t
+            g.contentView = KPagerView(theme: theme)
+            g.level = .normal   // a window among windows, as kpager was: over a title bar it hid the buttons
+            panel = p; taskbar = t; pager = g
+            // The pager shows the windows live: they move without telling anyone.
+            pagerTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                self?.pager?.contentView?.needsDisplay = true
+            }
             let nc = NotificationCenter.default
             observers = [
                 nc.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in self?.layout() },
                 nc.addObserver(forName: .windowsChanged, object: nil, queue: .main) { [weak self] _ in
                     (self?.taskbar?.contentView as? KTaskbarView)?.reload()
+                    self?.pager?.contentView?.needsDisplay = true
                 },
                 // A background picked in Settings is a desktop picked: the pager follows it.
                 nc.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
                     self?.panel?.contentView?.needsDisplay = true
+                    self?.pager?.contentView?.needsDisplay = true
                 },
             ]
             let moved: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged]
@@ -86,7 +99,7 @@ final class KDEDesktopController {
             ].compactMap { $0 }
         }
         layout()
-        panel?.orderFrontRegardless(); taskbar?.orderFrontRegardless()
+        panel?.orderFrontRegardless(); pager?.orderFrontRegardless(); taskbar?.orderFrontRegardless()
         (panel?.contentView as? KPanelView)?.start()
         (taskbar?.contentView as? KTaskbarView)?.reload()
         KDEApps.prepare()
@@ -105,7 +118,10 @@ final class KDEDesktopController {
         let h = Self.taskbarHeight(on: screen)
         let hidden = KPanelView.isHidden
         panel?.setFrame(NSRect(x: f.minX, y: f.minY, width: hidden ? KPanelView.hideW : f.width, height: KPanelView.height), display: true)
-        taskbar?.setFrame(NSRect(x: f.minX, y: top - h - (lowered ? h : 0), width: f.width, height: h), display: true)
+        let barY = top - h - (lowered ? h : 0)
+        taskbar?.setFrame(NSRect(x: f.minX, y: barY, width: f.width, height: h), display: true)
+        let ps = KPagerView.size(for: f)
+        pager?.setFrame(NSRect(x: f.maxX - ps.width, y: barY - ps.height, width: ps.width, height: ps.height), display: true)
     }
 
     private static var menuBarStays: Bool {
@@ -118,17 +134,33 @@ final class KDEDesktopController {
         max(KTaskbarView.height, max(screen.safeAreaInsets.top, ThemeManager.shared.menuBarHeight(of: screen)).rounded())
     }
 
-    /// The pointer at the top edge brings the Mac menu bar in over the taskbar, and its buttons
-    /// were out of reach: the taskbar steps down under it, and back once the pointer leaves it.
+    /// The Mac menu bar slides in over the taskbar when the pointer comes up there, and the
+    /// taskbar's buttons were out of reach: the taskbar steps down under it, and goes back once
+    /// the pointer leaves it below. Whether the bar is in is read off the WindowServer's menu-bar
+    /// window (hidden, it waits above the screen), checked ten times a second only while the
+    /// pointer is up there, not guessed from the pointer: where macOS starts the slide is its own.
     private func followPointer() {
         guard !Self.menuBarStays, let t = taskbar, let screen = NSScreen.screens.first else { return }
         let p = NSEvent.mouseLocation, f = screen.frame
         guard p.x >= f.minX, p.x <= f.maxX else { return }
-        if !lowered, p.y >= f.maxY - 2 {
-            lowered = true; layout()
-        } else if lowered, p.y < t.frame.minY {
+        if lowered, p.y < t.frame.minY {
             lowered = false; layout()
+        } else if !lowered, p.y >= t.frame.minY, revealWatch == nil {
+            revealWatch = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
+                guard let self, let t = self.taskbar, !self.lowered else { timer.invalidate(); self?.revealWatch = nil; return }
+                if ThemeManager.menuBarWindowHeight(on: screen) != nil {
+                    self.lowered = true; self.layout()
+                } else if NSEvent.mouseLocation.y < t.frame.minY {
+                    timer.invalidate(); self.revealWatch = nil
+                }
+            }
         }
+    }
+
+    /// The taskbar button of a window, on screen: where kwm's iconify sends it.
+    func taskButtonScreenRect(for window: AXUIElement) -> NSRect? {
+        guard let t = taskbar, let view = t.contentView as? KTaskbarView, let r = view.buttonRect(for: window) else { return nil }
+        return t.convertToScreen(view.convert(r, to: nil))
     }
 
     /// What the two hold, for maximised windows: the taskbar's resting lower edge and the panel's height.
@@ -508,6 +540,10 @@ final class KTaskbarView: NSView {
 
     private func index(at p: NSPoint) -> Int? { tasks.indices.first { taskRect($0).contains(p) } }
 
+    func buttonRect(for window: AXUIElement) -> NSRect? {
+        tasks.firstIndex { !$0.isAppLevel && CFEqual($0.window, window) }.map(taskRect)
+    }
+
     override func mouseDown(with event: NSEvent) {
         pressed = index(at: convert(event.locationInWindow, from: nil)); needsDisplay = true
     }
@@ -542,4 +578,107 @@ final class KTaskbarView: NSView {
         }
         return axParts
     }
+}
+
+
+// MARK: - Pager
+
+/// The four desktops in the top right corner, as KDE 1.1's pager showed them: each one's
+/// background, the windows on the current one as they stand, the current desktop framed in
+/// yellow. A click switches. The Mac's windows all live on the current desktop (see above).
+final class KPagerView: NSView {
+    private let theme: ThemeBundle
+    private var thumbs: [Int: NSImage] = [:]
+    init(theme: ThemeBundle) { self.theme = theme; super.init(frame: .zero) }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override var isFlipped: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    static let cellW: CGFloat = 72, gap: CGFloat = 3, rim: CGFloat = 7
+    static func cellH(for screen: NSRect) -> CGFloat { (cellW * screen.height / max(screen.width, 1)).rounded() }
+    static func size(for screen: NSRect) -> NSSize {
+        NSSize(width: 2 * rim + 2 * cellW + gap, height: 2 * rim + 2 * cellH(for: screen) + gap)
+    }
+    private var screen: NSRect { NSScreen.screens.first?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900) }
+    private func cell(_ i: Int) -> NSRect {
+        let h = Self.cellH(for: screen)
+        return NSRect(x: Self.rim + CGFloat(i % 2) * (Self.cellW + Self.gap), y: Self.rim + CGFloat(i / 2) * (h + Self.gap),
+                      width: Self.cellW, height: h)
+    }
+
+    /// The desktop's background, shrunk once: a pattern stays a pattern at the cell's scale.
+    private func thumb(_ i: Int, size: NSSize) -> NSImage? {
+        if let t = thumbs[i] { return t }
+        guard let list = theme.config.wallpapers, list.indices.contains(i),
+              let src = NSImage(contentsOf: theme.url.appendingPathComponent(list[i].file)) else { return nil }
+        let img = NSImage(size: size, flipped: false) { r in
+            if list[i].tiled == true {
+                let k = size.width / self.screen.width
+                let tile = NSImage(size: NSSize(width: max(1, src.size.width * k), height: max(1, src.size.height * k)), flipped: false) { tr in
+                    src.draw(in: tr); return true
+                }
+                NSColor(patternImage: tile).setFill(); r.fill()
+            } else {
+                src.draw(in: r)
+            }
+            return true
+        }
+        thumbs[i] = img
+        return img
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        KDEColors.face.setFill(); bounds.fill()
+        KDEColors.winPanel(bounds, sunken: false)
+        let well = bounds.insetBy(dx: 4, dy: 4)
+        KDEColors.winButton(well, sunken: true)
+        NSColor.fromHex("#637A80").setFill(); well.insetBy(dx: 2, dy: 2).fill()
+        let current = KDEDesktopController.currentDesktop
+        for i in 0..<4 {
+            let c = cell(i)
+            thumb(i, size: c.size)?.draw(in: c, from: .zero, operation: .copy, fraction: 1, respectFlipped: true, hints: nil)
+            if i == current { drawWindows(in: c) }
+            (i == current ? NSColor.fromHex("#F0F08C") : .black).setStroke()
+            NSBezierPath(rect: c.insetBy(dx: 0.5, dy: 0.5)).stroke()
+        }
+    }
+
+    /// The real windows of the primary display, back to front, white with a grey bar; the one in
+    /// front pale yellow, as the pager drew the active window.
+    private func drawWindows(in c: NSRect) {
+        let f = screen
+        let own = ProcessInfo.processInfo.processIdentifier
+        let list = WindowInventory.onScreen(maxAge: 0.5).filter {
+            ($0[kCGWindowLayer as String] as? Int) == 0 && (($0[kCGWindowAlpha as String] as? Double) ?? 1) > 0
+                && ($0[kCGWindowOwnerPID as String] as? pid_t) != own
+        }
+        let rects: [CGRect] = list.compactMap { w in
+            var b = CGRect.zero
+            guard let d = w[kCGWindowBounds as String] as? NSDictionary, CGRectMakeWithDictionaryRepresentation(d, &b),
+                  b.width > 40, b.height > 40, b.intersects(CGRect(x: 0, y: 0, width: f.width, height: f.height)) else { return nil }
+            return b
+        }
+        let kx = c.width / f.width, ky = c.height / f.height
+        NSGraphicsContext.saveGraphicsState()
+        NSBezierPath(rect: c).addClip()
+        for (n, b) in rects.enumerated().reversed() {
+            let r = NSRect(x: c.minX + b.minX * kx, y: c.minY + b.minY * ky, width: max(3, b.width * kx), height: max(3, b.height * ky)).integral
+            (n == 0 ? NSColor.fromHex("#FFFFD0") : .white).setFill(); r.fill()
+            KDEColors.face.setFill(); NSRect(x: r.minX, y: r.minY, width: r.width, height: min(2, r.height)).fill()
+            NSColor.black.setStroke(); NSBezierPath(rect: r.insetBy(dx: 0.5, dy: 0.5)).stroke()
+        }
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        guard let i = (0..<4).first(where: { cell($0).contains(p) }) else { return }
+        KDEDesktopController.switchTo(desktop: i)
+        needsDisplay = true
+    }
+
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+    override func accessibilityLabel() -> String? { "Pager, desktop \(KDEDesktopController.desktopNames[KDEDesktopController.currentDesktop])" }
 }

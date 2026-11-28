@@ -23,6 +23,7 @@ final class MinimizeZoom {
         guard let config = ThemeManager.shared.activeTheme?.config else { return false }
         let platinumWithoutDock = config.chrome?.style == "macos9" && config.dock.dockStyle == "none"
         return config.isControlStripModules || platinumWithoutDock || config.hasTaskButtons || intoDockIcon
+            || config.chrome?.style == "kde"   // into the button on kwm's taskbar
     }
 
     /// Halloween: its fireballs stand in for the lights, so the Mac's own minimise would show the

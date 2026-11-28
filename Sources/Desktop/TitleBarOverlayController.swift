@@ -902,7 +902,7 @@ final class TitleBarOverlayController {
         case .win31:    return 20
         case .cde:      return 20   // measured off Solaris 8: a 1 pt edge and a 19 pt bar
         case .photon:   return 21   // measured off QNX 6.2.1: black and #3F3F3F, then a 19 pt bar
-        case .kde:      return 22   // kwm: the 4 pt frame's top, then an 18 pt title bar
+        case .kde:      return 28   // kwm, KDE 1.1's 24 px a sixth up to sit with the taller taskbar
         case .beos:     return 22
         case .nextstep: return 22
         case .amiga:    return AmigaChrome.barHeight   // measured off the 2008 AmigaOne screenshots
@@ -1813,7 +1813,9 @@ final class TitleBarOverlayController {
                 zoomed = MinimizeZoom.shared.begin(wid: wid, windowBounds: o.bounds, bar: o.panel, barView: o.view,
                                                    patch: o.patch, icon: icon)
             } else {
+                // KDE: into kwm's taskbar at the top, which is not the dock's.
                 let button = DockController.shared.taskButtonScreenRect(for: w)
+                    ?? (KDEDesktopController.isActiveTheme ? KDEDesktopController.shared.taskButtonScreenRect(for: w) : nil)
                 if button != nil || ThemeManager.shared.activeTheme?.config.hasTaskButtons != true {
                     zoomed = MinimizeZoom.shared.begin(wid: wid, windowBounds: o.bounds, bar: o.panel, barView: o.view,
                                                        patch: o.patch, target: button)
@@ -2263,7 +2265,7 @@ final class TitleBarOverlayView: NSView {
             // kwm 1.0, as its screenshots show: the window's icon and the pin on the left (drawn
             // only: macOS lets no app put another's window on top), then iconify, maximise and
             // close on the right, flat 16 pt squares.
-            let s: CGFloat = 16, y = ((h - s) / 2).rounded()
+            let s: CGFloat = 18, y: CGFloat = 5
             let close = NSRect(x: w - 4 - s, y: y, width: s, height: s)
             let max = NSRect(x: close.minX - s - 2, y: y, width: s, height: s)
             let min = NSRect(x: max.minX - s - 2, y: y, width: s, height: s)
@@ -2499,25 +2501,30 @@ final class TitleBarOverlayView: NSView {
         KDEColors.light.setFill(); NSRect(x: 0, y: 1, width: b.width, height: 1).fill(); NSRect(x: 1, y: 1, width: 1, height: b.height - 1).fill()
         KDEColors.shadow.setFill(); NSRect(x: b.width - 1, y: 0, width: 1, height: b.height).fill()
         KDEColors.dark.setFill(); NSRect(x: b.width - 2, y: 1, width: 1, height: b.height - 1).fill()
-        let ink = isFront ? NSColor.black : NSColor.fromHex("#404040")
-        let midY = (b.height / 2).rounded()
+        // Rows 4 to 24 hold the band; the glyphs are etched, #6E6E6E with white a point below right.
+        let band0: CGFloat = 4, bandH = b.height - 7, midY = band0 + (bandH / 2).rounded()
+        func etched(_ shape: (CGFloat) -> Void) {
+            NSColor.white.setFill(); NSColor.white.setStroke(); shape(1)
+            NSColor.fromHex("#6E6E6E").setFill(); NSColor.fromHex("#6E6E6E").setStroke(); shape(0)
+        }
         if let icon {
             icon.draw(in: NSRect(x: 4, y: midY - 8, width: 16, height: 16), from: .zero, operation: .sourceOver,
                       fraction: 1, respectFlipped: true, hints: nil)
         }
         // The pin, lying down with its point to the left: needle, head, body, cap.
-        ink.setFill()
         let px: CGFloat = 23
-        NSRect(x: px, y: midY, width: 5, height: 1).fill()
-        NSRect(x: px + 5, y: midY - 3, width: 1, height: 7).fill()
-        NSRect(x: px + 6, y: midY - 2, width: 6, height: 1).fill(); NSRect(x: px + 6, y: midY + 2, width: 6, height: 1).fill()
-        NSRect(x: px + 12, y: midY - 3, width: 1, height: 7).fill()
+        etched { o in
+            NSRect(x: px + o, y: midY + o, width: 5, height: 1).fill()
+            NSRect(x: px + 5 + o, y: midY - 3 + o, width: 1, height: 7).fill()
+            NSRect(x: px + 6 + o, y: midY - 2 + o, width: 6, height: 1).fill(); NSRect(x: px + 6 + o, y: midY + 2 + o, width: 6, height: 1).fill()
+            NSRect(x: px + 12 + o, y: midY - 3 + o, width: 1, height: 7).fill()
+        }
         let firstButton = buttonRects.map(\.1.minX).min() ?? b.width
-        let band = NSRect(x: px + 17, y: 3, width: max(0, firstButton - 4 - (px + 17)), height: b.height - 4)
+        let band = NSRect(x: px + 17, y: band0, width: max(0, firstButton - 4 - (px + 17)), height: bandH)
         KDEColors.panel1(band, sunken: true)
         let inner = band.insetBy(dx: 1, dy: 1)
         if isFront { NSGradient(starting: KDEColors.select, ending: .black)?.draw(in: inner, angle: 0) }
-        let font = NSFont(name: "Helvetica-Bold", size: 12) ?? .boldSystemFont(ofSize: 12)
+        let font = NSFont(name: "Helvetica-Bold", size: 13) ?? .boldSystemFont(ofSize: 13)
         let para = NSMutableParagraphStyle(); para.lineBreakMode = .byTruncatingTail
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .paragraphStyle: para,
                                                     .foregroundColor: isFront ? NSColor.white : KDEColors.dark]
@@ -2525,16 +2532,19 @@ final class TitleBarOverlayView: NSView {
         (title as NSString).draw(in: NSRect(x: inner.minX + 4, y: inner.midY - th / 2, width: max(0, inner.width - 8), height: th),
                                  withAttributes: attrs)
         for (k, r) in buttonRects {
-            if tracker.state(for: k) == .pressed { KDEColors.winButton(r, sunken: true) }
-            ink.setFill(); ink.setStroke()
-            switch k {
-            case .minimize: NSRect(x: r.midX - 1, y: r.midY + 2, width: 2, height: 2).fill()
-            case .maximize: NSBezierPath(rect: NSRect(x: r.minX + 4.5, y: r.minY + 4.5, width: 8, height: 8)).stroke()
-            default:
-                let x = NSBezierPath(); x.lineWidth = 1.2
-                x.move(to: NSPoint(x: r.minX + 3.5, y: r.minY + 3.5)); x.line(to: NSPoint(x: r.maxX - 3.5, y: r.maxY - 3.5))
-                x.move(to: NSPoint(x: r.maxX - 3.5, y: r.minY + 3.5)); x.line(to: NSPoint(x: r.minX + 3.5, y: r.maxY - 3.5))
-                x.stroke()
+            let pressed = tracker.state(for: k) == .pressed
+            if pressed { KDEColors.winButton(r, sunken: true) }
+            let d: CGFloat = pressed ? 1 : 0
+            etched { o in
+                switch k {
+                case .minimize: NSRect(x: r.midX - 1 + o + d, y: r.midY + o + d, width: 2, height: 2).fill()
+                case .maximize: NSBezierPath(rect: NSRect(x: r.minX + 4.5 + o + d, y: r.minY + 4.5 + o + d, width: 9, height: 9)).stroke()
+                default:
+                    let x = NSBezierPath(); x.lineWidth = 1.3
+                    x.move(to: NSPoint(x: r.minX + 3.5 + o + d, y: r.minY + 3.5 + o + d)); x.line(to: NSPoint(x: r.maxX - 3.5 + o + d, y: r.maxY - 3.5 + o + d))
+                    x.move(to: NSPoint(x: r.maxX - 3.5 + o + d, y: r.minY + 3.5 + o + d)); x.line(to: NSPoint(x: r.minX + 3.5 + o + d, y: r.maxY - 3.5 + o + d))
+                    x.stroke()
+                }
             }
         }
     }
