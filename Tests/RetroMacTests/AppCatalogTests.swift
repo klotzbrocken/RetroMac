@@ -65,3 +65,46 @@ final class AppCatalogTests: XCTestCase {
         XCTAssertFalse(AppCatalog.canInstall(paint))
     }
 }
+
+/// The install gate: an unsigned bundle passes only for an app known to ship unsigned, and only
+/// after the user agreed. A swapped-in ad-hoc app for a notarized one must never get that far.
+final class InstallGateTests: XCTestCase {
+    private var dir: URL!
+    private var src: URL!
+    private var target: URL { dir.appendingPathComponent("Installed/Dummy.app") }
+
+    override func setUpWithError() throws {
+        dir = FileManager.default.temporaryDirectory.appendingPathComponent("rm-gate-\(UUID().uuidString)")
+        src = dir.appendingPathComponent("Dummy.app")
+        let contents = src.appendingPathComponent("Contents")
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let plist: [String: Any] = ["CFBundleIdentifier": "com.example.dummy", "CFBundleExecutable": "Dummy"]
+        try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            .write(to: contents.appendingPathComponent("Info.plist"))
+    }
+    override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
+
+    func testUnsignedAppThatExpectsAnIdentityIsRefusedWithoutAsking() {
+        var asked = false
+        let r = TrustedDownloadInstaller.installVerifiedApp(bundleAt: src, to: target, expectedBundleID: "com.example.dummy",
+                                                            confirmUnverified: { asked = true; return true })
+        guard case .failed = r else { return XCTFail("an unsigned app that expects an identity must fail, got \(r)") }
+        XCTAssertFalse(asked)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: target.path))
+    }
+
+    func testKnownUnsignedAppStillNeedsConsent() {
+        let r = TrustedDownloadInstaller.installVerifiedApp(bundleAt: src, to: target, expectedBundleID: "com.example.dummy",
+                                                            allowUnverified: true, confirmUnverified: { false })
+        guard case .cancelled = r else { return XCTFail("declining must cancel, got \(r)") }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: target.path))
+    }
+
+    /// The catalogue's words and its flag must agree, or a "Not signed" app could not be installed.
+    func testNotSignedCaveatMatchesTheFlag() {
+        for a in AppCatalog.catalogue {
+            XCTAssertEqual(a.unsigned, a.caveat?.hasPrefix("Not signed") == true, a.id)
+        }
+    }
+}

@@ -61,6 +61,17 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
     Quake or DOOM the card was pointed at can be brought back.
   - Extracting Warcraft again keeps the working data until the new extraction has succeeded.
 
+- **Safer downloads.**
+  - An app or emulator that RetroMac expects from a known developer is refused when the download
+    comes unsigned, instead of offering "Install Anyway": its identity can only be checked on a
+    signed app, so a swapped download would otherwise have passed. Retrolux, Retron Commander and
+    Macsplorer, which ship unsigned, still install after asking.
+  - Downloads stay on HTTPS, also after a redirect, treat a server error as a failure instead of
+    saving the error page, and give up on a stalled connection instead of leaving the installer
+    busy until RetroMac restarts.
+  - Websites browsed in 98.js's Internet Explorer can no longer open RetroMac's native Save and
+    Print dialogs; only the 98.js programs themselves reach them.
+
 - **The old Apple logo leaves with the menu bar in full screen.** The rainbow or Aqua Apple the
   Mac themes put over the menu bar stayed on a full-screen app after its menu bar slid away; it
   now goes with the bar and comes back when the pointer brings the bar down.

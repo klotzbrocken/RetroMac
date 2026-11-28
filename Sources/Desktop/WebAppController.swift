@@ -122,8 +122,9 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
         // File System Access API is unavailable, as it is in WKWebView) are routed to Swift.
         //
         // SECURITY: only install the bridge for the self-contained 98.js app windows — NOT
-        // for the IE/browser windows (`showNav`), which load arbitrary websites. And only in
-        // the main frame, so embedded ad iframes can never trigger a native save/print dialog.
+        // for the IE/browser windows (`showNav`), which load arbitrary websites. And only from
+        // the main frame (checked in `didReceive`), so iframes, including the sites 98.js's own
+        // Internet Explorer browses, can never trigger a native save/print dialog.
         if bridgeActive {
             let ucc = WKUserContentController()
             ucc.add(self, name: "webapp")
@@ -412,7 +413,11 @@ final class WebAppController: NSObject, WKNavigationDelegate, WKUIDelegate, WKDo
     """
 
     func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let body = message.body as? [String: Any],
+        // The handler is reachable from every frame (forMainFrameOnly limits only the scripts),
+        // and 98.js's Internet Explorer shows the sites it browses in an iframe.
+        guard message.frameInfo.isMainFrame,
+              Self.isTrusted98App(message.frameInfo.request.url?.absoluteString ?? ""),
+              let body = message.body as? [String: Any],
               let action = body["action"] as? String else { return }
         switch action {
         case "print": runPrint()

@@ -34,6 +34,8 @@ enum AppCatalog {
         let caveat: String?
         /// Nil = any Mac; otherwise the only architecture its binary has.
         var onlyArch: String? = nil
+        /// Ships without a Developer ID, so it may install unverified after asking.
+        var unsigned = false
     }
 
     private static let isAppleSilicon: Bool = {
@@ -124,21 +126,21 @@ enum AppCatalog {
             source: .github(repo: "konzertblock/retrolux", asset: dmg("retrolux")),
             page: repoPage("konzertblock/retrolux"),
             screenshot: URL(string: "https://raw.githubusercontent.com/konzertblock/retrolux/main/docs/screenshots/browser.png")!,
-            caveat: "Not signed with a Developer ID; RetroMac asks before installing it.", onlyArch: "arm64"),
+            caveat: "Not signed with a Developer ID; RetroMac asks before installing it.", onlyArch: "arm64", unsigned: true),
         App(id: "retroncommander", name: "Retron Commander", author: "konzertblock",
             blurb: "A two-panel file manager in the style of the Norton Commander: blue panels, function-key bar, keyboard first.",
             bundleID: "com.konzertblock.RetronCommander", appName: "Retron Commander",
             source: .github(repo: "konzertblock/retron-commander", asset: dmg("retron-commander")),
             page: repoPage("konzertblock/retron-commander"),
             screenshot: URL(string: "https://raw.githubusercontent.com/konzertblock/retron-commander/main/Screenshots/RetronCommander-norton-commander.png")!,
-            caveat: "Not signed with a Developer ID; RetroMac asks before installing it."),
+            caveat: "Not signed with a Developer ID; RetroMac asks before installing it.", unsigned: true),
         App(id: "macsplorer", name: "Macsplorer", author: "Jan Br\u{FC}nemann",
             blurb: "The Windows 2000 Explorer as a real file browser: folder tree always on, an address bar you can type into, details view, classic bevels and Tahoma.",
             bundleID: "dev.macsplorer.ai", appName: "Macsplorer",
             source: .github(repo: "jbrunemann/macsplorer", asset: { $0 == "macsplorer-macos.zip" }),
             page: repoPage("jbrunemann/macsplorer"),
             screenshot: URL(string: "https://raw.githubusercontent.com/jbrunemann/macsplorer/master/docs/window.png")!,
-            caveat: "Not signed with a Developer ID; RetroMac asks before installing it."),
+            caveat: "Not signed with a Developer ID; RetroMac asks before installing it.", unsigned: true),
         App(id: "arose", name: "ARose", author: "CooLajz",
             blurb: "The ARose screen saver of the Amiga's BlitzBlank, revived with its original authors' blessing: rotating, mirrored dots in ECS and AGA palettes, or a glowing modern mode.",
             bundleID: "cz.coolajz.ARose.Preview", appName: "ARose",
@@ -281,7 +283,7 @@ enum AppCatalog {
         guard let app = found else { return "\(a.name) was not in the download." }
         let target = URL(fileURLWithPath: "/Applications").appendingPathComponent(app.lastPathComponent)
         switch TrustedDownloadInstaller.installVerifiedApp(
-            bundleAt: app, to: target, expectedBundleID: a.bundleID,
+            bundleAt: app, to: target, expectedBundleID: a.bundleID, allowUnverified: a.unsigned,
             confirmUnverified: { InstallProgressWindow.confirmUnverified(name: a.name) }) {
         case .installed: return nil
         case .cancelled: return "Not installed."

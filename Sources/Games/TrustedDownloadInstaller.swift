@@ -19,7 +19,10 @@ enum TrustedDownloadInstaller {
     static func download(_ url: URL, to dest: URL, minBytes: Int = 0, sha256: String? = nil) -> Bool {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
-        p.arguments = ["-L", "-s", "-o", dest.path,
+        // HTTPS only, also after redirects; an HTTP error is a failure, not a file; a stalled
+        // connection ends (under 1 KB/s for a minute) instead of blocking the installer for good.
+        p.arguments = ["-L", "-s", "--fail", "--proto", "=https", "--proto-redir", "=https",
+                       "--connect-timeout", "30", "-y", "60", "-Y", "1024", "-o", dest.path,
                        "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
                        url.absoluteString]
         do { try p.run() } catch { return false }
@@ -143,8 +146,14 @@ enum TrustedDownloadInstaller {
     /// (warn-but-allow). Quarantine is preserved for verified apps (Gatekeeper approves a
     /// notarized app silently); it is stripped only when the user consents to an unverified one.
     /// A failed copy never destroys the previously installed app (staging + `replaceItemAt`).
+    ///
+    /// A download that names the app it expects is refused outright when it comes unsigned,
+    /// unless `allowUnverified` says that app really ships so: the identity can only be checked on
+    /// a signed bundle, so a swapped-in ad-hoc app would otherwise get the same "Install Anyway"
+    /// people click through for the few known unsigned apps.
     static func installVerifiedApp(bundleAt src: URL, to targetURL: URL,
                                    expectedTeamID: String? = nil, expectedBundleID: String? = nil,
+                                   allowUnverified: Bool = false,
                                    confirmUnverified: () -> Bool) -> InstallResult {
         let fm = FileManager.default
         let name = targetURL.lastPathComponent
@@ -165,7 +174,11 @@ enum TrustedDownloadInstaller {
             }
         }
 
-        if !verified && !confirmUnverified() { return .cancelled }
+        if !verified {
+            let expectsIdentity = expectedBundleID != nil || expectedTeamID != nil
+            if expectsIdentity && !allowUnverified { return .failed("it is not signed and notarized by its developer") }
+            if !confirmUnverified() { return .cancelled }
+        }
 
         // Stage on the SAME volume as the target (its own directory) for an atomic replace.
         let stagingURL = targetURL.deletingLastPathComponent()
