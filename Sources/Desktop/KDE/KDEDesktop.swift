@@ -15,6 +15,10 @@ final class KDEDesktopController {
     private var panel: NSPanel?
     private var taskbar: NSPanel?
     private var observers: [NSObjectProtocol] = []
+    private var mouseMonitors: [Any] = []
+    /// The taskbar has stepped down under the Mac menu bar, which macOS shows over it whenever
+    /// the pointer touches the top edge; it goes back up once the pointer has left it below.
+    private var lowered = false
 
     static var isActiveTheme: Bool { ThemeManager.shared.activeTheme?.config.chrome?.style == "kde" }
 
@@ -33,6 +37,9 @@ final class KDEDesktopController {
     func hide() {
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = []
+        mouseMonitors.forEach(NSEvent.removeMonitor)
+        mouseMonitors = []
+        lowered = false
         (panel?.contentView as? KPanelView)?.stop()
         panel?.orderOut(nil); taskbar?.orderOut(nil)
         panel = nil; taskbar = nil
@@ -72,6 +79,11 @@ final class KDEDesktopController {
                     self?.panel?.contentView?.needsDisplay = true
                 },
             ]
+            let moved: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDragged]
+            mouseMonitors = [
+                NSEvent.addGlobalMonitorForEvents(matching: moved) { [weak self] _ in self?.followPointer() },
+                NSEvent.addLocalMonitorForEvents(matching: moved) { [weak self] e in self?.followPointer(); return e },
+            ].compactMap { $0 }
         }
         layout()
         panel?.orderFrontRegardless(); taskbar?.orderFrontRegardless()
@@ -89,17 +101,40 @@ final class KDEDesktopController {
         // still stops below its place, so the taskbar sometimes sat 33 pt down. Only when the menu
         // bar stays (VoiceOver, see ThemeManager.syncMenuBarVisibility) does the taskbar go under it.
         let f = screen.frame
-        let barStays = NSWorkspace.shared.isVoiceOverEnabled || ThemeManager.shared.activeTheme?.config.hideMenuBarDefault != true
-        let top = barStays ? screen.visibleFrame.maxY : f.maxY
+        let top = Self.menuBarStays ? screen.visibleFrame.maxY : f.maxY
+        let h = Self.taskbarHeight(on: screen)
         let hidden = KPanelView.isHidden
         panel?.setFrame(NSRect(x: f.minX, y: f.minY, width: hidden ? KPanelView.hideW : f.width, height: KPanelView.height), display: true)
-        taskbar?.setFrame(NSRect(x: f.minX, y: top - KTaskbarView.height, width: f.width, height: KTaskbarView.height), display: true)
+        taskbar?.setFrame(NSRect(x: f.minX, y: top - h - (lowered ? h : 0), width: f.width, height: h), display: true)
     }
 
-    /// What the two hold, for maximised windows: the taskbar's lower edge and the panel's height.
+    private static var menuBarStays: Bool {
+        NSWorkspace.shared.isVoiceOverEnabled || ThemeManager.shared.activeTheme?.config.hideMenuBarDefault != true
+    }
+
+    /// As tall as the Mac menu bar (33 pt under a notch), so the bar macOS slides in over it
+    /// covers it exactly instead of leaving a cut-off strip; never below kpanel's 24 pt.
+    static func taskbarHeight(on screen: NSScreen) -> CGFloat {
+        max(KTaskbarView.height, max(screen.safeAreaInsets.top, ThemeManager.shared.menuBarHeight(of: screen)).rounded())
+    }
+
+    /// The pointer at the top edge brings the Mac menu bar in over the taskbar, and its buttons
+    /// were out of reach: the taskbar steps down under it, and back once the pointer leaves it.
+    private func followPointer() {
+        guard !Self.menuBarStays, let t = taskbar, let screen = NSScreen.screens.first else { return }
+        let p = NSEvent.mouseLocation, f = screen.frame
+        guard p.x >= f.minX, p.x <= f.maxX else { return }
+        if !lowered, p.y >= f.maxY - 2 {
+            lowered = true; layout()
+        } else if lowered, p.y < t.frame.minY {
+            lowered = false; layout()
+        }
+    }
+
+    /// What the two hold, for maximised windows: the taskbar's resting lower edge and the panel's height.
     var reserved: (taskbarBottom: CGFloat, bottom: CGFloat)? {
         guard panel != nil, let t = taskbar else { return nil }
-        return (t.frame.minY, KPanelView.height)
+        return (t.frame.minY + (lowered ? t.frame.height : 0), KPanelView.height)
     }
 
     // MARK: The four desktops

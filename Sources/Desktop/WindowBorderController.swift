@@ -548,6 +548,11 @@ final class WindowBorderController {
             // top and left, #9D9D9D along the bottom and right.
             return .bevel(hiOuter: NSColor.fromHex("#1F1F1F"), hiInner: NSColor.fromHex("#FFFFFF"),
                           loInner: NSColor.fromHex("#9D9D9D"), loOuter: NSColor.fromHex("#1F1F1F"), width: 5, radius: 0)
+        case "kde":
+            // kwm's 4 pt frame (BORDER 4), qDrawWinPanel in the Qt grey: face and black outside,
+            // white and #808080 inside.
+            return .bevel(hiOuter: NSColor.fromHex("#C0C0C0"), hiInner: NSColor.fromHex("#FFFFFF"),
+                          loInner: NSColor.fromHex("#808080"), loOuter: NSColor.fromHex("#000000"), width: 4, radius: 0)
         case "snowleopard":
             // 10.6 windows have no bevel and no glow, just a hairline contour around the
             // rounded frame. Anything thicker immediately reads as Leopard-era Aqua.

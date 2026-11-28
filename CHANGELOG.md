@@ -50,6 +50,16 @@ downloadable DMGs, see the [GitHub Releases](https://github.com/klotzbrocken/Ret
 
 ### Fixed
 
+- **KDE 1.0 gets kwm's title bars.**
+  - Running programs wear kwm's bar, as KDE 1.0's screenshots show it: the window's icon and the
+    pin on the left, the band shaded from dark blue into black with the title in white for the
+    window in front, grey behind, iconify, maximise and close on the right, inside the 4 pt grey
+    frame. The pin is only drawn, since macOS lets no app keep another's window on top.
+  - The Read Me has the same bar, with a working close button.
+  - The taskbar along the top is as tall as the Mac menu bar, so the bar macOS slides in at the
+    top edge covers it exactly. While it is in, the taskbar steps down beneath it, so its buttons
+    stay in reach; it goes back up once the pointer has left it.
+
 - **No more files lost to copying.**
   - Dropping a folder on a Dock stack of one of its own subfolders (~/Documents on
     ~/Documents/Inbox) copied it into its own copy, level after level, until the path grew too

@@ -42,6 +42,7 @@ final class TitleBarOverlayController {
         case win31, win98, luna, aero          // the Windows bars (95, 98 and Me share win98)
         case cde                               // Solaris 8's CDE (dtwm): menu box left, minimise and maximise right
         case photon                            // QNX 6.2.1's Photon: menu box left, minimise, maximise, then close right
+        case kde                               // KDE 1.0's kwm: icon and pin left, iconify, maximise and close right
         case beos                              // BeOS R5: the yellow tab, only as wide as its title, close box left, zoom box right
         case nextstep                          // NeXTSTEP: miniaturize left, close right, the bar black on the key window
         case amiga                             // AmigaOS 4.1: closer left, title left, iconify, zoom and depth right
@@ -49,7 +50,7 @@ final class TitleBarOverlayController {
         case fireLights                        // three glowing fireballs in place of the lights (Halloween)
         var isBar: Bool { self != .snowLights && self != .fireLights }
         /// Windows caption buttons cluster on the right; the Mac's close box sits on the left.
-        var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero || self == .cde || self == .photon }
+        var isWindows: Bool { self == .win31 || self == .win98 || self == .luna || self == .aero || self == .cde || self == .photon || self == .kde }
         /// What a double-click on the bar did in each era: Mac OS 8/9 rolled the window up, and
         /// so did System 7.5 with its WindowShade control panel (the System 7.1 theme wears 7.5's
         /// Control Strip too); System 6 did nothing, Windows maximised, Mac OS X minimised.
@@ -58,7 +59,7 @@ final class TitleBarOverlayController {
             case .platinum, .system7: return .collapse
             case .system6, .nextstep: return nil
             case .amiga: return .zoom
-            case .win31, .win98, .luna, .aero, .cde, .photon: return .zoom
+            case .win31, .win98, .luna, .aero, .cde, .photon, .kde: return .zoom
             case .aqua, .snowLights, .fireLights, .beos: return .minimize   // BeOS: a double-click on the tab hid the window
             }
         }
@@ -144,6 +145,7 @@ final class TitleBarOverlayController {
         case "win31":       return .win31
         case "cde":         return .cde        // Solaris 8
         case "photon":      return .photon     // QNX 6.2.1
+        case "kde":         return .kde        // KDE 1.0
         case "beos":        return .beos
         case "nextstep":    return .nextstep
         case "amiga":       return .amiga      // AmigaOS 4.1 on the AmigaOne
@@ -900,6 +902,7 @@ final class TitleBarOverlayController {
         case .win31:    return 20
         case .cde:      return 20   // measured off Solaris 8: a 1 pt edge and a 19 pt bar
         case .photon:   return 21   // measured off QNX 6.2.1: black and #3F3F3F, then a 19 pt bar
+        case .kde:      return 22   // kwm: the 4 pt frame's top, then an 18 pt title bar
         case .beos:     return 22
         case .nextstep: return 22
         case .amiga:    return AmigaChrome.barHeight   // measured off the 2008 AmigaOne screenshots
@@ -2256,6 +2259,18 @@ final class TitleBarOverlayView: NSView {
                 tracker.add(k, r, interactive: true)
                 buttonRects.append((k, r))
             }
+        case .kde:
+            // kwm 1.0, as its screenshots show: the window's icon and the pin on the left (drawn
+            // only: macOS lets no app put another's window on top), then iconify, maximise and
+            // close on the right, flat 16 pt squares.
+            let s: CGFloat = 16, y = ((h - s) / 2).rounded()
+            let close = NSRect(x: w - 4 - s, y: y, width: s, height: s)
+            let max = NSRect(x: close.minX - s - 2, y: y, width: s, height: s)
+            let min = NSRect(x: max.minX - s - 2, y: y, width: s, height: s)
+            for (k, r) in [(ChromeButtonKind.minimize, min), (.maximize, max), (.close, close)] {
+                tracker.add(k, r, interactive: true)
+                buttonRects.append((k, r))
+            }
         case .win98:
             // 20x18 bevel buttons, the theme's own size: [min][max], a 2 pt gap, [close].
             let bw: CGFloat = 20, bh: CGFloat = 18
@@ -2305,6 +2320,7 @@ final class TitleBarOverlayView: NSView {
         case .win31:      drawWin31(b)
         case .cde:        drawCDE(b)
         case .photon:     drawPhoton(b)
+        case .kde:        drawKDE(b)
         case .beos:       drawBeOS(b)
         case .amiga:      drawAmiga(b)
         case .nextstep:   drawNextstep(b)
@@ -2472,6 +2488,55 @@ final class TitleBarOverlayView: NSView {
         let font = NSFont(name: "LucidaGrande", size: 12) ?? .systemFont(ofSize: 12)
         drawCentredTitle(in: NSRect(x: left + 4, y: 5, width: max(0, right - left - 8), height: 15), font: font,
                          color: isFront ? NSColor.fromHex("#000065") : .black)
+    }
+
+    /// kwm's bar after KDE 1.0's own screenshots: the grey frame, the window's icon and the pin,
+    /// a sunken band shaded from dark blue into black with the title in white when the window is
+    /// in front (main.C: activeBackground darkBlue, activeBlend black, shadedHorizontal), grey
+    /// with a grey title behind, and the three flat buttons, sunk while pressed.
+    private func drawKDE(_ b: NSRect) {
+        KDEColors.face.setFill(); b.fill()
+        KDEColors.light.setFill(); NSRect(x: 0, y: 1, width: b.width, height: 1).fill(); NSRect(x: 1, y: 1, width: 1, height: b.height - 1).fill()
+        KDEColors.shadow.setFill(); NSRect(x: b.width - 1, y: 0, width: 1, height: b.height).fill()
+        KDEColors.dark.setFill(); NSRect(x: b.width - 2, y: 1, width: 1, height: b.height - 1).fill()
+        let ink = isFront ? NSColor.black : NSColor.fromHex("#404040")
+        let midY = (b.height / 2).rounded()
+        if let icon {
+            icon.draw(in: NSRect(x: 4, y: midY - 8, width: 16, height: 16), from: .zero, operation: .sourceOver,
+                      fraction: 1, respectFlipped: true, hints: nil)
+        }
+        // The pin, lying down with its point to the left: needle, head, body, cap.
+        ink.setFill()
+        let px: CGFloat = 23
+        NSRect(x: px, y: midY, width: 5, height: 1).fill()
+        NSRect(x: px + 5, y: midY - 3, width: 1, height: 7).fill()
+        NSRect(x: px + 6, y: midY - 2, width: 6, height: 1).fill(); NSRect(x: px + 6, y: midY + 2, width: 6, height: 1).fill()
+        NSRect(x: px + 12, y: midY - 3, width: 1, height: 7).fill()
+        let firstButton = buttonRects.map(\.1.minX).min() ?? b.width
+        let band = NSRect(x: px + 17, y: 3, width: max(0, firstButton - 4 - (px + 17)), height: b.height - 4)
+        KDEColors.panel1(band, sunken: true)
+        let inner = band.insetBy(dx: 1, dy: 1)
+        if isFront { NSGradient(starting: KDEColors.select, ending: .black)?.draw(in: inner, angle: 0) }
+        let font = NSFont(name: "Helvetica-Bold", size: 12) ?? .boldSystemFont(ofSize: 12)
+        let para = NSMutableParagraphStyle(); para.lineBreakMode = .byTruncatingTail
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .paragraphStyle: para,
+                                                    .foregroundColor: isFront ? NSColor.white : KDEColors.dark]
+        let th = (title as NSString).size(withAttributes: attrs).height
+        (title as NSString).draw(in: NSRect(x: inner.minX + 4, y: inner.midY - th / 2, width: max(0, inner.width - 8), height: th),
+                                 withAttributes: attrs)
+        for (k, r) in buttonRects {
+            if tracker.state(for: k) == .pressed { KDEColors.winButton(r, sunken: true) }
+            ink.setFill(); ink.setStroke()
+            switch k {
+            case .minimize: NSRect(x: r.midX - 1, y: r.midY + 2, width: 2, height: 2).fill()
+            case .maximize: NSBezierPath(rect: NSRect(x: r.minX + 4.5, y: r.minY + 4.5, width: 8, height: 8)).stroke()
+            default:
+                let x = NSBezierPath(); x.lineWidth = 1.2
+                x.move(to: NSPoint(x: r.minX + 3.5, y: r.minY + 3.5)); x.line(to: NSPoint(x: r.maxX - 3.5, y: r.maxY - 3.5))
+                x.move(to: NSPoint(x: r.maxX - 3.5, y: r.minY + 3.5)); x.line(to: NSPoint(x: r.minX + 3.5, y: r.maxY - 3.5))
+                x.stroke()
+            }
+        }
     }
 
     /// BeOS R5's tab: yellow when the window is in front, grey behind, a dark outline on three

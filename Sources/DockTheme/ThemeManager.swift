@@ -854,7 +854,7 @@ final class ThemeManager {
 
     private var knownMenuBarHeight: [String: CGFloat] = [:]
 
-    private func menuBarHeight(of screen: NSScreen) -> CGFloat {
+    func menuBarHeight(of screen: NSScreen) -> CGFloat {
         let inset = screen.frame.maxY - screen.visibleFrame.maxY
         let key = screenKey(for: screen)
         if inset > 1 {
